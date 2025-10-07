@@ -43,7 +43,7 @@ class RouteServiceProvider extends ServiceProvider {
      */
     protected function configureRateLimiting() {
         RateLimiter::for('api', static function (Request $request) {
-            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+            return Limit::perMinute(180)->by($request->user()?->id ?: $request->ip());
         });
 
         RateLimiter::for('cart-shipping-quote', static function (Request $request) {

@@ -60,13 +60,33 @@ class CartController extends Controller
             return $this->validationError(__('يجب أن يتطابق القسم المحدد مع حقل section.'), 422);
         }
 
-        $item = Item::select(['id', 'price', 'category_id', 'interface_type'])->find($validated['item_id']);
+        $item = Item::select(['id', 'price', 'category_id', 'interface_type', 'all_category_ids', 'currency'])
+            ->find($validated['item_id']);
 
         if (! $item) {
             return $this->validationError(__('العنصر المطلوب غير متاح.'), 422);
         }
 
+
+        $user = $request->user();
+
+
         $department = $this->resolveDepartment($item, $validated);
+
+        $itemDepartment = $this->resolveItemDepartment($item);
+
+        if (! $department && $itemDepartment) {
+            $department = $itemDepartment;
+        }
+
+        if (! $department) {
+            $existingDepartment = $this->existingCartDepartment($user);
+
+            if ($existingDepartment && ($itemDepartment === null || $itemDepartment === $existingDepartment)) {
+                $department = $existingDepartment;
+            }
+        }
+
 
         if (! $department) {
             return $this->validationError(__('تعذر تحديد القسم للسلة.'), 422);
@@ -80,7 +100,6 @@ class CartController extends Controller
             return $this->validationError(__('العنصر لا ينتمي إلى هذا القسم.'), 422);
         }
 
-        $user = $request->user();
 
         $hasDifferentDepartment = $user->cartItems()
             ->where('department', '!=', $department)
@@ -950,11 +969,7 @@ class CartController extends Controller
 
     protected function itemBelongsToDepartment(Item $item, string $department): bool
     {
-        $itemDepartment = $this->departmentFromCategory((int) $item->category_id);
-
-        if (! $itemDepartment && $item->interface_type) {
-            $itemDepartment = Config::get('cart.interface_map.' . $item->interface_type);
-        }
+        $itemDepartment = $this->resolveItemDepartment($item);
 
         if (! $itemDepartment) {
             return true;
@@ -962,6 +977,43 @@ class CartController extends Controller
 
         return $itemDepartment === $department;
     }
+
+    protected function resolveItemDepartment(Item $item): ?string
+
+    {
+        $itemDepartment = $this->departmentFromCategory((int) $item->category_id);
+
+        if (! $itemDepartment && $item->interface_type) {
+            $itemDepartment = $this->normalizeDepartment(Config::get('cart.interface_map.' . $item->interface_type));
+        }
+
+        if (! $itemDepartment && ! empty($item->all_category_ids)) {
+            $categoryIds = array_filter(array_map('intval', explode(',', (string) $item->all_category_ids)));
+
+            foreach ($categoryIds as $categoryId) {
+                $itemDepartment = $this->departmentFromCategory($categoryId);
+
+                if ($itemDepartment) {
+                    break;
+                }
+            }
+        }
+
+        return $itemDepartment ? $this->normalizeDepartment($itemDepartment) : null;
+    }
+
+    protected function existingCartDepartment(User $user): ?string
+    {
+        return $user->cartItems()
+            ->whereNotNull('department')
+            ->pluck('department')
+            ->map(fn ($value) => $this->normalizeDepartment($value))
+            ->filter()
+            ->unique()
+            ->values()
+            ->first();
+        
+        }
 
     protected function defaultCurrency(): string
     {

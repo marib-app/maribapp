@@ -19,6 +19,9 @@ Get-Content .\storage\logs\laravel.log -Tail 100
 git status; git add -A; git commit -m "msg"; git push
 
 
+php artisan cache:clear; php artisan config:clear ;  php artisan route:clear
+
+
 
 
 

@@ -84,24 +84,63 @@ class CartTipsRepository {
 
 
     final Iterable<dynamic> candidates = <dynamic>[
+      source?['data'],
+      source?['payload'],
+      source?['result'],
       source,
-      source['data'],
-      source['payload'],
-      source['result'],
     ];
 
     for (final dynamic candidate in candidates) {
       final Map<String, dynamic>? map = normalize(candidate);
       if (map == null) continue;
-      final Map<String, dynamic> sanitized = Map<String, dynamic>.from(map);
-      sanitized['presentation'] =
-          sanitized['presentation'] ?? sanitized['display'] ?? sanitized['style'];
+      final Map<String, dynamic> sanitized = Map<String, dynamic>.from(fallback);
+      sanitized.addAll(map);
+
+      sanitized['presentation'] = sanitized['presentation'] ??
+          sanitized['display'] ??
+          sanitized['style'] ??
+          fallback['presentation'];
       sanitized['tips'] = normalizeList(sanitized['tips']);
       sanitized['actions'] = normalizeList(sanitized['actions']);
-      sanitized.putIfAbsent('product_link', () => null);
-      sanitized.putIfAbsent('department', () => fallback['department']);
+      sanitized['product_link'] = sanitized.containsKey('product_link')
+          ? sanitized['product_link']
+          : fallback['product_link'];
+      sanitized['department'] = normalize(sanitized['department']) ??
+          fallback['department'];
 
-      return sanitized;
+      final List<dynamic> tips = sanitized['tips'] as List<dynamic>? ??
+          fallback['tips'] as List<dynamic>;
+      final List<dynamic> actions = sanitized['actions'] as List<dynamic>? ??
+          fallback['actions'] as List<dynamic>;
+      final bool hasFallbackText = () {
+        const List<String> keys = <String>[
+          'disclaimer',
+          'default_description',
+          'description',
+          'message',
+          'text',
+          'note',
+          'return_policy_text',
+        ];
+        for (final String key in keys) {
+          final dynamic value = sanitized[key];
+          if (value is String && value.trim().isNotEmpty) {
+            return true;
+          }
+        }
+        return false;
+      }();
+
+      final bool hasMeaningfulContent = tips.isNotEmpty ||
+          actions.isNotEmpty ||
+          sanitized['product_link'] != null ||
+          hasFallbackText;
+
+      if (hasMeaningfulContent) {
+        sanitized.remove('display');
+        sanitized.remove('style');
+        return sanitized;
+      }
 
     }
     return fallback;

@@ -839,7 +839,7 @@ class CartController extends Controller
             ->replace('ؤ', 'و')
             ->replace('ئ', 'ي')
             ->replaceMatches('/[\s_\-]+/u', '')
-            ->replaceMatches('/[^a-z0-9\u0621-\u064a]+/u', '')
+            ->replaceMatches('/[^a-z0-9\x{0621}-\x{064A}]+/u', '')
             ->value();
 
         if ($normalized === '') {

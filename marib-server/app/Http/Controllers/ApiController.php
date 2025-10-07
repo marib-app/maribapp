@@ -1224,7 +1224,7 @@ class ApiController extends Controller {
 
         $response['item_department'] = $itemDepartment;
 
-        TelemetryService::record('api.tips.response', [
+        app(TelemetryService::class)->record('api.tips.response', [
             'department' => $departmentKey,
             'item_id' => $itemId,
             'tips_count' => $tipsPayload->count(),

@@ -1623,7 +1623,15 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     if (fromDelivery != null && fromDelivery.isNotEmpty) {
       return fromDelivery;
     }
-    return 'ر.س';
+    final String? orderCurrencyLabel = _orderCurrencyLabel;
+    if (orderCurrencyLabel != null && orderCurrencyLabel.trim().isNotEmpty) {
+      return orderCurrencyLabel.trim();
+    }
+    final String? orderCurrencyCode = _orderCurrencyCode;
+    if (orderCurrencyCode != null && orderCurrencyCode.trim().isNotEmpty) {
+      return orderCurrencyCode.trim();
+    }
+    return '';
   }
 
   String _formatCurrencyAmount(double amount, {String? currency}) {
@@ -2546,7 +2554,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     final String resolvedCurrency = (currency != null &&
         currency.trim().isNotEmpty)
         ? currency.trim().toUpperCase()
-        : 'SAR';
+        : 'YER';
 
     return _ResolvedPaymentMeta(
       amount: finalAmount,

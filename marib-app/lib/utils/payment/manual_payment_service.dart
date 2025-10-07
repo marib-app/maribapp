@@ -1123,6 +1123,18 @@ class ManualPaymentService {
       ]) ??
           _stringify(paymentTransaction?['id']);
 
+      final bool hasIntent =
+          paymentIntentId != null && paymentIntentId.trim().isNotEmpty;
+      final bool hasTransaction = paymentTransactionId != null &&
+          paymentTransactionId.trim().isNotEmpty;
+
+      if (!hasIntent && hasTransaction) {
+        paymentIntentId = paymentTransactionId;
+      } else if (hasIntent && !hasTransaction) {
+        paymentTransactionId = paymentIntentId;
+      }
+
+
 
     } catch (_) {
       banks = const <BankAccount>[];

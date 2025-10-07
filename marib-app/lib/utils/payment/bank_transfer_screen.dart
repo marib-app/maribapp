@@ -23,6 +23,7 @@ import 'package:marib/data/cubits/wallet/wallet_summary_cubit.dart';
 import 'package:marib/data/model/wallet/wallet_summary.dart';
 import 'package:marib/utils/notification/notification_service.dart';
 import 'package:intl/intl.dart';
+import 'package:marib/utils/currency_utils.dart';
 
 
 
@@ -73,6 +74,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
   WalletSummary? _walletSummary;
   dynamic _walletError;
   String? _lastWalletEventKey;
+  CurrencyParseResult _settingsCurrencyInfo = const CurrencyParseResult();
 
   String? _paymentIntentId;
   String? _paymentTransactionId;
@@ -235,11 +237,26 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         ManualPaymentService.paymentMethodForApi(_manualBankMethod),
 
       );
+
+      final List<CurrencyParseResult> currencyCandidates = <CurrencyParseResult>[
+        CurrencyUtils.parseCurrency(settings.paymentIntent),
+        CurrencyUtils.parseCurrency(settings.paymentTransaction),
+        CurrencyUtils.parseCurrency(settings.raw),
+      ];
+      CurrencyParseResult settingsCurrency = const CurrencyParseResult();
+      for (final CurrencyParseResult candidate in currencyCandidates) {
+        if (!candidate.hasData) {
+          continue;
+        }
+        settingsCurrency = candidate.mergePreferNew(settingsCurrency);
+      }
+
       setState(() {
         _banks = settings.banks;
         _eastYemenBank = settings.eastYemenBank;
         _paymentIntentId = settings.paymentIntentId;
         _paymentTransactionId = settings.paymentTransactionId;
+        _settingsCurrencyInfo = settingsCurrency;
 
         final normalizedGateway = widget.args.normalizedGateway;
         final bool walletAvailable = _walletSummaryReady;
@@ -278,6 +295,42 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     } finally {
       if (mounted) setState(() => _loadingBanks = false);
     }
+  }
+
+
+  String? get _paymentCurrencyCode {
+    final List<String?> candidates = <String?>[
+      widget.args.normalizedCurrency,
+      CurrencyUtils.normalizeCurrencyCode(widget.args.currency),
+      _settingsCurrencyInfo.code,
+      CurrencyUtils.normalizeCurrencyCode(_settingsCurrencyInfo.display),
+      CurrencyUtils.normalizeCurrencyCode(_walletSummary?.currencyCode),
+      CurrencyUtils.normalizeCurrencyCode(_walletSummary?.currency),
+    ];
+    for (final String? candidate in candidates) {
+      if (candidate != null && candidate.isNotEmpty) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  String? get _paymentCurrencyLabel {
+    final List<String?> candidates = <String?>[
+      widget.args.currency,
+      _settingsCurrencyInfo.display,
+      _settingsCurrencyInfo.code,
+      _walletSummary?.currency,
+      _walletSummary?.currencyCode,
+      _paymentCurrencyCode,
+    ];
+    for (final String? candidate in candidates) {
+      final String? trimmed = candidate?.trim();
+      if (trimmed != null && trimmed.isNotEmpty) {
+        return trimmed;
+      }
+    }
+    return null;
   }
 
   String _maskRight(String? v, {int take = 4}) {
@@ -398,10 +451,10 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         return;
       }
       if (!_walletHasEnoughBalance) {
-        final currency =
-            widget.args.normalizedCurrency ?? widget.args.currency ?? '';
+        final String currency = _paymentCurrencyLabel ?? '';
+
         final amountText = widget.args.amount.toStringAsFixed(2);
-        final suffix = currency.isNotEmpty ? ' $currency' : '';
+        final String suffix = currency.isNotEmpty ? ' $currency' : '';
         _showOverlayMessage(
           'رصيد المحفظة غير كافٍ لدفع $amountText$suffix.',
           type: MessageType.error,
@@ -436,8 +489,14 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       final notesText = _notesCtrl.text.trim();
       final senderName = _shouldShowSenderField ? _senderCtrl.text.trim() : '';
 
-      final submissionCurrency =
-          widget.args.normalizedCurrency ?? widget.args.currency ?? 'SAR';
+      final String? submissionCurrency = _paymentCurrencyCode;
+      if (submissionCurrency == null || submissionCurrency.isEmpty) {
+        _showOverlayMessage(
+          'تعذّر تحديد عملة الطلب. يرجى المحاولة لاحقًا.',
+          type: MessageType.error,
+        );
+        return;
+      }
 
       final userNoteSections = <String>[];
       if (notesText.isNotEmpty) userNoteSections.add(notesText);

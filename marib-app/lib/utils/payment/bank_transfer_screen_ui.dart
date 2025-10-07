@@ -692,11 +692,18 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
   }
 
   String _formatWalletBalance(WalletSummary summary) {
-    final currency = summary.currency ??
-        widget.args.normalizedCurrency ??
-        widget.args.currency ??
-        'SAR';
-    return '${summary.balance.toStringAsFixed(2)} $currency';
+    final String? summaryCurrency = summary.currency?.trim();
+    final String? summaryCode = summary.currencyCode?.trim();
+    final String? displayCurrency = summaryCurrency?.isNotEmpty == true
+        ? summaryCurrency
+        : summaryCode?.isNotEmpty == true
+        ? summaryCode
+        : _paymentCurrencyLabel;
+    final String amountText = summary.balance.toStringAsFixed(2);
+    if (displayCurrency == null || displayCurrency.isEmpty) {
+      return amountText;
+    }
+    return '$amountText $displayCurrency';
   }
 
   String _formatWalletUpdated(DateTime? updatedAt) {

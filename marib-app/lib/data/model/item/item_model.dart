@@ -1,6 +1,7 @@
 import 'package:marib/data/model/category_model.dart';
 import 'package:marib/data/model/custom_field/custom_field_model.dart';
 import 'package:marib/data/model/seller_ratings_model.dart';
+import 'package:marib/utils/currency_utils.dart';
 
 
 
@@ -209,6 +210,7 @@ class ItemModel {
   int? isPurchased;
   List<UserRatings>? review;
   String? currency;
+  String? currencyCode;
 
   double? get latitude => _latitude;
   set latitude(dynamic value) {
@@ -237,6 +239,7 @@ class ItemModel {
     this.status,
     this.active,
     this.totalLikes,
+    this.currencyCode,
     this.views,
     this.videoLink,
     this.reviewLink,
@@ -276,6 +279,7 @@ class ItemModel {
     double? price,
     String? image,
     dynamic watermarkimage,
+    String? currencyCode,
     dynamic latitude,
     dynamic longitude,
     String? address,
@@ -354,6 +358,7 @@ class ItemModel {
       state: state ?? this.state,
       country: country ?? this.country,
       currency: currency ?? this.currency,
+      currencyCode: currencyCode ?? this.currencyCode,
       isPurchased: isPurchased ?? this.isPurchased,
       review: review ?? this.review,
     );
@@ -411,7 +416,14 @@ class ItemModel {
     m.isAlreadyReported = _toBool(json['is_already_reported']);
     m.allCategoryIds = json['all_category_ids'];
     m.rejectedReason = json['rejected_reason'];
-    m.currency = json['currency'];
+    final CurrencyParseResult currencyInfo = CurrencyUtils.parseCurrency(json);
+    final String? rawCurrency = json['currency']?.toString();
+    final String? displayCurrency = (currencyInfo.display ?? rawCurrency)?.trim();
+    m.currency = displayCurrency?.isEmpty == true ? null : displayCurrency;
+    final String? normalizedCurrencyCode =
+        currencyInfo.code ?? CurrencyUtils.normalizeCurrencyCode(displayCurrency);
+    m.currencyCode = normalizedCurrencyCode;
+
     m.city = json['city'];
     m.state = json['state'];
     m.country = json['country'];
@@ -492,6 +504,9 @@ class ItemModel {
     data['is_already_reported'] = isAlreadyReported;
     data['all_category_ids'] = allCategoryIds;
     data['currency'] = currency;
+    if (currencyCode != null && currencyCode!.trim().isNotEmpty) {
+      data['currency_code'] = currencyCode;
+    }
     data['rejected_reason'] = rejectedReason;
     data['is_purchased'] = isPurchased;
 

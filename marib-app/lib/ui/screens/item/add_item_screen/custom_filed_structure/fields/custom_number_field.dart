@@ -21,25 +21,25 @@ class CustomNumberField extends CustomField {
 
   // قيم منطق الحقل
   String _initialValue = "";
-  late final String _title;
+  String _title = "";
   String? _notes;
   dynamic _image;
   int? _maxLen;
   int? _minLen;
   bool _required = false;
-  late final dynamic _id;
+  dynamic _id;
 
   @override
   void init() {
     // التهيئة من parameters
-    _title = parameters['name'] ?? '';
+    _title = (parameters['name'] ?? '').toString();
     _notes = (parameters['notes']?.toString().isNotEmpty ?? false)
         ? parameters['notes'].toString()
         : null;
     _image = parameters['image'];
     _maxLen = parameters['max_length'];
     _minLen = parameters['min_length'];
-    _required = parameters['required'] == 1;
+    _required = parameters['required'] == 1 || parameters['required'] == true;
     _id = parameters['id'];
 
     // وضع التعديل
@@ -47,7 +47,7 @@ class CustomNumberField extends CustomField {
         parameters['value'] != null &&
         (parameters['value'] as List).isNotEmpty) {
       _initialValue = parameters['value'][0].toString();
-      update(() {});
+      update?.call(() {});
     }
     super.init();
   }

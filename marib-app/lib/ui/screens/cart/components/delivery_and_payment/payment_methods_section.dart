@@ -8,7 +8,8 @@ import 'package:marib/data/model/cart/checkout_models.dart';
 import 'shared_widgets.dart';
 import 'package:marib/data/model/wallet/wallet_summary.dart';
 import 'package:marib/utils/helper_utils.dart';
-
+import 'package:marib/utils/currency_utils.dart';
+import 'package:marib/utils/helper_utils.dart';
 
 
 /// ويدجت يعرض طرق الدفع المتاحة ويتعامل مع الحوارات الخاصة بالحوالة أو الكود.
@@ -29,16 +30,20 @@ class PaymentMethodsSection extends StatelessWidget {
   final bool allowPayOnDelivery;
   final bool payOnDeliverySelected;
   final bool walletCurrencyMatchesOrder;
-  final String? walletCurrency;
-  final String? orderCurrency;
+  final String? walletCurrencyCode;
+  final String? walletCurrencyLabel;
+  final String? orderCurrencyCode;
+  final String? orderCurrencyLabel;
 
   const PaymentMethodsSection({
     super.key,
     required this.loading,
     required this.addressReady,
     required this.walletCurrencyMatchesOrder,
-    required this.walletCurrency,
-    required this.orderCurrency,
+    required this.walletCurrencyCode,
+    required this.walletCurrencyLabel,
+    required this.orderCurrencyCode,
+    required this.orderCurrencyLabel,
     required this.banks,
     required this.selectedBankIndex,
     required this.onSelectBank,
@@ -164,16 +169,60 @@ class PaymentMethodsSection extends StatelessWidget {
       }) {
     final WalletSummary? summary = walletSummary;
     final double balance = summary?.balance ?? 0;
-    final String currency = (summary?.currency?.trim().isNotEmpty ?? false)
-        ? summary!.currency!.trim()
-        : 'ر.س';
-    final String? normalizedWalletCurrency = walletCurrency;
-    final String? normalizedOrderCurrency = orderCurrency;
+    String? sanitize(String? value) {
+      if (value == null) {
+        return null;
+      }
+      final String trimmed = value.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+
+    final String? summaryDisplay = sanitize(summary?.currency);
+    final String? summaryCode = CurrencyUtils.normalizeCurrencyCode(
+      summary?.currencyCode ?? summaryDisplay,
+    );
+
+    final String? resolvedWalletCode = CurrencyUtils.normalizeCurrencyCode(
+      walletCurrencyCode ?? summaryCode ?? walletCurrencyLabel ?? summaryDisplay,
+    );
+
+    final String? resolvedOrderCode = CurrencyUtils.normalizeCurrencyCode(
+      orderCurrencyCode ?? orderCurrencyLabel,
+    );
+
+    final String? walletDisplay = CurrencyUtils.displayToken(
+      label: sanitize(walletCurrencyLabel) ?? summaryDisplay,
+      fallback: sanitize(orderCurrencyLabel) ?? resolvedWalletCode ?? resolvedOrderCode,
+      code: resolvedWalletCode,
+    );
+
+    final String? orderDisplay = CurrencyUtils.displayToken(
+      label: sanitize(orderCurrencyLabel),
+      fallback: walletDisplay ?? resolvedOrderCode ?? resolvedWalletCode,
+      code: resolvedOrderCode,
+    );
+
+    final String currencyLabelForBalance = walletDisplay ??
+        orderDisplay ??
+        resolvedWalletCode ??
+        resolvedOrderCode ??
+        '';
     final String balanceText = summary == null
         ? '—'
-        : '${balance.toStringAsFixed(2)} $currency';
-    final String orderCurrencyLabel =
-        normalizedOrderCurrency ?? normalizedWalletCurrency ?? currency;
+        : currencyLabelForBalance.isEmpty
+        ? balance.toStringAsFixed(2)
+        : '${balance.toStringAsFixed(2)} $currencyLabelForBalance';
+
+    final String walletMessageLabel = walletDisplay ??
+        resolvedWalletCode ??
+        orderDisplay ??
+        resolvedOrderCode ??
+        '—';
+    final String orderMessageLabel = orderDisplay ??
+        resolvedOrderCode ??
+        walletDisplay ??
+        resolvedWalletCode ??
+        '—';
     String statusText;
     Color statusColor;
 
@@ -190,16 +239,15 @@ class PaymentMethodsSection extends StatelessWidget {
       statusText = 'تعذر تحميل رصيد المحفظة';
       statusColor = Colors.orange;
     } else if (!walletCurrencyMatchesOrder) {
-      final String walletCurrencyLabel =
-          normalizedWalletCurrency ?? currency;
+
       statusText =
-      'لا يمكن استخدام المحفظة بعملة $walletCurrencyLabel لطلب عملته $orderCurrencyLabel.';
+      'لا يمكن استخدام المحفظة بعملة $walletMessageLabel لطلب عملته $orderMessageLabel.';
       statusColor = Colors.orange;
     } else if (!walletEnabled) {
       final String requiredAmountText =
       requiredAmount.toStringAsFixed(2);
       statusText =
-      'الرصيد غير كافٍ لإجمالي $requiredAmountText $orderCurrencyLabel';
+      'الرصيد غير كافٍ لإجمالي $requiredAmountText $orderMessageLabel';
 
       statusColor = Colors.redAccent;
     } else {

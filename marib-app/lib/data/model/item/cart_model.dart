@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/utils/delivery_department.dart';
+import 'package:marib/utils/currency_utils.dart';
 
 
 
@@ -29,6 +30,7 @@ class Cart extends ItemModel {
     this.stockSnapshot,
     this.unitPriceLocked,
     String? currency,
+    String? currencyCode,
 
 
 
@@ -44,6 +46,7 @@ class Cart extends ItemModel {
     user: user,
     categoryId: categoryId,
     currency: currency,
+    currencyCode: currencyCode,
 
   );
 
@@ -122,8 +125,19 @@ class Cart extends ItemModel {
       explicitSection: item.itemType,
     );
 
+
+    String? _trimmed(String? value) {
+      final String? trimmed = value?.trim();
+      return (trimmed == null || trimmed.isEmpty) ? null : trimmed;
+    }
+
     final double resolvedUnitPrice = unitPrice ?? item.price ?? 0;
-    final String? resolvedCurrency = currency ?? item.currency;
+    final String? explicitCurrency = _trimmed(currency);
+    final String? resolvedCurrencyDisplay =
+        explicitCurrency ?? _trimmed(item.currency);
+    final String? resolvedCurrencyCode = CurrencyUtils.normalizeCurrencyCode(explicitCurrency) ??
+        item.currencyCode ??
+        CurrencyUtils.normalizeCurrencyCode(resolvedCurrencyDisplay);
 
     return Cart(
       id: item.id!,
@@ -147,7 +161,8 @@ class Cart extends ItemModel {
       stockSnapshot:
       stockSnapshot != null ? Map<String, dynamic>.from(stockSnapshot) : null,
       unitPriceLocked: unitPriceLocked,
-      currency: resolvedCurrency,
+      currency: resolvedCurrencyDisplay,
+      currencyCode: resolvedCurrencyCode,
     );
   }
 
@@ -299,10 +314,25 @@ class Cart extends ItemModel {
     _parseJsonMap(json['stock_snapshot'] ?? pivotMap?['stock_snapshot']);
     final bool? unitPriceLocked =
     _parseBool(json['unit_price_locked'] ?? pivotMap?['unit_price_locked']);
-    final String? currency =
-        _stringOrNull(json['currency']) ??
-            _stringOrNull(pivotMap?['currency']) ??
-            base.currency;
+
+    CurrencyParseResult currencyInfo = const CurrencyParseResult();
+
+    void absorbCurrency(Map<String, dynamic>? source) {
+      if (source == null || source.isEmpty) {
+        return;
+      }
+      currencyInfo = currencyInfo.mergePreferNew(CurrencyUtils.parseCurrency(source));
+    }
+
+    absorbCurrency(baseSource);
+    absorbCurrency(pivotMap);
+    absorbCurrency(json);
+
+    final String? currencyDisplay =
+    (currencyInfo.display ?? base.currency)?.trim();
+    final String? currencyCode = currencyInfo.code ??
+        base.currencyCode ??
+        CurrencyUtils.normalizeCurrencyCode(currencyDisplay);
 
     return Cart(
       id: itemId,
@@ -327,7 +357,8 @@ class Cart extends ItemModel {
       variantAttributes: variantAttributes,
       stockSnapshot: stockSnapshot,
       unitPriceLocked: unitPriceLocked,
-      currency: currency,
+      currency: currencyDisplay?.isEmpty == true ? null : currencyDisplay,
+      currencyCode: currencyCode,
     );
   }
 

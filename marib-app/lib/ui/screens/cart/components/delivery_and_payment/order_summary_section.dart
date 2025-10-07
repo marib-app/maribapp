@@ -3,6 +3,7 @@ import 'package:marib/data/model/cart/checkout_models.dart';
 import 'package:marib/data/model/item/cart_model.dart';
 
 import 'shared_widgets.dart';
+import 'package:marib/utils/currency_utils.dart';
 
 
 
@@ -46,25 +47,54 @@ class OrderSummarySection extends StatelessWidget {
 
 
   String _resolveCurrency() {
-    final String? shippingCurrencyLabel = shippingCurrency?.trim();
-    if (shippingCurrencyLabel != null && shippingCurrencyLabel.isNotEmpty) {
-      return shippingCurrencyLabel;
+    String? display;
+    String? code;
+
+    void considerDisplay(String? candidate) {
+      if (display != null) {
+        return;
+      }
+      final String? trimmed = candidate?.trim();
+      if (trimmed != null && trimmed.isNotEmpty) {
+        display = trimmed;
+      }
     }
-    final String? deliveryCurrency = deliveryInfo?.currency;
-    if (deliveryCurrency != null && deliveryCurrency.trim().isNotEmpty) {
-      return deliveryCurrency.trim();
-    }
-
-
-
-    for (final Cart item in cartItems) {
-      final String? candidate = item.currency;
-      if (candidate != null && candidate.trim().isNotEmpty) {
-        return candidate.trim();
+    void considerCode(String? candidate) {
+      if (code != null) {
+        return;
+      }
+      final String? normalized = CurrencyUtils.normalizeCurrencyCode(candidate);
+      if (normalized != null) {
+        code = normalized;
       }
     }
 
-    return '';
+    considerDisplay(shippingCurrency);
+    considerCode(shippingCurrency);
+
+    if (deliveryInfo != null) {
+      considerDisplay(deliveryInfo!.currency);
+      considerCode(deliveryInfo!.currencyCode);
+      considerCode(deliveryInfo!.currency);
+    }
+
+    for (final Cart item in cartItems) {
+      considerDisplay(item.currency);
+      considerCode(item.currencyCode);
+      considerCode(item.currency);
+    }
+
+    if (code == null) {
+      considerCode(display);
+    }
+
+    return CurrencyUtils.displayToken(
+      label: display,
+      fallback: code,
+      code: code,
+    ) ??
+        code ??
+        '';
   }
 
 

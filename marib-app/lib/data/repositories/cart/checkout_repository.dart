@@ -19,6 +19,7 @@ import 'package:marib/data/repositories/wallet_repository.dart';
 import 'package:marib/data/model/cart/cart_discount.dart';
 import 'package:marib/data/model/orders/user_order.dart';
 import 'package:marib/data/repositories/orders/orders_repository.dart';
+import 'package:marib/utils/currency_utils.dart';
 
 
 
@@ -296,8 +297,8 @@ class CheckoutRepository {
           'stock_snapshot': item.stockSnapshot,
         if (item.unitPrice != null) 'unit_price': item.unitPrice,
         if (item.unitPriceLocked != null) 'unit_price_locked': item.unitPriceLocked,
-        if (item.currency != null && item.currency!.trim().isNotEmpty)
-          'currency': item.currency!.trim(),
+        ..._currencyPayload(item),
+
       };
     }).toList();
 
@@ -335,6 +336,11 @@ class CheckoutRepository {
     normalizeDeliveryDepartment(deliveryInfo?.department);
 
 
+    final String? deliveryCurrencyDisplay = deliveryInfo?.currency?.trim();
+    final String? deliveryCurrencyCode = CurrencyUtils.normalizeCurrencyCode(
+        deliveryInfo?.currencyCode ?? deliveryCurrencyDisplay);
+
+
     final Map<String, dynamic> delivery = <String, dynamic>{
       if (deliveryDepartmentCode != null) 'department': deliveryDepartmentCode,
 
@@ -344,8 +350,13 @@ class CheckoutRepository {
         'fee_display': deliveryInfo.feeDisplay!.trim(),
       if (deliveryPriceDisplay != null && deliveryPriceDisplay.trim().isNotEmpty)
         'selected_fee_display': deliveryPriceDisplay.trim(),
-      if (deliveryInfo?.currency != null && deliveryInfo!.currency!.trim().isNotEmpty)
-        'currency': deliveryInfo.currency!.trim(),
+      if (deliveryCurrencyCode != null && deliveryCurrencyCode.isNotEmpty) ...{
+        'currency': deliveryCurrencyCode,
+        'currency_code': deliveryCurrencyCode,
+      } else if (deliveryCurrencyDisplay != null && deliveryCurrencyDisplay.isNotEmpty)
+        'currency': deliveryCurrencyDisplay,
+      if (deliveryCurrencyDisplay != null && deliveryCurrencyDisplay.isNotEmpty)
+        'currency_display': deliveryCurrencyDisplay,
       if (deliveryInfo?.userCoordinates?.lat != null)
         'user_lat': deliveryInfo!.userCoordinates!.lat,
       if (deliveryInfo?.userCoordinates?.lng != null)
@@ -432,7 +443,26 @@ class CheckoutRepository {
 
 
 
+  Map<String, dynamic> _currencyPayload(Cart item) {
+    final Map<String, dynamic> payload = <String, dynamic>{};
+    final String? displayCurrency = item.currency?.trim();
+    final String? normalizedCurrencyCode =
+        item.currencyCode ?? CurrencyUtils.normalizeCurrencyCode(displayCurrency);
 
+    if (normalizedCurrencyCode != null && normalizedCurrencyCode.isNotEmpty) {
+      payload['currency'] = normalizedCurrencyCode;
+      payload['currency_code'] = normalizedCurrencyCode;
+    } else if (displayCurrency != null && displayCurrency.isNotEmpty) {
+      payload['currency'] = displayCurrency;
+    }
+
+    if (displayCurrency != null && displayCurrency.isNotEmpty) {
+      payload['currency_display'] = displayCurrency;
+      payload['currency_label'] = displayCurrency;
+    }
+
+    return payload;
+  }
 
 
 
@@ -623,11 +653,16 @@ class CheckoutRepository {
     ])) ??
         (feeValue != null ? feeValue.toString() : null);
 
-    final String? currency = _asString(_firstValue(map, const [
+    final CurrencyParseResult currencyInfo = CurrencyUtils.parseCurrency(map);
+    final String? currencyDisplay =
+    (currencyInfo.display ?? _asString(_firstValue(map, const [
       ['currency'],
-      ['currency_code'],
+      ['currency_display'],
       ['meta', 'currency'],
-    ]));
+    ])))
+        ?.trim();
+    final String? currencyCode = currencyInfo.code ??
+        CurrencyUtils.normalizeCurrencyCode(currencyDisplay);
 
     final CheckoutCoordinates? userCoordinates =
     _parseCoordinates(_firstValue(map, const [
@@ -662,7 +697,8 @@ class CheckoutRepository {
       distanceKm: distanceKm,
       fee: feeValue,
       feeDisplay: feeDisplay,
-      currency: currency,
+      currency: currencyDisplay,
+      currencyCode: currencyCode,
       tiers: tiers,
       userCoordinates: userCoordinates,
       vendorCoordinates: vendorCoordinates,

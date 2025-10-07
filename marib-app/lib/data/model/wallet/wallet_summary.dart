@@ -1,9 +1,11 @@
 import 'wallet_filter.dart';
+import 'package:marib/utils/currency_utils.dart';
 
 class WalletSummary {
   WalletSummary({
     required this.balance,
     this.currency,
+    this.currencyCode,
     this.lastUpdatedAt,
     List<WalletFilter>? availableFilters,
     Map<String, dynamic>? raw,
@@ -15,6 +17,7 @@ class WalletSummary {
   final DateTime? lastUpdatedAt;
   final List<WalletFilter> availableFilters;
   final Map<String, dynamic> raw;
+  final String? currencyCode;
 
   factory WalletSummary.fromJson(Map<String, dynamic> json) {
     final balanceSource =
@@ -29,10 +32,21 @@ class WalletSummary {
       meta is Map ? (meta as Map)['filters'] : null,
     );
 
+
+    final CurrencyParseResult currencyInfo = CurrencyUtils.parseCurrency(json);
+    final String? currencyFromJson =
+    _parseString(json['currency'] ?? json['balance_currency']);
+    final String? displayCurrency = (currencyInfo.display ?? currencyFromJson ??
+        balanceDetails.currency)
+        ?.trim();
+    final String? normalizedCurrencyCode = currencyInfo.code ??
+        CurrencyUtils.normalizeCurrencyCode(displayCurrency) ??
+        CurrencyUtils.normalizeCurrencyCode(balanceDetails.currency);
+
     return WalletSummary(
       balance: balance,
-      currency: _parseString(json['currency'] ?? json['balance_currency']) ??
-          balanceDetails.currency,
+      currency: displayCurrency,
+      currencyCode: normalizedCurrencyCode,
 
       lastUpdatedAt: _parseDate(json['last_updated_at'] ?? json['updated_at']),
       availableFilters: [
@@ -50,6 +64,7 @@ class WalletSummary {
   WalletSummary copyWith({
     double? balance,
     String? currency,
+    String? currencyCode,
     DateTime? lastUpdatedAt,
     List<WalletFilter>? availableFilters,
     Map<String, dynamic>? raw,
@@ -57,6 +72,7 @@ class WalletSummary {
     return WalletSummary(
       balance: balance ?? this.balance,
       currency: currency ?? this.currency,
+      currencyCode: currencyCode ?? this.currencyCode,
       lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt,
       availableFilters: availableFilters ?? this.availableFilters,
       raw: raw ?? this.raw,

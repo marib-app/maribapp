@@ -16,65 +16,145 @@ import 'package:marib/utils/payment/manual_payment_service.dart'
 
 
 
-
-
-
-
-
-
-
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-
-class SoonScreen extends StatelessWidget {
+class SoonScreen extends StatefulWidget {
   const SoonScreen({super.key});
-  static Route route(RouteSettings s) => MaterialPageRoute(builder: (_) => const SoonScreen());
+
+  static Route route(RouteSettings routeSettings) {
+    return BlurredRouter(builder: (_) => const SoonScreen());
+  }
+
+  @override
+  State<SoonScreen> createState() => SoonScreenState();
+}
+
+class SoonScreenState extends State<SoonScreen> with TickerProviderStateMixin {
+  Future<void> _openBankTransferForPackage({
+    required int packageId,
+    required double amount,
+    String currency = 'YER',
+    required String packageType, // 'item_listing' | 'advertisement' | 'user'
+    int? itemId,
+  }) async {
+    final token = HiveUtils.getJWT();
+    if (token == null || token.isEmpty) {
+      // UiUtils.showSnackBarMessage(context, "سجّل الدخول أولاً");
+      return;
+    }
+
+    final result = await Navigator.of(context).push(
+      BankTransferScreen.route(
+        RouteSettings(
+          name: '/bank-transfer',
+          arguments: BankTransferArgs(
+            token: token,
+            packageId: packageId,
+            amount: amount,
+            currency: currency,
+            packageType: packageType,
+            purpose: 'package',
+            itemId: itemId,
+          ),
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+    final success = result is ManualPaymentSubmissionResult
+        ? result.success
+        : result == true;
+    if (success) {
+
+      // UiUtils.showSnackBarMessage(context, "تم رفع الإيصال وبانتظار المراجعة");
+      // UiUtils.showSnackBarMessage(context, "تم رفع الإيصال وبانتظار المراجعة");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return ScrollConfiguration(
-      // يزيل الوهج الأزرق نهائيًا
-      behavior: const _NoGlowBehavior(),
+    return AnnotatedRegion(
+      value: UiUtils.getSystemUiOverlayStyle(
+        context: context,
+        statusBarColor: context.color.secondaryColor,
+      ),
       child: Scaffold(
-        appBar: AppBar(title: const Text('تمرير متزن بلا وهج')),
-        body: NotificationListener<ScrollNotification>(
-          onNotification: (n) {
-            if (n is OverscrollNotification) {
-              HapticFeedback.lightImpact(); // اهتزاز خفيف فقط
-            }
-            return false;
-          },
-          child: ListView.builder(
-            physics: const ClampingScrollPhysics(), // تمرير ثابت بلا ارتداد
-            itemCount: 40,
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-            itemBuilder: (c, i) => Container(
-              margin: const EdgeInsets.symmetric(vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(color: Colors.black12, blurRadius: 4, offset: const Offset(0, 2))
-                ],
+        backgroundColor: context.color.primaryColor,
+        appBar: UiUtils.buildAppBar(
+          context,
+          showBackButton: true,
+          title: "soon".translate(context),
+          bottomHeight: 20,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SvgPicture.asset('assets/svg/soon.svg', width: 200, height: 200),
+              const SizedBox(height: 20),
+              Text(
+                "Coming Soon",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: context.color.territoryColor,
+                ),
               ),
-              child: ListTile(
-                leading: CircleAvatar(child: Text('${i + 1}')),
-                title: Text('عنصر ${i + 1}', style: const TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('تجربة تمرير هادئ بلا شدّ ولا وهج'),
+              const SizedBox(height: 40),
+
+              // شاشة الباقات (كما هي)
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: context.color.territoryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () async {
+                  final res = await Navigator.of(context).push(
+                    SubscriptionPackageListScreen.route(
+                      const RouteSettings(
+                        name: '/subscription-packages',
+                        arguments: {'source': 'soon_screen_test'},
+                      ),
+                    ),
+                  );
+                  if (res == true) {
+                    // UiUtils.showSnackBarMessage(context, "✅ Package Activated!");
+                  }
+                },
+                child: const Text("جرّب شاشة الباقات",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
-            ),
+
+              const SizedBox(height: 14),
+
+              // اختبار التحويل البنكي مباشرةً
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: context.color.territoryColor.withOpacity(0.85),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () async {
+                  const pkgId = 1;
+                  const amount = 5000.0;
+                  const currency = 'YER';
+                  const packageType = 'item_listing';
+                  await _openBankTransferForPackage(
+                    packageId: pkgId,
+                    amount: amount,
+                    currency: currency,
+                    packageType: packageType,
+                    itemId: null,
+                  );
+                },
+                child: const Text("ادفع الآن (تحويل بنكي)",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ],
           ),
         ),
-        backgroundColor: const Color(0xFFF6F7FB),
       ),
     );
-  }
-}
-
-class _NoGlowBehavior extends MaterialScrollBehavior {
-  const _NoGlowBehavior();
-  @override
-  Widget buildOverscrollIndicator(BuildContext context, Widget child, ScrollableDetails details) {
-    return child; // لا Glow ولا Stretch
   }
 }

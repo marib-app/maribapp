@@ -17,6 +17,7 @@ import 'package:marib/data/model/cart/cart_safety_tip.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/constant.dart';
+import 'package:marib/utils/currency_utils.dart';
 
 
 
@@ -137,83 +138,70 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   String? _resolveCartCurrency(CartState state) {
-    final List<String?> candidates = <String?>[
-      _currencyFromMap(state.deliveryQuote),
-      _currencyFromMap(state.departmentPolicy),
-      _currencyFromMap(state.blocking),
-      _currencyFromMap(state.support),
+    final List<CurrencyParseResult> infoCandidates = <CurrencyParseResult>[
+      _currencyInfoFromMap(state.deliveryQuote),
+      _currencyInfoFromMap(state.departmentPolicy),
+      _currencyInfoFromMap(state.blocking),
+      _currencyInfoFromMap(state.support),
     ];
 
-    for (final String? candidate in candidates) {
-      if (candidate != null) {
-        return candidate;
+    String? display;
+    String? code;
+
+    void considerDisplay(String? candidate) {
+      if (display != null) {
+        return;
       }
+      final String? trimmed = candidate?.trim();
+      if (trimmed != null && trimmed.isNotEmpty) {
+        display = trimmed;
+      }
+    }
+
+    void considerCode(String? candidate) {
+      if (code != null) {
+        return;
+      }
+      final String? normalized = CurrencyUtils.normalizeCurrencyCode(candidate);
+      if (normalized != null) {
+        code = normalized;
+      }
+    }
+
+    for (final CurrencyParseResult info in infoCandidates) {
+      considerDisplay(info.display);
+      considerCode(info.code);
     }
 
     for (final Cart item in state.items) {
-      final String? normalized = _normalizeCurrencyToken(item.currency);
-      if (normalized != null) {
-        return normalized;
-      }
+      considerDisplay(item.currency);
+      considerCode(item.currencyCode);
+      considerCode(item.currency);
     }
 
-    final String fallback = Constant.currencySymbol.trim();
-    return fallback.isEmpty ? null : fallback;
+    if (code == null) {
+      considerCode(display);
+    }
+
+    final String? fallbackSymbol = () {
+      final String trimmed = Constant.currencySymbol.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }();
+
+    final String? token = CurrencyUtils.displayToken(
+      label: display,
+      fallback: code ?? fallbackSymbol,
+      code: code,
+    );
+
+    return token ?? fallbackSymbol ?? code;
   }
 
-  String? _currencyFromMap(Map<String, dynamic>? source) {
+  CurrencyParseResult _currencyInfoFromMap(Map<String, dynamic>? source) {
     if (source == null || source.isEmpty) {
-      return null;
+      return const CurrencyParseResult();
     }
-
-    const List<String> currencyKeys = <String>[
-      'currency',
-      'currency_code',
-      'currencyCode',
-      'currency_display',
-      'currencyDisplay',
-      'currency_symbol',
-      'currencySymbol',
-    ];
-
-    for (final String key in currencyKeys) {
-      if (!source.containsKey(key)) {
-        continue;
-      }
-      final dynamic value = source[key];
-      final String? direct = _normalizeCurrencyToken(_asString(value));
-      if (direct != null) {
-        return direct;
-      }
-      if (value is Map<String, dynamic>) {
-        final String? nested = _currencyFromMap(value);
-        if (nested != null) {
-          return nested;
-        }
-      }
-    }
-
-    for (final dynamic entry in source.values) {
-      if (entry is Map<String, dynamic>) {
-        final String? nested = _currencyFromMap(entry);
-        if (nested != null) {
-          return nested;
-        }
-      }
-    }
-
-    return null;
-  }
-
-  String? _normalizeCurrencyToken(String? token) {
-    if (token == null) {
-      return null;
-    }
-    final String trimmed = token.trim();
-    if (trimmed.isEmpty) {
-      return null;
-    }
-    return trimmed.toUpperCase();
+    return CurrencyUtils.parseCurrency(source);
   }
 
   String? _asString(dynamic value) {

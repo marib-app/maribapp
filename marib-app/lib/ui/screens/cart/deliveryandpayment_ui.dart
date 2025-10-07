@@ -46,8 +46,10 @@ class DeliveryAndPaymentUI extends StatelessWidget {
   final String? selectedPaymentMethod;
   final void Function(int index) onSelectBank;
   final bool walletCurrencyMatchesOrder;
-  final String? walletCurrency;
-  final String? orderCurrency;
+  final String? walletCurrencyCode;
+  final String? walletCurrencyLabel;
+  final String? orderCurrencyCode;
+  final String? orderCurrencyLabel;
   final WalletSummary? walletSummary;
   final bool walletAvailable;
   final bool walletSelected;
@@ -108,8 +110,10 @@ class DeliveryAndPaymentUI extends StatelessWidget {
     required this.onRemoveCoupon,
     this.onDismissCouponMessage,
     required this.walletCurrencyMatchesOrder,
-    required this.walletCurrency,
-    required this.orderCurrency,
+    required this.walletCurrencyCode,
+    required this.walletCurrencyLabel,
+    required this.orderCurrencyCode,
+    required this.orderCurrencyLabel,
     required this.discounts,
     required this.paymentTimingLabel,
     required this.shippingPayment,
@@ -262,8 +266,10 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                   walletSelected: walletSelected,
                   walletEnabled: walletEnabled,
                   walletCurrencyMatchesOrder: walletCurrencyMatchesOrder,
-                  walletCurrency: walletCurrency,
-                  orderCurrency: orderCurrency,
+                  walletCurrencyCode: walletCurrencyCode,
+                  walletCurrencyLabel: walletCurrencyLabel,
+                  orderCurrencyCode: orderCurrencyCode,
+                  orderCurrencyLabel: orderCurrencyLabel,
                   onSelectWallet: onSelectWallet,
                   requiredAmount: requiredAmount,
                   allowPayNow: allowPayNow,

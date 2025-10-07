@@ -19,8 +19,10 @@ class CartPaymentMethodsTab extends StatelessWidget {
     required this.walletSummary,
     required this.walletAvailable,
     required this.walletCurrencyMatchesOrder,
-    required this.walletCurrency,
-    required this.orderCurrency,
+    required this.walletCurrencyCode,
+    required this.walletCurrencyLabel,
+    required this.orderCurrencyCode,
+    required this.orderCurrencyLabel,
     required this.walletSelected,
     required this.walletEnabled,
     required this.onSelectWallet,
@@ -68,11 +70,17 @@ class CartPaymentMethodsTab extends StatelessWidget {
   /// ما إذا كانت عملة المحفظة تطابق عملة الطلب الحالية.
   final bool walletCurrencyMatchesOrder;
 
-  /// رمز عملة المحفظة، بعد التطبيع إن وجد.
-  final String? walletCurrency;
+  /// رمز عملة المحفظة بعد التطبيع إن وجد.
+  final String? walletCurrencyCode;
 
-  /// رمز عملة الطلب الحالية، بعد التطبيع إن وجد.
-  final String? orderCurrency;
+  /// نص عرض عملة المحفظة.
+  final String? walletCurrencyLabel;
+
+  /// رمز عملة الطلب الحالية بعد التطبيع إن وجد.
+  final String? orderCurrencyCode;
+
+  /// نص عرض عملة الطلب الحالية.
+  final String? orderCurrencyLabel;
 
 
   /// إجمالي المبلغ المطلوب للدفع.
@@ -159,8 +167,10 @@ class CartPaymentMethodsTab extends StatelessWidget {
               allowPayOnDelivery: allowPayOnDelivery,
               payOnDeliverySelected: payOnDeliverySelected,
               walletCurrencyMatchesOrder: walletCurrencyMatchesOrder,
-              walletCurrency: walletCurrency,
-              orderCurrency: orderCurrency,
+              walletCurrencyCode: walletCurrencyCode,
+              walletCurrencyLabel: walletCurrencyLabel,
+              orderCurrencyCode: orderCurrencyCode,
+              orderCurrencyLabel: orderCurrencyLabel,marib-app/lib/ui/screens/cart/delivery_and_payment.dart
             ),
           ],
         ),

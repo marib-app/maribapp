@@ -27,6 +27,7 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/data/model/orders/user_order.dart';
 import 'components/delivery_and_payment/delivery_payment_timing_selector.dart';
 
+import 'package:marib/utils/currency_utils.dart';
 
 
 
@@ -2249,8 +2250,8 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
 
       if (!_walletCurrencyMatchesOrder) {
         final String walletCurrency =
-            _normalizeCurrencyToken(_walletSummary?.currency) ?? 'المحفظة';
-        final String orderCurrency = _orderCurrency ?? 'الطلب';
+            _currencyDisplayToken(_walletSummary?.currency) ?? 'المحفظة';
+        final String orderCurrency = _orderCurrencyLabel ?? 'الطلب';
         HelperUtils.showSnackBarMessage(
           context,
           'لا يمكن إتمام الدفع بالمحفظة بعملة $walletCurrency لطلب عملته $orderCurrency.',
@@ -2261,7 +2262,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       if (!_walletCanPay) {
         final double requiredAmount = _resolveRequiredPaymentAmount();
         final String requiredDisplay =
-        _formatCurrencyAmount(requiredAmount, currency: _orderCurrency);
+        _formatCurrencyAmount(requiredAmount, currency: _orderCurrencyLabel);
         HelperUtils.showSnackBarMessage(
           context,
           'رصيد المحفظة غير كافٍ لإكمال المبلغ المطلوب ($requiredDisplay).',
@@ -2793,72 +2794,116 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
   }
 
 
-  String? _normalizeCurrencyToken(String? value) {
+  String? _normalizeCurrencyToken(String? value, {String? code}) {
+    final String? normalized = CurrencyUtils.normalizeCurrencyCode(code ?? value);
+    if (normalized != null) {
+      return normalized;
+    }
+
     final String? trimmed = value?.trim();
     if (trimmed == null || trimmed.isEmpty) {
       return null;
     }
-    return trimmed.toUpperCase();
+    return trimmed;
   }
 
-  String? _currencyFromMap(Map<String, dynamic>? source) {
+  String? _currencyDisplayToken(String? value, {String? code, String? fallback}) {
+    final String? trimmed = value?.trim();
+    final String? normalized = CurrencyUtils.normalizeCurrencyCode(code ?? trimmed);
+    return CurrencyUtils.displayToken(
+      label: (trimmed == null || trimmed.isEmpty) ? null : trimmed,
+      fallback: fallback ?? normalized,
+      code: normalized,
+    ) ??
+        fallback ??
+        normalized;
+  }
+
+  CurrencyParseResult _currencyInfoFromMap(Map<String, dynamic>? source) {
     if (source == null || source.isEmpty) {
-      return null;
+      return const CurrencyParseResult();
     }
-    const List<String> keys = <String>[
-      'currency',
-      'currency_code',
-      'currencyCode',
-      'currency_display',
-      'currencyDisplay',
-      'currency_symbol',
-      'currencySymbol',
-    ];
-    for (final String key in keys) {
-      if (!source.containsKey(key)) {
-        continue;
-      }
-      final dynamic value = source[key];
-      if (value == null) {
-        continue;
-      }
-      final String? normalized = _normalizeCurrencyToken(value.toString());
-      if (normalized != null) {
-        return normalized;
-      }
-    }
-    return null;
+    return CurrencyUtils.parseCurrency(source);
   }
 
-  String? get _orderCurrency {
-    final List<String?> directCandidates = <String?>[
-      _currencyFromMap(_depositInfo),
-      _currencyFromMap(_latestCartState.deliveryQuote),
-      _normalizeCurrencyToken(_shippingCurrency),
-      _normalizeCurrencyToken(_deliveryInfo?.currency),
-    ];
+  CurrencyParseResult _currencyInfoFromValue(dynamic value) {
+    if (value == null) {
+      return const CurrencyParseResult();
+    }
+    if (value is Map<String, dynamic>) {
+      return CurrencyUtils.parseCurrency(value);
+    }
+    final String? stringValue = value.toString();
+    final String? trimmed = stringValue.trim();
+    if (trimmed.isEmpty) {
+      return const CurrencyParseResult();
+    }
+    final String? normalized = CurrencyUtils.normalizeCurrencyCode(trimmed);
+    return CurrencyParseResult(code: normalized, display: trimmed);
+  }
 
-    for (final String? candidate in directCandidates) {
-      if (candidate != null) {
-        return candidate;
+  CurrencyParseResult get _orderCurrencyInfo {
+    final List<CurrencyParseResult> directCandidates = <CurrencyParseResult>[
+      _currencyInfoFromMap(_depositInfo),
+      _currencyInfoFromMap(_latestCartState.deliveryQuote),
+      _currencyInfoFromValue(_shippingCurrency),
+      _currencyInfoFromValue(_deliveryInfo?.currency),
+    ];
+    String? display;
+    String? code;
+
+    void considerDisplay(String? candidate) {
+      if (display != null) {
+        return;
       }
+      final String? trimmed = candidate?.trim();
+      if (trimmed != null && trimmed.isNotEmpty) {
+        display = trimmed;
+      }
+    }
+
+    void considerCode(String? candidate) {
+      if (code != null) {
+        return;
+      }
+      final String? normalized = CurrencyUtils.normalizeCurrencyCode(candidate);
+      if (normalized != null && normalized.isNotEmpty) {
+        code = normalized;
+      }
+    }
+    for (final CurrencyParseResult info in directCandidates) {
+      considerDisplay(info.display);
+      considerCode(info.code);
+    }
+
+    void considerCartItem(Cart item) {
+      considerDisplay(item.currency);
+      considerCode(item.currencyCode);
+      considerCode(item.currency);
     }
 
     for (final Cart item in _cartItems) {
-      final String? normalized = _normalizeCurrencyToken(item.currency);
-      if (normalized != null) {
-        return normalized;
-      }
+      considerCartItem(item);
+
     }
 
     for (final Cart item in _latestCartState.items) {
-      final String? normalized = _normalizeCurrencyToken(item.currency);
-      if (normalized != null) {
-        return normalized;
-      }
+      considerCartItem(item);
+
     }
 
-    return null;
+    if (code == null) {
+      considerCode(display);
+    }
+
+    return CurrencyParseResult(code: code, display: display);
+  }
+
+  String? get _orderCurrencyCode => _orderCurrencyInfo.code;
+
+  String? get _orderCurrencyLabel {
+    final CurrencyParseResult info = _orderCurrencyInfo;
+    return _currencyDisplayToken(info.display, code: info.code);
   }
 
 
@@ -2873,23 +2918,34 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       return;
     }
 
-    final String? walletCurrency = _normalizeCurrencyToken(_walletSummary?.currency);
-    final String? orderCurrency = _orderCurrency;
+    final String? walletCurrency = _normalizeCurrencyToken(
+      _walletSummary?.currency,
+      code: _walletSummary?.currencyCode,
+    );
+    final String? orderCurrency = _orderCurrencyCode;
 
     if (walletCurrency != null && orderCurrency != null &&
         walletCurrency != orderCurrency) {
+
+      final String walletLabel = _currencyDisplayToken(
+        _walletSummary?.currency,
+        code: _walletSummary?.currencyCode,
+        fallback: walletCurrency,
+      ) ??
+          walletCurrency;
+      final String orderLabel = _orderCurrencyLabel ?? orderCurrency;
+
       HelperUtils.showSnackBarMessage(
         context,
-        'لا يمكن استخدام المحفظة بعملة $walletCurrency لطلب عملته $orderCurrency.',
+        'لا يمكن استخدام المحفظة بعملة $walletLabel لطلب عملته $orderLabel.',
       );
 
       return;
     }
 
     if (!_walletCanPay) {
-      final double requiredAmount = _resolveRequiredPaymentAmount();
       final String requiredDisplay =
-      _formatCurrencyAmount(requiredAmount, currency: orderCurrency);
+      _formatCurrencyAmount(requiredAmount, currency: _orderCurrencyLabel);
       HelperUtils.showSnackBarMessage(
         context,
         'رصيد المحفظة غير كافٍ لإكمال المبلغ المطلوب ($requiredDisplay).',
@@ -2907,8 +2963,11 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
 
 
   bool get _walletCurrencyMatchesOrder {
-    final String? walletCurrency = _normalizeCurrencyToken(_walletSummary?.currency);
-    final String? orderCurrency = _orderCurrency;
+    final String? walletCurrency = _normalizeCurrencyToken(
+      _walletSummary?.currency,
+      code: _walletSummary?.currencyCode,
+    );
+    final String? orderCurrency = _orderCurrencyCode;
     if (walletCurrency == null || orderCurrency == null) {
       return true;
     }
@@ -3438,9 +3497,17 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     final Map<String, dynamic>? depositViewModel = _buildDepositViewModel();
     final double requiredAmount = _resolveRequiredPaymentAmount();
 
-    final String? walletCurrency =
-    _normalizeCurrencyToken(_walletSummary?.currency);
-    final String? orderCurrency = _orderCurrency;
+    final String? orderCurrencyCode = _orderCurrencyCode;
+    final String? orderCurrencyLabel = _orderCurrencyLabel;
+    final String? walletCurrencyCode = _normalizeCurrencyToken(
+      _walletSummary?.currency,
+      code: _walletSummary?.currencyCode,
+    );
+    final String? walletCurrencyLabel = _currencyDisplayToken(
+      _walletSummary?.currency,
+      code: walletCurrencyCode ?? _walletSummary?.currencyCode,
+      fallback: orderCurrencyLabel ?? orderCurrencyCode,
+    );
 
 
     final String requiredAmountDisplay =
@@ -3481,8 +3548,10 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         walletEnabled: addressReady && _walletCanPay,
 
         walletCurrencyMatchesOrder: _walletCurrencyMatchesOrder,
-        walletCurrency: walletCurrency,
-        orderCurrency: orderCurrency,
+        walletCurrencyCode: walletCurrencyCode,
+        walletCurrencyLabel: walletCurrencyLabel,
+        orderCurrencyCode: orderCurrencyCode,
+        orderCurrencyLabel: orderCurrencyLabel,
 
         allowPayNow: _allowPayNow,
         allowPayOnDelivery: _allowPayOnDelivery,

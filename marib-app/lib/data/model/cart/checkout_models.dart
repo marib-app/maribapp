@@ -66,12 +66,14 @@ class CheckoutDeliveryInfo {
     this.fee,
     this.feeDisplay,
     this.currency,
+    this.currencyCode,
     this.tiers = const <CheckoutDeliveryTier>[],
     this.userCoordinates,
     this.vendorCoordinates,
     this.department,
     this.raw,
   });
+  final String? currencyCode;
 
   final double? distanceKm;
   final num? fee;

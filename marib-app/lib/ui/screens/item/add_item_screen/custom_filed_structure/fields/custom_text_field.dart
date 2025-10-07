@@ -190,17 +190,46 @@ class CustomFieldText extends CustomField {
   @override
   String type = "textbox";
 
-  late TextFieldController _controller;
+  TextFieldController? _controller;
 
+  TextFieldController _ensureController() {
+    final params = _asStringDynamicMap(parameters);
+
+    final existing = _controller;
+    if (existing == null) {
+      _controller = TextFieldController.fromParams(params);
+      return _controller!;
+    }
+
+    final next = TextFieldController.fromParams(params);
+
+    final hasChanged =
+        existing.name != next.name ||
+            existing.notes != next.notes ||
+            existing.image != next.image ||
+            existing.isRequired != next.isRequired ||
+            existing.maxLen != next.maxLen ||
+            existing.minLen != next.minLen ||
+            existing.softMaxLen != next.softMaxLen ||
+            existing.id != next.id ||
+            existing.initController != next.initController ||
+            existing.initialValue != next.initialValue;
+
+    if (hasChanged) {
+      _controller = next;
+    }
+
+    return _controller!;
+  }
   @override
   void init() {
-    _controller = TextFieldController.fromParams(_asStringDynamicMap(parameters));
-    update(() {}); // يحافظ على السلوك السابق (تهيئة ثم إعادة بناء)
+    _ensureController();
+    update?.call(() {}); // يحافظ على السلوك السابق (تهيئة ثم إعادة بناء)
     super.init();
   }
 
   @override
   Widget render() {
-    return TextFieldView(controller: _controller);
+    return TextFieldView(controller: _ensureController());
   }
 }

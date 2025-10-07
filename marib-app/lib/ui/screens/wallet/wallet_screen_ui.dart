@@ -21,6 +21,7 @@ import 'package:marib/ui/screens/wallet/wallet_transfer_sheet.dart';
 import 'package:marib/ui/screens/wallet/wallet_withdrawal_sheet.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/ui/screens/wallet/wallet_manual_payments_section.dart';
+import 'package:marib/utils/currency_utils.dart';
 
 
 
@@ -76,15 +77,49 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
   String _formatAmount(double amount, String? currency) {
     final formatted = _numberFormat.format(amount.abs());
     final withSign = amount >= 0 ? '+$formatted' : '-$formatted';
-    return currency == null || currency.isEmpty
+    final WalletSummary? summary = _activeSummary();
+    String? display = currency?.trim();
+    String? code;
+
+    if (summary != null) {
+      display = (display != null && display.isNotEmpty) ? display : summary.currency;
+      code = summary.currencyCode ??
+          CurrencyUtils.normalizeCurrencyCode(summary.currency);
+    } else {
+      code = CurrencyUtils.normalizeCurrencyCode(display);
+    }
+
+    final String? resolved = CurrencyUtils.displayToken(
+      label: display,
+      fallback: code,
+      code: code,
+    );
+
+    return resolved == null || resolved.isEmpty
+
         ? withSign
-        : '$withSign ${currency.toUpperCase()}';
+        : '$withSign $resolved';
   }
 
   String? _summaryCurrency() {
+    final WalletSummary? summary = _activeSummary();
+    if (summary == null) {
+      return null;
+    }
+    return CurrencyUtils.displayToken(
+      label: summary.currency,
+      fallback: summary.currencyCode,
+      code: summary.currencyCode,
+    );
+  }
+
+  WalletSummary? _activeSummary() {
     final state = context.read<WalletSummaryCubit>().state;
     if (state is WalletSummaryLoadSuccess) {
-      return state.summary.currency;
+      return state.summary;
+    }
+    if (state is WalletSummaryLoading && state.previous != null) {
+      return state.previous!.summary;
     }
     return null;
   }

@@ -3,6 +3,12 @@ import 'package:marib/data/model/cart/checkout_models.dart';
 import 'package:marib/data/model/item/cart_model.dart';
 
 import 'shared_widgets.dart';
+import 'package:marib/utils/currency_utils.dart';
+
+
+
+
+
 
 /// ويدجت يشرح تفاصيل التوصيل بما في ذلك المسافة والشرائح والرسوم.
 class DeliveryDetailsSection extends StatelessWidget {
@@ -313,22 +319,62 @@ class DeliveryDetailsSection extends StatelessWidget {
 
 
   String _resolveCurrency() {
-    final String? fromShipping = shippingCurrency?.trim();
-    if (fromShipping != null && fromShipping.isNotEmpty) {
-      return fromShipping;
+    String? display;
+    String? code;
+
+    void considerDisplay(String? candidate) {
+      if (display != null) {
+        return;
+      }
+      final String? trimmed = candidate?.trim();
+      if (trimmed != null && trimmed.isNotEmpty) {
+        display = trimmed;
+      }
     }
-    final String? fromInfo = deliveryInfo?.currency?.trim();
-    if (fromInfo != null && fromInfo.isNotEmpty) {
-      return fromInfo;
+
+    void considerCode(String? candidate) {
+      if (code != null) {
+        return;
+      }
+      final String? normalized = CurrencyUtils.normalizeCurrencyCode(candidate);
+      if (normalized != null) {
+        code = normalized;
+      }
     }
-    return 'ر.س';
+
+    considerDisplay(shippingCurrency);
+    considerCode(shippingCurrency);
+
+    if (deliveryInfo != null) {
+      considerDisplay(deliveryInfo!.currency);
+      considerCode(deliveryInfo!.currencyCode);
+      considerCode(deliveryInfo!.currency);
+
+
+    }
+    for (final Cart item in cartItems) {
+      considerDisplay(item.currency);
+      considerCode(item.currencyCode);
+      considerCode(item.currency);
+    }
+    if (code == null) {
+      considerCode(display);
+    }
+
+    return CurrencyUtils.displayToken(
+      label: display,
+      fallback: code,
+      code: code,
+    ) ??
+        code ??
+        'ر.س';
   }
 
   String _formatAmount(double amount, String currency) {
     final bool hasFraction = amount % 1 != 0;
     final String formatted =
     hasFraction ? amount.toStringAsFixed(2) : amount.toStringAsFixed(0);
-    return '$formatted $currency';
+    return currency.isEmpty ? formatted : '$formatted $currency';
   }
 
 

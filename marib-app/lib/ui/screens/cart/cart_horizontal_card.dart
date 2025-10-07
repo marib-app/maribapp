@@ -16,6 +16,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/constant.dart';
+import 'package:marib/utils/currency_utils.dart';
 
 class CartHorizontalCard extends StatelessWidget {
   final Cart item;
@@ -187,11 +188,20 @@ class CartHorizontalCard extends StatelessWidget {
         ? Colors.black.withOpacity(showShadow ? 0.35 : 0.25)
         : Colors.black.withOpacity(showShadow ? 0.12 : 0.08);
 
-    final String currencyToken = (item.currency?.trim().isNotEmpty ?? false)
-        ? item.currency!.trim()
-        : (Constant.currencySymbol.trim().isNotEmpty
-        ? Constant.currencySymbol
-        : 'ر.س');
+    final String? fallbackSymbol = () {
+      final String trimmed = Constant.currencySymbol.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }();
+    final String currencyToken =
+        CurrencyUtils.displayToken(
+          label: item.currency,
+          fallback: item.currencyCode ?? fallbackSymbol,
+          code: item.currencyCode ??
+              CurrencyUtils.normalizeCurrencyCode(item.currency),
+        ) ??
+            fallbackSymbol ??
+            'ر.س';
+
     final String formattedPrice = HelperUtils.formatPrice(item.unitPriceValue);
     final String priceLabel = formattedPrice.isEmpty ? '—' : formattedPrice;
     final String currencySuffix = currencyToken.trim().isEmpty

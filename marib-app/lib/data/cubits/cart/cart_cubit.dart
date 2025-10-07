@@ -203,10 +203,13 @@ class CartCubit extends Cubit<CartState> {
 
   final CartRepository _repository;
   final CartTipsRepository _tipsRepository;
+  PendingCartAddition? _pendingAdditionCache;
 
 
 
   Future<void> fetchCart() async {
+    _pendingAdditionCache = null;
+
     final CartSummary summary = await _repository.fetchCart();
     _syncSection(summary.items);
 
@@ -308,7 +311,7 @@ class CartCubit extends Cubit<CartState> {
       cart: cart,
       department: department,
     );
-
+    _pendingAdditionCache = request;
     CartSafetyTipsPayload? safetyTips;
     if (department != null && isSheinDepartment) {
 
@@ -432,6 +435,7 @@ class CartCubit extends Cubit<CartState> {
           deliveryPaymentTiming: summary.deliveryPaymentTiming,
         ),
       );
+      _pendingAdditionCache = null;
 
       _recordTelemetry('cart_add.success', <String, dynamic>{
         'department': normalizedDepartment,
@@ -493,7 +497,8 @@ class CartCubit extends Cubit<CartState> {
 
 
   Future<void> confirmPendingCartAddition() async {
-    final PendingCartAddition? pending = state.pendingAddition;
+    final PendingCartAddition? pending =
+        state.pendingAddition ?? _pendingAdditionCache;
     if (pending == null) {
       if (state.safetyTips != null) {
         _clearPendingAddition(clearSafetyTips: true);
@@ -509,6 +514,7 @@ class CartCubit extends Cubit<CartState> {
         skipTipFetch: true,
       );
     } finally {
+      _pendingAdditionCache = null;
       _clearPendingAddition(clearSafetyTips: true);
     }
   }
@@ -522,6 +528,7 @@ class CartCubit extends Cubit<CartState> {
   void _clearPendingAddition({bool clearSafetyTips = false}) {
     final bool shouldEmit = state.pendingAddition != null ||
         (clearSafetyTips && state.safetyTips != null);
+    _pendingAdditionCache = null;
     if (!shouldEmit) {
       return;
     }

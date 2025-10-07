@@ -491,10 +491,9 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
     cityTextController.dispose();
     countryTextController.dispose();
 
-    // أي موارد إضافية:
-    // _searchFocus.dispose();
-    // _searchCtrl.dispose();
 
+    _searchFocus.dispose();
+    _searchCtrl.dispose();
     super.dispose();
   }
 

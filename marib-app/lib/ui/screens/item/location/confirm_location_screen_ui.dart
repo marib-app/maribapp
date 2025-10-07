@@ -124,7 +124,7 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
                             ),
                             subtitle: (s.subtitle != null) ? Text(s.subtitle!) : null,
                             onTap: () async {
-                              _searchFocus.unfocus();
+                              _dismissKeyboard();
                               final det = await _placeDetails(s.placeId);
                               if (!mounted || det == null) return;
                               setState(() {
@@ -174,6 +174,14 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
   // ==========================
 
 
+  void _dismissKeyboard() {
+    if (_searchFocus.hasFocus) {
+      _searchFocus.unfocus();
+    }
+    FocusManager.instance.primaryFocus?.unfocus();
+  }
+
+
   Future<void> _onPostNowPressed() async {
     // ===== Helpers =====
     String? _clean(String? v) {
@@ -204,6 +212,23 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
           (getCloudData("with_more_details") as Map<String, dynamic>?) ??
               <String, dynamic>{};
 
+
+      String? _existingValue(String key) {
+        final value = cloudData[key];
+        if (value == null) return null;
+        if (value is String) {
+          return _clean(value);
+        }
+        return _clean(value.toString());
+      }
+
+      int? _normalizeAreaId(dynamic value) {
+        if (value == null) return null;
+        if (value is int) return value;
+        if (value is num) return value.toInt();
+        return int.tryParse(value.toString());
+      }
+
       final _area    = _clean(formatedAddress?.area);
       final _city    = _clean(formatedAddress?.city);
       final _state   = _clean(formatedAddress?.state);
@@ -213,34 +238,62 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
       final _resolvedCity = _city ?? _area;
 
       // address mixed جاهز بالعربي من AddressComponent
-      cloudData['address']   = _clean(formatedAddress?.mixed);
+      final address = _clean(formatedAddress?.mixed) ?? _existingValue('address');
+      if (address == null) {
+        _isPosting = false;
+        _snack('تعذر تحديد العنوان. يرجى اختيار موقع صالح.', isKey: false);
+        return;
+      }
+      cloudData['address'] = address;
+
       cloudData['latitude']  = latitude;
       cloudData['longitude'] = longitude;
       // بعض نقاط النهاية الخلفية القديمة ما زالت تتوقع مفاتيح location_*.
       // نرسلها مع الحقول الجديدة لضمان التوافق وتفادي أخطاء validation.required.
       cloudData['location_latitude']  = latitude;
       cloudData['location_longitude'] = longitude;
-      cloudData['city']      = _resolvedCity;
-      cloudData['state']     = _state;
+      final resolvedCity = _resolvedCity ?? _existingValue('city');
+      if (resolvedCity == null) {
+        _isPosting = false;
+        _snack('يرجى تحديد المدينة قبل المتابعة.', isKey: false);
+        return;
+      }
+      cloudData['city'] = resolvedCity;
 
-      if (_country != null) {
-        cloudData['country'] = _country;
+
+      final country = _country ?? _existingValue('country');
+      if (country == null) {
+        _isPosting = false;
+        _snack('يرجى تحديد الدولة قبل المتابعة.', isKey: false);
+        return;
+      }
+      cloudData['country'] = country;
+
+      final state = _state ?? _existingValue('state');
+      if (state != null) {
+        cloudData['state'] = state;
+
       } else {
-        cloudData.remove('country');
+        cloudData.remove('state');
       }
 
 
 
-      final areaId = formatedAddress?.areaId;
-      if (areaId != null) cloudData['area_id'] = areaId;
+      final areaId = formatedAddress?.areaId ?? _normalizeAreaId(cloudData['area_id']);
+      if (areaId != null) {
+        cloudData['area_id'] = areaId;
+      } else {
+        cloudData.remove('area_id');
+      }
 
       // احذف القيم الفارغة حفاظًا على نظافة الطلب
-      cloudData.removeWhere((k, v) => v == null || (v is String && v.isEmpty));
+      cloudData.removeWhere((k, v) => v == null || (v is String && v.trim().isEmpty));
 
       // ===== Submit =====
       final manage = context.read<ManageItemCubit>();
       if (widget.isEdit == true) {
-         manage.manage(
+        _dismissKeyboard();
+        manage.manage(
           ManageItemType.edit,
           cloudData,
           widget.mainImage,      // قد تكون null في التعديل وهذا منطقي
@@ -249,10 +302,12 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
       } else {
         // في الإضافة نتوقع وجود صور
         if (widget.mainImage == null) {
+          _isPosting = false;
           _snack("يرجى اختيار صورة رئيسية للإعلان", isKey: false);
           return;
         }
-         manage.manage(
+        _dismissKeyboard();
+        manage.manage(
           ManageItemType.add,
           cloudData,
           widget.mainImage!,
@@ -418,6 +473,7 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
                   child: TextField(
                     controller: _searchCtrl,
                     focusNode: _searchFocus,
+                    autofocus: false,
                     textInputAction: TextInputAction.search,
                     decoration: InputDecoration(
                       hintText: "ابحث عن عنوان…",
@@ -451,7 +507,7 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
                         }
                       });
                     },
-                    onSubmitted: (_) => _searchFocus.unfocus(),
+                    onSubmitted: (_) => _dismissKeyboard(),
                   ),
                 ),
               ),
@@ -556,6 +612,7 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
           },
 
           onCameraMoveStarted: () {
+            _dismissKeyboard();
             if (!_isMoving) setState(() => _isMoving = true);
             _hint.onMoveStart(); // 🔔 بدء حركة
           },
@@ -564,6 +621,7 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
             _cameraPosition = pos;
             _hint.onMove(zoom: pos.zoom); // 🔔 قراءة الزوم أثناء الحركة
           },
+          onTap: (_) => _dismissKeyboard(),
 
           onCameraIdle: () {
             _hint.onIdle(); // 🔔 سكون الكاميرا

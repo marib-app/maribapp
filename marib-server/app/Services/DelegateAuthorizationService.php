@@ -8,7 +8,10 @@ use App\Models\User;
 class DelegateAuthorizationService
 {
     public const ADMIN_ROLES = ['Super Admin', 'Admin'];
-
+    private const RESTRICTED_SECTIONS = [
+        DepartmentReportService::DEPARTMENT_SHEIN,
+        DepartmentReportService::DEPARTMENT_COMPUTER,
+    ];
     public function getDelegatesForSection(string $section): array
     {
         $value = CachingService::getSystemSettings($this->getDelegatesSettingKey($section));
@@ -64,6 +67,17 @@ class DelegateAuthorizationService
 
         return in_array($user->id, $delegates, true);
     }
+
+    public function isSectionRestricted(?string $section): bool
+    {
+        if ($section === null) {
+            return false;
+        }
+
+        return in_array($section, self::RESTRICTED_SECTIONS, true);
+    }
+
+
 
     protected function getDelegatesSettingKey(string $section): string
     {

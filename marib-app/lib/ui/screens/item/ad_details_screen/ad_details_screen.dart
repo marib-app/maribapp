@@ -605,6 +605,44 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     return false;
   }
 
+
+  List<String> _resolveTipActionCommands(
+      CartSafetyTipsPayload payload, {
+        CartSafetyTip? tip,
+      }) {
+    final List<String> commands = <String>[];
+    final Set<String> seen = <String>{};
+
+    void addCommand(dynamic value) {
+      if (value == null) {
+        return;
+      }
+      if (value is String) {
+        final String normalized = value.trim().toLowerCase();
+        if (normalized.isEmpty) {
+          return;
+        }
+        if (seen.add(normalized)) {
+          commands.add(normalized);
+        }
+        return;
+      }
+      if (value is Iterable) {
+        for (final dynamic entry in value) {
+          addCommand(entry);
+        }
+      }
+    }
+
+    if (tip?.raw != null) {
+      addCommand(tip!.raw!['actions']);
+    }
+    addCommand(payload.raw?['actions']);
+
+    return commands;
+  }
+
+
   Future<void> _showCartTipBottomSheet(
       BuildContext context, CartSafetyTipsPayload payload) async {
     final CartSafetyTip? tip = payload.primaryTip;
@@ -688,6 +726,12 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
             'has_external': externalAction != null,
           });
 
+
+          final List<String> resolvedCommands =
+          _resolveTipActionCommands(payload, tip: tip);
+          final List<String> commands =
+          resolvedCommands.isEmpty ? <String>['add_to_cart'] : resolvedCommands;
+
           try {
             await cartCubit.confirmPendingCartAddition();
           } catch (_) {
@@ -701,6 +745,31 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
           if (!mounted) return;
 
           Navigator.of(sheetContext).pop(true);
+
+
+          bool navigateToCart = false;
+          for (final String command in commands) {
+            switch (command) {
+              case 'go_to_cart':
+                navigateToCart = true;
+                break;
+              case 'add_to_cart':
+              // تمت إضافة المنتج بالفعل عبر confirmPendingCartAddition.
+                break;
+              default:
+              // أي أوامر غير معروفة تُعامل كإضافة للسلة.
+                break;
+            }
+          }
+
+          if (navigateToCart) {
+            final NavigatorState navigator =
+            Navigator.of(context, rootNavigator: true);
+            navigator.popUntil((Route<dynamic> route) => route is! PopupRoute);
+            await navigator.pushNamed(Routes.cart);
+            return;
+          }
+
 
           if (navigateAction != null) {
             await _handleCartTipAction(context, navigateAction!);

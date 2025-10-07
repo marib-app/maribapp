@@ -1,4 +1,5 @@
 import 'package:collection/collection.dart';
+import 'package:marib/utils/hive_utils.dart';
 
 class CartSafetyTipsPayload {
   const CartSafetyTipsPayload({
@@ -226,9 +227,8 @@ class CartSafetyTip {
   }
 
   factory CartSafetyTip.fromJson(Map<String, dynamic> json) {
-    final String? description = _coerceString(
-      json['description'] ?? json['text'] ?? json['message'],
-    );
+    final String? description = _resolveTipDescription(json);
+
 
     final List<CartSafetyTipAction> actions = (json['actions'] as List?)
         ?.map((dynamic e) => CartSafetyTipAction.tryParse(e))
@@ -260,6 +260,122 @@ class CartSafetyTip {
     if (value is String) return value;
     return value.toString();
   }
+
+
+
+  static String? _resolveTipDescription(Map<String, dynamic> json) {
+    String? normalize(String? value) {
+      if (value == null) return null;
+      final String trimmed = value.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+
+    final String? localized = normalize(_localizedTranslation(json['translations']));
+    if (localized != null) {
+      return localized;
+    }
+
+    final List<dynamic> candidates = <dynamic>[
+      json['description'],
+      json['text'],
+      json['message'],
+      json['default_description'],
+      json['defaultDescription'],
+    ];
+
+    for (final dynamic candidate in candidates) {
+      final String? resolved = normalize(_coerceString(candidate));
+      if (resolved != null) {
+        return resolved;
+      }
+    }
+
+    return null;
+  }
+
+  static String? _localizedTranslation(dynamic translationsRaw) {
+    if (translationsRaw == null) {
+      return null;
+    }
+
+    Map<String, dynamic>? translations;
+    if (translationsRaw is Map<String, dynamic>) {
+      translations = translationsRaw;
+    } else if (translationsRaw is Map) {
+      translations = translationsRaw.map(
+            (dynamic key, dynamic value) => MapEntry(key.toString(), value),
+      );
+    }
+
+    if (translations == null || translations.isEmpty) {
+      return null;
+    }
+
+    String? resolveString(dynamic value) {
+      final String? stringValue = _coerceString(value);
+      if (stringValue == null) {
+        return null;
+      }
+      final String trimmed = stringValue.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+
+    String? languageCode;
+    final dynamic language = HiveUtils.getLanguage();
+    if (language is Map) {
+      final dynamic code = language['code'] ??
+          language['language_code'] ??
+          language['language'];
+      if (code is String && code.trim().isNotEmpty) {
+        languageCode = code.trim();
+      }
+    } else if (language is String && language.trim().isNotEmpty) {
+      languageCode = language.trim();
+    }
+
+    Iterable<String> candidateKeys(String code) sync* {
+      if (code.isEmpty) {
+        return;
+      }
+      yield code;
+      final String lower = code.toLowerCase();
+      if (lower != code) {
+        yield lower;
+      }
+      final List<String> segments = code.split(RegExp('[-_]'));
+      if (segments.isNotEmpty) {
+        final String primary = segments.first;
+        if (primary.isNotEmpty) {
+          yield primary;
+          final String primaryLower = primary.toLowerCase();
+          if (primaryLower != primary) {
+            yield primaryLower;
+          }
+        }
+      }
+    }
+
+    if (languageCode != null) {
+      for (final String key in candidateKeys(languageCode)) {
+        final dynamic value = translations[key] ?? translations[key.toLowerCase()];
+        final String? resolved = resolveString(value);
+        if (resolved != null) {
+          return resolved;
+        }
+      }
+    }
+
+    for (final dynamic value in translations.values) {
+      final String? resolved = resolveString(value);
+      if (resolved != null) {
+        return resolved;
+      }
+    }
+
+    return null;
+  }
+
+
 }
 
 class CartSafetyTipAction {

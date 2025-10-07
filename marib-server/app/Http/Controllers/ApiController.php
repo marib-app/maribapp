@@ -1300,8 +1300,10 @@ class ApiController extends Controller {
 
             $section = $this->resolveSectionByCategoryId((int) $request->category_id);
 
-            if ($section !== null && !$this->delegateAuthorizationService->userCanManageSection($user, $section)) {
-                DB::rollBack();
+            if ($this->delegateAuthorizationService->isSectionRestricted($section)
+                && ! $this->delegateAuthorizationService->userCanManageSection($user, $section)) {
+            
+                    DB::rollBack();
                 ResponseService::errorResponse('غير مصرح لك بالنشر في هذا القسم.');
             }
 
@@ -6581,7 +6583,7 @@ public function storeRequestDevice(Request $request)
                 $additionalInfo['categories'] = [];
             }
             
-            if ($request->account_type == '2') {
+            if ((int) $request->account_type === User::ACCOUNT_TYPE_REAL_ESTATE) {
                 // حساب عقاري - معالجة البيانات الخاصة بالعقارات
                 // الحفاظ على البيانات الموجودة وتحديث المرسلة فقط
                 $contactInfo = $additionalInfo['contact_info'];
@@ -6630,7 +6632,7 @@ public function storeRequestDevice(Request $request)
                 
                 $additionalInfo['contact_info'] = $contactInfo;
                 
-            } elseif ($request->account_type == '3') {
+            } elseif ((int) $request->account_type === User::ACCOUNT_TYPE_SELLER) {
                 // حساب تجاري - معالجة البيانات الخاصة بالتجارة
                 // الحفاظ على البيانات الموجودة وتحديث المرسلة فقط
                 $contactInfo = $additionalInfo['contact_info'];

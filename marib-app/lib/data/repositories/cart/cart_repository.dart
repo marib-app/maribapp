@@ -42,6 +42,7 @@ final List<String> _cartAddEndpointCandidates = _buildCartEndpointCandidates(
   override: _cartAddEndpointOverride,
   defaults: <String>[
     Api.addToCartApi,
+    'cart',
     // Preferred
     'cart/items',
     // Aliases

@@ -85,6 +85,7 @@ import 'ad_custom_fields.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'AdImagesHeader.dart';
 import 'package:marib/utils/delivery_department.dart';
+import 'package:marib/utils/app_telemetry.dart';
 
 import 'ad_details_screen.dart';
 
@@ -92,10 +93,7 @@ import 'fetch_item_details_cubit.dart';
 
 import 'package:marib/data/repositories/item/item_repository.dart';
 import 'package:marib/ui/screens/item/ad_details_screen/fetch_item_details_cubit.dart'
-as details;
-
-
-
+    as details;
 
 class _AdItemDetailsRepository implements details.ItemDetailsRepository {
   _AdItemDetailsRepository(this._itemRepository, {this.fallbackSlug});
@@ -112,7 +110,7 @@ class _AdItemDetailsRepository implements details.ItemDetailsRepository {
 
     if (fallbackSlug != null && fallbackSlug!.isNotEmpty) {
       final slugResult =
-      await _itemRepository.fetchItemFromItemSlug(fallbackSlug!);
+          await _itemRepository.fetchItemFromItemSlug(fallbackSlug!);
       if (slugResult.modelList.isNotEmpty) {
         return slugResult.modelList.first;
       }
@@ -122,18 +120,13 @@ class _AdItemDetailsRepository implements details.ItemDetailsRepository {
   }
 }
 
-
 const double sidePadding = 16;
 
-
-
-
 class _ItemDetailsRepositoryImpl implements ItemDetailsRepository {
-
   _ItemDetailsRepositoryImpl(
-      this._itemRepository, {
-        required ItemModel? initialItem,
-      }) : _initialItem = initialItem;
+    this._itemRepository, {
+    required ItemModel? initialItem,
+  }) : _initialItem = initialItem;
 
   final ItemRepository _itemRepository;
   final ItemModel? _initialItem;
@@ -197,49 +190,29 @@ class _ItemDetailsRepositoryImpl implements ItemDetailsRepository {
       throw Exception(lastError.toString());
     }
 
-
     throw Exception('Item not found');
   }
 }
-
-
 
 class AdDetailsScreen extends StatefulWidget {
   final ItemModel model;
   final Object? initialSummary;
 
-
   const AdDetailsScreen({
     super.key,
     required this.model,
     this.initialSummary,
-
-
-
   });
 
   @override
   AdDetailsScreenState createState() => AdDetailsScreenState();
 
-
-
-
-
-
-
-
-
-
-
   static Route route(RouteSettings routeSettings) {
     final Map? arguments = routeSettings.arguments as Map?;
     final ItemModel initialModel = arguments?['model'] as ItemModel;
 
-
     final _AdDetailsRouteConfig config =
-    _AdDetailsRouteConfig.from(routeSettings.arguments);
-
-
+        _AdDetailsRouteConfig.from(routeSettings.arguments);
 
     return BlurredRouter(
       builder: (_) => MultiBlocProvider(
@@ -262,10 +235,9 @@ class AdDetailsScreen extends StatefulWidget {
           BlocProvider(
             create: (context) => MakeAnOfferItemCubit(),
           ),
-
           BlocProvider(
             create: (context) => FetchItemDetailsCubit(
-                _ItemDetailsRepositoryImpl(
+              _ItemDetailsRepositoryImpl(
                 ItemRepository(),
                 initialItem: config.initialModel,
               ),
@@ -277,14 +249,9 @@ class AdDetailsScreen extends StatefulWidget {
           initialSummary: config.initialSummary,
         ),
       ),
-
     );
   }
-
 }
-
-
-
 
 class _AdDetailsRouteConfig {
   _AdDetailsRouteConfig({
@@ -408,9 +375,6 @@ int? _extractItemId(dynamic value) {
   return null;
 }
 
-
-
-
 class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   //ImageView
   int currentPage = 0;
@@ -419,31 +383,30 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   int currentIndex = 0;
   bool isFavorite = false;
 
-
   bool isShowReportAds = true;
   final PageController pageController = PageController();
   final List<String?> images = [];
   final Completer<GoogleMapController> _controller =
-  Completer<GoogleMapController>();
+      Completer<GoogleMapController>();
   late final ScrollController _pageScrollController = ScrollController();
   List<ReportReason>? reasons = [];
   late int selectedId;
   final TextEditingController _reportmessageController =
-  TextEditingController();
+      TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey();
   final TextEditingController _makeAnOffermessageController =
-  TextEditingController();
+      TextEditingController();
   final GlobalKey<FormState> _offerFormKey = GlobalKey();
   int? _selectedPackageIndex;
   List<CustomFieldBuilder> moreDetailDynamicFields = [];
   late ItemModel _currentItem;
   CartSafetyTipsPayload? _lastCartSafetyTips;
 
-  bool get isAddedByMe => (_currentItem.user?.id != null
-      ? _currentItem.user!.id.toString()
-      : _currentItem.userId?.toString() ?? "") ==
+  bool get isAddedByMe =>
+      (_currentItem.user?.id != null
+          ? _currentItem.user!.id.toString()
+          : _currentItem.userId?.toString() ?? "") ==
       HiveUtils.getUserId();
-
 
   bool get _hasLocalItemDetails {
     final ItemModel item = _currentItem;
@@ -462,19 +425,17 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
   // Helper method to safely get model id
   int get safeModelId => _currentItem.id ?? 0;
+
   bool get _hasValidItemId => (_currentItem.id ?? widget.model.id ?? 0) > 0;
-
-
 
 // تبديل حالة الإعجاب + ربطها بكيوبيت المفضلة
   void _onToggleFavorite() {
     if (_currentItem.id == null) return;
     setState(() => isFavorite = !isFavorite);
 
-
     // ✅ جرّب واحدة من هذه حسب الكلاس المتوفر عندك
     // أو:
-     // context.read<FavoriteCubit>().toggleFav(model.id!);
+    // context.read<FavoriteCubit>().toggleFav(model.id!);
   }
 
   Future<bool> _changeAdStatus(String newStatus) async {
@@ -483,7 +444,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     if (id == null) {
       throw Exception('لا يمكن تغيير حالة إعلان بدون معرف صالح');
     }
-
 
     final int? userId = _currentItem.userId ?? widget.model.userId;
     await cubit.changeMyItemStatus(
@@ -513,8 +473,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     return false;
   }
 
-
-
   void _fetchCustomFieldsForCurrentItem() {
     final allCategoryIds = _currentItem.allCategoryIds;
     if (allCategoryIds != null && allCategoryIds.isNotEmpty) {
@@ -537,8 +495,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     }
     return item.userId;
   }
-
-
 
   String? _resolveSafetyTipsDepartment(ItemModel item) {
     final List<String?> candidates = <String?>[
@@ -566,7 +522,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     final String? allCategoryIds = item.allCategoryIds;
     if (allCategoryIds != null && allCategoryIds.isNotEmpty) {
       final Iterable<RegExpMatch> matches =
-      RegExp(r'\d+').allMatches(allCategoryIds);
+          RegExp(r'\d+').allMatches(allCategoryIds);
       for (final RegExpMatch match in matches) {
         final int? value = int.tryParse(match.group(0)!);
         if (value != null) {
@@ -576,7 +532,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     }
 
     final String? resolvedFromIds =
-    resolveDeliveryDepartmentFromCategoryIds(categoryIds);
+        resolveDeliveryDepartmentFromCategoryIds(categoryIds);
     if (resolvedFromIds != null) {
       return resolvedFromIds;
     }
@@ -593,46 +549,36 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     return null;
   }
 
-
-
-
-
   void _fetchAuxiliaryDataForCurrentItem() {
     // customField();
     if (!isAddedByMe) {
       context.read<FetchItemReportReasonsListCubit>().fetch();
       final int? itemId = _currentItem.id;
       final String? department =
-      itemId != null ? _resolveSafetyTipsDepartment(_currentItem) : null;
+          itemId != null ? _resolveSafetyTipsDepartment(_currentItem) : null;
       if (itemId != null && department != null) {
         context.read<FetchSafetyTipsListCubit>().fetchSafetyTips(
-          department: department,
-          itemId: itemId,
-        );
+              department: department,
+              itemId: itemId,
+            );
       }
 
       final sellerId = _resolveSellerId(_currentItem);
       if (sellerId != null && sellerId != 0) {
         context.read<FetchSellerRatingsCubit>().fetch(sellerId: sellerId);
       }
-
-
     } else {
       context.read<FetchAdsListingSubscriptionPackagesCubit>().fetchPackages();
     }
-
-
-
   }
-
-
 
   // دالة النصائح new
 
-
   void _handleCartTipsUpdate(
       BuildContext context, CartSafetyTipsPayload? payload) {
-    if (payload == null || !payload.hasTips) {
+    final bool hasContent = payload != null &&
+        (payload.hasDisplayableContent || payload.isSheinDepartment);
+    if (!hasContent) {
       _clearCartTipBanner(context);
       _lastCartSafetyTips = null;
       return;
@@ -662,34 +608,52 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   Future<void> _showCartTipBottomSheet(
       BuildContext context, CartSafetyTipsPayload payload) async {
     final CartSafetyTip? tip = payload.primaryTip;
-    if (tip == null || !tip.hasDescription) {
+    final String? resolvedDepartmentSlug =
+        (payload.departmentKey ?? _resolveSafetyTipsDepartment(_currentItem))
+            ?.toLowerCase()
+            .trim();
+    final bool isSheinDepartment = resolvedDepartmentSlug == 'shein';
+
+    String? descriptionText = tip?.description?.trim();
+    if (descriptionText == null || descriptionText.isEmpty) {
+      descriptionText = payload.fallbackDescription;
+    }
+    if ((descriptionText == null || descriptionText.isEmpty) &&
+        isSheinDepartment) {
+      descriptionText =
+          'يرجى التأكد من صحة رابط المنتج والتفاصيل المعروضة في موقع شي إن قبل المتابعة. مارب غير مسؤولة عن أي اختلافات أو روابط خارجية مضللة.';
+    }
+    if ((descriptionText == null || descriptionText.isEmpty) &&
+        !isSheinDepartment) {
       if (mounted) {
         context.read<CartCubit>().clearSafetyTips();
       }
       return;
     }
 
-    final List<CartSafetyTipAction> actions =
-    tip.actions.where(_isTipActionSupported).toList();
+    List<CartSafetyTipAction> actions =
+        tip?.actions.where(_isTipActionSupported).toList() ??
+            <CartSafetyTipAction>[];
+    if (actions.isEmpty) {
+      actions = payload.fallbackActions.where(_isTipActionSupported).toList();
+    }
+
     CartSafetyTipAction? navigateAction;
     CartSafetyTipAction? externalAction;
     for (final CartSafetyTipAction action in actions) {
-      if (navigateAction == null && action.isNavigate && action.navigatesToCart) {
+      if (navigateAction == null &&
+          action.isNavigate &&
+          action.navigatesToCart) {
         navigateAction = action;
       } else if (externalAction == null && action.isOpenUrl) {
         externalAction = action;
       }
     }
 
-    final String? resolvedDepartment =
-    _resolveSafetyTipsDepartment(_currentItem)?.toLowerCase().trim();
-    final bool isSheinDepartment = resolvedDepartment == 'shein';
-
     final CartCubit cartCubit = context.read<CartCubit>();
     bool cancellationTriggered = false;
 
     final bool? confirmed = await showModalBottomSheet<bool>(
-
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -703,7 +667,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
         final Color sheetBackground = sheetContext.color.secondaryColor;
         final Color accentColor = sheetContext.color.territoryColor;
         final Color handleColor =
-        sheetContext.color.textColorDark.withOpacity(0.1);
+            sheetContext.color.textColorDark.withOpacity(0.1);
         final Color outlineForeground = textColor.withOpacity(0.9);
         final Color outlineBorder = textColor.withOpacity(0.3);
 
@@ -719,6 +683,11 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
         );
 
         Future<void> handleNavigate() async {
+          AppTelemetry.record('tips_confirmed', <String, dynamic>{
+            'department': resolvedDepartmentSlug ?? payload.departmentKey,
+            'has_external': externalAction != null,
+          });
+
           try {
             await cartCubit.confirmPendingCartAddition();
           } catch (_) {
@@ -739,7 +708,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
             await _handleCartTipAction(context, externalAction!);
           } else {
             final NavigatorState navigator =
-            Navigator.of(context, rootNavigator: true);
+                Navigator.of(context, rootNavigator: true);
             navigator.popUntil((Route<dynamic> route) => route is! PopupRoute);
             await navigator.pushNamed(Routes.cart);
           }
@@ -760,13 +729,15 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
           cancellationTriggered = true;
           Navigator.of(sheetContext).pop(false);
           unawaited(cartCubit.cancelPendingCartAddition());
-
         }
 
-        final String titleText =
-        (tip.title?.trim().isNotEmpty ?? false)
-            ? tip.title!.trim()
-            : 'تنويه هام قبل الشراء';
+        final String? fallbackTitle = payload.fallbackTitle;
+        final String titleText = (tip?.title?.trim().isNotEmpty ?? false)
+            ? tip!.title!.trim()
+            : ((fallbackTitle?.trim().isNotEmpty ?? false)
+            ? fallbackTitle!.trim()
+            : 'تنويه هام قبل الشراء');
+        final String effectiveDescription = descriptionText ?? '';
 
         return Container(
           padding: const EdgeInsets.all(20),
@@ -804,7 +775,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  tip.description ?? '',
+                  effectiveDescription,
                   textAlign: TextAlign.center,
                   style: descriptionStyle,
                 ),
@@ -812,7 +783,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                 Text(
                   'لن يتم إضافة المنتج إلى السلة إلا عند اختيار "متابعة إلى الشراء".'
                       .translate(sheetContext),
-
                   textAlign: TextAlign.center,
                   style: descriptionStyle,
                 ),
@@ -890,11 +860,10 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }
 
   void _clearCartTipBanner(BuildContext context) {
-    final ScaffoldMessengerState? messenger = ScaffoldMessenger.maybeOf(context);
+    final ScaffoldMessengerState? messenger =
+        ScaffoldMessenger.maybeOf(context);
     messenger?.clearMaterialBanners();
   }
-
-
 
   Future<void> _handleCartTipAction(
       BuildContext context, CartSafetyTipAction action) async {
@@ -921,14 +890,11 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     }
   }
 
-
-
-
   void _setCurrentItem(
-      ItemModel item, {
-        bool triggerDependentFetches = false,
-        bool fromInit = false,
-      }) {
+    ItemModel item, {
+    bool triggerDependentFetches = false,
+    bool fromInit = false,
+  }) {
     final previousCategoryId = categoryId;
     _currentItem = item;
 
@@ -963,7 +929,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     }
   }
 
-
   @override
   void initState() {
     super.initState();
@@ -978,13 +943,11 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       context.read<FetchItemDetailsCubit>().fetch(itemId);
     }
 
-
     pageController.addListener(() {
       setState(() {
         currentPage = pageController.page!.round();
       });
     });
-
 
     _pageScrollController.addListener(_pageScroll);
   }
@@ -1002,12 +965,12 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }
 
   CameraPosition get _kInitialPlace => CameraPosition(
-    target: LatLng(
-      _currentItem.latitude ?? 0,
-      _currentItem.longitude ?? 0,
-    ),
-    zoom: 14.4746,
-  );
+        target: LatLng(
+          _currentItem.latitude ?? 0,
+          _currentItem.longitude ?? 0,
+        ),
+        zoom: 14.4746,
+      );
 
   @override
   void dispose() {
@@ -1016,13 +979,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
     super.dispose();
   }
-
-
-
-
-
-
-
 
   void combineImages() {
     final item = _currentItem;
@@ -1049,8 +1005,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     if (videoLink != null &&
         videoLink.isNotEmpty &&
         !HelperUtils.isYoutubeVideo(videoLink)) {
-
-
       flickManager = FlickManager(
         videoPlayerController: VideoPlayerController.networkUrl(
           Uri.parse(videoLink),
@@ -1068,47 +1022,39 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     }
   }
 
-
-
-
   void setItemClick() {
     if (!isAddedByMe) {
       context.read<ItemTotalClickCubit>().itemTotalClick(safeModelId);
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     return BlocListener<FetchItemDetailsCubit, FetchItemDetailsState>(
-        listener: (context, state) {
-          if (state is FetchItemDetailsSuccess) {
-            _setCurrentItem(
-              state.item,
-              triggerDependentFetches: true,
-            );
-
-          } else if (state is FetchItemDetailsFailure &&
-              isAddedByMe &&
-              _hasLocalItemDetails) {
-            context.read<FetchItemDetailsCubit>().seed(_currentItem);
-
-          }
+      listener: (context, state) {
+        if (state is FetchItemDetailsSuccess) {
+          _setCurrentItem(
+            state.item,
+            triggerDependentFetches: true,
+          );
+        } else if (state is FetchItemDetailsFailure &&
+            isAddedByMe &&
+            _hasLocalItemDetails) {
+          context.read<FetchItemDetailsCubit>().seed(_currentItem);
+        }
+      },
+      child: BlocBuilder<FetchItemDetailsCubit, FetchItemDetailsState>(
+        builder: (context, state) {
+          return _buildContentForState(context, state);
         },
-        child: BlocBuilder<FetchItemDetailsCubit, FetchItemDetailsState>(
-          builder: (context, state) {
-            return _buildContentForState(context, state);
-          },
-        ),
-
+      ),
     );
   }
 
   Widget _buildContentForState(
-      BuildContext context,
-      FetchItemDetailsState state,
-      ) {
+    BuildContext context,
+    FetchItemDetailsState state,
+  ) {
     final overlayStyle = SystemUiOverlayStyle(
       statusBarColor: context.color.secondaryDetailsColor,
     );
@@ -1116,7 +1062,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
     return BlocListener<CartCubit, CartState>(
       listenWhen: (CartState previous, CartState current) =>
-      previous.safetyTips != current.safetyTips,
+          previous.safetyTips != current.safetyTips,
       listener: (BuildContext listenerContext, CartState cartState) {
         _handleCartTipsUpdate(listenerContext, cartState.safetyTips);
       },
@@ -1124,24 +1070,20 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
         value: overlayStyle,
         child: scaffold,
       ),
-
     );
   }
 
-
-
-
-
   Widget _buildScaffoldForState(
-      BuildContext context,
-      FetchItemDetailsState state,
-      ) {
+    BuildContext context,
+    FetchItemDetailsState state,
+  ) {
     if (state is FetchItemDetailsSuccess) {
       final isOwner = isAddedByMe;
       return Scaffold(
         backgroundColor: context.color.secondaryDetailsColor,
-        bottomNavigationBar:
-        isOwner ? _buildOwnerBottomBar(context) : _buildPublicBottomBar(context),
+        bottomNavigationBar: isOwner
+            ? _buildOwnerBottomBar(context)
+            : _buildPublicBottomBar(context),
         body: isOwner ? _buildOwnerBody(context) : _buildPublicBody(context),
       );
     }
@@ -1225,8 +1167,9 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       moreDetailDynamicFields: moreDetailDynamicFields,
       onRenewPressed: showPackageSelectBottomSheet,
       onOpenMap: () => _navigateToGoogleMapScreen(context),
-      featuredSection:
-      (_currentItem.isFeature != true) ? createFeaturesAds() : const SizedBox.shrink(),
+      featuredSection: (_currentItem.isFeature != true)
+          ? createFeaturesAds()
+          : const SizedBox.shrink(),
       addCloudDataFn: (k, v) => addCloudData(k, v),
     );
   }
@@ -1263,27 +1206,27 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: isOwner
             ? Row(
-          children: const [
-            Expanded(
-              child: CustomShimmer(
+                children: const [
+                  Expanded(
+                    child: CustomShimmer(
+                      height: 48,
+                      borderRadius: 14,
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: CustomShimmer(
+                      height: 48,
+                      borderRadius: 14,
+                    ),
+                  ),
+                ],
+              )
+            : const CustomShimmer(
                 height: 48,
                 borderRadius: 14,
               ),
-            ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: CustomShimmer(
-                    height: 48,
-                    borderRadius: 14,
-                  ),
-                ),
-                    ],
-                  )
-                      : const CustomShimmer(
-                  height: 48,
-                  borderRadius: 14,
-                  ),
-              ),
+      ),
     );
 
     final content = Container(
@@ -1297,7 +1240,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
         removeLeft: true,
         removeRight: true,
         child: content,
-
       );
     }
     return MediaQuery.removePadding(
@@ -1309,9 +1251,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       child: content,
     );
   }
-
-
-
 
   Widget _buildPublicBody(BuildContext context) {
     final item = _currentItem;
@@ -1325,7 +1264,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics()), // ← تأثير السحب المطاطي
       slivers: [
-
         // =======================
         // 1️⃣ SliverAppBar للسلايدر
         // =======================
@@ -1346,7 +1284,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
               // حالة المفضلة (الإعجاب)
               isFavorite: isFavorite,
-              onToggleFavorite: _onToggleFavorite, // 👈 دالة بالأسفل
+              onToggleFavorite: _onToggleFavorite,
+              // 👈 دالة بالأسفل
 
               // تمرير الموديل والمعرّف الآمن
               model: item,
@@ -1360,19 +1299,20 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                 final slug = item.slug ?? "${item.id}";
                 HelperUtils.share(context, slug, model: item);
               },
-              onReport: () => _bottomSheet(item.id!), // نفس دالتك الحالية
+              onReport: () => _bottomSheet(item.id!),
+              // نفس دالتك الحالية
 
               // ✅ زر إعجاب احترافي متوافق مع الثيم
 
               likeButton: Builder(
-                builder: (ctx) => favButton(item: item, size: 40), // دالتك كما هي
-              ),              // (اختياري) لو تحب تستعمل دوال الفتح المخصصة:
+                builder: (ctx) =>
+                    favButton(item: item, size: 40), // دالتك كما هي
+              ), // (اختياري) لو تحب تستعمل دوال الفتح المخصصة:
               // openShareSheet: (ctx) async => HelperUtils.share(ctx, model.slug ?? "${model.id}", model: model),
               // openReportDialog: (ctx) async => _bottomSheet(model.id!),
             ),
           ),
         ),
-
 
         // =========================
         // 2️⃣ باقي محتوى الإعلان
@@ -1383,7 +1323,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-
                 // العنوان
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 10),
@@ -1400,9 +1339,9 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                 if (item.address != null) adInfo.titleAndDate(isDate: true),
 
                 // الحقول المخصصة
-                  AdCustomFieldsSection(
-                      fields: item.customFields ?? const <CustomFieldModel>[],
-                    ),
+                AdCustomFieldsSection(
+                  fields: item.customFields ?? const <CustomFieldModel>[],
+                ),
                 Divider(
                   thickness: 1,
                   color: context.color.textDefaultColor.withOpacity(0.1),
@@ -1417,7 +1356,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                 ),
 
                 // بيانات البائع (للزائر فقط)
-                if (!isAddedByMe && item.user != null) setSellerDetails(context, item),
+                if (!isAddedByMe && item.user != null)
+                  setSellerDetails(context, item),
 
                 // الخريطة (لو الإحداثيات متوفرة)
                 if (item.latitude != null && item.longitude != null)
@@ -1462,10 +1402,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     );
   }
 
-
-
-
-
   Widget reportedAdsWidget() {
     return BlocBuilder<UpdatedReportItemCubit, UpdatedReportItemState>(
       builder: (context, state) {
@@ -1487,57 +1423,53 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     );
   }
 
-
   Widget relatedAds() {
     return BlocBuilder<FetchRelatedItemsCubit, FetchRelatedItemsState>(
         builder: (context, state) {
-          if (state is FetchRelatedItemsInProgress) {
-            return relatedItemShimmer();
+      if (state is FetchRelatedItemsInProgress) {
+        return relatedItemShimmer();
+      }
+      if (state is FetchRelatedItemsFailure) {
+        if (state.errorMessage is ApiException) {
+          if (state.errorMessage == "no-internet") {
+            return NoInternet(
+              onRetry: () {
+                // التحقق من وجود categoryId قبل استخدامه
+                final safeCategoryId = categoryId ?? 1;
+                context
+                    .read<FetchRelatedItemsCubit>()
+                    .fetchRelatedItems(categoryId: safeCategoryId);
+              },
+            );
           }
-          if (state is FetchRelatedItemsFailure) {
-            if (state.errorMessage is ApiException) {
-              if (state.errorMessage == "no-internet") {
-                return NoInternet(
-                  onRetry: () {
-                    // التحقق من وجود categoryId قبل استخدامه
-                    final safeCategoryId = categoryId ?? 1;
-                    context
-                        .read<FetchRelatedItemsCubit>()
-                        .fetchRelatedItems(categoryId: safeCategoryId);
-                  },
-                );
-              }
-            }
+        }
 
-            return const SomethingWentWrong();
-          }
+        return const SomethingWentWrong();
+      }
 
-          if (state is FetchRelatedItemsSuccess) {
-            if (state.itemModel.isEmpty || state.itemModel.length == 1) {
-              return SizedBox.shrink();
-            }
+      if (state is FetchRelatedItemsSuccess) {
+        if (state.itemModel.isEmpty || state.itemModel.length == 1) {
+          return SizedBox.shrink();
+        }
 
-            return buildRelatedListWidget(state);
-          }
+        return buildRelatedListWidget(state);
+      }
 
-          return const SizedBox.square();
-        });
+      return const SizedBox.square();
+    });
   }
-
 
   /// عرض قائمة الإعلانات المشابهة بطريقة محسنة (تجاهل الإعلان الحالي + عرض نظيف)
   Widget buildRelatedListWidget(FetchRelatedItemsSuccess state) {
     // ✅ تصفية العناصر: نحذف الإعلان الحالي من القائمة قبل البناء
-    final relatedItems = state.itemModel
-        .where((item) => item.id != _currentItem.id)
-        .toList();
+    final relatedItems =
+        state.itemModel.where((item) => item.id != _currentItem.id).toList();
 
     return Padding(
       padding: const EdgeInsets.only(top: 10.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
           /// 🏷️ العنوان "إعلانات مشابهة"
           Text("relatedAds".translate(context))
               .size(context.font.large)
@@ -1550,10 +1482,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
           GridListAdapter(
             type: ListUiType.List,
             // عرض أفقي (كأنها ListView)
-            height: MediaQuery
-                .of(context)
-                .size
-                .height / 3.5.rh(context),
+            height: MediaQuery.of(context).size.height / 3.5.rh(context),
             controller: _pageScrollController,
             listAxis: Axis.horizontal,
             listSaperator: (context, index) => const SizedBox(width: 14),
@@ -1571,7 +1500,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       ),
     );
   }
-
 
   /// 🎯 ويدجت عرض تأثير التحميل (Shimmer) أثناء تحميل الإعلانات المشابهة
   Widget relatedItemShimmer({
@@ -1610,16 +1538,10 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     );
   }
 
-
-
-
-
-
 // الاعلانات المميزة
 
   Widget createFeaturesAds() {
-    if (_currentItem.status == "active" ||
-        _currentItem.status == "approved") {
+    if (_currentItem.status == "active" || _currentItem.status == "approved") {
       return MultiBlocProvider(
         providers: [
           BlocProvider(
@@ -1633,12 +1555,9 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
           return BlocListener<CreateFeaturedAdCubit, CreateFeaturedAdState>(
             listener: (context, state) {
               if (state is CreateFeaturedAdInSuccess) {
-
-
                 context
                     .read<FetchUserPackageLimitCubit>()
                     .fetchUserPackageLimit(packageType: 'advertisement');
-
 
                 HelperUtils.showSnackBarMessage(
                     context, state.responseMessage.toString(),
@@ -1655,15 +1574,13 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                 FetchUserPackageLimitState>(
               listener: (context, state) async {
                 if (state is FetchUserPackageLimitFailure) {
-
                   final rawMessage = (state.error ?? '').toString().trim();
                   if (HelperUtils.isConnectivityOrServerError(rawMessage)) {
                     final lowerCaseMessage = rawMessage.toLowerCase();
                     final message = rawMessage.isNotEmpty &&
-
-                        !lowerCaseMessage.contains('server-not-available') &&
-                        !lowerCaseMessage.contains('server not available')
-
+                            !lowerCaseMessage
+                                .contains('server-not-available') &&
+                            !lowerCaseMessage.contains('server not available')
                         ? rawMessage
                         : "somethingWentWrong".translate(context);
 
@@ -1675,16 +1592,13 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                     return;
                   }
 
-
                   if (HelperUtils.isPackageLimitError(rawMessage)) {
                     UiUtils.noPackageAvailableDialog(context);
                     return;
                   }
 
                   final readableMessage =
-                  HelperUtils.readableErrorMessage(context, rawMessage);
-
-
+                      HelperUtils.readableErrorMessage(context, rawMessage);
 
                   HelperUtils.showSnackBarMessage(
                     context,
@@ -1692,12 +1606,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                     type: MessageType.error,
                   );
                   return;
-
                 }
                 if (state is FetchUserPackageLimitInSuccess) {
-
-
-
                   final summary = UiUtils.subscriptionLimitSummary(
                     context,
                     state.limit,
@@ -1710,28 +1620,20 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                     );
                   }
 
-
                   if (state.canCreateListing) {
-
-
                     final confirmSummary = UiUtils.subscriptionLimitSummary(
                       context,
                       state.limit,
                       includeExpiry: false,
                     );
                     final expiryText =
-                    UiUtils.subscriptionLimitExpiry(context, state.limit);
+                        UiUtils.subscriptionLimitExpiry(context, state.limit);
                     final allowedMessage = UiUtils.getTranslatedLabel(
                         context, 'subscriptionLimitActionAllowed');
-
 
                     await UiUtils.showBlurredDialoge(
                       context,
                       dialoge: BlurredDialogBox(
-
-
-
-
                         title: "createFeaturedAd".translate(context),
                         content: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -1750,9 +1652,9 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                                       .textTheme
                                       .bodyMedium
                                       ?.copyWith(
-                                    color: context.color.territoryColor,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                        color: context.color.territoryColor,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                 ),
                               ),
                             if (confirmSummary != null &&
@@ -1761,9 +1663,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                                 padding: const EdgeInsets.only(top: 8),
                                 child: Text(
                                   confirmSummary,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium,
+                                  style: Theme.of(context).textTheme.bodyMedium,
                                 ),
                               ),
                             if (expiryText != null && expiryText.isNotEmpty)
@@ -1775,11 +1675,11 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                                       .textTheme
                                       .bodySmall
                                       ?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withOpacity(0.7),
-                                  ),
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.7),
+                                      ),
                                 ),
                               ),
                           ],
@@ -1788,23 +1688,18 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                         onAccept: () => Future.value().then((_) {
                           Future.delayed(
                             Duration.zero,
-                                () {
+                            () {
                               context
                                   .read<CreateFeaturedAdCubit>()
                                   .createFeaturedAds(
-                                itemId: _currentItem.id!,
-                              );
+                                    itemId: _currentItem.id!,
+                                  );
                               Navigator.pop(context);
                               return;
                             },
                           );
                         }),
                       ),
-
-
-
-
-
                     );
                   } else {
                     if (state.responseMessage.isNotEmpty) {
@@ -1818,8 +1713,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                       context,
                       limit: state.limit,
                     );
-
-
                   }
                 }
               },
@@ -1831,13 +1724,10 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                 firstChild: Container(
                   margin: const EdgeInsets.symmetric(vertical: 12),
                   padding: const EdgeInsets.all(4),
-
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-
                       const SizedBox(width: 20),
-
                     ],
                   ),
                 ),
@@ -1851,10 +1741,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       return SizedBox.shrink();
     }
   }
-
-
-
-
 
   Widget favButton({required ItemModel item, required double size}) {
     bool isLike = context.read<FavoriteCubit>().isItemFavorite(item.id!);
@@ -1889,39 +1775,42 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                 child: IconButton(
                   icon: inProgress
                       ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
                       : UiUtils.getSvg(
-                    isLike ? AppIcons.like_fill : AppIcons.like,
-                    width: 22,
-                    height: 22,
-                    color: isLike ? Colors.redAccent : Colors.white,
-                  ),
+                          isLike ? AppIcons.like_fill : AppIcons.like,
+                          width: 22,
+                          height: 22,
+                          color: isLike ? Colors.redAccent : Colors.white,
+                        ),
                   onPressed: inProgress
                       ? null
                       : () {
-                    UiUtils.checkUser(
-                      onNotGuest: () {
-                        context.read<UpdateFavoriteCubit>().setFavoriteItem(
-                          item: item,
-                          type: isLike ? 0 : 1,
-                        );
+                          UiUtils.checkUser(
+                            onNotGuest: () {
+                              context
+                                  .read<UpdateFavoriteCubit>()
+                                  .setFavoriteItem(
+                                    item: item,
+                                    type: isLike ? 0 : 1,
+                                  );
 
-                        UiUtils.showSoftSnackBar(
-                          context,
-                          message: isLike
-                              ? "تمت الإزالة من المفضلة"
-                              : "تمت الإضافة إلى المفضلة",
-                        );
-                      },
-                      context: context,
-                    );
-                  },
+                              UiUtils.showSoftSnackBar(
+                                context,
+                                message: isLike
+                                    ? "تمت الإزالة من المفضلة"
+                                    : "تمت الإضافة إلى المفضلة",
+                              );
+                            },
+                            context: context,
+                          );
+                        },
                 ),
               );
             },
@@ -1931,27 +1820,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     );
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  Widget itemData(int index, SubscriptionPackageModel model,
-      StateSetter stateSetter) {
+  Widget itemData(
+      int index, SubscriptionPackageModel model, StateSetter stateSetter) {
     return Padding(
       padding: const EdgeInsets.only(top: 7.0),
       child: Stack(
@@ -1964,10 +1834,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                 clipper: CapShapeClipper(),
                 child: Container(
                   color: context.color.territoryColor,
-                  width: MediaQuery
-                      .of(context)
-                      .size
-                      .width / 3,
+                  width: MediaQuery.of(context).size.width / 3,
                   height: 17,
                   padding: EdgeInsets.only(top: 3),
                   child: Text('activePlanLbl'.translate(context))
@@ -1995,14 +1862,13 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                           : context.color.textDefaultColor.withOpacity(0.1),
                       width: 1.5)),
               child:
-              !model.isActive! ? adsWidget(model) : activeAdsWidget(model),
+                  !model.isActive! ? adsWidget(model) : activeAdsWidget(model),
             ),
           ),
         ],
       ),
     );
   }
-
 
 // دالة مبسطة لعرض الباقات
 
@@ -2025,16 +1891,13 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${model.limit == "unlimited" ? "unlimitedLbl".translate(
-                        context) : model.limit.toString()}\t${"adsLbl"
-                        .translate(context)}\t\t·\t\t',
+                    '${model.limit == "unlimited" ? "unlimitedLbl".translate(context) : model.limit.toString()}\t${"adsLbl".translate(context)}\t\t·\t\t',
                     overflow: TextOverflow.ellipsis,
                     softWrap: true,
                   ).color(context.color.textDefaultColor.withOpacity(0.5)),
                   Flexible(
                     child: Text(
-                      '${model.duration.toString()}\t${"days".translate(
-                          context)}',
+                      '${model.duration.toString()}\t${"days".translate(context)}',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       softWrap: true,
@@ -2049,8 +1912,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
           padding: EdgeInsetsDirectional.only(start: 10.0),
           child: Text(
             (model.finalPrice ?? 0) > 0
-                ? "${Constant.currencySymbol}${model.finalPrice?.toString() ??
-                "0"}"
+                ? "${Constant.currencySymbol}${model.finalPrice?.toString() ?? "0"}"
                 : "free".translate(context),
             style: TextStyle(
               fontSize: 20,
@@ -2061,7 +1923,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       ],
     );
   }
-
 
 // دالة متابعة الباقة و والاشتراك
   Widget activeAdsWidget(SubscriptionPackageModel model) {
@@ -2085,8 +1946,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                   Text.rich(
                     TextSpan(
                       text: model.limit == "unlimited"
-                          ? "${"unlimitedLbl".translate(context)}\t${"adsLbl"
-                          .translate(context)}\t\t·\t\t"
+                          ? "${"unlimitedLbl".translate(context)}\t${"adsLbl".translate(context)}\t\t·\t\t"
                           : '',
                       style: TextStyle(
                         color: context.color.textDefaultColor.withOpacity(0.5),
@@ -2095,16 +1955,14 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                         if (model.limit != "unlimited")
                           TextSpan(
                             text:
-                            '${model.userPurchasedPackages?[0]
-                                .remainingItemLimit ?? 0}',
+                                '${model.userPurchasedPackages?[0].remainingItemLimit ?? 0}',
                             style: TextStyle(
                                 color: context.color.textDefaultColor),
                           ),
                         if (model.limit != "unlimited")
                           TextSpan(
                             text:
-                            '/${model.limit.toString()}\t${"adsLbl".translate(
-                                context)}\t\t·\t\t',
+                                '/${model.limit.toString()}\t${"adsLbl".translate(context)}\t\t·\t\t',
                           ),
                       ],
                     ),
@@ -2115,27 +1973,24 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                     child: Text.rich(
                       TextSpan(
                         text: model.duration == "unlimited"
-                            ? "${"unlimitedLbl".translate(context)}\t${"days"
-                            .translate(context)}"
+                            ? "${"unlimitedLbl".translate(context)}\t${"days".translate(context)}"
                             : '',
                         style: TextStyle(
                           color:
-                          context.color.textDefaultColor.withOpacity(0.5),
+                              context.color.textDefaultColor.withOpacity(0.5),
                         ),
                         children: [
                           if (model.duration != "unlimited")
                             TextSpan(
                               text:
-                              '${model.userPurchasedPackages?[0]
-                                  .remainingDays ?? 0}',
+                                  '${model.userPurchasedPackages?[0].remainingDays ?? 0}',
                               style: TextStyle(
                                   color: context.color.textDefaultColor),
                             ),
                           if (model.duration != "unlimited")
                             TextSpan(
                               text:
-                              '/${model.duration.toString()}\t${"days"
-                                  .translate(context)}',
+                                  '/${model.duration.toString()}\t${"days".translate(context)}',
                             ),
                         ],
                       ),
@@ -2153,8 +2008,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
           padding: EdgeInsetsDirectional.only(start: 10.0),
           child: Text(
             (model.finalPrice ?? 0) > 0
-                ? "${Constant.currencySymbol}${model.finalPrice?.toString() ??
-                "0"}"
+                ? "${Constant.currencySymbol}${model.finalPrice?.toString() ?? "0"}"
                 : "free".translate(context),
             style: TextStyle(
               fontSize: 20,
@@ -2165,7 +2019,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       ],
     );
   }
-
 
   showPackageSelectBottomSheet() {
     showModalBottomSheet(
@@ -2223,7 +2076,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     );
   }
 
-
 // دالة عرض واجهة واختيار الباقات
 
   Widget packageList() {
@@ -2266,78 +2118,74 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
           return StatefulBuilder(
               builder: (BuildContext context, StateSetter setStater) {
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Expanded(
-                      child: ListView.builder(
-                          shrinkWrap: true,
-                          padding: EdgeInsets.symmetric(horizontal: 18),
-                          itemBuilder: (context, index) {
-                            return itemData(index,
-                                state.subscriptionPackages[index], setStater);
-                          },
-                          itemCount: state.subscriptionPackages.length),
-                    ),
-                    Builder(builder: (context) {
-                      return BlocListener<RenewItemCubit, RenewItemState>(
-                        listener: (context, changeState) {
-                          if (changeState is RenewItemInSuccess) {
-                            HelperUtils.showSnackBarMessage(
-                                context, changeState.responseMessage);
-                            Future.delayed(Duration.zero, () {
-                              Navigator.pop(context);
-                              Navigator.pop(context, "refresh");
-                            });
-                          } else if (changeState is RenewItemFailure) {
-                            Navigator.pop(context);
-                            HelperUtils.showSnackBarMessage(
-                                context, changeState.error);
-                          }
-                        },
-                        child: UiUtils.buildButton(context, onPressed: () {
-                          if (state.subscriptionPackages[_selectedPackageIndex!]
-                              .isActive!) {
-                            Future.delayed(Duration.zero, () {
-                              context.read<RenewItemCubit>().renewItem(
-                                  packageId: state
-                                      .subscriptionPackages[_selectedPackageIndex!]
-                                      .id!,
-                                  itemId: _currentItem.id!);
-                            });
-                          } else {
-                            Navigator.pop(context);
-                            HelperUtils.showSnackBarMessage(context,
-                                "pleasePurchasePackage".translate(context));
-                            Navigator.pushNamed(
-                                context, Routes.subscriptionPackageListRoute);
-                          }
-                        },
-                            radius: 10,
-                            height: 46,
-                            disabled: _selectedPackageIndex == null,
-                            disabledColor:
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                      shrinkWrap: true,
+                      padding: EdgeInsets.symmetric(horizontal: 18),
+                      itemBuilder: (context, index) {
+                        return itemData(index,
+                            state.subscriptionPackages[index], setStater);
+                      },
+                      itemCount: state.subscriptionPackages.length),
+                ),
+                Builder(builder: (context) {
+                  return BlocListener<RenewItemCubit, RenewItemState>(
+                    listener: (context, changeState) {
+                      if (changeState is RenewItemInSuccess) {
+                        HelperUtils.showSnackBarMessage(
+                            context, changeState.responseMessage);
+                        Future.delayed(Duration.zero, () {
+                          Navigator.pop(context);
+                          Navigator.pop(context, "refresh");
+                        });
+                      } else if (changeState is RenewItemFailure) {
+                        Navigator.pop(context);
+                        HelperUtils.showSnackBarMessage(
+                            context, changeState.error);
+                      }
+                    },
+                    child: UiUtils.buildButton(context, onPressed: () {
+                      if (state.subscriptionPackages[_selectedPackageIndex!]
+                          .isActive!) {
+                        Future.delayed(Duration.zero, () {
+                          context.read<RenewItemCubit>().renewItem(
+                              packageId: state
+                                  .subscriptionPackages[_selectedPackageIndex!]
+                                  .id!,
+                              itemId: _currentItem.id!);
+                        });
+                      } else {
+                        Navigator.pop(context);
+                        HelperUtils.showSnackBarMessage(context,
+                            "pleasePurchasePackage".translate(context));
+                        Navigator.pushNamed(
+                            context, Routes.subscriptionPackageListRoute);
+                      }
+                    },
+                        radius: 10,
+                        height: 46,
+                        disabled: _selectedPackageIndex == null,
+                        disabledColor:
                             context.color.textLightColor.withOpacity(0.3),
-                            fontSize: context.font.large,
-                            buttonColor: context.color.territoryColor,
-                            textColor: context.color.secondaryColor,
-                            buttonTitle: "renewItem".translate(context),
-                            outerPadding: const EdgeInsets.all(20)),
-                      );
-                    })
-                  ],
-                );
-              });
+                        fontSize: context.font.large,
+                        buttonColor: context.color.territoryColor,
+                        textColor: context.color.secondaryColor,
+                        buttonTitle: "renewItem".translate(context),
+                        outerPadding: const EdgeInsets.all(20)),
+                  );
+                })
+              ],
+            );
+          });
         }
 
         return Container();
       },
     );
   }
-
-
-
-
 
 // دالة عرض النصائح قبل الشراء
 
@@ -2353,26 +2201,24 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
           const SizedBox(width: 12),
           Expanded(
               child: Text(
-                text.firstUpperCase(),
-                textAlign: TextAlign.start,
-              )
+            text.firstUpperCase(),
+            textAlign: TextAlign.start,
+          )
                   .color(
-                context.color.textDefaultColor,
-              )
+                    context.color.textDefaultColor,
+                  )
                   .size(context.font.large)),
         ],
       ),
     );
   }
 
-
-
-
-  Widget setTopRowItem({required AlignmentDirectional alignment,
-    required double marginVal,
-    required double cornerRadius,
-    required Color backgroundColor,
-    required Widget childWidget}) {
+  Widget setTopRowItem(
+      {required AlignmentDirectional alignment,
+      required double marginVal,
+      required double cornerRadius,
+      required Color backgroundColor,
+      required Widget childWidget}) {
     return Align(
         alignment: alignment,
         child: Container(
@@ -2382,10 +2228,9 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                 borderRadius: BorderRadius.circular(cornerRadius),
                 color: backgroundColor),
             child: childWidget)
-      //TODO: swap icons according to liked and non-liked -- favorite_border_rounded and favorite_rounded
-    );
+        //TODO: swap icons according to liked and non-liked -- favorite_border_rounded and favorite_rounded
+        );
   }
-
 
   Widget buildDot(int index) {
     return Container(
@@ -2397,14 +2242,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
           color: currentPage == index ? Colors.white : Colors.grey),
     );
   }
-
-
-
-
-
-
-
-
 
   // دالة تقديم بلاغ
   Widget setRejectedReason() {
@@ -2422,7 +2259,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
         margin: const EdgeInsets.symmetric(vertical: 15),
         padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 15),
         child: Row(
-          //crossAxisAlignment: CrossAxisAlignment.center,
+            //crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
@@ -2435,8 +2272,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
               ),
               Expanded(
                 child: Text(
-                  '${"rejection_reason".translate(context)}: ${_currentItem
-                      .rejectedReason}',
+                  '${"rejection_reason".translate(context)}: ${_currentItem.rejectedReason}',
                 )
                     .color(context.color.textDefaultColor)
                     .size(context.font.large),
@@ -2447,8 +2283,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       return SizedBox.shrink();
     }
   }
-
-
 
   void _navigateToGoogleMapScreen(BuildContext context) {
     Navigator.push(
@@ -2465,9 +2299,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       ),
     );
   }
-
-
-
 
   Widget setReportAd() {
     return AnimatedCrossFade(
@@ -2489,7 +2320,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              //crossAxisAlignment: CrossAxisAlignment.center,
+                //crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
@@ -2557,8 +2388,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     );
   }
 
-
-
 // دالة تقديم عرض
   void makeOfferBottomSheet(ItemModel model) async {
     await UiUtils.showBlurredDialoge(
@@ -2570,35 +2399,27 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
         },
         acceptButtonName: "send".translate(context),
         isAcceptContainesPush: true,
-        onAccept: () =>
-            Future.value().then((_) {
-              if (_offerFormKey.currentState!.validate()) {
-                context.read<MakeAnOfferItemCubit>().makeAnOfferItem(
-                    id: _currentItem.id!,
-                    from: "offer",
-                    amount:
+        onAccept: () => Future.value().then((_) {
+          if (_offerFormKey.currentState!.validate()) {
+            context.read<MakeAnOfferItemCubit>().makeAnOfferItem(
+                id: _currentItem.id!,
+                from: "offer",
+                amount:
                     double.parse(_makeAnOffermessageController.text.trim()));
-                Navigator.pop(context);
-                return;
-              }
-            }),
+            Navigator.pop(context);
+            return;
+          }
+        }),
       ),
     );
   }
 
-
 // تتبع تقديم عرض سعر
   Widget makeAnOffer() {
-    double bottomPadding = (MediaQuery
-        .of(context)
-        .viewInsets
-        .bottom - 50);
+    double bottomPadding = (MediaQuery.of(context).viewInsets.bottom - 50);
     bool isBottomPaddingNagative = bottomPadding.isNegative;
     return SizedBox(
-      width: MediaQuery
-          .of(context)
-          .size
-          .width,
+      width: MediaQuery.of(context).size.width,
       child: SingleChildScrollView(
         child: Form(
           key: _offerFormKey,
@@ -2624,8 +2445,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                       fontSize: 16),
                   children: <TextSpan>[
                     TextSpan(
-                      text:
-                      "\t${Constant.currencySymbol}${_currentItem.price}",
+                      text: "\t${Constant.currencySymbol}${_currentItem.price}",
                       style: TextStyle(
                           color: context.color.textDefaultColor,
                           fontSize: 16,
@@ -2672,13 +2492,13 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                       fillColor: context.color.borderColor.darken(20),
                       filled: true,
                       contentPadding:
-                      EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                          EdgeInsets.symmetric(vertical: 12, horizontal: 10),
                       hintText: "yourOffer".translate(context),
                       hintStyle: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 22,
                           color:
-                          context.color.textDefaultColor.withOpacity(0.3)),
+                              context.color.textDefaultColor.withOpacity(0.3)),
                       focusColor: context.color.territoryColor,
                       enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -2690,7 +2510,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                               color: context.color.borderColor.darken(60))),
                       focusedBorder: OutlineInputBorder(
                           borderSide:
-                          BorderSide(color: context.color.territoryColor))),
+                              BorderSide(color: context.color.territoryColor))),
                 ),
               ),
             ],
@@ -2700,9 +2520,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     );
   }
 
-
-
-
   Future<void> _bottomSheet(int itemId) async {
     await UiUtils.showBlurredDialoge(
       context,
@@ -2710,32 +2527,28 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
           title: "reportItem".translate(context),
           content: reportReason(),
           isAcceptContainesPush: true,
-          onAccept: () =>
-              Future.value().then((_) {
+          onAccept: () => Future.value().then((_) {
                 if (selectedId.isNegative) {
                   if (_formKey.currentState!.validate()) {
                     context.read<ItemReportCubit>().report(
-                      item_id: _currentItem.id!,
-                      reason_id: selectedId,
-                      message: _reportmessageController.text,
-                    );
+                          item_id: _currentItem.id!,
+                          reason_id: selectedId,
+                          message: _reportmessageController.text,
+                        );
                     Navigator.pop(context);
                     return;
                   }
                 } else {
                   context.read<ItemReportCubit>().report(
-                    item_id: _currentItem.id!,
-                    reason_id: selectedId,
-                  );
+                        item_id: _currentItem.id!,
+                        reason_id: selectedId,
+                      );
                   Navigator.pop(context);
                   return;
                 }
               })),
     );
   }
-
-
-
 
   String formatPhoneNumber(String fullNumber, String countryCode) {
     // Normalize the country code (remove '+' if present)
@@ -2755,10 +2568,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
     return fullNumber;
   }
-
-
-
-
 
   Widget setIconButtons({
     required String assetName,
@@ -2780,24 +2589,15 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                   assetName,
                   colorFilter: color == null
                       ? ColorFilter.mode(
-                      context.color.territoryColor, BlendMode.srcIn)
+                          context.color.territoryColor, BlendMode.srcIn)
                       : ColorFilter.mode(color, BlendMode.srcIn),
                 ))));
   }
 
-
-
-
-
-
-
 // دالة اختيار سبب البلاغ
 
   Widget reportReason() {
-    double bottomPadding = MediaQuery
-        .of(context)
-        .viewInsets
-        .bottom - 50;
+    double bottomPadding = MediaQuery.of(context).viewInsets.bottom - 50;
     bool isBottomPaddingNegative = bottomPadding.isNegative;
     reasons = context.read<FetchItemReportReasonsListCubit>().getList() ?? [];
 
@@ -2809,10 +2609,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     setState(() {});
     return StatefulBuilder(builder: (context, setState) {
       return SizedBox(
-        width: MediaQuery
-            .of(context)
-            .size
-            .width,
+        width: MediaQuery.of(context).size.width,
         child: SingleChildScrollView(
           child: Form(
             key: _formKey,
@@ -2897,7 +2694,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     });
   }
 
-
   // اختصارات العملة
   String _getCurrencySymbol(String? currency) {
     switch (currency) {
@@ -2912,12 +2708,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     }
   }
 }
-
-
-
-
-
-
 
 class _BlurredImageInternal extends StatefulWidget {
   final String imageUrl;
@@ -2938,13 +2728,11 @@ class _BlurredImageInternal extends StatefulWidget {
   State<_BlurredImageInternal> createState() => _BlurredImageInternalState();
 }
 
-
-
-class _BlurredImageInternalState extends State<_BlurredImageInternal> with SingleTickerProviderStateMixin {
+class _BlurredImageInternalState extends State<_BlurredImageInternal>
+    with SingleTickerProviderStateMixin {
   bool _isLoaded = false;
   late AnimationController _controller;
   late Animation<double> _blurAnimation;
-
 
   @override
   void initState() {
@@ -2953,14 +2741,12 @@ class _BlurredImageInternalState extends State<_BlurredImageInternal> with Singl
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
-    _blurAnimation = Tween<double>(begin: 90.0, end: 0.0).animate(CurvedAnimation(
+    _blurAnimation =
+        Tween<double>(begin: 90.0, end: 0.0).animate(CurvedAnimation(
       parent: _controller,
       curve: Curves.easeOut,
     ));
   }
-
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -2983,7 +2769,7 @@ class _BlurredImageInternalState extends State<_BlurredImageInternal> with Singl
               return child;
             },
             errorBuilder: (context, error, stackTrace) =>
-            const Center(child: Icon(Icons.broken_image)),
+                const Center(child: Icon(Icons.broken_image)),
           ),
           if (!_isLoaded)
             Positioned.fill(
@@ -3010,8 +2796,6 @@ class _BlurredImageInternalState extends State<_BlurredImageInternal> with Singl
   }
 }
 
-
-
 /// ✅ الصق هذا الكود هنا قبل build()
 Widget buildBlurredImage({
   required String imageUrl,
@@ -3029,13 +2813,10 @@ Widget buildBlurredImage({
   );
 }
 
-
-
-
-
 // 2) زر إعجاب موحّد الشكل ومربوط بالمفضّلة
 class _FavBtn extends StatelessWidget {
   final ItemModel model;
+
   const _FavBtn({required this.model});
 
   @override
@@ -3053,20 +2834,15 @@ class _FavBtn extends StatelessWidget {
         onPressed: () {
           if (model.id == null) return;
           if (liked) {
-            fav.removeFavoriteItem(model);   // إزالة من المفضلة
+            fav.removeFavoriteItem(model); // إزالة من المفضلة
           } else {
-            fav.addFavoriteitem(model);      // إضافة إلى المفضلة
+            fav.addFavoriteitem(model); // إضافة إلى المفضلة
           }
         },
       ),
     );
   }
 }
-
-
-
-
-
 
 class _AdDetailsLoadingBody extends StatelessWidget {
   const _AdDetailsLoadingBody({required this.isOwner});
@@ -3392,9 +3168,9 @@ class _FetchErrorView extends StatelessWidget {
               displayMessage,
               textAlign: TextAlign.center,
               style: theme.textTheme.titleMedium?.copyWith(
-                color: textColor,
-                fontWeight: FontWeight.w600,
-              ) ??
+                    color: textColor,
+                    fontWeight: FontWeight.w600,
+                  ) ??
                   TextStyle(
                     color: textColor,
                     fontWeight: FontWeight.w600,

@@ -134,7 +134,13 @@ class ItemCollection extends ResourceCollection {
                     $response[$key]['is_purchased'] = 0;
                 }
 
-                $department = $departmentAdvertiserService->resolveDepartmentForItem($collection);                if ($department === DepartmentReportService::DEPARTMENT_SHEIN) {
+                $department = $departmentAdvertiserService->resolveDepartmentForItem($collection);
+                if ($department !== null) {
+                    $response[$key]['department'] = $department;
+                }
+                if ($department === DepartmentReportService::DEPARTMENT_SHEIN) {
+
+                    
                     $productLink = $collection->product_link;
                     $response[$key]['tips'] = [
                         'product_link' => $productLink,

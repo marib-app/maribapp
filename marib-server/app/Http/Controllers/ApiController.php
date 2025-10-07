@@ -14,7 +14,8 @@ use App\Http\Resources\WalletTransactionResource;
 use App\Http\Resources\SliderResource;
 use App\Services\SliderMetricService;
 use App\Models\ManualPaymentRequestHistory;
-
+use App\Services\DepartmentAdvertiserService;
+use App\Services\TelemetryService;
 use App\Models\Area;
 use App\Models\BlockUser;
 use App\Models\Blog;
@@ -1130,7 +1131,42 @@ class ApiController extends Controller {
         }
 
         $departmentKey = $request->input('department');
+        $itemId = $request->input('item_id');
+
+        TelemetryService::record('api.tips.called', [
+            'department' => $departmentKey,
+            'item_id' => $itemId,
+        ]);
+
         $departments = app(DepartmentReportService::class)->availableDepartments();
+        $departmentResolver = app(DepartmentAdvertiserService::class);
+
+        $itemDepartment = null;
+        $productLink = null;
+
+        if ($request->filled('item_id')) {
+            $item = Item::select([
+                'id',
+                'product_link',
+                'interface_type',
+                'category_id',
+                'all_category_ids',
+                'item_type',
+            ])->find($request->integer('item_id'));
+
+            if ($item !== null) {
+                $itemDepartment = $departmentResolver->resolveDepartmentForItem($item);
+                $productLink = $item->product_link;
+            }
+        }
+
+        Log::info('tips.department_check', [
+            'item_id' => $itemId,
+            'requested_department' => $departmentKey,
+            'item_department' => $itemDepartment,
+        ]);
+
+
         $tips = Tip::with('translations.language')
             ->where('department', $departmentKey)
             ->orderBy('sequence')
@@ -1165,28 +1201,47 @@ class ApiController extends Controller {
             'tips' => $tipsPayload,
             'product_link' => null,
             'actions' => [],
+            'presentation' => DepartmentReportService::DEPARTMENT_SHEIN === $departmentKey ? 'modal' : 'banner',
+
+
         ];
 
-        if ($departmentKey === DepartmentReportService::DEPARTMENT_SHEIN && $request->filled('item_id')) {
-            $item = Item::select(['id', 'product_link'])->find($request->integer('item_id'));
-            $productLink = $item?->product_link;
-
-            if (! empty($productLink)) {
-                $response['product_link'] = $productLink;
-                $response['actions'] = [
-                    [
-                        'type' => 'navigate',
-                        'target' => 'cart',
-                        'label' => __('Continue Purchase'),
-                    ],
-                    [
-                        'type' => 'open_url',
-                        'url' => $productLink,
-                        'label' => __('Verify Product'),
-                    ],
-                ];
-            }
+        if ($departmentKey === DepartmentReportService::DEPARTMENT_SHEIN && ! empty($productLink)) {
+            $response['product_link'] = $productLink;
+            $response['actions'] = [
+                [
+                    'type' => 'navigate',
+                    'target' => 'cart',
+                    'label' => __('Continue Purchase'),
+                ],
+                [
+                    'type' => 'open_url',
+                    'url' => $productLink,
+                    'label' => __('Verify Product'),
+                ],
+            ];
         }
+
+
+        $response['item_department'] = $itemDepartment;
+
+        TelemetryService::record('api.tips.response', [
+            'department' => $departmentKey,
+            'item_id' => $itemId,
+            'tips_count' => $tipsPayload->count(),
+            'actions_count' => count($response['actions']),
+            'has_product_link' => $response['product_link'] !== null,
+        ]);
+
+        Log::info('tips.response_payload', [
+            'department' => $departmentKey,
+            'item_id' => $itemId,
+            'tips_count' => $tipsPayload->count(),
+            'actions_count' => count($response['actions']),
+            'product_link' => $response['product_link'],
+        ]);
+
+
 
         return ResponseService::successResponse('Tips fetched successfully.', $response);
      }

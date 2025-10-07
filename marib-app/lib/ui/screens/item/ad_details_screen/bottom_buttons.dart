@@ -26,6 +26,7 @@ import 'package:marib/data/model/item/cart_model.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/data/model/chat/chated_user_model.dart';
 
+import 'package:marib/data/model/cart/cart_safety_tip.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
@@ -562,7 +563,7 @@ AdActionMode resolveActionMode(ItemModel m) {
 // --------------------------------------------------
 // 🔹 AdDetailsBottomBar: شريط سفلي يغطي العرض كامل (لغير المالك)
 // --------------------------------------------------
-class AdDetailsBottomBar extends StatelessWidget {
+class AdDetailsBottomBar extends StatefulWidget {
   final ItemModel model;
   final List<CustomFieldBuilder> moreDetailDynamicFields;
   final void Function(List<CustomFieldBuilder>) onUpdateFields;
@@ -581,12 +582,30 @@ class AdDetailsBottomBar extends StatelessWidget {
     required this.onUpdateFields,
   });
 
+
+  @override
+  State<AdDetailsBottomBar> createState() => _AdDetailsBottomBarState();
+}
+
+class _AdDetailsBottomBarState extends State<AdDetailsBottomBar> {
+  bool _isAddToCartInProgress = false;
+
+  ItemModel get model => widget.model;
+  List<CustomFieldBuilder> get moreDetailDynamicFields =>
+      widget.moreDetailDynamicFields;
+  void Function(List<CustomFieldBuilder>) get onUpdateFields =>
+      widget.onUpdateFields;
+  VoidCallback? get onMakeOffer => widget.onMakeOffer;
+
   // --------------------------------------------
   // 📨 فتح الدردشة (يعتمد على منطقك الحالي في المشروع)
   // --------------------------------------------
   void _openChat(BuildContext context, ItemModel model, ChatedUser? chatedUser) {
     UiUtils.checkUser(
       onNotGuest: () async {
+        if (_isAddToCartInProgress) {
+          return;
+        }
         if (chatedUser != null) {
 
           _navigateToChat(context, model, chatedUser);
@@ -863,13 +882,26 @@ class AdDetailsBottomBar extends StatelessWidget {
           return;
         }
 
+        if (_isAddToCartInProgress) {
+          return;
+        }
+
+        if (mounted) {
+          setState(() {
+            _isAddToCartInProgress = true;
+          });
+        } else {
+          _isAddToCartInProgress = true;
+        }
+
         try {
           await cartCubit.addItem(cartItem);
 
 
-          final safetyTips = cartCubit.state.safetyTips;
-          final bool shouldNavigateToCart =
-              safetyTips == null || !safetyTips.hasTips;
+          final CartSafetyTipsPayload? safetyTips =
+              cartCubit.state.safetyTips;
+          final bool shouldNavigateToCart = safetyTips == null ||
+              !safetyTips.hasDisplayableContent;
 
           if (shouldNavigateToCart) {
             final navigator = Navigator.of(context, rootNavigator: true);
@@ -887,6 +919,14 @@ class AdDetailsBottomBar extends StatelessWidget {
             context,
             message,
           );
+        } finally {
+          if (mounted) {
+            setState(() {
+              _isAddToCartInProgress = false;
+            });
+          } else {
+            _isAddToCartInProgress = false;
+          }
         }
       },
       context: context,
@@ -1004,7 +1044,9 @@ class AdDetailsBottomBar extends StatelessWidget {
                         Expanded(
                         child: isEcommerce
                         ? ElevatedButton(
-                        onPressed: () => _addToCart(context),
+                          onPressed: _isAddToCartInProgress
+                              ? null
+                              : () => _addToCart(context),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
                           vertical: 14),
@@ -1016,7 +1058,30 @@ class AdDetailsBottomBar extends StatelessWidget {
                       _onFor(_brandGreen(context)),
                       elevation: 0,
                     ),
-                    child: const Text('إضافة الى السلة'),
+                          child: _isAddToCartInProgress
+                              ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment:
+                            MainAxisAlignment.center,
+                            children: const [
+                              SizedBox(
+                                height: 18,
+                                width: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'جاري الإضافة...',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          )
+                              : const Text('إضافة الى السلة'),
                   )
                       : ElevatedButton.icon(
                   onPressed: () =>

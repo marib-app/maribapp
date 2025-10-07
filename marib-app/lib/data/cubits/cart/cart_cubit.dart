@@ -11,6 +11,7 @@ import 'package:marib/data/model/cart/cart_discount.dart';
 import 'package:marib/utils/api.dart';
 import 'package:marib/data/repositories/cart/cart_tips_repository.dart';
 import 'package:marib/data/model/cart/cart_safety_tip.dart';
+import 'package:marib/utils/app_telemetry.dart';
 
 
 
@@ -291,8 +292,14 @@ class CartCubit extends Cubit<CartState> {
     _clearPendingAddition(clearSafetyTips: false);
 
     final String? departmentRaw = _activeSection ?? cart.section;
-    final String? department =
+    final String? normalizedDepartment =
         normalizeDeliveryDepartment(departmentRaw) ?? departmentRaw;
+
+    final String? department = normalizedDepartment;
+    final String? canonicalDepartment =
+        normalizeDeliveryDepartment(normalizedDepartment) ?? normalizedDepartment;
+    final bool isSheinDepartment = canonicalDepartment != null &&
+        canonicalDepartment.toLowerCase().trim() == 'shein';
 
 
     _setActiveSection(department);
@@ -303,7 +310,7 @@ class CartCubit extends Cubit<CartState> {
     );
 
     CartSafetyTipsPayload? safetyTips;
-    if (department != null) {
+    if (department != null && isSheinDepartment) {
 
       try {
         safetyTips = await _tipsRepository.fetchTips(
@@ -316,7 +323,7 @@ class CartCubit extends Cubit<CartState> {
     }
 
     final bool requiresConfirmation =
-        safetyTips != null && safetyTips.hasTips && safetyTips.showAsModal;
+        safetyTips != null && safetyTips.requiresConfirmation;
 
     if (requiresConfirmation) {
 
@@ -346,74 +353,108 @@ class CartCubit extends Cubit<CartState> {
     bool skipTipFetch = false,
   }) async {
 
-    final CartSummary summary = await _repository.addItem(
-      itemId: request.itemId,
-      quantity: request.quantity,
-      selectedCustomFields: request.selectedCustomFields,
-      weight: request.weight,
-      vendorLat: request.vendorLat,
-      vendorLng: request.vendorLng,
-      department: request.department,
-      variantId: request.variantId,
-      attributes: request.variantAttributes,
-      stockSnapshot: request.stockSnapshot,
-      unitPrice: request.unitPrice,
-      unitPriceLocked: request.unitPriceLocked,
-      currency: request.currency,
-    );
+    final String? normalizedDepartment =
+        normalizeDeliveryDepartment(request.department) ?? request.department;
+    final bool requestIsShein = normalizedDepartment != null &&
+        normalizedDepartment.toLowerCase().trim() == 'shein';
+
+    try {
+      final CartSummary summary = await _repository.addItem(
+        itemId: request.itemId,
+        quantity: request.quantity,
+        selectedCustomFields: request.selectedCustomFields,
+        weight: request.weight,
+        vendorLat: request.vendorLat,
+        vendorLng: request.vendorLng,
+        department: request.department,
+        variantId: request.variantId,
+        attributes: request.variantAttributes,
+        stockSnapshot: request.stockSnapshot,
+        unitPrice: request.unitPrice,
+        unitPriceLocked: request.unitPriceLocked,
+        currency: request.currency,
+      );
 
 
-    CartSafetyTipsPayload? resolvedTips =
-    (safetyTipsOverride != null && safetyTipsOverride.hasTips)
-        ? safetyTipsOverride
-        : null;
 
-    if (!skipTipFetch && resolvedTips == null) {
-      final String? canonicalDepartment =
-          _extractCanonicalDepartment(summary.raw) ?? request.department;
-      final int? addedItemId =
-          _extractAddedItemId(summary.raw) ?? request.itemId;
 
-      if (canonicalDepartment != null && addedItemId != null) {
-        try {
-          final CartSafetyTipsPayload? fetched = await _tipsRepository.fetchTips(
-            department: canonicalDepartment,
-            itemId: addedItemId,
-          );
-          if (fetched != null && fetched.hasTips) {
-            resolvedTips = fetched;
+
+
+
+
+
+      CartSafetyTipsPayload? resolvedTips =
+      (safetyTipsOverride != null &&
+          safetyTipsOverride.hasDisplayableContent)
+          ? safetyTipsOverride
+          : null;
+
+      if (!skipTipFetch && resolvedTips == null && requestIsShein) {
+        final String? summaryDepartment =
+            _extractCanonicalDepartment(summary.raw) ?? normalizedDepartment;
+        final String? fetchDepartment =
+            normalizeDeliveryDepartment(summaryDepartment) ?? summaryDepartment;
+        final int? addedItemId =
+            _extractAddedItemId(summary.raw) ?? request.itemId;
+
+        if (fetchDepartment != null && addedItemId != null) {
+          try {
+            final CartSafetyTipsPayload? fetched =
+            await _tipsRepository.fetchTips(
+              department: fetchDepartment,
+              itemId: addedItemId,
+            );
+            if (fetched != null && fetched.hasDisplayableContent) {
+              resolvedTips = fetched;
+            }
+          } catch (_) {
+            // Ignore tip fetch errors; cart addition succeeded.
+
+
           }
-        } catch (_) {
-          // Ignore tip fetch errors; cart addition succeeded.
+
         }
       }
-    }
+      _syncSection(summary.items);
+      emit(
+        state.copyWith(
+          items: summary.items,
+          discounts: summary.discounts,
+          lastUpdated: DateTime.now(),
+          safetyTips: skipTipFetch ? null : resolvedTips,
+          clearSafetyTips: skipTipFetch || resolvedTips == null,
+          pendingAddition: null,
+          departmentPolicy: summary.departmentPolicy,
+          support: summary.support,
+          deliveryQuote: summary.deliveryQuote,
+          blocking: summary.blocking,
+          deliveryPaymentOptions: summary.deliveryPaymentOptions,
+          deliveryPaymentTiming: summary.deliveryPaymentTiming,
+        ),
+      );
 
-    _syncSection(summary.items);
-    emit(
-      state.copyWith(
-        items: summary.items,
-        discounts: summary.discounts,
-        lastUpdated: DateTime.now(),
-        safetyTips: skipTipFetch ? null : resolvedTips,
-        clearSafetyTips: skipTipFetch || resolvedTips == null,
-        pendingAddition: null,
-        departmentPolicy: summary.departmentPolicy,
-        support: summary.support,
-        deliveryQuote: summary.deliveryQuote,
-        blocking: summary.blocking,
-        deliveryPaymentOptions: summary.deliveryPaymentOptions,
-        deliveryPaymentTiming: summary.deliveryPaymentTiming,
-      ),
-    );
-    final bool shouldRefreshPaymentTiming =
-        summary.deliveryPaymentOptions == null ||
-            summary.deliveryPaymentOptions!.isEmpty ||
-            summary.deliveryPaymentTiming == null ||
-            summary.deliveryPaymentTiming!.trim().isEmpty;
+      _recordTelemetry('cart_add.success', <String, dynamic>{
+        'department': normalizedDepartment,
+        'skip_tip_fetch': skipTipFetch,
+        'has_tips': resolvedTips?.hasDisplayableContent ?? false,
+      });
 
-    if (shouldRefreshPaymentTiming) {
-      await refreshDeliveryPaymentTiming();
+      final bool shouldRefreshPaymentTiming =
+          summary.deliveryPaymentOptions == null ||
+              summary.deliveryPaymentOptions!.isEmpty ||
+              summary.deliveryPaymentTiming == null ||
+              summary.deliveryPaymentTiming!.trim().isEmpty;
+
+      if (shouldRefreshPaymentTiming) {
+        await refreshDeliveryPaymentTiming();
+      }
+    } catch (error, _) {
+      _recordTelemetry('cart_add.failed', <String, dynamic>{
+        'department': normalizedDepartment,
+        'skip_tip_fetch': skipTipFetch,
+        'error': error.toString(),
+      });
+      rethrow;
     }
   }
 
@@ -674,8 +715,13 @@ class CartCubit extends Cubit<CartState> {
 
   void clearSafetyTips() {
     _clearPendingAddition(clearSafetyTips: true);
-
   }
+
+
+  void _recordTelemetry(String event, [Map<String, dynamic>? context]) {
+    AppTelemetry.record(event, context ?? const <String, dynamic>{});
+  }
+
 
 
   Future<void> removeCoupon(String rawCode) async {

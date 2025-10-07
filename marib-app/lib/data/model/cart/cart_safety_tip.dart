@@ -13,6 +13,27 @@ class CartSafetyTipsPayload {
 
   bool get hasTips => tips.isNotEmpty;
 
+
+  String? get departmentKey {
+    final dynamic department = raw?['department'];
+    if (department is String) {
+      final String trimmed = department.trim();
+      return trimmed.isEmpty ? null : trimmed.toLowerCase();
+    }
+    if (department is Map<String, dynamic>) {
+      final dynamic value = department['key'] ??
+          department['code'] ??
+          department['department'] ??
+          department['id'];
+      if (value is String && value.trim().isNotEmpty) {
+        return value.trim().toLowerCase();
+      }
+    }
+    return null;
+  }
+
+  bool get isSheinDepartment => departmentKey == 'shein';
+
   String get _normalizedPresentation =>
       (presentation ?? 'banner').toLowerCase().trim();
 
@@ -22,6 +43,117 @@ class CartSafetyTipsPayload {
 
   CartSafetyTip? get primaryTip =>
       tips.firstWhereOrNull((CartSafetyTip tip) => tip.hasDescription);
+
+
+
+  List<CartSafetyTipAction> get rawActions {
+    final dynamic actions = raw?['actions'];
+    if (actions is List) {
+      return actions
+          .map((dynamic action) => CartSafetyTipAction.tryParse(action))
+          .whereType<CartSafetyTipAction>()
+          .toList();
+    }
+    if (actions is Map) {
+      return actions.values
+          .map((dynamic action) => CartSafetyTipAction.tryParse(action))
+          .whereType<CartSafetyTipAction>()
+          .toList();
+    }
+    return const <CartSafetyTipAction>[];
+  }
+
+  String? get fallbackProductLink {
+    final dynamic link = raw?['product_link'] ?? raw?['productLink'];
+    if (link == null) return null;
+    if (link is String) {
+      final String trimmed = link.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+    return link.toString();
+  }
+
+  List<CartSafetyTipAction> get fallbackActions {
+    if (primaryTip?.actions.isNotEmpty ?? false) {
+      return primaryTip!.actions;
+    }
+
+    final List<CartSafetyTipAction> parsedRaw = rawActions;
+    if (parsedRaw.isNotEmpty) {
+      return parsedRaw;
+    }
+
+    if (!isSheinDepartment) {
+      return const <CartSafetyTipAction>[];
+    }
+
+    final String? productLink = fallbackProductLink;
+    if (productLink == null) {
+      return const <CartSafetyTipAction>[];
+    }
+
+    return <CartSafetyTipAction>[
+      CartSafetyTipAction(
+        type: 'open_url',
+        label: 'تحقق من المنتج',
+        productLink: productLink,
+        raw: <String, dynamic>{
+          'type': 'open_url',
+          'label': 'Verify Product',
+          'product_link': productLink,
+        },
+      ),
+    ];
+  }
+
+  String? get fallbackTitle {
+    final List<String> keys = <String>['title', 'name', 'heading', 'label'];
+    for (final String key in keys) {
+      final dynamic value = raw?[key];
+      if (value is String && value.trim().isNotEmpty) {
+        return value.trim();
+      }
+    }
+    return null;
+  }
+
+  String? get fallbackDescription {
+    final List<String> keys = <String>[
+      'disclaimer',
+      'default_description',
+      'description',
+      'message',
+      'text',
+      'note',
+      'return_policy_text',
+    ];
+
+    for (final String key in keys) {
+      final dynamic value = raw?[key];
+      if (value is String && value.trim().isNotEmpty) {
+        return value.trim();
+      }
+    }
+    return null;
+  }
+
+  bool get hasDisplayableContent =>
+      hasTips || rawActions.isNotEmpty || fallbackProductLink != null;
+
+  bool get requiresConfirmation {
+    if (showAsModal && hasDisplayableContent) {
+      return true;
+    }
+    if (isSheinDepartment) {
+      return true;
+    }
+    return false;
+  }
+
+
+
+
+
 
   CartSafetyTipsPayload copyWith({
     List<CartSafetyTip>? tips,

@@ -1,5 +1,8 @@
 import 'package:marib/data/model/cart/cart_safety_tip.dart';
 import 'package:marib/utils/api.dart';
+import 'package:marib/utils/app_telemetry.dart';
+
+
 
 class CartTipsRepository {
   const CartTipsRepository();
@@ -8,6 +11,13 @@ class CartTipsRepository {
     required String department,
     required int itemId,
   }) async {
+
+    AppTelemetry.record('tips_called', <String, dynamic>{
+      'department': department,
+      'item_id': itemId,
+    });
+
+
     final Map<String, dynamic> response = await Api.get(
       url: Api.getTipsApi,
       queryParameters: <String, dynamic>{
@@ -16,22 +26,39 @@ class CartTipsRepository {
       },
     );
 
-    final Map<String, dynamic>? payload = _extractPayload(response);
-    if (payload == null) {
-      return null;
-    }
+    final Map<String, dynamic> payload =
+    _resolvePayload(response, department: department);
 
     final CartSafetyTipsPayload tipsPayload =
     CartSafetyTipsPayload.fromJson(payload).copyWith(raw: payload);
-    if (!tipsPayload.hasTips) {
-      return null;
+    if (!tipsPayload.hasDisplayableContent) {
+      AppTelemetry.record('tips_empty', <String, dynamic>{
+        'department': department,
+        'item_id': itemId,
+      });
     }
 
     return tipsPayload;
   }
 
-  Map<String, dynamic>? _extractPayload(Map<String, dynamic>? source) {
-    if (source == null) return null;
+  Map<String, dynamic> _resolvePayload(
+      Map<String, dynamic>? source, {
+        required String department,
+      }) {
+    final Map<String, dynamic> fallback = <String, dynamic>{
+      'tips': const <dynamic>[],
+      'actions': const <dynamic>[],
+      'product_link': null,
+      'presentation': 'modal',
+      'department': <String, dynamic>{
+        'key': department,
+        'label': department,
+      },
+    };
+
+    if (source == null) {
+      return fallback;
+    }
 
     Map<String, dynamic>? normalize(dynamic value) {
       if (value == null) return null;
@@ -44,57 +71,39 @@ class CartTipsRepository {
       return null;
     }
 
+
+    List<dynamic> normalizeList(dynamic value) {
+      if (value is List) {
+        return List<dynamic>.from(value);
+      }
+      if (value is Iterable) {
+        return value.map((dynamic e) => e).toList();
+      }
+      return <dynamic>[];
+    }
+
+
     final Iterable<dynamic> candidates = <dynamic>[
       source,
       source['data'],
       source['payload'],
       source['result'],
-      source['tips'],
     ];
 
     for (final dynamic candidate in candidates) {
       final Map<String, dynamic>? map = normalize(candidate);
       if (map == null) continue;
-      final List<dynamic>? tipsList = _extractTipsList(map);
-      if (tipsList != null && tipsList.isNotEmpty) {
-        return <String, dynamic>{
-          'tips': tipsList,
-          'presentation': map['presentation'] ?? map['display'] ?? map['style'],
-          'raw': map,
-        };
-      }
+      final Map<String, dynamic> sanitized = Map<String, dynamic>.from(map);
+      sanitized['presentation'] =
+          sanitized['presentation'] ?? sanitized['display'] ?? sanitized['style'];
+      sanitized['tips'] = normalizeList(sanitized['tips']);
+      sanitized['actions'] = normalizeList(sanitized['actions']);
+      sanitized.putIfAbsent('product_link', () => null);
+      sanitized.putIfAbsent('department', () => fallback['department']);
+
+      return sanitized;
+
     }
-
-    return null;
-  }
-
-  List<dynamic>? _extractTipsList(Map<String, dynamic> map) {
-    final List<String> keys = <String>[
-      'tips',
-      'data',
-      'items',
-      'records',
-      'rows',
-      'entries',
-    ];
-
-    for (final String key in keys) {
-      final dynamic value = map[key];
-      if (value is List) {
-        return value;
-      }
-      if (value is Map) {
-        final Map<String, dynamic>? inner = value.map(
-              (dynamic key, dynamic value) => MapEntry(key.toString(), value),
-        );
-        if (inner == null) continue;
-        final List<dynamic>? nested = _extractTipsList(inner);
-        if (nested != null && nested.isNotEmpty) {
-          return nested;
-        }
-      }
-    }
-
-    return null;
+    return fallback;
   }
 }

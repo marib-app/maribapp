@@ -175,6 +175,7 @@ class Api {
     return headers;
   }
 
+
   static Map<String, dynamic>? _cloneMap(Map<String, dynamic>? source) {
     if (source == null) {
       return null;
@@ -185,6 +186,26 @@ class Api {
     }
 
     return Map<String, dynamic>.from(source);
+  }
+
+
+  static String? _resolveContentType({
+    Object? override,
+    Object? base,
+  }) {
+    final Object? candidate = override ?? base;
+
+    if (candidate == null) {
+      return null;
+    }
+
+    if (candidate is String) {
+      return candidate;
+    }
+
+    // Dio accepts String values for content type; ensure we don't surface
+    // unexpected object instances.
+    return candidate.toString();
   }
 
 
@@ -204,7 +225,10 @@ class Api {
       extra: _cloneMap(resolvedBase.extra),
       headers: headers ?? _cloneMap(resolvedBase.headers),
       responseType: resolvedBase.responseType,
-      contentType: contentType ?? resolvedBase.contentType,
+      contentType: _resolveContentType(
+        override: contentType,
+        base: resolvedBase.contentType,
+      ),
       validateStatus: resolvedBase.validateStatus,
       receiveDataWhenStatusError:
       resolvedBase.receiveDataWhenStatusError,
@@ -215,8 +239,6 @@ class Api {
       listFormat: resolvedBase.listFormat,
     );
   }
-
-
 
 
   static void _ensureSliderSessionHeaders(Map<String, dynamic> headers) {

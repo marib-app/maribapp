@@ -13,7 +13,8 @@ class ColorCatalog {
   ];
 
   /// Sanitizes a hex value by removing leading hashes and uppercasing.
-  static String sanitizeHex(String hex) => ColorPaletteHelper.normalizeHex(hex);
+  static String sanitizeHex(String hex) =>
+      ColorPaletteHelper.normalizeHex(hex);
 
   /// Resolves the display name for a hex value using the known palette.
   ///

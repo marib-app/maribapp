@@ -7,6 +7,7 @@ class SafetyTipsRepository {
     required String department,
     required int itemId,
   }) async {
+
     try {
       Map<String, dynamic> response = await Api.get(
         url: Api.getTipsApi,
@@ -18,20 +19,20 @@ class SafetyTipsRepository {
 
       final Map<String, dynamic> data = _normalizeMap(response['data']);
       final SafetyTipsDepartment? departmentModel =
-          SafetyTipsDepartment.fromNullableJson(data['department']);
+      SafetyTipsDepartment.fromNullableJson(data['department']);
       final String? productLink = _stringOrNull(data['product_link']);
       final List<SafetyTipAction> actions =
-          SafetyTipAction.parseList(data['actions']);
+      SafetyTipAction.parseList(data['actions']);
 
       final List<SafetyTipsModel> list = _normalizeList(data['tips'])
           .map(
             (tip) => SafetyTipsModel.fromJson(
-              tip,
-              department: departmentModel,
-              productLink: productLink,
-              sharedActions: actions,
-            ),
-          )
+          tip,
+          department: departmentModel,
+          productLink: productLink,
+          sharedActions: actions,
+        ),
+      )
           .toList();
 
       return DataOutput(total: list.length, modelList: list);
@@ -40,14 +41,13 @@ class SafetyTipsRepository {
     }
   }
 }
-
 Map<String, dynamic> _normalizeMap(dynamic source) {
   if (source is Map<String, dynamic>) {
     return Map<String, dynamic>.from(source);
   }
   if (source is Map) {
     return source.map(
-      (dynamic key, dynamic value) => MapEntry(key.toString(), value),
+          (dynamic key, dynamic value) => MapEntry(key.toString(), value),
     );
   }
   return <String, dynamic>{};
@@ -60,8 +60,8 @@ List<Map<String, dynamic>> _normalizeList(dynamic source) {
         .map(
           (Map<dynamic, dynamic> value) => value.map(
             (dynamic key, dynamic value) => MapEntry(key.toString(), value),
-          ),
-        )
+      ),
+    )
         .map((map) => Map<String, dynamic>.from(map))
         .toList();
   }

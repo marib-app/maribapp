@@ -11,6 +11,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:flutter/services.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/sliver_grid_delegate_with_fixed_cross_axis_count_and_fixed_height.dart';
 
@@ -32,6 +33,8 @@ import 'package:marib/ui/screens/item/add_item_screen/widgets/category.dart';
 ///  - تعرض شيمر لأي حالة ≠ Success
 ///  - تعرض NoData/Failure مع زر إعادة المحاولة (اختياري)
 /// ======================================================================
+
+
 
 class SelectCategoryUI extends StatelessWidget {
   const SelectCategoryUI({
@@ -95,6 +98,7 @@ class SelectCategoryUI extends StatelessWidget {
     if (state is FetchCategoryFailure) {
       // فشل عام: أظهر ودجت قياسية مع زر إعادة محاولة (اختياري)
       return const SomethingWentWrong();
+
     }
 
     if (state is! FetchCategorySuccess) {
@@ -126,7 +130,8 @@ class SelectCategoryUI extends StatelessWidget {
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
+          gridDelegate:
+          SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
             crossAxisCount: 3,
             height: MediaQuery.of(context).size.height * 0.18,
             crossAxisSpacing: 14,
@@ -151,6 +156,7 @@ class SelectCategoryUI extends StatelessWidget {
   //  _gridShimmer: شيمر شبكة الفئات الرئيسية قبل اكتمال الجلب
   // ----------------------------------------------------------------------
 
+
   Widget _gridShimmer(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -163,7 +169,8 @@ class SelectCategoryUI extends StatelessWidget {
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
+          gridDelegate:
+          SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
             crossAxisCount: 3,
             height: MediaQuery.of(context).size.height * 0.18,
             crossAxisSpacing: 14,
@@ -174,7 +181,7 @@ class SelectCategoryUI extends StatelessWidget {
             return Shimmer.fromColors(
               baseColor: Theme.of(context).colorScheme.shimmerBaseColor,
               highlightColor:
-                  Theme.of(context).colorScheme.shimmerHighlightColor,
+              Theme.of(context).colorScheme.shimmerHighlightColor,
               child: Container(
                 decoration: BoxDecoration(
                   color: context.color.borderColor.darken(6),
@@ -194,6 +201,7 @@ class SelectCategoryUI extends StatelessWidget {
 ///  - لا تعتمد على current.children (المنطق يضمن الجلب من الكيوبِت)
 ///  - تعرض شيمر لأي حالة ≠ Success، ومعالجة NoData/NoInternet/Failure
 /// ======================================================================
+
 
 class SelectNestedCategoryUI extends StatelessWidget {
   const SelectNestedCategoryUI({
@@ -224,13 +232,21 @@ class SelectNestedCategoryUI extends StatelessWidget {
 
   final VoidCallback onHomeTap;
   final void Function(List<CategoryModel> dataList, int index)
-      onBreadCrumbItemTap;
+  onBreadCrumbItemTap;
 
   final VoidCallback onTapAllCurrent;
   final void Function(CategoryModel) onCategoryTap;
 
+
+
   // داخل SelectNestedCategoryUI (كحقل نهائي)
 //  final ScrollController _breadcrumbController = ScrollController();
+
+
+
+
+
+
 
   // ----------------------------------------------------------------------
   //  build
@@ -280,7 +296,10 @@ class SelectNestedCategoryUI extends StatelessWidget {
   //  _headerWithBreadcrumb: عنوان + مسار تنقل أفقي
   // ----------------------------------------------------------------------
 
+
 // بديل _headerWithBreadcrumb: عنوان + Chips + زر "الكل"
+
+
 
   Widget _headerWithBreadcrumb(BuildContext context) {
     return Container(
@@ -309,9 +328,13 @@ class SelectNestedCategoryUI extends StatelessWidget {
     );
   }
 
+
+
   // ----------------------------------------------------------------------
   //  _breadcrumb: شريط مسار التنقل (Home > Level1 > Level2 ...)
   // ----------------------------------------------------------------------
+
+
 
 // مسار الفئات لازم نقله لتفاصيل الاعلان
 
@@ -320,9 +343,7 @@ class SelectNestedCategoryUI extends StatelessWidget {
 
     // +1 للـ Home
     final total = breadCrumbData.length + 1;
-    final activeIndex = breadCrumbData.isEmpty
-        ? 0
-        : breadCrumbData.length; // آخر فتات = الحالية
+    final activeIndex = breadCrumbData.isEmpty ? 0 : breadCrumbData.length; // آخر فتات = الحالية
     final keys = List.generate(total, (_) => GlobalKey());
 
     // تمركز الفئة النشطة في المنتصف بعد البناء
@@ -332,7 +353,7 @@ class SelectNestedCategoryUI extends StatelessWidget {
         if (ctx != null) {
           Scrollable.ensureVisible(
             ctx,
-            alignment: 0.5, // ← وسط المسار
+            alignment: 0.5,              // ← وسط المسار
             duration: const Duration(milliseconds: 280),
             curve: Curves.easeOutCubic,
           );
@@ -343,10 +364,9 @@ class SelectNestedCategoryUI extends StatelessWidget {
     return SizedBox(
       height: 40,
       child: ListView.separated(
-        // controller: _breadcrumbController,
+       // controller: _breadcrumbController,
 
-        physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics()),
+        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
         scrollDirection: Axis.horizontal,
         padding: EdgeInsets.zero,
         itemCount: total,
@@ -383,27 +403,26 @@ class SelectNestedCategoryUI extends StatelessWidget {
     );
   }
 
+
   Widget _chip(
-    BuildContext context, {
-    required String label,
-    required IconData icon,
-    required bool isActive,
-    required bool isDark, // ← جديد
-    required VoidCallback onTap,
-  }) {
+      BuildContext context, {
+        required String label,
+        required IconData icon,
+        required bool isActive,
+        required bool isDark,        // ← جديد
+        required VoidCallback onTap,
+      }) {
     // ألوان متكيفة
     final Color baseText = context.color.textDefaultColor;
     final Color borderColor = isActive
         ? context.color.territoryColor.withOpacity(0.55)
-        : (isDark
-            ? Colors.white.withOpacity(0.10)
-            : Colors.black.withOpacity(0.08));
+        : (isDark ? Colors.white.withOpacity(0.10) : Colors.black.withOpacity(0.08));
 
     final Color bgColor = isActive
         ? context.color.territoryColor.withOpacity(0.18)
         : (isDark
-            ? Colors.white.withOpacity(0.04)
-            : context.color.borderColor.darken(4));
+        ? Colors.white.withOpacity(0.04)
+        : context.color.borderColor.darken(4));
 
     return InkWell(
       borderRadius: BorderRadius.circular(18),
@@ -413,21 +432,20 @@ class SelectNestedCategoryUI extends StatelessWidget {
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: borderColor, width: 1), // ← حدود خفيفة
+          border: Border.all(color: borderColor, width: 1),  // ← حدود خفيفة
           boxShadow: isActive
               ? [
-                  BoxShadow(
-                    color: context.color.territoryColor.withOpacity(0.10),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  )
-                ]
+            BoxShadow(
+              color: context.color.territoryColor.withOpacity(0.10),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            )
+          ]
               : null,
         ),
         child: Row(
           children: [
-            Icon(icon,
-                size: 16, color: baseText.withOpacity(isActive ? 0.95 : 0.8)),
+            Icon(icon, size: 16, color: baseText.withOpacity(isActive ? 0.95 : 0.8)),
             const SizedBox(width: 6),
             Text(label)
                 .size(context.font.small)
@@ -438,6 +456,7 @@ class SelectNestedCategoryUI extends StatelessWidget {
     );
   }
 
+
   // ----------------------------------------------------------------------
   //  _subcategoriesBody: يقرر ما الذي يجب عرضه حسب حالة FetchSubCategoriesState
   // ----------------------------------------------------------------------
@@ -447,7 +466,7 @@ class SelectNestedCategoryUI extends StatelessWidget {
 
     if (state is FetchSubCategoriesFailure) {
       final msg = state.errorMessage;
-      if (msg == "no-internet") {
+      if (msg is String && msg == "no-internet") {
         return NoInternet(onRetry: onRetryFetchSubCategories);
       }
       return const SomethingWentWrong();
@@ -464,12 +483,13 @@ class SelectNestedCategoryUI extends StatelessWidget {
     return _subcategoriesList(context, state); // ← قائمة محسّنة
   }
 
+
   // ----------------------------------------------------------------------
   //  _subcategoriesList: قائمة الفئات الفرعية (نجاح)
   // ----------------------------------------------------------------------
 
-  Widget _subcategoriesList(
-      BuildContext context, FetchSubCategoriesSuccess state) {
+
+  Widget _subcategoriesList(BuildContext context, FetchSubCategoriesSuccess state) {
     final items = state.categories;
 
     return ListView.separated(
@@ -510,14 +530,20 @@ class SelectNestedCategoryUI extends StatelessWidget {
     );
   }
 
+
+
+
+
+
+
   Widget _animatedListItem(
-    BuildContext context, {
-    required int index,
-    required String title,
-    required String imageUrl,
-    required VoidCallback onTap,
-    required VoidCallback onLongPress,
-  }) {
+      BuildContext context, {
+        required int index,
+        required String title,
+        required String imageUrl,
+        required VoidCallback onTap,
+        required VoidCallback onLongPress,
+      }) {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.95, end: 1),
       duration: const Duration(milliseconds: 220),
@@ -538,13 +564,14 @@ class SelectNestedCategoryUI extends StatelessWidget {
     );
   }
 
+
   Widget _pressableListTile(
-    BuildContext context, {
-    required String title,
-    required String imageUrl,
-    required VoidCallback onTap,
-    required VoidCallback onLongPress,
-  }) {
+      BuildContext context, {
+        required String title,
+        required String imageUrl,
+        required VoidCallback onTap,
+        required VoidCallback onLongPress,
+      }) {
     return _ScaleOnPress(
       child: InkWell(
         onTap: onTap,
@@ -555,8 +582,7 @@ class SelectNestedCategoryUI extends StatelessWidget {
             color: context.color.secondaryColor,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: context.color.textDefaultColor
-                  .withOpacity(0.08), // 👈 رمادي شفاف
+              color: context.color.textDefaultColor.withOpacity(0.08), // 👈 رمادي شفاف
               width: 1,
             ),
           ),
@@ -604,9 +630,12 @@ class SelectNestedCategoryUI extends StatelessWidget {
     );
   }
 
+
   // ----------------------------------------------------------------------
   //  _listShimmer: شيمر لقائمة الفئات الفرعية قبل اكتمال الجلب
   // ----------------------------------------------------------------------
+
+
 
   Widget _listShimmer(BuildContext context) {
     return ListView.separated(
@@ -661,7 +690,12 @@ class SelectNestedCategoryUI extends StatelessWidget {
       },
     );
   }
+
 }
+
+
+
+
 
 class _ScaleOnPress extends StatefulWidget {
   const _ScaleOnPress({required this.child});

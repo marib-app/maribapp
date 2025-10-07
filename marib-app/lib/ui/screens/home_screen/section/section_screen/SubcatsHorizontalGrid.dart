@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:marquee/marquee.dart';
 import 'package:marib/data/model/category_model.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:marib/ui/screens/home_screen/section/section_screen/shimmer_colors.dart';
+import 'shimmer_colors.dart';
+
 
 const double _subcatCardRadius = 20.0;
 
@@ -65,6 +66,7 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
     final idx = _indexOf(widget.selectedId);
     return _pageOfIndex(idx);
   }
+
 
   int _calculateItemsPerRow(double maxWidth, int totalItems) {
     final availableWidth = maxWidth - (_hPad * 2);
@@ -133,8 +135,7 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
         final maxRows = total <= itemsPerRow ? 1 : 2;
         final itemsPerPage = itemsPerRow * maxRows;
         final totalSpacing = _spacing * (itemsPerRow - 1);
-        final widthForItems =
-            (w - (_hPad * 2) - totalSpacing).clamp(0.0, 4000.0);
+        final widthForItems = (w - (_hPad * 2) - totalSpacing).clamp(0.0, 4000.0);
         final itemWidth = (widthForItems / itemsPerRow).clamp(70.0, 120.0);
 
         final circleSize = (itemWidth * 0.82).clamp(48.0, 64.0);
@@ -142,13 +143,10 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
         const gap = 6.0;
         final rowHeight = circleSize + gap + titleHeight;
 
-        final gridHeight =
-            rowHeight * maxRows + _verticalSpacingBetweenRows * (maxRows - 1);
+        final gridHeight = rowHeight * maxRows + _verticalSpacingBetweenRows * (maxRows - 1);
         final pages = (total / itemsPerPage).ceil();
 
-        if (_itemsPerRow != itemsPerRow ||
-            _maxRows != maxRows ||
-            _itemsPerPage != itemsPerPage) {
+        if (_itemsPerRow != itemsPerRow || _maxRows != maxRows || _itemsPerPage != itemsPerPage) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
             final idx = _indexOf(widget.selectedId);
@@ -168,6 +166,7 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
           });
         }
 
+
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -181,7 +180,7 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
                   final start = pageIndex * itemsPerPage;
                   final padded = List<CategoryModel?>.generate(
                     itemsPerPage,
-                    (i) {
+                        (i) {
                       final absoluteIndex = start + i;
                       if (absoluteIndex >= total) return null;
                       return widget.subcats[absoluteIndex];
@@ -189,51 +188,44 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
                   );
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: _hPad),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: List.generate(maxRows, (rowIndex) {
-                        final rowStart = rowIndex * itemsPerRow;
-                        final rowItems =
-                            padded.skip(rowStart).take(itemsPerRow).toList();
-                        return Padding(
-                          padding: EdgeInsets.only(
-                              top: rowIndex == 0
-                                  ? 0
-                                  : _verticalSpacingBetweenRows),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: List.generate(itemsPerRow, (colIndex) {
-                              final item = rowItems.length > colIndex
-                                  ? rowItems[colIndex]
-                                  : null;
-                              if (item == null) {
-                                return SizedBox(
-                                    width: itemWidth, height: rowHeight);
+                  child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: List.generate(maxRows, (rowIndex) {
+                  final rowStart = rowIndex * itemsPerRow;
+                  final rowItems = padded.skip(rowStart).take(itemsPerRow).toList();
+                  return Padding(
+                  padding: EdgeInsets.only(top: rowIndex == 0 ? 0 : _verticalSpacingBetweenRows),
+                  child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: List.generate(itemsPerRow, (colIndex) {
+                  final item = rowItems.length > colIndex ? rowItems[colIndex] : null;
+                  if (item == null) {
+                  return SizedBox(width: itemWidth, height: rowHeight);
                               }
-                              final sel = item.id == widget.selectedId;
-                              return SizedBox(
-                                width: itemWidth,
-                                height: rowHeight,
-                                child: _SubcatCircle(
-                                  label: item.name ?? '',
-                                  brand: widget.brand,
-                                  selected: sel,
-                                  circleSize: circleSize,
-                                  imageUrl: item.url,
-                                  useImage: (item.url ?? '').isNotEmpty,
-                                  onTap: () {
-                                    // لا تغيّر الصفحة هنا — فقط نبلغ بالأكشن الصحيح
-                                    widget.onTap(item.id);
-                                    if (widget.isTopLevel) {
-                                      widget.onTopCategoryPick(item);
-                                    } else {
-                                      widget.onSubcatPick(item);
-                                    }
-                                  },
-                                ),
-                              );
-                            }),
+                  final sel = item.id == widget.selectedId;
+                  return SizedBox(
+                  width: itemWidth,
+                  height: rowHeight,
+                  child: _SubcatCircle(
+                  label: item.name ?? '',
+                  brand: widget.brand,
+                  selected: sel,
+                  circleSize: circleSize,
+                  imageUrl: item.url,
+                  useImage: (item.url ?? '').isNotEmpty,
+                  onTap: () {
+                  // لا تغيّر الصفحة هنا — فقط نبلغ بالأكشن الصحيح
+                  widget.onTap(item.id);
+                  if (widget.isTopLevel) {
+                  widget.onTopCategoryPick(item);
+                  } else {
+                  widget.onSubcatPick(item);
+                  }
+                  },
+                  ),
+                  );
+                  }),
                           ),
                         );
                       }),
@@ -282,8 +274,7 @@ class _SubcatCircle extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final textColor =
-        theme.textTheme.bodyMedium?.color ?? colorScheme.onSurface;
+    final textColor = theme.textTheme.bodyMedium?.color ?? colorScheme.onSurface;
 
     final shimmerBase = colorScheme.shimmerBaseColor;
     final shimmerHighlight = colorScheme.shimmerHighlightColor;
@@ -291,8 +282,7 @@ class _SubcatCircle extends StatelessWidget {
 
     final cardRadius = BorderRadius.circular(_subcatCardRadius);
     final unselectedBackground = Color.alphaBlend(
-      colorScheme.surfaceContainerHighest
-          .withOpacity(theme.brightness == Brightness.dark ? 0.35 : 0.18),
+      colorScheme.surfaceVariant.withOpacity(theme.brightness == Brightness.dark ? 0.35 : 0.18),
       colorScheme.surface,
     );
     final selectedBackground = Color.alphaBlend(
@@ -301,27 +291,24 @@ class _SubcatCircle extends StatelessWidget {
     );
     final borderColor = selected
         ? brand
-        : colorScheme.outline
-            .withOpacity(theme.brightness == Brightness.dark ? 0.35 : 0.2);
+        : colorScheme.outline.withOpacity(theme.brightness == Brightness.dark ? 0.35 : 0.2);
     final boxShadow = selected
         ? [
-            BoxShadow(
-              color: brand.withOpacity(
-                  theme.brightness == Brightness.dark ? 0.35 : 0.25),
-              blurRadius: 18,
-              spreadRadius: 1,
-              offset: const Offset(0, 6),
-            ),
-          ]
+      BoxShadow(
+        color: brand.withOpacity(theme.brightness == Brightness.dark ? 0.35 : 0.25),
+        blurRadius: 18,
+        spreadRadius: 1,
+        offset: const Offset(0, 6),
+      ),
+    ]
         : [
-            BoxShadow(
-              color: colorScheme.shadow.withOpacity(
-                  theme.brightness == Brightness.dark ? 0.25 : 0.06),
-              blurRadius: 10,
-              spreadRadius: 0,
-              offset: const Offset(0, 4),
-            ),
-          ];
+      BoxShadow(
+        color: colorScheme.shadow.withOpacity(theme.brightness == Brightness.dark ? 0.25 : 0.06),
+        blurRadius: 10,
+        spreadRadius: 0,
+        offset: const Offset(0, 4),
+      ),
+    ];
 
     final titleStyle = TextStyle(
       fontSize: 12,
@@ -333,18 +320,19 @@ class _SubcatCircle extends StatelessWidget {
     Widget avatar;
     if (useImage) {
       Widget shimmerTile() => Shimmer.fromColors(
+
             baseColor: shimmerBase,
             highlightColor: shimmerHighlight,
-            period: const Duration(milliseconds: 1150),
-            child: Container(
+        period: const Duration(milliseconds: 1150),
+        child: Container(
               width: circleSize,
               height: circleSize,
-              decoration: BoxDecoration(
-                borderRadius: cardRadius,
-                color: shimmerContent,
-              ),
-            ),
-          );
+          decoration: BoxDecoration(
+            borderRadius: cardRadius,
+            color: shimmerContent,
+          ),
+        ),
+      );
 
       avatar = ClipRRect(
         borderRadius: cardRadius,
@@ -353,6 +341,7 @@ class _SubcatCircle extends StatelessWidget {
           fit: BoxFit.cover,
           placeholder: (_, __) => shimmerTile(),
           errorWidget: (_, __, ___) => shimmerTile(),
+
         ),
       );
     } else {
@@ -446,11 +435,7 @@ class _FittedOrMarquee extends StatelessWidget {
           ),
         );
       }
-      return Text(text,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: style,
-          textAlign: TextAlign.center);
+      return Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: style, textAlign: TextAlign.center);
     });
   }
 }
@@ -460,8 +445,7 @@ class _DotsIndicator extends StatelessWidget {
   final int count;
   final Color color;
 
-  const _DotsIndicator(
-      {required this.current, required this.count, required this.color});
+  const _DotsIndicator({required this.current, required this.count, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -487,6 +471,26 @@ class _DotsIndicator extends StatelessWidget {
   }
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /// كتلة “جلب مؤجّل + شيمر” للفئات الفرعية تحت السلايدر.
 /// قبل التفعيل (enabled=false): شيمر فقط.
 /// عند التحويل إلى true: يبدأ الجلب مرّة واحدة، ويستمر الشيمر حتى تجهز البيانات.
@@ -501,14 +505,14 @@ class SubcatsDeferredBlock extends StatefulWidget {
   final Widget Function() builderWhenReady;
 
   /// شيمر مخصص (اختياري). إن تُركت null نستخدم شيمر افتراضي بنفس ارتفاع الشبكة.
-  final Widget Function(BuildContext context, double rowHeight, int maxRows)?
-      shimmerBuilder;
+  final Widget Function(BuildContext context, double rowHeight, int maxRows)? shimmerBuilder;
 
   /// حد أدنى لعرض الشيمر لتجنب “وميض” سريع
   final Duration minShimmer;
 
   /// لضبط ارتفاع الشيمر تمامًا مثل الشبكة (افتراضي 92 = 56 + 6 + 30)
   final double rowHeight;
+
 
   /// عدد الصفوف المفترض للشبكة (1 أو 2 عادةً).
   final int maxRows;
@@ -522,6 +526,7 @@ class SubcatsDeferredBlock extends StatefulWidget {
     this.minShimmer = const Duration(milliseconds: 400),
     this.rowHeight = 92.0,
     this.maxRows = 1,
+
   });
 
   @override
@@ -560,9 +565,7 @@ class SubcatsDeferredBlockState extends State<SubcatsDeferredBlock> {
       }
     } finally {
       final elapsed = DateTime.now().difference(_t0 ?? DateTime.now());
-      final extra = elapsed >= widget.minShimmer
-          ? Duration.zero
-          : (widget.minShimmer - elapsed);
+      final extra = elapsed >= widget.minShimmer ? Duration.zero : (widget.minShimmer - elapsed);
       if (extra > Duration.zero) {
         await Future.delayed(extra);
       }
@@ -574,9 +577,8 @@ class SubcatsDeferredBlockState extends State<SubcatsDeferredBlock> {
   Widget build(BuildContext context) {
     // قبل التفعيل أو أثناء الجلب الأول: شيمر
     if (!widget.enabled || !_ready) {
-      return widget.shimmerBuilder
-              ?.call(context, widget.rowHeight, widget.maxRows) ??
-          _defaultShimmer(context, widget.rowHeight, widget.maxRows);
+      return widget.shimmerBuilder?.call(context, widget.rowHeight, widget.maxRows)
+          ?? _defaultShimmer(context, widget.rowHeight, widget.maxRows);
     }
     // جاهز: UI الحقيقي
     return widget.builderWhenReady();
@@ -598,8 +600,7 @@ class SubcatsDeferredBlockState extends State<SubcatsDeferredBlock> {
     const indicatorHeight = 8.0;
     final circle = (rowHeight - gap - titleH).clamp(48.0, 64.0);
     final textWidth = circle + 12.0;
-    final gridHeight =
-        rowHeight * rows + _verticalSpacingBetweenRows * (rows - 1);
+    final gridHeight = rowHeight * rows + _verticalSpacingBetweenRows * (rows - 1);
     final totalHeight = gridHeight + indicatorGap + indicatorHeight;
 
     return SizedBox(
@@ -610,55 +611,55 @@ class SubcatsDeferredBlockState extends State<SubcatsDeferredBlock> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Column(
-              mainAxisSize: MainAxisSize.min,
-              children: List.generate(rows, (rowIndex) {
-                return Padding(
-                  padding: EdgeInsets.only(
-                      top: rowIndex == 0 ? 0 : _verticalSpacingBetweenRows),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: List.generate(4, (_) {
-                      return Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Shimmer.fromColors(
-                            baseColor: shimmerBase,
-                            highlightColor: shimmerHighlight,
-                            period: const Duration(milliseconds: 1150),
-                            child: Container(
-                              width: circle,
-                              height: circle,
-                              decoration: BoxDecoration(
-                                borderRadius: cardRadius,
-                                color: shimmerContent,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: gap),
-                          SizedBox(
-                            height: titleH,
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(rows, (rowIndex) {
+              return Padding(
+                padding: EdgeInsets.only(top: rowIndex == 0 ? 0 : _verticalSpacingBetweenRows),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: List.generate(4, (_) {
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                      Shimmer.fromColors(
+                      baseColor: shimmerBase,
+                      highlightColor: shimmerHighlight,
+                      period: const Duration(milliseconds: 1150),
+                      child: Container(
+                        width: circle,
+                        height: circle,
+                        decoration: BoxDecoration(
+                          borderRadius: cardRadius,
+                          color: shimmerContent,
+                        ),
+                        ),
+                      ),
+
+                    const SizedBox(height: gap),
+                    SizedBox(
+                    height: titleH,
                             width: textWidth,
-                            child: Align(
-                              alignment: Alignment.topCenter,
-                              child: Shimmer.fromColors(
-                                baseColor: shimmerBase,
-                                highlightColor: shimmerHighlight,
-                                period: const Duration(milliseconds: 1150),
-                                child: Container(
-                                  height: 12,
-                                  width: textWidth,
-                                  decoration: BoxDecoration(
-                                    color: shimmerContent,
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                ),
-                              ),
+                    child: Align(
+                    alignment: Alignment.topCenter,
+                    child: Shimmer.fromColors(
+                      baseColor: shimmerBase,
+                      highlightColor: shimmerHighlight,
+                      period: const Duration(milliseconds: 1150),
+                      child: Container(
+                        height: 12,
+                        width: textWidth,
+                        decoration: BoxDecoration(
+                          color: shimmerContent,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                    ),
                             ),
                           ),
-                        ],
-                      );
-                    }),
-                  ),
+                      ],
+                    );
+                  }),
+                ),
                 );
               }),
             ),
@@ -669,6 +670,8 @@ class SubcatsDeferredBlockState extends State<SubcatsDeferredBlock> {
                 final isActive = index == 0;
                 final width = isActive ? 18.0 : 8.0;
                 return Shimmer.fromColors(
+
+
                   baseColor: shimmerBase,
                   highlightColor: shimmerHighlight,
                   period: const Duration(milliseconds: 1150),
@@ -676,14 +679,16 @@ class SubcatsDeferredBlockState extends State<SubcatsDeferredBlock> {
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     width: width,
                     height: indicatorHeight,
+
+
                     decoration: BoxDecoration(
                       color: shimmerContent,
                       borderRadius: BorderRadius.circular(20),
                     ),
                   ),
-                );
-              }),
-            ),
+            );
+          }),
+        ),
           ],
         ),
       ),

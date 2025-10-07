@@ -52,8 +52,7 @@ class WalletSummaryCubit extends Cubit<WalletSummaryState> {
 
   Future<void> fetchSummary({String? filter, bool forceReload = false}) async {
     final trimmed = filter?.trim();
-    final normalizedFilter =
-        (trimmed == null || trimmed.isEmpty) ? null : trimmed;
+    final normalizedFilter = (trimmed == null || trimmed.isEmpty) ? null : trimmed;
     _cachedFilter = normalizedFilter ?? _cachedFilter;
 
     if (!forceReload && state is WalletSummaryLoadSuccess) {
@@ -63,10 +62,7 @@ class WalletSummaryCubit extends Cubit<WalletSummaryState> {
       }
     }
 
-    emit(WalletSummaryLoading(
-        previous: state is WalletSummaryLoadSuccess
-            ? state as WalletSummaryLoadSuccess
-            : null));
+    emit(WalletSummaryLoading(previous: state is WalletSummaryLoadSuccess ? state as WalletSummaryLoadSuccess : null));
     try {
       final summary = await _repository.fetchSummary(filter: _cachedFilter);
       emit(

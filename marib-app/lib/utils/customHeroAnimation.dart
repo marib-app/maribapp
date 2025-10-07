@@ -1,3 +1,4 @@
+
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:flutter/material.dart';
 
@@ -23,7 +24,9 @@ class _CustomImageHeroAnimationState extends State<CustomImageHeroAnimation> {
 
     final Size size = renderBox.size; // or _widgetKey.currentContext?.size
 
+
     final Offset offset = renderBox.localToGlobal(Offset.zero);
+
 
     return {
       "x": (offset.dx),
@@ -68,7 +71,9 @@ class _CustomHeroDestinationScreen extends StatefulWidget {
   final CImageType type;
   final dynamic image;
   const _CustomHeroDestinationScreen(
-      {required this.renderWidgetData, required this.type, this.image});
+      {required this.renderWidgetData,
+      required this.type,
+      this.image});
 
   @override
   State<_CustomHeroDestinationScreen> createState() =>
@@ -78,8 +83,8 @@ class _CustomHeroDestinationScreen extends StatefulWidget {
 class _CustomHeroDestinationScreenState
     extends State<_CustomHeroDestinationScreen>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 400));
+  late final AnimationController _controller =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
   late Animation<Offset> _sizeTween;
   late Animation<Offset> _positionTween;
   var mediaQuery = const Size(0, 0);
@@ -147,6 +152,8 @@ class _CustomHeroDestinationScreenState
 
   @override
   Widget build(BuildContext context) {
+
+
     return GestureDetector(
       onTap: () {
         Navigator.pop(context);

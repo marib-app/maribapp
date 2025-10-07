@@ -145,12 +145,10 @@ class _TransactionHistoryState extends State<TransactionHistory> {
                     decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(5),
                         color: context.color.territoryColor.withOpacity(0.1)),
-                    padding: EdgeInsets.symmetric(vertical: 3, horizontal: 7),
+                    padding: EdgeInsets.symmetric(vertical: 3,horizontal: 7),
                     child: Text(
                       transaction.paymentGateway!,
-                    )
-                        .size(context.font.small)
-                        .color(context.color.territoryColor),
+                    ).size(context.font.small).color(context.color.territoryColor),
                   ),
                   const SizedBox(height: 4),
                   Row(

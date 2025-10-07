@@ -5,9 +5,15 @@ import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/api.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 
+
+
 // lib/new_code/services/report_service.dart
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/utils/api.dart';
 
 /// خدمة الإبلاغ — تظهر الشيت فورًا (بدون انتظار الشبكة) وتحدّث نفسها لاحقًا.
 /// - تدعم cache للأسباب لتسريع الفتح.
@@ -27,6 +33,7 @@ class ReportService {
     String type = 'service',
     String? serviceTitle,
     String? serviceUid,
+
   }) async {
     // 1) جهّز أسباب فورية (Cache أو Fallback) — لعرض الشيت مباشرة
     final initialReasons = _loadReasonsFast();
@@ -43,9 +50,9 @@ class ReportService {
     if (form == null) return false;
 
     // 4) التقط بيانات الشيت
-    final int reasonId = int.tryParse(form['reason_id'] ?? '') ?? 0;
+    final int   reasonId    = int.tryParse(form['reason_id'] ?? '') ?? 0;
     final String reasonText = (form['reason_label'] ?? '').trim();
-    final String details = (form['details'] ?? '').trim();
+    final String details    = (form['details'] ?? '').trim();
 
     if (reasonId <= 0 && reasonText.isEmpty && details.isEmpty) {
       _toast('اختر سببًا أو اكتب تفاصيل البلاغ');
@@ -62,6 +69,7 @@ class ReportService {
       reasonText: reasonText,
       details: details,
       serviceUid: serviceUid,
+
     );
 
     Navigator.of(context, rootNavigator: true).maybePop(); // إغلاق اللودر
@@ -91,13 +99,10 @@ class ReportService {
 
     bool _isOtherLabel(String s) {
       final l = s.trim().toLowerCase();
-      return l == 'other' ||
-          l == 'others' ||
-          l.contains('أخرى') ||
-          l.contains('اخرى');
+      return l == 'other' || l == 'others' || l.contains('أخرى') || l.contains('اخرى');
     }
 
-    final bg = context.color.primaryColor;
+    final bg   = context.color.primaryColor;
     final text = context.color.textColorDark;
     final accent = context.color.secondaryColor;
 
@@ -145,8 +150,7 @@ class ReportService {
                       // Handle
                       Center(
                         child: Container(
-                          width: 40,
-                          height: 4,
+                          width: 40, height: 4,
                           margin: const EdgeInsets.only(bottom: 12),
                           decoration: BoxDecoration(
                             color: text.withOpacity(0.25),
@@ -166,8 +170,7 @@ class ReportService {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Text('اختر سبب البلاغ',
-                          style: TextStyle(color: text.withOpacity(0.75))),
+                      Text('اختر سبب البلاغ', style: TextStyle(color: text.withOpacity(0.75))),
                       const SizedBox(height: 8),
 
                       if (reasons.isEmpty)
@@ -180,10 +183,8 @@ class ReportService {
                           child: Row(
                             children: const [
                               SizedBox(
-                                width: 18,
-                                height: 18,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
+                                width: 18, height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
                               ),
                               SizedBox(width: 10),
                               Text('جاري تحميل الأسباب...'),
@@ -197,9 +198,7 @@ class ReportService {
                           margin: const EdgeInsetsDirectional.only(bottom: 4),
                           decoration: BoxDecoration(
                             border: Border.all(
-                              color: selected
-                                  ? text.withOpacity(0.25)
-                                  : Colors.transparent,
+                              color: selected ? text.withOpacity(0.25) : Colors.transparent,
                             ),
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -216,14 +215,12 @@ class ReportService {
                               r.label,
                               style: TextStyle(
                                 color: text,
-                                fontWeight: selected
-                                    ? FontWeight.w600
-                                    : FontWeight.w500,
+                                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                               ),
                             ),
                             activeColor: text,
-                            contentPadding: const EdgeInsetsDirectional.only(
-                                start: 8, end: 8),
+                            contentPadding:
+                            const EdgeInsetsDirectional.only(start: 8, end: 8),
                           ),
                         );
                       }),
@@ -261,10 +258,9 @@ class ReportService {
 
                           // إن كان السبب "أخرى" ويُوجد نص، اجعل نص السبب هو النص المكتوب
                           final String reasonLabelToSend =
-                              (_isOtherLabel(selectedLabel) &&
-                                      textVal.isNotEmpty)
-                                  ? textVal
-                                  : selectedLabel;
+                          (_isOtherLabel(selectedLabel) && textVal.isNotEmpty)
+                              ? textVal
+                              : selectedLabel;
 
                           // نفرض كتابة سبب عند اختيار "أخرى" بدون نص
                           if (_isOtherLabel(selectedLabel) && textVal.isEmpty) {
@@ -275,7 +271,7 @@ class ReportService {
                           }
 
                           Navigator.of(ctx).pop({
-                            'reason_id': '$selectedId',
+                            'reason_id'   : '$selectedId',
                             'reason_label': reasonLabelToSend,
                             if (textVal.isNotEmpty) 'details': textVal,
                           });
@@ -293,7 +289,7 @@ class ReportService {
   }
 
   void _showBlockingLoader() {
-    final bg = context.color.primaryColor;
+    final bg   = context.color.primaryColor;
     final text = context.color.textColorDark;
     showDialog(
       context: context,
@@ -304,17 +300,14 @@ class ReportService {
           decoration: BoxDecoration(
             color: bg,
             borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 12)
-            ],
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 12)],
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(
-                width: 18,
-                height: 18,
+                width: 18, height: 18,
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
               const SizedBox(width: 12),
@@ -360,22 +353,15 @@ class ReportService {
       final List list = (raw is List)
           ? raw
           : (raw is Map && raw['list'] is List)
-              ? raw['list']
-              : const [];
+          ? raw['list']
+          : const [];
 
-      final parsed = list
-          .map((e) {
-            final m =
-                (e is Map) ? e.cast<String, dynamic>() : <String, dynamic>{};
-            final id = int.tryParse(
-                    (m['id'] ?? m['value'] ?? m['key'] ?? '0').toString()) ??
-                0;
-            final title =
-                (m['title'] ?? m['name'] ?? m['reason'] ?? 'سبب').toString();
-            return _Reason(id: id, label: title);
-          })
-          .where((r) => r.id > 0 || r.label.trim().isNotEmpty)
-          .toList();
+      final parsed = list.map((e) {
+        final m = (e is Map) ? e.cast<String, dynamic>() : <String, dynamic>{};
+        final id = int.tryParse((m['id'] ?? m['value'] ?? m['key'] ?? '0').toString()) ?? 0;
+        final title = (m['title'] ?? m['name'] ?? m['reason'] ?? 'سبب').toString();
+        return _Reason(id: id, label: title);
+      }).where((r) => r.id > 0 || r.label.trim().isNotEmpty).toList();
 
       if (parsed.isNotEmpty) {
         _reasonsCache = parsed;
@@ -393,21 +379,19 @@ class ReportService {
   Future<bool> _submitReport({
     required int itemId,
     required String type,
-    int? reasonId, // رقم السبب
-    String? reasonText, // نص السبب (قد يكون نص المستخدم عند "أخرى")
-    String? details, // نص المستخدم (تفاصيل)
+    int?    reasonId,    // رقم السبب
+    String? reasonText,  // نص السبب (قد يكون نص المستخدم عند "أخرى")
+    String? details,     // نص المستخدم (تفاصيل)
     String? serviceUid,
+
   }) async {
     try {
       final String reasonTextNorm = (reasonText ?? '').trim();
-      final String detailsNorm = (details ?? '').trim();
+      final String detailsNorm    = (details ?? '').trim();
 
       bool _isOtherLabel(String s) {
         final l = s.trim().toLowerCase();
-        return l == 'other' ||
-            l == 'others' ||
-            l.contains('أخرى') ||
-            l.contains('اخرى');
+        return l == 'other' || l == 'others' || l.contains('أخرى') || l.contains('اخرى');
       }
 
       final Map<String, dynamic> payload = {
@@ -425,30 +409,27 @@ class ReportService {
 
       // لو "أخرى" ومعنا نص => اعتبر نص السبب هو نص المستخدم
       if (_isOtherLabel(reasonTextNorm) && detailsNorm.isNotEmpty) {
-        payload[Api.reportReason] = detailsNorm; // report_reason
-        payload['reason'] = detailsNorm;
-        payload['report_reason_text'] = detailsNorm;
+        payload[Api.reportReason]      = detailsNorm; // report_reason
+        payload['reason']              = detailsNorm;
+        payload['report_reason_text']  = detailsNorm;
       } else if (reasonTextNorm.isNotEmpty) {
         // غير "أخرى": أرسل النص كما هو (اختياري)
-        payload[Api.reportReason] = reasonTextNorm;
-        payload['reason'] = reasonTextNorm;
-        payload['report_reason_text'] = reasonTextNorm;
+        payload[Api.reportReason]      = reasonTextNorm;
+        payload['reason']              = reasonTextNorm;
+        payload['report_reason_text']  = reasonTextNorm;
       }
 
       // الرسالة/الوصف من المستخدم (إن وُجد)
       if (detailsNorm.isNotEmpty) {
-        payload[Api.message] = detailsNorm; // message
-        payload['details'] = detailsNorm;
+        payload[Api.message]      = detailsNorm; // message
+        payload['details']        = detailsNorm;
         payload['report_message'] = detailsNorm;
-        payload[Api.description] = detailsNorm; // description
+        payload[Api.description]  = detailsNorm; // description
       }
 
       // منع required_without: إن لم يوجد سبب ID ولا رسالة، أرسل رسالة افتراضية
-      final hasReasonId = payload.containsKey('report_reason_id') ||
-          payload.containsKey('reason_id');
-      final hasMessage = payload.containsKey(Api.message) ||
-          payload.containsKey('details') ||
-          payload.containsKey('report_message');
+      final hasReasonId = payload.containsKey('report_reason_id') || payload.containsKey('reason_id');
+      final hasMessage  = payload.containsKey(Api.message) || payload.containsKey('details') || payload.containsKey('report_message');
       if (!hasReasonId && !hasMessage) {
         payload[Api.message] = 'Report from app';
       }
@@ -463,9 +444,9 @@ class ReportService {
 
       final resp = await Api.post(url: Api.addReportsApi, parameter: payload);
       final ok = (resp['success'] == true) ||
-          (resp['status'] == 'ok') ||
-          (resp['code'] == 200) ||
-          (resp['error'] == false);
+          (resp['status']  == 'ok')  ||
+          (resp['code']    == 200)   ||
+          (resp['error']   == false);
 
       if (!ok) {
         _toast(resp[Api.message]?.toString() ?? 'تعذّر إرسال البلاغ');
@@ -489,6 +470,8 @@ class ReportService {
     }
     return true;
   }
+
+
 }
 
 // نموذج السبب (id رقمي + عنوان)

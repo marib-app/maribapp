@@ -97,7 +97,7 @@ class WifiPurchase extends Equatable {
         return value;
       }
       if (value is Map) {
-        return Map<String, dynamic>.from(value);
+        return Map<String, dynamic>.from(value as Map);
       }
       return <String, dynamic>{};
     }
@@ -111,11 +111,11 @@ class WifiPurchase extends Equatable {
     };
 
     final int id = parseInt(
-          json['id'] ??
-              json['purchase_id'] ??
-              json['order_id'] ??
-              json['transaction_id'],
-        ) ??
+      json['id'] ??
+          json['purchase_id'] ??
+          json['order_id'] ??
+          json['transaction_id'],
+    ) ??
         0;
 
     final int? planId = parseInt(
@@ -123,13 +123,13 @@ class WifiPurchase extends Equatable {
     );
 
     final String? planName = (json['plan_name'] ??
-            json['plan_title'] ??
-            planMap['name'] ??
-            planMap['title'])
+        json['plan_title'] ??
+        planMap['name'] ??
+        planMap['title'])
         ?.toString();
 
-    final String? networkName =
-        (json['network_name'] ?? networkMap['name'])?.toString();
+    final String? networkName = (json['network_name'] ?? networkMap['name'])
+        ?.toString();
 
     final int quantity = parseInt(json['quantity']) ??
         parseInt(json['count']) ??
@@ -145,29 +145,26 @@ class WifiPurchase extends Equatable {
     );
 
     final String? currency = (json['currency'] ??
-            json['currency_code'] ??
-            json['currency_symbol'] ??
-            meta['currency'])
+        json['currency_code'] ??
+        json['currency_symbol'] ??
+        meta['currency'])
         ?.toString();
 
     final String? status = (json['status'] ??
-            json['purchase_status'] ??
-            json['payment_status'] ??
-            json['state'] ??
-            meta['status'])
+        json['purchase_status'] ??
+        json['payment_status'] ??
+        json['state'] ??
+        meta['status'])
         ?.toString();
 
     final String? gateway = (json['payment_gateway'] ??
-            json['payment_method'] ??
-            json['gateway'] ??
-            meta['payment_gateway'])
+        json['payment_method'] ??
+        json['gateway'] ??
+        meta['payment_gateway'])
         ?.toString();
 
     final DateTime? createdAt = parseDate(
-      json['created_at'] ??
-          json['createdAt'] ??
-          json['date'] ??
-          json['purchased_at'],
+      json['created_at'] ?? json['createdAt'] ?? json['date'] ?? json['purchased_at'],
     );
 
     final List<String> codes = [
@@ -183,9 +180,9 @@ class WifiPurchase extends Equatable {
     }
 
     final String? reference = (json['reference'] ??
-            json['transaction_reference'] ??
-            json['payment_reference'] ??
-            json['order_reference'])
+        json['transaction_reference'] ??
+        json['payment_reference'] ??
+        json['order_reference'])
         ?.toString();
 
     return WifiPurchase(
@@ -240,8 +237,7 @@ class WifiPurchase extends Equatable {
   bool get isWalletGateway {
     final gateway = paymentGateway?.toLowerCase() ?? '';
     if (gateway.isEmpty) {
-      final metaGateway =
-          metadata['payment_gateway']?.toString().toLowerCase() ?? '';
+      final metaGateway = metadata['payment_gateway']?.toString().toLowerCase() ?? '';
       return metaGateway == 'wallet' || metaGateway.contains('wallet');
     }
     return gateway == 'wallet' || gateway.contains('wallet');
@@ -257,18 +253,18 @@ class WifiPurchase extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        planId,
-        planName,
-        networkName,
-        quantity,
-        total,
-        currency,
-        status,
-        paymentGateway,
-        codes,
-        createdAt,
-        reference,
-        metadata,
-      ];
+    id,
+    planId,
+    planName,
+    networkName,
+    quantity,
+    total,
+    currency,
+    status,
+    paymentGateway,
+    codes,
+    createdAt,
+    reference,
+    metadata,
+  ];
 }

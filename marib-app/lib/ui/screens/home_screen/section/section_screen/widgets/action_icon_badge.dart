@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:marib/ui/theme/theme.dart'; // يوفر context.color
-import 'package:marib/utils/extensions/extensions.dart'; // يوفر translate, .size, .color...
+import 'package:marib/utils/extensions/extensions.dart';  // يوفر translate, .size, .color...
+
+
 
 /// زر أيقونة (SVG أو IconData) مع بادج عددي اختياري.
 /// متوافق RTL عبر PositionedDirectional.
@@ -22,8 +24,8 @@ class ActionIconBadge extends StatelessWidget {
     this.tooltip,
     this.padding = EdgeInsets.zero,
     this.splashRadius,
-  }) : assert(
-            svgAsset != null || iconData != null, 'مرّر svgAsset أو iconData');
+  }) : assert(svgAsset != null || iconData != null,
+  'مرّر svgAsset أو iconData');
 
   /// استدعاء عند الضغط
   final VoidCallback onTap;
@@ -80,8 +82,7 @@ class ActionIconBadge extends StatelessWidget {
                 padding: padding,
                 tooltip: tooltip,
                 onPressed: onTap,
-                icon: _buildIcon(
-                  context,
+                icon: _buildIcon(context,
                   color: iconColor ?? colors.territoryColor,
                   size: iconSize,
                 ),
@@ -91,8 +92,7 @@ class ActionIconBadge extends StatelessWidget {
             // البادج
             if (showBadge)
               PositionedDirectional(
-                top: -2,
-                end: -2,
+                top: -2, end: -2,
                 child: _BadgeDot(
                   value: count,
                   color: badgeColor ?? colors.territoryColor,
@@ -104,11 +104,9 @@ class ActionIconBadge extends StatelessWidget {
     );
   }
 
-  Widget _buildIcon(BuildContext context,
-      {required Color color, required double size}) {
+  Widget _buildIcon(BuildContext context, {required Color color, required double size}) {
     if (svgAsset != null) {
-      return SvgPicture.asset(svgAsset!,
-          height: size, width: size, color: color);
+      return SvgPicture.asset(svgAsset!, height: size, width: size, color: color);
     }
     return Icon(iconData!, size: size, color: color);
   }
@@ -134,8 +132,7 @@ class _BadgeDot extends StatelessWidget {
       child: Center(
         child: Text(
           text,
-          style: const TextStyle(
-              fontSize: 10, color: Colors.white, fontWeight: FontWeight.w700),
+          style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w700),
         ),
       ),
     );

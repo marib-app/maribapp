@@ -40,6 +40,8 @@ class _PressableScale extends StatefulWidget {
   const _PressableScale({
     required this.child,
     required this.onTap,
+    this.pressedScale = .97,
+    this.duration = const Duration(milliseconds: 110),
     this.radius,
   });
 
@@ -77,12 +79,11 @@ class _PressableScaleState extends State<_PressableScale> {
 
 /// بطاقة افتتاحية: عنوان + الملاحظة داخل بطاقة أنيقة
 class _IntroCard extends StatelessWidget {
-  const _IntroCard();
+  const _IntroCard({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final isDark =
-        context.watch<AppThemeCubit>().state.appTheme == AppTheme.dark;
+    final isDark = context.watch<AppThemeCubit>().state.appTheme == AppTheme.dark;
     final border = Border.all(color: context.color.borderColor.withOpacity(.4));
     final bg = isDark
         ? context.color.secondaryColor.withOpacity(.6)
@@ -97,13 +98,13 @@ class _IntroCard extends StatelessWidget {
         boxShadow: isDark
             ? []
             : [
-                BoxShadow(
-                  blurRadius: 10,
-                  spreadRadius: 0,
-                  offset: const Offset(0, 6),
-                  color: Colors.black.withOpacity(.06),
-                )
-              ],
+          BoxShadow(
+            blurRadius: 10,
+            spreadRadius: 0,
+            offset: const Offset(0, 6),
+            color: Colors.black.withOpacity(.06),
+          )
+        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,8 +120,7 @@ class _IntroCard extends StatelessWidget {
             alignment: Alignment.center,
             child: FittedBox(
               fit: BoxFit.none,
-              child: UiUtils.getSvg(AppIcons.message,
-                  color: context.color.territoryColor),
+              child: UiUtils.getSvg(AppIcons.message, color: context.color.territoryColor),
             ),
           ),
           SizedBox(width: 12.rw(context)),
@@ -159,13 +159,13 @@ class _ContactActionTile extends StatelessWidget {
     required this.svgIcon,
     required this.onTap,
     this.subtitle,
+    super.key,
   });
 
   @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(16);
-    final isDark =
-        context.watch<AppThemeCubit>().state.appTheme == AppTheme.dark;
+    final isDark = context.watch<AppThemeCubit>().state.appTheme == AppTheme.dark;
 
     final container = Container(
       padding: const EdgeInsets.all(16),
@@ -174,8 +174,7 @@ class _ContactActionTile extends StatelessWidget {
             ? context.color.secondaryColor.withOpacity(.65)
             : context.color.secondaryColor,
         borderRadius: radius,
-        border: Border.all(
-            color: context.color.borderColor.withOpacity(.45), width: 1),
+        border: Border.all(color: context.color.borderColor.withOpacity(.45), width: 1),
       ),
       child: Row(
         children: [
@@ -190,8 +189,7 @@ class _ContactActionTile extends StatelessWidget {
             alignment: Alignment.center,
             child: FittedBox(
               fit: BoxFit.none,
-              child:
-                  UiUtils.getSvg(svgIcon, color: context.color.territoryColor),
+              child: UiUtils.getSvg(svgIcon, color: context.color.territoryColor),
             ),
           ),
           SizedBox(width: 14.rw(context)),
@@ -323,8 +321,7 @@ class ContactUsState extends State<ContactUs> {
                                         .centerAlign()
                                         .bold(),
                                     onTap: () async {
-                                      await launchUrl(
-                                          Uri.parse("tel:$number2"));
+                                      await launchUrl(Uri.parse("tel:$number2"));
                                     },
                                   ),
                               ],
@@ -363,7 +360,7 @@ class ContactUsState extends State<ContactUs> {
   }
 
   // فتح واجهة البريد — (موجودة مسبقًا)
-  void showEmailDialoge(email) {
+  showEmailDialoge(email) {
     Navigator.push(
       context,
       BlurredRouter(
@@ -374,53 +371,47 @@ class ContactUsState extends State<ContactUs> {
 
   // شيمر محسّن: بطاقة + تايلين
   Widget _ContactShimmer(BuildContext context) {
-    final isDark =
-        context.watch<AppThemeCubit>().state.appTheme == AppTheme.dark;
-    final base =
-        isDark ? Colors.white.withOpacity(.06) : Colors.black.withOpacity(.06);
-    final highlight =
-        isDark ? Colors.white.withOpacity(.14) : Colors.black.withOpacity(.12);
+    final isDark = context.watch<AppThemeCubit>().state.appTheme == AppTheme.dark;
+    final base = isDark ? Colors.white.withOpacity(.06) : Colors.black.withOpacity(.06);
+    final highlight = isDark ? Colors.white.withOpacity(.14) : Colors.black.withOpacity(.12);
 
-    Widget bar({double h = 14, double w = double.infinity, double r = 10}) =>
-        Container(
-          height: h,
-          width: w,
-          decoration: BoxDecoration(
-              color: Colors.white, borderRadius: BorderRadius.circular(r)),
-        );
+    Widget bar({double h = 14, double w = double.infinity, double r = 10}) => Container(
+      height: h,
+      width: w,
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(r)),
+    );
 
     Widget tile() => Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: context.color.secondaryColor,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-                color: context.color.borderColor.withOpacity(.5), width: 1),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.color.secondaryColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.color.borderColor.withOpacity(.5), width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+            ),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(child: bar(h: 16, r: 6)),
-              const SizedBox(width: 14),
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ],
+          const SizedBox(width: 14),
+          Expanded(child: bar(h: 16, r: 6)),
+          const SizedBox(width: 14),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
-        );
+        ],
+      ),
+    );
 
     return Padding(
       padding: const EdgeInsets.all(20.0),
@@ -436,17 +427,14 @@ class ContactUsState extends State<ContactUs> {
               decoration: BoxDecoration(
                 color: context.color.secondaryColor,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                    color: context.color.borderColor.withOpacity(.4)),
+                border: Border.all(color: context.color.borderColor.withOpacity(.4)),
               ),
               child: Row(
                 children: [
                   Container(
-                    width: 48,
-                    height: 48,
+                    width: 48, height: 48,
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.white, borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -492,13 +480,12 @@ class EmailSendWidget extends StatefulWidget {
 class _EmailSendWidgetState extends State<EmailSendWidget> {
   final TextEditingController _subject = TextEditingController();
   late final TextEditingController _email =
-      TextEditingController(text: widget.email);
+  TextEditingController(text: widget.email);
   final TextEditingController _text = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
-    final isDark =
-        context.watch<AppThemeCubit>().state.appTheme == AppTheme.dark;
+    final isDark = context.watch<AppThemeCubit>().state.appTheme == AppTheme.dark;
 
     return Scaffold(
       backgroundColor: Colors.white.withOpacity(0.0),
@@ -510,12 +497,12 @@ class _EmailSendWidgetState extends State<EmailSendWidget> {
             boxShadow: isDark
                 ? null
                 : [
-                    const BoxShadow(
-                      blurRadius: 6,
-                      offset: Offset(0, 2),
-                      color: ui.Color.fromARGB(255, 201, 201, 201),
-                    ),
-                  ],
+              const BoxShadow(
+                blurRadius: 6,
+                offset: Offset(0, 2),
+                color: ui.Color.fromARGB(255, 201, 201, 201),
+              ),
+            ],
             color: context.color.secondaryColor,
             borderRadius: BorderRadius.circular(12),
           ),
@@ -539,17 +526,14 @@ class _EmailSendWidgetState extends State<EmailSendWidget> {
                             height: 40,
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
-                              color: context.color.territoryColor
-                                  .withOpacity(0.06),
+                              color: context.color.territoryColor.withOpacity(0.06),
                               shape: BoxShape.circle,
                             ),
                             child: Directionality(
                               textDirection: Directionality.of(context),
                               child: RotatedBox(
-                                quarterTurns: Directionality.of(context) ==
-                                        TextDirection.rtl
-                                    ? 2
-                                    : 0,
+                                quarterTurns:
+                                Directionality.of(context) == TextDirection.rtl ? 2 : 0,
                                 child: UiUtils.getSvg(AppIcons.arrowLeft),
                               ),
                             ),

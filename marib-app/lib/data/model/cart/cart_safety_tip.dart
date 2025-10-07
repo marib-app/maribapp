@@ -37,9 +37,9 @@ class CartSafetyTipsPayload {
 
   factory CartSafetyTipsPayload.fromJson(Map<String, dynamic> json) {
     final List<CartSafetyTip> parsedTips = (json['tips'] as List?)
-            ?.map((dynamic e) => CartSafetyTip.tryParse(e))
-            .whereType<CartSafetyTip>()
-            .toList() ??
+        ?.map((dynamic e) => CartSafetyTip.tryParse(e))
+        .whereType<CartSafetyTip>()
+        .toList() ??
         const <CartSafetyTip>[];
 
     final String? presentation = _coerceString(
@@ -86,8 +86,8 @@ class CartSafetyTip {
     if (value is Map<String, dynamic>) return CartSafetyTip.fromJson(value);
     if (value is Map) {
       return CartSafetyTip.fromJson(
-        value.map(
-            (dynamic key, dynamic value) => MapEntry(key.toString(), value)),
+        value.map((dynamic key, dynamic value) =>
+            MapEntry(key.toString(), value)),
       );
     }
     return null;
@@ -99,9 +99,9 @@ class CartSafetyTip {
     );
 
     final List<CartSafetyTipAction> actions = (json['actions'] as List?)
-            ?.map((dynamic e) => CartSafetyTipAction.tryParse(e))
-            .whereType<CartSafetyTipAction>()
-            .toList() ??
+        ?.map((dynamic e) => CartSafetyTipAction.tryParse(e))
+        .whereType<CartSafetyTipAction>()
+        .toList() ??
         const <CartSafetyTipAction>[];
 
     return CartSafetyTip(
@@ -156,8 +156,7 @@ class CartSafetyTipAction {
   String? get normalizedTarget => target?.toLowerCase().trim();
 
   bool get navigatesToCart =>
-      isNavigate &&
-      (normalizedTarget == 'cart' ||
+      isNavigate && (normalizedTarget == 'cart' ||
           (payload?['target']?.toString().toLowerCase().trim() == 'cart'));
 
   String? get resolvedProductLink {
@@ -199,8 +198,8 @@ class CartSafetyTipAction {
     if (value is Map) {
       try {
         return CartSafetyTipAction.fromJson(
-          value.map(
-              (dynamic key, dynamic value) => MapEntry(key.toString(), value)),
+          value.map((dynamic key, dynamic value) =>
+              MapEntry(key.toString(), value)),
         );
       } catch (_) {
         return null;
@@ -222,13 +221,9 @@ class CartSafetyTipAction {
     return CartSafetyTipAction(
       type: type,
       label: _coerceString(json['label'] ?? json['title'] ?? json['text']),
-      target:
-          _coerceString(json['target'] ?? payload?['target'] ?? json['value']),
+      target: _coerceString(json['target'] ?? payload?['target'] ?? json['value']),
       productLink: _coerceString(
-        json['product_link'] ??
-            json['url'] ??
-            json['link'] ??
-            payload?['product_link'],
+        json['product_link'] ?? json['url'] ?? json['link'] ?? payload?['product_link'],
       ),
       payload: payload,
       raw: json,

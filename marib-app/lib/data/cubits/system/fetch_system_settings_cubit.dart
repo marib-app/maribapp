@@ -7,6 +7,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:convert';
 import 'package:marib/data/model/social_link_model.dart';
 
+
+
 abstract class FetchSystemSettingsState {}
 
 class FetchSystemSettingsInitial extends FetchSystemSettingsState {}
@@ -16,11 +18,13 @@ class FetchSystemSettingsInProgress extends FetchSystemSettingsState {}
 class FetchSystemSettingsSuccess extends FetchSystemSettingsState {
   final Map settings;
 
+
   final String? usageGuide;
   final List<SocialLink> socialLinks;
 
   FetchSystemSettingsSuccess({
     required this.settings,
+
     this.usageGuide,
     List<SocialLink> socialLinks = const [],
   }) : socialLinks = List.unmodifiable(socialLinks);
@@ -80,16 +84,19 @@ class FetchSystemSettingsCubit extends Cubit<FetchSystemSettingsState> {
       if (forceRefresh == true) {
         Map settings = await _systemRepository.fetchSystemSettings();
         emit(_processFetchedSettings(settings));
+
       } else {
         if (state is! FetchSystemSettingsSuccess) {
           Map settings = await _systemRepository.fetchSystemSettings();
           emit(_processFetchedSettings(settings));
+
         } else {
           await CheckInternet.check(
             onInternet: () async {
               Map settings = await _systemRepository.fetchSystemSettings();
 
               emit(_processFetchedSettings(settings));
+
             },
             onNoInternet: () {
               final current = state as FetchSystemSettingsSuccess;
@@ -99,7 +106,8 @@ class FetchSystemSettingsCubit extends Cubit<FetchSystemSettingsState> {
                 usageGuide: current.usageGuide,
                 socialLinks: current.socialLinks,
               ));
-            },
+
+              },
           );
         }
       }
@@ -167,13 +175,14 @@ class FetchSystemSettingsCubit extends Cubit<FetchSystemSettingsState> {
   Map getRawSettings() {
     if (state is FetchSystemSettingsSuccess) {
       final dynamic rawData =
-          (state as FetchSystemSettingsSuccess).settings['data'];
+      (state as FetchSystemSettingsSuccess).settings['data'];
       if (rawData is Map) {
         return rawData;
       }
     }
     return {};
   }
+
 
   void _cacheDelegateSettings(Map settings) {
     if (settings['data'] is! Map) {
@@ -184,7 +193,8 @@ class FetchSystemSettingsCubit extends Cubit<FetchSystemSettingsState> {
 
     final Map data = settings['data'] as Map;
     Constant.delegatesShein = _parseDelegateList(data['delegates_shein']);
-    Constant.delegatesComputer = _parseDelegateList(data['delegates_computer']);
+    Constant.delegatesComputer =
+        _parseDelegateList(data['delegates_computer']);
   }
 
   List<int> _parseDelegateList(dynamic raw) {
@@ -253,6 +263,8 @@ class FetchSystemSettingsCubit extends Cubit<FetchSystemSettingsState> {
     final parsed = int.tryParse(value.toString().trim());
     return parsed;
   }
+
+
 
   FetchSystemSettingsSuccess _processFetchedSettings(Map settings) {
     Constant.currencySymbol = _getSettingString(
@@ -379,6 +391,8 @@ class FetchSystemSettingsCubit extends Cubit<FetchSystemSettingsState> {
     );
   }
 
+
+
   dynamic _getSetting(Map settings, SystemSetting selected) {
     final dynamic data = settings['data'];
     if (data is! Map) {
@@ -394,10 +408,10 @@ class FetchSystemSettingsCubit extends Cubit<FetchSystemSettingsState> {
   }
 
   String _getSettingString(
-    Map settings,
-    SystemSetting selected, {
-    String? fallback,
-  }) {
+      Map settings,
+      SystemSetting selected, {
+        String? fallback,
+      }) {
     final dynamic value = _getSetting(settings, selected);
     if (value == null) {
       return fallback ?? '';
@@ -451,8 +465,7 @@ class FetchSystemSettingsCubit extends Cubit<FetchSystemSettingsState> {
 
         if (isLinkMap) {
           if (label != null && label.isNotEmpty) {
-            final Map<dynamic, dynamic> enriched =
-                Map<dynamic, dynamic>.from(value);
+            final Map<dynamic, dynamic> enriched = Map<dynamic, dynamic>.from(value);
             enriched.putIfAbsent('label', () => label);
             addLink(enriched);
           } else {
@@ -521,6 +534,7 @@ class FetchSystemSettingsCubit extends Cubit<FetchSystemSettingsState> {
 
       return links;
     }
+
 
     consume(raw);
     return links;

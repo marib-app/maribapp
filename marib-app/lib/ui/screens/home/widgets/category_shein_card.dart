@@ -23,7 +23,7 @@ class CategorySheinCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 60,
+            width:60,
             height: 60,
             decoration: BoxDecoration(
               color: Colors.white,

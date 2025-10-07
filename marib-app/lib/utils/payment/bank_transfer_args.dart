@@ -8,25 +8,30 @@ class BankTransferArgs {
   final String? purpose;
   final String? initialGateway;
 
+
   const BankTransferArgs({
     required this.token,
     required this.packageId,
     required this.amount,
+
     required this.packageType,
     this.currency,
     this.itemId,
     this.purpose,
     this.initialGateway,
+
+
   });
 }
 
 // اترك تعريف BankTransferArgs لديك كما هو، وأضف الامتداد التالي:
 extension BankTransferArgsX on BankTransferArgs {
   Map<String, dynamic> toContext() => {
-        'package_id': packageId,
-        'package_type': packageType,
-        if (itemId != null) 'item_id': itemId,
-      };
+    'package_id': packageId,
+    'package_type': packageType,
+    if (itemId != null) 'item_id': itemId,
+  };
+
 
   String get normalizedPurpose {
     final explicit = purpose?.trim();
@@ -53,7 +58,6 @@ extension BankTransferArgsX on BankTransferArgs {
     }
     return c.toUpperCase();
   }
-
   String? get normalizedGateway {
     final gateway = initialGateway?.trim();
     if (gateway == null || gateway.isEmpty) {
@@ -61,4 +65,6 @@ extension BankTransferArgsX on BankTransferArgs {
     }
     return gateway.toLowerCase();
   }
+
+
 }

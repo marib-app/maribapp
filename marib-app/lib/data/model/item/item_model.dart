@@ -2,6 +2,10 @@ import 'package:marib/data/model/category_model.dart';
 import 'package:marib/data/model/custom_field/custom_field_model.dart';
 import 'package:marib/data/model/seller_ratings_model.dart';
 
+
+
+
+
 class ItemSummary {
   final int? id;
   final String? name;
@@ -150,6 +154,12 @@ extension ItemSummaryX on ItemSummary {
   }
 }
 
+
+
+
+
+
+
 class ItemModel {
   int? id;
   String? name;
@@ -278,6 +288,7 @@ class ItemModel {
     String? videoLink,
     String? reviewLink,
     String? productLink,
+
     User? user,
     List<GalleryImages>? galleryImages,
     List<ItemOffers>? itemOffers,
@@ -322,6 +333,7 @@ class ItemModel {
       videoLink: videoLink ?? this.videoLink,
       reviewLink: reviewLink ?? this.reviewLink,
       productLink: productLink ?? this.productLink,
+
       user: user ?? this.user,
       galleryImages: galleryImages ?? this.galleryImages,
       itemOffers: itemOffers ?? this.itemOffers,
@@ -627,8 +639,7 @@ class GalleryImages {
   String? updatedAt;
   int? itemId;
 
-  GalleryImages(
-      {this.id, this.image, this.createdAt, this.updatedAt, this.itemId});
+  GalleryImages({this.id, this.image, this.createdAt, this.updatedAt, this.itemId});
 
   GalleryImages.fromJson(Map<String, dynamic> json) {
     id = ItemModel._toInt(json['id']);

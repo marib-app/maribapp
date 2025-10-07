@@ -3,14 +3,18 @@
 // يُبقي الرمز ProfileScreen معرفاً (لأن الـ part أدناه يحتوي الواجهة).
 
 import 'dart:io';
+import 'dart:ui' show Rect;
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:hive_flutter/adapters.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:marib/ui/screens/competitions/competitions_screen.dart';
 
+import 'package:marib/ui/screens/competitions/competitions_screen.dart';
 import 'package:marib/app/app_theme.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/auth/authentication_cubit.dart';
@@ -30,11 +34,14 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
+import 'package:marib/utils/hive_keys.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:marib/utils/app_icon.dart';
 
+import 'package:flutter/cupertino.dart';
 import 'package:url_launcher/url_launcher.dart';
 part 'profile_screen_ui.dart';
 
@@ -54,16 +61,12 @@ mixin ProfileScreenLogic<T extends StatefulWidget> on State<T> {
     final settings = context.read<FetchSystemSettingsCubit>();
 
     if (HiveUtils.isUserAuthenticated()) {
-      context
-          .read<FetchVerificationRequestsCubit>()
-          .fetchVerificationRequests();
+      context.read<FetchVerificationRequestsCubit>().fetchVerificationRequests();
       context.read<ProfileStatsCubit>().fetchProfileStats();
     }
 
-    if (!const bool.fromEnvironment("force-disable-demo-mode",
-        defaultValue: false)) {
-      Constant.isDemoModeOn =
-          settings.getSetting(SystemSetting.demoMode) ?? false;
+    if (!const bool.fromEnvironment("force-disable-demo-mode", defaultValue: false)) {
+      Constant.isDemoModeOn = settings.getSetting(SystemSetting.demoMode) ?? false;
     }
   }
 
@@ -79,6 +82,7 @@ mixin ProfileScreenLogic<T extends StatefulWidget> on State<T> {
     super.dispose();
   }
 
+
   void logOutConfirmWidget() {
     UiUtils.showBlurredDialoge(context,
         dialoge: BlurredDialogBox(
@@ -86,7 +90,7 @@ mixin ProfileScreenLogic<T extends StatefulWidget> on State<T> {
             onAccept: () async {
               Future.delayed(
                 Duration.zero,
-                () {
+                    () {
                   HiveUtils.clear();
                   Constant.favoriteItemList.clear();
                   context.read<UserDetailsCubit>().clear();
@@ -121,6 +125,8 @@ mixin ProfileScreenLogic<T extends StatefulWidget> on State<T> {
     );
   }
 
+
+
   String sellerStatus(String status) {
     if (status == 'pending') {
       return 'underReview'.translate(context);
@@ -145,8 +151,7 @@ mixin ProfileScreenLogic<T extends StatefulWidget> on State<T> {
     context.read<GetBuyerChatListCubit>().resetState();
     context.read<BlockedUsersListCubit>().resetState();
     HiveUtils.logoutUser(context, onLogout: () {});
-    Navigator.of(context)
-        .pushNamedAndRemoveUntil(Routes.login, (route) => false);
+    Navigator.of(context).pushNamedAndRemoveUntil(Routes.login, (route) => false);
   }
 
   Future<void> signOut(AuthenticationType? type) async {
@@ -163,8 +168,7 @@ mixin ProfileScreenLogic<T extends StatefulWidget> on State<T> {
         final value = await context.read<DeleteUserCubit>().deleteUser();
         HelperUtils.showSnackBarMessage(context, (value["message"]));
         for (int i = 0; i < AuthenticationType.values.length; i++) {
-          if (AuthenticationType.values[i].name ==
-              HiveUtils.getUserDetails().type) {
+          if (AuthenticationType.values[i].name == HiveUtils.getUserDetails().type) {
             await signOut(AuthenticationType.values[i]);
 
             HiveUtils.clear();
@@ -176,16 +180,14 @@ mixin ProfileScreenLogic<T extends StatefulWidget> on State<T> {
             context.read<BlockedUsersListCubit>().resetState();
 
             HiveUtils.logoutUser(context, onLogout: () {});
-            Navigator.of(context)
-                .pushNamedAndRemoveUntil(Routes.login, (route) => false);
+            Navigator.of(context).pushNamedAndRemoveUntil(Routes.login, (route) => false);
           }
         }
       });
     } on FirebaseAuthException catch (error) {
       if (error.code == "requires-recent-login") {
         for (int i = 0; i < AuthenticationType.values.length; i++) {
-          if (AuthenticationType.values[i].name ==
-              HiveUtils.getUserDetails().type) {
+          if (AuthenticationType.values[i].name == HiveUtils.getUserDetails().type) {
             await signOut(AuthenticationType.values[i]);
 
             HiveUtils.clear();
@@ -197,8 +199,7 @@ mixin ProfileScreenLogic<T extends StatefulWidget> on State<T> {
             context.read<BlockedUsersListCubit>().resetState();
 
             HiveUtils.logoutUser(context, onLogout: () {});
-            Navigator.of(context)
-                .pushNamedAndRemoveUntil(Routes.login, (route) => false);
+            Navigator.of(context).pushNamedAndRemoveUntil(Routes.login, (route) => false);
           }
         }
       } else {
@@ -244,9 +245,9 @@ mixin ProfileScreenLogic<T extends StatefulWidget> on State<T> {
     final int? accountType = HiveUtils.getUserDetails().userType;
     switch (accountType) {
       case 1:
-        return Colors.blue; // فردي
+        return Colors.blue;   // فردي
       case 2:
-        return Colors.green; // عقاري
+        return Colors.green;  // عقاري
       case 3:
         return Colors.orange; // تجاري
       default:
@@ -269,7 +270,16 @@ mixin ProfileScreenLogic<T extends StatefulWidget> on State<T> {
   }
 
   // واجهات لاستخدامها من الواجهة
-  Color getAccountTypeBadgeColor(BuildContext context) =>
-      _getAccountTypeBadgeColor(context);
+  Color getAccountTypeBadgeColor(BuildContext context) => _getAccountTypeBadgeColor(context);
   String getAccountTypeText() => _getAccountTypeText();
 }
+
+
+
+
+
+
+
+
+
+

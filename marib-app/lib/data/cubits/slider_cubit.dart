@@ -7,8 +7,12 @@ import 'package:marib/utils/api.dart';
 import 'package:marib/utils/network/networkAvailability.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:collection';
 import 'package:marib/utils/slider_interface_mapper.dart';
+
+
+
 
 abstract class SliderState {}
 
@@ -27,6 +31,7 @@ class SliderFallbackState extends SliderState {
   final String display;
   final String? image;
 }
+
 
 class SliderFetchSuccess extends SliderState {
   List<HomeSlider> sliderlist = [];
@@ -65,6 +70,7 @@ class SliderFetchFailure extends SliderState {
 class SliderCubit extends Cubit<SliderState> {
   SliderCubit() : super(SliderInitial());
 
+
   static const String _defaultInterfaceKey = '_default';
   final Map<String, List<HomeSlider>> _interfaceCache = {};
 
@@ -72,27 +78,30 @@ class SliderCubit extends Cubit<SliderState> {
     final String? normalized =
         SliderInterfaceMapper.normalize(interfaceType) ?? interfaceType?.trim();
     return (normalized == null || normalized.isEmpty)
+
+
         ? _defaultInterfaceKey
         : normalized;
   }
 
   void _emitSliderSuccess(
-    List<HomeSlider> sliders, {
-    required String? interfaceType,
-  }) {
+      List<HomeSlider> sliders, {
+        required String? interfaceType,
+      }) {
     if (isClosed) return;
 
     final String key = _normalizeInterfaceKey(interfaceType);
 
     if (key == _defaultInterfaceKey) {
       _interfaceCache[_defaultInterfaceKey] = sliders;
+
     } else {
       _interfaceCache[key] = sliders;
       _interfaceCache.putIfAbsent(_defaultInterfaceKey, () => <HomeSlider>[]);
     }
 
     final LinkedHashMap<String, HomeSlider> mergedMap =
-        LinkedHashMap<String, HomeSlider>();
+    LinkedHashMap<String, HomeSlider>();
 
     for (final List<HomeSlider> sliderGroup in _interfaceCache.values) {
       for (final HomeSlider slider in sliderGroup) {
@@ -101,7 +110,7 @@ class SliderCubit extends Cubit<SliderState> {
     }
 
     final List<HomeSlider> merged =
-        List<HomeSlider>.unmodifiable(mergedMap.values);
+    List<HomeSlider>.unmodifiable(mergedMap.values);
 
     emit(SliderFetchSuccess(merged));
   }
@@ -126,11 +135,13 @@ class SliderCubit extends Cubit<SliderState> {
   }
 
   Future<void> fetchSlider(
-    BuildContext context, {
-    bool? forceRefresh,
-    bool? loadWithoutDelay,
-    String? interfaceType,
-  }) async {
+      BuildContext context, {
+        bool? forceRefresh,
+        bool? loadWithoutDelay,
+        String? interfaceType,
+      }) async {
+
+
     if (forceRefresh != true) {
       if (state is SliderFetchSuccess) {
         await Future.delayed(Duration(
@@ -144,8 +155,10 @@ class SliderCubit extends Cubit<SliderState> {
       emit(SliderFetchInProgress());
     }
 
+
     final String? normalizedInterfaceType =
-        SliderInterfaceMapper.normalize(interfaceType) ?? interfaceType?.trim();
+        SliderInterfaceMapper.normalize(interfaceType) ??
+            interfaceType?.trim();
 
     Future<void> handleFailure(Object error) async {
       if (isClosed) return;
@@ -161,6 +174,7 @@ class SliderCubit extends Cubit<SliderState> {
           context,
           sendCityName: true,
           interfaceType: normalizedInterfaceType,
+
         );
         processFetchResult(
           value,
@@ -182,7 +196,7 @@ class SliderCubit extends Cubit<SliderState> {
     }
 
     final List<HomeSlider> cachedSliders =
-        List<HomeSlider>.from((state as SliderFetchSuccess).sliderlist);
+    List<HomeSlider>.from((state as SliderFetchSuccess).sliderlist);
 
     await CheckInternet.check(
       onInternet: () async {
@@ -196,11 +210,14 @@ class SliderCubit extends Cubit<SliderState> {
   }
 
   Future<SliderFetchPayload> fetchSliderFromDb(
-    BuildContext context, {
-    required bool sendCityName,
-    String? interfaceType,
-  }) async {
+      BuildContext context, {
+        required bool sendCityName,
+        String? interfaceType,
+      }) async {
+
+
     Map<String, String> body = {};
+
 
     final String? cleanedInterfaceType =
         SliderInterfaceMapper.normalize(interfaceType) ?? interfaceType?.trim();
@@ -211,6 +228,7 @@ class SliderCubit extends Cubit<SliderState> {
     var response = await Api.get(url: Api.getSliderApi, queryParameters: body);
 
     if (response[Api.error]) {
+
       throw CustomException(response[Api.message]);
     }
 
@@ -219,9 +237,9 @@ class SliderCubit extends Cubit<SliderState> {
 
   @visibleForTesting
   void processFetchResult(
-    SliderFetchPayload result, {
-    required String? interfaceType,
-  }) {
+      SliderFetchPayload result, {
+        required String? interfaceType,
+      }) {
     if (isClosed) return;
 
     if (result.hasFallback) {
@@ -262,11 +280,14 @@ class SliderCubit extends Cubit<SliderState> {
   }
 }
 
+
+
 class SliderFetchPayload {
   const SliderFetchPayload({
     required this.sliders,
     this.fallbackDisplay,
     this.fallbackImage,
+
   });
 
   final List<HomeSlider> sliders;
@@ -282,7 +303,7 @@ SliderFetchPayload parseSliderPayload(dynamic raw) {
 
     if (raw is Map) {
       final Map<String, dynamic> map = raw.map(
-        (key, value) => MapEntry(key.toString(), value),
+            (key, value) => MapEntry(key.toString(), value),
       );
 
       if (_parseBool(map['fallback'])) {
@@ -340,16 +361,16 @@ List<HomeSlider> _buildSliderList(dynamic data) {
   if (data is List) {
     return data
         .map<HomeSlider?>((dynamic entry) {
-          if (entry is Map<String, dynamic>) {
-            return HomeSlider.fromJson(entry);
-          }
-          if (entry is Map) {
-            return HomeSlider.fromJson(
-              entry.map((key, value) => MapEntry(key.toString(), value)),
-            );
-          }
-          return null;
-        })
+      if (entry is Map<String, dynamic>) {
+        return HomeSlider.fromJson(entry);
+      }
+      if (entry is Map) {
+        return HomeSlider.fromJson(
+          entry.map((key, value) => MapEntry(key.toString(), value)),
+        );
+      }
+      return null;
+    })
         .whereType<HomeSlider>()
         .toList(growable: false);
   }
@@ -360,13 +381,16 @@ List<HomeSlider> _buildSliderList(dynamic data) {
 
   if (data is Map) {
     final Map<String, dynamic> mapped = data.map(
-      (key, value) => MapEntry(key.toString(), value),
+          (key, value) => MapEntry(key.toString(), value),
     );
     return <HomeSlider>[HomeSlider.fromJson(mapped)];
   }
 
   return <HomeSlider>[];
 }
+
+
+
 
 String? _parseDisplayValue(dynamic raw) {
   if (raw == null) {
@@ -398,6 +422,9 @@ String? _parseImageValue(dynamic raw) {
   }
   return value;
 }
+
+
+
 
 bool _parseBool(dynamic raw) {
   if (raw is bool) {

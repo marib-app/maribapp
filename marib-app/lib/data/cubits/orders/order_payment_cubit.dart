@@ -41,8 +41,8 @@ class OrderPaymentState {
 
   bool get isBusy =>
       status == OrderPaymentStatus.loading ||
-      status == OrderPaymentStatus.processing ||
-      status == OrderPaymentStatus.confirming;
+          status == OrderPaymentStatus.processing ||
+          status == OrderPaymentStatus.confirming;
 
   OrderPaymentState copyWith({
     OrderPaymentStatus? status,
@@ -61,8 +61,7 @@ class OrderPaymentState {
     return OrderPaymentState(
       status: status ?? this.status,
       methods: methods ?? this.methods,
-      selectedMethod:
-          clearSelectedMethod ? null : (selectedMethod ?? this.selectedMethod),
+      selectedMethod: clearSelectedMethod ? null : (selectedMethod ?? this.selectedMethod),
       intent: intent ?? this.intent,
       action: clearAction ? null : (action ?? this.action),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
@@ -106,8 +105,7 @@ class OrderPaymentCubit extends Cubit<OrderPaymentState> {
       );
 
       final List<OrderPaymentMethod> methods = result.availableMethods;
-      final OrderPaymentMethod? selected =
-          _resolveInitialMethod(methods, state.selectedMethod);
+      final OrderPaymentMethod? selected = _resolveInitialMethod(methods, state.selectedMethod);
 
       emit(
         state.copyWith(
@@ -163,8 +161,7 @@ class OrderPaymentCubit extends Cubit<OrderPaymentState> {
     );
 
     try {
-      final OrderPaymentIntentResult initiation =
-          await _repository.initiatePayment(
+      final OrderPaymentIntentResult initiation = await _repository.initiatePayment(
         orderId: orderId,
         paymentMethod: resolvedMethod.id,
         amount: state.amount,
@@ -173,8 +170,7 @@ class OrderPaymentCubit extends Cubit<OrderPaymentState> {
       );
 
       if (initiation.requiresAction &&
-          (initiation.authorizationUrl != null &&
-              initiation.authorizationUrl!.isNotEmpty)) {
+          (initiation.authorizationUrl != null && initiation.authorizationUrl!.isNotEmpty)) {
         emit(
           state.copyWith(
             status: OrderPaymentStatus.actionRequired,
@@ -244,8 +240,7 @@ class OrderPaymentCubit extends Cubit<OrderPaymentState> {
     );
 
     try {
-      final OrderPaymentIntentResult confirmation =
-          await _repository.confirmPayment(
+      final OrderPaymentIntentResult confirmation = await _repository.confirmPayment(
         orderId: orderId,
         paymentMethod: method.id,
         intentId: intent.intentId,
@@ -297,9 +292,9 @@ class OrderPaymentCubit extends Cubit<OrderPaymentState> {
   }
 
   OrderPaymentMethod? _resolveInitialMethod(
-    List<OrderPaymentMethod> methods,
-    OrderPaymentMethod? previous,
-  ) {
+      List<OrderPaymentMethod> methods,
+      OrderPaymentMethod? previous,
+      ) {
     if (methods.isEmpty) {
       return null;
     }

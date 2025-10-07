@@ -41,7 +41,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
             backgroundColor: theme.appBarTheme.backgroundColor,
             foregroundColor: theme.appBarTheme.foregroundColor,
             systemOverlayStyle:
-                isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+            isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
             leading: const BackButton(),
             actions: [
               IconButton(
@@ -119,8 +119,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
             children: [
               grid,
               _ErrorBanner(
-                message:
-                    state.errorMessage ?? 'تعذّر تحديث الشبكات، حاول مجددًا.',
+                message: state.errorMessage ?? 'تعذّر تحديث الشبكات، حاول مجددًا.',
                 onRetry: () => _controller.refreshNetworks(),
               ),
             ],
@@ -327,21 +326,20 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
   String? _formatNetworkResultMessage(dynamic result) {
     if (result is Map) {
       final map = Map<String, dynamic>.from(result as Map);
-      return (map['message'] as String?) ??
-          (() {
-            final String? name = map['name'] as String?;
-            final String? status = map['status'] as String?;
-            if (name != null && status != null) {
-              return 'تم إرسال طلب الشبكة "$name" (الحالة: $status)';
-            }
-            if (name != null) {
-              return 'تمت إضافة الشبكة "$name" بنجاح';
-            }
-            if (status != null) {
-              return 'تم إرسال الطلب (الحالة: $status)';
-            }
-            return null;
-          })();
+      return (map['message'] as String?) ?? (() {
+        final String? name = map['name'] as String?;
+        final String? status = map['status'] as String?;
+        if (name != null && status != null) {
+          return 'تم إرسال طلب الشبكة "$name" (الحالة: $status)';
+        }
+        if (name != null) {
+          return 'تمت إضافة الشبكة "$name" بنجاح';
+        }
+        if (status != null) {
+          return 'تم إرسال الطلب (الحالة: $status)';
+        }
+        return null;
+      })();
     }
     if (result is String) {
       return 'تمت إضافة الشبكة "$result" بنجاح';
@@ -349,8 +347,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
     return 'تم إرسال طلب الشبكة بنجاح';
   }
 
-  Future<void> _openPlansSheet(
-      BuildContext context, WifiNetwork network) async {
+  Future<void> _openPlansSheet(BuildContext context, WifiNetwork network) async {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,

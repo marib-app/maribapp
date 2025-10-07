@@ -8,14 +8,17 @@ import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/ui/theme/theme.dart';
-// لو كنت تستخدم AnnotatedRegion بنمط النظام
+import 'package:flutter/services.dart'; // لو كنت تستخدم AnnotatedRegion بنمط النظام
 import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart'; // لتعريف BlurredDialogBox
 
-import 'package:marib/ui/screens/cart/cart_ui.dart';
+import 'cart_ui.dart';
 import 'package:marib/data/model/cart/cart_discount.dart';
 import 'package:marib/data/model/cart/cart_safety_tip.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:marib/utils/helper_utils.dart';
+
+
+
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -80,8 +83,7 @@ class _CartScreenState extends State<CartScreen> {
       _selectAll = !_selectAll;
       _selectedItems.clear();
       if (_selectAll) {
-        _selectedItems
-            .addAll(cartItems.where((e) => e.id != null).map((e) => e.id!));
+        _selectedItems.addAll(cartItems.where((e) => e.id != null).map((e) => e.id!));
       }
     });
   }
@@ -109,10 +111,10 @@ class _CartScreenState extends State<CartScreen> {
   Future<void> _applyCoupon() async {
     await context.read<CartCubit>().applyCoupon(_couponController.text);
   }
-
   Future<void> _updateDeliveryPaymentTiming(String timing) async {
     await context.read<CartCubit>().updateDeliveryPaymentTiming(timing);
   }
+
 
   Future<void> _removeCoupon(CartDiscount discount) async {
     String? code = discount.code;
@@ -180,13 +182,15 @@ class _CartScreenState extends State<CartScreen> {
     final List<Cart> cartItems = cartState.items;
     final double subtotal = context.read<CartCubit>().subtotal;
 
+
+
     Map<String, dynamic>? _castToStringKeyedMap(dynamic value) {
       if (value is Map<String, dynamic>) {
         return value;
       }
       if (value is Map) {
         return value.map(
-          (dynamic key, dynamic value) => MapEntry(key.toString(), value),
+              (dynamic key, dynamic value) => MapEntry(key.toString(), value),
         );
       }
       return null;
@@ -219,6 +223,7 @@ class _CartScreenState extends State<CartScreen> {
       return null;
     }
 
+
     Map<String, dynamic>? _firstMap(dynamic value) {
       final Map<String, dynamic>? direct = _castToStringKeyedMap(value);
       if (direct != null) {
@@ -236,7 +241,7 @@ class _CartScreenState extends State<CartScreen> {
     }
 
     final Map<String, dynamic>? supportMap =
-        _castToStringKeyedMap(cartState.support);
+    _castToStringKeyedMap(cartState.support);
     String? supportWhatsappNumber;
     String? supportWhatsappUrl;
     String? supportWhatsappMessage;
@@ -254,6 +259,7 @@ class _CartScreenState extends State<CartScreen> {
       if (channelsMap != null && whatsappMap == null) {
         whatsappMap = _firstMap(channelsMap['whatsapp']);
         supportWhatsappData ??= channelsMap['whatsapp'];
+
       }
 
       const List<String> numberKeys = <String>[
@@ -306,15 +312,21 @@ class _CartScreenState extends State<CartScreen> {
         'text',
       ];
 
-      supportWhatsappNumber = _firstStringValue(whatsappMap, numberKeys) ??
-          _firstStringValue(supportMap, numberKeys);
-      supportWhatsappUrl = _firstStringValue(whatsappMap, urlKeys) ??
-          _firstStringValue(supportMap, urlKeys);
-      supportWhatsappMessage = _firstStringValue(whatsappMap, messageKeys) ??
-          _firstStringValue(supportMap, messageKeys);
-      supportWhatsappLabel = _firstStringValue(whatsappMap, labelKeys) ??
-          _firstStringValue(supportMap, labelKeys);
+
+      supportWhatsappNumber =
+          _firstStringValue(whatsappMap, numberKeys) ??
+              _firstStringValue(supportMap, numberKeys);
+      supportWhatsappUrl =
+          _firstStringValue(whatsappMap, urlKeys) ??
+              _firstStringValue(supportMap, urlKeys);
+      supportWhatsappMessage =
+          _firstStringValue(whatsappMap, messageKeys) ??
+              _firstStringValue(supportMap, messageKeys);
+      supportWhatsappLabel =
+          _firstStringValue(whatsappMap, labelKeys) ??
+              _firstStringValue(supportMap, labelKeys);
       supportWhatsappData ??= whatsappMap;
+
 
       if (supportWhatsappUrl == null) {
         final dynamic whatsappRaw = supportMap['whatsapp'];
@@ -379,6 +391,7 @@ class _CartScreenState extends State<CartScreen> {
               HelperUtils.showSnackBarMessage(
                 context,
                 "السلة فارغة، لا يوجد عناصر للحذف.",
+
               );
             } else {
               UiUtils.showBlurredDialoge(
@@ -394,10 +407,10 @@ class _CartScreenState extends State<CartScreen> {
             }
           },
           onToggleSelectAll: () => _toggleSelectAll(cartItems),
-          onToggleSelectItem: (int? id) =>
-              _toggleSelectItem(id, cartItems.length),
+          onToggleSelectItem: (int? id) => _toggleSelectItem(id, cartItems.length),
           onContinueToPayment: () => _continueToPayment(cartItems),
           discounts: cartState.discounts,
+
           supportWhatsappLabel: supportWhatsappLabel,
           supportWhatsappNumber: supportWhatsappNumber,
           supportWhatsappUrl: supportWhatsappUrl,

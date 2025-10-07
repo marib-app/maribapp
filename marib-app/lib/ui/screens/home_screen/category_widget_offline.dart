@@ -8,96 +8,45 @@ class CategoryWidgetOffline extends StatelessWidget {
 
   // نفس قائمتك + أيقونة مؤقتة لخدمات أخرى
   final List<Map<String, dynamic>> staticCategories = const [
-    {
-      "id": 8,
-      "name": "requestYourAd",
-      "url": "assets/category/0.png",
-      'interfaceType': 'request_ad'
-    },
-    {
-      "id": 0,
-      "name": "exchangeAndTransfer",
-      "url": "assets/category/8.png",
-      'interfaceType': 'homepage'
-    },
-    {
-      "id": 174,
-      "name": "localServices",
-      "url": "assets/category/1.png",
-      'interfaceType': 'services_local'
-    },
-    {
-      "id": 181,
-      "name": "medicalServices",
-      "url": "assets/category/7.png",
-      'interfaceType': 'services_medical'
-    },
-    {
-      "id": 180,
-      "name": "studentServices",
-      "url": "assets/category/6.png",
-      'interfaceType': 'services_student'
-    },
-    {
-      "id": 175,
-      "name": "jobs",
-      "url": "assets/category/2.png",
-      'interfaceType': 'jobs'
-    },
-    {
-      "id": 175,
-      "name": "eventsOffers",
-      "url": "assets/category/3.png",
-      'interfaceType': 'events_offers'
-    },
-    {
-      "id": 114,
-      "name": "maribLost",
-      "url": "assets/category/4.png",
-      'interfaceType': 'marib_lost'
-    },
-    {
-      "id": 177,
-      "name": "maribGuide",
-      "url": "assets/category/5.png",
-      'interfaceType': 'marib_guide'
-    },
+    {"id": 8,  "name": "requestYourAd",       "url": "assets/category/0.png", 'interfaceType': 'request_ad'},
+    {"id": 0,  "name": "exchangeAndTransfer", "url": "assets/category/8.png", 'interfaceType': 'homepage'},
+    {"id": 174,"name": "localServices",       "url": "assets/category/1.png", 'interfaceType': 'services_local'},
+    {"id": 181,"name": "medicalServices",     "url": "assets/category/7.png", 'interfaceType': 'services_medical'},
+    {"id": 180,"name": "studentServices",     "url": "assets/category/6.png", 'interfaceType': 'services_student'},
+    {"id": 175,"name": "jobs",                "url": "assets/category/2.png", 'interfaceType': 'jobs'},
+    {"id": 175,"name": "eventsOffers",        "url": "assets/category/3.png", 'interfaceType': 'events_offers'},
+    {"id": 114,"name": "maribLost",           "url": "assets/category/4.png", 'interfaceType': 'marib_lost'},
+    {"id": 177,"name": "maribGuide",          "url": "assets/category/5.png", 'interfaceType': 'marib_guide'},
 
     // ✅ جديد: خدمات أخرى (أيقونة مؤقتة بدون صورة)
-    {
-      "id": 182,
-      "name": "otherServices",
-      "url": null,
-      "icon": Icons.apps,
-      'interfaceType': 'other_services'
-    },
+    {"id": 182, "name": "otherServices", "url": null, "icon": Icons.apps, 'interfaceType': 'other_services'},
   ];
 
   // تحدد اسم الـ route المطلوب لكل مجموعة
   String _resolveRouteByName(String key) {
     switch (key) {
-      // المجموعة 1 ➜ ClassifiedScreen
+    // المجموعة 1 ➜ ClassifiedScreen
       case 'requestYourAd':
       case 'localServices':
       case 'medicalServices':
       case 'studentServices':
         return Routes.classifiedScreenRoute;
 
-      // المجموعة 2 ➜ ClassifiedScreen3
+    // المجموعة 2 ➜ ClassifiedScreen3
       case 'jobs':
       case 'eventsOffers':
         return Routes.classifiedScreenRoute3;
 
-      // المجموعة 3 ➜ ClassifiedScreen2
+    // المجموعة 3 ➜ ClassifiedScreen2
       case 'maribLost':
       case 'maribGuide':
         return Routes.classifiedScreenRoute2;
 
-      // خدمات أخرى ➜ شاشة مستقلة
+    // خدمات أخرى ➜ شاشة مستقلة
       case 'otherServices':
         return Routes.otherServices;
 
-      // افتراضيًا
+    // افتراضيًا
       default:
         return Routes.classifiedScreenRoute;
     }
@@ -134,8 +83,7 @@ class CategoryWidgetOffline extends StatelessWidget {
                   return;
                 }
 
-                final routeName =
-                    _resolveRouteByName(category['name'] as String);
+                final routeName = _resolveRouteByName(category['name'] as String);
 
                 Navigator.pushNamed(
                   context,
@@ -158,8 +106,8 @@ class CategoryWidgetOffline extends StatelessWidget {
 
 class CategoryHomeCard extends StatelessWidget {
   final String title;
-  final String? url; // اختياري
-  final IconData? icon; // اختياري (لخدمات أخرى)
+  final String? url;        // اختياري
+  final IconData? icon;     // اختياري (لخدمات أخرى)
   final VoidCallback onTap;
 
   const CategoryHomeCard({
@@ -173,12 +121,10 @@ class CategoryHomeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Widget thumbChild = icon != null
-        ? Icon(icon,
-            size: 36, color: context.color.textDefaultColor) // أيقونة مؤقتة
+        ? Icon(icon, size: 36, color: context.color.textDefaultColor) // أيقونة مؤقتة
         : (url != null
-            ? Image.asset(url!, fit: BoxFit.cover)
-            : Icon(Icons.apps,
-                size: 36, color: context.color.textDefaultColor)); // fallback
+        ? Image.asset(url!, fit: BoxFit.cover)
+        : Icon(Icons.apps, size: 36, color: context.color.textDefaultColor)); // fallback
 
     return SizedBox(
       width: 70,
@@ -191,7 +137,8 @@ class CategoryHomeCard extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(18),
-                child: Container(
+                child: Container
+                  (
                   height: 70,
                   width: double.infinity,
                   color: context.color.secondaryColor,

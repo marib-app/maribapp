@@ -11,6 +11,7 @@ class OrderSubmissionResult {
     required this.raw,
   }) : _order = order;
 
+
   final String? orderId;
   final String? orderCode;
   final Map<String, dynamic>? _order;
@@ -25,7 +26,8 @@ class OrderSubmissionResult {
   Map<String, dynamic>? get paymentSummary =>
       details?.paymentSummary ?? details?.order.paymentSummary;
   Map<String, dynamic>? get deliveryPaymentSummary =>
-      details?.deliveryPaymentSummary ?? details?.order.deliveryPaymentSummary;
+      details?.deliveryPaymentSummary ??
+          details?.order.deliveryPaymentSummary;
   Map<String, dynamic>? get depositReceipts => details?.depositReceipts;
   Map<String, dynamic>? get paymentIntent => details?.order.paymentIntent;
 

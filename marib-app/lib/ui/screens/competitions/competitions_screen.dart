@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
@@ -13,14 +14,28 @@ import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart'; // Impor
 import 'package:marib/utils/responsiveSize.dart'; // Direct import for rh/rw extensions
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:marib/ui/screens/competitions/context_extensions.dart';
-import 'package:marib/ui/screens/competitions/competition_share_info.dart';
+import 'package:share_plus/share_plus.dart';
+import 'context_extensions.dart';
+import 'package:flutter/material.dart' hide Colors;
+import 'user_referral_points.dart';
+import 'package:flutter/material.dart';
+import 'competition_share_info.dart';
 import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:ui';
 
+
+
+
+
+
+
+
+
 class CompetitionScreen extends StatefulWidget {
   const CompetitionScreen({super.key});
+
+
 
   @override
   State<CompetitionScreen> createState() => CompetitionScreenState();
@@ -29,12 +44,17 @@ class CompetitionScreen extends StatefulWidget {
     return BlurredRouter(
       builder: (_) => BlocProvider(
         create: (context) =>
-            CompetitionCubit(CompetitionRepository())..fetchCompetitionData(),
+        CompetitionCubit(CompetitionRepository())..fetchCompetitionData(),
         child: const CompetitionScreen(),
       ),
     );
   }
 }
+
+
+
+
+
 
 class CompetitionScreenState extends State<CompetitionScreen>
     with TickerProviderStateMixin {
@@ -45,9 +65,14 @@ class CompetitionScreenState extends State<CompetitionScreen>
   List<Challenge> challengesList = [];
   late UserReferralPoints pointsData;
 
+
+
   bool _showHint = false;
   bool showWarning = false;
   bool _isLoadingButton = true; // حالة التحميل المؤقتة
+
+
+
 
   @override
   void initState() {
@@ -76,6 +101,8 @@ class CompetitionScreenState extends State<CompetitionScreen>
     _shakeController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         _shakeController.reverse();
+
+
       }
     });
   }
@@ -92,6 +119,10 @@ class CompetitionScreenState extends State<CompetitionScreen>
     if (ratio >= 0.5) return Colors.orange;
     return Colors.red;
   }
+
+
+
+
 
   Widget build(BuildContext context) {
     return AnnotatedRegion(
@@ -115,8 +146,7 @@ class CompetitionScreenState extends State<CompetitionScreen>
                 Tab(
                   child: Text(
                     'activities'.translate(context),
-                    style: TextStyle(
-                        color: Theme.of(context).textTheme.bodyMedium?.color),
+                    style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
                   ),
                 ),
                 Tab(
@@ -141,18 +171,13 @@ class CompetitionScreenState extends State<CompetitionScreen>
                         challengesList = state.challenges;
 
                         final int maxReferrals = state.challenges.isNotEmpty
-                            ? state.challenges
-                                .map((c) => c.requiredReferrals)
-                                .reduce((a, b) => a > b ? a : b)
+                            ? state.challenges.map((c) => c.requiredReferrals).reduce((a, b) => a > b ? a : b)
                             : 0;
 
-                        final Challenge? highestChallenge =
-                            state.challenges.isNotEmpty
-                                ? state.challenges.reduce((a, b) =>
-                                    a.requiredReferrals > b.requiredReferrals
-                                        ? a
-                                        : b)
-                                : null;
+                        final Challenge? highestChallenge = state.challenges.isNotEmpty
+                            ? state.challenges.reduce((a, b) =>
+                        a.requiredReferrals > b.requiredReferrals ? a : b)
+                            : null;
 
                         return SingleChildScrollView(
                           physics: const ClampingScrollPhysics(),
@@ -160,11 +185,9 @@ class CompetitionScreenState extends State<CompetitionScreen>
                             padding: const EdgeInsets.all(16.0),
                             child: Column(
                               children: [
-                                buildPointsCard(context, state.referralPoints,
-                                    maxReferrals, state.challenges),
+                                buildPointsCard(context, state.referralPoints, maxReferrals, state.challenges),
                                 const SizedBox(height: 20),
-                                _buildChallengesSection(context, challengesList,
-                                    pointsData.currentPoints),
+                                _buildChallengesSection(context, challengesList, pointsData.currentPoints),
                                 const SizedBox(height: 20),
                                 //_buildInviteSection(),
                               ],
@@ -188,16 +211,14 @@ class CompetitionScreenState extends State<CompetitionScreen>
                         children: [
                           Text(
                             "paymentDetails".translate(context),
-                            style: TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.bold),
+                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                           ),
                           SizedBox(height: 10),
                           _buildPaymentMethods(context),
                           SizedBox(height: 20),
                           Text(
                             "transactionHistory".translate(context),
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                           SizedBox(height: 10),
                           _buildTransactionHistory(),
@@ -211,58 +232,65 @@ class CompetitionScreenState extends State<CompetitionScreen>
           ],
         ),
 
+
+
+
+
         // ✅ الزر الثابت أسفل الشاشة
         bottomNavigationBar: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: _isLoadingButton
                 ? Shimmer.fromColors(
-                    baseColor: Colors.grey.shade300,
-                    highlightColor: Colors.grey.shade100,
-                    child: Container(
-                      width: double.infinity,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: Colors.grey,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  )
+              baseColor: Colors.grey.shade300,
+              highlightColor: Colors.grey.shade100,
+              child: Container(
+                width: double.infinity,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.grey,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            )
                 : SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                            context, CompetitionShareInfoScreen.route());
-                      },
-                      icon: const Icon(Icons.emoji_events,
-                          color: Colors.white, size: 18),
-                      label: const Text(
-                        "شارك واربح",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: context.color.forthColor,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(context, CompetitionShareInfoScreen.route());
+                },
+                icon: const Icon(Icons.emoji_events, color: Colors.white, size: 18),
+                label: const Text(
+                  "شارك واربح",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
                   ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: context.color.forthColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Challenge? getNearestChallenge(
-      List<Challenge> challenges, int currentPoints) {
+
+
+
+
+
+
+  Challenge? getNearestChallenge(List<Challenge> challenges, int currentPoints) {
     if (challenges.isEmpty) {
       return null;
     }
@@ -271,42 +299,40 @@ class CompetitionScreenState extends State<CompetitionScreen>
       ..sort((a, b) => a.requiredPoints.compareTo(b.requiredPoints));
 
     final nearestChallenge = sortedChallenges.firstWhere(
-      (c) => c.requiredPoints > currentPoints,
+          (c) => c.requiredPoints > currentPoints,
       orElse: () => sortedChallenges.last,
     );
 
     return nearestChallenge;
   }
 
+
   Widget buildPointsCard(
-    BuildContext context,
-    UserReferralPoints pointsData,
-    int maxReferrals,
-    List<Challenge> challenges,
-  ) {
+      BuildContext context,
+      UserReferralPoints pointsData,
+      int maxReferrals,
+      List<Challenge> challenges,
+      ) {
     // 🧮 النقاط الحالية
     final int currentPoints = pointsData.currentPoints;
 
     // 🗃️ ترتيب التحديات حسب النقاط المطلوبة
-    final sortedChallenges = [...challenges]
-      ..sort((a, b) => a.requiredPoints.compareTo(b.requiredPoints));
+    final sortedChallenges = [...challenges]..sort((a, b) => a.requiredPoints.compareTo(b.requiredPoints));
 
     // 🥇 أعلى تحدي
     final highest = sortedChallenges.isNotEmpty
-        ? sortedChallenges
-            .reduce((a, b) => a.requiredPoints > b.requiredPoints ? a : b)
+        ? sortedChallenges.reduce((a, b) => a.requiredPoints > b.requiredPoints ? a : b)
         : null;
 
     // 🎯 أقرب تحدي لم يصله المستخدم بعد
     final nearest = sortedChallenges.cast<Challenge?>().firstWhere(
           (c) => c!.requiredPoints > currentPoints,
-          orElse: () => null,
-        );
+      orElse: () => null,
+    );
 
     // 📌 عدد النقاط المتبقية للوصول للتحدي الأقرب
     final int remaining = nearest != null
-        ? (nearest.requiredPoints - currentPoints)
-            .clamp(0, nearest.requiredPoints)
+        ? (nearest.requiredPoints - currentPoints).clamp(0, nearest.requiredPoints)
         : 0;
 
     // ⏳ نسبة التقدم إلى أعلى تحدي
@@ -315,8 +341,7 @@ class CompetitionScreenState extends State<CompetitionScreen>
         : 0.0;
 
     // ✅ هل يستطيع جمع الجائزة الآن؟
-    final bool canCollect =
-        nearest != null && currentPoints >= nearest.requiredPoints;
+    final bool canCollect = nearest != null && currentPoints >= nearest.requiredPoints;
 
     return Container(
       padding: const EdgeInsets.all(16), // 🧱 حواف داخلية للبطاقة
@@ -326,10 +351,7 @@ class CompetitionScreenState extends State<CompetitionScreen>
             : Colors.amber.shade100, // 🎨 لون البطاقة في الوضع الفاتح
         borderRadius: BorderRadius.circular(12), // 🔲 حواف دائرية للبطاقة
         boxShadow: const [
-          BoxShadow(
-              color: Colors.black12,
-              blurRadius: 8,
-              offset: Offset(0, 4)), // 🟤 ظل خفيف
+          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)), // 🟤 ظل خفيف
         ],
       ),
       child: Row(
@@ -346,7 +368,7 @@ class CompetitionScreenState extends State<CompetitionScreen>
                   style: TextStyle(
                     fontSize: 18, // 🔠 حجم الخط الرئيسي
                     fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
+                    color: Theme.of(context).colorScheme.onBackground,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -355,9 +377,8 @@ class CompetitionScreenState extends State<CompetitionScreen>
                 LinearProgressIndicator(
                   value: progress, // ⚖️ النسبة الحالية
                   backgroundColor: Colors.grey.shade300, // 🎨 لون الخلفية
-                  valueColor: AlwaysStoppedAnimation(progress >= 1.0
-                      ? Colors.green
-                      : Colors.orange), // 🎨 لون التقدم
+                  valueColor: AlwaysStoppedAnimation(
+                      progress >= 1.0 ? Colors.green : Colors.orange), // 🎨 لون التقدم
                   minHeight: 8, // 📏 ارتفاع الشريط
                 ),
                 const SizedBox(height: 10),
@@ -369,10 +390,7 @@ class CompetitionScreenState extends State<CompetitionScreen>
                       : "🎉 مبروك! وصلت لكل التحديات.",
                   style: TextStyle(
                     fontSize: 14, // 🔠 حجم الخط
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withOpacity(0.7),
+                    color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -389,33 +407,24 @@ class CompetitionScreenState extends State<CompetitionScreen>
                         ElevatedButton(
                           onPressed: canCollect
                               ? () {
-                                  // ✅ تنفيذ الجمع هنا
-                                }
+                            // ✅ تنفيذ الجمع هنا
+                          }
                               : () {
-                                  HapticFeedback.vibrate(); // 📳 اهتزاز خفيف
-                                  setState(() =>
-                                      showWarning = true); // 🔔 إظهار التنبيه
-                                  Future.delayed(const Duration(seconds: 3),
-                                      () {
-                                    if (context.mounted)
-                                      setState(() => showWarning = false);
-                                  });
-                                },
+                            HapticFeedback.vibrate(); // 📳 اهتزاز خفيف
+                            setState(() => showWarning = true); // 🔔 إظهار التنبيه
+                            Future.delayed(const Duration(seconds: 3), () {
+                              if (context.mounted) setState(() => showWarning = false);
+                            });
+                          },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: canCollect
-                                ? Colors.orange
-                                : Colors.grey, // 🎨 لون الزر
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 10), // 📐 حجم الزر
+                            backgroundColor: canCollect ? Colors.orange : Colors.grey, // 🎨 لون الزر
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10), // 📐 حجم الزر
                             shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(20), // 🟦 حواف الزر
+                              borderRadius: BorderRadius.circular(20), // 🟦 حواف الزر
                             ),
                           ),
                           child: Text(
-                            canCollect
-                                ? "اجمع نقاطك الآن"
-                                : "اجمع نقاط التحدي", // 🏷️ نص الزر
+                            canCollect ? "اجمع نقاطك الآن" : "اجمع نقاط التحدي", // 🏷️ نص الزر
                             style: const TextStyle(color: Colors.white),
                           ),
                         ),
@@ -423,8 +432,7 @@ class CompetitionScreenState extends State<CompetitionScreen>
                         // 💬 التنبيه (يظهر أو يختفي بشكل سلس + يلتف إذا ما فيه مساحة)
                         AnimatedOpacity(
                           opacity: showWarning ? 1.0 : 0.0, // 👀 ظهور واختفاء
-                          duration: const Duration(
-                              milliseconds: 300), // ⏱️ مدة الأنميشن
+                          duration: const Duration(milliseconds: 300), // ⏱️ مدة الأنميشن
                           child: Text(
                             "باقي $remaining نقطة لتفعيل الزر",
                             style: TextStyle(
@@ -454,6 +462,24 @@ class CompetitionScreenState extends State<CompetitionScreen>
       ),
     );
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   void _showChallengeDetailsDialog(BuildContext context, Challenge challenge) {
     showGeneralDialog(
@@ -540,9 +566,7 @@ class CompetitionScreenState extends State<CompetitionScreen>
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      challenge.isActive
-                          ? "الحالة: 🔥 نشط"
-                          : "الحالة: 🚫 غير نشط",
+                      challenge.isActive ? "الحالة: 🔥 نشط" : "الحالة: 🚫 غير نشط",
                       style: const TextStyle(fontSize: 14),
                     ),
                   ],
@@ -555,11 +579,19 @@ class CompetitionScreenState extends State<CompetitionScreen>
     );
   }
 
+
+
+
+
+
+
+
+
   Widget _buildChallengesSection(
-    BuildContext context,
-    List<Challenge> challenges,
-    int currentPoints,
-  ) {
+      BuildContext context,
+      List<Challenge> challenges,
+      int currentPoints,
+      ) {
     // تقسيم القائمة إلى صفوف كل صف فيه عنصرين
     final rows = <Widget>[];
 
@@ -567,18 +599,12 @@ class CompetitionScreenState extends State<CompetitionScreen>
       final row = Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(
-              child:
-                  _buildChallengeCard(context, challenges[i], currentPoints)),
+          Expanded(child: _buildChallengeCard(context, challenges[i], currentPoints)),
           const SizedBox(width: 10),
           if (i + 1 < challenges.length)
-            Expanded(
-                child: _buildChallengeCard(
-                    context, challenges[i + 1], currentPoints))
+            Expanded(child: _buildChallengeCard(context, challenges[i + 1], currentPoints))
           else
-            const Expanded(
-                child:
-                    SizedBox()), // لتعبئة الفراغ في حال كان عدد البطاقات فردي
+            const Expanded(child: SizedBox()), // لتعبئة الفراغ في حال كان عدد البطاقات فردي
         ],
       );
       rows.add(Padding(
@@ -590,20 +616,18 @@ class CompetitionScreenState extends State<CompetitionScreen>
     return Column(children: rows);
   }
 
-  Widget _buildChallengeCard(
-      BuildContext context, Challenge challenge, int currentPoints) {
+
+  Widget _buildChallengeCard(BuildContext context, Challenge challenge, int currentPoints) {
     final bool isActive = challenge.isActive;
     final bool isEligible = currentPoints >= challenge.requiredPoints;
 
-    final Color badgeColor =
-        isActive ? Colors.orange.shade100 : Colors.grey.shade300;
-    final Color badgeTextColor =
-        isActive ? Colors.deepOrange : Colors.grey.shade700;
+    final Color badgeColor = isActive ? Colors.orange.shade100 : Colors.grey.shade300;
+    final Color badgeTextColor = isActive ? Colors.deepOrange : Colors.grey.shade700;
     final Color backgroundColor = isEligible
         ? Colors.lightGreen.shade50
         : isActive
-            ? Colors.amber.shade50
-            : Colors.grey.shade100;
+        ? Colors.amber.shade50
+        : Colors.grey.shade100;
 
     return InkWell(
       onTap: () => _showChallengeDetailsDialog(context, challenge),
@@ -667,8 +691,7 @@ class CompetitionScreenState extends State<CompetitionScreen>
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(6),
                   child: LinearProgressIndicator(
-                    value: (currentPoints / challenge.requiredPoints)
-                        .clamp(0.0, 1.0),
+                    value: (currentPoints / challenge.requiredPoints).clamp(0.0, 1.0),
                     minHeight: 6,
                     backgroundColor: Colors.grey.shade300,
                     valueColor: AlwaysStoppedAnimation(
@@ -682,6 +705,9 @@ class CompetitionScreenState extends State<CompetitionScreen>
       ),
     );
   }
+
+
+
 
   // Shimmer placeholder for Points Section
   Widget _buildPointsSectionShimmer(BuildContext context) {
@@ -724,6 +750,7 @@ class CompetitionScreenState extends State<CompetitionScreen>
 
   // Shimmer placeholder for Challenges Section
 
+
   Widget _buildChallengesSectionShimmer(BuildContext context) {
     return Shimmer.fromColors(
       baseColor: Colors.grey[300]!,
@@ -741,7 +768,7 @@ class CompetitionScreenState extends State<CompetitionScreen>
         itemBuilder: (context, index) {
           return Card(
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -770,13 +797,13 @@ class CompetitionScreenState extends State<CompetitionScreen>
       shrinkWrap: true,
       padding: const EdgeInsets.all(16),
       physics:
-          const NeverScrollableScrollPhysics(), // Disable scrolling if inside a ScrollView
+      const NeverScrollableScrollPhysics(), // Disable scrolling if inside a ScrollView
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2, // Number of items per row
         crossAxisSpacing: 8, // Increased horizontal spacing
         mainAxisSpacing: 8, // Increased vertical spacing
         childAspectRatio:
-            0.7, // Controls the width-to-height ratio of each item
+        0.7, // Controls the width-to-height ratio of each item
       ),
       itemBuilder: (context, index) {
         return Container(
@@ -854,6 +881,10 @@ class CompetitionScreenState extends State<CompetitionScreen>
       },
     );
   }
+
+
+
+
 
   Widget _buildInviteSection() {
     return BlocBuilder<CompetitionCubit, CompetitionState>(
@@ -949,16 +980,16 @@ class CompetitionScreenState extends State<CompetitionScreen>
                 ),
                 child: state is CompetitionSuccess
                     ? QrImageView(
-                        data: inviteMessage,
-                        version: QrVersions.auto,
-                        size: 104.0,
-                        backgroundColor: Colors.white,
-                        errorCorrectionLevel: QrErrorCorrectLevel.M,
-                      )
+                  data: inviteMessage,
+                  version: QrVersions.auto,
+                  size: 104.0,
+                  backgroundColor: Colors.white,
+                  errorCorrectionLevel: QrErrorCorrectLevel.M,
+                )
                     : Center(
-                        child:
-                            Icon(Icons.qr_code, size: 40, color: Colors.grey),
-                      ),
+                  child:
+                  Icon(Icons.qr_code, size: 40, color: Colors.grey),
+                ),
               ),
 
               SizedBox(height: 15),
@@ -980,6 +1011,7 @@ class CompetitionScreenState extends State<CompetitionScreen>
                           _shareInviteMessage(inviteMessage, context);
                         }
                       },
+
                       icon: Icon(Icons.share, color: Colors.white, size: 18),
                       label: Text(
                         "share".translate(context),
@@ -1018,6 +1050,8 @@ class CompetitionScreenState extends State<CompetitionScreen>
       },
     );
   }
+
+
 
   void _shareInviteMessage(String message, BuildContext context) {
     // نسخ الرسالة إلى الحافظة كبديل للمشاركة
@@ -1176,7 +1210,7 @@ Widget _buildPaymentShimmer(BuildContext context) {
                 leading: Container(width: 40, height: 40, color: Colors.white),
                 title: Container(width: 120, height: 16, color: Colors.white),
                 subtitle:
-                    Container(width: 180, height: 12, color: Colors.white),
+                Container(width: 180, height: 12, color: Colors.white),
                 trailing: Container(width: 60, height: 16, color: Colors.white),
               ),
             ),
@@ -1467,7 +1501,7 @@ class UserReferralPoints {
       totalPoints: 5000,
       nextRewardMessage: "Collect additional points to get a reward!",
       inviteFriendMessage:
-          "Invite your friends and earn points for each friend who joins.",
+      "Invite your friends and earn points for each friend who joins.",
       qrCodeData: "sample_qr_code_data_string",
       currentPoints: 1350,
       maxPoints: maxPointsFromApi ?? 1500, // استخدام القيمة من الـ API
@@ -1479,16 +1513,16 @@ class UserReferralPoints {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is UserReferralPoints &&
-          runtimeType == other.runtimeType &&
-          totalPoints == other.totalPoints &&
-          nextRewardMessage == other.nextRewardMessage &&
-          inviteFriendMessage == other.inviteFriendMessage &&
-          qrCodeData == other.qrCodeData &&
-          currentPoints == other.currentPoints &&
-          maxPoints == other.maxPoints &&
-          referralCode == other.referralCode &&
-          referredUsersCount == other.referredUsersCount;
+          other is UserReferralPoints &&
+              runtimeType == other.runtimeType &&
+              totalPoints == other.totalPoints &&
+              nextRewardMessage == other.nextRewardMessage &&
+              inviteFriendMessage == other.inviteFriendMessage &&
+              qrCodeData == other.qrCodeData &&
+              currentPoints == other.currentPoints &&
+              maxPoints == other.maxPoints &&
+              referralCode == other.referralCode &&
+              referredUsersCount == other.referredUsersCount;
 
   @override
   int get hashCode =>
@@ -1518,11 +1552,11 @@ class CompetitionSuccess extends CompetitionState {
   final Challenge? nextChallenge;
 
   const CompetitionSuccess(
-    this.referralPoints,
-    this.challenges,
-    this.paymentTransactions, {
-    this.nextChallenge,
-  });
+      this.referralPoints,
+      this.challenges,
+      this.paymentTransactions, {
+        this.nextChallenge,
+      });
 
   @override
   bool operator ==(Object other) {
@@ -1548,6 +1582,7 @@ class CompetitionSuccess extends CompetitionState {
   }
 }
 
+
 class CompetitionFailure extends CompetitionState {
   final String message;
 
@@ -1556,9 +1591,9 @@ class CompetitionFailure extends CompetitionState {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is CompetitionFailure &&
-          runtimeType == other.runtimeType &&
-          message == other.message;
+          other is CompetitionFailure &&
+              runtimeType == other.runtimeType &&
+              message == other.message;
 
   @override
   int get hashCode => message.hashCode;
@@ -1596,7 +1631,7 @@ class CompetitionCubit extends Cubit<CompetitionState> {
       List<dynamic> paymentTransactions = [];
       try {
         paymentTransactions =
-            await _competitionRepository.getPaymentTransactions();
+        await _competitionRepository.getPaymentTransactions();
       } catch (e) {
         // إذا فشل جلب المعاملات، نستمر بدون تعطيل المسابقات
         print("Warning: Could not load payment transactions: $e");
@@ -1612,7 +1647,7 @@ class CompetitionCubit extends Cubit<CompetitionState> {
         referredUsersCount: userPointsData['referred_users_count'] ?? 0,
         nextRewardMessage: "Collect additional points to get a reward!",
         inviteFriendMessage:
-            "Invite your friends and earn points for each friend who joins.",
+        "Invite your friends and earn points for each friend who joins.",
         qrCodeData: _generateInviteMessage(
             userPointsData['referral_code'] ?? 'DEFAULT123'),
       );
@@ -1657,7 +1692,7 @@ class CompetitionCubit extends Cubit<CompetitionState> {
   Future<void> refreshPaymentTransactions() async {
     try {
       final paymentTransactions =
-          await _competitionRepository.getPaymentTransactions();
+      await _competitionRepository.getPaymentTransactions();
 
       if (state is CompetitionSuccess) {
         final currentState = state as CompetitionSuccess;

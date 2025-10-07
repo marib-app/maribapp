@@ -29,10 +29,10 @@ class FavoriteRepository {
     final map = Map<String, dynamic>.from(m);
 
     // قوائم قد تحتوي عناصر ليست خرائط
-    map['custom_fields'] = _onlyMaps(map['custom_fields']);
-    map['gallery_images'] = _onlyMaps(map['gallery_images']);
-    map['favourites'] = _onlyMaps(map['favourites']);
-    map['featured_items'] = _onlyMaps(map['featured_items']);
+    map['custom_fields']   = _onlyMaps(map['custom_fields']);
+    map['gallery_images']  = _onlyMaps(map['gallery_images']);
+    map['favourites']      = _onlyMaps(map['favourites']);
+    map['featured_items']  = _onlyMaps(map['featured_items']);
 
     // ضبط بعض الحقول الشائعة داخل custom_fields
     final cfs = (map['custom_fields'] as List<Map<String, dynamic>>);
@@ -80,17 +80,14 @@ class FavoriteRepository {
     final rows = (data?['data'] as List?) ?? const [];
 
     // ✅ تنقية كل عنصر قبل تحويله للموديل
-    final List<ItemModel> modelList = rows
-        .map<ItemModel?>((e) {
-          if (e is Map) {
-            final sanitized = _sanitizeItemMap(Map<String, dynamic>.from(e));
-            return ItemModel.fromJson(sanitized);
-          }
-          // نتجاهل أي عنصر ليس خريطة
-          return null;
-        })
-        .whereType<ItemModel>()
-        .toList();
+    final List<ItemModel> modelList = rows.map<ItemModel?>((e) {
+      if (e is Map) {
+        final sanitized = _sanitizeItemMap(Map<String, dynamic>.from(e));
+        return ItemModel.fromJson(sanitized);
+      }
+      // نتجاهل أي عنصر ليس خريطة
+      return null;
+    }).whereType<ItemModel>().toList();
 
     print("🔄 تم تحويل ${modelList.length} عنصر بنجاح");
 

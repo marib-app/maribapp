@@ -17,6 +17,7 @@ class HomeSlider {
   String? ctaLabel;
   Map<String, dynamic>? meta;
 
+
   HomeSlider({
     this.id,
     this.sequence,
@@ -40,8 +41,7 @@ class HomeSlider {
   HomeSlider.fromJson(Map<String, dynamic> json) {
     id = _parseInt(json['id']);
     sequence = _asString(json['sequence']);
-    thirdPartyLink =
-        _asString(json['third_party_link'] ?? json['thirdPartyLink']);
+    thirdPartyLink = _asString(json['third_party_link'] ?? json['thirdPartyLink']);
     modelId = _parseInt(json['model_id'] ?? json['modelId']);
     image = _asString(json['image']);
     modelType = _asString(json['model_type'] ?? json['modelType']);
@@ -49,8 +49,7 @@ class HomeSlider {
     destination = _asString(json['destination']);
     actionType = _asString(json['action_type'] ?? json['actionType']);
     actionPayload = HomeSliderActionPayload.fromJson(json['action_payload']);
-    targetSummary =
-        HomeSliderTargetSummary.maybeFromJson(json['target_summary']);
+    targetSummary = HomeSliderTargetSummary.maybeFromJson(json['target_summary']);
     title = _asString(json['title'] ?? json['headline']);
     subtitle = _asString(json['subtitle'] ?? json['description']);
     badgeLabel = _asString(json['badge_label'] ?? json['badgeLabel']);
@@ -59,9 +58,10 @@ class HomeSlider {
 
     if (json['model'] is Map<String, dynamic>) {
       model = CategorySlider.fromJson(json['model']);
-    } else if (targetSummary != null &&
-        targetSummary!.asCategorySlider != null) {
+
+    } else if (targetSummary != null && targetSummary!.asCategorySlider != null) {
       model = targetSummary!.asCategorySlider;
+
     } else {
       model = null;
     }
@@ -91,6 +91,9 @@ class HomeSlider {
     }
     return data;
   }
+
+
+
 
   String? get actionTypeNormalized => actionType?.toLowerCase().trim();
 
@@ -134,8 +137,7 @@ class HomeSliderActionPayload {
       return HomeSliderActionPayload._(
         raw: raw,
         url: _extractString(raw, const ['url', 'link', 'href', 'deep_link']),
-        couponCode:
-            _extractString(raw, const ['coupon_code', 'coupon', 'code']),
+        couponCode: _extractString(raw, const ['coupon_code', 'coupon', 'code']),
         arguments: _asMap(raw['arguments'] ?? raw['args']),
       );
     }
@@ -147,8 +149,7 @@ class HomeSliderActionPayload {
       url ?? _extractString(raw, const ['url', 'link', 'href', 'deep_link']);
 
   String? get resolvedCouponCode =>
-      couponCode ??
-      _extractString(raw, const ['coupon_code', 'coupon', 'code']);
+      couponCode ?? _extractString(raw, const ['coupon_code', 'coupon', 'code']);
 
   Map<String, dynamic>? toJson() => raw;
 }
@@ -181,7 +182,7 @@ class HomeSliderTargetSummary {
 
   factory HomeSliderTargetSummary.fromJson(Map<String, dynamic> json) {
     final Map<String, dynamic>? meta =
-        _asMap(json['meta'] ?? json['extras'] ?? json['data']);
+    _asMap(json['meta'] ?? json['extras'] ?? json['data']);
     return HomeSliderTargetSummary(
       type: _asString(json['type'] ?? json['target_type'] ?? meta?['type']),
       id: json['id'] ?? json['target_id'] ?? meta?['id'],
@@ -211,8 +212,8 @@ class HomeSliderTargetSummary {
   bool get isCategory =>
       const ['category', 'categories'].contains(normalizedType);
 
-  bool get isItem =>
-      const ['item', 'product', 'listing'].contains(normalizedType);
+  bool get isItem => const ['item', 'product', 'listing']
+      .contains(normalizedType);
 
   int? get idAsInt => _parseInt(id);
 
@@ -234,7 +235,14 @@ class HomeSliderTargetSummary {
       parentCategoryId: parentCategoryId,
     );
   }
+
+
+
+
+
 }
+
+
 
 class CategorySlider {
   int? id;
@@ -263,7 +271,6 @@ class CategorySlider {
     return data;
   }
 }
-
 int? _parseInt(dynamic value) {
   if (value == null) return null;
   if (value is int) return value;

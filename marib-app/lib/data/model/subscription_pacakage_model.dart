@@ -51,10 +51,12 @@ class SubscriptionPackageModel {
     duration = json['duration'];
     limit = json['item_limit'];
     type = json['type'];
-    final currencyValue =
-        json['currency'] ?? json['currency_code'] ?? json['currencyCode'];
-    currency =
-        currencyValue is String ? currencyValue : currencyValue?.toString();
+    final currencyValue = json['currency'] ??
+        json['currency_code'] ??
+        json['currencyCode'];
+    currency = currencyValue is String
+        ? currencyValue
+        : currencyValue?.toString();
     if (currency != null && currency!.trim().isEmpty) {
       currency = null;
     }

@@ -55,13 +55,11 @@ class OrderPaymentsRepository {
         'intent_id': intentId.trim(),
         'payment_intent_id': intentId.trim(),
       },
-      if (transactionId != null &&
-          transactionId.trim().isNotEmpty) ...<String, dynamic>{
+      if (transactionId != null && transactionId.trim().isNotEmpty) ...<String, dynamic>{
         'transaction_id': transactionId.trim(),
         'payment_transaction_id': transactionId.trim(),
       },
-      if (reference != null &&
-          reference.trim().isNotEmpty) ...<String, dynamic>{
+      if (reference != null && reference.trim().isNotEmpty) ...<String, dynamic>{
         'reference': reference.trim(),
         'gateway_reference': reference.trim(),
         'payment_reference': reference.trim(),

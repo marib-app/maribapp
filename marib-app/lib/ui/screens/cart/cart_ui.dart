@@ -51,12 +51,14 @@ class CartUI extends StatelessWidget {
   final String? deliveryPaymentTiming;
   final ValueChanged<String>? onSelectDeliveryPaymentTiming;
 
+
   const CartUI({
     super.key,
     required this.isLoading,
     required this.cartItems,
     required this.subtotal,
     required this.discounts,
+
     required this.couponController,
     required this.couponInProgress,
     required this.couponError,
@@ -100,11 +102,11 @@ class CartUI extends StatelessWidget {
     }();
 
     final String localizedFallbackRaw =
-        UiUtils.getTranslatedLabel(context, 'notAvailable');
-    final String fallbackStoreName = localizedFallbackRaw == 'notAvailable'
-        ? 'غير متوفر'
-        : localizedFallbackRaw;
+    UiUtils.getTranslatedLabel(context, 'notAvailable');
+    final String fallbackStoreName =
+    localizedFallbackRaw == 'notAvailable' ? 'غير متوفر' : localizedFallbackRaw;
     final String resolvedStoreName = storeName ?? fallbackStoreName;
+
 
     final String? whatsappLabelRaw = supportWhatsappLabel?.trim();
     final String? whatsappNumberRaw = supportWhatsappNumber?.trim();
@@ -151,6 +153,7 @@ class CartUI extends StatelessWidget {
 
     void showWhatsappSnack(String message) {
       HelperUtils.showSnackBarMessage(context, message);
+
     }
 
     Uri? buildWhatsappUri() {
@@ -164,8 +167,7 @@ class CartUI extends StatelessWidget {
         return null;
       }
 
-      final StringBuffer buffer =
-          StringBuffer('https://wa.me/$sanitizedNumber');
+      final StringBuffer buffer = StringBuffer('https://wa.me/$sanitizedNumber');
       if (whatsappMessageRaw != null && whatsappMessageRaw.isNotEmpty) {
         buffer.write('?text=${Uri.encodeComponent(whatsappMessageRaw)}');
       }
@@ -191,6 +193,8 @@ class CartUI extends StatelessWidget {
         showWhatsappSnack('تعذر فتح تطبيق الواتساب.');
       }
     }
+
+
 
     Widget buildCouponFeedback(String message) {
       final Color accent = Colors.redAccent;
@@ -224,6 +228,8 @@ class CartUI extends StatelessWidget {
       );
     }
 
+
+
     Widget? buildSafetyTipsBanner() {
       final CartSafetyTipsPayload? payload = safetyTips;
       if (payload == null || !payload.showAsBanner) {
@@ -236,7 +242,7 @@ class CartUI extends StatelessWidget {
       }
 
       final List<CartSafetyTipAction> actionable = tip.actions.where(
-        (CartSafetyTipAction action) {
+            (CartSafetyTipAction action) {
           if (action.isNavigate) {
             return action.navigatesToCart;
           }
@@ -286,7 +292,7 @@ class CartUI extends StatelessWidget {
                         tip.description ?? '',
                         style: TextStyle(
                           color:
-                              context.color.textDefaultColor.withOpacity(0.85),
+                          context.color.textDefaultColor.withOpacity(0.85),
                           height: 1.4,
                         ),
                       ),
@@ -335,6 +341,9 @@ class CartUI extends StatelessWidget {
     }
 
     final Widget? safetyBanner = buildSafetyTipsBanner();
+
+
+
 
     Widget buildDiscountTile(CartDiscount discount) {
       final bool applied = discount.isApplied;
@@ -396,8 +405,7 @@ class CartUI extends StatelessWidget {
             ),
             if (applied && (discount.code?.trim().isNotEmpty ?? false))
               IconButton(
-                onPressed:
-                    couponInProgress ? null : () => onRemoveCoupon(discount),
+                onPressed: couponInProgress ? null : () => onRemoveCoupon(discount),
                 icon: Icon(Icons.close, color: accent),
               ),
           ],
@@ -435,7 +443,7 @@ class CartUI extends StatelessWidget {
                     hintText: 'أدخل رمز القسيمة',
                     filled: true,
                     fillColor:
-                        isDarkInput ? Colors.grey.shade900 : Colors.white,
+                    isDarkInput ? Colors.grey.shade900 : Colors.white,
                     border: border,
                     enabledBorder: border,
                     focusedBorder: border.copyWith(
@@ -443,29 +451,28 @@ class CartUI extends StatelessWidget {
                         color: context.color.territoryColor,
                       ),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 12),
+                    contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   ),
                   onSubmitted: (_) => onApplyCoupon(),
                 ),
               ),
               const SizedBox(width: 8),
               ElevatedButton(
-                onPressed:
-                    (!couponInProgress && !isLoading) ? onApplyCoupon : null,
+                onPressed: (!couponInProgress && !isLoading) ? onApplyCoupon : null,
                 style: ElevatedButton.styleFrom(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 child: couponInProgress
                     ? const SizedBox(
-                        height: 18,
-                        width: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
                     : const Text('تطبيق'),
               ),
             ],
@@ -482,6 +489,7 @@ class CartUI extends StatelessWidget {
       );
     }
 
+
     String? _stringValue(dynamic value) {
       if (value == null) return null;
       if (value is String) {
@@ -491,13 +499,14 @@ class CartUI extends StatelessWidget {
       return value.toString();
     }
 
+
     Map<String, dynamic>? _castToStringKeyedMap(dynamic value) {
       if (value is Map<String, dynamic>) {
         return value;
       }
       if (value is Map) {
         return value.map(
-          (dynamic key, dynamic value) => MapEntry(key.toString(), value),
+              (dynamic key, dynamic value) => MapEntry(key.toString(), value),
         );
       }
       return null;
@@ -586,7 +595,7 @@ class CartUI extends StatelessWidget {
         addDescription(map['details']);
 
         final String? description =
-            descriptionParts.isEmpty ? null : descriptionParts.join('\n');
+        descriptionParts.isEmpty ? null : descriptionParts.join('\n');
 
         final bool isDisabled = (_asBool(map['disabled']) ?? false) ||
             (_asBool(map['enabled']) == false);
@@ -617,7 +626,7 @@ class CartUI extends StatelessWidget {
 
     Widget? buildDeliveryPaymentTimingSection() {
       final List<_DeliveryTimingOption> options =
-          _normalizeDeliveryTimingOptions(deliveryPaymentOptions);
+      _normalizeDeliveryTimingOptions(deliveryPaymentOptions);
       if (options.isEmpty) {
         return null;
       }
@@ -629,12 +638,11 @@ class CartUI extends StatelessWidget {
 
       final bool containsSelected = resolvedSelectedValue != null &&
           options.any(
-            (_DeliveryTimingOption option) =>
-                option.value == resolvedSelectedValue,
+                (_DeliveryTimingOption option) => option.value == resolvedSelectedValue,
           );
       if (!containsSelected) {
         final _DeliveryTimingOption preselected = options.firstWhere(
-          (_DeliveryTimingOption option) => option.isInitiallySelected,
+              (_DeliveryTimingOption option) => option.isInitiallySelected,
           orElse: () => options.first,
         );
         resolvedSelectedValue = preselected.value;
@@ -653,8 +661,9 @@ class CartUI extends StatelessWidget {
         return text != null && text.isNotEmpty;
       }
 
-      final bool useSegmented = options.length <= 3 &&
-          options.every((option) => !hasDescription(option));
+      final bool useSegmented =
+          options.length <= 3 && options.every((option) => !hasDescription(option));
+
 
       final Color accent = context.color.territoryColor;
 
@@ -695,11 +704,10 @@ class CartUI extends StatelessWidget {
                 final Color textColor = isSelected
                     ? accent
                     : isEnabled
-                        ? context.color.textDefaultColor
-                        : context.color.textDefaultColor.withOpacity(0.4);
+                    ? context.color.textDefaultColor
+                    : context.color.textDefaultColor.withOpacity(0.4);
                 return Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: Text(
                     option.label,
                     style: TextStyle(
@@ -739,8 +747,7 @@ class CartUI extends StatelessWidget {
             return Container(
               margin: const EdgeInsets.only(bottom: 8),
               decoration: BoxDecoration(
-                color:
-                    isSelected ? accent.withOpacity(0.08) : Colors.transparent,
+                color: isSelected ? accent.withOpacity(0.08) : Colors.transparent,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: RadioListTile<String>(
@@ -748,13 +755,13 @@ class CartUI extends StatelessWidget {
                 groupValue: resolvedSelectedValue,
                 onChanged: isEnabled
                     ? (String? value) {
-                        if (value == null) {
-                          return;
-                        }
-                        if (value != resolvedSelectedValue) {
-                          onSelectDeliveryPaymentTiming?.call(value);
-                        }
-                      }
+                  if (value == null) {
+                    return;
+                  }
+                  if (value != resolvedSelectedValue) {
+                    onSelectDeliveryPaymentTiming?.call(value);
+                  }
+                }
                     : null,
                 activeColor: accent,
                 dense: true,
@@ -770,20 +777,20 @@ class CartUI extends StatelessWidget {
                 subtitle: option.description == null
                     ? null
                     : Text(
-                        option.description!,
-                        style: TextStyle(
-                          color:
-                              context.color.textDefaultColor.withOpacity(0.75),
-                          fontSize: 13,
-                          height: 1.35,
-                        ),
-                      ),
+                  option.description!,
+                  style: TextStyle(
+                    color: context.color.textDefaultColor.withOpacity(0.75),
+                    fontSize: 13,
+                    height: 1.35,
+                  ),
+                ),
                 controlAffinity: ListTileControlAffinity.trailing,
               ),
             );
           }).toList(),
         );
       }
+
 
       return Container(
         width: double.infinity,
@@ -812,16 +819,18 @@ class CartUI extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            if (useSegmented)
-              buildSegmentedSelector()
-            else
-              buildRadioSelector(),
+            if (useSegmented) buildSegmentedSelector() else buildRadioSelector(),
+
           ],
         ),
       );
     }
 
+
+
     final Widget? deliveryTimingSection = buildDeliveryPaymentTimingSection();
+
+
 
     return Scaffold(
       backgroundColor: context.color.primaryColor,
@@ -838,12 +847,10 @@ class CartUI extends StatelessWidget {
                   children: [
                     BackButton(color: context.color.textColorDark),
                     const SizedBox(width: 8),
-                    Text("سلة المشتريات",
-                        style: TextStyle(color: context.color.textColorDark)),
+                    Text("سلة المشتريات", style: TextStyle(color: context.color.textColorDark)),
                     const Spacer(),
                     IconButton(
-                      icon:
-                          const Icon(Icons.delete, color: Colors.red, size: 26),
+                      icon: const Icon(Icons.delete, color: Colors.red, size: 26),
                       onPressed: onTapDeleteAll,
                     ),
                   ],
@@ -853,8 +860,7 @@ class CartUI extends StatelessWidget {
               Expanded(
                 child: ListView.separated(
                   physics: const BouncingScrollPhysics(),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemCount: isLoading ? 5 : cartItems.length + 1,
                   itemBuilder: (context, index) {
@@ -867,9 +873,7 @@ class CartUI extends StatelessWidget {
                             GestureDetector(
                               onTap: onToggleSelectAll,
                               child: Icon(
-                                selectAll
-                                    ? Icons.check_circle
-                                    : Icons.radio_button_unchecked,
+                                selectAll ? Icons.check_circle : Icons.radio_button_unchecked,
                                 color: selectAll ? Colors.green : Colors.grey,
                                 size: 22,
                               ),
@@ -879,15 +883,14 @@ class CartUI extends StatelessWidget {
                                 const Icon(Icons.storefront_outlined, size: 20),
                                 const SizedBox(width: 4),
                                 isLoading
-                                    ? _buildShimmerLine(context,
-                                        width: 140, height: 12)
+                                    ? _buildShimmerLine(context, width: 140, height: 12)
                                     : Text(
-                                        resolvedStoreName,
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: context.color.textDefaultColor,
-                                        ),
-                                      ),
+                                  resolvedStoreName,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: context.color.textDefaultColor,
+                                  ),
+                                ),
                               ],
                             ),
                           ],
@@ -927,12 +930,10 @@ class CartUI extends StatelessWidget {
               ),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.only(
-                    top: 10, left: 16, right: 16, bottom: 24),
+                padding: const EdgeInsets.only(top: 10, left: 16, right: 16, bottom: 24),
                 decoration: BoxDecoration(
                   color: context.color.territoryColor.withOpacity(0.4),
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(18)),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
                 ),
                 child: Column(
                   children: [
@@ -940,18 +941,24 @@ class CartUI extends StatelessWidget {
                       buildCouponSection(),
                       const SizedBox(height: 16),
                     ],
+
+
                     if (!isLoading && deliveryTimingSection != null) ...[
                       deliveryTimingSection,
                       const SizedBox(height: 16),
                     ],
+
+
+
+
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       decoration: BoxDecoration(
                         color: context.color.secondaryColor,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: context.color.borderColor,
+
                         ),
                         boxShadow: [
                           BoxShadow(
@@ -968,6 +975,7 @@ class CartUI extends StatelessWidget {
                         children: [
                           Text(
                             "المبلغ الإجمالي",
+
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -977,16 +985,18 @@ class CartUI extends StatelessWidget {
                           isLoading
                               ? _buildShimmerLine(context, width: 80)
                               : Text(
-                                  "${subtotal.toStringAsFixed(2)} ر.س",
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
-                                    color: context.color.textDefaultColor,
-                                  ),
-                                ),
+                            "${subtotal.toStringAsFixed(2)} ر.س",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: context.color.textDefaultColor,
+                            ),
+                          ),
                         ],
                       ),
                     ),
+
+
                     const SizedBox(height: 16),
                     UiUtils.buildButton(
                       context,
@@ -1058,8 +1068,7 @@ class CartUI extends StatelessWidget {
     );
   }
 
-  Widget _buildShimmerLine(BuildContext context,
-      {double height = 14, double width = 120}) {
+  Widget _buildShimmerLine(BuildContext context, {double height = 14, double width = 120}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Shimmer.fromColors(
       baseColor: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
@@ -1075,6 +1084,8 @@ class CartUI extends StatelessWidget {
     );
   }
 }
+
+
 
 class _DeliveryTimingOption {
   const _DeliveryTimingOption({

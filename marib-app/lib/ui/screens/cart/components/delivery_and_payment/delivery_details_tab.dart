@@ -4,7 +4,7 @@ import 'package:marib/data/model/item/cart_model.dart';
 import 'package:marib/data/model/cart/checkout_models.dart';
 import 'package:marib/utils/app_icon.dart';
 
-import 'package:marib/ui/screens/cart/components/delivery_and_payment/delivery_details_section.dart';
+import 'delivery_details_section.dart';
 
 /// تبويب يقدّم معلومات التوصيل من مسافة وسعر وتفاصيل أخرى.
 class CartDeliveryDetailsTab extends StatelessWidget {
@@ -96,8 +96,7 @@ class CartDeliveryDetailsTab extends StatelessWidget {
             'التوصيل',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
-          childrenPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          childrenPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           children: [
             DeliveryDetailsSection(
               loading: loading,

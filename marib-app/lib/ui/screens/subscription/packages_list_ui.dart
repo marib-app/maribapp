@@ -3,7 +3,7 @@ part of 'packages_list.dart';
 enum _PackageType { listing, featured }
 
 extension _SubscriptionPackageListScreenStateUi
-    on _SubscriptionPackageListScreenState {
+on _SubscriptionPackageListScreenState {
   Widget buildSubscriptionPackageListScreen(BuildContext context) {
     return Scaffold(
       backgroundColor: context.color.backgroundColor,
@@ -35,7 +35,7 @@ extension _SubscriptionPackageListScreenStateUi
               indicatorWeight: 3,
               labelColor: context.color.territoryColor,
               unselectedLabelColor:
-                  context.color.textDefaultColor.withOpacity(0.5),
+              context.color.textDefaultColor.withOpacity(0.5),
               labelStyle: const TextStyle(fontSize: 16),
               labelPadding: const EdgeInsets.symmetric(horizontal: 16),
               indicatorSize: TabBarIndicatorSize.tab,
@@ -83,7 +83,8 @@ extension _SubscriptionPackageListScreenStateUi
         listener: (context, state) {
           if (state is GetApiKeysSuccess) {
             AppSettings.stripeCurrency = state.stripeCurrency ?? "";
-            AppSettings.stripePublishableKey = state.stripePublishableKey ?? "";
+            AppSettings.stripePublishableKey =
+                state.stripePublishableKey ?? "";
             AppSettings.stripeStatus = state.stripeStatus ?? 0;
             AppSettings.payStackCurrency = state.payStackCurrency ?? "";
             AppSettings.payStackKey = state.payStackApiKey ?? "";
@@ -303,8 +304,7 @@ class _CtaSwitcher extends StatelessWidget {
   final ValueNotifier<SubscriptionPackageModel?> selectedFeatured;
   final int listingIndex;
   final int featuredIndex;
-  final String Function(SubscriptionPackageModel?, bool isFeatured)
-      labelBuilder;
+  final String Function(SubscriptionPackageModel?, bool isFeatured) labelBuilder;
   final void Function(SubscriptionPackageModel?, _PackageType) onPickGateway;
 
   const _CtaSwitcher({

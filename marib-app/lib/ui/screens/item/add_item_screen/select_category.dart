@@ -31,14 +31,16 @@ import 'package:marib/data/cubits/custom_field/fetch_custom_fields_cubit.dart';
 
 import 'package:marib/data/model/category_model.dart';
 import 'package:marib/utils/cloudState/cloud_state.dart';
-// isEndReached()
+import 'package:marib/utils/extensions/extensions.dart'; // isEndReached()
 import 'package:marib/utils/touch_manager.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/utils/hive_utils.dart';
 // الواجهة المنفصلة (لا تحتوي أي منطق)
-import 'package:marib/ui/screens/item/add_item_screen/select_category_ui.dart';
-import 'package:marib/ui/screens/item/add_item_screen/scroll_extensions.dart';
+import 'select_category_ui.dart';
+import 'scroll_extensions.dart';
 import 'package:marib/utils/constant.dart';
+
+
 
 // عدّاد اختياري يُستخدم عند التنقل التراكمي (كما في الكود الأصلي)
 
@@ -71,15 +73,19 @@ class SelectCategoryScreen extends StatefulWidget {
   }
 
   @override
-  CloudState<SelectCategoryScreen> createState() =>
-      _SelectCategoryScreenState();
+  CloudState<SelectCategoryScreen> createState() => _SelectCategoryScreenState();
 }
 
 class _SelectCategoryScreenState extends CloudState<SelectCategoryScreen> {
   // متحكم التمرير لمتابعة الوصول لنهاية القائمة
   late final ScrollController controller = ScrollController();
 
+
+
+
+
   int? _delegateRootId;
+
 
   @override
   void initState() {
@@ -87,10 +93,12 @@ class _SelectCategoryScreenState extends CloudState<SelectCategoryScreen> {
 
     clearCloudData('delegateRootId');
 
+
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
+
 
       _delegateRootId = HiveUtils.getDelegateRootCategoryId();
       if (_delegateRootId != null) {
@@ -107,17 +115,16 @@ class _SelectCategoryScreenState extends CloudState<SelectCategoryScreen> {
 
       final bool wasDelegateBefore = HiveUtils.wasDelegateBefore();
 
-      final int? t =
-          HiveUtils.getUserDetails().userType; // 1 فردي, 2 عقاري, 3 تجاري
+      final int? t = HiveUtils.getUserDetails().userType; // 1 فردي, 2 عقاري, 3 تجاري
       int? rootId;
       if (t == 1) {
         rootId = Constant.publicRootCategoryId; // الفردي → CategoryPublic
       } else if (t == 2) {
-        rootId =
-            Constant.realEstateRootCategoryId; // العقاري → real_estate_services
+        rootId = Constant.realEstateRootCategoryId; // العقاري → real_estate_services
       } else if (wasDelegateBefore) {
         rootId = Constant.publicRootCategoryId;
       }
+
 
       if (rootId != null) {
         final root = CategoryModel(
@@ -149,6 +156,7 @@ class _SelectCategoryScreenState extends CloudState<SelectCategoryScreen> {
     );
   }
 
+
   Future<void> _fetchAllRootCategories() async {
     final cubit = context.read<FetchCategoryCubit>();
 
@@ -162,7 +170,7 @@ class _SelectCategoryScreenState extends CloudState<SelectCategoryScreen> {
       cubit.fetchCategoriesMore();
 
       state = await cubit.stream.firstWhere(
-        (s) => s is FetchCategorySuccess && (s).categories.length > prevLen,
+            (s) => s is FetchCategorySuccess && (s as FetchCategorySuccess).categories.length > prevLen,
         orElse: () => state,
       );
 
@@ -173,6 +181,15 @@ class _SelectCategoryScreenState extends CloudState<SelectCategoryScreen> {
       if (!mounted) break;
     }
   }
+
+
+
+
+
+
+
+
+
 
   @override
   void dispose() {
@@ -193,12 +210,11 @@ class _SelectCategoryScreenState extends CloudState<SelectCategoryScreen> {
 
   // جلب الحقول المخصصة ثم الانتقال لشاشة تفاصيل إضافة الإعلان
 
-  Future<void> _navigateAfterCustomFieldsForList(
-      List<CategoryModel> breadCrumbList) async {
+
+  Future<void> _navigateAfterCustomFieldsForList(List<CategoryModel> breadCrumbList) async {
     final ids = breadCrumbList.map((e) => e.id!).toList();
 
-    context
-        .read<FetchCustomFieldsCubit>()
+    context.read<FetchCustomFieldsCubit>()
         .fetchCustomFields(categoryIds: ids.join(','));
 
     await Future.delayed(const Duration(milliseconds: 100));
@@ -222,7 +238,14 @@ class _SelectCategoryScreenState extends CloudState<SelectCategoryScreen> {
     TouchManager.touchProcessed();
   }
 
+
+
+
+
+
+
   // عند الضغط على فئة من الشبكة الرئيسية
+
 
   void _onRootCategoryTap(CategoryModel category) {
     if (category.children!.isEmpty && category.subcategoriesCount == 0) {
@@ -248,6 +271,8 @@ class _SelectCategoryScreenState extends CloudState<SelectCategoryScreen> {
     }
   }
 
+
+
   @override
   Widget build(BuildContext context) {
     // نقرأ الحالة لتمريرها للواجهة
@@ -262,8 +287,7 @@ class _SelectCategoryScreenState extends CloudState<SelectCategoryScreen> {
           debugPrint(
               '[SelectCategory] state=Success count=${state.categories.length} isLoadingMore=${state.isLoadingMore}');
         } else if (state is FetchCategoryFailure) {
-          debugPrint(
-              '[SelectCategory] state=Failure error=${state.errorMessage}');
+          debugPrint('[SelectCategory] state=Failure error=${state.errorMessage}');
         }
       },
       child: SelectCategoryUI(
@@ -306,8 +330,7 @@ class SelectNestedCategory extends StatefulWidget {
   }
 
   @override
-  CloudState<SelectNestedCategory> createState() =>
-      _SelectNestedCategoryState();
+  CloudState<SelectNestedCategory> createState() => _SelectNestedCategoryState();
 }
 
 class _SelectNestedCategoryState extends CloudState<SelectNestedCategory> {
@@ -317,11 +340,15 @@ class _SelectNestedCategoryState extends CloudState<SelectNestedCategory> {
   // نسخة محلية من الـ Breadcrumb لسرعة التحديث البصري (إن لزم)
   List<CategoryModel> breadCrumbData = [];
 
+
   int? delegateRootId;
+
 
   @override
   void initState() {
+
     delegateRootId = getCloudData('delegateRootId') as int?;
+
 
     final bc = getCloudData('breadCrumb') ?? <CategoryModel>[];
     if (bc.isEmpty) {
@@ -332,6 +359,7 @@ class _SelectNestedCategoryState extends CloudState<SelectNestedCategory> {
       }
     }
 
+
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -340,11 +368,19 @@ class _SelectNestedCategoryState extends CloudState<SelectNestedCategory> {
     });
   }
 
+
+
+
+
+
+
+
   @override
   void dispose() {
     controller.dispose();
     super.dispose();
   }
+
 
   Future<void> _fetchAllSubCategories() async {
     final c = context.read<FetchSubCategoriesCubit>();
@@ -353,16 +389,15 @@ class _SelectNestedCategoryState extends CloudState<SelectNestedCategory> {
 
     c.fetchSubCategories(categoryId: categoryId);
 
-    var state =
-        await c.stream.firstWhere((s) => s is FetchSubCategoriesSuccess);
+
+    var state = await c.stream.firstWhere((s) => s is FetchSubCategoriesSuccess);
     var prevLen = (state as FetchSubCategoriesSuccess).categories.length;
 
     while (c.hasMoreData()) {
       c.fetchSubCategories(categoryId: categoryId);
 
       state = await c.stream.firstWhere(
-        (s) =>
-            s is FetchSubCategoriesSuccess && (s).categories.length > prevLen,
+            (s) => s is FetchSubCategoriesSuccess && (s as FetchSubCategoriesSuccess).categories.length > prevLen,
         orElse: () => state,
       );
 
@@ -374,12 +409,22 @@ class _SelectNestedCategoryState extends CloudState<SelectNestedCategory> {
     }
   }
 
+
+
+
+
+
+
+
   /// مستمع نهاية الصفحة: تحميل المزيد عند الحاجة
   void _pageScrollListen() {
     if (controller.isEndReached()) {
       final c = context.read<FetchSubCategoriesCubit>();
       if (c.hasMoreData()) {
+
         final id = _resolveCategoryIdForFetch();
+
+
 
         debugPrint(
             '[SelectNestedCategory] fetchSubCategories(): load more id=${id}');
@@ -405,15 +450,14 @@ class _SelectNestedCategoryState extends CloudState<SelectNestedCategory> {
 
   // جلب الحقول المخصصة ثم الانتقال لتفاصيل إضافة الإعلان
 
-  Future<void> _navigateAfterCustomFieldsForCategory(
-      CategoryModel category) async {
+
+  Future<void> _navigateAfterCustomFieldsForCategory(CategoryModel category) async {
     final bc = (getCloudData('breadCrumb') ?? <CategoryModel>[])..add(category);
     setCloudData("breadCrumb", bc);
 
     final ids = bc.map((e) => e.id!).toList();
 
-    context
-        .read<FetchCustomFieldsCubit>()
+    context.read<FetchCustomFieldsCubit>()
         .fetchCustomFields(categoryIds: ids.join(','));
 
     await Future.delayed(const Duration(milliseconds: 100));
@@ -437,6 +481,11 @@ class _SelectNestedCategoryState extends CloudState<SelectNestedCategory> {
 
     TouchManager.touchProcessed();
   }
+
+
+
+
+
 
   /// الضغط على فئة ضمن القائمة (قد تكون نهائية أو لها أبناء)
   void _onNestedCategoryTap(CategoryModel category) {
@@ -484,6 +533,8 @@ class _SelectNestedCategoryState extends CloudState<SelectNestedCategory> {
     }
   }
 
+
+
   int _resolveCategoryIdForFetch() {
     if (delegateRootId != null && widget.current.id == delegateRootId) {
       return delegateRootId!;
@@ -501,20 +552,28 @@ class _SelectNestedCategoryState extends CloudState<SelectNestedCategory> {
     );
   }
 
+
+
+
   /// إعادة المحاولة عند الخطأ/لا بيانات
   void _retryFetchSubCategories() {
     final id = _resolveCategoryIdForFetch();
 
-    debugPrint('[SelectNestedCategory] retry fetchSubCategories() id=${id}');
+    debugPrint(
+        '[SelectNestedCategory] retry fetchSubCategories() id=${id}');
     context.read<FetchSubCategoriesCubit>().fetchSubCategories(
-          categoryId: id,
-        );
+      categoryId: id,
+    );
   }
+
+
 
   // غلاف للحفاظ على التوافق مع النداءات القديمة
   Future<void> _fetchCustomFieldsAndNavigate(CategoryModel category) {
     return _navigateAfterCustomFieldsForCategory(category);
   }
+
+
 
   @override
   Widget build(BuildContext context) {

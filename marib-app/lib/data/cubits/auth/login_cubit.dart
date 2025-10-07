@@ -23,11 +23,13 @@ class LoginSuccess extends LoginState {
   final Map<String, dynamic> apiResponse;
   final bool isNewUser;
 
+
   LoginSuccess({
     required this.isProfileCompleted,
     required this.credential,
     required this.apiResponse,
     required this.isNewUser,
+
   });
 }
 
@@ -176,6 +178,7 @@ class LoginCubit extends Cubit<LoginState> {
           isProfileCompleted: false,
           credential: credential,
           isNewUser: result['isNewUser'] == true,
+
         ));
       } else {
         var data = result['data'];
@@ -186,6 +189,7 @@ class LoginCubit extends Cubit<LoginState> {
           isProfileCompleted: true,
           credential: credential,
           isNewUser: result['isNewUser'] == true,
+
         ));
       }
     } catch (e) {

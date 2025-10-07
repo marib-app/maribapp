@@ -13,10 +13,7 @@ class FetchSellersSuccess extends FetchSellersState {
   final bool hasMore;
   final bool isLoadingMore;
 
-  FetchSellersSuccess(
-      {required this.sellers,
-      required this.hasMore,
-      required this.isLoadingMore});
+  FetchSellersSuccess({required this.sellers, required this.hasMore, required this.isLoadingMore});
 
   FetchSellersSuccess copyWith({
     List<UserModel>? sellers,
@@ -45,10 +42,8 @@ class FetchSellersCubit extends Cubit<FetchSellersState> {
   Future<void> fetchSellers({required int accountType}) async {
     try {
       emit(FetchSellersProgress());
-      final sellers =
-          await _sellerRepository.fetchSellers(accountType: accountType);
-      emit(FetchSellersSuccess(
-          sellers: sellers, hasMore: sellers.isNotEmpty, isLoadingMore: false));
+      final sellers = await _sellerRepository.fetchSellers(accountType: accountType);
+      emit(FetchSellersSuccess(sellers: sellers, hasMore: sellers.isNotEmpty, isLoadingMore: false));
     } catch (e) {
       emit(FetchSellersFailure(e.toString()));
     }
@@ -62,19 +57,12 @@ class FetchSellersCubit extends Cubit<FetchSellersState> {
       emit(currentState.copyWith(isLoadingMore: true));
 
       try {
-        final currentPage = (currentState.sellers.length / 10).ceil() +
-            1; // Assuming 10 items per page
-        final newSellers = await _sellerRepository.fetchSellers(
-            accountType: accountType, page: currentPage);
-        final allSellers = List<UserModel>.from(currentState.sellers)
-          ..addAll(newSellers);
-        emit(currentState.copyWith(
-            sellers: allSellers,
-            hasMore: newSellers.isNotEmpty,
-            isLoadingMore: false));
+        final currentPage = (currentState.sellers.length / 10).ceil() + 1; // Assuming 10 items per page
+        final newSellers = await _sellerRepository.fetchSellers(accountType: accountType, page: currentPage);
+        final allSellers = List<UserModel>.from(currentState.sellers)..addAll(newSellers);
+        emit(currentState.copyWith(sellers: allSellers, hasMore: newSellers.isNotEmpty, isLoadingMore: false));
       } catch (e) {
-        emit(currentState.copyWith(
-            isLoadingMore: false)); // Revert loading state on error
+        emit(currentState.copyWith(isLoadingMore: false)); // Revert loading state on error
         // Optionally, emit a failure state or show a snackbar
       }
     }

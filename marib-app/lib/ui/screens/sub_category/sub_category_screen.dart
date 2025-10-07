@@ -161,7 +161,7 @@ class _CategoryListState extends State<SubCategoryScreen>
                                             widget.categoryList[index].id
                                                 .toString()
                                           ],
-                                          "interfaceType": widget.interfaceType,
+                                            "interfaceType": widget.interfaceType,
                                         });
                                   } else {
                                     Navigator.pushNamed(

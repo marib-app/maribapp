@@ -18,11 +18,11 @@ class FetchHomeScreenSuccess extends FetchHomeScreenState {
   final String? rootIdentifier;
 
   FetchHomeScreenSuccess(
-    this.sections, {
-    this.interfaceType,
-    this.slug,
-    this.rootIdentifier,
-  });
+      this.sections, {
+        this.interfaceType,
+        this.slug,
+        this.rootIdentifier,
+      });
 }
 
 class FetchHomeScreenFail extends FetchHomeScreenState {
@@ -37,13 +37,17 @@ class FetchHomeScreenCubit extends Cubit<FetchHomeScreenState> {
         _currentInterfaceType = _cleanInterfaceType(defaultInterfaceType),
         _currentSlug = null,
         _currentRootIdentifier = null,
-        super(FetchHomeScreenInitial());
+
+      super(FetchHomeScreenInitial());
+
 
   final HomeRepository _homeRepository = HomeRepository();
   final String? _defaultInterfaceType;
   String? _currentInterfaceType;
   String? _currentSlug;
   String? _currentRootIdentifier;
+
+
 
   static String? _cleanInterfaceType(String? value) {
     final String? normalized = SliderInterfaceMapper.normalize(value);
@@ -54,6 +58,7 @@ class FetchHomeScreenCubit extends Cubit<FetchHomeScreenState> {
     final trimmed = value.trim();
     return trimmed.isEmpty ? null : trimmed;
   }
+
 
   static String? _cleanSlug(String? value) {
     if (value == null) return null;
@@ -67,8 +72,7 @@ class FetchHomeScreenCubit extends Cubit<FetchHomeScreenState> {
     return trimmed.isEmpty ? null : trimmed;
   }
 
-  String? get currentInterfaceType =>
-      _currentInterfaceType ?? _defaultInterfaceType;
+  String? get currentInterfaceType => _currentInterfaceType ?? _defaultInterfaceType;
   String? get currentSlug => _currentSlug;
   String? get currentRootIdentifier => _currentRootIdentifier;
 
@@ -76,15 +80,19 @@ class FetchHomeScreenCubit extends Cubit<FetchHomeScreenState> {
     required String interfaceType,
     String? slug,
     String? rootIdentifier,
+
   }) async {
     await fetch(
       interfaceType: interfaceType,
       slug: slug,
       rootIdentifier: rootIdentifier,
     );
+
   }
 
   Future<void> fetch({
+
+
     String? country,
     String? state,
     String? city,
@@ -92,24 +100,24 @@ class FetchHomeScreenCubit extends Cubit<FetchHomeScreenState> {
     String? interfaceType,
     String? slug,
     String? rootIdentifier,
+
   }) async {
+
+
     try {
       emit(FetchHomeScreenInProgress());
 
       final String? resolvedInterfaceType =
-          _cleanInterfaceType(interfaceType) ??
-              _currentInterfaceType ??
-              _defaultInterfaceType;
+          _cleanInterfaceType(interfaceType) ?? _currentInterfaceType ?? _defaultInterfaceType;
       final String? resolvedSlug = _cleanSlug(slug);
-      final String? resolvedRootIdentifier =
-          _cleanRootIdentifier(rootIdentifier);
+      final String? resolvedRootIdentifier = _cleanRootIdentifier(rootIdentifier);
 
       _currentInterfaceType = resolvedInterfaceType;
       _currentSlug = resolvedSlug;
       _currentRootIdentifier = resolvedRootIdentifier;
 
-      final List<HomeScreenSection> homeScreenDataList =
-          await _homeRepository.fetchHome(
+      final List<HomeScreenSection> homeScreenDataList = await _homeRepository.fetchHome(
+
         interfaceType: resolvedInterfaceType,
         country: country,
         state: state,
@@ -117,7 +125,10 @@ class FetchHomeScreenCubit extends Cubit<FetchHomeScreenState> {
         areaId: areaId,
         slug: resolvedSlug,
         rootIdentifier: resolvedRootIdentifier,
+
       );
+
+
 
       emit(
         FetchHomeScreenSuccess(
@@ -125,6 +136,7 @@ class FetchHomeScreenCubit extends Cubit<FetchHomeScreenState> {
           interfaceType: resolvedInterfaceType,
           slug: resolvedSlug,
           rootIdentifier: resolvedRootIdentifier,
+
         ),
       );
     } catch (e) {

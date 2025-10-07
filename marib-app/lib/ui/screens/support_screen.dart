@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:marib/app/app_theme.dart';
+import 'package:marib/data/cubits/request_device/request_device_cubit.dart';
 import 'package:marib/data/cubits/request_support/request_support_cubit.dart';
+import 'package:marib/data/cubits/system/app_theme_cubit.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
+import 'package:marib/ui/screens/widgets/custom_text_form_field.dart';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/hive_utils.dart';
+import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/ui_utils.dart';
+import 'dart:ui' as ui;
 
 class SupportScreen extends StatefulWidget {
   const SupportScreen({super.key});

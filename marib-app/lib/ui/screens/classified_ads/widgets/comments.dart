@@ -3,7 +3,8 @@ import 'package:timeago/timeago.dart' as timeago;
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/data/model/seller_ratings_model.dart' show UserRatings;
-import 'package:marib/ui/screens/classified_ads/widgets/service_ratings_api.dart';
+import 'service_ratings_api.dart';
+
 
 class ItemCommentsList extends StatefulWidget {
   final int itemId;
@@ -16,6 +17,8 @@ class ItemCommentsList extends StatefulWidget {
     required this.itemId,
     this.onCanReviewChanged,
     this.serviceUid,
+
+
     this.padding = const EdgeInsets.symmetric(horizontal: 16),
   });
 
@@ -37,9 +40,7 @@ class ItemCommentsListState extends State<ItemCommentsList> {
   void initState() {
     super.initState();
     // تهيئة timeago بالعربية (بهدوء لو كانت مسجلة مسبقًا)
-    try {
-      timeago.setLocaleMessages('ar', timeago.ArMessages());
-    } catch (_) {}
+    try { timeago.setLocaleMessages('ar', timeago.ArMessages()); } catch (_) {}
     _loadFirst();
     _scroll.addListener(_onScroll);
   }
@@ -70,11 +71,13 @@ class ItemCommentsListState extends State<ItemCommentsList> {
         perPage: 20,
         sort: _sort,
         serviceUid: widget.serviceUid,
+
       );
       _items.addAll(res.list);
       _hasMore = res.hasMore;
       _page = res.nextPage;
       widget.onCanReviewChanged?.call(res.canReview);
+
     } catch (_) {
       // بإمكانك عرض SnackBar هنا لو حبيت
     } finally {
@@ -92,11 +95,13 @@ class ItemCommentsListState extends State<ItemCommentsList> {
         perPage: 20,
         sort: _sort,
         serviceUid: widget.serviceUid,
+
       );
       _items.addAll(res.list);
       _hasMore = res.hasMore;
       _page = res.nextPage;
       widget.onCanReviewChanged?.call(res.canReview);
+
     } catch (_) {
       // تجاهل هادئ
     } finally {
@@ -116,10 +121,7 @@ class ItemCommentsListState extends State<ItemCommentsList> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Center(
-        child: SizedBox(
-            width: 22,
-            height: 22,
-            child: CircularProgressIndicator(strokeWidth: 2)),
+        child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)),
       );
     }
 
@@ -139,10 +141,7 @@ class ItemCommentsListState extends State<ItemCommentsList> {
             return const Padding(
               padding: EdgeInsets.symmetric(vertical: 14),
               child: Center(
-                child: SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2)),
+                child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
               ),
             );
           }
@@ -161,7 +160,7 @@ class _CommentTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final card = Theme.of(context).cardColor;
-    final txt = context.color.textColorDark;
+    final txt  = context.color.textColorDark;
 
     final double stars = (rating.ratings ?? 0).toDouble();
     final String reviewText = (rating.review ?? '').toString().trim();
@@ -171,12 +170,7 @@ class _CommentTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: card,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -188,9 +182,7 @@ class _CommentTile extends StatelessWidget {
               _StarsRow(value: stars),
               const Spacer(),
               if (timeText.isNotEmpty)
-                Text(timeText,
-                    style:
-                        TextStyle(fontSize: 12, color: txt.withOpacity(0.65))),
+                Text(timeText, style: TextStyle(fontSize: 12, color: txt.withOpacity(0.65))),
             ],
           ),
           const SizedBox(height: 8),
@@ -209,9 +201,7 @@ class _CommentTile extends StatelessWidget {
     final raw = (r.createdAt ?? '').toString();
     if (raw.isEmpty) return '';
     DateTime? dt;
-    try {
-      dt = DateTime.tryParse(raw);
-    } catch (_) {}
+    try { dt = DateTime.tryParse(raw); } catch (_) {}
     if (dt == null) return '';
     return timeago.format(dt, locale: 'ar');
   }

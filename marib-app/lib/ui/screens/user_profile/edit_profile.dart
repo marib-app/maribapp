@@ -32,6 +32,8 @@ import 'dart:async';
 
 part 'edit_profile_ui.dart'; // ← واجهة المستخدم مفصولة هنا
 
+
+
 class UserProfileScreen extends StatefulWidget {
   final String from;
   final bool? navigateToHome;
@@ -47,6 +49,10 @@ class UserProfileScreen extends StatefulWidget {
     required this.type,
     this.extraData,
   });
+
+
+
+
 
   @override
   State<UserProfileScreen> createState() => UserProfileScreenState();
@@ -65,6 +71,10 @@ class UserProfileScreen extends StatefulWidget {
   }
 }
 
+
+
+
+
 class UserProfileScreenState extends State<UserProfileScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController phoneController = TextEditingController();
@@ -75,16 +85,20 @@ class UserProfileScreenState extends State<UserProfileScreen> {
   // حقول إضافية للحسابات التجارية والعقارية
   final TextEditingController businessNameController = TextEditingController();
   final TextEditingController businessLocationController =
-      TextEditingController();
+  TextEditingController();
   final TextEditingController businessPhoneController = TextEditingController();
   final TextEditingController businessWhatsappController =
-      TextEditingController();
+  TextEditingController();
   final TextEditingController officeNameController = TextEditingController();
   final TextEditingController officeLocationController =
-      TextEditingController();
+  TextEditingController();
   final TextEditingController officePhoneController = TextEditingController();
   final TextEditingController officeWhatsappController =
-      TextEditingController();
+  TextEditingController();
+
+
+
+
 
   // متغيرات إضافية للحسابات التجارية والعقارية المحسنة
   File? businessLogoImage; // شعار الشركة/المكتب
@@ -107,11 +121,14 @@ class UserProfileScreenState extends State<UserProfileScreen> {
   String? countryCode = "+${Constant.defaultCountryCode}";
   int? userType;
 
+
+
 // يبدأ الواجهة على وضع الشيمر حتى يكتمل الجلب الكسول
   bool isUiLazyLoading = true;
 
 // لحماية onStartLazyLoad من التشغيل أكثر من مرة
   bool _didLazyKickoff = false;
+
 
   // تجهيز الموقع المنسّق (نفس منطقك لكن مختصر للتoggles)
   String? _formattedLocation() {
@@ -123,33 +140,34 @@ class UserProfileScreenState extends State<UserProfileScreen> {
     return null;
   }
 
+
   // حفظ فوري عند تبديل سويتش (إشعارات/تفاصيل شخصية)
-  Future<bool> _savePrivacyToggle(
-      {bool? notifications, bool? personalDetails}) async {
+  Future<bool> _savePrivacyToggle({bool? notifications, bool? personalDetails}) async {
     try {
       // نرسل القيم الحالية + المتغير الذي تغيّر فقط
       final resp = await context.read<AuthCubit>().updateuserdata(
-            context,
-            name: nameController.text.trim(),
-            email: emailController.text.trim(),
-            // لا نرفع صورة هنا
-            address: addressController.text,
-            location: _formattedLocation(),
-            mobile: phoneController.text,
-            notification: (notifications ?? isNotificationsEnabled) ? "1" : "0",
-            countryCode: countryCode,
-            personalDetail: (personalDetails ?? isPersonalDetailShow) ? 1 : 0,
-            // لا نمرّر additionalData هنا حتى لا نكتب فوق بيانات أخرى
-          );
+        context,
+        name: nameController.text.trim(),
+        email: emailController.text.trim(),
+        // لا نرفع صورة هنا
+        address: addressController.text,
+        location: _formattedLocation(),
+        mobile: phoneController.text,
+        notification: (notifications ?? isNotificationsEnabled) ? "1" : "0",
+        countryCode: countryCode,
+        personalDetail: (personalDetails ?? isPersonalDetailShow) ? 1 : 0,
+        // لا نمرّر additionalData هنا حتى لا نكتب فوق بيانات أخرى
+      );
 
       // مزامنة الحالة المحلية مثل profileupdateprocess
       Future.microtask(() {
         context.read<UserDetailsCubit>().copy(UserModel.fromJson(resp['data']));
       });
 
+
       // رسالة نجاح (اختياري)
 
-      //  HelperUtils.showSnackBarMessage(context, resp['message'] ?? "تم الحفظ");
+    //  HelperUtils.showSnackBarMessage(context, resp['message'] ?? "تم الحفظ");
 
       return true;
     } catch (e) {
@@ -185,6 +203,9 @@ class UserProfileScreenState extends State<UserProfileScreen> {
       return PermissionStatus.denied;
     }
   }
+
+
+
 
   @override
   void initState() {
@@ -225,7 +246,7 @@ class UserProfileScreenState extends State<UserProfileScreen> {
         additionalInfo = userDetails.additionalInfo as Map<String, dynamic>;
       } else if (userDetails.additionalInfo is Map) {
         additionalInfo =
-            Map<String, dynamic>.from(userDetails.additionalInfo as Map);
+        Map<String, dynamic>.from(userDetails.additionalInfo as Map);
       } else {
         additionalInfo = <String, dynamic>{};
       }
@@ -235,7 +256,7 @@ class UserProfileScreenState extends State<UserProfileScreen> {
         contactInfo = additionalInfo['contact_info'] as Map<String, dynamic>;
       } else if (additionalInfo['contact_info'] is Map) {
         contactInfo =
-            Map<String, dynamic>.from(additionalInfo['contact_info'] as Map);
+        Map<String, dynamic>.from(additionalInfo['contact_info'] as Map);
       }
 
       print("Debug - User Type: $userType");
@@ -338,12 +359,12 @@ class UserProfileScreenState extends State<UserProfileScreen> {
         existingCommercialRegisterUrl =
             contactInfo?['commercial_register_file'] ??
                 additionalInfo['commercial_register_file'] ??
-                userDetails.additionalInfo?['commercial_register_file']
+                userDetails
+                    .additionalInfo?['commercial_register_file']
                     ?.toString();
 
         print("Debug - Business Logo URL: $existingBusinessLogoUrl");
-        print(
-            "Debug - Commercial Register URL: $existingCommercialRegisterUrl");
+        print("Debug - Commercial Register URL: $existingCommercialRegisterUrl");
       }
     } else {
       print("Debug - No additional info found");
@@ -401,9 +422,9 @@ class UserProfileScreenState extends State<UserProfileScreen> {
             userDetails.additionalInfo?['commercial_register_file']?.toString();
 
         String? openingTimeStr =
-            userDetails.additionalInfo?['opening_time']?.toString();
+        userDetails.additionalInfo?['opening_time']?.toString();
         String? closingTimeStr =
-            userDetails.additionalInfo?['closing_time']?.toString();
+        userDetails.additionalInfo?['closing_time']?.toString();
 
         if (openingTimeStr != null && openingTimeStr.isNotEmpty) {
           List<String> openingParts = openingTimeStr.split(':');
@@ -445,7 +466,7 @@ class UserProfileScreenState extends State<UserProfileScreen> {
       isPersonalDetailShow = true;
     } else {
       isPersonalDetailShow =
-          userDetails.isPersonalDetailShow == 1 ? true : false;
+      userDetails.isPersonalDetailShow == 1 ? true : false;
     }
 
     if (HiveUtils.getCountryCode() != null) {
@@ -457,7 +478,7 @@ class UserProfileScreenState extends State<UserProfileScreen> {
           : "";
     } else {
       phoneController.text =
-          userDetails.mobile != null ? userDetails.mobile! : "";
+      userDetails.mobile != null ? userDetails.mobile! : "";
     }
   }
 
@@ -567,6 +588,7 @@ class UserProfileScreenState extends State<UserProfileScreen> {
         if (v) {
           final status = await _requestNotificationPermissionIfNeeded();
 
+
           if (!_isNotificationPermissionActive(status)) {
             if (!mounted) return;
             setState(() => isNotificationsEnabled = old);
@@ -580,12 +602,12 @@ class UserProfileScreenState extends State<UserProfileScreen> {
 
         final ok = await _savePrivacyToggle(notifications: v); // حفظ فعلي
 
-        if (!ok && mounted)
-          setState(() => isNotificationsEnabled = old); // تراجع
+
+        if (!ok && mounted) setState(() => isNotificationsEnabled = old); // تراجع
       },
       onTogglePersonalDetail: (v) async {
         final old = isPersonalDetailShow;
-        setState(() => isPersonalDetailShow = v); // Optimistic UI
+        setState(() => isPersonalDetailShow = v);                // Optimistic UI
         final ok = await _savePrivacyToggle(personalDetails: v); // حفظ فعلي
         if (!ok && mounted) setState(() => isPersonalDetailShow = old); // تراجع
       },
@@ -594,10 +616,10 @@ class UserProfileScreenState extends State<UserProfileScreen> {
         countryCode = value;
         setState(() {});
       },
-      setPhoneReadOnly:
-          HiveUtils.getUserDetails().type == AuthenticationType.phone.name
-              ? true
-              : false,
+      setPhoneReadOnly: HiveUtils.getUserDetails().type ==
+          AuthenticationType.phone.name
+          ? true
+          : false,
 
       // —————— التحميل الكسول + الشيمر ——————
       isLazyLoading: isUiLazyLoading,
@@ -623,13 +645,14 @@ class UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
+
   Future<void> validateData() async {
     if (_formKey.currentState!.validate()) {
       profileupdateprocess();
     }
   }
 
-  Future<void> profileupdateprocess() async {
+  profileupdateprocess() async {
     setState(() {
       isLoading = true;
     });
@@ -653,7 +676,7 @@ class UserProfileScreenState extends State<UserProfileScreen> {
         };
 
         if (existingBusinessLogoUrl != null && businessLogoImage == null) {
-          additionalData['contact_info']['office_logo'] =
+          additionalData!['contact_info']['office_logo'] =
               existingBusinessLogoUrl;
         }
       } else if (userType == 3) {
@@ -667,23 +690,23 @@ class UserProfileScreenState extends State<UserProfileScreen> {
         };
 
         if (openingTime != null) {
-          additionalData['contact_info']['opening_time'] =
-              "${openingTime!.hour}:${openingTime!.minute.toString().padLeft(2, '0')}";
+          additionalData!['contact_info']['opening_time'] =
+          "${openingTime!.hour}:${openingTime!.minute.toString().padLeft(2, '0')}";
         }
 
         if (closingTime != null) {
-          additionalData['contact_info']['closing_time'] =
-              "${closingTime!.hour}:${closingTime!.minute.toString().padLeft(2, '0')}";
+          additionalData!['contact_info']['closing_time'] =
+          "${closingTime!.hour}:${closingTime!.minute.toString().padLeft(2, '0')}";
         }
 
         if (existingBusinessLogoUrl != null && businessLogoImage == null) {
-          additionalData['contact_info']['business_logo'] =
+          additionalData!['contact_info']['business_logo'] =
               existingBusinessLogoUrl;
         }
 
         if (existingCommercialRegisterUrl != null &&
             commercialRegisterFile == null) {
-          additionalData['contact_info']['commercial_register_file'] =
+          additionalData!['contact_info']['commercial_register_file'] =
               existingCommercialRegisterUrl;
         }
       }
@@ -702,7 +725,7 @@ class UserProfileScreenState extends State<UserProfileScreen> {
 
       Future.delayed(
         Duration.zero,
-        () {
+            () {
           context
               .read<UserDetailsCubit>()
               .copy(UserModel.fromJson(response['data']));
@@ -711,7 +734,7 @@ class UserProfileScreenState extends State<UserProfileScreen> {
 
       Future.delayed(
         Duration.zero,
-        () {
+            () {
           setState(() {
             isLoading = false;
           });
@@ -728,7 +751,7 @@ class UserProfileScreenState extends State<UserProfileScreen> {
       if (widget.from == "login" && widget.popToCurrent != true) {
         Future.delayed(
           Duration.zero,
-          () {
+              () {
             if (HiveUtils.getCityName() != null &&
                 HiveUtils.getCityName() != "") {
               HelperUtils.killPreviousPages(
@@ -798,7 +821,10 @@ class UserProfileScreenState extends State<UserProfileScreen> {
         });
   }
 
-  Future<void> _imgFromGallery(ImageSource imageSource) async {
+
+
+
+  _imgFromGallery(ImageSource imageSource) async {
     CropImage.init(context);
 
     final pickedFile = await ImagePicker().pickImage(source: imageSource);
@@ -825,7 +851,7 @@ class UserProfileScreenState extends State<UserProfileScreen> {
       showWorldWide: false,
       showPhoneCode: true,
       countryListTheme:
-          CountryListThemeData(borderRadius: BorderRadius.circular(11)),
+      CountryListThemeData(borderRadius: BorderRadius.circular(11)),
       onSelect: (Country value) {
         countryCode = value.phoneCode;
         setState(() {});

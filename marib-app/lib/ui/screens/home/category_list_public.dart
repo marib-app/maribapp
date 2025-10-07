@@ -9,6 +9,7 @@ import 'package:marib/data/model/category_model.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
 
+
 import 'package:marib/ui/screens/item/add_item_screen/widgets/category.dart';
 import 'package:marib/utils/sliver_grid_delegate_with_fixed_cross_axis_count_and_fixed_height.dart';
 import 'package:marib/ui/screens/widgets/errors/no_data_found.dart';
@@ -18,6 +19,7 @@ import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/utils/api.dart';
 
 class CategoryListPublic extends StatefulWidget {
+
   final String categoryName;
   final int categoryId;
   final String? interfaceType;
@@ -48,7 +50,7 @@ class CategoryListPublicScreenState extends State<CategoryListPublic> {
   @override
   void initState() {
     super.initState();
-
+   
     context
         .read<FetchSubCategoriesCubit>()
         .fetchSubCategories(categoryId: widget.categoryId);
@@ -63,37 +65,42 @@ class CategoryListPublicScreenState extends State<CategoryListPublic> {
         showBackButton: true,
         title: widget.categoryName,
       ),
+    
       body: BlocBuilder<FetchSubCategoriesCubit, FetchSubCategoriesState>(
         builder: (context, state) {
+
           if (state is FetchSubCategoriesInProgress) {
             return _buildGridShimmer();
           }
 
-          if (state is FetchSubCategoriesFailure) {
-            if (state.errorMessage is ApiException) {
-              if (state.errorMessage == "no-internet") {
-                return NoInternet(
-                  onRetry: () {
-                    context
-                        .read<FetchSubCategoriesCubit>()
-                        .fetchSubCategories(categoryId: widget.categoryId);
-                  },
-                );
-              }
-            }
 
-            return const SomethingWentWrong();
+          if (state is FetchSubCategoriesFailure) {
+          if (state.errorMessage is ApiException) {
+            if (state.errorMessage == "no-internet") {
+              return NoInternet(
+                onRetry: () {
+                  context
+                      .read<FetchSubCategoriesCubit>()
+                      .fetchSubCategories(categoryId: widget.categoryId);
+                },
+              );
+            }
           }
 
+          return const SomethingWentWrong();
+        }
+
+    
           if (state is FetchSubCategoriesSuccess) {
+
             if (state.categories.isEmpty) {
               return NoDataFound(onTap: () {
-                context
+                 context
                     .read<FetchSubCategoriesCubit>()
                     .fetchSubCategories(categoryId: widget.categoryId);
               });
             }
-
+ 
             return GridView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
               gridDelegate:
@@ -106,46 +113,47 @@ class CategoryListPublicScreenState extends State<CategoryListPublic> {
               itemCount: state.categories.length,
               itemBuilder: (context, index) {
                 CategoryModel subCategory = state.categories[index];
-
+                
                 return CategoryCard(
                   title: subCategory.name!,
                   url: subCategory.url!,
                   onTap: () {
-                    if (state.categories[index].children!.isEmpty &&
-                        state.categories[index].subcategoriesCount == 0) {
-                      Navigator.pushNamed(context, Routes.itemsList,
-                          arguments: {
-                            'catID': state.categories[index].id.toString(),
-                            'catName': state.categories[index].name,
-                            "categoryIds": [
-                              state.categories[index].id.toString()
-                            ],
-                            "interfaceType": widget.interfaceType,
-                          });
-                    } else {
-                      print("hi");
-                      Navigator.pushNamed(context, Routes.subCategoryScreen,
-                          arguments: {
-                            "categoryList": state.categories[index].children!,
-                            "catName": state.categories[index].name,
-                            "catId": state.categories[index].id,
-                            "categoryIds": [
-                              state.categories[index].id.toString()
-                            ],
-                            "interfaceType": widget.interfaceType,
-                          });
-                    }
+                
+                   if (state.categories[index].children!.isEmpty &&
+                          state.categories[index].subcategoriesCount == 0) {
+                        Navigator.pushNamed(context, Routes.itemsList,
+                            arguments: {
+                              'catID': state.categories[index].id.toString(),
+                              'catName': state.categories[index].name,
+                              "categoryIds": [ state.categories[index].id.toString()],
+                              "interfaceType": widget.interfaceType,
+                            });
+                      } else {
+                        print("hi");
+                        Navigator.pushNamed(context, Routes.subCategoryScreen,
+                            arguments: {
+                              "categoryList": state.categories[index].children!,
+                              "catName": state.categories[index].name,
+                              "catId": state.categories[index].id,
+                                    "categoryIds": [
+                                      state.categories[index].id.toString()
+                                    ],
+                              "interfaceType": widget.interfaceType,
+                            });
+                      }
                   },
                 );
               },
             );
           }
 
+
           return Container();
         },
       ),
     );
   }
+
 
   Widget _buildGridShimmer() {
     return GridView.builder(
@@ -156,7 +164,7 @@ class CategoryListPublicScreenState extends State<CategoryListPublic> {
         crossAxisSpacing: 14,
         mainAxisSpacing: 14,
       ),
-      itemCount: 9,
+      itemCount: 9, 
       itemBuilder: (context, index) {
         return Shimmer.fromColors(
           baseColor: Theme.of(context).colorScheme.shimmerBaseColor,

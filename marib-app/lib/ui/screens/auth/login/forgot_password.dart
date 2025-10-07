@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:marib/app/routes.dart';
@@ -7,11 +8,13 @@ import 'package:marib/data/cubits/password_reset_cubit.dart';
 import 'package:marib/data/repositories/otp_repository.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/ui/screens/widgets/new_password_dialog.dart';
+import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/hive_utils.dart';
+import 'package:marib/utils/extensions/extensions.dart';
 
 // الواجهة المفصولة
-import 'package:marib/ui/screens/auth/login/forgot_password_ui.dart';
+import 'forgot_password_ui.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -184,7 +187,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       showWorldWide: false,
       showPhoneCode: true,
       countryListTheme:
-          CountryListThemeData(borderRadius: BorderRadius.circular(11)),
+      CountryListThemeData(borderRadius: BorderRadius.circular(11)),
       onSelect: (value) {
         setState(() {
           flagEmoji = value.flagEmoji;
@@ -258,7 +261,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               } else {
                 Navigator.of(context).pushNamedAndRemoveUntil(
                   Routes.locationPermissionScreen,
-                  (route) => false,
+                      (route) => false,
                 );
               }
             });

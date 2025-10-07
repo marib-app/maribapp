@@ -72,8 +72,10 @@ class OrderPaymentIntentResult {
   final Map<String, dynamic> raw;
 
   bool get isSuccessful {
-    final String normalized =
-        (status ?? message ?? '').toString().trim().toLowerCase();
+    final String normalized = (status ?? message ?? '')
+        .toString()
+        .trim()
+        .toLowerCase();
     if (normalized.isEmpty) {
       return false;
     }
@@ -118,8 +120,7 @@ OrderPaymentIntentResult parseOrderPaymentIntent(dynamic response) {
     }
     if (value is Map) {
       return value.map(
-        (dynamic key, dynamic value) =>
-            MapEntry<String, dynamic>('${key ?? ''}', value),
+            (dynamic key, dynamic value) => MapEntry<String, dynamic>('${key ?? ''}', value),
       );
     }
     return <String, dynamic>{'data': value};
@@ -131,8 +132,7 @@ OrderPaymentIntentResult parseOrderPaymentIntent(dynamic response) {
     }
     if (value is Map) {
       return value.map(
-        (dynamic key, dynamic value) =>
-            MapEntry<String, dynamic>('${key ?? ''}', value),
+            (dynamic key, dynamic value) => MapEntry<String, dynamic>('${key ?? ''}', value),
       );
     }
     return null;
@@ -202,19 +202,19 @@ OrderPaymentIntentResult parseOrderPaymentIntent(dynamic response) {
       _mapify(top['data']) ?? _mapify(top['result']) ?? top;
 
   final Map<String, dynamic>? intent = _mapify(
-        data['payment_intent'] ??
-            data['paymentIntent'] ??
-            data['intent'] ??
-            data['payment'],
-      ) ??
+    data['payment_intent'] ??
+        data['paymentIntent'] ??
+        data['intent'] ??
+        data['payment'],
+  ) ??
       _mapify(top['payment_intent'] ?? top['paymentIntent']);
 
   final Map<String, dynamic>? transaction = _mapify(
-        data['payment_transaction'] ??
-            data['paymentTransaction'] ??
-            data['transaction'] ??
-            data['payment_attempt'],
-      ) ??
+    data['payment_transaction'] ??
+        data['paymentTransaction'] ??
+        data['transaction'] ??
+        data['payment_attempt'],
+  ) ??
       _mapify(top['payment_transaction'] ?? top['paymentTransaction']);
 
   Map<String, dynamic>? gatewayResponse = _mapify(
@@ -226,8 +226,7 @@ OrderPaymentIntentResult parseOrderPaymentIntent(dynamic response) {
         transaction?['gateway_response'],
   );
 
-  gatewayResponse ??=
-      _mapify(top['payment_gateway_response'] ?? top['gateway_response']);
+  gatewayResponse ??= _mapify(top['payment_gateway_response'] ?? top['gateway_response']);
 
   final List<dynamic> methodCandidates = <dynamic>[
     data['payment_methods'],
@@ -253,9 +252,11 @@ OrderPaymentIntentResult parseOrderPaymentIntent(dynamic response) {
     if (resolvedId == null || resolvedId.isEmpty) {
       return;
     }
-    final String resolvedLabel = _stringify(label) ?? resolvedId.toUpperCase();
-    final Map<String, dynamic>? normalizedRaw =
-        raw == null ? null : Map<String, dynamic>.from(raw);
+    final String resolvedLabel =
+        _stringify(label) ?? resolvedId.toUpperCase();
+    final Map<String, dynamic>? normalizedRaw = raw == null
+        ? null
+        : Map<String, dynamic>.from(raw);
 
     final bool isManual = (resolvedId.contains('manual') ||
         resolvedId.contains('bank') ||
@@ -300,15 +301,18 @@ OrderPaymentIntentResult parseOrderPaymentIntent(dynamic response) {
             raw: entry,
           );
         } else if (entry is Map) {
-          final Map<String, dynamic> map = Map<String, dynamic>.from(entry);
+          final Map<String, dynamic> map =
+          Map<String, dynamic>.from(entry as Map);
           addMethod(
             id: map['id'] ??
                 map['payment_method'] ??
                 map['method'] ??
                 map['gateway'] ??
                 map['code'],
-            label:
-                map['label'] ?? map['name'] ?? map['title'] ?? map['display'],
+            label: map['label'] ??
+                map['name'] ??
+                map['title'] ??
+                map['display'],
             raw: map,
           );
         } else if (entry is String) {
@@ -322,15 +326,17 @@ OrderPaymentIntentResult parseOrderPaymentIntent(dynamic response) {
         for (final dynamic entry in _iterable(candidate['methods'])) {
           if (entry is Map || entry is Map<String, dynamic>) {
             final Map<String, dynamic> map =
-                Map<String, dynamic>.from(entry as Map);
+            Map<String, dynamic>.from(entry as Map);
             addMethod(
               id: map['id'] ??
                   map['payment_method'] ??
                   map['method'] ??
                   map['gateway'] ??
                   map['code'],
-              label:
-                  map['label'] ?? map['name'] ?? map['title'] ?? map['display'],
+              label: map['label'] ??
+                  map['name'] ??
+                  map['title'] ??
+                  map['display'],
               raw: map,
             );
           } else if (entry is String) {
@@ -344,7 +350,8 @@ OrderPaymentIntentResult parseOrderPaymentIntent(dynamic response) {
           final String key = entry.key;
           final dynamic value = entry.value;
           if (value is Map) {
-            final Map<String, dynamic> map = Map<String, dynamic>.from(value);
+            final Map<String, dynamic> map =
+            Map<String, dynamic>.from(value as Map);
             addMethod(
               id: map['id'] ??
                   map['payment_method'] ??
@@ -371,7 +378,8 @@ OrderPaymentIntentResult parseOrderPaymentIntent(dynamic response) {
         final String key = entry.key;
         final dynamic value = entry.value;
         if (value is Map) {
-          final Map<String, dynamic> nested = Map<String, dynamic>.from(value);
+          final Map<String, dynamic> nested =
+          Map<String, dynamic>.from(value as Map);
           addMethod(
             id: nested['id'] ??
                 nested['payment_method'] ??
@@ -406,10 +414,10 @@ OrderPaymentIntentResult parseOrderPaymentIntent(dynamic response) {
     methods = methods
         .map(
           (OrderPaymentMethod method) => method.copyWith(
-            isDefault: method.isDefault ||
-                method.id.toLowerCase() == defaultMethodId.toLowerCase(),
-          ),
-        )
+        isDefault: method.isDefault ||
+            method.id.toLowerCase() == defaultMethodId.toLowerCase(),
+      ),
+    )
         .toList();
   }
 

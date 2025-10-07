@@ -120,8 +120,7 @@ class FetchServicesCubit extends Cubit<FetchServicesState> {
         return ClassifiedSummary.fromJson(Map<String, dynamic>.from(e));
       }).toList();
 
-      final int total =
-          (result['total'] as int? ?? (_services.length + newItems.length));
+      final int total = (result['total'] as int? ?? (_services.length + newItems.length));
 
       _services.addAll(newItems);
       _hasMoreData = _services.length < total;

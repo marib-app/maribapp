@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'dart:typed_data';
 import 'package:marib/data/cubits/wallet/wallet_transfers_cubit.dart';
 import 'package:marib/data/cubits/wallet/wallet_withdrawals_cubit.dart';
 import 'package:marib/data/cubits/wallet/wallet_summary_cubit.dart';
@@ -21,6 +22,10 @@ import 'package:marib/ui/screens/wallet/wallet_withdrawal_sheet.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/ui/screens/wallet/wallet_manual_payments_section.dart';
 
+
+
+
+
 class WalletScreenUI extends StatefulWidget {
   const WalletScreenUI({super.key});
 
@@ -32,9 +37,9 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
   final PageController _pageController = PageController();
 
   final ScrollController _scrollController = ScrollController();
-  final NumberFormat _numberFormat =
-      NumberFormat.currency(decimalDigits: 2, symbol: '');
+  final NumberFormat _numberFormat = NumberFormat.currency(decimalDigits: 2, symbol: '');
   final DateFormat _dateTimeFormat = DateFormat('dd MMM yyyy, HH:mm');
+
 
   @override
   void initState() {
@@ -84,6 +89,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     return null;
   }
 
+
   double? _currentBalance() {
     final state = context.read<WalletSummaryCubit>().state;
     if (state is WalletSummaryLoadSuccess) {
@@ -99,9 +105,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     if (raw is List) {
       return raw
           .whereType<dynamic>()
-          .map((e) => e is Map<String, dynamic>
-              ? e
-              : Map<String, dynamic>.from(e as Map))
+          .map((e) => e is Map<String, dynamic> ? e : Map<String, dynamic>.from(e as Map))
           .toList();
     }
     if (raw is Map<String, dynamic>) {
@@ -110,24 +114,19 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
       }
       return raw.values
           .whereType<dynamic>()
-          .map((e) => e is Map<String, dynamic>
-              ? e
-              : Map<String, dynamic>.from(e as Map))
+          .map((e) => e is Map<String, dynamic> ? e : Map<String, dynamic>.from(e as Map))
           .toList();
     }
     if (raw is Map) {
       return raw.values
           .whereType<dynamic>()
-          .map((e) => e is Map<String, dynamic>
-              ? e
-              : Map<String, dynamic>.from(e as Map))
+          .map((e) => e is Map<String, dynamic> ? e : Map<String, dynamic>.from(e as Map))
           .toList();
     }
     return const [];
   }
 
-  WalletOperationOptions? _extractTransferOptions(
-      WalletOperationOptions? base) {
+  WalletOperationOptions? _extractTransferOptions(WalletOperationOptions? base) {
     if (base == null) return null;
 
     WalletOperationOptions mergeOptions(WalletOperationOptions source) {
@@ -164,8 +163,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
         return mergeOptions(transferOptions);
       }
       if (candidate is Map) {
-        final map =
-            candidate.map((key, value) => MapEntry(key.toString(), value));
+        final map = candidate.map((key, value) => MapEntry(key.toString(), value));
         final transferOptions = WalletOperationOptions.fromMap(map);
         return mergeOptions(transferOptions);
       }
@@ -183,8 +181,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
 
     WalletOperationOptions? options;
     final currentState = withdrawalsCubit.state;
-    if (currentState is WalletWithdrawalsSuccess &&
-        currentState.options != null) {
+    if (currentState is WalletWithdrawalsSuccess && currentState.options != null) {
       options = currentState.options;
     } else {
       options = await withdrawalsCubit.loadOptions();
@@ -192,26 +189,27 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
 
     options ??= await withdrawalsCubit.loadOptions(force: true);
 
+
+
     if (!mounted) return;
 
     if (options == null || options.fields.isEmpty) {
-      HelperUtils.showSnackBarMessage(
-          context, 'تعذر تحميل نموذج السحب حالياً.');
+      HelperUtils.showSnackBarMessage(context, 'تعذر تحميل نموذج السحب حالياً.');
       return;
     }
     final WalletOperationOptions sheetOptions = options;
 
     final result = await showModalBottomSheet<WalletWithdrawal>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => BlocProvider.value(
-        value: withdrawalsCubit,
-        child: WalletWithdrawalSheet(
-          options: sheetOptions,
-          balance: _currentBalance(),
-          currency: _summaryCurrency(),
+        context: context,
+        isScrollControlled: true,
+        builder: (_) => BlocProvider.value(
+          value: withdrawalsCubit,
+          child: WalletWithdrawalSheet(
+            options: sheetOptions,
+            balance: _currentBalance(),
+            currency: _summaryCurrency(),
         ),
-      ),
+        ),
     );
 
     if (result != null && mounted) {
@@ -228,8 +226,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
 
     WalletOperationOptions? baseOptions;
     final currentState = withdrawalsCubit.state;
-    if (currentState is WalletWithdrawalsSuccess &&
-        currentState.options != null) {
+    if (currentState is WalletWithdrawalsSuccess && currentState.options != null) {
       baseOptions = currentState.options;
     } else {
       baseOptions = await withdrawalsCubit.loadOptions();
@@ -241,8 +238,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
 
     final transferOptions = _extractTransferOptions(baseOptions);
     if (transferOptions == null || transferOptions.fields.isEmpty) {
-      HelperUtils.showSnackBarMessage(
-          context, 'لا توجد حقول متاحة لعملية التحويل حالياً.');
+      HelperUtils.showSnackBarMessage(context, 'لا توجد حقول متاحة لعملية التحويل حالياً.');
       return;
     }
 
@@ -266,6 +262,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     }
   }
 
+
   Future<void> _startTopUp({String gateway = 'manual_bank'}) async {
     if (!HiveUtils.isUserAuthenticated()) {
       UiUtils.checkUser(onNotGuest: () {}, context: context);
@@ -276,7 +273,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     if (amount == null) return;
 
     final token = HiveUtils.getJWT();
-    if (token.isEmpty) {
+    if (token == null || token.isEmpty) {
       HelperUtils.showSnackBarMessage(context, 'loginFirst'.translate(context));
       return;
     }
@@ -319,8 +316,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
             ),
             TextButton(
               onPressed: () {
-                final value =
-                    double.tryParse(controller.text.replaceAll(',', '.'));
+                final value = double.tryParse(controller.text.replaceAll(',', '.'));
                 if (value == null || value <= 0) {
                   HelperUtils.showSnackBarMessage(
                     context,
@@ -364,12 +360,12 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
       onRefresh: _onRefresh,
       child: CustomScrollView(
         controller: _scrollController,
-        physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics()),
+        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
         slivers: [
           SliverToBoxAdapter(child: _buildSummarySection()),
           SliverToBoxAdapter(child: _buildWithdrawalsSection()),
           SliverToBoxAdapter(child: _buildFiltersSection()),
+
           BlocBuilder<WalletTransactionsCubit, WalletTransactionsState>(
             builder: (context, state) {
               return SliverList(
@@ -397,9 +393,8 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
         if (state is WalletWithdrawalsFailure) {
           return _WithdrawalsErrorCard(
             message: state.error.toString(),
-            onRetry: () => context
-                .read<WalletWithdrawalsCubit>()
-                .loadInitial(includeOptions: true),
+            onRetry: () =>
+                context.read<WalletWithdrawalsCubit>().loadInitial(includeOptions: true),
           );
         }
 
@@ -423,6 +418,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
       },
     );
   }
+
 
   Widget _buildActionsPage() {
     return SafeArea(
@@ -455,16 +451,14 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
       builder: (context, state) {
         if (state is WalletSummaryLoading && state.previous != null) {
           return _SummaryCard(
-            balanceText: _formatAmount(state.previous!.summary.balance,
-                state.previous!.summary.currency),
+            balanceText: _formatAmount(state.previous!.summary.balance, state.previous!.summary.currency),
             lastUpdated: state.previous!.summary.lastUpdatedAt,
             isLoading: true,
           );
         }
         if (state is WalletSummaryLoadSuccess) {
           return _SummaryCard(
-            balanceText:
-                _formatAmount(state.summary.balance, state.summary.currency),
+            balanceText: _formatAmount(state.summary.balance, state.summary.currency),
             lastUpdated: state.summary.lastUpdatedAt,
           );
         }
@@ -482,9 +476,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
                 Text(state.error.toString()),
                 const SizedBox(height: 12),
                 OutlinedButton(
-                  onPressed: () => context
-                      .read<WalletSummaryCubit>()
-                      .fetchSummary(forceReload: true),
+                  onPressed: () => context.read<WalletSummaryCubit>().fetchSummary(forceReload: true),
                   child: Text('retry'.translate(context)),
                 ),
               ],
@@ -512,26 +504,23 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
         return SizedBox(
           height: 64,
           child: ListView(
-            padding: const EdgeInsetsDirectional.only(
-                start: 16, end: 16, top: 12, bottom: 12),
+            padding: const EdgeInsetsDirectional.only(start: 16, end: 16, top: 12, bottom: 12),
             scrollDirection: Axis.horizontal,
             children: [
               _FilterChip(
                 label: 'walletFilterAll'.translate(context),
                 selected: activeFilter == null,
-                onSelected: (_) =>
-                    context.read<WalletTransactionsCubit>().clearFilters(),
+                onSelected: (_) => context.read<WalletTransactionsCubit>().clearFilters(),
               ),
               const SizedBox(width: 8),
               ...filters.map(
-                (filter) => Padding(
+                    (filter) => Padding(
                   padding: const EdgeInsetsDirectional.only(end: 8),
                   child: _FilterChip(
                     label: filter.label,
                     selected: activeFilter == filter.value,
-                    onSelected: (_) => context
-                        .read<WalletTransactionsCubit>()
-                        .applyFilter(filter.value),
+                    onSelected: (_) =>
+                        context.read<WalletTransactionsCubit>().applyFilter(filter.value),
                   ),
                 ),
               ),
@@ -587,6 +576,10 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     );
   }
 
+
+
+
+
   List<Widget> _buildTransactionsContent(WalletTransactionsState state) {
     if (state is WalletTransactionsLoading) {
       return [
@@ -612,8 +605,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
               Text(state.error.toString()),
               const SizedBox(height: 12),
               OutlinedButton(
-                onPressed: () =>
-                    context.read<WalletTransactionsCubit>().loadInitial(),
+                onPressed: () => context.read<WalletTransactionsCubit>().loadInitial(),
                 child: Text('retry'.translate(context)),
               ),
             ],
@@ -635,8 +627,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton(
-                  onPressed: () =>
-                      context.read<WalletTransactionsCubit>().refresh(),
+                  onPressed: () => context.read<WalletTransactionsCubit>().refresh(),
                   child: Text('retry'.translate(context)),
                 ),
               ],
@@ -667,6 +658,10 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     return const [];
   }
 }
+
+
+
+
 
 class _WithdrawalsCard extends StatelessWidget {
   const _WithdrawalsCard({
@@ -715,10 +710,10 @@ class _WithdrawalsCard extends StatelessWidget {
                   onPressed: isRefreshing ? null : onRefresh,
                   child: isRefreshing
                       ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                       : const Text('تحديث'),
                 ),
               ],
@@ -754,16 +749,13 @@ class _WithdrawalsCard extends StatelessWidget {
                     Align(
                       alignment: AlignmentDirectional.centerStart,
                       child: TextButton(
-                        onPressed: isLoadingMore || onLoadMore == null
-                            ? null
-                            : onLoadMore,
+                        onPressed: isLoadingMore || onLoadMore == null ? null : onLoadMore,
                         child: isLoadingMore
                             ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              )
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                             : const Text('تحميل المزيد'),
                       ),
                     ),
@@ -795,13 +787,11 @@ class _WithdrawalTile extends StatelessWidget {
         : '#${withdrawal.id}';
     final amountValue = withdrawal.amount;
     final amountText = amountValue != null
-        ? formatAmount(
-            amountValue > 0 ? -amountValue : amountValue, withdrawal.currency)
+        ? formatAmount(amountValue > 0 ? -amountValue : amountValue, withdrawal.currency)
         : '--';
     final status = withdrawal.status?.capitalize() ?? 'غير معروف';
     final timestamp = withdrawal.updatedAt ?? withdrawal.createdAt;
-    final subtitleText =
-        timestamp != null ? dateFormat.format(timestamp.toLocal()) : null;
+    final subtitleText = timestamp != null ? dateFormat.format(timestamp.toLocal()) : null;
     final statusColor = _statusColor(context, withdrawal.status);
 
     return ListTile(
@@ -830,8 +820,7 @@ class _WithdrawalTile extends StatelessWidget {
         children: [
           Text(
             amountText,
-            style: theme.textTheme.bodyMedium
-                ?.copyWith(fontWeight: FontWeight.w600),
+            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 6),
           Container(
@@ -852,14 +841,10 @@ class _WithdrawalTile extends StatelessWidget {
 
   Color _statusColor(BuildContext context, String? status) {
     final normalized = status?.toLowerCase() ?? '';
-    if (normalized.contains('fail') ||
-        normalized.contains('reject') ||
-        normalized.contains('cancel')) {
+    if (normalized.contains('fail') || normalized.contains('reject') || normalized.contains('cancel')) {
       return Colors.redAccent;
     }
-    if (normalized.contains('complete') ||
-        normalized.contains('success') ||
-        normalized.contains('paid')) {
+    if (normalized.contains('complete') || normalized.contains('success') || normalized.contains('paid')) {
       return Colors.green;
     }
     if (normalized.contains('pending') || normalized.contains('process')) {
@@ -929,9 +914,9 @@ class _WalletPrimaryButton extends StatelessWidget {
     final onBackground = theme.colorScheme.onPrimary;
 
     final textStyle = theme.textTheme.titleMedium?.copyWith(
-          color: onBackground,
-          fontWeight: FontWeight.w700,
-        ) ??
+      color: onBackground,
+      fontWeight: FontWeight.w700,
+    ) ??
         TextStyle(
           color: onBackground,
           fontWeight: FontWeight.w700,
@@ -976,6 +961,9 @@ class _WalletPrimaryButton extends StatelessWidget {
   }
 }
 
+
+
+
 class _SummaryCard extends StatelessWidget {
   const _SummaryCard({
     this.balanceText,
@@ -1008,16 +996,16 @@ class _SummaryCard extends StatelessWidget {
             const SizedBox(height: 12),
             isLoading
                 ? LinearProgressIndicator(
-                    minHeight: 10,
-                    color: context.color.territoryColor,
-                    backgroundColor: context.color.borderColor.withOpacity(.3),
-                  )
+              minHeight: 10,
+              color: context.color.territoryColor,
+              backgroundColor: context.color.borderColor.withOpacity(.3),
+            )
                 : Text(
-                    balanceText ?? '--',
-                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
+              balanceText ?? '--',
+              style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 14),
             Row(
               children: [
@@ -1059,8 +1047,8 @@ class _FilterChip extends StatelessWidget {
       onSelected: onSelected,
       selectedColor: context.color.territoryColor.withOpacity(.15),
       labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: selected ? context.color.territoryColor : null,
-          ),
+        color: selected ? context.color.territoryColor : null,
+      ),
     );
   }
 }
@@ -1097,12 +1085,12 @@ class _TransactionTile extends StatelessWidget {
           ),
           boxShadow: transaction.highlighted
               ? [
-                  BoxShadow(
-                    color: colorScheme.tertiary.withOpacity(.2),
-                    offset: const Offset(0, 6),
-                    blurRadius: 18,
-                  ),
-                ]
+            BoxShadow(
+              color: colorScheme.tertiary.withOpacity(.2),
+              offset: const Offset(0, 6),
+              blurRadius: 18,
+            ),
+          ]
               : null,
         ),
         child: Padding(
@@ -1123,22 +1111,20 @@ class _TransactionTile extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      transaction.classification ??
-                          'walletUnknownClassification'.translate(context),
+                      transaction.classification ?? 'walletUnknownClassification'.translate(context),
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ),
                   Text(
                     amountText,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: isCredit ? colorScheme.tertiary : Colors.red,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      color: isCredit ? colorScheme.tertiary : Colors.red,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ],
               ),
-              if (transaction.description != null &&
-                  transaction.description!.isNotEmpty) ...[
+              if (transaction.description != null && transaction.description!.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
                   transaction.description!,
@@ -1154,15 +1140,13 @@ class _TransactionTile extends StatelessWidget {
                     child: Text(
                       transaction.createdAt == null
                           ? 'walletUnknownDate'.translate(context)
-                          : UiUtils.formatDate(
-                              transaction.createdAt!.toIso8601String()),
+                          : UiUtils.formatDate(transaction.createdAt!.toIso8601String()),
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),
                 ],
               ),
-              if (transaction.references.isNotEmpty ||
-                  transaction.referenceCode != null) ...[
+              if (transaction.references.isNotEmpty || transaction.referenceCode != null) ...[
                 const SizedBox(height: 10),
                 Wrap(
                   spacing: 6,
@@ -1171,11 +1155,10 @@ class _TransactionTile extends StatelessWidget {
                     ...transaction.references
                         .map(
                           (ref) => Chip(
-                            label: Text(ref),
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
-                          ),
-                        )
+                        label: Text(ref),
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    )
                         .toList(),
                     if (transaction.referenceCode != null)
                       Chip(
@@ -1185,16 +1168,13 @@ class _TransactionTile extends StatelessWidget {
                   ],
                 ),
               ],
-              if (transaction.beforeBalance != null ||
-                  transaction.afterBalance != null) ...[
+              if (transaction.beforeBalance != null || transaction.afterBalance != null) ...[
                 const SizedBox(height: 10),
                 Text(
                   'walletBalanceChange'
                       .translate(context)
-                      .replaceFirst('{from}',
-                          (transaction.beforeBalance ?? 0).toStringAsFixed(2))
-                      .replaceFirst('{to}',
-                          (transaction.afterBalance ?? 0).toStringAsFixed(2)),
+                      .replaceFirst('{from}', (transaction.beforeBalance ?? 0).toStringAsFixed(2))
+                      .replaceFirst('{to}', (transaction.afterBalance ?? 0).toStringAsFixed(2)),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],

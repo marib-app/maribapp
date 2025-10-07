@@ -6,6 +6,8 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/app_icon.dart';
 
+
+
 /// زر "فرز بحسب" + نافذة الفرز (خفيف/متوافق مع الهوية)
 class SortByAction extends StatelessWidget {
   final TextEditingController searchController;
@@ -23,9 +25,9 @@ class SortByAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = context.color.secondaryColor; // كابسولة الزر
-    final fg = context.color.textDefaultColor; // نص/أيقونة
-    final br = context.color.borderColor; // حدود خفيفة
+    final bg = context.color.secondaryColor;         // كابسولة الزر
+    final fg = context.color.textDefaultColor;       // نص/أيقونة
+    final br = context.color.borderColor;            // حدود خفيفة
 
     return InkWell(
       onTap: () => _openSheet(context),
@@ -44,8 +46,7 @@ class SortByAction extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            UiUtils.getSvg(AppIcons.sortByIcon,
-                color: fg, height: 20, width: 20),
+            UiUtils.getSvg(AppIcons.sortByIcon, color: fg, height: 20, width: 20),
             const SizedBox(width: 6),
             Flexible(
               child: Text(
@@ -77,6 +78,8 @@ class SortByAction extends StatelessWidget {
   }
 }
 
+
+
 // ⬇️ بدل هذا الكلاس: كان Stateless —> صار Stateful لإدارة الاختيار + الأزرار
 class _SortSheet extends StatefulWidget {
   final String initialSort;
@@ -102,47 +105,45 @@ class _SortSheetState extends State<_SortSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context);
-    final bg = context.color.secondaryColor;
-    final br = context.color.borderColor;
-    final on = context.color.textDefaultColor;
+    final t   = Theme.of(context);
+    final bg  = context.color.secondaryColor;
+    final br  = context.color.borderColor;
+    final on  = context.color.textDefaultColor;
     final acc = context.color.territoryColor;
 
     final h = MediaQuery.of(context).size.height * 0.9;
 
     // فاصل بصري بسيط قابل لإعادة الاستخدام
     Widget separator(String text) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Row(
-            children: [
-              Expanded(child: Divider(color: t.dividerColor)),
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 8),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: t.colorScheme.surface.withOpacity(.6),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: t.dividerColor),
-                ),
-                child: Text(
-                  text,
-                  style: t.textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: t.colorScheme.onSurface.withOpacity(.8),
-                  ),
-                ),
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        children: [
+          Expanded(child: Divider(color: t.dividerColor)),
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: t.colorScheme.surface.withOpacity(.6),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: t.dividerColor),
+            ),
+            child: Text(
+              text,
+              style: t.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: t.colorScheme.onSurface.withOpacity(.8),
               ),
-              Expanded(child: Divider(color: t.dividerColor)),
-            ],
+            ),
           ),
-        );
+          Expanded(child: Divider(color: t.dividerColor)),
+        ],
+      ),
+    );
 
     return AnimatedPadding(
       duration: const Duration(milliseconds: 150),
       curve: Curves.easeOutCubic,
-      padding:
-          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Align(
         alignment: Alignment.bottomCenter,
         child: ConstrainedBox(
@@ -155,8 +156,7 @@ class _SortSheetState extends State<_SortSheet> {
               children: [
                 const SizedBox(height: 10),
                 Container(
-                  height: 5,
-                  width: 48,
+                  height: 5, width: 48,
                   decoration: BoxDecoration(
                     color: br,
                     borderRadius: BorderRadius.circular(3),
@@ -186,8 +186,7 @@ class _SortSheetState extends State<_SortSheet> {
                         ),
                       ),
                       IconButton(
-                        tooltip: MaterialLocalizations.of(context)
-                            .closeButtonTooltip,
+                        tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
                         onPressed: () => Navigator.pop(context),
                         icon: Icon(Icons.close_rounded, color: on),
                       ),
@@ -239,8 +238,7 @@ class _SortSheetState extends State<_SortSheet> {
                               minimumSize: const Size.fromHeight(48),
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12)),
-                              side: BorderSide(
-                                  color: t.colorScheme.outline.withOpacity(.5)),
+                              side: BorderSide(color: t.colorScheme.outline.withOpacity(.5)),
                               foregroundColor: t.colorScheme.onSurface,
                             ),
                           ),
@@ -276,6 +274,10 @@ class _SortSheetState extends State<_SortSheet> {
   }
 }
 
+
+
+
+
 // ⬇️ حدّثنا القائمة لتعرض ✔ خضراء وتغيّر الاختيار بدون إغلاق فوري
 class _OptionsList extends StatelessWidget {
   final String selected;
@@ -288,22 +290,17 @@ class _OptionsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context);
-    final fg = context.color.textDefaultColor;
-    final ripple = t.colorScheme.primary.withOpacity(0.14);
-    final highlight = t.colorScheme.primary.withOpacity(0.06);
+    final t     = Theme.of(context);
+    final fg    = context.color.textDefaultColor;
+    final ripple   = t.colorScheme.primary.withOpacity(0.14);
+    final highlight= t.colorScheme.primary.withOpacity(0.06);
 
     final items = <_Opt>[
-      _Opt('default', '', 'default'.translate(context),
-          Icons.star_border_rounded),
-      _Opt('newToOld', 'new-to-old', 'newToOld'.translate(context),
-          Icons.fiber_new_rounded),
-      _Opt('oldToNew', 'old-to-new', 'oldToNew'.translate(context),
-          Icons.history_rounded),
-      _Opt('priceHighToLow', 'price-high-to-low',
-          'priceHighToLow'.translate(context), Icons.trending_down_rounded),
-      _Opt('priceLowToHigh', 'price-low-to-high',
-          'priceLowToHigh'.translate(context), Icons.trending_up_rounded),
+      _Opt('default', '', 'default'.translate(context), Icons.star_border_rounded),
+      _Opt('newToOld', 'new-to-old', 'newToOld'.translate(context), Icons.fiber_new_rounded),
+      _Opt('oldToNew', 'old-to-new', 'oldToNew'.translate(context), Icons.history_rounded),
+      _Opt('priceHighToLow', 'price-high-to-low', 'priceHighToLow'.translate(context), Icons.trending_down_rounded),
+      _Opt('priceLowToHigh', 'price-low-to-high', 'priceLowToHigh'.translate(context), Icons.trending_up_rounded),
     ];
 
     return ListView.separated(
@@ -330,8 +327,7 @@ class _OptionsList extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 child: Row(
                   children: [
                     Icon(o.icon, size: 22, color: fg),
@@ -348,14 +344,11 @@ class _OptionsList extends StatelessWidget {
                     ),
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 140),
-                      transitionBuilder: (c, a) =>
-                          ScaleTransition(scale: a, child: c),
+                      transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
                       child: isSel
                           ? const Icon(Icons.check_circle_rounded,
-                              key: ValueKey('on'),
-                              color: Colors.green) // ✔ أخضر
-                          : const SizedBox(
-                              key: ValueKey('off'), width: 0, height: 0),
+                          key: ValueKey('on'), color: Colors.green) // ✔ أخضر
+                          : const SizedBox(key: ValueKey('off'), width: 0, height: 0),
                     ),
                   ],
                 ),
@@ -367,6 +360,9 @@ class _OptionsList extends StatelessWidget {
     );
   }
 }
+
+
+
 
 class _Opt {
   final String keyStr;

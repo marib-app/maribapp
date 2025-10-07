@@ -93,7 +93,7 @@ class FetchMyItemsCubit extends Cubit<FetchMyItemsState> {
     }
   }
 
-  void edit(ItemModel item) {
+  edit(ItemModel item) {
     if (state is FetchMyItemsSuccess) {
       List<ItemModel> items = (state as FetchMyItemsSuccess).items;
       int index = items.indexWhere((element) => element.id == item.id);

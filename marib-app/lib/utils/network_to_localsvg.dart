@@ -5,6 +5,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:hive/hive.dart';
 import 'package:flutter/foundation.dart';
 
+
+
 class NetworkToLocalSvg {
   Dio dio = Dio();
   static final Map<String, Future<String?>> _inFlightRequests = {};
@@ -60,10 +62,10 @@ class NetworkToLocalSvg {
         }
 
         return Container();
+
       },
     );
   }
-
   Future<String?> _createRequest(String url, Box box) {
     final future = convert(url).then((data) {
       if (data != null) {
@@ -79,18 +81,19 @@ class NetworkToLocalSvg {
     });
 
     return future;
+
   }
 
   Widget _buildSvgPicture(
-    String data, {
-    Color? color,
-    double? width,
-    double? height,
-  }) {
+      String data, {
+        Color? color,
+        double? width,
+        double? height,
+      }) {
     return SvgPicture.string(
       data,
       colorFilter:
-          color != null ? ColorFilter.mode(color, BlendMode.srcIn) : null,
+      color != null ? ColorFilter.mode(color, BlendMode.srcIn) : null,
       width: width,
       height: height,
     );

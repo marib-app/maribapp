@@ -15,6 +15,10 @@ import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/data/model/chat/chated_user_model.dart';
 part 'chatTile_ui.dart';
 
+
+
+
+
 class ChatTile extends StatelessWidget {
   final String profilePicture;
   final String userName;
@@ -38,6 +42,7 @@ class ChatTile extends StatelessWidget {
   final String? itemCurrency;
   final String? itemCurrencySymbol;
 
+
   const ChatTile({
     super.key,
     required this.profilePicture,
@@ -46,11 +51,13 @@ class ChatTile extends StatelessWidget {
     required this.itemName,
     required this.unreadCount,
     this.lastMessage,
+
     required this.id,
     required this.date,
     required this.itemId,
     required this.itemOfferId,
     required this.conversationId,
+
     required this.itemPrice,
     this.status,
     this.itemAmount,
@@ -64,4 +71,5 @@ class ChatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => buildChatTile(context);
+
 }

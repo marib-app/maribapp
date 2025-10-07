@@ -1,6 +1,7 @@
 import 'package:marib/utils/helper_utils.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+
 /// Configure your app from here
 /// Most of basic configuration will be from here
 /// For theme colors go to [lib/Ui/Theme/theme.dart]
@@ -33,9 +34,10 @@ class AppSettings {
 
   //  "https://maribsrv.com"; //don't add / at end but https:// is required
 
-  static const String hostUrl = "http://192.168.1.247:8000";
 
+ static const String hostUrl = "http://192.168.1.247:8000";
   ///API Setting
+
 
   static const int apiDataLoadLimit = 20;
   static const int maxCategoryShowLengthInHomeScreen = 5;
@@ -54,6 +56,7 @@ it will call API in background without showing the process and when data availab
   ///Set type here
   static const DeepLinkType deepLinkingType = DeepLinkType.native;
 
+
   static const String shareNavigationWebUrl = "maribsrv.com";
 
   /// You will find this prefix from firebase console in dynamic link section
@@ -69,6 +72,9 @@ it will call API in background without showing the process and when data availab
   ///Firebase authentication OTP timer.
   static const int otpResendSecond = 60 * 2;
   static const int otpTimeOutSecond = 60 * 2;
+
+
+
 
   ///This code will show on login screen [Note: don't add  + symbol]
   static const String defaultCountryCode = "967";

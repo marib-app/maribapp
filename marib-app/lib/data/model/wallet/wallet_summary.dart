@@ -1,4 +1,4 @@
-import 'package:marib/data/model/wallet/wallet_filter.dart';
+import 'wallet_filter.dart';
 
 class WalletSummary {
   WalletSummary({
@@ -26,20 +26,20 @@ class WalletSummary {
     );
     final meta = json['meta'];
     final metadataFilters = WalletFilter.fromResponse(
-      meta is Map ? (meta)['filters'] : null,
+      meta is Map ? (meta as Map)['filters'] : null,
     );
 
     return WalletSummary(
       balance: balance,
       currency: _parseString(json['currency'] ?? json['balance_currency']) ??
           balanceDetails.currency,
+
       lastUpdatedAt: _parseDate(json['last_updated_at'] ?? json['updated_at']),
       availableFilters: [
         ...filters,
         ...metadataFilters.where(
-          (candidate) =>
-              filters.indexWhere(
-                  (existing) => existing.value == candidate.value) ==
+              (candidate) =>
+          filters.indexWhere((existing) => existing.value == candidate.value) ==
               -1,
         ),
       ],
@@ -82,6 +82,7 @@ class WalletSummary {
       return null;
     }
 
+
     if (value is Map) {
       final map = value;
       currency = _parseString(map['currency']);
@@ -123,6 +124,7 @@ class WalletSummary {
     }
 
     return _BalanceDetails(amount: amount, currency: currency);
+
   }
 
   static String? _parseString(dynamic value) {
@@ -139,8 +141,7 @@ class WalletSummary {
       return value;
     }
     if (value is num) {
-      return DateTime.fromMillisecondsSinceEpoch(value.toInt() * 1000,
-          isUtc: true);
+      return DateTime.fromMillisecondsSinceEpoch(value.toInt() * 1000, isUtc: true);
     }
     if (value is String && value.isNotEmpty) {
       return DateTime.tryParse(value);
@@ -148,6 +149,10 @@ class WalletSummary {
     return null;
   }
 }
+
+
+
+
 
 class _BalanceDetails {
   const _BalanceDetails({
@@ -158,6 +163,9 @@ class _BalanceDetails {
   final double? amount;
   final String? currency;
 }
+
+
+
 
 class WalletSummaryBundle {
   const WalletSummaryBundle({

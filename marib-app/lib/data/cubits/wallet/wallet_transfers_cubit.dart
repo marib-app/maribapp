@@ -27,8 +27,7 @@ class WalletTransfersCubit extends Cubit<WalletTransfersState> {
 
   final WalletOperationsRepository _repository;
 
-  Future<Map<String, dynamic>> submitTransfer(
-      Map<String, dynamic> payload) async {
+  Future<Map<String, dynamic>> submitTransfer(Map<String, dynamic> payload) async {
     emit(WalletTransferSubmitting());
     try {
       final response = await _repository.submitTransfer(payload: payload);

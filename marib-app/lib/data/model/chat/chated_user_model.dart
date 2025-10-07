@@ -20,27 +20,30 @@ class ChatedUser {
   int? unreadMessagesCount;
   ChatLastMessage? lastMessage;
 
+
   ChatedUser(
       {this.id,
       this.sellerId,
       this.buyerId,
       this.itemId,
-      this.itemOfferId,
-      this.conversationId,
+        this.itemOfferId,
+        this.conversationId,
       this.createdAt,
       this.updatedAt,
       this.amount,
       this.seller,
       this.buyer,
       this.userBlocked,
-      this.item,
-      this.participants,
-      this.unreadMessagesCount,
-      this.lastMessage});
+        this.item,
+        this.participants,
+        this.unreadMessagesCount,
+        this.lastMessage});
+
 
   static bool? parseUserBlocked(dynamic value) {
     return _parseBool(value);
   }
+
 
   ChatedUser.fromJson(Map<String, dynamic> json /*, {BuildContext? context}*/) {
     id = _parseInt(json['id']);
@@ -109,6 +112,7 @@ class ChatedUser {
   }
 }
 
+
 int? _parseInt(dynamic value) {
   if (value == null) {
     return null;
@@ -124,6 +128,7 @@ int? _parseInt(dynamic value) {
   }
   return null;
 }
+
 
 double? _parseDouble(dynamic value) {
   if (value == null) {
@@ -158,6 +163,7 @@ String? _parseString(dynamic value) {
   return trimmed;
 }
 
+
 bool? _parseBool(dynamic value) {
   if (value == null) {
     return null;
@@ -179,6 +185,8 @@ bool? _parseBool(dynamic value) {
   }
   return null;
 }
+
+
 
 class ChatLastMessage {
   final int? id;
@@ -235,6 +243,9 @@ class ChatLastMessage {
     return data;
   }
 }
+
+
+
 
 class Seller {
   int? id;
@@ -293,6 +304,7 @@ class Item {
   String? currency;
   String? currencySymbol;
 
+
   Item(
       {this.id,
       this.name,
@@ -301,10 +313,10 @@ class Item {
       this.image,
       this.status,
       this.review,
-      this.reviews,
-      this.isPurchased,
-      this.currency,
-      this.currencySymbol});
+        this.reviews,
+        this.isPurchased,
+        this.currency,
+        this.currencySymbol});
 
   Item.fromJson(Map<String, dynamic> json) {
     id = _parseInt(json['id']);
@@ -323,14 +335,17 @@ class Item {
     currency = _parseString(json['currency']) ??
         _parseString(json['currency_code']) ??
         _parseString(json['currencyCode']) ??
-        _parseString(json['currency_label']) ??
+    _parseString(json['currency_label']) ??
         _parseString(json['currencyLabel']);
+
 
     currencySymbol = _parseString(json['currency_symbol']) ??
         _parseString(json['currencySymbol']) ??
-        _parseString(json['currency_label']) ??
+    _parseString(json['currency_label']) ??
         _parseString(json['currencyLabel']) ??
         currency;
+
+
 
     final reviewJson = json['review'];
     if (reviewJson is List) {
@@ -395,6 +410,7 @@ class BlockedUserModel {
   }
 }
 
+
 class ChatParticipant {
   int? userId;
   String? role;
@@ -427,9 +443,8 @@ class ChatParticipant {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = additionalData != null
-        ? Map<String, dynamic>.from(additionalData!)
-        : {};
+    final Map<String, dynamic> data =
+    additionalData != null ? Map<String, dynamic>.from(additionalData!) : {};
 
     if (userId != null) {
       data['user_id'] = userId;

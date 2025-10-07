@@ -7,6 +7,11 @@ import 'package:marib/data/cubits/competition_cubit.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:marib/data/repositories/competition_repository.dart';
+import 'package:flutter/material.dart' hide Colors;
+import 'package:flutter/material.dart';
+import 'dart:ui';
+
+
 
 class CompetitionShareInfoScreen extends StatelessWidget {
   const CompetitionShareInfoScreen({super.key});
@@ -14,8 +19,7 @@ class CompetitionShareInfoScreen extends StatelessWidget {
   static Route route() {
     return MaterialPageRoute(
       builder: (_) => BlocProvider(
-        create: (_) =>
-            CompetitionCubit(CompetitionRepository())..fetchCompetitionData(),
+        create: (_) => CompetitionCubit(CompetitionRepository())..fetchCompetitionData(),
         child: const CompetitionShareInfoScreen(),
       ),
     );
@@ -29,7 +33,7 @@ class CompetitionShareInfoScreen extends StatelessWidget {
         statusBarColor: Theme.of(context).primaryColor,
       ),
       child: Scaffold(
-        //  backgroundColor: context.red ? Colors.black : Colors.white,
+      //  backgroundColor: context.red ? Colors.black : Colors.white,
         appBar: UiUtils.buildAppBar(
           context,
           showBackButton: true,
@@ -51,19 +55,20 @@ class CompetitionShareInfoScreen extends StatelessWidget {
     if (state is CompetitionSuccess) {
       referralCode = state.referralPoints.referralCode.trim();
       final friendMessage =
-          state.referralPoints.inviteFriendMessage.trim().isNotEmpty
-              ? state.referralPoints.inviteFriendMessage
-              : state.referralPoints.qrCodeData;
+      state.referralPoints.inviteFriendMessage.trim().isNotEmpty
+          ? state.referralPoints.inviteFriendMessage
+          : state.referralPoints.qrCodeData;
       inviteMessage = friendMessage.trim().isNotEmpty
           ? friendMessage
           : state.referralPoints.qrCodeData;
     }
     final bool hasCode = referralCode.isNotEmpty;
-    final unavailableLabelRaw = "referralCodeUnavailable".translate(context);
+    final unavailableLabelRaw =
+    "referralCodeUnavailable".translate(context);
     final String unavailableLabel =
-        unavailableLabelRaw == "referralCodeUnavailable"
-            ? 'Referral code is currently unavailable'
-            : unavailableLabelRaw;
+    unavailableLabelRaw == "referralCodeUnavailable"
+        ? 'Referral code is currently unavailable'
+        : unavailableLabelRaw;
     final String shareMessage = inviteMessage.trim();
     final bool canShare = shareMessage.isNotEmpty;
 
@@ -99,17 +104,15 @@ class CompetitionShareInfoScreen extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("رمز الإحالة",
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                  Text("رمز الإحالة", style: TextStyle(color: Colors.grey[600], fontSize: 12)),
                   const SizedBox(height: 4),
                   Text(
                     hasCode ? referralCode : '—',
-                    style: TextStyle(
+                      style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: hasCode
-                          ? context.color.forthColor
-                          : Colors.grey.shade500,
+                        color:
+                        hasCode ? context.color.forthColor : Colors.grey.shade500,
                     ),
                   ),
                   if (!hasCode)
@@ -125,19 +128,18 @@ class CompetitionShareInfoScreen extends StatelessWidget {
               IconButton(
                 onPressed: hasCode
                     ? () {
-                        Clipboard.setData(ClipboardData(text: referralCode));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text("تم نسخ رمز الإحالة بنجاح"),
-                            backgroundColor: context.color.forthColor,
-                          ),
-                        );
-                      }
+                  Clipboard.setData(ClipboardData(text: referralCode));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("تم نسخ رمز الإحالة بنجاح"),
+                      backgroundColor: context.color.forthColor,
+                    ),
+                  );
+                }
                     : null,
                 icon: Icon(
                   Icons.copy,
-                  color:
-                      hasCode ? context.color.forthColor : Colors.grey.shade400,
+                  color: hasCode ? context.color.forthColor : Colors.grey.shade400,
                 ),
               ),
             ],
@@ -155,8 +157,7 @@ class CompetitionShareInfoScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border:
-                  Border.all(color: context.color.forthColor.withOpacity(0.3)),
+              border: Border.all(color: context.color.forthColor.withOpacity(0.3)),
             ),
             child: QrImageView(
               data: referralCode,
@@ -183,6 +184,7 @@ class CompetitionShareInfoScreen extends StatelessWidget {
             ),
           ),
 
+
         const SizedBox(height: 15),
 
         // ✅ زر المشاركة
@@ -192,24 +194,23 @@ class CompetitionShareInfoScreen extends StatelessWidget {
           child: ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: context.color.forthColor,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
             onPressed: canShare
                 ? () {
-                    Clipboard.setData(ClipboardData(text: shareMessage));
+              Clipboard.setData(ClipboardData(text: shareMessage));
 
-                    UiUtils.showSoftSnackBar(
-                      context,
-                      message: "تم نسخ كود الإحالة للمشاركة",
-                      iconPath: 'assets/image/showSoftSnackBar.png',
-                    );
-                  }
+              UiUtils.showSoftSnackBar(
+                context,
+                message: "تم نسخ كود الإحالة للمشاركة",
+                iconPath: 'assets/image/showSoftSnackBar.png',
+              );
+            }
                 : null,
+
             icon: const Icon(Icons.share, color: Colors.white),
-            label: const Text("مشاركة الكود",
-                style: TextStyle(color: Colors.white)),
+            label: const Text("مشاركة الكود", style: TextStyle(color: Colors.white)),
           ),
         ),
 
@@ -224,8 +225,7 @@ class CompetitionShareInfoScreen extends StatelessWidget {
             label: const Text("رجوع", style: TextStyle(color: Colors.white)),
             style: ElevatedButton.styleFrom(
               backgroundColor: context.color.forthColor,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
           ),
         ),

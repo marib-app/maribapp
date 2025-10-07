@@ -1,7 +1,10 @@
 // lib/new_code/ui/classified_ads/widgets/addrating.dart
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:flutter/foundation.dart';
+import 'package:marib/utils/api.dart';
 import 'package:marib/utils/helper_utils.dart';
+import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/ui/screens/classified_ads/widgets/service_ratings_api.dart';
 
 class AddRatingBottomSheet extends StatefulWidget {
@@ -11,23 +14,23 @@ class AddRatingBottomSheet extends StatefulWidget {
     this.serviceTitle,
     this.sellerId, // احتياطي للتوافق مع الاستدعاءات السابقة
     this.serviceUid,
+
   });
 
-  final int? itemId; // معرّف الخدمة
-  final String? serviceTitle; // غير مستخدم للإرسال، فقط للعرض إن لزم
-  final int? sellerId; // لم يعد مطلوبًا من واجهة الخدمة الحالية
+  final int? itemId;           // معرّف الخدمة
+  final String? serviceTitle;  // غير مستخدم للإرسال، فقط للعرض إن لزم
+  final int? sellerId;         // لم يعد مطلوبًا من واجهة الخدمة الحالية
   final String? serviceUid;
 
   @override
   State<AddRatingBottomSheet> createState() => _AddRatingBottomSheetState();
 }
 
-class _AddRatingBottomSheetState extends State<AddRatingBottomSheet>
-    with SingleTickerProviderStateMixin {
+class _AddRatingBottomSheetState extends State<AddRatingBottomSheet> with SingleTickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
 
-  final List<String> _emojis = ["😡", "🙁", "😐", "🙂", "😍"];
-  final List<String> _labels = ["سيّئ جدًا", "سيّئ", "عادي", "جيد", "ممتاز"];
+  final List<String> _emojis = ["😡","🙁","😐","🙂","😍"];
+  final List<String> _labels = ["سيّئ جدًا","سيّئ","عادي","جيد","ممتاز"];
 
   final List<String> _suggestions = const [
     "الخدمة ممتازة وسريعة.",
@@ -49,10 +52,8 @@ class _AddRatingBottomSheetState extends State<AddRatingBottomSheet>
   void initState() {
     super.initState();
     _emojiAnim = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 220),
-      lowerBound: .85,
-      upperBound: 1.12,
+      vsync: this, duration: const Duration(milliseconds: 220),
+      lowerBound: .85, upperBound: 1.12,
     );
     _controller.addListener(() {
       if (_selectedSuggestion != null &&
@@ -77,7 +78,7 @@ class _AddRatingBottomSheetState extends State<AddRatingBottomSheet>
   // ---------- إرسال ----------
   Future<void> _submit() async {
     final stars = _rating.toInt();
-    String text = _controller.text.trim();
+    String text  = _controller.text.trim();
 
     if (stars == 0) {
       HelperUtils.showSnackBarMessage(context, "اختر عدد النجوم");
@@ -85,7 +86,9 @@ class _AddRatingBottomSheetState extends State<AddRatingBottomSheet>
     }
     if (text.isEmpty) text = "تم إرسال تقييم من التطبيق";
 
-    final int? itemId = widget.itemId;
+
+    final int? itemId   = widget.itemId;
+
 
     if (itemId == null) {
       HelperUtils.showSnackBarMessage(context, "تعذّر تحديد الخدمة.");
@@ -99,16 +102,24 @@ class _AddRatingBottomSheetState extends State<AddRatingBottomSheet>
         stars: stars,
         comment: text,
         serviceUid: widget.serviceUid,
+
       );
 
+
+
       if (!mounted) return;
+
 
       if (ok) {
         HelperUtils.showSnackBarMessage(context, "تم ارسال تقييمك بنجاح");
         Navigator.of(context).pop(true); // لتحديث القائمة
       } else {
         HelperUtils.showSnackBarMessage(context, "تعذر إرسال التقييم");
+
+
       }
+
+
     } catch (e, stack) {
       if (kDebugMode) {
         // ignore: avoid_print
@@ -121,6 +132,8 @@ class _AddRatingBottomSheetState extends State<AddRatingBottomSheet>
           message.isNotEmpty ? message : "تعذر إرسال التقييم",
         );
       }
+
+
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -129,7 +142,7 @@ class _AddRatingBottomSheetState extends State<AddRatingBottomSheet>
   // ---------- الواجهة (كما هي) ----------
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final theme  = Theme.of(context);
     final insets = MediaQuery.of(context).viewInsets;
     final isDark = theme.brightness == Brightness.dark;
 
@@ -158,8 +171,7 @@ class _AddRatingBottomSheetState extends State<AddRatingBottomSheet>
                       const SizedBox(height: 8),
                       Center(
                         child: Container(
-                          width: 40,
-                          height: 4,
+                          width: 40, height: 4,
                           decoration: BoxDecoration(
                             color: isDark ? Colors.white24 : Colors.black26,
                             borderRadius: BorderRadius.circular(999),
@@ -173,8 +185,7 @@ class _AddRatingBottomSheetState extends State<AddRatingBottomSheet>
                           children: [
                             Icon(Icons.send_rounded, size: 20),
                             SizedBox(width: 8),
-                            Text("ارسل تقييمك",
-                                style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text("ارسل تقييمك", style: TextStyle(fontWeight: FontWeight.bold)),
                           ],
                         ),
                       ),
@@ -194,13 +205,14 @@ class _AddRatingBottomSheetState extends State<AddRatingBottomSheet>
                           ),
                         ),
                       ),
+
                       const SizedBox(height: 14),
                       const Padding(
                         padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Text("كم نجمة يستحق؟",
-                            style: TextStyle(fontWeight: FontWeight.w600)),
+                        child: Text("كم نجمة يستحق؟", style: TextStyle(fontWeight: FontWeight.w600)),
                       ),
                       const SizedBox(height: 6),
+
                       Center(
                         child: Column(
                           children: [
@@ -209,18 +221,14 @@ class _AddRatingBottomSheetState extends State<AddRatingBottomSheet>
                               children: List.generate(5, (index) {
                                 final i = index + 1;
                                 return Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(horizontal: 4),
+                                  padding: const EdgeInsets.symmetric(horizontal: 4),
                                   child: GestureDetector(
                                     onTap: () => _onRatingChanged(i),
                                     child: AnimatedScale(
-                                      duration:
-                                          const Duration(milliseconds: 160),
+                                      duration: const Duration(milliseconds: 160),
                                       scale: _rating == i ? 1.12 : 1.0,
                                       child: Icon(
-                                        _rating >= i
-                                            ? Icons.star_rounded
-                                            : Icons.star_border_rounded,
+                                        _rating >= i ? Icons.star_rounded : Icons.star_border_rounded,
                                         color: Colors.amber,
                                         size: 32,
                                       ),
@@ -235,31 +243,30 @@ class _AddRatingBottomSheetState extends State<AddRatingBottomSheet>
                               child: Center(
                                 child: _rating > 0
                                     ? ScaleTransition(
-                                        scale: _emojiAnim,
-                                        child: Text(
-                                          "${_emojis[_rating.toInt() - 1]}  ${_labels[_rating.toInt() - 1]}",
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.w600),
-                                        ),
-                                      )
+                                  scale: _emojiAnim,
+                                  child: Text(
+                                    "${_emojis[_rating.toInt()-1]}  ${_labels[_rating.toInt()-1]}",
+                                    style: const TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                )
                                     : const SizedBox(),
                               ),
                             ),
                           ],
                         ),
                       ),
+
                       const SizedBox(height: 8),
                       const Padding(
                         padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Text("اقتراحات جاهزة",
-                            style: TextStyle(fontWeight: FontWeight.w600)),
+                        child: Text("اقتراحات جاهزة", style: TextStyle(fontWeight: FontWeight.w600)),
                       ),
                       const SizedBox(height: 8),
+
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
+                          spacing: 8, runSpacing: 8,
                           children: List.generate(_suggestions.length, (i) {
                             final selected = _selectedSuggestion == i;
                             return ChoiceChip(
@@ -267,8 +274,7 @@ class _AddRatingBottomSheetState extends State<AddRatingBottomSheet>
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   if (selected) ...[
-                                    const Icon(Icons.check_circle_rounded,
-                                        size: 16),
+                                    const Icon(Icons.check_circle_rounded, size: 16),
                                     const SizedBox(width: 6),
                                   ],
                                   Flexible(child: Text(_suggestions[i])),
@@ -278,21 +284,14 @@ class _AddRatingBottomSheetState extends State<AddRatingBottomSheet>
                               showCheckmark: false,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                side: BorderSide(
-                                    color: selected
-                                        ? Colors.amber
-                                        : (isDark
-                                            ? Colors.white12
-                                            : Colors.black12)),
+                                side: BorderSide(color: selected ? Colors.amber : (isDark ? Colors.white12 : Colors.black12)),
                               ),
                               onSelected: (val) {
                                 setState(() {
                                   _selectedSuggestion = val ? i : null;
                                   if (val) {
                                     _controller.text = _suggestions[i];
-                                    _controller.selection =
-                                        TextSelection.collapsed(
-                                            offset: _controller.text.length);
+                                    _controller.selection = TextSelection.collapsed(offset: _controller.text.length);
                                   }
                                 });
                               },
@@ -300,13 +299,14 @@ class _AddRatingBottomSheetState extends State<AddRatingBottomSheet>
                           }),
                         ),
                       ),
+
                       const SizedBox(height: 12),
                       const Padding(
                         padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Text("اكتب رأيك",
-                            style: TextStyle(fontWeight: FontWeight.w600)),
+                        child: Text("اكتب رأيك", style: TextStyle(fontWeight: FontWeight.w600)),
                       ),
                       const SizedBox(height: 6),
+
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: TextField(
@@ -315,31 +315,26 @@ class _AddRatingBottomSheetState extends State<AddRatingBottomSheet>
                           decoration: InputDecoration(
                             hintText: "اكتب رأيك...",
                             filled: true,
-                            border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 10),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           ),
                         ),
                       ),
+
                       const SizedBox(height: 14),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: SizedBox(
-                          width: double.infinity,
-                          height: 46,
+                          width: double.infinity, height: 46,
                           child: ElevatedButton(
                             onPressed: _isSubmitting ? null : _submit,
                             child: _isSubmitting
-                                ? const SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2))
+                                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))
                                 : const Text("إرسال تقييمك"),
                           ),
                         ),
                       ),
+
                       const SizedBox(height: 16),
                     ],
                   ),

@@ -3,9 +3,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:marib/data/model/cart/checkout_models.dart';
 import 'package:marib/data/model/wallet/wallet_summary.dart';
 import 'package:marib/utils/app_icon.dart';
-import 'package:marib/ui/screens/cart/components/delivery_and_payment/delivery_payment_timing_selector.dart';
+import 'delivery_payment_timing_selector.dart';
 
-import 'package:marib/ui/screens/cart/components/delivery_and_payment/payment_methods_section.dart';
+import 'payment_methods_section.dart';
 
 /// تبويب يحتوي على خيارات الدفع المتاحة بما في ذلك البنوك والمحفظة.
 class CartPaymentMethodsTab extends StatelessWidget {
@@ -28,7 +28,8 @@ class CartPaymentMethodsTab extends StatelessWidget {
     required this.allowPayNow,
     required this.allowPayOnDelivery,
     required this.payOnDeliverySelected,
-    this.deliveryPaymentTimingOptions = const <DeliveryPaymentTimingOption>[],
+    this.deliveryPaymentTimingOptions =
+    const <DeliveryPaymentTimingOption>[],
     this.selectedDeliveryPaymentTiming,
     this.onSelectDeliveryPaymentTiming,
     this.initiallyExpanded = true,
@@ -73,6 +74,7 @@ class CartPaymentMethodsTab extends StatelessWidget {
   /// رمز عملة الطلب الحالية، بعد التطبيع إن وجد.
   final String? orderCurrency;
 
+
   /// إجمالي المبلغ المطلوب للدفع.
   final double requiredAmount;
 
@@ -87,7 +89,6 @@ class CartPaymentMethodsTab extends StatelessWidget {
 
   /// تحديد حالة التوسع المبدئي للتبويب.
   final bool initiallyExpanded;
-
   /// خيارات توقيت الدفع المتاحة للتحديد.
   final List<DeliveryPaymentTimingOption> deliveryPaymentTimingOptions;
 
@@ -96,6 +97,7 @@ class CartPaymentMethodsTab extends StatelessWidget {
 
   /// رد الفعل عند اختيار توقيت دفع مختلف.
   final ValueChanged<String>? onSelectDeliveryPaymentTiming;
+
 
   @override
   Widget build(BuildContext context) {
@@ -129,8 +131,7 @@ class CartPaymentMethodsTab extends StatelessWidget {
             'الدفع',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
-          childrenPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          childrenPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           children: [
             if (deliveryPaymentTimingOptions.isNotEmpty) ...[
               DeliveryPaymentTimingSelector(

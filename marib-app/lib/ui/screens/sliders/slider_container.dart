@@ -2,13 +2,14 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:marib/ui/screens/sliders/slider_component.dart';
-import 'package:marib/ui/screens/sliders/slider_shimmer.dart';
+import 'slider_component.dart';
+import 'slider_shimmer.dart';
 import 'package:marib/data/model/home_slider.dart';
 
 import 'package:marib/data/cubits/slider_cubit.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
 import 'dart:async';
+
 
 class SliderWidget extends StatefulWidget {
   final String interfaceType;
@@ -50,16 +51,17 @@ class _SliderWidgetState extends State<SliderWidget> {
   void _requestSlider({bool forceRefresh = false}) {
     if (_hasRequestedCurrentInterface && !forceRefresh) return;
     final String? normalized =
-        SliderInterfaceMapper.normalize(widget.interfaceType);
+    SliderInterfaceMapper.normalize(widget.interfaceType);
     unawaited(
       context.read<SliderCubit>().fetchSlider(
-            context,
-            interfaceType: normalized ?? widget.interfaceType,
-            forceRefresh: forceRefresh,
-          ),
+        context,
+        interfaceType: normalized ?? widget.interfaceType,
+        forceRefresh: forceRefresh,
+      ),
     );
     _hasRequestedCurrentInterface = true;
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -83,8 +85,7 @@ class _SliderWidgetState extends State<SliderWidget> {
       builder: (context, state) {
         if (state is SliderFetchInProgress) {
           final Widget? cached = _buildFromCache();
-          return cached ?? const SliderShimmer();
-        }
+          return cached ?? const SliderShimmer();        }
         if (state is SliderFallbackState) {
           final String display = state.display.toLowerCase();
           if (display == 'shimmer') {
@@ -122,6 +123,9 @@ class _SliderWidgetState extends State<SliderWidget> {
       },
     );
   }
+
+
+
 
   void _cacheSliderList(List<HomeSlider> sliders) {
     if (sliders.isEmpty) {
@@ -191,10 +195,10 @@ class _SliderWidgetState extends State<SliderWidget> {
                   imageUrl,
                   fit: BoxFit.cover,
                   errorBuilder: (
-                    BuildContext context,
-                    Object error,
-                    StackTrace? stackTrace,
-                  ) {
+                      BuildContext context,
+                      Object error,
+                      StackTrace? stackTrace,
+                      ) {
                     return Container(
                       color: Colors.grey.shade200,
                       alignment: Alignment.center,
@@ -235,7 +239,9 @@ class _StaticSliderIndicator extends StatelessWidget {
             width: isActive ? activeWidth : inactiveWidth,
             height: height,
             decoration: BoxDecoration(
-              color: isActive ? const Color(0xFFEB5924) : Colors.grey.shade400,
+              color: isActive
+                  ? const Color(0xFFEB5924)
+                  : Colors.grey.shade400,
               borderRadius: BorderRadius.circular(height),
             ),
           ),
@@ -243,4 +249,8 @@ class _StaticSliderIndicator extends StatelessWidget {
       }),
     );
   }
+
+
+
+
 }

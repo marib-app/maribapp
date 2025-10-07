@@ -2,8 +2,7 @@ import 'package:marib/utils/api.dart';
 import 'package:marib/data/model/user_model.dart'; // Assuming UserModel can be reused or adapted
 
 class SellerRepository {
-  Future<List<UserModel>> fetchSellers(
-      {required int accountType, int? page}) async {
+  Future<List<UserModel>> fetchSellers({required int accountType, int? page}) async {
     try {
       Map<String, String> params = {
         "account_type": accountType.toString(),
@@ -35,10 +34,11 @@ class SellerRepository {
         }
 
         return sellersData.map((e) => UserModel.fromJson(e)).toList();
+
+
       } else {
         final dynamic errorCode = response['code'];
-        final dynamic errorMessage =
-            response['message'] ?? 'Unknown error occurred';
+        final dynamic errorMessage = response['message'] ?? 'Unknown error occurred';
         final String formattedMessage = errorCode != null
             ? 'Error $errorCode: $errorMessage'
             : errorMessage.toString();

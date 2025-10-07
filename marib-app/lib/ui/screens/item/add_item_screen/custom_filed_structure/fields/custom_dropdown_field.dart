@@ -7,6 +7,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/ui_utils.dart';
 
+
 import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/custom_field.dart';
 
 /// =====================
@@ -50,7 +51,7 @@ class CustomFieldDropdown extends CustomField {
         : null;
     final dynamic image = parameters['image'];
     final List<dynamic> values =
-        (parameters['values'] as List<dynamic>? ?? const []);
+    (parameters['values'] as List<dynamic>? ?? const []);
 
     final bool requiredField = parameters['required'] == 1;
 
@@ -113,8 +114,7 @@ class CustomFieldDropdownView extends StatefulWidget {
   final ValueChanged<dynamic> onChanged;
 
   @override
-  State<CustomFieldDropdownView> createState() =>
-      _CustomFieldDropdownViewState();
+  State<CustomFieldDropdownView> createState() => _CustomFieldDropdownViewState();
 }
 
 class _CustomFieldDropdownViewState extends State<CustomFieldDropdownView> {
@@ -160,16 +160,15 @@ class _CustomFieldDropdownViewState extends State<CustomFieldDropdownView> {
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               width: 1.2,
-              color:
-                  _focus.hasFocus ? context.color.territoryColor : borderColor,
+              color: _focus.hasFocus ? context.color.territoryColor : borderColor,
             ),
             boxShadow: _focus.hasFocus
                 ? [
-                    BoxShadow(
-                      blurRadius: 8,
-                      color: context.color.territoryColor.withOpacity(.07),
-                    )
-                  ]
+              BoxShadow(
+                blurRadius: 8,
+                color: context.color.territoryColor.withOpacity(.07),
+              )
+            ]
                 : null,
           ),
           child: Padding(
@@ -191,7 +190,7 @@ class _CustomFieldDropdownViewState extends State<CustomFieldDropdownView> {
               /// القيمة المعروضة:
               /// - null = يعرض الـ hint
               /// - قيمة نصية = يعرض القيمة المختارة
-              initialValue: (hasSelection ? widget.selected : null),
+              value: (hasSelection ? widget.selected : null),
 
               isExpanded: true,
               dropdownColor: context.color.secondaryColor,
@@ -302,16 +301,16 @@ class _CustomFieldDropdownViewState extends State<CustomFieldDropdownView> {
           child: (!widget.requiredField || hasSelection)
               ? const SizedBox.shrink(key: ValueKey('noerr'))
               : Padding(
-                  key: const ValueKey('err'),
-                  padding: const EdgeInsetsDirectional.only(top: 6.0, start: 8),
-                  child: Text(
-                    "هذا الحقل مطلوب",
-                    style: TextStyle(
-                      fontSize: context.font.small,
-                      color: context.color.error,
-                    ),
-                  ),
-                ),
+            key: const ValueKey('err'),
+            padding: const EdgeInsetsDirectional.only(top: 6.0, start: 8),
+            child: Text(
+              "هذا الحقل مطلوب",
+              style: TextStyle(
+                fontSize: context.font.small,
+                color: context.color.error,
+              ),
+            ),
+          ),
         ),
       ],
     );
@@ -384,7 +383,9 @@ class _DropdownHeader extends StatelessWidget {
                   notes!,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                ).size(context.font.small).color(context.color.textLightColor),
+                )
+                    .size(context.font.small)
+                    .color(context.color.textLightColor),
               ],
             ],
           ),

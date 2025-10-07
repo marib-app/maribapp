@@ -20,6 +20,8 @@ import 'package:marib/data/model/cart/cart_discount.dart';
 import 'package:marib/data/model/orders/user_order.dart';
 import 'package:marib/data/repositories/orders/orders_repository.dart';
 
+
+
 /// Repository responsible for collecting all checkout metadata required by the
 /// delivery & payment flow. It orchestrates calls to:
 ///
@@ -30,15 +32,19 @@ import 'package:marib/data/repositories/orders/orders_repository.dart';
 /// The goal is to keep the UI in sync with the server so changes to delivery
 /// pricing or payment accounts appear immediately.
 
+
 typedef _ApiPostHandler = Future<Map<String, dynamic>> Function({
-  required String url,
-  dynamic parameter,
-  Options? options,
-  bool? useBaseUrl,
-  Map<String, dynamic>? extraHeaders,
+required String url,
+dynamic parameter,
+Options? options,
+bool? useBaseUrl,
+Map<String, dynamic>? extraHeaders,
 });
 
+
 class CheckoutRepository {
+
+
   CheckoutRepository({
     CartRepository? cartRepository,
     DeliveryPricingService? deliveryPricingService,
@@ -46,12 +52,14 @@ class CheckoutRepository {
     CartShippingQuoteService? shippingQuoteService,
     _ApiPostHandler? apiPostHandler,
     AddressesRepository? addressesRepository,
+
+
   })  : _shippingQuoteService =
-            shippingQuoteService ?? CartShippingQuoteService.shared,
+      shippingQuoteService ?? CartShippingQuoteService.shared,
         _cartRepository = cartRepository ??
             CartRepository(
               shippingQuoteService:
-                  shippingQuoteService ?? CartShippingQuoteService.shared,
+              shippingQuoteService ?? CartShippingQuoteService.shared,
             ),
         _deliveryPricingService =
             deliveryPricingService ?? DeliveryPricingService(),
@@ -64,10 +72,12 @@ class CheckoutRepository {
         );
   }
 
+
   final DeliveryPricingService _deliveryPricingService;
   final WalletRepository _walletRepository;
   final CartShippingQuoteService _shippingQuoteService;
   final _ApiPostHandler _apiPostHandler;
+
 
   final CartRepository _cartRepository;
   late final AddressesRepository _addressesRepository;
@@ -75,6 +85,7 @@ class CheckoutRepository {
   String? _lastKnownDepartment;
   int? _lastKnownAddressId;
   bool _forceRefreshNextShippingQuote = false;
+
 
   Future<CheckoutResult> fetchCheckout({
     String? department,
@@ -84,6 +95,7 @@ class CheckoutRepository {
     String? deliveryPaymentTiming,
     Map<String, dynamic>? shippingPaymentOverride,
   }) async {
+
     final String? departmentCode = normalizeDeliveryDepartment(department);
     final String? trackedDepartment = departmentCode ?? department;
 
@@ -98,6 +110,7 @@ class CheckoutRepository {
         FeatureFlags.deliveryPricingEnabled && addressId != null;
 
     final Future<CheckoutAddress?> fallbackAddressFuture = addressId != null
+
         ? (preloadedAddress ?? _fetchAddressFromRepository(addressId))
         : (preloadedAddress ?? Future<CheckoutAddress?>.value(null));
 
@@ -107,13 +120,15 @@ class CheckoutRepository {
     );
 
     final Future<CheckoutShippingQuote?> quoteFuture = shouldRequestQuote
+
         ? _fetchShippingQuote(
-            department: department,
-            addressId: addressId,
-            forceRefresh: _consumeForceRefreshFlag(),
-            depositEnabled: depositEnabled,
-            extra: quoteExtras,
-          )
+      department: department,
+      addressId: addressId,
+      forceRefresh: _consumeForceRefreshFlag(),
+      depositEnabled: depositEnabled,
+      extra: quoteExtras,
+
+    )
         : Future.value(null);
 
     final walletFuture = _fetchWalletSummary();
@@ -128,22 +143,27 @@ class CheckoutRepository {
     final CheckoutAddress? fallbackAddress = await fallbackAddressFuture;
 
     final Map<String, dynamic>? paymentData =
-        _extractMap(paymentSettings, candidates: const [
+    _extractMap(paymentSettings, candidates: const [
       'data',
       'payment_settings',
       'settings',
       'result',
     ]);
 
-    final CheckoutDeliveryInfo? deliveryInfo =
-        FeatureFlags.deliveryPricingEnabled
-            ? _parseDeliveryInfoFromQuote(
-                shippingQuote,
-                fallbackDepartment: departmentCode ?? department,
-              )
-            : null;
+    final CheckoutDeliveryInfo? deliveryInfo = FeatureFlags.deliveryPricingEnabled
 
-    final CheckoutAddress? address = _parseCheckoutAddress(
+        ? _parseDeliveryInfoFromQuote(
+      shippingQuote,
+      fallbackDepartment: departmentCode ?? department,
+    )
+
+
+        : null;
+
+
+
+    final CheckoutAddress? address =
+        _parseCheckoutAddress(
           shippingQuote?.address ??
               shippingQuote?.delivery ??
               shippingQuote?.deliveryQuote ??
@@ -151,10 +171,10 @@ class CheckoutRepository {
               paymentData ??
               fallbackAddress?.raw,
         ) ??
-        fallbackAddress;
+            fallbackAddress;
 
     final List<CheckoutBank> banks =
-        _parseBanks(paymentData ?? paymentSettings);
+    _parseBanks(paymentData ?? paymentSettings);
 
     return CheckoutResult(
       cartItems: cartItems,
@@ -169,6 +189,7 @@ class CheckoutRepository {
     );
   }
 
+
   Future<WalletSummary?> _fetchWalletSummary() async {
     try {
       return await _walletRepository.fetchSummary();
@@ -181,6 +202,7 @@ class CheckoutRepository {
     return _fetchAddressFromRepository(addressId);
   }
 
+
   Future<CheckoutDeliveryInfo?> refreshDeliveryInfo({
     String? department,
     int? addressId,
@@ -188,9 +210,12 @@ class CheckoutRepository {
     String? deliveryPaymentTiming,
     Map<String, dynamic>? shippingPaymentOverride,
   }) async {
+
+
     if (!FeatureFlags.deliveryPricingEnabled) {
       return null;
     }
+
 
     final String? departmentCode = normalizeDeliveryDepartment(department);
     final Map<String, dynamic>? quoteExtras = _buildShippingQuoteExtras(
@@ -201,9 +226,11 @@ class CheckoutRepository {
     final CheckoutShippingQuote? quote = await _fetchShippingQuote(
       department: departmentCode,
       addressId: addressId,
+
       forceRefresh: true,
       depositEnabled: depositEnabled,
       extra: quoteExtras,
+
     );
     return _parseDeliveryInfoFromQuote(
       quote,
@@ -235,6 +262,8 @@ class CheckoutRepository {
     );
   }
 
+
+
   Future<OrderSubmissionResult> submitOrder({
     required List<Cart> cartItems,
     required Map<String, dynamic>? address,
@@ -248,27 +277,25 @@ class CheckoutRepository {
     required String deliveryPaymentTiming,
     String? deliveryPaymentNote,
     bool depositEnabled = false,
+
   }) async {
     final List<Map<String, dynamic>> items = cartItems.map((Cart item) {
       return <String, dynamic>{
         'item_id': item.id,
         'quantity': item.quantity,
-        if (item.selectedCustomFields != null &&
-            item.selectedCustomFields!.isNotEmpty)
+        if (item.selectedCustomFields != null && item.selectedCustomFields!.isNotEmpty)
           'selected_custom_fields': item.selectedCustomFields,
         if (item.weight != null) 'weight': item.weight,
         if (item.vendorLat != null) 'vendor_lat': item.vendorLat,
         if (item.vendorLng != null) 'vendor_lng': item.vendorLng,
         if (item.section.isNotEmpty) 'section': item.section,
         if (item.variantId != null) 'variant_id': item.variantId,
-        if (item.variantAttributes != null &&
-            item.variantAttributes!.isNotEmpty)
+        if (item.variantAttributes != null && item.variantAttributes!.isNotEmpty)
           'variant_attributes': item.variantAttributes,
         if (item.stockSnapshot != null && item.stockSnapshot!.isNotEmpty)
           'stock_snapshot': item.stockSnapshot,
         if (item.unitPrice != null) 'unit_price': item.unitPrice,
-        if (item.unitPriceLocked != null)
-          'unit_price_locked': item.unitPriceLocked,
+        if (item.unitPriceLocked != null) 'unit_price_locked': item.unitPriceLocked,
         if (item.currency != null && item.currency!.trim().isNotEmpty)
           'currency': item.currency!.trim(),
       };
@@ -276,21 +303,27 @@ class CheckoutRepository {
 
     final String? departmentCode = normalizeDeliveryDepartment(department);
 
+
     final String? trimmedPaymentMethod = paymentMethodName?.trim();
     final String? apiPaymentMethod =
-        trimmedPaymentMethod != null && trimmedPaymentMethod.isNotEmpty
-            ? ManualPaymentService.paymentMethodForApi(trimmedPaymentMethod)
-            : null;
+    trimmedPaymentMethod != null && trimmedPaymentMethod.isNotEmpty
+        ? ManualPaymentService.paymentMethodForApi(trimmedPaymentMethod)
+        : null;
 
     final Map<String, dynamic> payload = <String, dynamic>{
       'items': jsonEncode(items),
       if (departmentCode != null) 'department': departmentCode,
       if (addressId != null) 'address_id': addressId,
+
       'delivery_payment_timing': deliveryPaymentTiming,
       if (deliveryPaymentNote != null && deliveryPaymentNote.trim().isNotEmpty)
         'delivery_user_note': deliveryPaymentNote.trim(),
+
+
       'deposit_enabled': depositEnabled ? 1 : 0,
+
       if (apiPaymentMethod != null) 'payment_method': apiPaymentMethod,
+
       if (subtotal != null) 'subtotal': subtotal,
     };
 
@@ -299,21 +332,19 @@ class CheckoutRepository {
     }
 
     final String? deliveryDepartmentCode =
-        normalizeDeliveryDepartment(deliveryInfo?.department);
+    normalizeDeliveryDepartment(deliveryInfo?.department);
+
 
     final Map<String, dynamic> delivery = <String, dynamic>{
       if (deliveryDepartmentCode != null) 'department': deliveryDepartmentCode,
-      if (deliveryInfo?.distanceKm != null)
-        'distance_km': deliveryInfo!.distanceKm,
+
+      if (deliveryInfo?.distanceKm != null) 'distance_km': deliveryInfo!.distanceKm,
       if (deliveryInfo?.fee != null) 'fee': deliveryInfo!.fee,
-      if (deliveryInfo?.feeDisplay != null &&
-          deliveryInfo!.feeDisplay!.trim().isNotEmpty)
+      if (deliveryInfo?.feeDisplay != null && deliveryInfo!.feeDisplay!.trim().isNotEmpty)
         'fee_display': deliveryInfo.feeDisplay!.trim(),
-      if (deliveryPriceDisplay != null &&
-          deliveryPriceDisplay.trim().isNotEmpty)
+      if (deliveryPriceDisplay != null && deliveryPriceDisplay.trim().isNotEmpty)
         'selected_fee_display': deliveryPriceDisplay.trim(),
-      if (deliveryInfo?.currency != null &&
-          deliveryInfo!.currency!.trim().isNotEmpty)
+      if (deliveryInfo?.currency != null && deliveryInfo!.currency!.trim().isNotEmpty)
         'currency': deliveryInfo.currency!.trim(),
       if (deliveryInfo?.userCoordinates?.lat != null)
         'user_lat': deliveryInfo!.userCoordinates!.lat,
@@ -331,6 +362,7 @@ class CheckoutRepository {
 
     final Map<String, dynamic> payment = <String, dynamic>{
       if (apiPaymentMethod != null) 'method': apiPaymentMethod,
+
       if (paymentBank?.id != null) 'bank_id': paymentBank!.id,
       if (paymentBank?.name.isNotEmpty == true) 'bank_name': paymentBank!.name,
       if (paymentBank?.accountNumber?.isNotEmpty == true)
@@ -342,6 +374,7 @@ class CheckoutRepository {
     }
 
     final Map<String, dynamic> response = await _apiPostHandler(
+
       url: Api.createOrderApi,
       parameter: payload,
       useBaseUrl: true,
@@ -360,12 +393,13 @@ class CheckoutRepository {
       details = null;
     }
 
-    final Map<String, dynamic>? orderPayload = details?.order.raw ??
-        _extractMap(normalized, candidates: const <String>[
-          'order',
-          'data',
-          'result',
-        ]);
+    final Map<String, dynamic>? orderPayload =
+        details?.order.raw ??
+            _extractMap(normalized, candidates: const <String>[
+              'order',
+              'data',
+              'result',
+            ]);
 
     final Map<String, dynamic> orderSource = orderPayload ?? normalized;
 
@@ -396,18 +430,30 @@ class CheckoutRepository {
     );
   }
 
+
+
+
+
+
+
+
+
   Future<CheckoutShippingQuote?> _fetchShippingQuote({
     String? department,
     int? addressId,
     bool depositEnabled = false,
+
     bool forceRefresh = false,
     Map<String, dynamic>? extra,
+
+
   }) async {
     if (!FeatureFlags.deliveryPricingEnabled) {
       return null;
     }
 
     final String? trimmedDepartment = normalizeDeliveryDepartment(department);
+
 
     try {
       return await _shippingQuoteService.quoteShipping(
@@ -416,6 +462,7 @@ class CheckoutRepository {
         forceRefresh: forceRefresh,
         depositEnabled: depositEnabled,
         extra: extra,
+
       );
     } on CartShippingQuoteException catch (error) {
       if (error.statusCode == 404) {
@@ -425,10 +472,12 @@ class CheckoutRepository {
     }
   }
 
+
+
   Future<CheckoutAddress?> _fetchAddressFromRepository(int addressId) async {
     try {
       final List<Map<String, dynamic>> addresses =
-          await _addressesRepository.fetchAddresses();
+      await _addressesRepository.fetchAddresses();
       for (final Map<String, dynamic> entry in addresses) {
         final CheckoutAddress? parsed = _parseCheckoutAddress(entry);
         if (parsed?.id == addressId) {
@@ -440,6 +489,7 @@ class CheckoutRepository {
     }
     return null;
   }
+
 
   Map<String, dynamic>? _buildShippingQuoteExtras({
     String? deliveryPaymentTiming,
@@ -456,8 +506,8 @@ class CheckoutRepository {
 
     if (paymentOverride != null && paymentOverride.isNotEmpty) {
       final Map<String, dynamic> sanitized =
-          Map<String, dynamic>.from(paymentOverride)
-            ..removeWhere((String key, dynamic value) => value == null);
+      Map<String, dynamic>.from(paymentOverride)
+        ..removeWhere((String key, dynamic value) => value == null);
 
       if (sanitized.isNotEmpty) {
         extras['payment'] = jsonEncode(sanitized);
@@ -469,6 +519,8 @@ class CheckoutRepository {
 
     return extras.isEmpty ? null : extras;
   }
+
+
 
   void _handleShippingDestinationChange({
     String? department,
@@ -492,10 +544,12 @@ class CheckoutRepository {
     return shouldForce;
   }
 
+
+
   CheckoutDeliveryInfo? _parseDeliveryInfoFromQuote(
-    CheckoutShippingQuote? quote, {
-    String? fallbackDepartment,
-  }) {
+      CheckoutShippingQuote? quote, {
+        String? fallbackDepartment,
+      }) {
     if (quote == null) {
       return null;
     }
@@ -525,6 +579,7 @@ class CheckoutRepository {
 
     return null;
   }
+
 
   CheckoutDeliveryInfo? _parseDeliveryInfo(dynamic payload,
       {String? department}) {
@@ -559,13 +614,13 @@ class CheckoutRepository {
     ]));
 
     final String? feeDisplay = _asString(_firstValue(map, const [
-          ['delivery_fee_formatted'],
-          ['fee_display'],
-          ['price_display'],
-          ['formatted_price'],
-          ['formatted_fee'],
-          ['delivery_fee_text'],
-        ])) ??
+      ['delivery_fee_formatted'],
+      ['fee_display'],
+      ['price_display'],
+      ['formatted_price'],
+      ['formatted_fee'],
+      ['delivery_fee_text'],
+    ])) ??
         (feeValue != null ? feeValue.toString() : null);
 
     final String? currency = _asString(_firstValue(map, const [
@@ -575,7 +630,7 @@ class CheckoutRepository {
     ]));
 
     final CheckoutCoordinates? userCoordinates =
-        _parseCoordinates(_firstValue(map, const [
+    _parseCoordinates(_firstValue(map, const [
       ['user_coordinates'],
       ['userLocation'],
       ['user'],
@@ -585,7 +640,7 @@ class CheckoutRepository {
     ]));
 
     final CheckoutCoordinates? vendorCoordinates =
-        _parseCoordinates(_firstValue(map, const [
+    _parseCoordinates(_firstValue(map, const [
       ['vendor_coordinates'],
       ['vendorLocation'],
       ['vendor'],
@@ -594,7 +649,7 @@ class CheckoutRepository {
     ]));
 
     final List<CheckoutDeliveryTier> tiers =
-        _parseTiers(_firstValue(map, const [
+    _parseTiers(_firstValue(map, const [
       ['tiers'],
       ['size_tiers'],
       ['sizes'],
@@ -619,7 +674,8 @@ class CheckoutRepository {
   CheckoutAddress? _parseCheckoutAddress(dynamic payload) {
     final Map<String, dynamic>? envelope = _mapify(payload);
 
-    final Map<String, dynamic>? map = _extractMap(payload, candidates: const [
+    final Map<String, dynamic>? map =
+    _extractMap(payload, candidates: const [
       'user',
       'customer',
       'recipient',
@@ -646,6 +702,7 @@ class CheckoutRepository {
       ['full_address'],
     ]));
 
+
     const List<List<String>> namePaths = [
       ['name'],
       ['contact_name'],
@@ -661,12 +718,14 @@ class CheckoutRepository {
     String? name;
     for (final Map<String, dynamic>? scope in [map, envelope]) {
       if (scope == null) continue;
-      final String? candidate = _asString(_firstValue(scope, namePaths));
+      final String? candidate =
+      _asString(_firstValue(scope, namePaths));
       if (candidate != null && candidate.trim().isNotEmpty) {
         name = candidate;
         break;
       }
     }
+
 
     final String? description = _asString(_firstValue(map, const [
       ['description'],
@@ -692,7 +751,8 @@ class CheckoutRepository {
     String? phone;
     for (final Map<String, dynamic>? scope in [map, envelope]) {
       if (scope == null) continue;
-      final String? candidate = _asString(_firstValue(scope, phonePaths));
+      final String? candidate =
+      _asString(_firstValue(scope, phonePaths));
       if (candidate != null && candidate.trim().isNotEmpty) {
         phone = candidate;
         break;
@@ -714,26 +774,29 @@ class CheckoutRepository {
       coordinates: coordinates,
       raw: {
         ...?envelope,
-        ...map,
+        ...?map,
       },
     );
   }
 
   List<CheckoutBank> _parseBanks(dynamic payload) {
-    final Iterable<Map<String, dynamic>> candidates = _extractBankMaps(payload);
+    final Iterable<Map<String, dynamic>> candidates =
+    _extractBankMaps(payload);
 
     final List<CheckoutBank> banks = candidates
         .map(_bankFromMap)
         .where((bank) => bank.name.isNotEmpty)
         .toList();
 
+
+
     final Map<String, dynamic>? payloadMap = _mapify(payload);
     final CheckoutBank? eastYemenBank = _parseEastYemenBank(payloadMap);
     if (eastYemenBank != null &&
-        !banks
-            .any((bank) => bank.paymentMethod == eastYemenBank.paymentMethod)) {
+        !banks.any((bank) => bank.paymentMethod == eastYemenBank.paymentMethod)) {
       banks.add(eastYemenBank);
     }
+
 
     banks.sort((a, b) {
       final int orderA = _asInt(a.raw?['display_order']) ?? 0;
@@ -750,7 +813,7 @@ class CheckoutRepository {
     Map<String, dynamic>? normalize(dynamic source) {
       if (source is Map<String, dynamic>) return source;
       if (source is Map) {
-        return Map<String, dynamic>.from(source);
+        return Map<String, dynamic>.from(source as Map);
       }
       return null;
     }
@@ -796,20 +859,23 @@ class CheckoutRepository {
 
   CheckoutBank _bankFromMap(Map<String, dynamic> map) {
     final String name = _asString(_firstValue(map, const [
-          ['bank_name'],
-          ['name'],
-          ['title'],
-          ['label'],
-          ['payment_method_name'],
-        ]))?.trim() ??
+      ['bank_name'],
+      ['name'],
+      ['title'],
+      ['label'],
+      ['payment_method_name'],
+    ]))?.trim() ??
         '';
 
+
     final String paymentMethod = _asString(_firstValue(map, const [
-          ['payment_method'],
-          ['method'],
-          ['gateway'],
-        ]))?.trim() ??
+      ['payment_method'],
+      ['method'],
+      ['gateway'],
+    ]))?.trim() ??
         'manual_bank';
+
+
 
     final String? accountName = _asString(_firstValue(map, const [
       ['account_name'],
@@ -853,7 +919,9 @@ class CheckoutRepository {
     return CheckoutBank(
       id: id,
       name: name,
+
       paymentMethod: paymentMethod.isEmpty ? 'manual_bank' : paymentMethod,
+
       accountName: accountName,
       accountNumber: accountNumber,
       iban: iban,
@@ -864,13 +932,13 @@ class CheckoutRepository {
     );
   }
 
+
   CheckoutBank? _parseEastYemenBank(Map<String, dynamic>? payload) {
     if (payload == null || payload.isEmpty) {
       return null;
     }
 
-    final Map<String, dynamic>? extras =
-        _extractMap(payload, candidates: const [
+    final Map<String, dynamic>? extras = _extractMap(payload, candidates: const [
       'extras',
       'extra',
       'additional',
@@ -887,12 +955,12 @@ class CheckoutRepository {
     }
 
     final bool enabled = _asBool(_firstValue(config, const [
-          ['enabled'],
-          ['status'],
-          ['is_enabled'],
-          ['isEnabled'],
-          ['active'],
-        ])) ??
+      ['enabled'],
+      ['status'],
+      ['is_enabled'],
+      ['isEnabled'],
+      ['active'],
+    ])) ??
         false;
 
     if (!enabled) {
@@ -900,11 +968,11 @@ class CheckoutRepository {
     }
 
     final String name = _asString(_firstValue(config, const [
-          ['display_name'],
-          ['name'],
-          ['title'],
-          ['label'],
-        ]))?.trim() ??
+      ['display_name'],
+      ['name'],
+      ['title'],
+      ['label'],
+    ]))?.trim() ??
         '';
 
     final String resolvedName = name.isEmpty ? 'بنك الشرق اليمني' : name;
@@ -972,6 +1040,7 @@ class CheckoutRepository {
     );
   }
 
+
   CheckoutCoordinates? _parseCoordinates(dynamic payload) {
     final Map<String, dynamic>? map = _mapify(payload);
     if (map == null || map.isEmpty) {
@@ -1005,6 +1074,7 @@ class CheckoutRepository {
     final double? lat = _asDouble(_firstValue(map, latPaths));
     final double? lng = _asDouble(_firstValue(map, lngPaths));
 
+
     if (lat == null && lng == null) {
       return null;
     }
@@ -1030,9 +1100,9 @@ class CheckoutRepository {
       if (map == null) return const <CheckoutDeliveryTier>[];
       return map.entries
           .map((entry) => _tierFromMap({
-                'key': entry.key,
-                'price': entry.value,
-              }))
+        'key': entry.key,
+        'price': entry.value,
+      }))
           .toList();
     }
 
@@ -1041,20 +1111,20 @@ class CheckoutRepository {
 
   CheckoutDeliveryTier _tierFromMap(Map<String, dynamic> map) {
     final String key = _asString(_firstValue(map, const [
-          ['key'],
-          ['id'],
-          ['size_key'],
-          ['code'],
-        ]))?.trim() ??
+      ['key'],
+      ['id'],
+      ['size_key'],
+      ['code'],
+    ]))?.trim() ??
         '';
 
     final String label = _asString(_firstValue(map, const [
-          ['label'],
-          ['name'],
-          ['title'],
-          ['size'],
-          ['description'],
-        ]))?.trim() ??
+      ['label'],
+      ['name'],
+      ['title'],
+      ['size'],
+      ['description'],
+    ]))?.trim() ??
         key;
 
     final String? description = _asString(_firstValue(map, const [
@@ -1072,11 +1142,11 @@ class CheckoutRepository {
     ]));
 
     final String? priceDisplay = _asString(_firstValue(map, const [
-          ['price_display'],
-          ['formatted_price'],
-          ['display'],
-          ['text'],
-        ])) ??
+      ['price_display'],
+      ['formatted_price'],
+      ['display'],
+      ['text'],
+    ])) ??
         (price != null ? price.toString() : null);
 
     return CheckoutDeliveryTier(
@@ -1104,6 +1174,7 @@ class CheckoutRepository {
       }
     }
 
+
     for (final String wrapper in const <String>['data', 'result', 'payload']) {
       if (!normalized.containsKey(wrapper)) continue;
       final Map<String, dynamic>? nested = _extractMap(
@@ -1114,6 +1185,7 @@ class CheckoutRepository {
         return nested;
       }
     }
+
 
     return normalized;
   }
@@ -1142,7 +1214,7 @@ class CheckoutRepository {
       return source;
     }
     if (source is Map) {
-      return Map<String, dynamic>.from(source);
+      return Map<String, dynamic>.from(source as Map);
     }
     return null;
   }
@@ -1174,6 +1246,7 @@ class CheckoutRepository {
     final num? result = _asNum(value);
     return result?.toInt();
   }
+
 
   bool? _asBool(dynamic value) {
     if (value == null) return null;

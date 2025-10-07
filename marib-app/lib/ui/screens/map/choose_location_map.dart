@@ -248,7 +248,7 @@ class _ChooseLocationMapState extends State<ChooseLocationMap> {
         setState(() {});
 
         return true;
-      },*/ /*
+      },*//*
 
       child: Scaffold(
         bottomNavigationBar: SizedBox(

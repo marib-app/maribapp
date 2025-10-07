@@ -112,9 +112,9 @@ class ServiceRequestsCubit extends Cubit<ServiceRequestsState> {
   }
 
   ServiceRequestsLoadSuccess _insert(
-    ServiceRequestsLoadSuccess current,
-    ServiceRequestModel request,
-  ) {
+      ServiceRequestsLoadSuccess current,
+      ServiceRequestModel request,
+      ) {
     final normalizedStatus = _normalizeStatus(request.status);
 
     List<ServiceRequestModel> clone(List<ServiceRequestModel> input) =>

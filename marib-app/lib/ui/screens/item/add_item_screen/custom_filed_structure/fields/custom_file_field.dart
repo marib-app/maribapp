@@ -101,8 +101,8 @@ class CustomFileField extends CustomField {
       didChange(mf); // مرر القيمة للفالديتور/الفورم
       AbstractField.files["custom_field_files[${parameters['id']}]"] = mf;
 
-      final took = ((DateTime.now().millisecondsSinceEpoch - t0) / 1000)
-          .toStringAsFixed(1);
+      final took =
+      ((DateTime.now().millisecondsSinceEpoch - t0) / 1000).toStringAsFixed(1);
       HelperUtils.showSnackBarMessage(context, "تم اختيار الملف (${took}ث)");
     } catch (_) {
       HelperUtils.showSnackBarMessage(context, "حدث خطأ أثناء اختيار الملف");
@@ -153,11 +153,11 @@ class CustomFileField extends CustomField {
 
   /// معاينة صورة بكامل الشاشة (موحّدة ومريحة)
   void _showImageViewer(
-    BuildContext ctx,
-    String localOrRemotePath, {
-    String? fileName,
-    String? sizeText,
-  }) {
+      BuildContext ctx,
+      String localOrRemotePath, {
+        String? fileName,
+        String? sizeText,
+      }) {
     showGeneralDialog(
       context: ctx,
       barrierColor: Colors.black87,
@@ -176,10 +176,8 @@ class CustomFileField extends CustomField {
                       minScale: 0.5,
                       maxScale: 5,
                       child: localOrRemotePath.startsWith('http')
-                          ? Image.network(localOrRemotePath,
-                              fit: BoxFit.contain)
-                          : Image.file(File(localOrRemotePath),
-                              fit: BoxFit.contain),
+                          ? Image.network(localOrRemotePath, fit: BoxFit.contain)
+                          : Image.file(File(localOrRemotePath), fit: BoxFit.contain),
                     ),
                   ),
                 ),
@@ -203,8 +201,7 @@ class CustomFileField extends CustomField {
                       children: [
                         IconButton(
                           onPressed: () => Navigator.of(ctx).pop(),
-                          icon:
-                              const Icon(Icons.arrow_back, color: Colors.white),
+                          icon: const Icon(Icons.arrow_back, color: Colors.white),
                           tooltip: "رجوع",
                         ),
                         const SizedBox(width: 8),
@@ -248,8 +245,7 @@ class CustomFileField extends CustomField {
                             child: Text(
                               [
                                 if (fileName?.isNotEmpty ?? false) fileName!,
-                                if (sizeText?.isNotEmpty ?? false)
-                                  " • $sizeText",
+                                if (sizeText?.isNotEmpty ?? false) " • $sizeText",
                               ].join(""),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -344,7 +340,7 @@ class CustomFileFieldView extends StatefulWidget {
 
   /// فتح المعاينة الكاملة (يمرّرها المنطق لتوحيد سلوك العرض)
   final void Function(String path, String? fileName, String? sizeText)
-      onOpenImage;
+  onOpenImage;
 
   @override
   State<CustomFileFieldView> createState() => _CustomFileFieldViewState();
@@ -399,38 +395,38 @@ class _CustomFileFieldViewState extends State<CustomFileFieldView> {
                   child: Center(
                     child: widget.busy
                         ? Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: context.color.territoryColor,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text("جاري التحضير…")
-                                  .size(context.font.large)
-                                  .color(
-                                    context.color.textDefaultColor
-                                        .withOpacity(.6),
-                                  ),
-                            ],
-                          )
-                        : Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.upload_file),
-                              const SizedBox(width: 6),
-                              Text("addFile".translate(context))
-                                  .size(context.font.large)
-                                  .color(
-                                    context.color.textDefaultColor
-                                        .withOpacity(.6),
-                                  ),
-                            ],
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: context.color.territoryColor,
                           ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text("جاري التحضير…")
+                            .size(context.font.large)
+                            .color(
+                          context.color.textDefaultColor
+                              .withOpacity(.6),
+                        ),
+                      ],
+                    )
+                        : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.upload_file),
+                        const SizedBox(width: 6),
+                        Text("addFile".translate(context))
+                            .size(context.font.large)
+                            .color(
+                          context.color.textDefaultColor
+                              .withOpacity(.6),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -444,17 +440,17 @@ class _CustomFileFieldViewState extends State<CustomFileFieldView> {
           child: picked == null
               ? const SizedBox.shrink(key: ValueKey('noFile'))
               : _PickedPreview(
-                  key: const ValueKey('hasFile'),
-                  path: picked,
-                  openImage: (p, sizeText) =>
-                      widget.onOpenImage(p, fileName, sizeText),
-                  onOpenPdf: (p) => Navigator.pushNamed(
-                    context,
-                    Routes.pdfViewerScreen,
-                    arguments: p,
-                  ),
-                  onClear: widget.onClear,
-                ),
+            key: const ValueKey('hasFile'),
+            path: picked,
+            openImage: (p, sizeText) =>
+                widget.onOpenImage(p, fileName, sizeText),
+            onOpenPdf: (p) => Navigator.pushNamed(
+              context,
+              Routes.pdfViewerScreen,
+              arguments: p,
+            ),
+            onClear: widget.onClear,
+          ),
         ),
 
         const SizedBox(height: 8),
@@ -464,7 +460,7 @@ class _CustomFileFieldViewState extends State<CustomFileFieldView> {
           padding: const EdgeInsetsDirectional.only(start: 6, end: 4),
           child: Text(
             "${'allowedFileTypes'.translate(context)}: PNG, JPG, JPEG, SVG, PDF — "
-            "${_bytesToMbString(Constant.maxSizeInBytes)} MB",
+                "${_bytesToMbString(Constant.maxSizeInBytes)} MB",
           ).size(context.font.smaller).color(context.color.textLightColor),
         ),
 
@@ -529,11 +525,14 @@ class _Header extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 maxLines: 3,
                 softWrap: true,
-              ).size(context.font.large).bold(weight: FontWeight.w500).color(
-                    hasError
-                        ? context.color.error
-                        : context.color.textColorDark,
-                  ),
+              )
+                  .size(context.font.large)
+                  .bold(weight: FontWeight.w500)
+                  .color(
+                hasError
+                    ? context.color.error
+                    : context.color.textColorDark,
+              ),
               if (notes != null && notes!.isNotEmpty) ...[
                 SizedBox(height: 5.rh(context)),
                 Text(notes!)
@@ -570,9 +569,9 @@ class _PickedPreview extends StatelessWidget {
   bool get _isRemote => path.startsWith('http');
   bool get _isImage =>
       path.toLowerCase().endsWith('.png') ||
-      path.toLowerCase().endsWith('.jpg') ||
-      path.toLowerCase().endsWith('.jpeg') ||
-      path.toLowerCase().endsWith('.webp');
+          path.toLowerCase().endsWith('.jpg') ||
+          path.toLowerCase().endsWith('.jpeg') ||
+          path.toLowerCase().endsWith('.webp');
   bool get _isPdf => path.toLowerCase().endsWith('.pdf');
 
   String? _sizeText() {

@@ -38,15 +38,12 @@ class WalletOperationsRepository {
     final metaMap = _unwrapMeta(response);
     final currentPage = _parseInt(metaMap['current_page']) ?? page;
     final lastPage = _parseInt(metaMap['last_page']);
-    final perPageValue =
-        _parseInt(metaMap['per_page']) ?? (perPage ?? Constant.loadLimit);
+    final perPageValue = _parseInt(metaMap['per_page']) ?? (perPage ?? Constant.loadLimit);
     final total = _parseInt(metaMap['total']) ?? withdrawals.length;
-    final hasMore = _resolveHasMore(
-        metaMap, currentPage, lastPage, perPageValue, withdrawals.length);
+    final hasMore = _resolveHasMore(metaMap, currentPage, lastPage, perPageValue, withdrawals.length);
 
     final optionsMap = _unwrapOptions(response);
-    final options =
-        optionsMap != null ? WalletOperationOptions.fromMap(optionsMap) : null;
+    final options = optionsMap != null ? WalletOperationOptions.fromMap(optionsMap) : null;
 
     return WalletWithdrawalsResult(
       data: DataOutput<WalletWithdrawal>(
@@ -66,8 +63,7 @@ class WalletOperationsRepository {
     );
   }
 
-  Future<WalletOperationOptions?> fetchWithdrawalOptions(
-      {String? clientTag}) async {
+  Future<WalletOperationOptions?> fetchWithdrawalOptions({String? clientTag}) async {
     final response = await Api.get(
       url: Api.walletWithdrawalOptionsApi,
       queryParameters: {
@@ -150,11 +146,9 @@ class WalletOperationsRepository {
     final metaMap = _unwrapMeta(response);
     final currentPage = _parseInt(metaMap['current_page']) ?? page;
     final lastPage = _parseInt(metaMap['last_page']);
-    final perPageValue =
-        _parseInt(metaMap['per_page']) ?? (perPage ?? Constant.loadLimit);
+    final perPageValue = _parseInt(metaMap['per_page']) ?? (perPage ?? Constant.loadLimit);
     final total = _parseInt(metaMap['total']) ?? requests.length;
-    final hasMore = _resolveHasMore(
-        metaMap, currentPage, lastPage, perPageValue, requests.length);
+    final hasMore = _resolveHasMore(metaMap, currentPage, lastPage, perPageValue, requests.length);
 
     return DataOutput<ManualPayment>(
       total: total,
@@ -172,9 +166,9 @@ class WalletOperationsRepository {
   }
 
   List<Map<String, dynamic>> _unwrapList(
-    Map<String, dynamic> response,
-    List<String> candidates,
-  ) {
+      Map<String, dynamic> response,
+      List<String> candidates,
+      ) {
     dynamic payload = response;
     if (payload is Map && payload.containsKey('data')) {
       payload = payload['data'];
@@ -182,9 +176,7 @@ class WalletOperationsRepository {
     if (payload is List) {
       return payload
           .whereType<dynamic>()
-          .map((e) => e is Map<String, dynamic>
-              ? e
-              : Map<String, dynamic>.from(e as Map))
+          .map((e) => e is Map<String, dynamic> ? e : Map<String, dynamic>.from(e as Map))
           .toList();
     }
     if (payload is Map) {
@@ -194,9 +186,7 @@ class WalletOperationsRepository {
         if (value is List) {
           return value
               .whereType<dynamic>()
-              .map((e) => e is Map<String, dynamic>
-                  ? e
-                  : Map<String, dynamic>.from(e as Map))
+              .map((e) => e is Map<String, dynamic> ? e : Map<String, dynamic>.from(e as Map))
               .toList();
         }
         if (value is Map) {
@@ -247,9 +237,9 @@ class WalletOperationsRepository {
   }
 
   Map<String, dynamic> _unwrapSingle(
-    Map<String, dynamic> response,
-    List<String> candidates,
-  ) {
+      Map<String, dynamic> response,
+      List<String> candidates,
+      ) {
     dynamic payload = response;
     for (var depth = 0; depth < 5; depth++) {
       if (payload is Map<String, dynamic>) {
@@ -289,12 +279,12 @@ class WalletOperationsRepository {
   }
 
   bool _resolveHasMore(
-    Map<String, dynamic> meta,
-    int currentPage,
-    int? lastPage,
-    int perPage,
-    int count,
-  ) {
+      Map<String, dynamic> meta,
+      int currentPage,
+      int? lastPage,
+      int perPage,
+      int count,
+      ) {
     if (meta['has_more'] is bool) {
       return meta['has_more'] as bool;
     }

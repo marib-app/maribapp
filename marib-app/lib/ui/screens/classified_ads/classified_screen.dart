@@ -1,8 +1,8 @@
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/fetch_services_cubit.dart';
+import 'package:marib/data/cubits/slider_cubit.dart';
 import 'package:marib/data/model/category_model.dart';
-import 'package:marib/data/model/classified_model.dart'
-    show ClassifiedSummary; // ← نستخدم النسخة الخفيفة
+import 'package:marib/data/model/classified_model.dart' show ClassifiedSummary; // ← نستخدم النسخة الخفيفة
 import 'package:marib/ui/screens/sliders/slider_widget.dart';
 import 'package:marib/ui/screens/home/widgets/home_shimmers.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
@@ -14,13 +14,14 @@ import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/api.dart';
 import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/utils/screen_scaler.dart';
 import 'package:marquee/marquee.dart';
-import 'package:marib/data/model/classified_model.dart'
-    show ClassifiedSummary, ClassifiedSummaryX;
+import 'package:timeago/timeago.dart' as timeago;
+import 'package:marib/data/model/classified_model.dart' show ClassifiedSummary, ClassifiedSummaryX;
 import 'package:marib/utils/slider_interface_mapper.dart';
 
 /// ---------------------------------------------------------------------------
@@ -52,11 +53,13 @@ class ClassifiedScreen extends StatefulWidget {
   }
 }
 
+
+
 class _ClassifiedScreenState extends State<ClassifiedScreen> {
   final ScrollController _pageScrollController = ScrollController();
 
   bool _adShownOnce = false; // عرض الإعلان مرة واحدة
-  bool _isPaging = false; // حارس تحميل المزيد
+  bool _isPaging = false;    // حارس تحميل المزيد
 
   @override
   void initState() {
@@ -67,8 +70,8 @@ class _ClassifiedScreenState extends State<ClassifiedScreen> {
     // تأجيل الجلب + عرض الإعلان لما بعد أول فريم
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<FetchServicesCubit>().fetchServices(
-            categoryId: int.tryParse(widget.categoryId),
-          );
+        categoryId: int.tryParse(widget.categoryId),
+      );
 
       if (!_adShownOnce) {
         _adShownOnce = true;
@@ -102,6 +105,8 @@ class _ClassifiedScreenState extends State<ClassifiedScreen> {
     _pageScrollController.dispose();
     super.dispose();
   }
+
+
 
 // زر سياقي مع معالجة موحّدة لتدفّق "إضافة خدمة" (كل الخدمات -> صفحة رئيسية من السيرفر)
   Widget? _buildContextualAction(BuildContext context) {
@@ -144,9 +149,9 @@ class _ClassifiedScreenState extends State<ClassifiedScreen> {
     }
 
     TextButton _btn(IconData icon, String label, VoidCallback onTap) {
-      final fg = Theme.of(context).appBarTheme.foregroundColor ??
-          Theme.of(context).colorScheme.onSurface ??
-          context.color.textColorDark;
+      final fg = Theme.of(context).appBarTheme.foregroundColor
+          ?? Theme.of(context).colorScheme.onSurface
+          ?? context.color.textColorDark;
       return TextButton.icon(
         onPressed: onTap,
         icon: Icon(icon, size: 20),
@@ -160,50 +165,53 @@ class _ClassifiedScreenState extends State<ClassifiedScreen> {
     }
 
     return _btn(
-      _iconForType(normalizedType),
-      _labelForType(normalizedType),
-      () {
-        final state = context.read<FetchServicesCubit>().state;
+        _iconForType(normalizedType),
+        _labelForType(normalizedType),
+            () {
+          final state = context.read<FetchServicesCubit>().state;
 
-        if (state is! FetchServicesSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text("loadingDataPleaseTryAgain".translate(context))),
+          if (state is! FetchServicesSuccess) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("loadingDataPleaseTryAgain".translate(context))),
+            );
+            return;
+          }
+
+          // نلتقط الخدمة الرئيسية (ملخّص) من القائمة
+          final main = state.servicesList.firstWhere(
+                (s) => s.isMain == true,
+            orElse: () => const ClassifiedSummary(
+                id: 0, title: null, image: null, isMain: true, status: true),
+        );
+          if (main.id == null || main.id == 0) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('تعذّر تحديد الصفحة الرئيسية لهذه الخدمة')),
+            );
+            return;
+          }
+
+          final category = CategoryModel(
+            id: int.tryParse(widget.categoryId) ?? 0,
+            name: widget.categoryName,
+        );
+          // نمرّر id + title + category — والجلب يتم داخل MainServiceDetails
+          Navigator.pushNamed(
+            context,
+            Routes.mainServiceDetailsRoute,
+            arguments: {
+              "id": main.id,
+              "title": main.title,
+              "category": category,
+            },
           );
-          return;
-        }
-
-        // نلتقط الخدمة الرئيسية (ملخّص) من القائمة
-        final main = state.servicesList.firstWhere(
-          (s) => s.isMain == true,
-          orElse: () => const ClassifiedSummary(
-              id: 0, title: null, image: null, isMain: true, status: true),
-        );
-        if (main.id == 0) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('تعذّر تحديد الصفحة الرئيسية لهذه الخدمة')),
-          );
-          return;
-        }
-
-        final category = CategoryModel(
-          id: int.tryParse(widget.categoryId) ?? 0,
-          name: widget.categoryName,
-        );
-        // نمرّر id + title + category — والجلب يتم داخل MainServiceDetails
-        Navigator.pushNamed(
-          context,
-          Routes.mainServiceDetailsRoute,
-          arguments: {
-            "id": main.id,
-            "title": main.title,
-            "category": category,
-          },
-        );
-      },
+            },
     );
   }
+
+
+
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -215,8 +223,8 @@ class _ClassifiedScreenState extends State<ClassifiedScreen> {
       color: context.color.territoryColor,
       onRefresh: () async {
         await context.read<FetchServicesCubit>().fetchServices(
-              categoryId: int.tryParse(widget.categoryId),
-            );
+          categoryId: int.tryParse(widget.categoryId),
+        );
       },
       child: Scaffold(
         backgroundColor: context.color.primaryColor,
@@ -245,8 +253,8 @@ class _ClassifiedScreenState extends State<ClassifiedScreen> {
                 return NoInternet(
                   onRetry: () {
                     context.read<FetchServicesCubit>().fetchServices(
-                          categoryId: int.tryParse(widget.categoryId),
-                        );
+                      categoryId: int.tryParse(widget.categoryId),
+                    );
                   },
                 );
               }
@@ -267,6 +275,8 @@ class _ClassifiedScreenState extends State<ClassifiedScreen> {
                 children: [
                   SliderWidget(interfaceType: widget.interfaceType),
                   const SizedBox(height: 12),
+
+
                   Expanded(
                     child: GridView.custom(
                       controller: _pageScrollController,
@@ -283,33 +293,26 @@ class _ClassifiedScreenState extends State<ClassifiedScreen> {
                         childAspectRatio: 0.54, // مطابق للشيمر
                       ),
                       childrenDelegate: SliverChildBuilderDelegate(
-                        (context, index) {
+                            (context, index) {
                           // مؤشر “تحميل المزيد”
-                          if (state.hasMore &&
-                              state.isLoadingMore &&
+                          if (state.hasMore && state.isLoadingMore &&
                               index == activeServices.length) {
-                            return const Center(
-                                child: CircularProgressIndicator());
+                            return const Center(child: CircularProgressIndicator());
                           }
 
                           // عنصر خطأ التحميل الإضافي
                           if (state.loadingMoreError &&
-                              index ==
-                                  activeServices.length +
-                                      (state.hasMore && state.isLoadingMore
-                                          ? 1
-                                          : 0)) {
+                              index == activeServices.length +
+                                  (state.hasMore && state.isLoadingMore ? 1 : 0)) {
                             return Center(
                               child: Padding(
                                 padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                    "somethingWentWrng".translate(context)),
+                                child: Text("somethingWentWrng".translate(context)),
                               ),
                             );
                           }
 
-                          final ClassifiedSummary service =
-                              activeServices[index];
+                          final ClassifiedSummary service = activeServices[index];
                           return RepaintBoundary(
                             child: ClassifiedCardWithEffect(
                               classified: service,
@@ -327,6 +330,9 @@ class _ClassifiedScreenState extends State<ClassifiedScreen> {
                       ),
                     ),
                   ),
+
+
+
                 ],
               );
             }
@@ -338,6 +344,8 @@ class _ClassifiedScreenState extends State<ClassifiedScreen> {
     );
   }
 }
+
+
 
 class ClassifiedCardWithEffect extends StatefulWidget {
   final ClassifiedSummary classified; // ← Summary
@@ -352,8 +360,7 @@ class ClassifiedCardWithEffect extends StatefulWidget {
   });
 
   @override
-  State<ClassifiedCardWithEffect> createState() =>
-      _ClassifiedCardWithEffectState();
+  State<ClassifiedCardWithEffect> createState() => _ClassifiedCardWithEffectState();
 }
 
 class _ClassifiedCardWithEffectState extends State<ClassifiedCardWithEffect> {
@@ -376,11 +383,9 @@ class _ClassifiedCardWithEffectState extends State<ClassifiedCardWithEffect> {
               // كما هي لديك...
             } else {
               final id = widget.classified.id;
-              if (id == 0) {
+              if (id == 0 || id == null) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content:
-                          Text('لا يمكن فتح التفاصيل: مُعرّف الخدمة غير صالح')),
+                  const SnackBar(content: Text('لا يمكن فتح التفاصيل: مُعرّف الخدمة غير صالح')),
                 );
                 return;
               }
@@ -394,6 +399,7 @@ class _ClassifiedCardWithEffectState extends State<ClassifiedCardWithEffect> {
               );
             }
           },
+
           child: buildClassifiedCard(
             context,
             widget.classified,
@@ -406,16 +412,19 @@ class _ClassifiedCardWithEffectState extends State<ClassifiedCardWithEffect> {
   }
 }
 
+
+
+
 // بطاقة الخدمة (بدون أي تغيير بصري)
 
 Widget buildClassifiedCard(
-  BuildContext context,
-  ClassifiedSummary classified,
-  int categoryId,
-  String categoryName,
-) {
-  final double r = ScreenScaler.s(16); // نصف قطر البطاقة
-  final double bw = 1; // سُمك الإطار
+    BuildContext context,
+    ClassifiedSummary classified,
+    int categoryId,
+    String categoryName,
+    ) {
+  final double r = ScreenScaler.s(16);     // نصف قطر البطاقة
+  final double bw = 1;                     // سُمك الإطار
   final double titleH = ScreenScaler.s(20);
   final double gap = ScreenScaler.s(6);
 
@@ -439,11 +448,9 @@ Widget buildClassifiedCard(
                   // نفس منطقك لو فيه تعامل خاص للـ main
                 } else {
                   final id = classified.id;
-                  if (id == 0) {
+                  if (id == 0 || id == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text(
-                              'لا يمكن فتح التفاصيل: مُعرّف الخدمة غير صالح')),
+                      const SnackBar(content: Text('لا يمكن فتح التفاصيل: مُعرّف الخدمة غير صالح')),
                     );
                     return;
                   }
@@ -457,8 +464,7 @@ Widget buildClassifiedCard(
                   );
                 }
               },
-              child: Ink(
-                // ✅ Ink لسبلاش متوافق مع الديكور
+              child: Ink( // ✅ Ink لسبلاش متوافق مع الديكور
                 decoration: BoxDecoration(
                   color: context.color.secondaryColor,
                   borderRadius: BorderRadius.circular(r),
@@ -495,25 +501,25 @@ Widget buildClassifiedCard(
                         height: titleH,
                         child: (classified.title ?? "").length < 20
                             ? Text(
-                                (classified.title ?? "").firstUpperCase(),
-                                style: TextStyle(
-                                  color: context.color.textColorDark,
-                                  fontSize: ScreenScaler.s(14),
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              )
+                          (classified.title ?? "").firstUpperCase(),
+                          style: TextStyle(
+                            color: context.color.textColorDark,
+                            fontSize: ScreenScaler.s(14),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        )
                             : Marquee(
-                                text: (classified.title ?? "").firstUpperCase(),
-                                style: TextStyle(
-                                  color: context.color.textColorDark,
-                                  fontSize: ScreenScaler.s(14),
-                                ),
-                                scrollAxis: Axis.horizontal,
-                                blankSpace: 30.0,
-                                velocity: 30.0,
-                                pauseAfterRound: const Duration(seconds: 2),
-                              ),
+                          text: (classified.title ?? "").firstUpperCase(),
+                          style: TextStyle(
+                            color: context.color.textColorDark,
+                            fontSize: ScreenScaler.s(14),
+                          ),
+                          scrollAxis: Axis.horizontal,
+                          blankSpace: 30.0,
+                          velocity: 30.0,
+                          pauseAfterRound: const Duration(seconds: 2),
+                        ),
                       ),
                     ),
                   ],
@@ -555,6 +561,10 @@ Widget buildClassifiedCard(
     ],
   );
 }
+
+
+
+
 
 // شبكة الشيمر (كما هي لديك)
 Widget buildClassifiedShimmerGrid(BuildContext context) {
@@ -644,3 +654,7 @@ Widget buildClassifiedShimmerGrid(BuildContext context) {
     },
   );
 }
+
+
+
+

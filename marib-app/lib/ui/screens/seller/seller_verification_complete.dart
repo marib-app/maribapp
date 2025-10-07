@@ -88,7 +88,7 @@ class _SellerVerificationCompleteScreenState
         if (mounted) {
           Navigator.pop(context);
           Navigator.pop(context);
-          Navigator.pop(context, 'refresh');
+          Navigator.pop(context,'refresh');
         }
       });
   }

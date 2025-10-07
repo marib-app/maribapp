@@ -8,22 +8,22 @@ import 'package:marib/data/model/cart/cart_discount.dart';
 
 /// Environment overrides (comma-separated lists allowed).
 const String _cartGetEndpointOverride =
-    String.fromEnvironment('CART_GET_ENDPOINTS');
+String.fromEnvironment('CART_GET_ENDPOINTS');
 const String _cartAddEndpointOverride =
-    String.fromEnvironment('CART_ADD_ENDPOINTS');
+String.fromEnvironment('CART_ADD_ENDPOINTS');
 const String _cartUpdateEndpointOverride =
-    String.fromEnvironment('CART_UPDATE_ENDPOINTS');
+String.fromEnvironment('CART_UPDATE_ENDPOINTS');
 const String _cartRemoveEndpointOverride =
-    String.fromEnvironment('CART_REMOVE_ENDPOINTS');
+String.fromEnvironment('CART_REMOVE_ENDPOINTS');
 const String _cartClearEndpointOverride =
-    String.fromEnvironment('CART_CLEAR_ENDPOINTS');
+String.fromEnvironment('CART_CLEAR_ENDPOINTS');
 const String _cartApplyCouponEndpointOverride =
-    String.fromEnvironment('CART_APPLY_COUPON_ENDPOINTS');
+String.fromEnvironment('CART_APPLY_COUPON_ENDPOINTS');
 const String _cartRemoveCouponEndpointOverride =
-    String.fromEnvironment('CART_REMOVE_COUPON_ENDPOINTS');
+String.fromEnvironment('CART_REMOVE_COUPON_ENDPOINTS');
 
 const String _cartDeliveryTimingEndpointOverride =
-    String.fromEnvironment('CART_DELIVERY_PAYMENT_TIMING_ENDPOINTS');
+String.fromEnvironment('CART_DELIVERY_PAYMENT_TIMING_ENDPOINTS');
 
 /// Endpoint candidates in priority order. First working one wins.
 final List<String> _cartFetchEndpointCandidates = _buildCartEndpointCandidates(
@@ -54,7 +54,8 @@ final List<String> _cartAddEndpointCandidates = _buildCartEndpointCandidates(
   ],
 );
 
-final List<String> _cartUpdateEndpointCandidates = _buildCartEndpointCandidates(
+final List<String> _cartUpdateEndpointCandidates =
+_buildCartEndpointCandidates(
   override: _cartUpdateEndpointOverride,
   defaults: <String>[
     // Many backends accept re-posting to the add endpoint to update quantity
@@ -66,7 +67,8 @@ final List<String> _cartUpdateEndpointCandidates = _buildCartEndpointCandidates(
   ],
 );
 
-final List<String> _cartRemoveEndpointCandidates = _buildCartEndpointCandidates(
+final List<String> _cartRemoveEndpointCandidates =
+_buildCartEndpointCandidates(
   override: _cartRemoveEndpointOverride,
   defaults: <String>[
     Api.removeCartItemApi,
@@ -91,7 +93,7 @@ final List<String> _cartClearEndpointCandidates = _buildCartEndpointCandidates(
 );
 
 final List<String> _cartApplyCouponEndpointCandidates =
-    _buildCartEndpointCandidates(
+_buildCartEndpointCandidates(
   override: _cartApplyCouponEndpointOverride,
   defaults: <String>[
     'api/cart/coupon',
@@ -104,7 +106,7 @@ final List<String> _cartApplyCouponEndpointCandidates =
 );
 
 final List<String> _cartRemoveCouponEndpointCandidates =
-    _buildCartEndpointCandidates(
+_buildCartEndpointCandidates(
   override: _cartRemoveCouponEndpointOverride,
   defaults: <String>[
     'api/cart/coupon',
@@ -116,8 +118,9 @@ final List<String> _cartRemoveCouponEndpointCandidates =
   ],
 );
 
+
 final List<String> _cartDeliveryTimingEndpointCandidates =
-    _buildCartEndpointCandidates(
+_buildCartEndpointCandidates(
   override: _cartDeliveryTimingEndpointOverride,
   defaults: <String>[
     'cart/delivery-payment-timing',
@@ -126,6 +129,8 @@ final List<String> _cartDeliveryTimingEndpointCandidates =
     'cart/payment-timings',
   ],
 );
+
+
 
 List<String> _buildCartEndpointCandidates({
   required String override,
@@ -142,7 +147,7 @@ List<String> _buildCartEndpointCandidates({
     }
   }
 
-  if (override.trim().isNotEmpty) {
+  if (override is String && override.trim().isNotEmpty) {
     for (final String part in override.split(',')) {
       add(part);
     }
@@ -180,9 +185,10 @@ bool _shouldUseBaseUrl(String endpoint) {
 String? _normSection(String? v) {
   final String? s = normalizeDeliveryDepartment(v);
   if (s == null) return null;
-  if (s == 'general') return 'store';
-  return s;
+  if (s == 'general') return 'store';  return s;
 }
+
+
 
 class _DirectCartRequest {
   const _DirectCartRequest({
@@ -194,14 +200,18 @@ class _DirectCartRequest {
   final Map<String, dynamic> parameters;
 }
 
+
+
 /// Repository that wraps the backend cart endpoints and normalises the
 /// responses into [Cart] models. All methods return the server's latest cart
 /// payload so the caller can keep state in sync with the backend.
 
+
+
 class CartRepository {
   CartRepository({CartShippingQuoteService? shippingQuoteService})
       : _shippingQuoteService =
-            shippingQuoteService ?? CartShippingQuoteService.shared;
+      shippingQuoteService ?? CartShippingQuoteService.shared;
 
   final CartShippingQuoteService _shippingQuoteService;
 
@@ -213,7 +223,9 @@ class CartRepository {
     final Map<String, dynamic> normalized = Map<String, dynamic>.from(response);
     final CartSummary summary = _parseCartSummary(normalized);
     return summary;
+
   }
+
 
   Future<CartSummary> fetchDeliveryPaymentTiming() async {
     try {
@@ -233,6 +245,7 @@ class CartRepository {
       rethrow;
     }
   }
+
 
   Future<CartSummary> addItem({
     required int itemId,
@@ -412,6 +425,7 @@ class CartRepository {
         normalized[key is String ? key : key.toString()] = v;
       });
       return normalized;
+
     }
     if (value is Iterable) {
       final List<dynamic> list = value.toList();
@@ -494,6 +508,7 @@ class CartRepository {
     }
 
     response ??= await _tryDeleteDirect(
+
       _cartRemoveCouponEndpointCandidates,
     );
 
@@ -503,6 +518,8 @@ class CartRepository {
       }
       throw ApiException('تعذر تطبيق القسيمة على الخادم.');
     }
+
+
 
     final CartSummary summary = _parseCartSummary(response);
     _shippingQuoteService.invalidateCache();
@@ -532,12 +549,17 @@ class CartRepository {
     return summary;
   }
 
+
   /// Updates the delivery payment timing using the delivery timing endpoint
   /// and returns the refreshed cart summary from the server.
+
+
+
 
   Future<CartSummary> setDeliveryPaymentTiming({
     required String timing,
   }) async {
+
     final String normalized = timing.trim();
     if (normalized.isEmpty) {
       throw ArgumentError.value(timing, 'timing', 'Timing cannot be empty.');
@@ -563,10 +585,11 @@ class CartRepository {
     return setDeliveryPaymentTiming(timing: timing);
   }
 
+
   Future<Map<String, dynamic>> _getWithFallback(
-    List<String> endpoints, {
-    Map<String, dynamic>? queryParameters,
-  }) async {
+      List<String> endpoints, {
+        Map<String, dynamic>? queryParameters,
+      }) async {
     ApiHttpException? notFound;
 
     for (final String endpoint in endpoints) {
@@ -593,13 +616,13 @@ class CartRepository {
   }
 
   Future<Map<String, dynamic>> _postWithFallback(
-    List<String> endpoints,
-    Map<String, dynamic> parameters,
-  ) async {
+      List<String> endpoints,
+      Map<String, dynamic> parameters,
+      ) async {
     ApiHttpException? notFound;
     final Map<String, dynamic> filteredParameters =
-        Map<String, dynamic>.from(parameters)
-          ..removeWhere((String key, dynamic value) => value == null);
+    Map<String, dynamic>.from(parameters)
+      ..removeWhere((String key, dynamic value) => value == null);
 
     for (final String endpoint in endpoints) {
       try {
@@ -631,8 +654,8 @@ class CartRepository {
       if (endpoint == null) continue;
 
       final Map<String, dynamic> params =
-          Map<String, dynamic>.from(candidate.parameters)
-            ..removeWhere((String key, dynamic value) => value == null);
+      Map<String, dynamic>.from(candidate.parameters)
+        ..removeWhere((String key, dynamic value) => value == null);
 
       try {
         return await Api.postJson(
@@ -651,7 +674,8 @@ class CartRepository {
     return null;
   }
 
-  Future<Map<String, dynamic>?> _tryDeleteDirect(List<String> endpoints) async {
+  Future<Map<String, dynamic>?> _tryDeleteDirect(
+      List<String> endpoints) async {
     for (final String endpointRaw in endpoints) {
       final String? endpoint = _normalizeCartEndpoint(endpointRaw);
       if (endpoint == null) continue;
@@ -729,19 +753,17 @@ class CartRepository {
       return _ensureSellerRow(map);
     }).toList();
 
-    final List<Cart> items = normalisedRows
-        .map<Cart?>((dynamic e) {
-          if (e is Cart) return e;
-          final Map<String, dynamic>? map = _castToStringKeyedMap(e);
-          if (map != null) {
-            return Cart.fromJson(map);
-          }
-          return null;
-        })
-        .whereType<Cart>()
-        .toList();
+    final List<Cart> items = normalisedRows.map<Cart?>((dynamic e) {
+      if (e is Cart) return e;
+      final Map<String, dynamic>? map = _castToStringKeyedMap(e);
+      if (map != null) {
+        return Cart.fromJson(map);
+      }
+      return null;
+    }).whereType<Cart>().toList();
 
     final List<CartDiscount> discounts = _parseDiscounts(response);
+
 
     Map<String, dynamic>? departmentPolicy;
     Map<String, dynamic>? support;
@@ -823,10 +845,10 @@ class CartRepository {
       final Map<String, dynamic> normalized = Map<String, dynamic>.from(map);
       final dynamic depositRaw = map['deposit'];
       final Map<String, dynamic>? depositMap =
-          _castToStringKeyedMap(depositRaw);
+      _castToStringKeyedMap(depositRaw);
       if (depositMap != null) {
-        normalized['deposit'] = Map<String, dynamic>.unmodifiable(
-            Map<String, dynamic>.from(depositMap));
+        normalized['deposit'] =
+        Map<String, dynamic>.unmodifiable(Map<String, dynamic>.from(depositMap));
       } else if (depositRaw != null) {
         normalized['deposit'] = depositRaw;
       }
@@ -858,7 +880,7 @@ class CartRepository {
       ]));
 
       final Map<String, dynamic>? quoteCandidate =
-          _findFirstMapValue(map, const <String>[
+      _findFirstMapValue(map, const <String>[
         'delivery_quote',
         'deliveryQuote',
         'delivery_quote_info',
@@ -868,7 +890,7 @@ class CartRepository {
 
       if (quoteCandidate != null) {
         final Map<String, dynamic>? normalizedQuote =
-            _normalizeQuote(quoteCandidate);
+        _normalizeQuote(quoteCandidate);
         if (normalizedQuote != null) {
           if (deliveryQuote == null) {
             deliveryQuote = normalizedQuote;
@@ -984,6 +1006,7 @@ class CartRepository {
       blocking: blocking,
       deliveryPaymentOptions: deliveryPaymentOptions,
       deliveryPaymentTiming: deliveryPaymentTiming,
+
     );
   }
 
@@ -1016,8 +1039,8 @@ class CartRepository {
       }
       final String? text = value is String
           ? value.trim().isEmpty
-              ? null
-              : value.trim()
+          ? null
+          : value.trim()
           : value?.toString();
       if (text != null && text.isNotEmpty) {
         addDiscount(<String, dynamic>{'message': text});
@@ -1059,7 +1082,7 @@ class CartRepository {
       }
 
       final Map<String, dynamic>? nestedCart =
-          _castToStringKeyedMap(map['cart'] ?? map['data']);
+      _castToStringKeyedMap(map['cart'] ?? map['data']);
       if (nestedCart != null) {
         for (final String key in discountKeys) {
           if (!nestedCart.containsKey(key)) continue;
@@ -1093,8 +1116,7 @@ class CartRepository {
     Map<String, dynamic>? mergedSeller;
 
     void absorb(dynamic candidate) {
-      final Map<String, dynamic>? normalised =
-          _normaliseSellerPayload(candidate);
+      final Map<String, dynamic>? normalised = _normaliseSellerPayload(candidate);
       if (normalised == null) return;
       mergedSeller = _mergeSellerMaps(mergedSeller, normalised);
     }
@@ -1104,43 +1126,29 @@ class CartRepository {
     absorb(result['user']);
 
     final Map<String, dynamic> directAliases = <String, dynamic>{
-      if (result.containsKey('seller_name'))
-        'seller_name': result['seller_name'],
-      if (result.containsKey('vendor_name'))
-        'vendor_name': result['vendor_name'],
+      if (result.containsKey('seller_name')) 'seller_name': result['seller_name'],
+      if (result.containsKey('vendor_name')) 'vendor_name': result['vendor_name'],
       if (result.containsKey('store_name')) 'store_name': result['store_name'],
       if (result.containsKey('shop_name')) 'shop_name': result['shop_name'],
-      if (result.containsKey('business_name'))
-        'business_name': result['business_name'],
-      if (result.containsKey('company_name'))
-        'company_name': result['company_name'],
-      if (result.containsKey('seller_mobile'))
-        'seller_mobile': result['seller_mobile'],
-      if (result.containsKey('seller_phone'))
-        'seller_phone': result['seller_phone'],
-      if (result.containsKey('vendor_phone'))
-        'vendor_phone': result['vendor_phone'],
-      if (result.containsKey('vendor_mobile'))
-        'vendor_mobile': result['vendor_mobile'],
+      if (result.containsKey('business_name')) 'business_name': result['business_name'],
+      if (result.containsKey('company_name')) 'company_name': result['company_name'],
+      if (result.containsKey('seller_mobile')) 'seller_mobile': result['seller_mobile'],
+      if (result.containsKey('seller_phone')) 'seller_phone': result['seller_phone'],
+      if (result.containsKey('vendor_phone')) 'vendor_phone': result['vendor_phone'],
+      if (result.containsKey('vendor_mobile')) 'vendor_mobile': result['vendor_mobile'],
       if (result.containsKey('phone')) 'phone': result['phone'],
-      if (result.containsKey('phone_number'))
-        'phone_number': result['phone_number'],
+      if (result.containsKey('phone_number')) 'phone_number': result['phone_number'],
       if (result.containsKey('contact')) 'contact': result['contact'],
-      if (result.containsKey('contact_number'))
-        'contact_number': result['contact_number'],
+      if (result.containsKey('contact_number')) 'contact_number': result['contact_number'],
       if (result.containsKey('whatsapp')) 'whatsapp': result['whatsapp'],
       if (result.containsKey('whatsapp_number'))
         'whatsapp_number': result['whatsapp_number'],
-      if (result.containsKey('seller_address'))
-        'seller_address': result['seller_address'],
-      if (result.containsKey('vendor_address'))
-        'vendor_address': result['vendor_address'],
+      if (result.containsKey('seller_address')) 'seller_address': result['seller_address'],
+      if (result.containsKey('vendor_address')) 'vendor_address': result['vendor_address'],
       if (result.containsKey('location')) 'location': result['location'],
       if (result.containsKey('address')) 'address': result['address'],
-      if (result.containsKey('seller_email'))
-        'seller_email': result['seller_email'],
-      if (result.containsKey('vendor_email'))
-        'vendor_email': result['vendor_email'],
+      if (result.containsKey('seller_email')) 'seller_email': result['seller_email'],
+      if (result.containsKey('vendor_email')) 'vendor_email': result['vendor_email'],
     };
     if (directAliases.isNotEmpty) {
       absorb(directAliases);
@@ -1163,37 +1171,25 @@ class CartRepository {
         if (item.containsKey('vendor_name')) 'vendor_name': item['vendor_name'],
         if (item.containsKey('store_name')) 'store_name': item['store_name'],
         if (item.containsKey('shop_name')) 'shop_name': item['shop_name'],
-        if (item.containsKey('business_name'))
-          'business_name': item['business_name'],
-        if (item.containsKey('company_name'))
-          'company_name': item['company_name'],
-        if (item.containsKey('seller_mobile'))
-          'seller_mobile': item['seller_mobile'],
-        if (item.containsKey('seller_phone'))
-          'seller_phone': item['seller_phone'],
-        if (item.containsKey('vendor_phone'))
-          'vendor_phone': item['vendor_phone'],
-        if (item.containsKey('vendor_mobile'))
-          'vendor_mobile': item['vendor_mobile'],
+        if (item.containsKey('business_name')) 'business_name': item['business_name'],
+        if (item.containsKey('company_name')) 'company_name': item['company_name'],
+        if (item.containsKey('seller_mobile')) 'seller_mobile': item['seller_mobile'],
+        if (item.containsKey('seller_phone')) 'seller_phone': item['seller_phone'],
+        if (item.containsKey('vendor_phone')) 'vendor_phone': item['vendor_phone'],
+        if (item.containsKey('vendor_mobile')) 'vendor_mobile': item['vendor_mobile'],
         if (item.containsKey('phone')) 'phone': item['phone'],
-        if (item.containsKey('phone_number'))
-          'phone_number': item['phone_number'],
+        if (item.containsKey('phone_number')) 'phone_number': item['phone_number'],
         if (item.containsKey('contact')) 'contact': item['contact'],
-        if (item.containsKey('contact_number'))
-          'contact_number': item['contact_number'],
+        if (item.containsKey('contact_number')) 'contact_number': item['contact_number'],
         if (item.containsKey('whatsapp')) 'whatsapp': item['whatsapp'],
         if (item.containsKey('whatsapp_number'))
           'whatsapp_number': item['whatsapp_number'],
-        if (item.containsKey('seller_address'))
-          'seller_address': item['seller_address'],
-        if (item.containsKey('vendor_address'))
-          'vendor_address': item['vendor_address'],
+        if (item.containsKey('seller_address')) 'seller_address': item['seller_address'],
+        if (item.containsKey('vendor_address')) 'vendor_address': item['vendor_address'],
         if (item.containsKey('location')) 'location': item['location'],
         if (item.containsKey('address')) 'address': item['address'],
-        if (item.containsKey('seller_email'))
-          'seller_email': item['seller_email'],
-        if (item.containsKey('vendor_email'))
-          'vendor_email': item['vendor_email'],
+        if (item.containsKey('seller_email')) 'seller_email': item['seller_email'],
+        if (item.containsKey('vendor_email')) 'vendor_email': item['vendor_email'],
       };
       if (itemAlias.isNotEmpty) {
         absorb(itemAlias);
@@ -1202,10 +1198,10 @@ class CartRepository {
 
     if (mergedSeller != null && mergedSeller!.isNotEmpty) {
       final Map<String, dynamic>? normalisedSeller =
-          _normaliseSellerFields(mergedSeller!);
+      _normaliseSellerFields(mergedSeller!);
       if (normalisedSeller != null && normalisedSeller.isNotEmpty) {
         final Map<String, dynamic> sellerContact =
-            _projectSellerContact(normalisedSeller);
+        _projectSellerContact(normalisedSeller);
         result['seller'] = sellerContact;
         result['vendor'] ??= sellerContact;
       }

@@ -2,8 +2,8 @@ class Challenge {
   final int id;
   final String title;
   final String description;
-  final int requiredReferrals; // من الـ API: required_referrals
-  final int pointsPerReferral; // من الـ API: points_per_referral
+  final int requiredReferrals;   // من الـ API: required_referrals
+  final int pointsPerReferral;   // من الـ API: points_per_referral
   final bool isActive;
   final String createdAt;
   final String updatedAt;
@@ -27,23 +27,22 @@ class Challenge {
 
   /// ✅ بديل آمن لو احتجت كائن افتراضي
   factory Challenge.empty() => const Challenge(
-        id: 0,
-        title: '',
-        description: '',
-        requiredReferrals: 0,
-        pointsPerReferral: 0,
-        isActive: false,
-        createdAt: '',
-        updatedAt: '',
-      );
+    id: 0,
+    title: '',
+    description: '',
+    requiredReferrals: 0,
+    pointsPerReferral: 0,
+    isActive: false,
+    createdAt: '',
+    updatedAt: '',
+  );
 
   factory Challenge.fromJson(Map<String, dynamic> json) {
     return Challenge(
       id: (json['id'] ?? 0) as int,
       title: (json['title'] ?? '') as String,
       description: (json['description'] ?? '') as String,
-      requiredReferrals:
-          (json['required_referrals'] ?? json['requiredPoints'] ?? 0) as int,
+      requiredReferrals: (json['required_referrals'] ?? json['requiredPoints'] ?? 0) as int,
       pointsPerReferral: (json['points_per_referral'] ?? 0) as int,
       isActive: json['is_active'] is bool
           ? (json['is_active'] as bool)
@@ -91,16 +90,16 @@ class Challenge {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Challenge &&
-          runtimeType == other.runtimeType &&
-          id == other.id &&
-          title == other.title &&
-          description == other.description &&
-          requiredReferrals == other.requiredReferrals &&
-          pointsPerReferral == other.pointsPerReferral &&
-          isActive == other.isActive &&
-          createdAt == other.createdAt &&
-          updatedAt == other.updatedAt;
+          other is Challenge &&
+              runtimeType == other.runtimeType &&
+              id == other.id &&
+              title == other.title &&
+              description == other.description &&
+              requiredReferrals == other.requiredReferrals &&
+              pointsPerReferral == other.pointsPerReferral &&
+              isActive == other.isActive &&
+              createdAt == other.createdAt &&
+              updatedAt == other.updatedAt;
 
   @override
   int get hashCode =>

@@ -20,16 +20,19 @@ class ChatMessageModal {
       this.senderId,
       this.receiverId,
       this.itemId,
-      this.itemOfferId,
+        this.itemOfferId,
       this.message,
       this.file,
       this.audio,
-      this.messageType,
-      this.createdAt,
-      this.updatedAt,
-      this.status,
-      this.deliveredAt,
-      this.readAt});
+        this.messageType,
+
+        this.createdAt,
+        this.updatedAt,
+        this.status,
+        this.deliveredAt,
+        this.readAt});
+
+
 
   ChatMessageModal.fromJson(Map<String, dynamic> json) {
     id = json['id'];

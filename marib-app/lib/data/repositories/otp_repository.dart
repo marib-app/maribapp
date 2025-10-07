@@ -32,7 +32,7 @@ class OtpRepository {
       print("Send OTP Error: $e");
 
       // Check if the error is a DioError and try to extract the message
-      if (e is DioException) {
+      if (e is DioError) {
         if (e.response?.data is Map && e.response?.data['message'] != null) {
           throw Exception(e.response!.data['message']);
         }
@@ -125,7 +125,7 @@ class OtpRepository {
       print("Send Password Reset OTP Error: $e");
 
       // Check if the error is a DioError and try to extract the message
-      if (e is DioException) {
+      if (e is DioError) {
         if (e.response?.data is Map && e.response?.data['message'] != null) {
           throw Exception(e.response!.data['message']);
         }

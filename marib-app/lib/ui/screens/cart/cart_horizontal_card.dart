@@ -1,3 +1,7 @@
+
+
+
+
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:marib/data/cubits/cart/cart_cubit.dart';
 import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
@@ -28,6 +32,7 @@ class CartHorizontalCard extends StatelessWidget {
   final ShapeBorder? buttonShape;
   final bool showShadow;
 
+
   const CartHorizontalCard({
     super.key,
     required this.item,
@@ -48,7 +53,7 @@ class CartHorizontalCard extends StatelessWidget {
   Widget _quantityControls(BuildContext context, Cart item) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final Color panelColor =
-        context.color.territoryColor.withOpacity(isDark ? 0.28 : 0.12);
+    context.color.territoryColor.withOpacity(isDark ? 0.28 : 0.12);
 
     return Dismissible(
       key: ValueKey('${item.id}-${item.quantity}'),
@@ -60,10 +65,11 @@ class CartHorizontalCard extends StatelessWidget {
                 title: "تأكيد الحذف ",
                 onAccept: () async {
                   await context.read<CartCubit>().removeItem(
-                        cartItemId: item.cartItemId,
-                        itemId: item.id!,
-                      );
-                },
+                    cartItemId: item.cartItemId,
+                    itemId: item.id!,
+                  );
+
+                  },
                 cancelTextColor: context.color.textColorDark,
                 svgImagePath: "assets/lottie/delete_user.json",
                 content:
@@ -100,10 +106,11 @@ class CartHorizontalCard extends StatelessWidget {
                 InkWell(
                   onTap: () async {
                     await context.read<CartCubit>().increaseQuantity(
-                          cartItemId: item.cartItemId,
-                          itemId: item.id!,
-                        );
-                  },
+                      cartItemId: item.cartItemId,
+                      itemId: item.id!,
+                    );
+
+                    },
                   child: Container(
                     padding: EdgeInsets.all(6),
                     decoration: BoxDecoration(
@@ -138,6 +145,7 @@ class CartHorizontalCard extends StatelessWidget {
                               title: "تأكيد الحذف ",
                               onAccept: () async {
                                 await cartCubit.removeItem(
+
                                   cartItemId: item.cartItemId,
                                   itemId: item.id!,
                                 );
@@ -148,9 +156,9 @@ class CartHorizontalCard extends StatelessWidget {
                                   .translate(context))));
                     } else {
                       await context.read<CartCubit>().decreaseQuantity(
-                            cartItemId: item.cartItemId,
-                            itemId: item.id!,
-                          );
+                        cartItemId: item.cartItemId,
+                        itemId: item.id!,
+                      );
                     }
                   },
                   child: Container(
@@ -172,6 +180,7 @@ class CartHorizontalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final Color cardColor = context.color.secondaryColor;
     final Color shadowColor = isDark
@@ -181,12 +190,13 @@ class CartHorizontalCard extends StatelessWidget {
     final String currencyToken = (item.currency?.trim().isNotEmpty ?? false)
         ? item.currency!.trim()
         : (Constant.currencySymbol.trim().isNotEmpty
-            ? Constant.currencySymbol
-            : 'ر.س');
+        ? Constant.currencySymbol
+        : 'ر.س');
     final String formattedPrice = HelperUtils.formatPrice(item.unitPriceValue);
     final String priceLabel = formattedPrice.isEmpty ? '—' : formattedPrice;
-    final String currencySuffix =
-        currencyToken.trim().isEmpty ? '' : ' ${currencyToken.trim()}';
+    final String currencySuffix = currencyToken.trim().isEmpty
+        ? ''
+        : ' ${currencyToken.trim()}';
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.5),
@@ -276,6 +286,7 @@ class CartHorizontalCard extends StatelessWidget {
                                 children: [
                                   Expanded(
                                     child: Text('$priceLabel$currencySuffix')
+
                                         .size(context.font.large)
                                         .color(context.color.territoryColor)
                                         .bold(weight: FontWeight.w700),
@@ -288,7 +299,7 @@ class CartHorizontalCard extends StatelessWidget {
                                 Text(item.user?.name?.trim() ?? "")
                                     .setMaxLines(lines: 1)
                                     .color(context.color.textDefaultColor
-                                        .withOpacity(0.5))
+                                    .withOpacity(0.5))
                                     .size(context.font.smaller),
 
                               // Row()

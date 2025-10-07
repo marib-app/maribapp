@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:marib/ui/screens/cart/components/delivery_and_payment/shared_widgets.dart';
-import 'package:marib/ui/screens/cart/components/delivery_and_payment/deposit_summary_card.dart';
+import 'shared_widgets.dart';
+import 'deposit_summary_card.dart';
 
 /// قسم مخصّص لعرض سياسات الإرجاع، تفاصيل الوديعة، والتنبيهات الداعمة.
 class PoliciesSection extends StatelessWidget {
@@ -48,9 +48,9 @@ class PoliciesSection extends StatelessWidget {
 
   bool get hasContent =>
       _hasDepositContent ||
-      _isNonEmptyString(returnPolicyText) ||
-      _isNonEmptyString(departmentNotice) ||
-      _hasSupportContent;
+          _isNonEmptyString(returnPolicyText) ||
+          _isNonEmptyString(departmentNotice) ||
+          _hasSupportContent;
 
   @override
   Widget build(BuildContext context) {
@@ -112,11 +112,13 @@ class PoliciesSection extends StatelessWidget {
   /// يبني بطاقة صغيرة توضح تفاصيل الوديعة بالأرقام والنسب.
   Widget _buildDepositCard(BuildContext context) {
     return DepositSummaryCard(data: depositInfo);
+
   }
 
   /// يعرض نص سياسة الاسترجاع بتنسيق واضح ومقروء.
   Widget _buildPolicyText(BuildContext context) {
     return buildReturnPolicyCard(context, returnPolicyText!);
+
   }
 
   /// يبرز أي ملاحظة خاصة بالقسم أو الإدارة لمساعدة المستخدم.
@@ -157,15 +159,13 @@ class PoliciesSection extends StatelessWidget {
 
     final List<Widget> lines = <Widget>[];
     if (_isNonEmptyString(label)) {
-      lines.add(
-          Text(label!, style: const TextStyle(fontWeight: FontWeight.bold)));
+      lines.add(Text(label!, style: const TextStyle(fontWeight: FontWeight.bold)));
     }
     if (_isNonEmptyString(number)) {
       lines.add(Text('رقم التواصل: $number'));
     }
     if (_isNonEmptyString(url)) {
-      lines.add(Text('الرابط المباشر: $url',
-          style: const TextStyle(decoration: TextDecoration.underline)));
+      lines.add(Text('الرابط المباشر: $url', style: const TextStyle(decoration: TextDecoration.underline)));
     }
     if (_isNonEmptyString(message)) {
       lines.add(Text('رسالة جاهزة: $message'));
@@ -199,11 +199,11 @@ class PoliciesSection extends StatelessWidget {
 
   /// يبني صفًا نصيًا بمظهر موحّد بين جميع الأقسام الفرعية.
   Widget _buildInfoRow(
-    BuildContext context,
-    String label,
-    String value, {
-    Color? valueColor,
-  }) {
+      BuildContext context,
+      String label,
+      String value, {
+        Color? valueColor,
+      }) {
     final TextStyle labelStyle = TextStyle(
       color: Theme.of(context).brightness == Brightness.dark
           ? Colors.white70

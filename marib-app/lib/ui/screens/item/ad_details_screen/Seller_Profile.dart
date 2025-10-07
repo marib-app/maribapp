@@ -1,20 +1,63 @@
+import 'dart:async';
+import 'package:timeago/timeago.dart' as timeago;
 import 'package:marib/app/routes.dart';
+import 'package:marib/data/cubits/cart/cart_cubit.dart';
+import 'package:marib/data/cubits/custom_field/fetch_custom_fields_cubit.dart';
+import 'package:marib/data/cubits/report/fetch_item_report_reason_list.dart';
+import 'package:marib/data/cubits/subscription/fetch_ads_listing_subscription_packages_cubit.dart';
+import 'package:marib/data/model/custom_field/custom_field_model.dart';
+import 'package:marib/data/model/item/cart_model.dart';
+import 'package:marib/data/model/user_model.dart';
+import 'package:marib/ui/screens/home_screen/home_screen.dart';
+import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
+import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/responsiveSize.dart';
+import 'package:marib/data/cubits/chat/get_buyer_chat_users_cubit.dart';
+import 'package:marib/data/cubits/chat/make_an_offer_item_cubit.dart';
+import 'package:marib/data/cubits/favorite/favorite_cubit.dart';
+import 'package:marib/data/cubits/item/create_featured_ad_cubit.dart';
+import 'package:marib/data/cubits/item/fetch_my_item_cubit.dart';
+import 'package:marib/data/cubits/item/item_total_click_cubit.dart';
+import 'package:marib/data/cubits/item/related_item_cubit.dart';
+import 'package:marib/data/cubits/renew_item_cubit.dart';
+import 'package:marib/data/cubits/safety_tips_cubit.dart';
 import 'package:marib/data/cubits/seller/fetch_seller_ratings_cubit.dart';
+import 'package:marib/data/model/chat/chated_user_model.dart';
 import 'package:marib/data/model/item/item_model.dart';
+import 'package:marib/data/model/safety_tips_model.dart';
+import 'package:marib/data/model/subscription_pacakage_model.dart';
+import 'package:intl/intl.dart';
 import 'package:marib/utils/app_icon.dart';
+import 'package:marib/utils/validator.dart';
+import 'package:flick_video_player/flick_video_player.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:video_player/video_player.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+import 'package:marib/data/repositories/favourites_repository.dart';
+import 'dart:ui';
+import 'package:marib/data/model/classified_model.dart';
+import 'package:marib/utils/screen_scaler.dart';
+import 'package:marquee/marquee.dart';
+import 'package:marib/utils/api.dart';
+import 'package:marib/utils/cloudState/cloud_state.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
 
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 
 import 'package:shimmer/shimmer.dart';
+
+import 'package:flutter/widgets.dart';
+
 
 /// ويدجت لعرض صورة البائع بشكل احترافي مع شيمر يظهر إلى أن تكتمل الصورة
 class SellerProfileImage extends StatefulWidget {
@@ -35,62 +78,70 @@ class _SellerProfileImageState extends State<SellerProfileImage> {
 
     return SizedBox(
       height: 60.rh(context), // ارتفاع متجاوب
-      width: 60.rw(context), // عرض متجاوب
+      width: 60.rw(context),  // عرض متجاوب
       child: ClipRRect(
         borderRadius: BorderRadius.circular(10), // حواف ناعمة
         child: hasImage
             ? Stack(
-                fit: StackFit.expand,
-                children: [
-                  // ✅ صورة البائع من الإنترنت
-                  Image.network(
-                    widget.imageUrl!,
-                    fit: BoxFit.cover, // تغطية مناسبة بدون تشويه
-                    frameBuilder: (context, child, frame, wasLoaded) {
-                      if (frame != null && !_isImageLoaded) {
-                        // أول ظهور فعلي للصورة → نوقف الشيمر
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          if (mounted) {
-                            setState(() => _isImageLoaded = true);
-                          }
-                        });
-                      }
-                      return child; // نرجع الصورة نفسها
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      // في حال فشل التحميل → نعرض الأيقونة الافتراضية
-                      return UiUtils.getSvg(
-                        AppIcons.defaultPersonLogo,
-                        color: context.color.territoryColor,
-                        fit: BoxFit.none,
-                      );
-                    },
-                  ),
+          fit: StackFit.expand,
+          children: [
+            // ✅ صورة البائع من الإنترنت
+            Image.network(
+              widget.imageUrl!,
+              fit: BoxFit.cover, // تغطية مناسبة بدون تشويه
+              frameBuilder: (context, child, frame, wasLoaded) {
+                if (frame != null && !_isImageLoaded) {
+                  // أول ظهور فعلي للصورة → نوقف الشيمر
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      setState(() => _isImageLoaded = true);
+                    }
+                  });
+                }
+                return child; // نرجع الصورة نفسها
+              },
+              errorBuilder: (context, error, stackTrace) {
+                // في حال فشل التحميل → نعرض الأيقونة الافتراضية
+                return UiUtils.getSvg(
+                  AppIcons.defaultPersonLogo,
+                  color: context.color.territoryColor,
+                  fit: BoxFit.none,
+                );
+              },
+            ),
 
-                  // ✨ شيمر احترافي يظهر فوق الصورة إلى أن تكتمل
-                  if (!_isImageLoaded)
-                    Shimmer.fromColors(
-                      baseColor: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.grey[800]!
-                          : Colors.grey[300]!,
-                      highlightColor:
-                          Theme.of(context).brightness == Brightness.dark
-                              ? Colors.grey[700]!
-                              : Colors.grey[100]!,
-                      child: Container(color: Colors.grey),
-                    ),
-                ],
-              )
-            : UiUtils.getSvg(
-                // ❌ في حال لا يوجد رابط صورة أصلاً
-                AppIcons.defaultPersonLogo,
-                color: context.color.territoryColor,
-                fit: BoxFit.none,
+            // ✨ شيمر احترافي يظهر فوق الصورة إلى أن تكتمل
+            if (!_isImageLoaded)
+              Shimmer.fromColors(
+                baseColor: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey[800]!
+                    : Colors.grey[300]!,
+                highlightColor: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey[700]!
+                    : Colors.grey[100]!,
+                child: Container(color: Colors.grey),
               ),
+          ],
+        )
+            : UiUtils.getSvg(
+          // ❌ في حال لا يوجد رابط صورة أصلاً
+          AppIcons.defaultPersonLogo,
+          color: context.color.territoryColor,
+          fit: BoxFit.none,
+        ),
       ),
     );
   }
 }
+
+
+
+
+
+
+
+
+
 
 /// ويدجت تعرض معلومات البائع (الاسم، التوثيق، التقييم، البريد)
 /// مع تأثير Shimmer يظهر مؤقتاً أثناء تحميل البيانات
@@ -123,12 +174,16 @@ class SellerInfoSection extends StatelessWidget {
                 horizontal: 6,
                 vertical: 2,
               ),
-              child: Text("verified".translate(context)).bold().size(10),
+              child: Text("verified".translate(context))
+                  .bold()
+                  .size(10),
             ),
           const SizedBox(height: 4),
 
           // ✅ اسم المستخدم
-          Text(user.name ?? "").bold().size(context.font.large),
+          Text(user.name ?? "")
+              .bold()
+              .size(context.font.large),
 
           const SizedBox(height: 4),
 
@@ -153,15 +208,16 @@ class SellerInfoSection extends StatelessWidget {
                 Text('${total ?? 0} ${"ratings".translate(context)}')
                     .size(14)
                     .color(
-                      context.color.textDefaultColor.withOpacity(0.3),
-                    ),
+                  context.color.textDefaultColor.withOpacity(0.3),
+                ),
               ],
             ),
 
           const SizedBox(height: 4),
 
           // ✅ البريد الإلكتروني (إذا كان ظاهر ومتوفر)
-          if (user.showPersonalDetails == 1 && user.email?.isNotEmpty == true)
+          if (user.showPersonalDetails == 1 &&
+              user.email?.isNotEmpty == true)
             Text(user.email!)
                 .color(context.color.textLightColor)
                 .size(context.font.small),
@@ -170,6 +226,10 @@ class SellerInfoSection extends StatelessWidget {
     );
   }
 }
+
+
+
+
 
 /// ويدجت تعرض أزرار الرسائل والاتصال (بدون شيمر)
 class SellerActions extends StatelessWidget {
@@ -180,8 +240,8 @@ class SellerActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // ✅ التحقق من صلاحية عرض الأزرار
-    final canShow =
-        user.showPersonalDetails == 1 && user.mobile?.isNotEmpty == true;
+    final canShow = user.showPersonalDetails == 1 &&
+        user.mobile?.isNotEmpty == true;
 
     if (!canShow) return const SizedBox.shrink();
 
@@ -222,13 +282,19 @@ class SellerActions extends StatelessWidget {
   }
 }
 
+
+
+
+
+
+
 /// زر أيقونة بتأثير بصري احترافي (بدون شيمر)
 class IconActionButton extends StatelessWidget {
-  final String assetName; // مسار SVG
-  final VoidCallback onTap; // الإجراء عند النقر
-  final Color? color; // لون الأيقونة (اختياري)
-  final double size; // حجم الزر (عرض × ارتفاع)
-  final double borderRadius; // نصف قطر الحواف
+  final String assetName;      // مسار SVG
+  final VoidCallback onTap;    // الإجراء عند النقر
+  final Color? color;          // لون الأيقونة (اختياري)
+  final double size;           // حجم الزر (عرض × ارتفاع)
+  final double borderRadius;   // نصف قطر الحواف
 
   const IconActionButton({
     super.key,
@@ -272,6 +338,8 @@ class IconActionButton extends StatelessWidget {
   }
 }
 
+
+
 // دالة عرض معلومات المعلن
 
 Widget setSellerDetails(BuildContext context, ItemModel model) {
@@ -285,12 +353,8 @@ Widget setSellerDetails(BuildContext context, ItemModel model) {
         Routes.sellerProfileScreen,
         arguments: {
           "model": user,
-          "total":
-              context.read<FetchSellerRatingsCubit>().totalSellerRatings() ?? 0,
-          "rating": context
-              .read<FetchSellerRatingsCubit>()
-              .sellerData()
-              ?.averageRating,
+          "total": context.read<FetchSellerRatingsCubit>().totalSellerRatings() ?? 0,
+          "rating": context.read<FetchSellerRatingsCubit>().sellerData()?.averageRating,
         },
       );
     },
@@ -306,6 +370,12 @@ Widget setSellerDetails(BuildContext context, ItemModel model) {
     ),
   );
 }
+
+
+
+
+
+
 
 class SellerDetailsShimmer extends StatelessWidget {
   const SellerDetailsShimmer({super.key});

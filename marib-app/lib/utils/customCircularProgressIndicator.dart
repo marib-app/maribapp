@@ -5,12 +5,8 @@ class CustomCircularProgressIndicator extends StatelessWidget {
   final double? strokeWidth;
   final double? widthAndHeight;
 
-  const CustomCircularProgressIndicator({
-    super.key,
-    this.indicatorColor,
-    this.strokeWidth,
-    this.widthAndHeight,
-  });
+  const CustomCircularProgressIndicator(
+      {super.key, this.indicatorColor, this.strokeWidth, this.widthAndHeight,});
 
   @override
   Widget build(BuildContext context) {

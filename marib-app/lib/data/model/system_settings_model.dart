@@ -32,3 +32,4 @@ enum SystemSetting {
   usageGuide,
   socialLinks
 }
+

@@ -7,9 +7,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen>
-    with
-        AutomaticKeepAliveClientMixin<ProfileScreen>,
-        ProfileScreenLogic<ProfileScreen> {
+    with AutomaticKeepAliveClientMixin<ProfileScreen>, ProfileScreenLogic<ProfileScreen> {
   final ValueNotifier<bool> _isDark = ValueNotifier(false);
   final ScrollController _scroll = ScrollController();
   final ValueNotifier<double> _scrollY = ValueNotifier(0);
@@ -23,9 +21,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     super.initState();
     _isDark.value = context.read<AppThemeCubit>().isDarkMode();
     if (HiveUtils.isUserAuthenticated()) {
-      context
-          .read<FetchVerificationRequestsCubit>()
-          .fetchVerificationRequests();
+      context.read<FetchVerificationRequestsCubit>().fetchVerificationRequests();
       context.read<ProfileStatsCubit>().fetchProfileStats();
     }
     _scroll.addListener(() => _scrollY.value = _scroll.offset);
@@ -77,8 +73,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
         body: CustomScrollView(
           controller: _scroll,
-          physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics()),
+          physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
           slivers: [
             // بطاقة البروفايل الزجاجية
             SliverToBoxAdapter(
@@ -103,6 +98,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+
                     // الملف الشخصي
                     _ServiceItemTile(
                       title: "الملف الشخصي ",
@@ -111,9 +107,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         UiUtils.checkUser(
                           onNotGuest: () {
                             HelperUtils.goToNextPage(
-                              Routes.showProfile,
-                              context,
-                              false,
+                              Routes.showProfile, context, false,
                               args: {"from": "profile"},
                             );
                           },
@@ -129,8 +123,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       svg: AppIcons.myReviewIcon,
                       onTap: () {
                         UiUtils.checkUser(
-                          onNotGuest: () => Navigator.pushNamed(
-                              context, Routes.myReviewsScreen),
+                          onNotGuest: () => Navigator.pushNamed(context, Routes.myReviewsScreen),
                           context: context,
                         );
                       },
@@ -146,7 +139,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       onTap: () {
                         UiUtils.checkUser(
                           onNotGuest: () {
-                            //    APICallTrigger.trigger(); // تفعيل إعادة الجلب في شاشة الإعلانات المروّجة
+                        //    APICallTrigger.trigger(); // تفعيل إعادة الجلب في شاشة الإعلانات المروّجة
                             Navigator.pushNamed(context, Routes.myAdvertisment);
                           },
                           context: context,
@@ -155,45 +148,50 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ),
                     const SizedBox(height: 10),
 
+
                     // الاشتراكات
                     _ServiceItemTile(
                       title: "الاشتراكات",
                       svg: AppIcons.subscription,
                       onTap: () {
                         UiUtils.checkUser(
-                          onNotGuest: () => Navigator.pushNamed(
-                              context, Routes.subscriptionPackageListRoute),
+                          onNotGuest: () => Navigator.pushNamed(context, Routes.subscriptionPackageListRoute),
                           context: context,
                         );
                       },
                     ),
                     const SizedBox(height: 10),
+
 
                     _ServiceItemTile(
                       title: "walletTitle".translate(context),
                       svg: AppIcons.wallet,
                       onTap: () {
                         UiUtils.checkUser(
-                          onNotGuest: () =>
-                              Navigator.pushNamed(context, Routes.wallet),
+                          onNotGuest: () => Navigator.pushNamed(context, Routes.wallet),
                           context: context,
                         );
                       },
                     ),
                     const SizedBox(height: 10),
 
+
+
+
+
+
                     _ServiceItemTile(
                       title: "طلباتي",
                       svg: AppIcons.competition,
                       onTap: () {
                         UiUtils.checkUser(
-                          onNotGuest: () =>
-                              Navigator.pushNamed(context, Routes.ordersList),
+                          onNotGuest: () => Navigator.pushNamed(context, Routes.ordersList),
                           context: context,
                         );
                       },
                     ),
                     const SizedBox(height: 10),
+
 
                     // كرت "التحديث متاح" (شرطي) — نُقِل هنا أسفل تقييماتي
                     if (Constant.isUpdateAvailable == true) ...[
@@ -204,14 +202,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                           if (Platform.isIOS) {
                             await launchUrl(Uri.parse(Constant.appstoreURLios));
                           } else if (Platform.isAndroid) {
-                            await launchUrl(
-                                Uri.parse(Constant.playstoreURLAndroid));
+                            await launchUrl(Uri.parse(Constant.playstoreURLAndroid));
                           }
                         },
                       ),
                       const SizedBox(height: 10),
                     ],
                     //
+
+
 
                     // ─────────── بقية البنود كما هي ───────────
 
@@ -220,8 +219,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       svg: AppIcons.competition,
                       onTap: () {
                         UiUtils.checkUser(
-                          onNotGuest: () =>
-                              Navigator.pushNamed(context, Routes.competition),
+                          onNotGuest: () => Navigator.pushNamed(context, Routes.competition),
                           context: context,
                         );
                       },
@@ -233,8 +231,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       svg: AppIcons.favorites,
                       onTap: () {
                         UiUtils.checkUser(
-                          onNotGuest: () => Navigator.pushNamed(
-                              context, Routes.favoritesScreen),
+                          onNotGuest: () => Navigator.pushNamed(context, Routes.favoritesScreen),
                           context: context,
                         );
                       },
@@ -246,8 +243,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       svg: AppIcons.favorites, // يمكنك استبدال الأيقونة لاحقًا
                       onTap: () {
                         UiUtils.checkUser(
-                          onNotGuest: () =>
-                              Navigator.pushNamed(context, Routes.soon),
+                          onNotGuest: () => Navigator.pushNamed(context, Routes.soon),
                           context: context,
                         );
                       },
@@ -259,9 +255,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       isDark: _isDark,
                       onToggle: () {
                         final v = !_isDark.value;
-                        context
-                            .read<AppThemeCubit>()
-                            .changeTheme(v ? AppTheme.dark : AppTheme.light);
+                        context.read<AppThemeCubit>().changeTheme(v ? AppTheme.dark : AppTheme.light);
                         _isDark.value = v;
                       },
                     ),
@@ -290,8 +284,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                             final mobile = HiveUtils.getUserDetails().mobile;
                             if (mobile != null &&
                                 Constant.demoMobileNumber ==
-                                    mobile.replaceFirst(
-                                        "+${HiveUtils.getCountryCode()}", "")) {
+                                    mobile.replaceFirst("+${HiveUtils.getCountryCode()}", "")) {
                               HelperUtils.showSnackBarMessage(
                                 context,
                                 "thisActionNotValidDemo".translate(context),
@@ -314,7 +307,11 @@ class _ProfileScreenState extends State<ProfileScreen>
       ),
     );
   }
+
+
 }
+
+
 
 /* =========================
  *  بطاقة البروفايل (كما هي)
@@ -335,9 +332,7 @@ class _ProfileGlassCard extends StatelessWidget {
     final dateOnly = raw.split(' ').first;
     final parts = dateOnly.split('-');
     if (parts.length == 3) {
-      final yyyy = parts[0],
-          mm = parts[1].padLeft(2, '0'),
-          dd = parts[2].padLeft(2, '0');
+      final yyyy = parts[0], mm = parts[1].padLeft(2, '0'), dd = parts[2].padLeft(2, '0');
       return 'تم الانضمام في : $dd/$mm/$yyyy';
     }
     return 'تم الانضمام في : $dateOnly';
@@ -346,9 +341,7 @@ class _ProfileGlassCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = HiveUtils.getUserDetails();
-    final String name = (user.name ?? "").trim().isEmpty
-        ? "anonymous".translate(context)
-        : user.name!;
+    final String name = (user.name ?? "").trim().isEmpty ? "anonymous".translate(context) : user.name!;
     final int? type = user.userType; // 1 فردي، 2 عقاري، 3 تجاري
     final _AccountStyle style = _AccountStyle.fromType(context, type);
     final String joined = _formatJoined(user.createdAt);
@@ -370,22 +363,16 @@ class _ProfileGlassCard extends StatelessWidget {
                 height: 80,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(
-                      color: context.color.textDefaultColor.withOpacity(0.10)),
+                  border: Border.all(color: context.color.textDefaultColor.withOpacity(0.10)),
                 ),
                 child: ClipOval(
                   child: (user.profile ?? "").isEmpty
                       ? Container(
-                          color: context.color.backgroundColor,
-                          alignment: Alignment.center,
-                          child: UiUtils.getSvg(AppIcons.defaultPersonLogo,
-                              color: style.base, fit: BoxFit.none),
-                        )
-                      : UiUtils.getImage(
-                          height: 70,
-                          width: 70,
-                          user.profile!,
-                          fit: BoxFit.cover),
+                    color: context.color.backgroundColor,
+                    alignment: Alignment.center,
+                    child: UiUtils.getSvg(AppIcons.defaultPersonLogo, color: style.base, fit: BoxFit.none),
+                  )
+                      : UiUtils.getImage(height: 70, width: 70, user.profile!, fit: BoxFit.cover),
                 ),
               ),
               const SizedBox(width: 12),
@@ -394,14 +381,10 @@ class _ProfileGlassCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(name)
-                        .bold(weight: FontWeight.w800)
-                        .size(context.font.large + 1)
-                        .color(context.color.textColorDark),
+                    Text(name).bold(weight: FontWeight.w800).size(context.font.large + 1).color(context.color.textColorDark),
                     const SizedBox(height: 10),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
                         color: context.color.secondaryColor,
                         borderRadius: BorderRadius.circular(10),
@@ -412,19 +395,13 @@ class _ProfileGlassCard extends StatelessWidget {
                         children: [
                           Icon(style.icon, size: 16, color: style.base),
                           const SizedBox(width: 10),
-                          Text(style.label(context),
-                              style: TextStyle(
-                                  color: style.base,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 12)),
+                          Text(style.label(context), style: TextStyle(color: style.base, fontWeight: FontWeight.w700, fontSize: 12)),
                         ],
                       ),
                     ),
                     if (joined.isNotEmpty) ...[
                       const SizedBox(height: 10),
-                      Text(joined)
-                          .size(context.font.small)
-                          .color(context.color.textDefaultColor),
+                      Text(joined).size(context.font.small).color(context.color.textDefaultColor),
                     ],
                   ],
                 ),
@@ -436,6 +413,14 @@ class _ProfileGlassCard extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
+
+
+
 
 class _AccountStyle {
   final Color base;
@@ -467,6 +452,8 @@ class _AccountStyle {
   }
 }
 
+
+
 class _ThemeSwitchTile extends StatelessWidget {
   final ValueNotifier<bool> isDark;
   final VoidCallback onToggle;
@@ -491,13 +478,11 @@ class _ThemeSwitchTile extends StatelessWidget {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(14),
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 10), // 👈 نفس ارتفاع الخدمات
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), // 👈 نفس ارتفاع الخدمات
               decoration: BoxDecoration(
                 color: context.color.secondaryColor,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                    color: context.color.textDefaultColor.withOpacity(0.06)),
+                border: Border.all(color: context.color.textDefaultColor.withOpacity(0.06)),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.03),
@@ -532,8 +517,7 @@ class _ThemeSwitchTile extends StatelessWidget {
                     activeColor: Colors.white,
                     activeTrackColor: accent,
                     inactiveThumbColor: context.color.textDefaultColor,
-                    inactiveTrackColor:
-                        context.color.textDefaultColor.withOpacity(0.2),
+                    inactiveTrackColor: context.color.textDefaultColor.withOpacity(0.2),
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
 
@@ -542,7 +526,7 @@ class _ThemeSwitchTile extends StatelessWidget {
                   // النص وسط
                   Expanded(
                     child: Text(v ? "الوضع الداكن" : "الوضع الفاتح",
-                            textAlign: TextAlign.center)
+                        textAlign: TextAlign.center)
                         .bold(weight: FontWeight.w600)
                         .size(context.font.normal)
                         .color(context.color.textColorDark),
@@ -555,26 +539,21 @@ class _ThemeSwitchTile extends StatelessWidget {
                     duration: const Duration(milliseconds: 400),
                     transitionBuilder: (child, anim) {
                       return ScaleTransition(
-                        scale: CurvedAnimation(
-                            parent: anim, curve: Curves.easeOutBack),
+                        scale: CurvedAnimation(parent: anim, curve: Curves.easeOutBack),
                         child: FadeTransition(opacity: anim, child: child),
                       );
                     },
                     child: v
                         ? SizedBox(
-                            key: const ValueKey("dark"),
-                            height: 22,
-                            width: 22,
-                            child: UiUtils.getSvg(AppIcons.darkTheme,
-                                color: accent),
-                          )
+                      key: const ValueKey("dark"),
+                      height: 22, width: 22,
+                      child: UiUtils.getSvg(AppIcons.darkTheme, color: accent),
+                    )
                         : SizedBox(
-                            key: const ValueKey("light"),
-                            height: 22,
-                            width: 22,
-                            child: UiUtils.getSvg(AppIcons.language,
-                                color: accent),
-                          ),
+                      key: const ValueKey("light"),
+                      height: 22, width: 22,
+                      child: UiUtils.getSvg(AppIcons.language, color: accent),
+                    ),
                   ),
                 ],
               ),
@@ -586,11 +565,19 @@ class _ThemeSwitchTile extends StatelessWidget {
   }
 }
 
+
+
+
+
+
+
+
+
 class _ActionTab {
   final String label;
   final String svg;
   final VoidCallback? onTap;
-  const _ActionTab(this.label, this.svg);
+  const _ActionTab(this.label, this.svg, {this.onTap});
 }
 
 class _TabChip extends StatelessWidget {
@@ -604,19 +591,14 @@ class _TabChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.color.territoryColor.withOpacity(0.10),
         borderRadius: BorderRadius.circular(12),
-        border:
-            Border.all(color: context.color.textDefaultColor.withOpacity(0.10)),
+        border: Border.all(color: context.color.textDefaultColor.withOpacity(0.10)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          UiUtils.getSvg(tab.svg,
-              height: 18, width: 18, color: context.color.territoryColor),
+          UiUtils.getSvg(tab.svg, height: 18, width: 18, color: context.color.territoryColor),
           const SizedBox(width: 8),
-          Text(tab.label)
-              .bold(weight: FontWeight.w700)
-              .size(context.font.small)
-              .color(context.color.textColorDark),
+          Text(tab.label).bold(weight: FontWeight.w700).size(context.font.small).color(context.color.textColorDark),
         ],
       ),
     );
@@ -643,18 +625,13 @@ class _ExploreList extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
       child: Container(
-        decoration: BoxDecoration(
-            color: context.color.secondaryColor,
-            borderRadius: BorderRadius.circular(14)),
+        decoration: BoxDecoration(color: context.color.secondaryColor, borderRadius: BorderRadius.circular(14)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-              child: Text("استكشف")
-                  .bold(weight: FontWeight.w700)
-                  .size(context.font.normal)
-                  .color(context.color.textColorDark),
+              child: Text("استكشف").bold(weight: FontWeight.w700).size(context.font.normal).color(context.color.textColorDark),
             ),
             ...items.map((e) {
               return InkWell(
@@ -663,12 +640,9 @@ class _ExploreList extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
                   child: Row(
                     children: [
-                      Text(e.title)
-                          .bold(weight: FontWeight.w600)
-                          .color(context.color.textColorDark),
+                      Text(e.title).bold(weight: FontWeight.w600).color(context.color.textColorDark),
                       const Spacer(),
-                      UiUtils.getSvg(e.svg,
-                          color: context.color.textDefaultColor),
+                      UiUtils.getSvg(e.svg, color: context.color.textDefaultColor),
                     ],
                   ),
                 ),
@@ -701,8 +675,7 @@ class _ThemeToggle extends StatelessWidget {
             width: 36,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                  color: context.color.textDefaultColor.withOpacity(0.12)),
+              border: Border.all(color: context.color.textDefaultColor.withOpacity(0.12)),
             ),
             alignment: Alignment.center,
             child: AnimatedRotation(
@@ -710,10 +683,8 @@ class _ThemeToggle extends StatelessWidget {
               duration: const Duration(milliseconds: 350),
               curve: Curves.easeOutQuart,
               child: v
-                  ? UiUtils.getSvg(AppIcons.darkTheme,
-                      color: context.color.textDefaultColor)
-                  : UiUtils.getSvg(AppIcons.language,
-                      color: context.color.textDefaultColor),
+                  ? UiUtils.getSvg(AppIcons.darkTheme, color: context.color.textDefaultColor)
+                  : UiUtils.getSvg(AppIcons.language, color: context.color.textDefaultColor),
             ),
           ),
         );
@@ -721,6 +692,9 @@ class _ThemeToggle extends StatelessWidget {
     );
   }
 }
+
+
+
 
 class _IconSquareButton extends StatelessWidget {
   final String svg;
@@ -734,17 +708,20 @@ class _IconSquareButton extends StatelessWidget {
       alignment: Alignment.center,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
-        border:
-            Border.all(color: context.color.textDefaultColor.withOpacity(0.12)),
+        border: Border.all(color: context.color.textDefaultColor.withOpacity(0.12)),
       ),
       child: InkWell(
         onTap: onTap,
-        child: UiUtils.getSvg(svg,
-            height: 22, width: 22, color: context.color.textDefaultColor),
+        child: UiUtils.getSvg(svg, height: 22, width: 22, color: context.color.textDefaultColor),
       ),
     );
   }
 }
+
+
+
+
+
 
 class _Pressable extends StatefulWidget {
   final Widget child;
@@ -754,7 +731,6 @@ class _Pressable extends StatefulWidget {
   @override
   State<_Pressable> createState() => _PressableState();
 }
-
 class _PressableState extends State<_Pressable> {
   bool _down = false;
   @override
@@ -782,7 +758,12 @@ class _PressableState extends State<_Pressable> {
  *  - _DeleteAccountRow
  * ========== */
 
+
+
+
+
 // ================== FIX: missing widgets ==================
+
 
 class _UpdateRow extends StatelessWidget {
   final VoidCallback onTap;
@@ -797,15 +778,13 @@ class _UpdateRow extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: 40, height: 40,
               decoration: BoxDecoration(
                 color: context.color.territoryColor.withOpacity(0.10),
                 borderRadius: BorderRadius.circular(10),
               ),
               alignment: Alignment.center,
-              child: UiUtils.getSvg(AppIcons.update,
-                  color: context.color.territoryColor),
+              child: UiUtils.getSvg(AppIcons.update, color: context.color.territoryColor),
             ),
             const SizedBox(width: 12),
             Column(
@@ -815,14 +794,12 @@ class _UpdateRow extends StatelessWidget {
                     .bold(weight: FontWeight.w700)
                     .color(context.color.textColorDark),
                 Text("v${Constant.newVersionNumber}")
-                    .size(context.font.small)
-                    .italic()
+                    .size(context.font.small).italic()
                     .color(context.color.textColorDark),
               ],
             ),
             const Spacer(),
-            UiUtils.getSvg(AppIcons.arrowRight,
-                color: context.color.textDefaultColor),
+            UiUtils.getSvg(AppIcons.arrowRight, color: context.color.textDefaultColor),
           ],
         ),
       ),
@@ -842,15 +819,13 @@ class _DeleteAccountRow extends StatelessWidget {
         onTap: onTap,
         child: Row(
           children: [
-            UiUtils.getSvg(AppIcons.delete,
-                color: context.color.territoryColor),
+            UiUtils.getSvg(AppIcons.delete, color: context.color.territoryColor),
             const SizedBox(width: 12),
             Text("deleteAccount".translate(context))
                 .bold(weight: FontWeight.w700)
                 .color(context.color.textColorDark),
             const Spacer(),
-            UiUtils.getSvg(AppIcons.arrowRight,
-                color: context.color.textDefaultColor),
+            UiUtils.getSvg(AppIcons.arrowRight, color: context.color.textDefaultColor),
           ],
         ),
       ),
@@ -869,6 +844,10 @@ class _ActionChip extends StatelessWidget {
   const _ActionChip({
     required this.label,
     required this.svg,
+    this.onTap,
+    this.padding = const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+    this.iconSize = 20,
+    this.showIcon = false,
   });
 
   @override
@@ -878,17 +857,13 @@ class _ActionChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.color.secondaryColor,
         borderRadius: BorderRadius.circular(12),
-        border:
-            Border.all(color: context.color.textDefaultColor.withOpacity(0.10)),
+        border: Border.all(color: context.color.textDefaultColor.withOpacity(0.10)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (showIcon)
-            UiUtils.getSvg(svg,
-                height: iconSize,
-                width: iconSize,
-                color: context.color.territoryColor),
+            UiUtils.getSvg(svg, height: iconSize, width: iconSize, color: context.color.territoryColor),
           if (showIcon) const SizedBox(width: 8),
           Flexible(
             child: Text(label)
@@ -902,6 +877,12 @@ class _ActionChip extends StatelessWidget {
     return onTap == null ? core : _Pressable(onTap: onTap, child: core);
   }
 }
+
+
+
+
+
+
 
 class _ServiceItemTile extends StatelessWidget {
   final String title;
@@ -922,16 +903,14 @@ class _ServiceItemTile extends StatelessWidget {
 
     return _Pressable(
       onTap: onTap,
-      child: ClipRRect(
-        // يضمن تطابق الحواف مع أي أنيميشن/سكيل
+      child: ClipRRect( // يضمن تطابق الحواف مع أي أنيميشن/سكيل
         borderRadius: BorderRadius.circular(14),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
           decoration: BoxDecoration(
             color: context.color.secondaryColor,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-                color: context.color.textDefaultColor.withOpacity(0.06)),
+            border: Border.all(color: context.color.textDefaultColor.withOpacity(0.06)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.03),
@@ -950,7 +929,7 @@ class _ServiceItemTile extends StatelessWidget {
               colors: [
                 barBase.withOpacity(0.40), // أقوى عند الحافة
                 barBase.withOpacity(0.18), // يتدرّج للداخل
-                Colors.transparent, // يتلاشى
+                Colors.transparent,        // يتلاشى
               ],
               stops: const [0.0, 0.08, 0.20], // اضبطها لو تبغيه أرفع/أعرض
             ),
@@ -985,3 +964,4 @@ class _ServiceItemTile extends StatelessWidget {
     );
   }
 }
+

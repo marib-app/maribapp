@@ -19,8 +19,7 @@ class WalletFilter {
     return WalletFilter(
       value: rawValue.toString(),
       label: rawLabel.toString(),
-      metadata:
-          Map<String, dynamic>.from(json['meta'] ?? json['metadata'] ?? {}),
+      metadata: Map<String, dynamic>.from(json['meta'] ?? json['metadata'] ?? {}),
       isDefault: _parseBool(json['default'] ?? json['is_default']),
     );
   }
@@ -62,13 +61,13 @@ class WalletFilter {
       return response
           .whereType<dynamic>()
           .map((e) => e is Map<String, dynamic>
-              ? WalletFilter.fromJson(e)
-              : WalletFilter.fromJson(Map<String, dynamic>.from(e as Map)))
+          ? WalletFilter.fromJson(e)
+          : WalletFilter.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
     }
 
     if (response is Map) {
-      final map = Map<String, dynamic>.from(response);
+      final map = Map<String, dynamic>.from(response as Map);
       final candidates = [
         map['filters'],
         map['available_filters'],

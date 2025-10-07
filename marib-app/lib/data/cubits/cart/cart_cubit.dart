@@ -6,10 +6,18 @@ import 'package:marib/data/repositories/cart/cart_repository.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/delivery_department.dart';
 import 'package:meta/meta.dart';
+import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/data/model/cart/cart_discount.dart';
 import 'package:marib/utils/api.dart';
 import 'package:marib/data/repositories/cart/cart_tips_repository.dart';
 import 'package:marib/data/model/cart/cart_safety_tip.dart';
+
+
+
+
+
+
+
 
 @immutable
 class CartState {
@@ -28,6 +36,7 @@ class CartState {
     this.deliveryPaymentOptions,
     this.deliveryPaymentTiming,
     this.pendingAddition,
+
   });
 
   final List<Cart> items;
@@ -44,6 +53,7 @@ class CartState {
   final List<dynamic>? deliveryPaymentOptions;
   final String? deliveryPaymentTiming;
   final PendingCartAddition? pendingAddition;
+
 
   CartState copyWith({
     List<Cart>? items,
@@ -68,11 +78,13 @@ class CartState {
       items: items ?? this.items,
       discounts: discounts ?? this.discounts,
       couponInProgress: couponInProgress ?? this.couponInProgress,
-      couponError: clearCouponError ? null : (couponError ?? this.couponError),
+      couponError:
+      clearCouponError ? null : (couponError ?? this.couponError),
       throttleResetAt:
-          clearThrottle ? null : (throttleResetAt ?? this.throttleResetAt),
+      clearThrottle ? null : (throttleResetAt ?? this.throttleResetAt),
       lastUpdated: lastUpdated ?? this.lastUpdated,
-      safetyTips: clearSafetyTips ? null : (safetyTips ?? this.safetyTips),
+      safetyTips:
+      clearSafetyTips ? null : (safetyTips ?? this.safetyTips),
       pendingAddition: identical(pendingAddition, _sentinel)
           ? this.pendingAddition
           : pendingAddition as PendingCartAddition?,
@@ -88,17 +100,21 @@ class CartState {
       blocking: identical(blocking, _sentinel)
           ? this.blocking
           : blocking as Map<String, dynamic>?,
-      deliveryPaymentOptions: identical(deliveryPaymentOptions, _sentinel)
+      deliveryPaymentOptions:
+      identical(deliveryPaymentOptions, _sentinel)
           ? this.deliveryPaymentOptions
           : deliveryPaymentOptions as List<dynamic>?,
-      deliveryPaymentTiming: identical(deliveryPaymentTiming, _sentinel)
+      deliveryPaymentTiming:
+      identical(deliveryPaymentTiming, _sentinel)
           ? this.deliveryPaymentTiming
           : deliveryPaymentTiming as String?,
     );
   }
-
   static const Object _sentinel = Object();
+
 }
+
+
 
 @immutable
 class PendingCartAddition {
@@ -131,12 +147,10 @@ class PendingCartAddition {
       vendorLat: cart.vendorLat,
       vendorLng: cart.vendorLng,
       variantId: cart.variantId,
-      variantAttributes: cart.variantAttributes != null
-          ? Map<String, dynamic>.from(cart.variantAttributes!)
-          : null,
-      stockSnapshot: cart.stockSnapshot != null
-          ? Map<String, dynamic>.from(cart.stockSnapshot!)
-          : null,
+      variantAttributes:
+      cart.variantAttributes != null ? Map<String, dynamic>.from(cart.variantAttributes!) : null,
+      stockSnapshot:
+      cart.stockSnapshot != null ? Map<String, dynamic>.from(cart.stockSnapshot!) : null,
       unitPrice: cart.unitPrice,
       unitPriceLocked: cart.unitPriceLocked,
       currency: cart.currency,
@@ -158,8 +172,8 @@ class PendingCartAddition {
   final String? currency;
 
   static List<Map<String, dynamic>>? _cloneListOfMaps(
-    List<Map<String, dynamic>>? source,
-  ) {
+      List<Map<String, dynamic>>? source,
+      ) {
     if (source == null) {
       return null;
     }
@@ -173,17 +187,23 @@ class CartCubit extends Cubit<CartState> {
   CartCubit({CartRepository? repository, CartTipsRepository? tipsRepository})
       : _repository = repository ?? CartRepository(),
         _tipsRepository = tipsRepository ?? const CartTipsRepository(),
-        super(const CartState()) {
+
+      super(const CartState()) {
     final String? storedSection = HiveUtils.getCartSection();
     _activeSection =
         normalizeDeliveryDepartment(storedSection) ?? storedSection;
+
+
   }
 
   String? _activeSection;
   String? get activeSection => _activeSection;
 
+
   final CartRepository _repository;
   final CartTipsRepository _tipsRepository;
+
+
 
   Future<void> fetchCart() async {
     final CartSummary summary = await _repository.fetchCart();
@@ -207,6 +227,7 @@ class CartCubit extends Cubit<CartState> {
       ),
     );
   }
+
 
   Future<void> updateDeliveryPaymentTiming(String timing) async {
     final String normalized = timing.trim();
@@ -241,14 +262,16 @@ class CartCubit extends Cubit<CartState> {
           deliveryQuote: summary.deliveryQuote,
           blocking: summary.blocking,
           deliveryPaymentOptions: summary.deliveryPaymentOptions,
-          deliveryPaymentTiming: summary.deliveryPaymentTiming ?? normalized,
+          deliveryPaymentTiming:
+          summary.deliveryPaymentTiming ?? normalized,
         ),
       );
 
-      final bool requiresRefresh = summary.deliveryPaymentOptions == null ||
-          summary.deliveryPaymentOptions!.isEmpty ||
-          summary.deliveryPaymentTiming == null ||
-          summary.deliveryPaymentTiming!.trim().isEmpty;
+      final bool requiresRefresh =
+          summary.deliveryPaymentOptions == null ||
+              summary.deliveryPaymentOptions!.isEmpty ||
+              summary.deliveryPaymentTiming == null ||
+              summary.deliveryPaymentTiming!.trim().isEmpty;
       if (requiresRefresh) {
         await refreshDeliveryPaymentTiming();
       }
@@ -271,6 +294,7 @@ class CartCubit extends Cubit<CartState> {
     final String? department =
         normalizeDeliveryDepartment(departmentRaw) ?? departmentRaw;
 
+
     _setActiveSection(department);
 
     final PendingCartAddition request = PendingCartAddition.fromCart(
@@ -280,6 +304,7 @@ class CartCubit extends Cubit<CartState> {
 
     CartSafetyTipsPayload? safetyTips;
     if (department != null) {
+
       try {
         safetyTips = await _tipsRepository.fetchTips(
           department: department,
@@ -294,11 +319,13 @@ class CartCubit extends Cubit<CartState> {
         safetyTips != null && safetyTips.hasTips && safetyTips.showAsModal;
 
     if (requiresConfirmation) {
+
       emit(
         state.copyWith(
           safetyTips: safetyTips,
           clearSafetyTips: false,
           pendingAddition: request,
+
         ),
       );
       return;
@@ -306,16 +333,19 @@ class CartCubit extends Cubit<CartState> {
 
     await _commitCartAddition(
       request: request,
+
       safetyTipsOverride:
-          (safetyTips != null && safetyTips.hasTips) ? safetyTips : null,
+      (safetyTips != null && safetyTips.hasTips) ? safetyTips : null,
     );
   }
 
   Future<void> _commitCartAddition({
     required PendingCartAddition request,
+
     CartSafetyTipsPayload? safetyTipsOverride,
     bool skipTipFetch = false,
   }) async {
+
     final CartSummary summary = await _repository.addItem(
       itemId: request.itemId,
       quantity: request.quantity,
@@ -332,10 +362,11 @@ class CartCubit extends Cubit<CartState> {
       currency: request.currency,
     );
 
+
     CartSafetyTipsPayload? resolvedTips =
-        (safetyTipsOverride != null && safetyTipsOverride.hasTips)
-            ? safetyTipsOverride
-            : null;
+    (safetyTipsOverride != null && safetyTipsOverride.hasTips)
+        ? safetyTipsOverride
+        : null;
 
     if (!skipTipFetch && resolvedTips == null) {
       final String? canonicalDepartment =
@@ -345,8 +376,7 @@ class CartCubit extends Cubit<CartState> {
 
       if (canonicalDepartment != null && addedItemId != null) {
         try {
-          final CartSafetyTipsPayload? fetched =
-              await _tipsRepository.fetchTips(
+          final CartSafetyTipsPayload? fetched = await _tipsRepository.fetchTips(
             department: canonicalDepartment,
             itemId: addedItemId,
           );
@@ -387,18 +417,18 @@ class CartCubit extends Cubit<CartState> {
     }
   }
 
+
   Future<void> refreshDeliveryPaymentTiming() async {
     try {
-      final CartSummary summary =
-          await _repository.fetchDeliveryPaymentTiming();
+      final CartSummary summary = await _repository.fetchDeliveryPaymentTiming();
       if (summary.items.isNotEmpty) {
         _syncSection(summary.items);
       }
 
       final List<Cart> resolvedItems =
-          summary.items.isNotEmpty ? summary.items : state.items;
+      summary.items.isNotEmpty ? summary.items : state.items;
       final List<CartDiscount> resolvedDiscounts =
-          summary.discounts.isNotEmpty ? summary.discounts : state.discounts;
+      summary.discounts.isNotEmpty ? summary.discounts : state.discounts;
 
       emit(
         state.copyWith(
@@ -410,15 +440,16 @@ class CartCubit extends Cubit<CartState> {
           deliveryQuote: summary.deliveryQuote ?? state.deliveryQuote,
           blocking: summary.blocking ?? state.blocking,
           deliveryPaymentOptions:
-              summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
+          summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
           deliveryPaymentTiming:
-              summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
+          summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
         ),
       );
     } catch (_) {
       // Ignore delivery payment timing fetch failures.
     }
   }
+
 
   Future<void> confirmPendingCartAddition() async {
     final PendingCartAddition? pending = state.pendingAddition;
@@ -444,6 +475,7 @@ class CartCubit extends Cubit<CartState> {
   Future<void> cancelPendingCartAddition() async {
     _clearPendingAddition(clearSafetyTips: true);
     await fetchCart();
+
   }
 
   void _clearPendingAddition({bool clearSafetyTips = false}) {
@@ -459,6 +491,8 @@ class CartCubit extends Cubit<CartState> {
       ),
     );
   }
+
+
 
   Future<void> updateItemQuantity(int id, int quantity) async {
     final Cart? item = _findItem(itemId: id);
@@ -500,6 +534,7 @@ class CartCubit extends Cubit<CartState> {
 
     if (item == null) return;
 
+
     await _updateItemQuantity(item, item.quantity + 1);
   }
 
@@ -512,6 +547,8 @@ class CartCubit extends Cubit<CartState> {
 
     await _updateItemQuantity(item, item.quantity - 1);
   }
+
+
 
   Future<void> removeItem({int? cartItemId, required int itemId}) async {
     final Cart? item = _findItem(
@@ -610,7 +647,7 @@ class CartCubit extends Cubit<CartState> {
           state.copyWith(
             couponInProgress: false,
             couponError:
-                'تم تجاوز الحد المسموح لمحاولات القسائم. يرجى الانتظار دقيقة قبل المحاولة مجددًا.',
+            'تم تجاوز الحد المسموح لمحاولات القسائم. يرجى الانتظار دقيقة قبل المحاولة مجددًا.',
             throttleResetAt: DateTime.now().add(const Duration(minutes: 1)),
           ),
         );
@@ -632,9 +669,14 @@ class CartCubit extends Cubit<CartState> {
     }
   }
 
+
+
+
   void clearSafetyTips() {
     _clearPendingAddition(clearSafetyTips: true);
+
   }
+
 
   Future<void> removeCoupon(String rawCode) async {
     final String trimmed = rawCode.trim();
@@ -675,7 +717,7 @@ class CartCubit extends Cubit<CartState> {
           state.copyWith(
             couponInProgress: false,
             couponError:
-                'تم تجاوز الحد المسموح لمحاولات القسائم. يرجى الانتظار دقيقة قبل المحاولة مجددًا.',
+            'تم تجاوز الحد المسموح لمحاولات القسائم. يرجى الانتظار دقيقة قبل المحاولة مجددًا.',
             throttleResetAt: DateTime.now().add(const Duration(minutes: 1)),
           ),
         );
@@ -728,6 +770,8 @@ class CartCubit extends Cubit<CartState> {
   int get totalItems =>
       state.items.fold(0, (int total, Cart item) => total + item.quantity);
 
+
+
   int getQuantityForCartItem({int? cartItemId, required int itemId}) {
     final Cart? item = _findItem(
       cartItemId: cartItemId,
@@ -738,6 +782,8 @@ class CartCubit extends Cubit<CartState> {
   }
 
   int getQuantityForProduct(int id) => getQuantityForCartItem(itemId: id);
+
+
 
   double get subtotal =>
       state.items.fold(0, (double sum, Cart item) => sum + item.subtotalAmount);
@@ -752,6 +798,7 @@ class CartCubit extends Cubit<CartState> {
       return null;
     }
 
+
     for (final Cart item in state.items) {
       if (item.id == itemId) {
         return item;
@@ -759,6 +806,7 @@ class CartCubit extends Cubit<CartState> {
     }
     return null;
   }
+
 
   void _syncSection(List<Cart> items) {
     final String? newSection = items.isNotEmpty ? items.first.section : null;
@@ -770,12 +818,16 @@ class CartCubit extends Cubit<CartState> {
         normalizeDeliveryDepartment(section) ?? section?.trim();
 
     if (_activeSection == normalized) {
+
       return;
     }
 
     _activeSection = normalized;
     unawaited(HiveUtils.setCartSection(normalized));
   }
+
+
+
 
   String? _extractCanonicalDepartment(Map<String, dynamic>? raw) {
     for (final Map<String, dynamic> candidate in _mapCandidates(raw)) {
@@ -821,8 +873,7 @@ class CartCubit extends Cubit<CartState> {
     return null;
   }
 
-  Iterable<Map<String, dynamic>> _mapCandidates(
-      Map<String, dynamic>? raw) sync* {
+  Iterable<Map<String, dynamic>> _mapCandidates(Map<String, dynamic>? raw) sync* {
     final List<dynamic> queue = <dynamic>[];
     if (raw != null) {
       queue.add(raw);
@@ -870,11 +921,14 @@ class CartCubit extends Cubit<CartState> {
     }
     if (value is Map) {
       return value.map(
-        (dynamic key, dynamic value) => MapEntry(key.toString(), value),
+            (dynamic key, dynamic value) => MapEntry(key.toString(), value),
       );
     }
     return null;
   }
+
+
+
 
   String? _readDepartmentSlug(Map<String, dynamic>? map) {
     final String? value = _extractDepartmentValue(map);
@@ -897,7 +951,7 @@ class CartCubit extends Cubit<CartState> {
         continue;
       }
       final String? resolved =
-          _resolveDepartmentValue(map[key], <Map<String, dynamic>>{map});
+      _resolveDepartmentValue(map[key], <Map<String, dynamic>>{map});
       if (resolved != null && resolved.isNotEmpty) {
         return resolved;
       }
@@ -973,6 +1027,10 @@ class CartCubit extends Cubit<CartState> {
     return trimmed.isEmpty ? null : trimmed;
   }
 
+
+
+
+
   String? _readString(Map<String, dynamic>? map, Iterable<String> keys) {
     if (map == null) return null;
     for (final String key in keys) {
@@ -1020,4 +1078,9 @@ class CartCubit extends Cubit<CartState> {
     }
     return null;
   }
+
+
+
+
+
 }

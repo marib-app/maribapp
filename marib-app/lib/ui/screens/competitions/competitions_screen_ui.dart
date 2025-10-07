@@ -3,8 +3,7 @@
 // تم تقسيم الواجهة إلى كلاسات صغيرة مع تعليقات عربية، مع الحفاظ على نفس الشكل.
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'
-    show SystemUiOverlayStyle, Clipboard, ClipboardData;
+import 'package:flutter/services.dart' show SystemUiOverlayStyle, Clipboard, ClipboardData;
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
@@ -15,8 +14,8 @@ import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 import 'package:marib/app/routes.dart';
 
 import 'package:marib/data/model/challenge_model.dart'; // Challenge
-import 'package:marib/ui/screens/competitions/context_extensions.dart'; // context.isDarkMode / context.color
-import 'package:marib/ui/screens/competitions/competitions_screen.dart'; // CompetitionState/Logic/Actions
+import 'context_extensions.dart'; // context.isDarkMode / context.color
+import 'competitions_screen.dart'; // CompetitionState/Logic/Actions
 
 /// واجهة العرض الرئيسية: تربط الحالة + المنطق + الإجراءات بالكلاسات المرئية.
 class CompetitionScreenUI extends StatelessWidget {
@@ -95,8 +94,7 @@ class _ActivitiesTab extends StatelessWidget {
   final CompetitionState state;
   final CompetitionLogic logic;
   final CompetitionActions actions;
-  const _ActivitiesTab(
-      {required this.state, required this.logic, required this.actions});
+  const _ActivitiesTab({required this.state, required this.logic, required this.actions});
 
   @override
   Widget build(BuildContext context) {
@@ -111,12 +109,9 @@ class _ActivitiesTab extends StatelessWidget {
 
     // حسابات مشتقة للعرض فقط
     final highest = logic.highestChallenge(s.challenges);
-    final nearest =
-        logic.nearestUnreached(s.challenges, s.referralPoints.currentPoints);
-    final remaining =
-        logic.remainingToNearest(s.challenges, s.referralPoints.currentPoints);
-    final progress =
-        logic.progressToHighest(s.challenges, s.referralPoints.currentPoints);
+    final nearest = logic.nearestUnreached(s.challenges, s.referralPoints.currentPoints);
+    final remaining = logic.remainingToNearest(s.challenges, s.referralPoints.currentPoints);
+    final progress = logic.progressToHighest(s.challenges, s.referralPoints.currentPoints);
 
     return SingleChildScrollView(
       physics: const ClampingScrollPhysics(),
@@ -194,8 +189,7 @@ class _PaymentTab extends StatelessWidget {
         Row(
           children: [
             Text("transactionHistory".translate(context),
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const Spacer(),
             if (tx.isNotEmpty)
               TextButton.icon(
@@ -227,8 +221,7 @@ class PointsCard extends StatelessWidget {
   final double progressToHighest;
   final bool showWarning;
   final VoidCallback onCollectPressed;
-  final Animation<double> Function()
-      shakeAnimation; // متروك لو أردت استخدامه لاحقًا
+  final Animation<double> Function() shakeAnimation; // متروك لو أردت استخدامه لاحقًا
 
   const PointsCard({
     super.key,
@@ -273,7 +266,7 @@ class PointsCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
+                    color: Theme.of(context).colorScheme.onBackground,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -290,15 +283,12 @@ class PointsCard extends StatelessWidget {
                 Text(
                   nearestTitle != null
                       ? (remainingToNearest > 0
-                          ? "باقي لك $remainingToNearest نقطة للحصول على جائزة التحدي '$nearestTitle' 🎁"
-                          : "جاهز لجائزة التحدي '$nearestTitle' 🎁")
+                      ? "باقي لك $remainingToNearest نقطة للحصول على جائزة التحدي '$nearestTitle' 🎁"
+                      : "جاهز لجائزة التحدي '$nearestTitle' 🎁")
                       : "🎉 ${'allChallengesReached'.translate(context)}",
                   style: TextStyle(
                     fontSize: 14,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withOpacity(0.7),
+                    color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -310,12 +300,9 @@ class PointsCard extends StatelessWidget {
                     ElevatedButton(
                       onPressed: onCollectPressed,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            canCollect ? Colors.orange : Colors.grey,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 10),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20)),
+                        backgroundColor: canCollect ? Colors.orange : Colors.grey,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                       ),
                       child: Text(
                         canCollect ? "اجمع نقاطك الآن" : "اجمع نقاط التحدي",
@@ -329,8 +316,7 @@ class PointsCard extends StatelessWidget {
                         nearestTitle != null && remainingToNearest > 0
                             ? "باقي $remainingToNearest نقطة لتفعيل الزر"
                             : "",
-                        style:
-                            TextStyle(fontSize: 12, color: Colors.red.shade700),
+                        style: TextStyle(fontSize: 12, color: Colors.red.shade700),
                       ),
                     ),
                   ],
@@ -339,8 +325,7 @@ class PointsCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          Image.asset('assets/image/rewards.png',
-              width: 110, height: 100, fit: BoxFit.contain),
+          Image.asset('assets/image/rewards.png', width: 110, height: 100, fit: BoxFit.contain),
         ],
       ),
     );
@@ -365,13 +350,10 @@ class ChallengeCard extends StatelessWidget {
     final bool isActive = challenge.isActive;
     final bool isEligible = currentPoints >= challenge.requiredPoints;
 
-    final Color badgeColor =
-        isActive ? Colors.orange.shade100 : Colors.grey.shade300;
-    final Color badgeTextColor =
-        isActive ? Colors.deepOrange : Colors.grey.shade700;
-    final Color backgroundColor = isEligible
-        ? Colors.lightGreen.shade50
-        : (isActive ? Colors.amber.shade50 : Colors.grey.shade100);
+    final Color badgeColor = isActive ? Colors.orange.shade100 : Colors.grey.shade300;
+    final Color badgeTextColor = isActive ? Colors.deepOrange : Colors.grey.shade700;
+    final Color backgroundColor =
+    isEligible ? Colors.lightGreen.shade50 : (isActive ? Colors.amber.shade50 : Colors.grey.shade100);
 
     return InkWell(
       onTap: onTap,
@@ -382,12 +364,7 @@ class ChallengeCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: backgroundColor,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 6,
-                offset: const Offset(0, 3))
-          ],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6, offset: const Offset(0, 3))],
         ),
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -398,25 +375,17 @@ class ChallengeCard extends StatelessWidget {
             Text(
               challenge.title,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: context.color.textDefaultColor),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: context.color.textDefaultColor),
             ),
             const SizedBox(height: 6),
-            Text(
-                "${challenge.requiredPoints} ${'pointsRequired'.translate(context)}",
+            Text("${challenge.requiredPoints} ${'pointsRequired'.translate(context)}",
                 style: const TextStyle(fontSize: 12, color: Colors.black54)),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                  color: badgeColor, borderRadius: BorderRadius.circular(20)),
+              decoration: BoxDecoration(color: badgeColor, borderRadius: BorderRadius.circular(20)),
               child: Text(isActive ? "🔥 نشط" : "🚫 غير نشط",
-                  style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: badgeTextColor)),
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: badgeTextColor)),
             ),
             if (isActive)
               Padding(
@@ -424,12 +393,10 @@ class ChallengeCard extends StatelessWidget {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(6),
                   child: LinearProgressIndicator(
-                    value: (currentPoints / challenge.requiredPoints)
-                        .clamp(0.0, 1.0),
+                    value: (currentPoints / challenge.requiredPoints).clamp(0.0, 1.0),
                     minHeight: 6,
                     backgroundColor: Colors.grey.shade300,
-                    valueColor: AlwaysStoppedAnimation(
-                        isEligible ? Colors.green : Colors.orange),
+                    valueColor: AlwaysStoppedAnimation(isEligible ? Colors.green : Colors.orange),
                   ),
                 ),
               ),
@@ -447,10 +414,12 @@ class ReferralCodeBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
     final String trimmedCode = code.trim();
     final bool hasCode = trimmedCode.isNotEmpty;
     final unavailableTextRaw = "referralCodeUnavailable".translate(context);
-    final unavailableText = unavailableTextRaw == "referralCodeUnavailable"
+    final unavailableText =
+    unavailableTextRaw == "referralCodeUnavailable"
         ? "Referral code is currently unavailable"
         : unavailableTextRaw;
 
@@ -494,15 +463,15 @@ class ReferralCodeBox extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: hasCode ? "copy".translate(context) : unavailableText,
+            tooltip:
+            hasCode ? "copy".translate(context) : unavailableText,
             onPressed: hasCode
                 ? () {
-                    Clipboard.setData(ClipboardData(text: trimmedCode));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text("messageCopied".translate(context))),
-                    );
-                  }
+              Clipboard.setData(ClipboardData(text: trimmedCode));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("messageCopied".translate(context))),
+              );
+            }
                 : null,
             icon: Icon(
               Icons.copy,
@@ -518,14 +487,14 @@ class ReferralCodeBox extends StatelessWidget {
 /// قسم خيارات الدفع — يفتح نفس الحوارات ويحفظ عبر actions.onSavePaymentInfo
 class PaymentMethodsSection extends StatelessWidget {
   final Future<void> Function({
-    required List<String> paymentMethods,
-    required Map<String, dynamic> paymentAccountDetails,
-    String? businessName,
-    String? businessWhatsapp,
-    String? businessLocation,
-    List<String>? businessCategories,
-    String? commercialRegister,
-    String? email,
+  required List<String> paymentMethods,
+  required Map<String, dynamic> paymentAccountDetails,
+  String? businessName,
+  String? businessWhatsapp,
+  String? businessLocation,
+  List<String>? businessCategories,
+  String? commercialRegister,
+  String? email,
   }) onSavePaymentInfo;
 
   const PaymentMethodsSection({super.key, required this.onSavePaymentInfo});
@@ -541,8 +510,7 @@ class PaymentMethodsSection extends StatelessWidget {
           onTap: () => _showAddCreditCardDialog(context),
         ),
         ListTile(
-          leading:
-              const Icon(Icons.account_balance_wallet, color: Colors.orange),
+          leading: const Icon(Icons.account_balance_wallet, color: Colors.orange),
           title: Text("payViaWallet".translate(context)),
           trailing: const Icon(Icons.arrow_forward_ios),
           onTap: () => _showWalletDialog(context),
@@ -586,8 +554,7 @@ class PaymentMethodsSection extends StatelessWidget {
                 Expanded(
                   child: TextField(
                     controller: mmYYController,
-                    decoration: const InputDecoration(
-                        labelText: "MM/YY", border: OutlineInputBorder()),
+                    decoration: const InputDecoration(labelText: "MM/YY", border: OutlineInputBorder()),
                     keyboardType: TextInputType.number,
                   ),
                 ),
@@ -595,8 +562,7 @@ class PaymentMethodsSection extends StatelessWidget {
                 Expanded(
                   child: TextField(
                     controller: cvvController,
-                    decoration: const InputDecoration(
-                        labelText: "CVV", border: OutlineInputBorder()),
+                    decoration: const InputDecoration(labelText: "CVV", border: OutlineInputBorder()),
                     keyboardType: TextInputType.number,
                   ),
                 ),
@@ -604,8 +570,7 @@ class PaymentMethodsSection extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: context.color.forthColor),
+              style: ElevatedButton.styleFrom(backgroundColor: context.color.forthColor),
               onPressed: () async {
                 await onSavePaymentInfo(
                   paymentMethods: const ['credit_card'],
@@ -616,8 +581,7 @@ class PaymentMethodsSection extends StatelessWidget {
                 );
                 if (context.mounted) Navigator.pop(context);
               },
-              child: Text("save".translate(context),
-                  style: const TextStyle(color: Colors.white)),
+              child: Text("save".translate(context), style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -644,8 +608,7 @@ class PaymentMethodsSection extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: context.color.forthColor),
+              style: ElevatedButton.styleFrom(backgroundColor: context.color.forthColor),
               onPressed: () async {
                 await onSavePaymentInfo(
                   paymentMethods: const ['wallet'],
@@ -656,8 +619,7 @@ class PaymentMethodsSection extends StatelessWidget {
                 );
                 if (context.mounted) Navigator.pop(context);
               },
-              child: Text("save".translate(context),
-                  style: const TextStyle(color: Colors.white)),
+              child: Text("save".translate(context), style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -676,15 +638,12 @@ class PaymentMethodsSection extends StatelessWidget {
           children: [
             TextField(
               controller: phoneController,
-              decoration: InputDecoration(
-                  labelText: "phoneNumber".translate(context),
-                  border: const OutlineInputBorder()),
+              decoration: InputDecoration(labelText: "phoneNumber".translate(context), border: const OutlineInputBorder()),
               keyboardType: TextInputType.phone,
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: context.color.forthColor),
+              style: ElevatedButton.styleFrom(backgroundColor: context.color.forthColor),
               onPressed: () async {
                 await onSavePaymentInfo(
                   paymentMethods: const ['phone'],
@@ -695,8 +654,7 @@ class PaymentMethodsSection extends StatelessWidget {
                 );
                 if (context.mounted) Navigator.pop(context);
               },
-              child: Text("save".translate(context),
-                  style: const TextStyle(color: Colors.white)),
+              child: Text("save".translate(context), style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -743,10 +701,10 @@ class _ChallengesGrid extends StatelessWidget {
               Expanded(
                 child: right != null
                     ? ChallengeCard(
-                        challenge: right,
-                        currentPoints: currentPoints,
-                        onTap: () => onOpenDetails(right),
-                      )
+                  challenge: right,
+                  currentPoints: currentPoints,
+                  onTap: () => onOpenDetails(right),
+                )
                     : const SizedBox(),
               ),
             ],
@@ -768,10 +726,7 @@ class _GridShimmer extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
-        childAspectRatio: 0.7,
+        crossAxisCount: 2, crossAxisSpacing: 8, mainAxisSpacing: 8, childAspectRatio: 0.7,
       ),
       itemBuilder: (context, index) {
         return Container(
@@ -783,42 +738,22 @@ class _GridShimmer extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CustomShimmer(
-                  width: double.infinity,
-                  height: (100 as num).rh(context),
-                  borderRadius: 16),
+              CustomShimmer(width: double.infinity, height: (100 as num).rh(context), borderRadius: 16),
               Padding(
                 padding: const EdgeInsets.all(12.0),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CustomShimmer(
-                          width: (120 as num).rw(context),
-                          height: (15 as num).rh(context),
-                          borderRadius: 4),
-                      const SizedBox(height: 8),
-                      Row(children: [
-                        CustomShimmer(
-                            width: (20 as num).rw(context),
-                            height: (20 as num).rh(context),
-                            borderRadius: 10),
-                        const SizedBox(width: 4),
-                        CustomShimmer(
-                            width: (60 as num).rw(context),
-                            height: (12 as num).rh(context),
-                            borderRadius: 4),
-                      ]),
-                      const SizedBox(height: 8),
-                      CustomShimmer(
-                          width: (100 as num).rw(context),
-                          height: (12 as num).rh(context),
-                          borderRadius: 4),
-                      const SizedBox(height: 8),
-                      CustomShimmer(
-                          width: double.infinity,
-                          height: (8 as num).rh(context),
-                          borderRadius: 4),
-                    ]),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  CustomShimmer(width: (120 as num).rw(context), height: (15 as num).rh(context), borderRadius: 4),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    CustomShimmer(width: (20 as num).rw(context), height: (20 as num).rh(context), borderRadius: 10),
+                    const SizedBox(width: 4),
+                    CustomShimmer(width: (60 as num).rw(context), height: (12 as num).rh(context), borderRadius: 4),
+                  ]),
+                  const SizedBox(height: 8),
+                  CustomShimmer(width: (100 as num).rw(context), height: (12 as num).rh(context), borderRadius: 4),
+                  const SizedBox(height: 8),
+                  CustomShimmer(width: double.infinity, height: (8 as num).rh(context), borderRadius: 4),
+                ]),
               ),
             ],
           ),
@@ -833,10 +768,10 @@ class _GridShimmer extends StatelessWidget {
 //
 
 void _showChallengeDetailsDialog(
-  BuildContext context,
-  Challenge challenge,
-  VoidCallback goToInstructions,
-) {
+    BuildContext context,
+    Challenge challenge,
+    VoidCallback goToInstructions,
+    ) {
   showDialog(
     context: context,
     builder: (_) => BlurredDialogBox(
@@ -849,9 +784,7 @@ void _showChallengeDetailsDialog(
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Icon(Icons.description, color: Colors.deepOrange),
             const SizedBox(width: 8),
-            Expanded(
-                child: Text(challenge.description,
-                    style: const TextStyle(fontSize: 14))),
+            Expanded(child: Text(challenge.description, style: const TextStyle(fontSize: 14))),
           ]),
           const SizedBox(height: 20),
           Divider(thickness: 1, color: Colors.grey.shade300),
@@ -859,23 +792,20 @@ void _showChallengeDetailsDialog(
           Row(children: [
             const Icon(Icons.people, color: Colors.deepOrange),
             const SizedBox(width: 8),
-            Text("الإحالات المطلوبة: ${challenge.requiredReferrals}",
-                style: const TextStyle(fontSize: 14)),
+            Text("الإحالات المطلوبة: ${challenge.requiredReferrals}", style: const TextStyle(fontSize: 14)),
           ]),
           const SizedBox(height: 10),
           Row(children: [
             const Icon(Icons.star_rate_rounded, color: Colors.amber),
             const SizedBox(width: 8),
-            Text("النقاط لكل إحالة: ${challenge.pointsPerReferral}",
-                style: const TextStyle(fontSize: 14)),
+            Text("النقاط لكل إحالة: ${challenge.pointsPerReferral}", style: const TextStyle(fontSize: 14)),
           ]),
           const SizedBox(height: 10),
           Row(children: [
             Icon(challenge.isActive ? Icons.check_circle : Icons.cancel,
                 color: challenge.isActive ? Colors.green : Colors.grey),
             const SizedBox(width: 8),
-            Text(challenge.isActive ? "الحالة: 🔥 نشط" : "الحالة: 🚫 غير نشط",
-                style: const TextStyle(fontSize: 14)),
+            Text(challenge.isActive ? "الحالة: 🔥 نشط" : "الحالة: 🚫 غير نشط", style: const TextStyle(fontSize: 14)),
           ]),
           const SizedBox(height: 20),
           Divider(thickness: 1, color: Colors.grey.shade300),
@@ -892,8 +822,7 @@ void _showChallengeDetailsDialog(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue.shade50,
                 foregroundColor: Colors.blue.shade800,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ),
@@ -904,9 +833,9 @@ void _showChallengeDetailsDialog(
 }
 
 void _showAllTransactionsDialog(
-  BuildContext context,
-  List<dynamic> paymentTransactions,
-) {
+    BuildContext context,
+    List<dynamic> paymentTransactions,
+    ) {
   showDialog(
     context: context,
     builder: (_) => BlurredDialogBox(
@@ -918,8 +847,7 @@ void _showAllTransactionsDialog(
           itemCount: paymentTransactions.length,
           itemBuilder: (context, index) {
             final tx = paymentTransactions[index] as Map<String, dynamic>;
-            final status =
-                (tx['payment_status'] ?? '').toString().toLowerCase();
+            final status = (tx['payment_status'] ?? '').toString().toLowerCase();
             final isSuccess = status == 'success' || status == 'succeeded';
 
             return Card(
@@ -930,17 +858,14 @@ void _showAllTransactionsDialog(
                       ? Colors.green
                       : (status == 'pending' ? Colors.orange : Colors.red),
                   child: Icon(
-                    isSuccess
-                        ? Icons.check
-                        : (status == 'pending' ? Icons.schedule : Icons.close),
+                    isSuccess ? Icons.check : (status == 'pending' ? Icons.schedule : Icons.close),
                     color: Colors.white,
                     size: 16,
                   ),
                 ),
                 title: Text(
                   "${"transaction".translate(context)} #${tx['id']}",
-                  style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                 ),
                 subtitle: Text(
                   "${tx['payment_gateway'] ?? 'notSpecified'.translate(context)} - ${_formatDate(tx['created_at'])}",

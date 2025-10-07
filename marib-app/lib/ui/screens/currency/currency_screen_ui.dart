@@ -24,8 +24,9 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/extensions/extensions.dart'; // context.color
 
-import 'package:marib/ui/screens/currency/currency_screen.dart'
-    show CurrencyViewState, CurrencyPageStatus;
+import 'currency_screen.dart' show CurrencyViewState, CurrencyPageStatus;
+
+
 
 class CurrencyScreenUI extends StatelessWidget {
   const CurrencyScreenUI({
@@ -107,11 +108,7 @@ class CurrencyScreenUI extends StatelessWidget {
       ),
       child: TabBar(
         controller: tabController,
-        tabs: const [
-          Tab(text: 'الأسعار'),
-          Tab(text: 'التحويل'),
-          Tab(text: 'الذهب')
-        ],
+        tabs: const [Tab(text: 'الأسعار'), Tab(text: 'التحويل'), Tab(text: 'الذهب')],
         indicator: UnderlineTabIndicator(
           borderSide: BorderSide(color: brand, width: 3),
           insets: const EdgeInsets.symmetric(horizontal: 24),
@@ -120,7 +117,7 @@ class CurrencyScreenUI extends StatelessWidget {
         unselectedLabelStyle: unselected,
         labelColor: onBg,
         unselectedLabelColor: onBg.withOpacity(0.5),
-        overlayColor: WidgetStateProperty.all(Colors.transparent),
+        overlayColor: MaterialStateProperty.all(Colors.transparent),
       ),
     );
   }
@@ -137,8 +134,7 @@ class CurrencyScreenUI extends StatelessWidget {
           controller: tabController,
           physics: const BouncingScrollPhysics(),
           children: [
-            RatesTabView(
-                state: state, onShareRates: onShareRates, brand: brand),
+            RatesTabView(state: state, onShareRates: onShareRates, brand: brand),
             ConvertTabView(
               state: state,
               amountController: amountController,
@@ -160,12 +156,8 @@ class CurrencyScreenUI extends StatelessWidget {
   Widget _buildLoadingShimmer(BuildContext context) {
     final isDark = _isDark(context);
     // ألوان خفيفة جدًا
-    final base = isDark
-        ? Colors.white.withOpacity(0.08)
-        : Colors.black.withOpacity(0.06);
-    final highlight = isDark
-        ? Colors.white.withOpacity(0.16)
-        : Colors.black.withOpacity(0.12);
+    final base = isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.06);
+    final highlight = isDark ? Colors.white.withOpacity(0.16) : Colors.black.withOpacity(0.12);
 
     return Shimmer.fromColors(
       baseColor: base,
@@ -251,8 +243,7 @@ class CurrencyScreenUI extends StatelessWidget {
     );
   }
 
-  Widget _skeletonLine(
-      {double widthFactor = 1, double height = 10, double radius = 6}) {
+  Widget _skeletonLine({double widthFactor = 1, double height = 10, double radius = 6}) {
     return FractionallySizedBox(
       widthFactor: widthFactor,
       child: Container(
@@ -265,8 +256,7 @@ class CurrencyScreenUI extends StatelessWidget {
     );
   }
 
-  Widget _skeletonPill(
-      {required double width, required double height, double radius = 999}) {
+  Widget _skeletonPill({required double width, required double height, double radius = 999}) {
     return Container(
       width: width,
       height: height,
@@ -277,6 +267,10 @@ class CurrencyScreenUI extends StatelessWidget {
     );
   }
 }
+
+
+
+
 
 class RatesTabView extends StatelessWidget {
   const RatesTabView({
@@ -298,11 +292,8 @@ class RatesTabView extends StatelessWidget {
     final onBg = _isDark(context) ? Colors.white : Colors.black;
 
     final hasTime = state.lastUpdatedAt != null;
-    final dateStr = hasTime
-        ? DateFormat('yyyy-MM-dd').format(state.lastUpdatedAt!)
-        : 'غير متاح';
-    final timeStr =
-        hasTime ? DateFormat('HH:mm').format(state.lastUpdatedAt!) : '--:--';
+    final dateStr = hasTime ? DateFormat('yyyy-MM-dd').format(state.lastUpdatedAt!) : 'غير متاح';
+    final timeStr = hasTime ? DateFormat('HH:mm').format(state.lastUpdatedAt!) : '--:--';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
@@ -348,11 +339,11 @@ class RatesTabView extends StatelessWidget {
 
   // ---------- صفّ العملة (نظيف مع عرض بيع/شراء احترافي) ----------
   Widget _row(
-    BuildContext context, {
-    required String name,
-    required String sell,
-    required String buy,
-  }) {
+      BuildContext context, {
+        required String name,
+        required String sell,
+        required String buy,
+      }) {
     final theme = Theme.of(context);
     final onBg = _isDark(context) ? Colors.white : Colors.black;
     final divider = _isDark(context) ? Colors.white12 : Colors.black12;
@@ -364,9 +355,9 @@ class RatesTabView extends StatelessWidget {
     }
 
     final nameStyle = theme.textTheme.titleSmall?.copyWith(
-          color: onBg,
-          fontWeight: FontWeight.w800,
-        ) ??
+      color: onBg,
+      fontWeight: FontWeight.w800,
+    ) ??
         TextStyle(color: onBg, fontWeight: FontWeight.w800, fontSize: 15.5);
 
     return Material(
@@ -396,8 +387,7 @@ class RatesTabView extends StatelessWidget {
                       shape: BoxShape.circle,
                       border: Border.all(color: onBg.withOpacity(0.20)),
                     ),
-                    child: Icon(Icons.account_balance_wallet_outlined,
-                        size: 15, color: brand),
+                    child: Icon(Icons.account_balance_wallet_outlined, size: 15, color: brand),
                   ),
                   const SizedBox(width: 8),
                   ConstrainedBox(
@@ -429,18 +419,15 @@ class RatesTabView extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         // فاصل رأسي رفيع ملوّن يعطي لمسة احترافية
-                        Container(
-                            width: 2,
-                            height: 18,
-                            color: accent.withOpacity(0.9)),
+                        Container(width: 2, height: 18, color: accent.withOpacity(0.9)),
                         const SizedBox(width: 6),
                         Text(
                           _fmt(value),
                           style: theme.textTheme.titleSmall?.copyWith(
-                                color: accent,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 0.2,
-                              ) ??
+                            color: accent,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.2,
+                          ) ??
                               TextStyle(
                                 color: accent,
                                 fontWeight: FontWeight.w900,
@@ -555,7 +542,7 @@ class RatesTabView extends StatelessWidget {
 
     String _name(d) => (d as dynamic).currencyName?.toString() ?? '';
     String _sell(d) => (d as dynamic).sellPrice?.toString() ?? '';
-    String _buy(d) => (d as dynamic).buyPrice?.toString() ?? '';
+    String _buy(d)  => (d as dynamic).buyPrice?.toString() ?? '';
 
     if (rates.isEmpty) {
       final onBg = _isDark(context) ? Colors.white : Colors.black;
@@ -569,9 +556,9 @@ class RatesTabView extends StatelessWidget {
               child: Text(
                 'لا توجد بيانات حالياً',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: onBg,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  color: onBg,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ),
@@ -597,6 +584,16 @@ class RatesTabView extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
+
+
+
+
+
 
 // ===================================================================
 // تبويب 2: التحويل — تخطيط رأسي + زر تبادل في المنتصف (بدوال داخلية)
@@ -708,10 +705,7 @@ class ConvertTabView extends StatelessWidget {
     );
   }
 
-  Widget _primaryBtn(BuildContext context,
-      {required String label,
-      required IconData icon,
-      required VoidCallback onPressed}) {
+  Widget _primaryBtn(BuildContext context, {required String label, required IconData icon, required VoidCallback onPressed}) {
     return FilledButton.icon(
       onPressed: onPressed,
       icon: Icon(icon),
@@ -726,10 +720,7 @@ class ConvertTabView extends StatelessWidget {
     );
   }
 
-  Widget _ghostBtn(BuildContext context,
-      {required String label,
-      required IconData icon,
-      required VoidCallback onPressed}) {
+  Widget _ghostBtn(BuildContext context, {required String label, required IconData icon, required VoidCallback onPressed}) {
     final onBg = _isDark(context) ? Colors.white : Colors.black;
     return OutlinedButton.icon(
       onPressed: onPressed,
@@ -751,16 +742,19 @@ class ConvertTabView extends StatelessWidget {
 
     String _name(d) => (d as dynamic).currencyName?.toString() ?? '';
     final all = state.rates;
-    final fromItems = all.map<DropdownMenuItem<String>>((r) {
+    final fromItems = all
+        .map<DropdownMenuItem<String>>((r) {
       final v = _name(r);
       return DropdownMenuItem(value: v, child: Text(v));
-    }).toList(growable: false);
+    })
+        .toList(growable: false);
     final toItems = all
         .where((r) => _name(r) != state.fromCurrency)
         .map<DropdownMenuItem<String>>((r) {
       final v = _name(r);
       return DropdownMenuItem(value: v, child: Text(v));
-    }).toList(growable: false);
+    })
+        .toList(growable: false);
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -773,16 +767,14 @@ class ConvertTabView extends StatelessWidget {
             context,
             'من',
             DropdownButtonFormField<String>(
-              initialValue:
-                  state.fromCurrency.isEmpty ? null : state.fromCurrency,
+              value: state.fromCurrency.isEmpty ? null : state.fromCurrency,
               items: fromItems,
               onChanged: (v) => v != null ? onChangeFrom(v) : null,
               decoration: InputDecoration(
                 border: _border(context),
                 enabledBorder: _border(context),
                 focusedBorder: _border(context),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               ),
             ),
           ),
@@ -797,15 +789,14 @@ class ConvertTabView extends StatelessWidget {
             context,
             'إلى',
             DropdownButtonFormField<String>(
-              initialValue: state.toCurrency.isEmpty ? null : state.toCurrency,
+              value: state.toCurrency.isEmpty ? null : state.toCurrency,
               items: toItems,
               onChanged: (v) => v != null ? onChangeTo(v) : null,
               decoration: InputDecoration(
                 border: _border(context),
                 enabledBorder: _border(context),
                 focusedBorder: _border(context),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               ),
             ),
           ),
@@ -826,8 +817,7 @@ class ConvertTabView extends StatelessWidget {
                 border: _border(context),
                 enabledBorder: _border(context),
                 focusedBorder: _border(context),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
               ),
             ),
           ),
@@ -846,13 +836,11 @@ class ConvertTabView extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _primaryBtn(context,
-                    label: "تحويل", icon: Icons.check, onPressed: onConvert),
+                child: _primaryBtn(context, label: "تحويل", icon: Icons.check, onPressed: onConvert),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _ghostBtn(context,
-                    label: "تصفير", icon: Icons.refresh, onPressed: onReset),
+                child: _ghostBtn(context, label: "تصفير", icon: Icons.refresh, onPressed: onReset),
               ),
             ],
           ),
@@ -896,16 +884,15 @@ class GoldTabView extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.workspace_premium_outlined,
-              size: 18, color: onBg.withOpacity(0.7)),
+          Icon(Icons.workspace_premium_outlined, size: 18, color: onBg.withOpacity(0.7)),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: onBg.withOpacity(0.85),
-                    fontWeight: FontWeight.w700,
-                  ),
+                color: onBg.withOpacity(0.85),
+                fontWeight: FontWeight.w700,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textDirection: TextDirection.rtl,
@@ -922,36 +909,35 @@ class GoldTabView extends StatelessWidget {
     );
   }
 
-  Widget _row(BuildContext context,
-      {required String name, required String sell, required String buy}) {
+  Widget _row(BuildContext context, {required String name, required String sell, required String buy}) {
     final onBg = _isDark(context) ? Colors.white : Colors.black;
 
     TextStyle nameStyle = Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: onBg,
-              fontWeight: FontWeight.w800,
-            ) ??
+      color: onBg,
+      fontWeight: FontWeight.w800,
+    ) ??
         TextStyle(color: onBg, fontWeight: FontWeight.w800, fontSize: 15.5);
     TextStyle labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: onBg.withOpacity(0.6),
-              fontWeight: FontWeight.w700,
-            ) ??
+      color: onBg.withOpacity(0.6),
+      fontWeight: FontWeight.w700,
+    ) ??
         TextStyle(color: onBg.withOpacity(0.6), fontWeight: FontWeight.w700);
 
     Widget chip(String v, Color c) => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: c.withOpacity(0.5)),
-          ),
-          child: Text(
-            v,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: c,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.2,
-                ),
-          ),
-        );
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: c.withOpacity(0.5)),
+      ),
+      child: Text(
+        v,
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+          color: c,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0.2,
+        ),
+      ),
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -966,8 +952,7 @@ class GoldTabView extends StatelessWidget {
               shape: BoxShape.circle,
               border: Border.all(color: onBg.withOpacity(0.25)),
             ),
-            child: Icon(Icons.workspace_premium,
-                size: 16, color: Colors.amber[700]),
+            child: Icon(Icons.workspace_premium, size: 16, color: Colors.amber[700]),
           ),
           const SizedBox(width: 10),
 
@@ -1016,9 +1001,9 @@ class GoldTabView extends StatelessWidget {
           Text(
             'لا توجد بيانات ذهب حالياً',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: onBg,
-                  fontWeight: FontWeight.w700,
-                ),
+              color: onBg,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
@@ -1031,7 +1016,7 @@ class GoldTabView extends StatelessWidget {
 
     String _name(d) => (d as dynamic).currencyName?.toString() ?? '';
     String _sell(d) => (d as dynamic).sellPrice?.toString() ?? '';
-    String _buy(d) => (d as dynamic).buyPrice?.toString() ?? '';
+    String _buy(d)  => (d as dynamic).buyPrice?.toString() ?? '';
 
     bool _isGold(dynamic d) {
       final n = _name(d);

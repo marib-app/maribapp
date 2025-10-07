@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:marib/app/routes.dart';
 
+
 // حقول الفئة (العامّة)
 import 'package:marib/data/cubits/custom_field/fetch_custom_fields_cubit.dart';
 import 'package:marib/data/model/custom_field/custom_field_model.dart';
@@ -15,10 +16,13 @@ import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/cus
 
 // مخزن القيم (الموجود في مشروعكم)
 import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart'
-    as dynamic_fields;
+as dynamic_fields;
 import 'package:marib/data/repositories/service_request_repository.dart';
 import 'package:marib/utils/helper_utils.dart';
-import 'package:marib/ui/screens/classified_ads/service_add_more_details_screen_ui.dart';
+import 'service_add_more_details_screen_ui.dart';
+
+
+
 
 class ServiceAddMoreDetailsScreen extends StatefulWidget {
   const ServiceAddMoreDetailsScreen({super.key});
@@ -59,8 +63,7 @@ class _ServiceAddMoreDetailsScreenState
   bool _submitting = false;
   bool _navigatedOnEmpty = false;
 
-  final ServiceRequestRepository _requestRepository =
-      ServiceRequestRepository();
+  final ServiceRequestRepository _requestRepository = ServiceRequestRepository();
   // ===================== Helpers =====================
 
   List<Map<String, dynamic>> _parseSchema(dynamic raw) {
@@ -73,13 +76,12 @@ class _ServiceAddMoreDetailsScreenState
 
     List<Map<String, dynamic>> _fromList(List list) {
       return list
-          .map((e) =>
-              _asMap(e) ??
-              {
-                'type': 'textbox',
-                'title': '$e',
-                'key': 'field_$e',
-              })
+          .map((e) => _asMap(e) ??
+          {
+            'type': 'textbox',
+            'title': '$e',
+            'key': 'field_$e',
+          })
           .toList();
     }
 
@@ -205,9 +207,9 @@ class _ServiceAddMoreDetailsScreenState
 
     // ===== النوع =====
     String t = (_str(m['type']) ??
-            _str(m['field_type']) ??
-            _str(m['input_type']) ??
-            'textbox')
+        _str(m['field_type']) ??
+        _str(m['input_type']) ??
+        'textbox')!
         .toLowerCase();
 
     switch (t) {
@@ -318,8 +320,7 @@ class _ServiceAddMoreDetailsScreenState
     m['id'] = m['id'] ?? key;
 
     // ===== مطلوب؟ =====
-    final req =
-        m['required'] ?? m['is_required'] ?? m['mandatory'] ?? m['status'];
+    final req = m['required'] ?? m['is_required'] ?? m['mandatory'] ?? m['status'];
     m['required'] = _asBool(req);
 
     // ===== الترتيب =====
@@ -352,7 +353,7 @@ class _ServiceAddMoreDetailsScreenState
       final opt = _normalizeOptions(rawOptions);
       final List<String> valuesStrings = opt['values'] as List<String>;
       final List<Map<String, String>> kvList =
-          opt['kv'] as List<Map<String, String>>;
+      opt['kv'] as List<Map<String, String>>;
       if (valuesStrings.isNotEmpty) {
         m['values'] = valuesStrings;
       }
@@ -453,6 +454,7 @@ class _ServiceAddMoreDetailsScreenState
     _categoryId = (args?['categoryId'] as int?) ??
         int.tryParse('${args?['categoryId'] ?? ''}');
 
+
     final serviceIdRaw = args?['serviceId'] ?? args?['itemId'];
     if (serviceIdRaw is int) {
       _serviceId = serviceIdRaw;
@@ -462,6 +464,7 @@ class _ServiceAddMoreDetailsScreenState
       _serviceId = null;
     }
 
+
     final serviceUidRaw = args?['serviceUid'] ?? args?['service_uid'];
     if (serviceUidRaw is String) {
       final trimmed = serviceUidRaw.trim();
@@ -469,6 +472,8 @@ class _ServiceAddMoreDetailsScreenState
     } else {
       _serviceUid = null;
     }
+
+
 
     final serviceTitleRaw = args?['serviceTitle'];
     if (serviceTitleRaw is String) {
@@ -496,6 +501,9 @@ class _ServiceAddMoreDetailsScreenState
       _currency = c.isNotEmpty ? c : null;
     }
 
+
+
+
     final rawSchema = args?['serviceFieldsSchema'] ??
         args?['service_fields_schema'] ??
         args?['service_fields'] ??
@@ -521,26 +529,27 @@ class _ServiceAddMoreDetailsScreenState
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<FetchCustomFieldsCubit, FetchCustomFieldState>(
-      listener: (context, state) {
-        if (state is FetchCustomFieldSuccess) {
-          _mergeAndBuild(
-            categoryFields: state.fields,
-            schemaFields: _schemaFromDetails,
-          );
-        } else {
+        listener: (context, state) {
+          if (state is FetchCustomFieldSuccess) {
+            _mergeAndBuild(
+              categoryFields: state.fields,
+              schemaFields: _schemaFromDetails,
+            );
+          } else {
           if (_builders.isEmpty) {
             _mergeAndBuild(
                 categoryFields: const [], schemaFields: _schemaFromDetails);
           }
-        }
-      },
+          }
+        },
       builder: (context, state) {
-        final effectiveState = (!_ready && state is! FetchCustomFieldFail)
+        final effectiveState =
+        (!_ready && state is! FetchCustomFieldFail)
             ? FetchCustomFieldInProgress()
             : state;
 
         final preparedFields =
-            _builders.map((b) => b..stateUpdater(setState)).toList();
+        _builders.map((b) => b..stateUpdater(setState)).toList();
 
         final shouldAutoSubmit = state is FetchCustomFieldSuccess &&
             _ready &&
@@ -571,10 +580,10 @@ class _ServiceAddMoreDetailsScreenState
           },
           onRetry: state is FetchCustomFieldFail && _categoryId != null
               ? () {
-                  context.read<FetchCustomFieldsCubit>().fetchCustomFields(
-                        categoryIds: '$_categoryId',
-                      );
-                }
+            context.read<FetchCustomFieldsCubit>().fetchCustomFields(
+              categoryIds: '$_categoryId',
+            );
+          }
               : null,
         );
       },
@@ -587,17 +596,22 @@ class _ServiceAddMoreDetailsScreenState
       return;
     }
 
+
+
     final customFields = Map<String, dynamic>.from(
       dynamic_fields.AbstractField.fieldsData,
     );
     final attachments = Map<String, dynamic>.from(
       dynamic_fields.AbstractField.files,
+
     );
     setState(() => _submitting = true);
     try {
       final request = await _requestRepository.createRequest(
         serviceId: _serviceId!,
         serviceUid: _serviceUid,
+
+
         customFields: customFields.isEmpty ? null : customFields,
         attachments: attachments.isEmpty ? null : attachments,
       );
@@ -606,7 +620,9 @@ class _ServiceAddMoreDetailsScreenState
         ...request.raw,
         ...request.toBannerData(),
         if (_serviceUid != null) 'service_uid': _serviceUid,
-        if (request.customFields != null) 'custom_fields': request.customFields,
+
+        if (request.customFields != null)
+          'custom_fields': request.customFields,
         if (customFields.isNotEmpty && request.customFields == null)
           'custom_fields': customFields,
         if (attachments.isNotEmpty) 'attachments': attachments,
@@ -632,3 +648,4 @@ class _ServiceAddMoreDetailsScreenState
     }
   }
 }
+

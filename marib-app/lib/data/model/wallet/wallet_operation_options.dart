@@ -26,9 +26,7 @@ class WalletOperationOptions {
       if (raw is List) {
         return raw
             .whereType<dynamic>()
-            .map((e) => e is Map<String, dynamic>
-                ? e
-                : Map<String, dynamic>.from(e as Map))
+            .map((e) => e is Map<String, dynamic> ? e : Map<String, dynamic>.from(e as Map))
             .toList();
       }
       if (raw is Map) {
@@ -90,14 +88,10 @@ class WalletOperationOptions {
     );
 
     amountFieldId ??= fields.firstWhere(
-      (field) {
-        final type =
-            (field['type'] ?? field['input_type']).toString().toLowerCase();
-        final name = (field['name'] ?? field['key'] ?? field['id'])
-            .toString()
-            .toLowerCase();
-        return name.contains('amount') &&
-            (type.contains('number') || type.contains('text'));
+          (field) {
+        final type = (field['type'] ?? field['input_type']).toString().toLowerCase();
+        final name = (field['name'] ?? field['key'] ?? field['id']).toString().toLowerCase();
+        return name.contains('amount') && (type.contains('number') || type.contains('text'));
       },
       orElse: () => const <String, dynamic>{},
     )['id']?.toString();
@@ -125,7 +119,9 @@ class WalletOperationOptions {
     );
 
     final currency = _parseString(
-      options['currency'] ?? metadata['currency'] ?? metadata['currency_code'],
+      options['currency'] ??
+          metadata['currency'] ??
+          metadata['currency_code'],
     );
 
     return WalletOperationOptions(

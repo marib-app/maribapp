@@ -36,9 +36,9 @@ class DeepLinkManager {
   }
 
 */
-/*  static void initDeepLinks(*/ /*
+/*  static void initDeepLinks(*//*
  */
-/*BuildContext context*/ /*
+/*BuildContext context*//*
  */
 /*) async {
     PendingDynamicLinkData? data =
@@ -51,7 +51,7 @@ class DeepLinkManager {
     FirebaseDynamicLinks.instance.onLink.listen((data) {
       _handleDeepLinks(Constant.navigatorKey.currentContext!, data);
     });
-  }*/ /*
+  }*//*
 
 
   static Future<void> _handleDeepLinks(
@@ -77,7 +77,7 @@ class DeepLinkManager {
             args: {
               "from": "home",
               "model": dataOutput.modelList[0],
-            });*/ /*
+            });*//*
 
       },
     );
@@ -85,7 +85,7 @@ class DeepLinkManager {
 /*Navigator.pushNamed(context, Routes.adDetailsScreen, arguments: {
       "from": "home",
       "model": dataOutput.modelList[0],
-    });*/ /*
+    });*//*
 
 
 //

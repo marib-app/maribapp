@@ -33,7 +33,7 @@ extension StyledText<T extends Text> on T {
       textAlign: textAlign ?? this.textAlign,
       textDirection: textDirection ?? this.textDirection,
       textHeightBehavior: textHeightBehavior ?? this.textHeightBehavior,
-      textScaler: textScaleFactor ?? textScaler,
+      textScaler:textScaleFactor ?? textScaler,
       textWidthBasis: textWidthBasis ?? this.textWidthBasis,
     );
   }
@@ -82,6 +82,7 @@ extension StyledText<T extends Text> on T {
     }
     return copyWith(data: upperCase + suffix) as T;
   }
+
 
   T setMaxChars({required int maxChars}) {
     String textToDisplay = (data?.length ?? 0) > maxChars

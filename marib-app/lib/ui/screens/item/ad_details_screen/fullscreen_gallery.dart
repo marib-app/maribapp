@@ -46,8 +46,7 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || widget.images.isEmpty) return;
-      _ensureThumbVisible(_currentIndex,
-          jump: true, itemExtent: _lastThumbExtent);
+      _ensureThumbVisible(_currentIndex, jump: true, itemExtent: _lastThumbExtent);
       _prefetchNeighbors(_currentIndex);
     });
   }
@@ -87,8 +86,7 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
                 child: PhotoViewGallery.builder(
                   itemCount: widget.images.length,
                   pageController: _controller,
-                  backgroundDecoration:
-                      const BoxDecoration(color: Colors.transparent),
+                  backgroundDecoration: const BoxDecoration(color: Colors.transparent),
                   onPageChanged: (index) {
                     setState(() => _currentIndex = index);
                     _ensureThumbVisible(index, itemExtent: _lastThumbExtent);
@@ -99,9 +97,7 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
                     final tag = widget.heroTagBuilder?.call(index);
                     return PhotoViewGalleryPageOptions(
                       imageProvider: CachedNetworkImageProvider(url),
-                      heroAttributes: tag != null
-                          ? PhotoViewHeroAttributes(tag: tag)
-                          : null,
+                      heroAttributes: tag != null ? PhotoViewHeroAttributes(tag: tag) : null,
                       minScale: PhotoViewComputedScale.contained,
                       maxScale: PhotoViewComputedScale.covered * 3.0,
                       initialScale: PhotoViewComputedScale.contained,
@@ -120,17 +116,13 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
             right: 0,
             child: SafeArea(
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.black.withOpacity(0.5)
-                        : Colors.white.withOpacity(0.15),
+                    color: isDark ? Colors.black.withOpacity(0.5) : Colors.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: Row(
                     children: [
                       IconButton(
@@ -165,8 +157,7 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
                   _lastThumbExtent = l.itemExtent;
                   _lastThumbPadding = l.padding;
 
-                  final stripHeight =
-                      l.itemH + l.padding.vertical + 12; // مؤشر أسفل المصغّر
+                  final stripHeight = l.itemH + l.padding.vertical + 12; // مؤشر أسفل المصغّر
 
                   return Container(
                     height: stripHeight,
@@ -187,8 +178,7 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
                         const IgnorePointer(
                           child: DecoratedBox(
                             decoration: BoxDecoration(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(14)),
+                              borderRadius: BorderRadius.all(Radius.circular(14)),
                               gradient: LinearGradient(
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
@@ -217,8 +207,7 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
                             physics: const BouncingScrollPhysics(),
                             itemExtent: l.itemExtent,
                             itemCount: widget.images.length,
-                            itemBuilder: (_, i) =>
-                                _thumb(i, w: l.itemW, h: l.itemH),
+                            itemBuilder: (_, i) => _thumb(i, w: l.itemW, h: l.itemH),
                           ),
                         ),
                       ],
@@ -235,17 +224,17 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
 
   // ======= تخطيط المصغّرات ديناميكيًا =======
   ({double itemW, double itemH, double itemExtent, EdgeInsets padding})
-      _thumbLayout(BoxConstraints c) {
+  _thumbLayout(BoxConstraints c) {
     final w = c.maxWidth;
 
     // عدد المصغّرات الظاهر تقريبياً حسب العرض
     final visible = w < 360
         ? 4.5
         : w < 480
-            ? 5.5
-            : w < 768
-                ? 6.5
-                : 8.5;
+        ? 5.5
+        : w < 768
+        ? 6.5
+        : 8.5;
 
     const gap = 8.0;
     const hPad = 10.0;
@@ -260,10 +249,10 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
     final itemExtent = itemW + gap;
 
     return (
-      itemW: itemW,
-      itemH: itemH,
-      itemExtent: itemExtent,
-      padding: const EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
+    itemW: itemW,
+    itemH: itemH,
+    itemExtent: itemExtent,
+    padding: const EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
     );
   }
 
@@ -297,24 +286,24 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: selected
                       ? [
-                          BoxShadow(
-                            color: selColor.withOpacity(.40),
-                            blurRadius: 14,
-                            spreadRadius: 1,
-                          ),
-                          BoxShadow(
-                            color: Colors.black.withOpacity(.30),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ]
+                    BoxShadow(
+                      color: selColor.withOpacity(.40),
+                      blurRadius: 14,
+                      spreadRadius: 1,
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withOpacity(.30),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
                       : [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(.22),
-                            blurRadius: 6,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
+                    BoxShadow(
+                      color: Colors.black.withOpacity(.22),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
                 child: Container(
                   width: w,
@@ -332,9 +321,8 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
                       imageUrl: url,
                       fit: BoxFit.cover,
                       placeholder: (_, __) => Container(color: Colors.white10),
-                      errorWidget: (_, __, ___) => const Icon(
-                          Icons.broken_image_outlined,
-                          color: Colors.white54),
+                      errorWidget: (_, __, ___) =>
+                      const Icon(Icons.broken_image_outlined, color: Colors.white54),
                     ),
                   ),
                 ),
@@ -377,12 +365,11 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
     if (extent == 0) return;
 
     final viewport = _thumbCtrl.position.viewportDimension;
-    final targetOffset = (i * extent) -
-        (viewport - (extent - _thumbSpacing)) / 2; // تمركز العنصر
+    final targetOffset =
+        (i * extent) - (viewport - (extent - _thumbSpacing)) / 2; // تمركز العنصر
 
     final clamped = targetOffset
-        .clamp(_thumbCtrl.position.minScrollExtent,
-            _thumbCtrl.position.maxScrollExtent)
+        .clamp(_thumbCtrl.position.minScrollExtent, _thumbCtrl.position.maxScrollExtent)
         .toDouble();
 
     if (jump) {
@@ -403,7 +390,6 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
         await precacheImage(CachedNetworkImageProvider(url), context);
       } catch (_) {}
     }
-
     if (i - 1 >= 0) prefetch(widget.images[i - 1]!);
     if (i + 1 < widget.images.length) prefetch(widget.images[i + 1]!);
   }

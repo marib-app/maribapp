@@ -32,18 +32,16 @@ class CurrencyCubit extends Cubit<CurrencyState> {
   }) {
     if (state is CurrencySuccess) {
       final currencyRates = (state as CurrencySuccess).currencyRates;
-
+      
       // Find the currency rates for the selected currencies
       final fromRate = currencyRates.firstWhere(
         (rate) => rate.currencyName == fromCurrency,
-        orElse: () =>
-            CurrencyRate(currencyName: fromCurrency, sellPrice: 1, buyPrice: 1),
+        orElse: () => CurrencyRate(currencyName: fromCurrency, sellPrice: 1, buyPrice: 1),
       );
-
+      
       final toRate = currencyRates.firstWhere(
         (rate) => rate.currencyName == toCurrency,
-        orElse: () =>
-            CurrencyRate(currencyName: toCurrency, sellPrice: 1, buyPrice: 1),
+        orElse: () => CurrencyRate(currencyName: toCurrency, sellPrice: 1, buyPrice: 1),
       );
 
       // Use sell price when buying, buy price when selling
@@ -53,7 +51,7 @@ class CurrencyCubit extends Cubit<CurrencyState> {
       // Calculate the conversion
       return amount * (fromValue / toValue);
     }
-
+    
     return 0.0;
   }
 }

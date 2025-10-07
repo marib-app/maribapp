@@ -36,6 +36,7 @@ class CheckoutBank {
     this.id,
     required this.name,
     this.paymentMethod = 'manual_bank',
+
     this.accountName,
     this.accountNumber,
     this.iban,
@@ -83,6 +84,7 @@ class CheckoutDeliveryInfo {
   final Map<String, dynamic>? raw;
 }
 
+
 @immutable
 class CheckoutShippingQuote {
   const CheckoutShippingQuote({
@@ -115,6 +117,7 @@ class CheckoutShippingQuote {
   final Map<String, dynamic>? data;
   final Map<String, dynamic>? raw;
 }
+
 
 @immutable
 class CheckoutDeliveryTier {

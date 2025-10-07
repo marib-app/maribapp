@@ -2,6 +2,7 @@
 
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/fetch_services_cubit.dart';
+import 'package:marib/data/cubits/slider_cubit.dart';
 import 'package:marib/data/model/category_model.dart';
 import 'package:marib/data/model/classified_model.dart' show ClassifiedSummary;
 import 'package:marib/ui/screens/sliders/slider_widget.dart';
@@ -82,8 +83,7 @@ class _ClassifiedScreen2State extends State<ClassifiedScreen2> {
 
     _isPaging = true;
     try {
-      await cubit.fetchMoreServices(
-          categoryId: int.tryParse(widget.categoryId));
+      await cubit.fetchMoreServices(categoryId: int.tryParse(widget.categoryId));
     } finally {
       _isPaging = false;
     }
@@ -133,9 +133,9 @@ class _ClassifiedScreen2State extends State<ClassifiedScreen2> {
     }
 
     TextButton _btn(IconData icon, String label, VoidCallback onTap) {
-      final fg = Theme.of(context).appBarTheme.foregroundColor ??
-          Theme.of(context).colorScheme.onSurface ??
-          context.color.textColorDark;
+      final fg = Theme.of(context).appBarTheme.foregroundColor
+          ?? Theme.of(context).colorScheme.onSurface
+          ?? context.color.textColorDark;
       return TextButton.icon(
         onPressed: onTap,
         icon: Icon(icon, size: 20),
@@ -149,47 +149,45 @@ class _ClassifiedScreen2State extends State<ClassifiedScreen2> {
     }
 
     return _btn(
-      _iconForType(normalizedType),
-      _labelForType(normalizedType),
-      () {
-        final state = context.read<FetchServicesCubit>().state;
+        _iconForType(normalizedType),
+        _labelForType(normalizedType),
+            () {
+          final state = context.read<FetchServicesCubit>().state;
 
-        if (state is! FetchServicesSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text("loadingDataPleaseTryAgain".translate(context))),
+          if (state is! FetchServicesSuccess) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("loadingDataPleaseTryAgain".translate(context))),
+            );
+            return;
+          }
+
+          // نلتقط الخدمة الرئيسية من قائمة الملخصات
+          final main = state.servicesList.firstWhere(
+                (s) => s.isMain == true,
+            orElse: () => const ClassifiedSummary(
+                id: 0, title: null, image: null, isMain: true, status: true),
+        );
+          if (main.id == null || main.id == 0) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('تعذّر تحديد الصفحة الرئيسية لهذه الخدمة')),
+            );
+            return;
+          }
+
+          final category = CategoryModel(
+            id: int.tryParse(widget.categoryId) ?? 0,
+            name: widget.categoryName,
+        );
+          Navigator.pushNamed(
+            context,
+            Routes.mainServiceDetailsRoute,
+            arguments: {
+              "id": main.id,
+              "title": main.title,
+              "category": category,
+            },
           );
-          return;
-        }
-
-        // نلتقط الخدمة الرئيسية من قائمة الملخصات
-        final main = state.servicesList.firstWhere(
-          (s) => s.isMain == true,
-          orElse: () => const ClassifiedSummary(
-              id: 0, title: null, image: null, isMain: true, status: true),
-        );
-        if (main.id == 0) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('تعذّر تحديد الصفحة الرئيسية لهذه الخدمة')),
-          );
-          return;
-        }
-
-        final category = CategoryModel(
-          id: int.tryParse(widget.categoryId) ?? 0,
-          name: widget.categoryName,
-        );
-        Navigator.pushNamed(
-          context,
-          Routes.mainServiceDetailsRoute,
-          arguments: {
-            "id": main.id,
-            "title": main.title,
-            "category": category,
-          },
-        );
-      },
+            },
     );
   }
 
@@ -233,8 +231,8 @@ class _ClassifiedScreen2State extends State<ClassifiedScreen2> {
                 return NoInternet(
                   onRetry: () {
                     context.read<FetchServicesCubit>().fetchServices(
-                          categoryId: int.tryParse(widget.categoryId),
-                        );
+                      categoryId: int.tryParse(widget.categoryId),
+                    );
                   },
                 );
               }
@@ -270,8 +268,7 @@ class _ClassifiedScreen2State extends State<ClassifiedScreen2> {
                             index == items.length) {
                           return Padding(
                             padding: EdgeInsets.all(ScreenScaler.s(12)),
-                            child: const Center(
-                                child: CircularProgressIndicator()),
+                            child: const Center(child: CircularProgressIndicator()),
                           );
                         }
 
@@ -279,16 +276,13 @@ class _ClassifiedScreen2State extends State<ClassifiedScreen2> {
                         if (state.loadingMoreError &&
                             index ==
                                 items.length +
-                                    (state.hasMore && state.isLoadingMore
-                                        ? 1
-                                        : 0)) {
+                                    (state.hasMore && state.isLoadingMore ? 1 : 0)) {
                           return Padding(
                             padding: EdgeInsets.all(ScreenScaler.s(12)),
                             child: Center(
                               child: Text(
                                 "somethingWentWrng".translate(context),
-                                style: TextStyle(
-                                    color: context.color.textColorDark),
+                                style: TextStyle(color: context.color.textColorDark),
                               ),
                             ),
                           );
@@ -399,13 +393,10 @@ class _ClassifiedListItem extends StatelessWidget {
                                 vertical: ScreenScaler.s(3),
                               ),
                               decoration: BoxDecoration(
-                                color: context.color.territoryColor
-                                    .withOpacity(.12),
-                                borderRadius:
-                                    BorderRadius.circular(ScreenScaler.s(20)),
+                                color: context.color.territoryColor.withOpacity(.12),
+                                borderRadius: BorderRadius.circular(ScreenScaler.s(20)),
                                 border: Border.all(
-                                  color:
-                                      context.color.territoryColor.darken(10),
+                                  color: context.color.territoryColor.darken(10),
                                 ),
                               ),
                               child: Text(
@@ -485,10 +476,9 @@ class _ClassifiedListItem extends StatelessWidget {
     }
 
     final id = model.id;
-    if (id == 0) {
+    if (id == null || id == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('لا يمكن فتح التفاصيل: مُعرّف الخدمة غير صالح')),
+        const SnackBar(content: Text('لا يمكن فتح التفاصيل: مُعرّف الخدمة غير صالح')),
       );
       return;
     }

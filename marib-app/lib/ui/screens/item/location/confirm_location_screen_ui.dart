@@ -5,12 +5,15 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
   // Entry
   // ==========================
 
+
+
+
   Widget _buildUI(BuildContext context) {
     final canPost = latitude != null && longitude != null;
 
     // إعدادات قياس لوحة الاقتراحات (طول مرن)
-    const double _tileH = 56; // ارتفاع تقريبي لكل عنصر اقتراح
-    const double _vPad = 16; // padding رأسي داخلي
+    const double _tileH = 56;   // ارتفاع تقريبي لكل عنصر اقتراح
+    const double _vPad  = 16;   // padding رأسي داخلي
     const double _maxCap = 400; // سقف أقصى للارتفاع
 
     // يحسب الارتفاع المناسب: تحميل/لا توجد نتائج = 56، غير ذلك = عدد العناصر * ارتفاع العنصر + padding مع سقف
@@ -66,114 +69,94 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
               duration: const Duration(milliseconds: 150),
               child: (_loadingSuggestions || _suggestions.isNotEmpty)
                   ? CompositedTransformFollower(
-                      link: _searchLink,
-                      showWhenUnlinked: false,
-                      offset: Offset(0, _searchBoxSize.height + 10),
-                      child: Align(
-                        alignment:
-                            (Directionality.of(context) == TextDirection.rtl)
-                                ? AlignmentDirectional.topEnd
-                                : AlignmentDirectional.topStart,
-                        child: Material(
-                          elevation: 20,
-                          borderRadius: BorderRadius.circular(12),
-                          clipBehavior: Clip.antiAlias,
-                          color: Theme.of(context).colorScheme.surface,
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxWidth: _searchBoxSize.width == 0
-                                  ? MediaQuery.of(context).size.width - 20
-                                  : _searchBoxSize.width,
-                              // 👇 الطول المرن بدل 500 ثابت
-                              maxHeight: _calcMaxHeight(),
-                            ),
-                            child: _loadingSuggestions
-                                ? const SizedBox(
-                                    height: 56,
-                                    child: Center(
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2),
-                                    ),
-                                  )
-                                : (_suggestions.isEmpty
-                                    ? const SizedBox(
-                                        height: 56,
-                                        child: Center(
-                                            child: Text('لا توجد نتائج')),
-                                      )
-                                    : ListView.separated(
-                                        shrinkWrap: true,
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 8),
-                                        itemCount: _suggestions.length,
-                                        separatorBuilder: (_, __) =>
-                                            const Divider(height: 1),
-                                        itemBuilder: (_, i) {
-                                          final s = _suggestions[i];
-                                          return ListTile(
-                                            dense: true,
-                                            leading: const Icon(Icons.place),
-                                            title: RichText(
-                                              text: _highlight(
-                                                s.title,
-                                                _searchCtrl.text,
-                                                Theme.of(context)
-                                                    .textTheme
-                                                    .bodyMedium!,
-                                                Theme.of(context)
-                                                    .textTheme
-                                                    .bodyMedium!
-                                                    .copyWith(
-                                                        fontWeight:
-                                                            FontWeight.bold),
-                                              ),
-                                            ),
-                                            subtitle: (s.subtitle != null)
-                                                ? Text(s.subtitle!)
-                                                : null,
-                                            onTap: () async {
-                                              _searchFocus.unfocus();
-                                              final det = await _placeDetails(
-                                                  s.placeId);
-                                              if (!mounted || det == null)
-                                                return;
-                                              setState(() {
-                                                _suggestions = [];
-                                                latitude = det.lat;
-                                                longitude = det.lng;
-                                                formatedAddress =
-                                                    AddressComponent(
-                                                  area: det.area,
-                                                  city: det.city,
-                                                  state: det.state,
-                                                  country: det.country,
-                                                );
-                                                _cameraPosition = buildCamera(
-                                                    LatLng(det.lat, det.lng));
-                                                _mapController.animateCamera(
-                                                  CameraUpdate
-                                                      .newCameraPosition(
-                                                          _cameraPosition!),
-                                                );
-                                                _markers
-                                                  ..clear()
-                                                  ..add(Marker(
-                                                    markerId: const MarkerId(
-                                                        'currentLocation'),
-                                                    position: LatLng(
-                                                        det.lat, det.lng),
-                                                  ));
-                                              });
-                                              _searchCtrl.text =
-                                                  formatedAddress!.mixed;
-                                            },
-                                          );
-                                        },
-                                      )),
-                          ),
-                        ),
+                link: _searchLink,
+                showWhenUnlinked: false,
+                offset: Offset(0, _searchBoxSize.height + 10),
+                child: Align(
+                  alignment: (Directionality.of(context) == TextDirection.rtl)
+                      ? AlignmentDirectional.topEnd
+                      : AlignmentDirectional.topStart,
+                  child: Material(
+                    elevation: 20,
+                    borderRadius: BorderRadius.circular(12),
+                    clipBehavior: Clip.antiAlias,
+                    color: Theme.of(context).colorScheme.surface,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: _searchBoxSize.width == 0
+                            ? MediaQuery.of(context).size.width - 20
+                            : _searchBoxSize.width,
+                        // 👇 الطول المرن بدل 500 ثابت
+                        maxHeight: _calcMaxHeight(),
                       ),
-                    )
+                      child: _loadingSuggestions
+                          ? const SizedBox(
+                        height: 56,
+                        child: Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                          : (_suggestions.isEmpty
+                          ? const SizedBox(
+                        height: 56,
+                        child: Center(child: Text('لا توجد نتائج')),
+                      )
+                          : ListView.separated(
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        itemCount: _suggestions.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        itemBuilder: (_, i) {
+                          final s = _suggestions[i];
+                          return ListTile(
+                            dense: true,
+                            leading: const Icon(Icons.place),
+                            title: RichText(
+                              text: _highlight(
+                                s.title,
+                                _searchCtrl.text,
+                                Theme.of(context).textTheme.bodyMedium!,
+                                Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium!
+                                    .copyWith(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            subtitle: (s.subtitle != null) ? Text(s.subtitle!) : null,
+                            onTap: () async {
+                              _searchFocus.unfocus();
+                              final det = await _placeDetails(s.placeId);
+                              if (!mounted || det == null) return;
+                              setState(() {
+                                _suggestions = [];
+                                latitude = det.lat;
+                                longitude = det.lng;
+                                formatedAddress = AddressComponent(
+                                  area: det.area,
+                                  city: det.city,
+                                  state: det.state,
+                                  country: det.country,
+                                );
+                                _cameraPosition = buildCamera(LatLng(det.lat, det.lng));
+                                _mapController.animateCamera(
+                                  CameraUpdate.newCameraPosition(_cameraPosition!),
+                                );
+                                _markers
+                                  ..clear()
+                                  ..add(Marker(
+                                    markerId: const MarkerId('currentLocation'),
+                                    position: LatLng(det.lat, det.lng),
+                                  ));
+                              });
+                              _searchCtrl.text = formatedAddress!.mixed;
+                            },
+                          );
+                        },
+                      )),
+                    ),
+                  ),
+                ),
+              )
                   : const SizedBox.shrink(),
             ),
           ],
@@ -182,9 +165,14 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
     );
   }
 
+
+
+
+
   // ==========================
   // Actions
   // ==========================
+
 
   Future<void> _onPostNowPressed() async {
     // ===== Helpers =====
@@ -204,6 +192,8 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
       return;
     }
 
+
+
     // منع النقر المزدوج بشكل بسيط (لو ما عندك isPosting خارجي)
     if (_isPosting == true) return;
     _isPosting = true;
@@ -214,30 +204,32 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
           (getCloudData("with_more_details") as Map<String, dynamic>?) ??
               <String, dynamic>{};
 
-      final _area = _clean(formatedAddress?.area);
-      final _city = _clean(formatedAddress?.city);
-      final _state = _clean(formatedAddress?.state);
+      final _area    = _clean(formatedAddress?.area);
+      final _city    = _clean(formatedAddress?.city);
+      final _state   = _clean(formatedAddress?.state);
       final _country = _clean(formatedAddress?.country);
 
       // city: city or (area) else null
       final _resolvedCity = _city ?? _area;
 
       // address mixed جاهز بالعربي من AddressComponent
-      cloudData['address'] = _clean(formatedAddress?.mixed);
-      cloudData['latitude'] = latitude;
+      cloudData['address']   = _clean(formatedAddress?.mixed);
+      cloudData['latitude']  = latitude;
       cloudData['longitude'] = longitude;
       // بعض نقاط النهاية الخلفية القديمة ما زالت تتوقع مفاتيح location_*.
       // نرسلها مع الحقول الجديدة لضمان التوافق وتفادي أخطاء validation.required.
-      cloudData['location_latitude'] = latitude;
+      cloudData['location_latitude']  = latitude;
       cloudData['location_longitude'] = longitude;
-      cloudData['city'] = _resolvedCity;
-      cloudData['state'] = _state;
+      cloudData['city']      = _resolvedCity;
+      cloudData['state']     = _state;
 
       if (_country != null) {
         cloudData['country'] = _country;
       } else {
         cloudData.remove('country');
       }
+
+
 
       final areaId = formatedAddress?.areaId;
       if (areaId != null) cloudData['area_id'] = areaId;
@@ -248,10 +240,10 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
       // ===== Submit =====
       final manage = context.read<ManageItemCubit>();
       if (widget.isEdit == true) {
-        manage.manage(
+         manage.manage(
           ManageItemType.edit,
           cloudData,
-          widget.mainImage, // قد تكون null في التعديل وهذا منطقي
+          widget.mainImage,      // قد تكون null في التعديل وهذا منطقي
           widget.otherImage ?? const [], // حماية
         );
       } else {
@@ -260,7 +252,7 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
           _snack("يرجى اختيار صورة رئيسية للإعلان", isKey: false);
           return;
         }
-        manage.manage(
+         manage.manage(
           ManageItemType.add,
           cloudData,
           widget.mainImage!,
@@ -281,9 +273,17 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
     }
   }
 
+
+
+
+
+
+
+
   // ==========================
   // Body (Bloc + Content)
   // ==========================
+
 
   Widget bodyData() {
     return BlocConsumer<ManageItemCubit, ManageItemState>(
@@ -314,12 +314,16 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
     if (state is ManageItemFail) {
       final filteredError = ErrorFilter.check(state.error).error;
       final message =
-          filteredError is String ? filteredError : filteredError.toString();
+      filteredError is String ? filteredError : filteredError.toString();
       HelperUtils.showSnackBarMessage(context, message);
 
       Widgets.hideLoder(context);
     }
   }
+
+
+
+
 
   Widget _buildBodyContent() {
     final color = Theme.of(context).colorScheme;
@@ -356,9 +360,7 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
 
                     // تدرّج سفلي لتحسين قراءة بطاقة العنوان فوق الخريطة
                     Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
+                      left: 0, right: 0, bottom: 0,
                       child: IgnorePointer(
                         child: Container(
                           height: 1,
@@ -376,6 +378,7 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
                         ),
                       ),
                     ),
+
                   ],
                 ),
               ),
@@ -386,9 +389,11 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
     );
   }
 
+
   // ==========================
   // Sections
   // ==========================
+
 
   Widget _buildTitleAndPickOtherLocationButton() {
     return Column(
@@ -419,22 +424,20 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: (_searchCtrl.text.isNotEmpty)
                           ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                _searchCtrl.clear();
-                                setState(() => _suggestions = []);
-                              },
-                            )
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchCtrl.clear();
+                          setState(() => _suggestions = []);
+                        },
+                      )
                           : null,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                     onTap: _updateSearchBoxSize,
                     onChanged: (q) {
                       _updateSearchBoxSize();
                       _debounce?.cancel();
-                      _debounce =
-                          Timer(const Duration(milliseconds: 300), () async {
+                      _debounce = Timer(const Duration(milliseconds: 300), () async {
                         if (q.trim().length < 2) {
                           setState(() => _suggestions = []);
                           return;
@@ -444,8 +447,7 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
                           final res = await _placesAutocomplete(q);
                           if (mounted) setState(() => _suggestions = res);
                         } finally {
-                          if (mounted)
-                            setState(() => _loadingSuggestions = false);
+                          if (mounted) setState(() => _loadingSuggestions = false);
                         }
                       });
                     },
@@ -461,6 +463,19 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
       ],
     );
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   Widget _buildMapStack() {
     return Stack(
@@ -489,6 +504,7 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
         // أزرار التحكم
         _buildMapControls(),
 
+
         // لودينغ اختياري
         if (_reverseLoading)
           const Positioned.fill(
@@ -499,6 +515,14 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
       ],
     );
   }
+
+
+
+
+
+
+
+
 
   Widget _buildGoogleMapCard() {
     final bottomPad = MediaQuery.of(context).padding.bottom + 72;
@@ -550,8 +574,7 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
               if (t == null) return;
 
               final same = (latitude != null && longitude != null) &&
-                  (LatLng(latitude!, longitude!) ==
-                      LatLng(t.latitude, t.longitude));
+                  (LatLng(latitude!, longitude!) == LatLng(t.latitude, t.longitude));
               if (same) {
                 if (mounted) setState(() => _isMoving = false);
                 return;
@@ -567,8 +590,7 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
 
               _hint.onReverseStart(); // 🔔 بدء جلب العنوان
 
-              await getLocationFromLatitudeLongitude(
-                  latLng: LatLng(t.latitude, t.longitude));
+              await getLocationFromLatitudeLongitude(latLng: LatLng(t.latitude, t.longitude));
 
               final ok = mounted && (formatedAddress?.mixed.isNotEmpty == true);
 
@@ -587,11 +609,17 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
     );
   }
 
+
+
+
+
+
   Widget _buildMapControls() {
     const spacing = 12.0;
 
     final color = Theme.of(context).colorScheme;
     final isHybrid = _mapType == MapType.hybrid;
+
 
     return Positioned(
       bottom: 16,
@@ -635,6 +663,14 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
     );
   }
 
+
+
+
+
+
+
+
+
   Widget _buildMyLocationControl() {
     final cs = Theme.of(context).colorScheme;
 
@@ -648,8 +684,7 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
         var perm = await Geolocator.checkPermission();
         if (perm == LocationPermission.denied) {
           perm = await Geolocator.requestPermission();
-          if (perm == LocationPermission.denied ||
-              perm == LocationPermission.deniedForever) {
+          if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) {
             HelperUtils.showSnackBarMessage(context, 'لم يتم منح إذن الموقع');
             setState(() => _locating = false);
             return;
@@ -657,15 +692,13 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
         }
 
         // جلب الموقع الحالي
-        final pos = await Geolocator.getCurrentPosition(
-            desiredAccuracy: LocationAccuracy.high);
+        final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
         latitude = pos.latitude;
         longitude = pos.longitude;
 
         final target = LatLng(latitude!, longitude!);
         _cameraPosition = buildCamera(target);
-        await _mapController
-            .animateCamera(CameraUpdate.newCameraPosition(_cameraPosition!));
+        await _mapController.animateCamera(CameraUpdate.newCameraPosition(_cameraPosition!));
 
         // تحديث العنوان
         await getLocationFromLatitudeLongitude(latLng: target);
@@ -684,43 +717,37 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 180),
-      transitionBuilder: (child, animation) =>
-          ScaleTransition(scale: animation, child: child),
+      transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
       child: _buildMapControlButton(
         key: ValueKey(_locating),
         onTap: _goToMyLocation,
         backgroundColor: cs.surface,
         gradient: _locating
             ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  cs.primary.withOpacity(.18),
-                  cs.primary.withOpacity(.10)
-                ],
-              )
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [cs.primary.withOpacity(.18), cs.primary.withOpacity(.10)],
+        )
             : null,
-        borderColor: _locating
-            ? cs.primary.withOpacity(.35)
-            : cs.outline.withOpacity(.6),
+        borderColor: _locating ? cs.primary.withOpacity(.35) : cs.outline.withOpacity(.6),
         child: Stack(
-          alignment: Alignment.center,
-          children: [
-            AnimatedOpacity(
-              duration: const Duration(milliseconds: 120),
-              opacity: _locating ? 0.0 : 1.0,
-              child: Icon(Icons.my_location_rounded, color: cs.primary),
-            ),
-            AnimatedOpacity(
-              duration: const Duration(milliseconds: 120),
-              opacity: _locating ? 1.0 : 0.0,
-              child: const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
+            alignment: Alignment.center,
+            children: [
+        AnimatedOpacity(
+        duration: const Duration(milliseconds: 120),
+        opacity: _locating ? 0.0 : 1.0,
+        child: Icon(Icons.my_location_rounded, color: cs.primary),
+      ),
+      AnimatedOpacity(
+        duration: const Duration(milliseconds: 120),
+        opacity: _locating ? 1.0 : 0.0,
+        child: const SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(strokeWidth: 2),
               ),
             ),
-          ],
+            ],
         ),
       ),
     );
@@ -756,12 +783,16 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
               color: borderColor ?? cs.outline.withOpacity(.6),
               width: 1,
             ),
+
           ),
           child: Center(child: child),
+
         ),
       ),
     );
   }
+
+
 
   Future<void> _animateZoom({required bool zoomIn}) async {
     try {
@@ -787,6 +818,10 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
     }
   }
 
+
+
+
+
   Widget _centerPin() {
     final color = Theme.of(context).colorScheme;
 
@@ -800,8 +835,7 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
             TweenAnimationBuilder<double>(
               tween: Tween(begin: 1, end: _isMoving ? 1.06 : 1.0),
               duration: const Duration(milliseconds: 160),
-              builder: (_, scale, child) =>
-                  Transform.scale(scale: scale, child: child),
+              builder: (_, scale, child) => Transform.scale(scale: scale, child: child),
               child: CustomPaint(
                 size: const Size(32, 46),
                 painter: _PinPainter(
@@ -818,8 +852,7 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
               width: _isMoving ? 28 : 22,
               height: 6,
               decoration: BoxDecoration(
-                color: Colors.black26,
-                borderRadius: BorderRadius.circular(12),
+                color: Colors.black26, borderRadius: BorderRadius.circular(12),
               ),
             ),
           ],
@@ -827,6 +860,13 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
       ),
     );
   }
+
+
+
+
+
+
+
 
   Widget _buildAddressCard() {
     return Container(
@@ -842,9 +882,7 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
             decoration: BoxDecoration(
               color: context.color.territoryColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(5),
-              border: Border.all(
-                  width: Constant.borderWidth,
-                  color: context.color.borderColor),
+              border: Border.all(width: Constant.borderWidth, color: context.color.borderColor),
             ),
             child: SizedBox(
               width: 8.11,
@@ -852,8 +890,7 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
               child: SvgPicture.asset(
                 AppIcons.location,
                 fit: BoxFit.none,
-                colorFilter: ColorFilter.mode(
-                    context.color.territoryColor, BlendMode.srcIn),
+                colorFilter: ColorFilter.mode(context.color.territoryColor, BlendMode.srcIn),
               ),
             ),
           ),
@@ -865,19 +902,16 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
               Text(
                 formatedAddress == null
                     ? "____"
-                    : (formatedAddress!.city == null ||
-                            formatedAddress!.city!.isEmpty)
-                        ? ((formatedAddress!.area?.isNotEmpty ?? false)
-                            ? formatedAddress!.area!
-                            : "____")
-                        : ((formatedAddress!.area?.isNotEmpty ?? false)
-                            ? "${formatedAddress!.area!}, ${formatedAddress!.city!}"
-                            : formatedAddress!.city!),
+                    : (formatedAddress!.city == null || formatedAddress!.city!.isEmpty)
+                    ? ((formatedAddress!.area?.isNotEmpty ?? false) ? formatedAddress!.area! : "____")
+                    : ((formatedAddress!.area?.isNotEmpty ?? false)
+                    ? "${formatedAddress!.area!}, ${formatedAddress!.city!}"
+                    : formatedAddress!.city!),
               ).size(context.font.large),
               const SizedBox(height: 4),
               Text(
                 "${(formatedAddress?.state?.isNotEmpty ?? false) ? formatedAddress!.state! : "____"},"
-                "${(formatedAddress?.country?.isNotEmpty ?? false) ? formatedAddress!.country! : "____"}",
+                    "${(formatedAddress?.country?.isNotEmpty ?? false) ? formatedAddress!.country! : "____"}",
               ),
             ],
           ),
@@ -886,9 +920,16 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
     );
   }
 
+
+
+
+
+
   // ==========================
   // Shimmer
   // ==========================
+
+
 
   Widget shimmerEffect() {
     return Column(
@@ -941,13 +982,20 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
     );
   }
 
+
   // ==========================
   // (اختياري) دوال لاحقة للفصل الدقيق
   // ==========================
 
+
+
+
   // ==========================
 // Dialogs (moved to UI extension)
 // ==========================
+
+
+
 
   void dialogueBottomSheet({
     required String title,
@@ -1018,11 +1066,15 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
     );
   }
 
+
+
+
+
   Widget dialogueWidget(
-    String title,
-    TextEditingController controller,
-    String hintText,
-  ) {
+      String title,
+      TextEditingController controller,
+      String hintText,
+      ) {
     final bottomPadding = (MediaQuery.of(context).viewInsets.bottom - 50);
     final isBottomPaddingNegative = bottomPadding.isNegative;
 
@@ -1057,8 +1109,7 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
                   cursorColor: context.color.territoryColor,
                   validator: (val) {
                     if (val == null || val.isEmpty) {
-                      return Validator.nullCheckValidator(val,
-                          context: context);
+                      return Validator.nullCheckValidator(val, context: context);
                     } else {
                       return null;
                     }
@@ -1089,8 +1140,7 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderSide:
-                          BorderSide(color: context.color.territoryColor),
+                      borderSide: BorderSide(color: context.color.territoryColor),
                     ),
                   ),
                 ),
@@ -1102,6 +1152,9 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
     );
   }
 
+
+
+
 // ==========================
 // GPS Permission Dialog (UI)
 // ==========================
@@ -1110,8 +1163,7 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text("فشل تحديد الموقع"),
-        content: const Text(
-            "لم نتمكن من الوصول لموقعك. تأكد من تفعيل GPS ومنح الإذن."),
+        content: const Text("لم نتمكن من الوصول لموقعك. تأكد من تفعيل GPS ومنح الإذن."),
         actions: [
           TextButton(
             onPressed: () {
@@ -1122,9 +1174,8 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
           ),
           TextButton(
             onPressed: () {
-              _openedAppSettings =
-                  true; // نحتاجها لـ didChangeAppLifecycleState
-              openAppSettings(); // من permission_handler
+              _openedAppSettings = true; // نحتاجها لـ didChangeAppLifecycleState
+              openAppSettings();         // من permission_handler
             },
             child: const Text("⚙️ الإعدادات"),
           ),
@@ -1133,12 +1184,20 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
     );
   }
 
-  PreferredSizeWidget _buildAppBar() =>
-      AppBar(title: const Text('تأكيد الموقع'));
+
+
+
+
+
+
+
+
+  PreferredSizeWidget _buildAppBar() => AppBar(title: const Text('تأكيد الموقع'));
   Widget _buildMapSection() => const SizedBox.shrink();
   Widget _buildAddressForm() => const SizedBox.shrink();
   Widget _buildActionButtons() => const SizedBox.shrink();
 }
+
 
 // --------- نماذج بيانات داخل نفس الملف (بسيطة) ---------
 class _PlaceSuggestion {
@@ -1167,6 +1226,10 @@ class _PlaceDetails {
   });
 }
 
+
+
+
+
 class _PinPainter extends CustomPainter {
   final Color fill, border, shadow;
   _PinPainter({required this.fill, required this.border, required this.shadow});
@@ -1177,17 +1240,14 @@ class _PinPainter extends CustomPainter {
     final center = Offset(w / 2, h * 0.42);
 
     // ظل خفيف
-    final shadowPaint = Paint()
-      ..color = shadow
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+    final shadowPaint = Paint()..color = shadow..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
     canvas.drawCircle(center.translate(0, 2), 10, shadowPaint);
 
     // شكل الدبوس: قطرة + سن سفلي
     final path = Path()
       ..moveTo(w / 2, h) // السن
       ..quadraticBezierTo(w * 0.82, h * 0.68, w * 0.82, h * 0.42)
-      ..arcToPoint(Offset(w * 0.18, h * 0.42),
-          radius: Radius.circular(w), clockwise: false)
+      ..arcToPoint(Offset(w * 0.18, h * 0.42), radius: Radius.circular(w), clockwise: false)
       ..quadraticBezierTo(w * 0.18, h * 0.68, w / 2, h)
       ..close();
 

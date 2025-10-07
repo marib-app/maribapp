@@ -80,6 +80,7 @@ class SendMessageCubit extends Cubit<SendMessageState> {
         }
         return withinLimit;
       }());
+
     } catch (e) {
       Logger.error(e.toString());
       emit(SendMessageFailed(e.toString()));

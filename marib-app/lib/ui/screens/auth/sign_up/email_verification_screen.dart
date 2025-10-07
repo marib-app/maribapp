@@ -12,6 +12,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
+
 class EmailVerificationScreen extends StatefulWidget {
   final String username;
   final String email;
@@ -59,7 +60,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 arguments: {"from": "login"},
               );*/
 
-              Navigator.pushReplacementNamed(context, Routes.login);
+              Navigator.pushReplacementNamed(context, Routes.login
+              );
               return;
             }
             // timer.cancel();

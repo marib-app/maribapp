@@ -1,4 +1,5 @@
 // شاشة محسنة لطلب صلاحيات الموقع مع نصوص وتجربة مستخدم احترافية
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
@@ -9,23 +10,25 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/hive_utils.dart';
+import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/api.dart';
+
+
 
 class LocationPermissionScreen extends StatefulWidget {
   const LocationPermissionScreen({super.key});
 
   @override
-  State<LocationPermissionScreen> createState() =>
-      _LocationPermissionScreenState();
+  State<LocationPermissionScreen> createState() => _LocationPermissionScreenState();
 
-  static Route route(RouteSettings routeSettings) =>
-      MaterialPageRoute(builder: (_) => const LocationPermissionScreen());
+  static Route route(RouteSettings routeSettings) => MaterialPageRoute(builder: (_) => const LocationPermissionScreen());
 }
 
-class _LocationPermissionScreenState extends State<LocationPermissionScreen>
-    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+
+
+class _LocationPermissionScreenState extends State<LocationPermissionScreen> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   bool _openedAppSettings = false;
   bool _isLoading = false;
   late AnimationController _fadeController;
@@ -109,6 +112,8 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
       setState(() => _isLoading = false);
     }
   }
+
+
 
   Future<void> _getCurrentLocation() async {
     setState(() => _isLoading = true);
@@ -201,6 +206,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
     setState(() => _isLoading = false);
   }
 
+
   void _showSnack(String message) {
     UiUtils.showSoftSnackBar(
       context,
@@ -214,6 +220,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
       fontWeight: FontWeight.w600,
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -229,8 +236,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
                 const Spacer(),
 
                 /// 🔹 أنميشن الموقع
-                Lottie.asset('assets/lottie/location.json',
-                    width: 200, height: 200),
+                Lottie.asset('assets/lottie/location.json', width: 200, height: 200),
 
                 const SizedBox(height: 30),
 
@@ -241,15 +247,13 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
                     .centerAlign(),
 
                 const SizedBox(height: 20),
-
                 /// 🔹 بطاقة موحدة للشرح + الخصوصية
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: context.color.surface.withOpacity(0.01),
+                    color: context.color.background.withOpacity(0.01),
                     borderRadius: BorderRadius.circular(30),
-                    border: Border.all(
-                        color: context.color.textDefaultColor.withOpacity(0.1)),
+                    border: Border.all(color: context.color.textDefaultColor.withOpacity(0.1)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -260,8 +264,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: context.font.larger,
-                          color:
-                              context.color.textDefaultColor.withOpacity(0.85),
+                          color: context.color.textDefaultColor.withOpacity(0.85),
                           height: 1.6,
                         ),
                       ),
@@ -274,8 +277,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: context.font.small,
-                          color:
-                              context.color.textDefaultColor.withOpacity(0.7),
+                          color: context.color.textDefaultColor.withOpacity(0.7),
                           height: 1.8,
                         ),
                       ),
@@ -298,17 +300,17 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
                   onPressed: _isLoading
                       ? () {}
                       : () {
-                          UiUtils.setDefaultLocationValue(
-                            isCurrent: false,
-                            isHomeUpdate: false,
-                            context: context,
-                          );
-                          HelperUtils.killPreviousPages(
-                            context,
-                            Routes.main,
-                            {"from": "login"},
-                          );
-                        },
+                    UiUtils.setDefaultLocationValue(
+                      isCurrent: false,
+                      isHomeUpdate: false,
+                      context: context,
+                    );
+                    HelperUtils.killPreviousPages(
+                      context,
+                      Routes.main,
+                      {"from": "login"},
+                    );
+                  },
                   outline: true,
                 ),
 
@@ -319,14 +321,14 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
                   duration: const Duration(milliseconds: 400),
                   child: _isLoading
                       ? Column(
-                          children: [
-                            const CircularProgressIndicator(),
-                            const SizedBox(height: 8),
-                            Text("جارٍ تحديد موقعك...")
-                                .size(context.font.normal)
-                                .color(context.color.textDefaultColor),
-                          ],
-                        )
+                    children: [
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 8),
+                      Text("جارٍ تحديد موقعك...")
+                          .size(context.font.normal)
+                          .color(context.color.textDefaultColor),
+                    ],
+                  )
                       : const SizedBox.shrink(),
                 ),
 
@@ -339,6 +341,10 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
     );
   }
 
+
+
+
+
   Widget _buildActionButton({
     required String title,
     required VoidCallback onPressed,
@@ -348,20 +354,14 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
       onTap: onPressed,
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
-        splashColor: context.color.territoryColor
-            .withOpacity(0.3), // تأثير الموجة عند الضغط
-        highlightColor: context.color.territoryColor
-            .withOpacity(0.1), // تأثير الإضاءة عند الضغط
+        splashColor: context.color.territoryColor.withOpacity(0.3), // تأثير الموجة عند الضغط
+        highlightColor: context.color.territoryColor.withOpacity(0.1), // تأثير الإضاءة عند الضغط
         child: UiUtils.buildButton(
           context,
           buttonTitle: title,
           onPressed: onPressed,
-          buttonColor: outline
-              ? context.color.backgroundColor
-              : context.color.territoryColor,
-          textColor: outline
-              ? context.color.territoryColor
-              : context.color.secondaryColor,
+          buttonColor: outline ? context.color.backgroundColor : context.color.territoryColor,
+          textColor: outline ? context.color.territoryColor : context.color.secondaryColor,
           border: outline
               ? BorderSide(color: context.color.territoryColor.withOpacity(0.5))
               : BorderSide.none,
@@ -372,4 +372,6 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen>
       ),
     );
   }
+
 }
+

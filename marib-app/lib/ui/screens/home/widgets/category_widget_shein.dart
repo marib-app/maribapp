@@ -88,16 +88,15 @@ class CategoryWidgetShein extends StatelessWidget {
                       itemBuilder: (context, index) {
                         final item = page[index];
                         if (item is Map && item['special'] == true) {
+                        
                           return GestureDetector(
-                            onTap: () async {
-                              final Uri whatsappUrl = Uri.parse(
-                                  "https://wa.me/maribsrvices?text=مرحبا, أريد طلب خاص");
+                     onTap: () async {
+    final Uri whatsappUrl = Uri.parse("https://wa.me/maribsrvices?text=مرحبا, أريد طلب خاص");
 
-                              if (await canLaunchUrl(whatsappUrl)) {
-                                await launchUrl(whatsappUrl,
-                                    mode: LaunchMode.externalApplication);
-                              }
-                            },
+    if (await canLaunchUrl(whatsappUrl)) {
+      await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
+    }
+  },
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -154,6 +153,8 @@ class CategoryWidgetShein extends StatelessWidget {
                                     "catId": category.id,
                                     "categoryIds": [category.id.toString()],
                                     "interfaceType": "shein_products",
+
+                                    
                                   },
                                 );
                               } else {

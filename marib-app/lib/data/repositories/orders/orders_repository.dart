@@ -8,6 +8,8 @@ import 'package:marib/utils/api.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/network_request_interseptor.dart';
 
+
+
 class OrdersRepository {
   const OrdersRepository();
 
@@ -15,18 +17,20 @@ class OrdersRepository {
     Map<String, dynamic>? filters,
   }) async {
     final Map<String, dynamic>? query =
-        filters == null ? null : Map<String, dynamic>.from(filters);
+    filters == null ? null : Map<String, dynamic>.from(filters);
     query?.removeWhere((key, value) => value == null);
 
     final Map<String, dynamic> response = await Api.get(
       url: Api.userOrdersApi,
       queryParameters: query,
+
       useBaseUrl: true,
     );
 
     final List<Map<String, dynamic>> rows = _extractOrders(response);
     return rows.map(UserOrder.fromJson).toList();
   }
+
 
   Future<OrderDetails> fetchOrderDetails(String id) async {
     final Map<String, dynamic> response = await Api.get(
@@ -44,6 +48,10 @@ class OrdersRepository {
 
     return OrdersRepository.parseOrderDetailsResponse(response);
   }
+
+
+
+
 
   Future<InvoiceDownloadResult> fetchInvoicePdf(String id) async {
     final Dio dio = Dio();
@@ -66,7 +74,7 @@ class OrdersRepository {
 
       final List<int> rawBytes = _normalizeBytes(response.data);
       final String? contentType =
-          response.headers.value(HttpHeaders.contentTypeHeader)?.toLowerCase();
+      response.headers.value(HttpHeaders.contentTypeHeader)?.toLowerCase();
 
       if (contentType != null && contentType.contains('application/pdf')) {
         final String? fileName = _resolveFileName(response.headers);
@@ -125,9 +133,11 @@ class OrdersRepository {
     }
   }
 
+
+
   static OrderDetails parseOrderDetailsResponse(
-    Map<String, dynamic> response,
-  ) {
+      Map<String, dynamic> response,) {
+
     final List<Map<String, dynamic>> extracted = _extractOrders(response);
     Map<String, dynamic>? order = extracted.isNotEmpty ? extracted.first : null;
 
@@ -148,8 +158,7 @@ class OrdersRepository {
     order ??= _mapify(response);
 
     if (order == null) {
-      throw const FormatException(
-          'Order details are missing from the response.');
+      throw const FormatException('Order details are missing from the response.');
     }
 
     final Map<String, dynamic> normalized = Map<String, dynamic>.from(order);
@@ -160,6 +169,7 @@ class OrdersRepository {
       'delivery_payment_summary',
       'payment_intent',
       'deposit_receipts',
+
     };
 
     for (final String key in structuralKeys) {
@@ -191,55 +201,55 @@ class OrdersRepository {
       _ensureAlias(normalized, entry.key, entry.value, response);
     }
 
-    final Map<String, dynamic>? policyMap = _mapify(normalized['policy']) ??
-        _findMapByPaths(
-          response,
-          const <List<String>>[
-            <String>['policy'],
-            <String>['data', 'policy'],
-            <String>['data', 'policies', 'return'],
-            <String>['data', 'order', 'policy'],
-            <String>['order', 'policy'],
-            <String>['result', 'policy'],
-            <String>['result', 'order', 'policy'],
-            <String>['section', 'policy'],
-            <String>['department', 'policy'],
-          ],
-        );
+    final Map<String, dynamic>? policyMap =
+        _mapify(normalized['policy']) ??
+            _findMapByPaths(
+              response,
+              const <List<String>>[
+                <String>['policy'],
+                <String>['data', 'policy'],
+                <String>['data', 'policies', 'return'],
+                <String>['data', 'order', 'policy'],
+                <String>['order', 'policy'],
+                <String>['result', 'policy'],
+                <String>['result', 'order', 'policy'],
+                <String>['section', 'policy'],
+                <String>['department', 'policy'],
+              ],
+            );
 
-    final Map<String, dynamic>? supportMap = _mapify(normalized['support']) ??
-        _findMapByPaths(
-          response,
-          const <List<String>>[
-            <String>['support'],
-            <String>['data', 'support'],
-            <String>['data', 'order', 'support'],
-            <String>['order', 'support'],
-            <String>['result', 'support'],
-            <String>['result', 'order', 'support'],
-            <String>['section', 'support'],
-            <String>['department', 'support'],
-          ],
-        );
+    final Map<String, dynamic>? supportMap =
+        _mapify(normalized['support']) ??
+            _findMapByPaths(
+              response,
+              const <List<String>>[
+                <String>['support'],
+                <String>['data', 'support'],
+                <String>['data', 'order', 'support'],
+                <String>['order', 'support'],
+                <String>['result', 'support'],
+                <String>['result', 'order', 'support'],
+                <String>['section', 'support'],
+                <String>['department', 'support'],
+              ],
+            );
+
 
     final Map<String, dynamic>? paymentSummary =
-        _mapify(normalized['payment_summary'] ?? normalized['paymentSummary']);
+    _mapify(normalized['payment_summary'] ?? normalized['paymentSummary']);
 
     final Map<String, dynamic>? deliveryPaymentSummary = _mapify(
-      normalized['delivery_payment_summary'] ??
-          normalized['deliveryPaymentSummary'],
+      normalized['delivery_payment_summary'] ?? normalized['deliveryPaymentSummary'],
     );
 
-    final Map<String, dynamic>? depositReceipts = _wrapDepositReceipts(
-            normalized['deposit_receipts'] ?? normalized['depositReceipts']) ??
-        _wrapDepositReceipts(
-            response['deposit_receipts'] ?? response['depositReceipts']);
+    final Map<String, dynamic>? depositReceipts =
+        _wrapDepositReceipts(normalized['deposit_receipts'] ?? normalized['depositReceipts']) ??
+            _wrapDepositReceipts(response['deposit_receipts'] ?? response['depositReceipts']);
+
 
     final UserOrder orderModel = UserOrder.fromJson(normalized);
-    final OrderPolicy? policy =
-        policyMap != null ? OrderPolicy.fromJson(policyMap) : null;
-    final OrderSupport? support =
-        supportMap != null ? OrderSupport.fromJson(supportMap) : null;
+    final OrderPolicy? policy = policyMap != null ? OrderPolicy.fromJson(policyMap) : null;
+    final OrderSupport? support = supportMap != null ? OrderSupport.fromJson(supportMap) : null;
 
     return OrderDetails(
       order: orderModel,
@@ -252,11 +262,10 @@ class OrdersRepository {
     );
   }
 
-  static List<Map<String, dynamic>> _extractOrders(
-      Map<String, dynamic> payload) {
+
+  static List<Map<String, dynamic>> _extractOrders(Map<String, dynamic> payload) {
     final List<Map<String, dynamic>> results = <Map<String, dynamic>>[];
-    final List<dynamic>? directList =
-        _findListByPaths(payload, const <List<String>>[
+    final List<dynamic>? directList = _findListByPaths(payload, const <List<String>>[
       <String>['data', 'orders'],
       <String>['data', 'items'],
       <String>['data', 'data'],
@@ -286,7 +295,7 @@ class OrdersRepository {
         }
       }
     } else if (data is Map) {
-      final Map<String, dynamic> normalized = Map<String, dynamic>.from(data);
+      final Map<String, dynamic> normalized = Map<String, dynamic>.from(data as Map);
       for (final dynamic entry in normalized.values) {
         if (entry is List) {
           for (final dynamic item in entry) {
@@ -303,9 +312,9 @@ class OrdersRepository {
   }
 
   static List<dynamic>? _findListByPaths(
-    Map<String, dynamic> payload,
-    List<List<String>> candidates,
-  ) {
+      Map<String, dynamic> payload,
+      List<List<String>> candidates,
+      ) {
     for (final List<String> path in candidates) {
       dynamic current = payload;
       var success = true;
@@ -327,9 +336,9 @@ class OrdersRepository {
   }
 
   static dynamic _findValueByPaths(
-    Map<String, dynamic> payload,
-    List<List<String>> candidates,
-  ) {
+      Map<String, dynamic> payload,
+      List<List<String>> candidates,
+      ) {
     for (final List<String> path in candidates) {
       dynamic current = payload;
       var success = true;
@@ -351,18 +360,18 @@ class OrdersRepository {
   }
 
   static Map<String, dynamic>? _findMapByPaths(
-    Map<String, dynamic> payload,
-    List<List<String>> candidates,
-  ) {
+      Map<String, dynamic> payload,
+      List<List<String>> candidates,
+      ) {
     final dynamic value = _findValueByPaths(payload, candidates);
     return _mapify(value);
   }
 
   static void _copyIfMissing(
-    Map<String, dynamic> target,
-    String key,
-    Map<String, dynamic> response,
-  ) {
+      Map<String, dynamic> target,
+      String key,
+      Map<String, dynamic> response,
+      ) {
     if (target.containsKey(key)) {
       return;
     }
@@ -373,12 +382,7 @@ class OrdersRepository {
       return;
     }
 
-    for (final String containerKey in const <String>[
-      'data',
-      'result',
-      'payload',
-      'order'
-    ]) {
+    for (final String containerKey in const <String>['data', 'result', 'payload', 'order']) {
       final dynamic container = response[containerKey];
       if (container is Map<String, dynamic>) {
         if (container.containsKey(key)) {
@@ -386,7 +390,7 @@ class OrdersRepository {
           return;
         }
       } else if (container is Map) {
-        final Map<String, dynamic> map = Map<String, dynamic>.from(container);
+        final Map<String, dynamic> map = Map<String, dynamic>.from(container as Map);
         if (map.containsKey(key)) {
           _assignValue(target, key, map[key]);
           return;
@@ -396,11 +400,11 @@ class OrdersRepository {
   }
 
   static void _ensureAlias(
-    Map<String, dynamic> target,
-    String canonicalKey,
-    List<String> aliases,
-    Map<String, dynamic> response,
-  ) {
+      Map<String, dynamic> target,
+      String canonicalKey,
+      List<String> aliases,
+      Map<String, dynamic> response,
+      ) {
     if (target.containsKey(canonicalKey) && target[canonicalKey] != null) {
       return;
     }
@@ -412,21 +416,14 @@ class OrdersRepository {
       }
     }
 
-    final List<Map<String, dynamic>> candidates = <Map<String, dynamic>>[
-      response
-    ];
+    final List<Map<String, dynamic>> candidates = <Map<String, dynamic>>[response];
 
-    for (final String key in const <String>[
-      'data',
-      'order',
-      'result',
-      'payload'
-    ]) {
+    for (final String key in const <String>['data', 'order', 'result', 'payload']) {
       final dynamic value = response[key];
       if (value is Map<String, dynamic>) {
         candidates.add(value);
       } else if (value is Map) {
-        candidates.add(Map<String, dynamic>.from(value));
+        candidates.add(Map<String, dynamic>.from(value as Map));
       }
     }
 
@@ -441,10 +438,10 @@ class OrdersRepository {
   }
 
   static void _assignValue(
-    Map<String, dynamic> target,
-    String key,
-    dynamic value,
-  ) {
+      Map<String, dynamic> target,
+      String key,
+      dynamic value,
+      ) {
     if (value == null) {
       return;
     }
@@ -452,15 +449,16 @@ class OrdersRepository {
     if (value is Map<String, dynamic>) {
       target[key] = Map<String, dynamic>.from(value);
     } else if (value is Map) {
-      target[key] = Map<String, dynamic>.from(value);
+      target[key] = Map<String, dynamic>.from(value as Map);
     } else {
       target[key] = value;
     }
   }
 
+
   static Map<String, dynamic>? _mapify(dynamic value) {
     if (value is Map<String, dynamic>) return value;
-    if (value is Map) return Map<String, dynamic>.from(value);
+    if (value is Map) return Map<String, dynamic>.from(value as Map);
     return null;
   }
 
@@ -490,6 +488,7 @@ class OrdersRepository {
 
     return null;
   }
+
 
   List<int> _normalizeBytes(dynamic data) {
     if (data == null) {
@@ -531,13 +530,13 @@ class OrdersRepository {
     }
 
     final RegExpMatch? encodedMatch =
-        RegExp("filename\*=UTF-8''([^;]+)").firstMatch(disposition);
+    RegExp("filename\*=UTF-8''([^;]+)").firstMatch(disposition);
     if (encodedMatch != null && encodedMatch.groupCount >= 1) {
       return Uri.decodeFull(encodedMatch.group(1)!);
     }
 
     final RegExpMatch? simpleMatch =
-        RegExp("filename=\"?([^\";]+)\"?").firstMatch(disposition);
+    RegExp("filename=\"?([^\";]+)\"?").firstMatch(disposition);
     if (simpleMatch != null && simpleMatch.groupCount >= 1) {
       return simpleMatch.group(1);
     }
@@ -607,8 +606,7 @@ class OrdersRepository {
 
     final String lower = key.toLowerCase();
     return keys.any((String candidate) =>
-        candidate.toLowerCase() == lower ||
-        lower.contains(candidate.toLowerCase()));
+    candidate.toLowerCase() == lower || lower.contains(candidate.toLowerCase()));
   }
 
   bool _isValidUrl(String value) {
@@ -638,11 +636,14 @@ class InvoiceDownloadResult {
   bool get hasDownloadUrl =>
       downloadUrl != null && downloadUrl!.trim().isNotEmpty;
 
-  factory InvoiceDownloadResult.bytes(Uint8List bytes, {String? fileName}) {
+  factory InvoiceDownloadResult.bytes(Uint8List bytes,
+      {String? fileName}) {
     return InvoiceDownloadResult._(bytes: bytes, fileName: fileName);
   }
 
   factory InvoiceDownloadResult.link(String url) {
     return InvoiceDownloadResult._(downloadUrl: url);
   }
+
+
 }

@@ -98,7 +98,7 @@ class _CategoryListState extends State<CategoryList>
                             Navigator.pop(context, category);
                           } else {
                             if (state.categories[index].children!.isEmpty) {
-                              print(
+                                           print(
                                   "categoryList: ${state.categories[index].children}");
                               print("catName: ${state.categories[index].name}");
                               print("catId: ${state.categories[index].id}");
@@ -116,6 +116,7 @@ class _CategoryListState extends State<CategoryList>
                                 },
                               );
                             } else {
+                 
                               Navigator.pushNamed(
                                   context, Routes.subCategoryScreen,
                                   arguments: {

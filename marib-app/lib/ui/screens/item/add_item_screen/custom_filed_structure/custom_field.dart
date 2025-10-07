@@ -1,3 +1,5 @@
+
+
 import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/register.dart';
 import 'package:flutter/material.dart';
 
@@ -7,9 +9,12 @@ abstract class CustomField {
 
   late BuildContext context;
 
+
   // داخل class CustomField { ... }
   static final Map<String, dynamic> fieldsData = {};
   static final Map<String, dynamic> files = {};
+
+
 
   void init() {}
   dynamic update;
@@ -27,6 +32,7 @@ class CustomFieldBuilder {
   late CustomField? customField = KRegisteredFields().get(field['type']);
 
   void init() {
+
     customField?.parameters = field;
     //Calling init of custom field from here and this init will be called into the UI
     customField?.init();
@@ -34,11 +40,13 @@ class CustomFieldBuilder {
 
   void stateUpdater(StateSetter updater) {
     customField?.update = updater;
+
   }
 
   Widget build(BuildContext context) {
     ///setting parameters from here
     customField?.parameters = field;
+
 
     ///setting context from here
     customField?.context = context;

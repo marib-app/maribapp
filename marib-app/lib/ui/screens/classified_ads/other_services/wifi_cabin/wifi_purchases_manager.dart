@@ -10,7 +10,7 @@ class WifiPurchasesManager {
   final WifiRepository _repository;
 
   final ValueNotifier<List<WifiPurchase>> purchases =
-      ValueNotifier<List<WifiPurchase>>(const <WifiPurchase>[]);
+  ValueNotifier<List<WifiPurchase>>(const <WifiPurchase>[]);
   final ValueNotifier<bool> loading = ValueNotifier<bool>(false);
   final ValueNotifier<String?> error = ValueNotifier<String?>(null);
 
@@ -36,8 +36,7 @@ class WifiPurchasesManager {
 
   void register(WifiPurchase purchase) {
     final List<WifiPurchase> current = List<WifiPurchase>.from(purchases.value);
-    final int index =
-        current.indexWhere((element) => element.id == purchase.id);
+    final int index = current.indexWhere((element) => element.id == purchase.id);
     if (index >= 0) {
       current[index] = purchase;
     } else {
@@ -56,11 +55,12 @@ class WifiPurchasesManager {
 
   String _describeError(Object error) {
     if (error is ApiHttpException) {
-      final Map<String, dynamic> payload = error.payload is Map<String, dynamic>
+      final Map<String, dynamic> payload =
+      error.payload is Map<String, dynamic>
           ? Map<String, dynamic>.from(error.payload as Map)
           : error.payload is Map
-              ? Map<String, dynamic>.from(error.payload as Map)
-              : <String, dynamic>{};
+          ? Map<String, dynamic>.from(error.payload as Map)
+          : <String, dynamic>{};
       final String? base = _stringify(
         payload['message'] ?? payload['error'] ?? payload['detail'],
       );

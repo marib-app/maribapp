@@ -7,6 +7,8 @@ import 'package:marib/utils/ui_utils.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:marib/ui/screens/cart/order_outstanding_info.dart';
 
+
+
 class OrderStepData {
   const OrderStepData({
     required this.label,
@@ -16,6 +18,7 @@ class OrderStepData {
     this.isCurrent = false,
     this.outstanding,
     this.onPayOutstanding,
+
   });
 
   final String label;
@@ -25,6 +28,10 @@ class OrderStepData {
   final bool isCurrent;
   final OrderOutstandingInfo? outstanding;
   final VoidCallback? onPayOutstanding;
+
+
+
+
 
   OrderStepData copyWith({
     String? label,
@@ -122,25 +129,28 @@ List<OrderStepData> buildOrderStepData(UserOrder order) {
 
 class OrderStepContent extends StatelessWidget {
   const OrderStepContent({
-    super.key,
-    required this.isLoading,
-    required this.order,
-    required this.orderDetails,
-    required this.steps,
-    required this.errorMessage,
-    required this.dateFormat,
-    required this.onRetry,
-    required this.onOpenInvoice,
-    required this.onCancelOrder,
-    required this.isCancelling,
-    required this.canOpenInvoice,
-    required this.isInvoiceLoading,
-    this.invoiceBlockReason,
-    this.outstanding,
-    this.onPayOutstanding,
-    this.paymentSummary,
-    this.deliveryPaymentSummary,
-    this.depositReceipts,
+  super.key,
+  required this.isLoading,
+  required this.order,
+  required this.orderDetails,
+
+  required this.steps,
+  required this.errorMessage,
+  required this.dateFormat,
+  required this.onRetry,
+  required this.onOpenInvoice,
+  required this.onCancelOrder,
+  required this.isCancelling,
+  required this.canOpenInvoice,
+  required this.isInvoiceLoading,
+  this.invoiceBlockReason,
+  this.outstanding,
+  this.onPayOutstanding,
+
+  this.paymentSummary,
+  this.deliveryPaymentSummary,
+  this.depositReceipts,
+
   });
 
   final bool isLoading;
@@ -172,6 +182,7 @@ class OrderStepContent extends StatelessWidget {
     'reserve',
     'booking',
   ];
+
 
   static const List<String> _goodsKeywords = <String>[
     'goods',
@@ -249,6 +260,8 @@ class OrderStepContent extends StatelessWidget {
     'download',
   ];
 
+
+
   @override
   Widget build(BuildContext context) {
     final bool showShimmer = isLoading && errorMessage == null;
@@ -257,13 +270,10 @@ class OrderStepContent extends StatelessWidget {
     if (order != null) {
       final OrderDetails? details = orderDetails;
       final UserOrder resolvedOrder = order!;
-      final Map<String, dynamic>? paymentSummaryData = paymentSummary ??
-          details?.paymentSummary ??
-          resolvedOrder.paymentSummary;
-      final Map<String, dynamic>? deliverySummaryData =
-          deliveryPaymentSummary ??
-              details?.deliveryPaymentSummary ??
-              resolvedOrder.deliveryPaymentSummary;
+      final Map<String, dynamic>? paymentSummaryData =
+          paymentSummary ?? details?.paymentSummary ?? resolvedOrder.paymentSummary;
+      final Map<String, dynamic>? deliverySummaryData = deliveryPaymentSummary ??
+          details?.deliveryPaymentSummary ?? resolvedOrder.deliveryPaymentSummary;
       final Map<String, dynamic>? depositReceiptsData =
           depositReceipts ?? details?.depositReceipts;
 
@@ -288,10 +298,10 @@ class OrderStepContent extends StatelessWidget {
 
     final Widget effectiveBody = showShimmer
         ? Shimmer.fromColors(
-            baseColor: Colors.grey.shade300,
-            highlightColor: Colors.grey.shade100,
-            child: body,
-          )
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: body,
+    )
         : body;
 
     return AnnotatedRegion(
@@ -313,32 +323,31 @@ class OrderStepContent extends StatelessWidget {
   }
 
   Widget _buildContent(
-    BuildContext context,
-    UserOrder order,
-    List<OrderStepData> providedSteps,
-    OrderDetails? details, {
-    String? outstanding,
-    Future<void> Function()? onPayOutstanding,
-    Map<String, dynamic>? paymentSummary,
-    Map<String, dynamic>? deliveryPaymentSummary,
-    Map<String, dynamic>? depositReceipts,
-  }) {
+      BuildContext context,
+      UserOrder order,
+      List<OrderStepData> providedSteps,
+      OrderDetails? details, {
+        String? outstanding,
+        Future<void> Function()? onPayOutstanding,
+        Map<String, dynamic>? paymentSummary,
+        Map<String, dynamic>? deliveryPaymentSummary,
+        Map<String, dynamic>? depositReceipts,
+      }) {
     final List<OrderStepData> effectiveSteps =
-        providedSteps.isNotEmpty ? providedSteps : buildOrderStepData(order);
+    providedSteps.isNotEmpty ? providedSteps : buildOrderStepData(order);
+
 
     final OrderStatusDisplay? statusDisplay = order.statusDisplay;
-    final OrderStatusReserveOptions? reserveOptions =
-        order.statusReserveOptions;
+    final OrderStatusReserveOptions? reserveOptions = order.statusReserveOptions;
     final OrderPolicy? policy = details?.policy;
     final OrderSupport? support = details?.support;
     final OrderActions actions = order.actions;
 
-    final bool showStatusDisplay =
-        statusDisplay != null && statusDisplay.hasContent;
-    final bool showReserveOptions =
-        reserveOptions != null && reserveOptions.hasContent;
-    final bool showPolicySection = (policy != null && policy.hasReturnPolicy) ||
-        (support != null && support.hasContact);
+    final bool showStatusDisplay = statusDisplay != null && statusDisplay.hasContent;
+    final bool showReserveOptions = reserveOptions != null && reserveOptions.hasContent;
+    final bool showPolicySection =
+        (policy != null && policy.hasReturnPolicy) || (support != null && support.hasContact);
+
 
     final Widget? paymentsSummarySection = _buildFinancialSummarySection(
       context,
@@ -353,14 +362,16 @@ class OrderStepContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
+
           if (showStatusDisplay) ...<Widget>[
-            _buildStatusDisplayCard(context, statusDisplay),
+            _buildStatusDisplayCard(context, statusDisplay!),
             const SizedBox(height: 20),
           ],
           if (showReserveOptions) ...<Widget>[
-            _buildReserveOptionsCard(context, reserveOptions),
+            _buildReserveOptionsCard(context, reserveOptions!),
             const SizedBox(height: 20),
           ],
+
           if (effectiveSteps.isNotEmpty)
             _buildStepsRow(context, effectiveSteps)
           else
@@ -373,11 +384,14 @@ class OrderStepContent extends StatelessWidget {
             outstanding: outstanding,
             onPayOutstanding: onPayOutstanding,
           ),
+
           const SizedBox(height: 20),
+
           if (paymentsSummarySection != null) ...<Widget>[
             paymentsSummarySection,
             const SizedBox(height: 20),
           ],
+
           _buildOrderSummary(context, order),
           if (showPolicySection) ...<Widget>[
             const SizedBox(height: 20),
@@ -389,16 +403,16 @@ class OrderStepContent extends StatelessWidget {
   }
 
   Widget? _buildFinancialSummarySection(
-    BuildContext context,
-    UserOrder order, {
-    Map<String, dynamic>? paymentSummary,
-    Map<String, dynamic>? deliveryPaymentSummary,
-    Map<String, dynamic>? depositReceipts,
-  }) {
+      BuildContext context,
+      UserOrder order, {
+        Map<String, dynamic>? paymentSummary,
+        Map<String, dynamic>? deliveryPaymentSummary,
+        Map<String, dynamic>? depositReceipts,
+      }) {
     final List<_ReceiptEntry> receipts = _parseDepositReceipts(depositReceipts);
 
     final Map<String, dynamic>? depositSource =
-        _extractSection(paymentSummary, _depositKeywords);
+    _extractSection(paymentSummary, _depositKeywords);
     final Map<String, dynamic>? goodsCandidate = _extractSection(
       paymentSummary,
       _goodsKeywords,
@@ -442,7 +456,8 @@ class OrderStepContent extends StatelessWidget {
     final List<_PaymentBreakdown> breakdowns = <_PaymentBreakdown>[
       if (depositBreakdown != null && depositBreakdown.hasContent)
         depositBreakdown,
-      if (goodsBreakdown != null && goodsBreakdown.hasContent) goodsBreakdown,
+      if (goodsBreakdown != null && goodsBreakdown.hasContent)
+        goodsBreakdown,
       if (deliveryBreakdown != null && deliveryBreakdown.hasContent)
         deliveryBreakdown,
     ];
@@ -518,9 +533,9 @@ class OrderStepContent extends StatelessWidget {
         Text(
           'المبلغ: $amount',
           style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(fontWeight: FontWeight.w600) ??
+              .textTheme
+              .bodyMedium
+              ?.copyWith(fontWeight: FontWeight.w600) ??
               const TextStyle(fontWeight: FontWeight.w600),
         ),
       );
@@ -531,9 +546,9 @@ class OrderStepContent extends StatelessWidget {
         Text(
           entry.subtitle!.trim(),
           style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: Colors.grey.shade700) ??
+              .textTheme
+              .bodySmall
+              ?.copyWith(color: Colors.grey.shade700) ??
               TextStyle(color: Colors.grey.shade700, fontSize: 12),
         ),
       );
@@ -544,9 +559,9 @@ class OrderStepContent extends StatelessWidget {
         Text(
           entry.note!.trim(),
           style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: Colors.grey.shade600, height: 1.4) ??
+              .textTheme
+              .bodySmall
+              ?.copyWith(color: Colors.grey.shade600, height: 1.4) ??
               TextStyle(color: Colors.grey.shade600, fontSize: 12, height: 1.4),
         ),
       );
@@ -569,9 +584,9 @@ class OrderStepContent extends StatelessWidget {
                 Text(
                   entry.title ?? 'إيصال',
                   style: Theme.of(context)
-                          .textTheme
-                          .titleSmall
-                          ?.copyWith(fontWeight: FontWeight.w600) ??
+                      .textTheme
+                      .titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w600) ??
                       const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 if (details.isNotEmpty) ...<Widget>[
@@ -612,7 +627,8 @@ class OrderStepContent extends StatelessWidget {
           return;
         }
         visited.add(node);
-        final Map<String, dynamic> normalized = _normalizeMap(node);
+        final Map<String, dynamic> normalized =
+        _normalizeMap(node as Map<dynamic, dynamic>);
         if (_looksLikeReceipt(normalized)) {
           receipts.add(_buildReceiptEntry(normalized));
           return;
@@ -636,6 +652,7 @@ class OrderStepContent extends StatelessWidget {
     Map<String, dynamic>? summary,
     Map<String, dynamic>? fallbackSource,
     List<_ReceiptEntry> receipts = const <_ReceiptEntry>[],
+    String? currency,
   }) {
     final Map<String, dynamic>? source = summary ?? fallbackSource;
     final _AmountInfo? paidInfo = _scanForAmount(source, _paidKeywords);
@@ -686,16 +703,16 @@ class OrderStepContent extends StatelessWidget {
   }
 
   Map<String, dynamic>? _extractSection(
-    Map<String, dynamic>? source,
-    List<String> includeKeywords, {
-    List<String> excludeKeywords = const <String>[],
-  }) {
+      Map<String, dynamic>? source,
+      List<String> includeKeywords, {
+        List<String> excludeKeywords = const <String>[],
+      }) {
     if (source == null || source.isEmpty) {
       return null;
     }
 
     final Map<String, dynamic> normalized =
-        _normalizeMap(source as Map<dynamic, dynamic>);
+    _normalizeMap(source as Map<dynamic, dynamic>);
 
     for (final MapEntry<String, dynamic> entry in normalized.entries) {
       final String key = entry.key.toLowerCase();
@@ -768,7 +785,7 @@ class OrderStepContent extends StatelessWidget {
     }
 
     final Map<String, dynamic> normalized =
-        _normalizeMap(source as Map<dynamic, dynamic>);
+    _normalizeMap(source as Map<dynamic, dynamic>);
     final Map<String, dynamic> result = <String, dynamic>{};
 
     normalized.forEach((String key, dynamic value) {
@@ -797,7 +814,8 @@ class OrderStepContent extends StatelessWidget {
           return null;
         }
         visited.add(node);
-        final Map<String, dynamic> normalized = _normalizeMap(node);
+        final Map<String, dynamic> normalized =
+        _normalizeMap(node as Map<dynamic, dynamic>);
         for (final MapEntry<String, dynamic> entry in normalized.entries) {
           final String key = entry.key.toLowerCase();
           if (_containsKeyword(key, keywords)) {
@@ -849,14 +867,14 @@ class OrderStepContent extends StatelessWidget {
       return _AmountInfo(value: value.toDouble());
     }
     if (value is Map) {
-      final Map<String, dynamic> normalized = _normalizeMap(value);
+      final Map<String, dynamic> normalized =
+      _normalizeMap(value as Map<dynamic, dynamic>);
       final String? display = _firstDisplayString(normalized);
       final double? numeric = _firstNumericValue(normalized);
       if (display != null || numeric != null) {
         return _AmountInfo(
           text: display,
-          value:
-              numeric ?? (display != null ? _tryParseNumeric(display) : null),
+          value: numeric ?? (display != null ? _tryParseNumeric(display) : null),
         );
       }
       for (final dynamic nested in normalized.values) {
@@ -888,7 +906,7 @@ class OrderStepContent extends StatelessWidget {
     for (final MapEntry<String, dynamic> entry in map.entries) {
       if (_containsKeyword(entry.key.toLowerCase(), _displayKeys)) {
         final String? candidate =
-            _stringFromDynamic(entry.value, requireDigits: true);
+        _stringFromDynamic(entry.value, requireDigits: true);
         if (candidate != null) {
           return candidate;
         }
@@ -951,7 +969,7 @@ class OrderStepContent extends StatelessWidget {
       return value;
     }
     if (value is Map) {
-      return _normalizeMap(value);
+      return _normalizeMap(value as Map<dynamic, dynamic>);
     }
     return null;
   }
@@ -979,14 +997,14 @@ class OrderStepContent extends StatelessWidget {
     }
     if (value is Map) {
       return _stringFromDynamic(
-        (value).values,
+        (value as Map).values,
         requireDigits: requireDigits,
       );
     }
     if (value is Iterable) {
       for (final dynamic element in value) {
         final String? candidate =
-            _stringFromDynamic(element, requireDigits: requireDigits);
+        _stringFromDynamic(element, requireDigits: requireDigits);
         if (candidate != null) {
           return candidate;
         }
@@ -1008,9 +1026,7 @@ class OrderStepContent extends StatelessWidget {
     if (trimmed.length >= 6) {
       return true;
     }
-    return trimmed.contains(' ') ||
-        trimmed.contains('،') ||
-        trimmed.contains('.');
+    return trimmed.contains(' ') || trimmed.contains('،') || trimmed.contains('.');
   }
 
   String? _joinNonEmpty(List<String?> values, {String separator = ' '}) {
@@ -1042,7 +1058,8 @@ class OrderStepContent extends StatelessWidget {
           return;
         }
         visited.add(node);
-        final Map<String, dynamic> normalized = _normalizeMap(node);
+        final Map<String, dynamic> normalized =
+        _normalizeMap(node as Map<dynamic, dynamic>);
         for (final MapEntry<String, dynamic> entry in normalized.entries) {
           final String key = entry.key.toLowerCase();
           if (_containsKeyword(key, _noteKeywords)) {
@@ -1077,25 +1094,24 @@ class OrderStepContent extends StatelessWidget {
     if (map.isEmpty) {
       return false;
     }
-    final Iterable<String> keys =
-        map.keys.map((String key) => key.toLowerCase());
+    final Iterable<String> keys = map.keys.map((String key) => key.toLowerCase());
     int score = 0;
     if (keys.any((String key) =>
-        key.contains('receipt') ||
+    key.contains('receipt') ||
         key.contains('reference') ||
         key.contains('number') ||
         key.contains('code'))) {
+
       score++;
     }
     if (keys.any((String key) =>
-        key.contains('amount') ||
+    key.contains('amount') ||
         key.contains('value') ||
         key.contains('total') ||
         key.contains('paid'))) {
       score++;
     }
-    if (keys
-        .any((String key) => key.contains('status') || key.contains('state'))) {
+    if (keys.any((String key) => key.contains('status') || key.contains('state'))) {
       score++;
     }
     if (keys.any((String key) => _containsKeyword(key, _urlKeywords))) {
@@ -1106,28 +1122,19 @@ class OrderStepContent extends StatelessWidget {
 
   _ReceiptEntry _buildReceiptEntry(Map<String, dynamic> map) {
     final String? title = _firstReadableString(
-          map,
-          const <String>[
-            'title',
-            'label',
-            'name',
-            'reference',
-            'receipt',
-            'bank',
-            'method'
-          ],
-        ) ??
+      map,
+      const <String>['title', 'label', 'name', 'reference', 'receipt', 'bank', 'method'],
+    ) ??
         _firstReadableString(map, const <String>['id', 'number', 'code']);
     final String? status =
-        _firstReadableString(map, const <String>['status', 'state', 'result']);
+    _firstReadableString(map, const <String>['status', 'state', 'result']);
     final String? date = _firstReadableString(
       map,
       const <String>['date', 'created_at', 'submitted_at', 'timestamp', 'time'],
     );
-    final String? subtitle =
-        _joinNonEmpty(<String?>[status, date], separator: ' • ');
+    final String? subtitle = _joinNonEmpty(<String?>[status, date], separator: ' • ');
     final _AmountInfo? amount =
-        _scanForAmount(map, const <String>['amount', 'value', 'total', 'paid']);
+    _scanForAmount(map, const <String>['amount', 'value', 'total', 'paid']);
     final String? note = _extractNote(map);
     final String? url = _extractUrlFromMap(map);
 
@@ -1206,7 +1213,7 @@ class OrderStepContent extends StatelessWidget {
       return _isLikelyUrl(trimmed) ? trimmed : null;
     }
     if (value is Map) {
-      return _resolveUrl((value).values);
+      return _resolveUrl((value as Map).values);
     }
     if (value is Iterable) {
       for (final dynamic element in value) {
@@ -1249,7 +1256,7 @@ class OrderStepContent extends StatelessWidget {
       return double.tryParse(normalized);
     }
     if (value is Map) {
-      return _tryParseNumeric((value).values);
+      return _tryParseNumeric((value as Map).values);
     }
     if (value is Iterable) {
       for (final dynamic element in value) {
@@ -1261,6 +1268,8 @@ class OrderStepContent extends StatelessWidget {
     }
     return null;
   }
+
+
 
   Widget _buildStepsRow(BuildContext context, List<OrderStepData> steps) {
     return Row(
@@ -1306,23 +1315,25 @@ class OrderStepContent extends StatelessWidget {
   }
 
   Widget _buildInfoCard(
-    BuildContext context,
-    UserOrder order,
-    OrderActions actions, {
-    String? outstanding,
-    Future<void> Function()? onPayOutstanding,
-  }) {
-    final String createdAt =
-        order.createdAt != null ? dateFormat.format(order.createdAt!) : '—';
+      BuildContext context,
+      UserOrder order,
+      OrderActions actions, {
+        String? outstanding,
+        Future<void> Function()? onPayOutstanding,
+      }) {
+
+    final String createdAt = order.createdAt != null
+        ? dateFormat.format(order.createdAt!)
+        : '—';
     final String paymentStatus = order.paymentLabel;
     final String deliveryStatus = order.deliveryLabel;
     final String address = order.addressLabel ?? '—';
     final bool showWarning = _shouldShowWarning(paymentStatus);
     final bool showCancel = actions.canCancel;
-    final String? cancelHint =
-        actions.hasCancelHint ? actions.cancelHint!.trim() : null;
+    final String? cancelHint = actions.hasCancelHint ? actions.cancelHint!.trim() : null;
     final bool showOutstanding =
         outstanding != null && outstanding.trim().isNotEmpty;
+
 
     return Container(
       width: double.infinity,
@@ -1372,15 +1383,15 @@ class OrderStepContent extends StatelessWidget {
                       : () => onOpenInvoice(order),
                   child: isInvoiceLoading
                       ? SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
-                        )
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  )
                       : const Text('عرض فاتورة'),
                 ),
               ),
@@ -1391,14 +1402,14 @@ class OrderStepContent extends StatelessWidget {
                     onPressed: isCancelling ? null : () => onCancelOrder(order),
                     child: isCancelling
                         ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor:
+                        AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
                         : Text(actions.cancelButtonLabel),
                   ),
                 ),
@@ -1410,7 +1421,7 @@ class OrderStepContent extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
                       Text(
-                        outstanding,
+                        outstanding!,
                         style: Theme.of(context)
                             .textTheme
                             .titleMedium
@@ -1432,6 +1443,7 @@ class OrderStepContent extends StatelessWidget {
               ],
             ],
           ),
+
           if (invoiceBlockReason != null) ...<Widget>[
             const SizedBox(height: 12),
             _buildActionNotice(
@@ -1441,20 +1453,17 @@ class OrderStepContent extends StatelessWidget {
               accentColor: Colors.orange.shade700,
             ),
           ],
-          if (showCancel &&
-              (actions.canRefundDeposit || cancelHint != null)) ...<Widget>[
+
+          if (showCancel && (actions.canRefundDeposit || cancelHint != null)) ...<Widget>[
             const SizedBox(height: 12),
             _buildActionNotice(
               context,
               actions.canRefundDeposit
                   ? 'سيتم بدء عملية استرداد العربون عند تأكيد الإلغاء.'
                   : cancelHint!,
-              icon: actions.canRefundDeposit
-                  ? Icons.savings_outlined
-                  : Icons.info_outline,
-              accentColor: actions.canRefundDeposit
-                  ? Colors.green.shade700
-                  : Colors.orange.shade700,
+              icon: actions.canRefundDeposit ? Icons.savings_outlined : Icons.info_outline,
+              accentColor:
+              actions.canRefundDeposit ? Colors.green.shade700 : Colors.orange.shade700,
             ),
           ],
           const SizedBox(height: 20),
@@ -1467,10 +1476,10 @@ class OrderStepContent extends StatelessWidget {
               ),
               child: const Text(
                 '⚠️ ملاحظة هامة:\n'
-                'في حال كانت حالة السداد معلّقة، فهذا يعني أن الطلب لم يتم تسليمه بعد لإدارة التطبيق. '
-                'يُرجى العلم أن تأخير المعالجة يكون عادةً من جهة التاجر، حيث لم يقم بعد بتأكيد عملية الدفع الخاصة بك. '
-                'عند مراجعة التاجر للطلب وتأكيد السداد، سيتم تحديث الحالة تلقائيًا إلى (مدفوع)، '
-                'وسيتولى فريق التوصيل مباشرة تنفيذ الطلب دون أي تأخير إضافي.',
+                    'في حال كانت حالة السداد معلّقة، فهذا يعني أن الطلب لم يتم تسليمه بعد لإدارة التطبيق. '
+                    'يُرجى العلم أن تأخير المعالجة يكون عادةً من جهة التاجر، حيث لم يقم بعد بتأكيد عملية الدفع الخاصة بك. '
+                    'عند مراجعة التاجر للطلب وتأكيد السداد، سيتم تحديث الحالة تلقائيًا إلى (مدفوع)، '
+                    'وسيتولى فريق التوصيل مباشرة تنفيذ الطلب دون أي تأخير إضافي.',
                 style: TextStyle(
                   fontSize: 13,
                   height: 1.6,
@@ -1484,17 +1493,17 @@ class OrderStepContent extends StatelessWidget {
     );
   }
 
+
+
   Widget _buildStatusDisplayCard(
-    BuildContext context,
-    OrderStatusDisplay display,
-  ) {
-    final _StatusBannerVisual visual =
-        _resolveStatusBannerVisual(context, display);
+      BuildContext context,
+      OrderStatusDisplay display,
+      ) {
+    final _StatusBannerVisual visual = _resolveStatusBannerVisual(context, display);
     final String? primary = display.primaryText;
     final String? secondary = display.secondaryText;
     final String? note = _hasValue(display.note) ? display.note!.trim() : null;
-    final String? badge =
-        _hasValue(display.badge) ? display.badge!.trim() : null;
+    final String? badge = _hasValue(display.badge) ? display.badge!.trim() : null;
     final bool hasPrimary = _hasValue(primary);
     final bool hasSecondary = _hasValue(secondary);
 
@@ -1559,8 +1568,7 @@ class OrderStepContent extends StatelessWidget {
               ),
               if (badge != null)
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: visual.badgeBackground,
                     borderRadius: BorderRadius.circular(100),
@@ -1579,7 +1587,7 @@ class OrderStepContent extends StatelessWidget {
           if (showNote) ...<Widget>[
             const SizedBox(height: 12),
             Text(
-              note,
+              note!,
               style: TextStyle(
                 height: 1.5,
                 color: visual.textColor.withOpacity(0.85),
@@ -1592,18 +1600,14 @@ class OrderStepContent extends StatelessWidget {
   }
 
   Widget _buildReserveOptionsCard(
-    BuildContext context,
-    OrderStatusReserveOptions options,
-  ) {
-    final String? title =
-        _hasValue(options.title) ? options.title!.trim() : null;
+      BuildContext context,
+      OrderStatusReserveOptions options,
+      ) {
+    final String? title = _hasValue(options.title) ? options.title!.trim() : null;
     final String? emphasis = options.emphasisText;
 
     String? body;
-    for (final String? candidate in <String?>[
-      options.message,
-      options.disclaimer
-    ]) {
+    for (final String? candidate in <String?>[options.message, options.disclaimer]) {
       if (_hasValue(candidate) && candidate!.trim() != emphasis) {
         body = candidate.trim();
         break;
@@ -1667,7 +1671,7 @@ class OrderStepContent extends StatelessWidget {
           if (body != null) ...<Widget>[
             const SizedBox(height: 12),
             Text(
-              body,
+              body!,
               style: TextStyle(
                 height: 1.5,
                 color: Colors.orange.shade700,
@@ -1680,25 +1684,24 @@ class OrderStepContent extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: options.points
                   .map((String point) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            const Text('• '),
-                            Expanded(
-                              child: Text(
-                                point.trim(),
-                                style: const TextStyle(height: 1.5),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ))
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    const Text('• '),
+                    Expanded(
+                      child: Text(
+                        point.trim(),
+                        style: const TextStyle(height: 1.5),
+                      ),
+                    ),
+                  ],
+                ),
+              ))
                   .toList(),
             ),
           ],
-          if (_hasValue(options.actionLabel) &&
-              _hasValue(options.actionUrl)) ...<Widget>[
+          if (_hasValue(options.actionLabel) && _hasValue(options.actionUrl)) ...<Widget>[
             const SizedBox(height: 12),
             Align(
               alignment: AlignmentDirectional.centerStart,
@@ -1714,13 +1717,13 @@ class OrderStepContent extends StatelessWidget {
   }
 
   Widget _buildPolicySection(
-    BuildContext context,
-    OrderPolicy? policy,
-    OrderSupport? support,
-  ) {
+      BuildContext context,
+      OrderPolicy? policy,
+      OrderSupport? support,
+      ) {
     final bool hasPolicy = policy != null && policy.hasReturnPolicy;
     final bool hasSupport = support != null && support.hasContact;
-    final String? subtitle = hasSupport ? _supportSubtitle(support) : null;
+    final String? subtitle = hasSupport ? _supportSubtitle(support!) : null;
 
     if (!hasPolicy && !hasSupport) {
       return const SizedBox.shrink();
@@ -1741,7 +1744,7 @@ class OrderStepContent extends StatelessWidget {
         children: <Widget>[
           if (hasPolicy) ...<Widget>[
             Text(
-              policy.effectiveTitle,
+              policy!.effectiveTitle,
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 8),
@@ -1755,7 +1758,7 @@ class OrderStepContent extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () => _openSupport(context, support),
+                onPressed: () => _openSupport(context, support!),
                 icon: const Icon(Icons.headset_mic_outlined),
                 label: Text(support.effectiveLabel),
               ),
@@ -1778,11 +1781,11 @@ class OrderStepContent extends StatelessWidget {
   }
 
   Widget _buildActionNotice(
-    BuildContext context,
-    String message, {
-    IconData icon = Icons.info_outline,
-    Color? accentColor,
-  }) {
+      BuildContext context,
+      String message, {
+        IconData icon = Icons.info_outline,
+        Color? accentColor,
+      }) {
     final Color baseColor = accentColor ?? Colors.orange.shade700;
     return Container(
       width: double.infinity,
@@ -1829,8 +1832,7 @@ class OrderStepContent extends StatelessWidget {
     try {
       await UiUtils.launchURL(resolved!);
     } catch (_) {
-      UiUtils.showSoftSnackBar(context,
-          message: 'تعذر فتح الرابط. حاول لاحقًا.');
+      UiUtils.showSoftSnackBar(context, message: 'تعذر فتح الرابط. حاول لاحقًا.');
     }
   }
 
@@ -1846,14 +1848,17 @@ class OrderStepContent extends StatelessWidget {
 
   bool _hasValue(String? value) => value != null && value.trim().isNotEmpty;
 
+
+
   Widget _buildOrderSummary(BuildContext context, UserOrder order) {
-    final OrderLine? line = order.items.isNotEmpty ? order.items.first : null;
+    final OrderLine? line =
+    order.items.isNotEmpty ? order.items.first : null;
 
     final String productName = (line != null && line.name.trim().isNotEmpty)
         ? line.name
         : 'لا توجد منتجات مسجلة';
     final String quantityText =
-        line != null ? 'عدد: ${line.quantity}' : 'عدد: 0';
+    line != null ? 'عدد: ${line.quantity}' : 'عدد: 0';
     final String subtotal = line?.totalText ?? order.totalLabel;
     final String total = order.totalLabel;
 
@@ -2012,11 +2017,11 @@ class OrderStepContent extends StatelessWidget {
   }
 
   Widget _buildInfoRow(
-    BuildContext context,
-    String title,
-    String value, {
-    Color? valueColor,
-  }) {
+      BuildContext context,
+      String title,
+      String value, {
+        Color? valueColor,
+      }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -2086,17 +2091,15 @@ class _OrderStepIndicator extends StatelessWidget {
           padding: const EdgeInsets.all(2),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: visual.isHighlighted
-                ? visual.highlightColor
-                : Colors.transparent,
+            color: visual.isHighlighted ? visual.highlightColor : Colors.transparent,
             boxShadow: visual.isHighlighted
                 ? <BoxShadow>[
-                    BoxShadow(
-                      color: visual.highlightColor.withOpacity(0.5),
-                      blurRadius: 8,
-                      spreadRadius: 2,
-                    ),
-                  ]
+              BoxShadow(
+                color: visual.highlightColor.withOpacity(0.5),
+                blurRadius: 8,
+                spreadRadius: 2,
+              ),
+            ]
                 : const <BoxShadow>[],
           ),
           child: CircleAvatar(
@@ -2113,8 +2116,7 @@ class _OrderStepIndicator extends StatelessWidget {
         Text(
           step.label,
           style: TextStyle(
-            fontWeight:
-                visual.isHighlighted ? FontWeight.bold : FontWeight.normal,
+            fontWeight: visual.isHighlighted ? FontWeight.bold : FontWeight.normal,
             color: visual.isHighlighted
                 ? visual.labelColor
                 : context.color.textColorDark,
@@ -2144,6 +2146,9 @@ class _StepVisual {
   final bool isHighlighted;
 }
 
+
+
+
 class _StatusBannerVisual {
   const _StatusBannerVisual({
     required this.backgroundColor,
@@ -2164,11 +2169,15 @@ class _StatusBannerVisual {
   final Color badgeTextColor;
 }
 
+
+
+
+
 _StepVisual _resolveStepVisual(
-  BuildContext context,
-  OrderStepData step,
-  int index,
-) {
+    BuildContext context,
+    OrderStepData step,
+    int index,
+    ) {
   const List<IconData> icons = <IconData>[
     Icons.assignment_turned_in,
     Icons.check_circle,
@@ -2178,7 +2187,7 @@ _StepVisual _resolveStepVisual(
   ];
 
   final IconData icon =
-      index < icons.length ? icons[index] : Icons.check_circle;
+  index < icons.length ? icons[index] : Icons.check_circle;
 
   if (step.isCurrent) {
     return _StepVisual(
@@ -2212,14 +2221,14 @@ _StepVisual _resolveStepVisual(
   );
 }
 
+
 _StatusBannerVisual _resolveStatusBannerVisual(
-  BuildContext context,
-  OrderStatusDisplay display,
-) {
+    BuildContext context,
+    OrderStatusDisplay display,
+    ) {
   final String style = (display.style ?? '').toLowerCase();
   final String combinedText =
-      '${display.primaryText ?? ''} ${display.badge ?? ''} ${display.note ?? ''}'
-          .toLowerCase();
+  '${display.primaryText ?? ''} ${display.badge ?? ''} ${display.note ?? ''}'.toLowerCase();
 
   Color resolveColor(MaterialColor base, int shade) => base[shade] ?? base;
 
@@ -2283,6 +2292,7 @@ _StatusBannerVisual _resolveStatusBannerVisual(
   );
 }
 
+
 class _SummaryRow extends StatelessWidget {
   const _SummaryRow({
     required this.title,
@@ -2313,6 +2323,9 @@ class _SummaryRow extends StatelessWidget {
   }
 }
 
+
+
+
 class _PaymentBreakdownTile extends StatelessWidget {
   const _PaymentBreakdownTile({
     required this.breakdown,
@@ -2325,19 +2338,19 @@ class _PaymentBreakdownTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final TextStyle titleStyle = Theme.of(context)
-            .textTheme
-            .titleMedium
-            ?.copyWith(fontWeight: FontWeight.bold) ??
+        .textTheme
+        .titleMedium
+        ?.copyWith(fontWeight: FontWeight.bold) ??
         const TextStyle(fontWeight: FontWeight.bold, fontSize: 16);
     final TextStyle labelStyle = Theme.of(context)
-            .textTheme
-            .bodySmall
-            ?.copyWith(color: Colors.grey.shade600) ??
+        .textTheme
+        .bodySmall
+        ?.copyWith(color: Colors.grey.shade600) ??
         TextStyle(color: Colors.grey.shade600, fontSize: 12);
     final TextStyle valueStyle = Theme.of(context)
-            .textTheme
-            .titleSmall
-            ?.copyWith(fontWeight: FontWeight.w600) ??
+        .textTheme
+        .titleSmall
+        ?.copyWith(fontWeight: FontWeight.w600) ??
         const TextStyle(fontWeight: FontWeight.w600);
 
     final String paidDisplay = breakdown.formattedPaid(currency) ?? '—';
@@ -2369,17 +2382,15 @@ class _PaymentBreakdownTile extends StatelessWidget {
             ),
           ],
         ),
-        if (breakdown.note != null &&
-            breakdown.note!.trim().isNotEmpty) ...<Widget>[
+        if (breakdown.note != null && breakdown.note!.trim().isNotEmpty) ...<Widget>[
           const SizedBox(height: 8),
           Text(
             breakdown.note!.trim(),
             style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: Colors.grey.shade700, height: 1.4) ??
-                TextStyle(
-                    color: Colors.grey.shade700, fontSize: 12, height: 1.4),
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: Colors.grey.shade700, height: 1.4) ??
+                TextStyle(color: Colors.grey.shade700, fontSize: 12, height: 1.4),
           ),
         ],
       ],
@@ -2422,10 +2433,10 @@ class _PaymentBreakdown {
 
   bool get hasContent =>
       (paidText != null && paidText!.trim().isNotEmpty) ||
-      paidValue != null ||
-      (dueText != null && dueText!.trim().isNotEmpty) ||
-      dueValue != null ||
-      (note != null && note!.trim().isNotEmpty);
+          paidValue != null ||
+          (dueText != null && dueText!.trim().isNotEmpty) ||
+          dueValue != null ||
+          (note != null && note!.trim().isNotEmpty);
 
   String? formattedPaid(String? currency) {
     if (paidText != null && paidText!.trim().isNotEmpty) {
@@ -2491,7 +2502,8 @@ class _ReceiptEntry {
 String _formatCurrency(double value, String? currency) {
   final NumberFormat formatter = NumberFormat('#,##0.##');
   final String formatted = formatter.format(value);
-  final String suffix = (currency != null && currency.trim().isNotEmpty)
+  final String suffix =
+  (currency != null && currency.trim().isNotEmpty)
       ? ' ${currency.trim().toUpperCase()}'
       : '';
   return '$formatted$suffix'.trim();

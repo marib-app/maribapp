@@ -85,13 +85,15 @@ class WifiCabinController extends ChangeNotifier {
         limit: _defaultLimit,
       );
 
-      final decorated = networks.map((network) {
+      final decorated = networks
+          .map((network) {
         final distance = network.distanceKm ??
             _haversineKm(center, LatLng(network.latitude, network.longitude));
         return network.copyWith(distanceKm: distance);
-      }).toList()
+      })
+          .toList()
         ..sort(
-          (a, b) => (a.distanceKm ?? double.infinity)
+              (a, b) => (a.distanceKm ?? double.infinity)
               .compareTo(b.distanceKm ?? double.infinity),
         );
 

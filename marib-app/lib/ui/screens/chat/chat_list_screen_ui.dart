@@ -1,3 +1,4 @@
+
 part of 'chat_list_screen.dart';
 
 extension _ChatListScreenUi on _ChatListScreenState {
@@ -34,9 +35,9 @@ extension _ChatListScreenUi on _ChatListScreenState {
                 indicatorWeight: 1.5,
                 labelColor: context.color.textDefaultColor,
                 unselectedLabelColor:
-                    context.color.textDefaultColor.withOpacity(0.5),
+                context.color.textDefaultColor.withOpacity(0.5),
                 labelStyle:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 labelPadding: const EdgeInsets.symmetric(horizontal: 16),
                 indicatorSize: TabBarIndicatorSize.tab,
               ),
@@ -114,19 +115,24 @@ extension _ChatListScreenUi on _ChatListScreenState {
                       final itemAmount = c.amount; // قد تكون null
                       final status = item?.status;
 
+
                       final itemCurrency = item?.currency;
                       final itemCurrencySymbol = item?.currencySymbol;
 
                       final date = c.createdAt ?? '';
+
 
                       final isPurchased = item?.isPurchased ?? 0;
                       final alreadyReview = _hasAnyReview(item);
 
                       final itemOfferId = (c.itemOfferId ?? c.id) ?? 0;
 
+
                       final unreadCount = c.unreadMessagesCount ?? 0;
                       final lastMessage = c.lastMessage;
                       final participants = c.participants;
+
+
 
                       final conversationId =
                           c.conversationId ?? c.id?.toString() ?? '';
@@ -142,7 +148,9 @@ extension _ChatListScreenUi on _ChatListScreenState {
                           itemName: itemName,
                           unreadCount: unreadCount,
                           lastMessage: lastMessage,
+
                           conversationId: conversationId,
+
                           date: date,
                           itemOfferId: itemOfferId,
                           itemPrice: itemPrice,
@@ -229,6 +237,8 @@ extension _ChatListScreenUi on _ChatListScreenState {
                       final itemCurrencySymbol = item?.currencySymbol;
                       final date = c.createdAt ?? '';
 
+
+
                       final isPurchased = item?.isPurchased ?? 0;
                       final alreadyReview = _hasAnyReview(item);
 
@@ -237,6 +247,8 @@ extension _ChatListScreenUi on _ChatListScreenState {
                       final unreadCount = c.unreadMessagesCount ?? 0;
                       final lastMessage = c.lastMessage;
                       final participants = c.participants;
+
+
 
                       final conversationId =
                           c.conversationId ?? c.id?.toString() ?? '';
@@ -247,7 +259,7 @@ extension _ChatListScreenUi on _ChatListScreenState {
                           id: id,
                           itemId: itemId,
                           conversationId:
-                              c.conversationId ?? c.id?.toString() ?? '',
+                          c.conversationId ?? c.id?.toString() ?? '',
                           profilePicture: profilePicture,
                           userName: userName,
                           itemPicture: itemPicture,
@@ -265,6 +277,7 @@ extension _ChatListScreenUi on _ChatListScreenState {
                           participants: participants,
                           itemCurrency: itemCurrency,
                           itemCurrencySymbol: itemCurrencySymbol,
+
                         ),
                       );
                     },
@@ -298,7 +311,7 @@ extension _ChatListScreenUi on _ChatListScreenState {
                   Shimmer.fromColors(
                     baseColor: Theme.of(context).colorScheme.shimmerBaseColor,
                     highlightColor:
-                        Theme.of(context).colorScheme.shimmerHighlightColor,
+                    Theme.of(context).colorScheme.shimmerHighlightColor,
                     child: Stack(
                       children: [
                         const SizedBox(width: 58, height: 58),
@@ -311,7 +324,7 @@ extension _ChatListScreenUi on _ChatListScreenState {
                             decoration: BoxDecoration(
                               color: Colors.grey,
                               border:
-                                  Border.all(width: 1.5, color: Colors.white),
+                              Border.all(width: 1.5, color: Colors.white),
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
@@ -325,7 +338,7 @@ extension _ChatListScreenUi on _ChatListScreenState {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border:
-                                    Border.all(color: Colors.white, width: 2),
+                                Border.all(color: Colors.white, width: 2),
                               ),
                               child: CircleAvatar(
                                 radius: 15,

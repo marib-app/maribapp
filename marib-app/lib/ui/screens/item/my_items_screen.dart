@@ -104,7 +104,8 @@ class MyItemState extends State<ItemsScreen> with TickerProviderStateMixin {
             ),
           ],
         ),
-        body: ScrollConfiguration(
+        body: 
+        ScrollConfiguration(
           behavior: RemoveGlow(),
           child: PageView(
             physics: const NeverScrollableScrollPhysics(),

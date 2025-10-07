@@ -1,3 +1,4 @@
+
 import 'package:marib/utils/login/lib/login_status.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -7,6 +8,7 @@ import 'package:marib/utils/login/lib/payloads.dart';
 class EmailLogin extends LoginSystem {
   @override
   Future<UserCredential?> login() async {
+
     UserCredential? userCredential;
     if (payload is EmailLoginPayload) {
       var payloadData = (payload as EmailLoginPayload);
@@ -19,13 +21,13 @@ class EmailLogin extends LoginSystem {
         );
         emit(MSuccess());
       } else {
-        userCredential = await FirebaseAuth.instance
-            .signInWithEmailAndPassword(
+        userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: payloadData.email,
           password: payloadData.password,
-        )
-            .catchError((e) {
+        ).catchError((e){
           emit(MFail(e));
+
+
         });
       }
     }
@@ -33,5 +35,7 @@ class EmailLogin extends LoginSystem {
   }
 
   @override
-  void onEvent(MLoginState state) {}
+  void onEvent(MLoginState state) {
+
+  }
 }

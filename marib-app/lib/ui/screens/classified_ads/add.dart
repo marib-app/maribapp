@@ -8,9 +8,12 @@ import 'package:marib/data/model/classified_model.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marquee/marquee.dart';
 import 'package:marib/utils/screen_scaler.dart';
+
+
 
 class AddClassified extends StatelessWidget {
   final ClassifiedModel classified;
@@ -70,8 +73,7 @@ class AddClassified extends StatelessWidget {
 
                 if (hasImage)
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(
-                        ScreenScaler.s(1.5)), // ✅ زوايا ناعمة
+                    borderRadius: BorderRadius.circular(ScreenScaler.s(1.5)), // ✅ زوايا ناعمة
                     child: Container(
                       width: ScreenScaler.s(100),
                       height: ScreenScaler.s(25), // ✅ مرن حسب الشاشة
@@ -89,8 +91,7 @@ class AddClassified extends StatelessWidget {
                         fit: BoxFit.cover,
                         placeholder: (ctx, _) => Container(
                           color: context.color.secondaryColor,
-                          child:
-                              const Center(child: CircularProgressIndicator()),
+                          child: const Center(child: CircularProgressIndicator()),
                         ),
                         errorWidget: (_, __, ___) => Container(
                           color: Colors.grey[300],
@@ -161,6 +162,12 @@ class AddClassified extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
+
 
 /*
 import 'package:marib/app/routes.dart';

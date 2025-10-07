@@ -19,8 +19,8 @@ class _NoInternetState extends State<NoInternet> with TickerProviderStateMixin {
   _NetUiState _state = _NetUiState.idle;
   String? _statusMsg;
 
-  late final AnimationController _successPulse = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 380))
+  late final AnimationController _successPulse =
+  AnimationController(vsync: this, duration: const Duration(milliseconds: 380))
     ..value = 0.0;
 
   @override
@@ -31,8 +31,7 @@ class _NoInternetState extends State<NoInternet> with TickerProviderStateMixin {
 
   Future<bool> _checkConnectivity() async {
     try {
-      final socket = await Socket.connect('1.1.1.1', 53,
-          timeout: const Duration(seconds: 2));
+      final socket = await Socket.connect('1.1.1.1', 53, timeout: const Duration(seconds: 2));
       socket.destroy();
       return true;
     } catch (_) {
@@ -74,15 +73,14 @@ class _NoInternetState extends State<NoInternet> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final brand = context.color.territoryColor;
     final bg = context.color.backgroundColor;
-    final onBg = Theme.of(context).colorScheme.onSurface;
+    final onBg = Theme.of(context).colorScheme.onBackground;
 
     return Scaffold(
       backgroundColor: bg,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final minSide =
-                constraints.biggest.shortestSide.clamp(280.0, 900.0);
+            final minSide = constraints.biggest.shortestSide.clamp(280.0, 900.0);
             final circle = (minSide * 0.55).clamp(160.0, 360.0);
             final iconSize = (circle * 0.22).clamp(36.0, 64.0);
             final ring1 = circle;
@@ -103,6 +101,7 @@ class _NoInternetState extends State<NoInternet> with TickerProviderStateMixin {
                       _ring(ring1, brand.withOpacity(0.14)),
                       _ring(ring2, brand.withOpacity(0.16)),
                       _ring(ring3, brand.withOpacity(0.18)),
+
                       Container(
                         width: circle * 0.4,
                         height: circle * 0.4,
@@ -130,18 +129,13 @@ class _NoInternetState extends State<NoInternet> with TickerProviderStateMixin {
                               return ScaleTransition(
                                 key: const ValueKey('success'),
                                 scale: Tween(begin: 0.7, end: 1.0).animate(
-                                  CurvedAnimation(
-                                      parent: _successPulse,
-                                      curve: Curves.easeOutBack),
+                                  CurvedAnimation(parent: _successPulse, curve: Curves.easeOutBack),
                                 ),
-                                child: Icon(Icons.check_circle_rounded,
-                                    size: iconSize, color: brand),
+                                child: Icon(Icons.check_circle_rounded, size: iconSize, color: brand),
                               );
                             }
                             return Icon(Icons.wifi_off_rounded,
-                                key: const ValueKey('icon'),
-                                size: iconSize,
-                                color: brand);
+                                key: const ValueKey('icon'), size: iconSize, color: brand);
                           }(),
                         ),
                       ),
@@ -153,22 +147,15 @@ class _NoInternetState extends State<NoInternet> with TickerProviderStateMixin {
 
                 // العنوان
                 Text(
-                  _state == _NetUiState.success
-                      ? "تم الاتصال بالإنترنت"
-                      : "لا يوجد اتصال بالإنترنت",
+                  _state == _NetUiState.success ? "تم الاتصال بالإنترنت" : "لا يوجد اتصال بالإنترنت",
                   textAlign: TextAlign.center,
-                )
-                    .size(context.font.extraLarge)
-                    .color(onBg)
-                    .bold(weight: FontWeight.w700),
+                ).size(context.font.extraLarge).color(onBg).bold(weight: FontWeight.w700),
 
                 const SizedBox(height: 8),
 
                 // الوصف
                 Text(
-                  _state == _NetUiState.success
-                      ? "جاري المتابعة..."
-                      : "تحقق من الشبكة ثم جرّب مرة أخرى.",
+                  _state == _NetUiState.success ? "جاري المتابعة..." : "تحقق من الشبكة ثم جرّب مرة أخرى.",
                   textAlign: TextAlign.center,
                 ).size(context.font.normal).color(onBg.withOpacity(0.75)),
 
@@ -176,20 +163,15 @@ class _NoInternetState extends State<NoInternet> with TickerProviderStateMixin {
 
                 // زر إعادة المحاولة
                 ElevatedButton(
-                  onPressed:
-                      _state == _NetUiState.loading ? null : _onRetryPressed,
+                  onPressed: _state == _NetUiState.loading ? null : _onRetryPressed,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: brand,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 22, vertical: 14),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                   child: Text(
-                    _state == _NetUiState.loading
-                        ? "يفحص الاتصال..."
-                        : "إعادة المحاولة",
+                    _state == _NetUiState.loading ? "يفحص الاتصال..." : "إعادة المحاولة",
                   ).size(context.font.normal).bold(),
                 ),
 
@@ -199,15 +181,13 @@ class _NoInternetState extends State<NoInternet> with TickerProviderStateMixin {
                   child: (_statusMsg == null)
                       ? const SizedBox.shrink()
                       : Padding(
-                          key: ValueKey(_statusMsg),
-                          padding: const EdgeInsets.only(top: 12),
-                          child: Text(
-                            _statusMsg!,
-                            textAlign: TextAlign.center,
-                          )
-                              .size(context.font.small)
-                              .color(onBg.withOpacity(0.85)),
-                        ),
+                    key: ValueKey(_statusMsg),
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(
+                      _statusMsg!,
+                      textAlign: TextAlign.center,
+                    ).size(context.font.small).color(onBg.withOpacity(0.85)),
+                  ),
                 ),
 
                 const Spacer(),
@@ -218,8 +198,7 @@ class _NoInternetState extends State<NoInternet> with TickerProviderStateMixin {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.info_outline_rounded,
-                          size: 16, color: onBg.withOpacity(0.6)),
+                      Icon(Icons.info_outline_rounded, size: 16, color: onBg.withOpacity(0.6)),
                       const SizedBox(width: 6),
                       Flexible(
                         child: Text(

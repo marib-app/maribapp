@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:geocoding/geocoding.dart';
 
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -20,9 +21,9 @@ class CartAddressLocationPicker extends StatefulWidget {
   final Map<String, dynamic>? initial;
 
   static Future<Map<String, dynamic>?> show(
-    BuildContext context, {
-    Map<String, dynamic>? initial,
-  }) {
+      BuildContext context, {
+        Map<String, dynamic>? initial,
+      }) {
     return Navigator.of(context).push<Map<String, dynamic>>(
       BlurredRouter<Map<String, dynamic>>(
         builder: (_) => CartAddressLocationPicker(initial: initial),
@@ -31,8 +32,7 @@ class CartAddressLocationPicker extends StatefulWidget {
   }
 
   @override
-  State<CartAddressLocationPicker> createState() =>
-      _CartAddressLocationPickerState();
+  State<CartAddressLocationPicker> createState() => _CartAddressLocationPickerState();
 }
 
 class _CartAddressLocationPickerState extends State<CartAddressLocationPicker>
@@ -238,11 +238,7 @@ class _CartAddressLocationPickerState extends State<CartAddressLocationPicker>
         mark.locality,
         mark.administrativeArea,
         mark.country,
-      ]
-          .whereType<String>()
-          .map((String e) => e.trim())
-          .where((String e) => e.isNotEmpty)
-          .join('، ');
+      ].whereType<String>().map((String e) => e.trim()).where((String e) => e.isNotEmpty).join('، ');
       if (composed.isNotEmpty) {
         result['formatted_address'] = composed;
       }
@@ -265,122 +261,120 @@ class _CartAddressLocationPickerState extends State<CartAddressLocationPicker>
       body: _initializing
           ? const Center(child: CircularProgressIndicator())
           : Column(
+        children: [
+          Expanded(
+            child: Stack(
               children: [
-                Expanded(
-                  child: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: GoogleMap(
-                          mapType: _mapType,
-                          myLocationEnabled: true,
-                          zoomControlsEnabled: false,
-                          initialCameraPosition: _camera ??
-                              const CameraPosition(
-                                  target: LatLng(0, 0), zoom: 2),
-                          onMapCreated: (GoogleMapController controller) {
-                            _controller = controller;
-                          },
-                          onCameraMove: _onCameraMove,
-                          onCameraIdle: _onCameraIdle,
-                        ),
-                      ),
-                      Align(
-                        alignment: Alignment.center,
-                        child: IgnorePointer(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.place,
-                                size: 48,
-                                color: context.color.territoryColor,
-                              ),
-                              if (_geocoding) const SizedBox(height: 12),
-                              if (_geocoding)
-                                const CircularProgressIndicator(
-                                    strokeWidth: 2.5),
-                            ],
-                          ),
-                        ),
-                      ),
-                      PositionedDirectional(
-                        top: 20,
-                        end: 20,
-                        child: Column(
-                          children: [
-                            _MapIconButton(
-                              icon: Icons.layers_outlined,
-                              tooltip: 'تبديل نوع الخريطة',
-                              onPressed: () {
-                                setState(() {
-                                  _mapType = _mapType == MapType.normal
-                                      ? MapType.hybrid
-                                      : MapType.normal;
-                                });
-                              },
-                            ),
-                            const SizedBox(height: 12),
-                            _MapIconButton(
-                              icon: Icons.my_location,
-                              tooltip: 'موقعي الحالي',
-                              onPressed: _goToCurrentLocation,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                Positioned.fill(
+                  child: GoogleMap(
+                    mapType: _mapType,
+                    myLocationEnabled: true,
+                    zoomControlsEnabled: false,
+                    initialCameraPosition:
+                    _camera ?? const CameraPosition(target: LatLng(0, 0), zoom: 2),
+                    onMapCreated: (GoogleMapController controller) {
+                      _controller = controller;
+                    },
+                    onCameraMove: _onCameraMove,
+                    onCameraIdle: _onCameraIdle,
                   ),
                 ),
-                Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: color.surface,
-                    borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(24)),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 12,
-                        offset: Offset(0, -4),
-                      ),
-                    ],
+                Align(
+                  alignment: Alignment.center,
+                  child: IgnorePointer(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.place,
+                          size: 48,
+                          color: context.color.territoryColor,
+                        ),
+                        if (_geocoding)
+                          const SizedBox(height: 12),
+                        if (_geocoding)
+                          const CircularProgressIndicator(strokeWidth: 2.5),
+                      ],
+                    ),
                   ),
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                ),
+                PositionedDirectional(
+                  top: 20,
+                  end: 20,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        'الموقع المختار',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: context.font.larger,
-                          color: context.color.textDefaultColor,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _addressSummary(),
-                        style: TextStyle(
-                          fontSize: context.font.normal,
-                          color: context.color.textLightColor,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      UiUtils.buildButton(
-                        context,
-                        buttonTitle: 'تأكيد الموقع',
-                        height: 54,
-                        radius: 14,
+                      _MapIconButton(
+                        icon: Icons.layers_outlined,
+                        tooltip: 'تبديل نوع الخريطة',
                         onPressed: () {
-                          Navigator.of(context).pop(_buildResult());
+                          setState(() {
+                            _mapType = _mapType == MapType.normal
+                                ? MapType.hybrid
+                                : MapType.normal;
+                          });
                         },
+                      ),
+                      const SizedBox(height: 12),
+                      _MapIconButton(
+                        icon: Icons.my_location,
+                        tooltip: 'موقعي الحالي',
+                        onPressed: _goToCurrentLocation,
                       ),
                     ],
                   ),
                 ),
               ],
             ),
+          ),
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: color.surface,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 12,
+                  offset: Offset(0, -4),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'الموقع المختار',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: context.font.larger,
+                    color: context.color.textDefaultColor,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _addressSummary(),
+                  style: TextStyle(
+                    fontSize: context.font.normal,
+                    color: context.color.textLightColor,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                UiUtils.buildButton(
+                  context,
+                  buttonTitle: 'تأكيد الموقع',
+                  height: 54,
+                  radius: 14,
+                  onPressed: () {
+                    Navigator.of(context).pop(_buildResult());
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

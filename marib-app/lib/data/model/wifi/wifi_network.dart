@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-import 'package:marib/data/model/wifi/wifi_plan.dart';
+import 'wifi_plan.dart';
 
 class WifiNetwork extends Equatable {
   const WifiNetwork({
@@ -48,14 +48,14 @@ class WifiNetwork extends Equatable {
       if (value is List) {
         return value
             .map((dynamic e) {
-              if (e is Map<String, dynamic>) {
-                return WifiPlan.fromJson(e);
-              }
-              if (e is Map) {
-                return WifiPlan.fromJson(Map<String, dynamic>.from(e));
-              }
-              return null;
-            })
+          if (e is Map<String, dynamic>) {
+            return WifiPlan.fromJson(e);
+          }
+          if (e is Map) {
+            return WifiPlan.fromJson(Map<String, dynamic>.from(e as Map));
+          }
+          return null;
+        })
             .whereType<WifiPlan>()
             .toList();
       }
@@ -71,11 +71,9 @@ class WifiNetwork extends Equatable {
       iconUrl: json['icon']?.toString() ?? json['icon_url']?.toString(),
       coverageKm: parseDouble(json['radius']) ?? parseDouble(json['radius_km']),
       rating: parseDouble(json['rating']),
-      distanceKm:
-          parseDouble(json['distance']) ?? parseDouble(json['distance_km']),
+      distanceKm: parseDouble(json['distance']) ?? parseDouble(json['distance_km']),
       address: json['address']?.toString(),
-      plans: parsePlans(
-          json['plans'] ?? json['wifi_plans'] ?? json['available_plans']),
+      plans: parsePlans(json['plans'] ?? json['wifi_plans'] ?? json['available_plans']),
     );
   }
 
@@ -125,16 +123,16 @@ class WifiNetwork extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        name,
-        latitude,
-        longitude,
-        description,
-        iconUrl,
-        coverageKm,
-        rating,
-        distanceKm,
-        address,
-        plans,
-      ];
+    id,
+    name,
+    latitude,
+    longitude,
+    description,
+    iconUrl,
+    coverageKm,
+    rating,
+    distanceKm,
+    address,
+    plans,
+  ];
 }

@@ -33,7 +33,8 @@ class CartShippingQuoteService {
     return shared;
   }
 
-  static final CartShippingQuoteService shared = CartShippingQuoteService._();
+  static final CartShippingQuoteService shared =
+  CartShippingQuoteService._();
 
   final String _endpoint;
   bool _forceRefreshNext = false;
@@ -43,10 +44,10 @@ class CartShippingQuoteService {
     String? department,
     bool? forceRefresh,
     bool depositEnabled = false,
+
     Map<String, dynamic>? extra,
   }) async {
-    final bool shouldForceRefresh =
-        (forceRefresh ?? false) || _forceRefreshNext;
+    final bool shouldForceRefresh = (forceRefresh ?? false) || _forceRefreshNext;
 
     final Map<String, dynamic> payload = <String, dynamic>{};
 
@@ -80,24 +81,24 @@ class CartShippingQuoteService {
       );
 
       final Map<String, dynamic> normalized =
-          Map<String, dynamic>.from(response);
+      Map<String, dynamic>.from(response);
 
       if (_isFailure(normalized)) {
         throw CartShippingQuoteException(
-          message:
-              _extractMessage(normalized) ?? 'فشل الحصول على تسعيرة التوصيل.',
+          message: _extractMessage(normalized) ??
+              'فشل الحصول على تسعيرة التوصيل.',
           payload: normalized,
         );
       }
 
       final Map<String, dynamic> data = _mapify(_firstValue(
-            normalized,
-            const <List<String>>[
-              <String>['data'],
-              <String>['result'],
-              <String>['payload'],
-            ],
-          )) ??
+        normalized,
+        const <List<String>>[
+          <String>['data'],
+          <String>['result'],
+          <String>['payload'],
+        ],
+      )) ??
           normalized;
 
       final CheckoutShippingQuote quote = CheckoutShippingQuote(
@@ -132,58 +133,58 @@ class CartShippingQuoteService {
           <String>['metadata'],
         ])),
         departmentNotice: _asString(_firstValue(
-              data,
-              const <List<String>>[
-                <String>['department_notice'],
-                <String>['departmentNotice'],
-                <String>['notice'],
-              ],
-            ) ??
+          data,
+          const <List<String>>[
+            <String>['department_notice'],
+            <String>['departmentNotice'],
+            <String>['notice'],
+          ],
+        ) ??
             _firstValue(normalized, const <List<String>>[
               <String>['department_notice'],
               <String>['departmentNotice'],
             ])),
         fromCache: _asBool(_firstValue(
-              data,
-              const <List<String>>[
-                <String>['from_cache'],
-                <String>['cache_hit'],
-                <String>['cache', 'hit'],
-              ],
-            ) ??
+          data,
+          const <List<String>>[
+            <String>['from_cache'],
+            <String>['cache_hit'],
+            <String>['cache', 'hit'],
+          ],
+        ) ??
             _firstValue(normalized, const <List<String>>[
               <String>['from_cache'],
               <String>['cache_hit'],
             ])),
         cacheKey: _asString(_firstValue(
-              data,
-              const <List<String>>[
-                <String>['cache_key'],
-                <String>['cache', 'key'],
-              ],
-            ) ??
+          data,
+          const <List<String>>[
+            <String>['cache_key'],
+            <String>['cache', 'key'],
+          ],
+        ) ??
             normalized['cache_key']),
         cacheExpiresAt: _parseDateTime(_asString(_firstValue(
-              data,
-              const <List<String>>[
-                <String>['cache_expires_at'],
-                <String>['cache', 'expires_at'],
-                <String>['expires_at'],
-              ],
-            ) ??
+          data,
+          const <List<String>>[
+            <String>['cache_expires_at'],
+            <String>['cache', 'expires_at'],
+            <String>['expires_at'],
+          ],
+        ) ??
             _firstValue(normalized, const <List<String>>[
               <String>['cache_expires_at'],
               <String>['expires_at'],
             ]))),
         cacheTtlSeconds: _asNum(_firstValue(
-              data,
-              const <List<String>>[
-                <String>['cache_ttl'],
-                <String>['cache', 'ttl'],
-                <String>['ttl'],
-                <String>['cache_ttl_seconds'],
-              ],
-            ) ??
+          data,
+          const <List<String>>[
+            <String>['cache_ttl'],
+            <String>['cache', 'ttl'],
+            <String>['ttl'],
+            <String>['cache_ttl_seconds'],
+          ],
+        ) ??
             _firstValue(normalized, const <List<String>>[
               <String>['cache_ttl'],
               <String>['ttl'],
@@ -196,16 +197,16 @@ class CartShippingQuoteService {
       return quote;
     } on ApiHttpException catch (error) {
       throw CartShippingQuoteException(
-        message:
-            error.errorMessage?.toString() ?? 'تعذر الوصول إلى خادم التسعير.',
+        message: error.errorMessage?.toString() ??
+            'تعذر الوصول إلى خادم التسعير.',
         statusCode: error.statusCode,
         payload: _mapify(error.payload),
         cause: error,
       );
     } on ApiException catch (error) {
       throw CartShippingQuoteException(
-        message:
-            error.errorMessage?.toString() ?? 'تعذر الوصول إلى خادم التسعير.',
+        message: error.errorMessage?.toString() ??
+            'تعذر الوصول إلى خادم التسعير.',
         cause: error,
       );
     }
@@ -223,7 +224,7 @@ class CartShippingQuoteService {
       return value;
     }
     if (value is Map) {
-      return Map<String, dynamic>.from(value);
+      return Map<String, dynamic>.from(value as Map);
     }
     return null;
   }
@@ -249,9 +250,9 @@ class CartShippingQuoteService {
   }
 
   static dynamic _firstValue(
-    Map<String, dynamic> source,
-    List<List<String>> paths,
-  ) {
+      Map<String, dynamic> source,
+      List<List<String>> paths,
+      ) {
     for (final List<String> path in paths) {
       dynamic current = source;
       var success = true;

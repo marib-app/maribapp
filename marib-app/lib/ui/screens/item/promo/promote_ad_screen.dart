@@ -20,6 +20,8 @@ import 'package:marib/data/model/item/item_model.dart';
 
 import 'dart:async';
 
+
+
 class PromoteAdScreen extends StatefulWidget {
   final ItemModel model;
   final double? dailyPrice;
@@ -32,12 +34,11 @@ class PromoteAdScreen extends StatefulWidget {
 
   static Route route(RouteSettings settings) {
     final Map<dynamic, dynamic>? args =
-        settings.arguments as Map<dynamic, dynamic>?;
+    settings.arguments as Map<dynamic, dynamic>?;
     final ItemModel model = (args?['model'] as ItemModel?) ?? ItemModel();
     final dynamic rawDailyPrice = args?['dailyPrice'];
-    final double? dailyPrice = rawDailyPrice is num
-        ? rawDailyPrice.toDouble()
-        : rawDailyPrice as double?;
+    final double? dailyPrice =
+    rawDailyPrice is num ? rawDailyPrice.toDouble() : rawDailyPrice as double?;
 
     return BlurredRouter(
       builder: (_) => MultiBlocProvider(
@@ -49,6 +50,8 @@ class PromoteAdScreen extends StatefulWidget {
             ),
           ),
         ],
+
+
         child: PromoteAdScreen(
           model: model,
           dailyPrice: dailyPrice,
@@ -87,12 +90,18 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
       setState(() => _pageLoaded = true);
     });
 
+
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       context
           .read<FetchUserPackageLimitCubit>()
           .fetchUserPackageLimit(packageType: 'advertisement');
     });
+
+
+
+
   }
 
   @override
@@ -107,12 +116,12 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
       if (!_scrollCtrl.hasClients) return;
       _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
     }
-
     Future<void>.delayed(Duration.zero, jump);
     Future<void>.delayed(const Duration(milliseconds: 120), jump);
     Future<void>.delayed(const Duration(milliseconds: 240), jump);
     Future<void>.delayed(const Duration(milliseconds: 360), jump);
   }
+
 
   Widget _buildLimitStatusCard() {
     return BlocBuilder<FetchUserPackageLimitCubit, FetchUserPackageLimitState>(
@@ -125,7 +134,7 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
             margin: const EdgeInsets.symmetric(vertical: 12),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+              color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Center(
@@ -146,14 +155,14 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
               ? 'subscriptionLimitActionAllowed'
               : 'subscriptionLimitActionBlocked';
           final String statusLabel =
-              UiUtils.getTranslatedLabel(context, statusKey);
+          UiUtils.getTranslatedLabel(context, statusKey);
           final String? summary = UiUtils.subscriptionLimitSummary(
             context,
             state.limit,
             includeExpiry: false,
           );
           final String? expiry =
-              UiUtils.subscriptionLimitExpiry(context, state.limit);
+          UiUtils.subscriptionLimitExpiry(context, state.limit);
 
           return Container(
             width: double.infinity,
@@ -223,6 +232,12 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
     );
   }
 
+
+
+
+
+
+
   // بيانات الطرق (للبطاقات + الحوارات)
   Map<String, String> _bankMeta(int index) {
     // مطابق لما شاركته في PaymentStandalonePage (مع إبقاء الشرق فوري بدون رقم في البطاقة)
@@ -252,6 +267,10 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
         return {"name": "", "logo": "", "accountName": "", "accountNumber": ""};
     }
   }
+
+
+
+
 
   Widget _buildSubscriptionDetails() {
     bool statusHasBalance(SubscriptionStatus status) {
@@ -338,8 +357,7 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
         }
 
         if (remainingDays != null) {
-          final String daysLabel =
-              '$remainingDays ${_arabicDays(remainingDays)}';
+          final String daysLabel = '$remainingDays ${_arabicDays(remainingDays)}';
           rows.add(detailRow('الأيام المميزة المتبقية', daysLabel));
         }
 
@@ -399,6 +417,10 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
       },
     );
   }
+
+
+
+
 
   // الانتقال لمرحلة الدفع (جلب الطرق فقط هنا)
   Future<void> _goToPaymentStep() async {
@@ -483,6 +505,7 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
     await context
         .read<FetchUserPackageLimitCubit>()
         .fetchUserPackageLimit(packageType: 'advertisement');
+
   }
 
   String _formatYer(num v) {
@@ -493,19 +516,18 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
   }
 
   String _arabicDays(int d) {
-    return (d == 1)
-        ? 'يوم'
-        : (d == 2)
-            ? 'يومان'
-            : (d >= 3 && d <= 10)
-                ? 'أيام'
-                : 'يوماً';
+    return (d == 1) ? 'يوم' : (d == 2) ? 'يومان' : (d >= 3 && d <= 10)
+        ? 'أيام'
+        : 'يوماً';
   }
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final cs = Theme
+        .of(context)
+        .colorScheme;
     final media = MediaQuery.of(context);
+
 
     final limitState = context.watch<FetchUserPackageLimitCubit>().state;
     final bool limitInProgress = limitState is FetchUserPackageLimitInProgress;
@@ -515,240 +537,250 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
         : !limitFailure;
     final bool disableAction = limitInProgress || !canProceed;
 
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: UiUtils.getSystemUiOverlayStyle(
         context: context,
         statusBarColor: context.color.secondaryColor,
       ),
-      child: BlocListener<PromoteAdCubit, PromoteAdState>(
-        listener: (context, state) {
-          if (state is PromoteAdError) {
-            HelperUtils.showSnackBarMessage(
+        child: BlocListener<PromoteAdCubit, PromoteAdState>(
+          listener: (context, state) {
+            if (state is PromoteAdError) {
+              HelperUtils.showSnackBarMessage(
+                context,
+                state.message,
+                type: MessageType.error,
+              );
+            } else if (state is PromoteAdSubscriberReady) {
+              final String? message = state.message;
+              if (message != null && message.isNotEmpty) {
+                HelperUtils.showSnackBarMessage(
+                  context,
+                  message,
+                  type: MessageType.success,
+                );
+              }
+            } else if (state is PromoteAdNonSubscriber) {
+              final String? message = state.message;
+              if (message != null && message.isNotEmpty) {
+                HelperUtils.showSnackBarMessage(
+                  context,
+                  message,
+                  type: MessageType.success,
+                );
+              }
+
+            }
+          },
+          child: Scaffold(
+            backgroundColor: context.color.secondaryDetailsColor,
+            appBar: UiUtils.buildAppBar(
               context,
-              state.message,
-              type: MessageType.error,
-            );
-          } else if (state is PromoteAdSubscriberReady) {
-            final String? message = state.message;
-            if (message != null && message.isNotEmpty) {
-              HelperUtils.showSnackBarMessage(
-                context,
-                message,
-                type: MessageType.success,
-              );
-            }
-          } else if (state is PromoteAdNonSubscriber) {
-            final String? message = state.message;
-            if (message != null && message.isNotEmpty) {
-              HelperUtils.showSnackBarMessage(
-                context,
-                message,
-                type: MessageType.success,
-              );
-            }
-          }
-        },
-        child: Scaffold(
-          backgroundColor: context.color.secondaryDetailsColor,
-          appBar: UiUtils.buildAppBar(
-            context,
-            title: 'تمييز الإعلان',
-            showBackButton: true,
-          ),
+              title: 'تمييز الإعلان',
+              showBackButton: true,
+            ),
 
-          // شريط الإجمالي + زر سفلي (كما طلبت)
-          bottomNavigationBar: SafeArea(
-            top: false,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              decoration: BoxDecoration(
-                color: cs.surface,
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 10,
-                      offset: const Offset(0, -3))
-                ],
-              ),
+        // شريط الإجمالي + زر سفلي (كما طلبت)
+        bottomNavigationBar: SafeArea(
+          top: false,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            decoration: BoxDecoration(
+              color: cs.surface,
+              boxShadow: [
+                BoxShadow(color: Colors.black12,
+                    blurRadius: 10,
+                    offset: const Offset(0, -3))
+              ],
+            ),
               child: BlocBuilder<PromoteAdCubit, PromoteAdState>(
-                builder: (context, promoteState) {
-                  final PromoteAdCubit cubit = context.read<PromoteAdCubit>();
+                  builder: (context, promoteState) {
+                    final PromoteAdCubit cubit = context.read<PromoteAdCubit>();
 
-                  String buttonTitle = 'تمييز الآن';
-                  VoidCallback onPressed = () {};
-                  bool disabledButton = disableAction;
+                    String buttonTitle = 'تمييز الآن';
+                    VoidCallback onPressed = () {};
+                    bool disabledButton = disableAction;
 
-                  final bool isProcessing = promoteState is PromoteAdChecking ||
-                      promoteState is PromoteAdActing;
+                    final bool isProcessing = promoteState is PromoteAdChecking ||
+                        promoteState is PromoteAdActing;
 
-                  String progressTitle = 'جاري التنفيذ...';
-                  if (promoteState is PromoteAdChecking) {
-                    progressTitle = 'جاري التحقق...';
-                  } else if (promoteState is PromoteAdActing) {
-                    progressTitle = promoteState.isFeaturing
-                        ? 'جاري تمييز الإعلان...'
-                        : 'جاري إيقاف التمييز...';
-                    buttonTitle = promoteState.isFeaturing
-                        ? 'تمييز الآن'
-                        : 'إيقاف التمييز';
-                  }
+                    String progressTitle = 'جاري التنفيذ...';
+                    if (promoteState is PromoteAdChecking) {
+                      progressTitle = 'جاري التحقق...';
+                    } else if (promoteState is PromoteAdActing) {
+                      progressTitle = promoteState.isFeaturing
+                          ? 'جاري تمييز الإعلان...'
+                          : 'جاري إيقاف التمييز...';
+                      buttonTitle = promoteState.isFeaturing
+                          ? 'تمييز الآن'
+                          : 'إيقاف التمييز';
+                    }
 
-                  if (!isProcessing) {
-                    if (promoteState is PromoteAdIdle) {
-                      if (!disableAction) {
-                        disabledButton = false;
-                        onPressed = () => cubit.check();
-                      }
-                    } else if (promoteState is PromoteAdSubscriberReady) {
-                      if (promoteState.isFeatured && promoteState.canPause) {
-                        buttonTitle = 'إيقاف التمييز';
+
+
+                    if (!isProcessing) {
+                      if (promoteState is PromoteAdIdle) {
                         if (!disableAction) {
                           disabledButton = false;
-                          onPressed = () => cubit.unfeature();
+                          onPressed = () => cubit.check();
+                        }
+                      } else if (promoteState is PromoteAdSubscriberReady) {
+                        if (promoteState.isFeatured && promoteState.canPause) {
+                          buttonTitle = 'إيقاف التمييز';
+                          if (!disableAction) {
+                            disabledButton = false;
+                            onPressed = () => cubit.unfeature();
+                          }
+                        } else {
+                          buttonTitle = 'تمييز الآن';
+                          if (!disableAction && promoteState.hasBalance) {
+                            disabledButton = false;
+                            onPressed = () => cubit.feature();
+                          } else {
+                            disabledButton = true;
+                          }
+                        }
+                      } else if (promoteState is PromoteAdNonSubscriber) {
+                        buttonTitle = 'شراء باقة مميزة الآن';
+                        if (!disableAction) {
+                          disabledButton = false;
+                          onPressed = () {
+                            Navigator.pushNamed(
+                              context,
+                              Routes.subscriptionPackageListRoute,
+                            );
+                          };
+                        }
+                      } else if (promoteState is PromoteAdError) {
+                        buttonTitle = 'إعادة المحاولة';
+                        if (!disableAction) {
+                          disabledButton = false;
+                          onPressed = () => cubit.check();
                         }
                       } else {
-                        buttonTitle = 'تمييز الآن';
-                        if (!disableAction && promoteState.hasBalance) {
+                        if (!disableAction) {
                           disabledButton = false;
-                          onPressed = () => cubit.feature();
-                        } else {
-                          disabledButton = true;
+                          onPressed = () => cubit.check();
                         }
                       }
-                    } else if (promoteState is PromoteAdNonSubscriber) {
-                      buttonTitle = 'شراء باقة مميزة الآن';
-                      if (!disableAction) {
-                        disabledButton = false;
-                        onPressed = () {
-                          Navigator.pushNamed(
-                            context,
-                            Routes.subscriptionPackageListRoute,
-                          );
-                        };
-                      }
-                    } else if (promoteState is PromoteAdError) {
-                      buttonTitle = 'إعادة المحاولة';
-                      if (!disableAction) {
-                        disabledButton = false;
-                        onPressed = () => cubit.check();
-                      }
-                    } else {
-                      if (!disableAction) {
-                        disabledButton = false;
-                        onPressed = () => cubit.check();
-                      }
                     }
-                  }
 
-                  if (isProcessing) {
-                    disabledButton = true;
-                  }
+                    if (isProcessing) {
+                      disabledButton = true;
+                    }
 
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      UiUtils.buildButton(
-                        context,
-                        onPressed: onPressed,
-                        disabled: disabledButton,
-                        buttonTitle: buttonTitle,
-                        height: 52,
-                        radius: 12,
-                        isInProgress: isProcessing,
-                        showProgressTitle: isProcessing,
-                        titleWhenProgress: progressTitle,
-                      ),
-                    ],
-                  );
-                },
-              ),
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        UiUtils.buildButton(
+                          context,
+                          onPressed: onPressed,
+                          disabled: disabledButton,
+                          buttonTitle: buttonTitle,
+                          height: 52,
+                          radius: 12,
+                          isInProgress: isProcessing,
+                          showProgressTitle: isProcessing,
+                          titleWhenProgress: progressTitle,
+                        ),
+                      ],
+                    );
+                  },
+
+
             ),
           ),
+        ),
 
-          body: SafeArea(
+        body: SafeArea(
             child: BlocBuilder<PromoteAdCubit, PromoteAdState>(
-              builder: (context, promoteState) {
-                final bool showOverlay = promoteState is PromoteAdChecking ||
-                    promoteState is PromoteAdActing;
+                builder: (context, promoteState) {
+                  final bool showOverlay = promoteState is PromoteAdChecking ||
+                      promoteState is PromoteAdActing;
 
-                return Stack(
-                  children: [
-                    SingleChildScrollView(
-                      controller: _scrollCtrl,
-                      physics: const BouncingScrollPhysics(),
-                      padding: EdgeInsets.fromLTRB(
-                        14.rw(context),
-                        10.rh(context),
-                        14.rw(context),
-                        (media.viewPadding.bottom + 12).clamp(16, 32),
+
+                  return Stack(
+                    children: [
+                      SingleChildScrollView(
+                        controller: _scrollCtrl,
+                        physics: const BouncingScrollPhysics(),
+                        padding: EdgeInsets.fromLTRB(
+                          14.rw(context),
+                          10.rh(context),
+                          14.rw(context),
+                          (media.viewPadding.bottom + 12).clamp(16, 32),
+                        ),
+                        child: _pageLoaded
+                            ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _AdHero(
+                              imageUrl: widget.model.image ?? '',
+                              badgeColor: context.color.territoryColor,
+                            ),
+                            _buildLimitStatusCard(),
+                            _SellingPoints(),
+                            const SizedBox(height: 8),
+                            _buildSubscriptionDetails(),
+                            _ComparisonCard(),
+                            const SizedBox(height: 16),
+
+                            const SizedBox(height: 12),
+                          ],
+                        )
+                            : _PageSkeleton(),
                       ),
-                      child: _pageLoaded
-                          ? Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _AdHero(
-                                  imageUrl: widget.model.image ?? '',
-                                  badgeColor: context.color.territoryColor,
+                      if (showOverlay)
+                        Positioned.fill(
+                          child: Container(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surface
+                                .withOpacity(0.65),
+                            alignment: Alignment.center,
+                            child: Shimmer.fromColors(
+                              baseColor: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withOpacity(0.3),
+                              highlightColor: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withOpacity(0.1),
+                              child: Container(
+                                width: 96,
+                                height: 96,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .surface,
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Colors.black26,
+                                      blurRadius: 18,
+                                    ),
+                                  ],
                                 ),
-                                _buildLimitStatusCard(),
-                                _SellingPoints(),
-                                const SizedBox(height: 8),
-                                _buildSubscriptionDetails(),
-                                _ComparisonCard(),
-                                const SizedBox(height: 16),
-                                const SizedBox(height: 12),
-                              ],
-                            )
-                          : _PageSkeleton(),
-                    ),
-                    if (showOverlay)
-                      Positioned.fill(
-                        child: Container(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surface
-                              .withOpacity(0.65),
-                          alignment: Alignment.center,
-                          child: Shimmer.fromColors(
-                            baseColor: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withOpacity(0.3),
-                            highlightColor: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withOpacity(0.1),
-                            child: Container(
-                              width: 96,
-                              height: 96,
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.surface,
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Colors.black26,
-                                    blurRadius: 18,
-                                  ),
-                                ],
-                              ),
-                              alignment: Alignment.center,
-                              child: const SizedBox(
-                                width: 36,
-                                height: 36,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 3),
+                                alignment: Alignment.center,
+                                child: const SizedBox(
+                                  width: 36,
+                                  height: 36,
+                                  child: CircularProgressIndicator(strokeWidth: 3),
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                  ],
-                );
-              },
-            ),
+                    ],
+                  );
+                },
+
+
           ),
         ),
       ),
+        ),
     );
   }
 
@@ -759,14 +791,16 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
   Future<void> _showPurchaseCodeDialog(
       {required VoidCallback onConfirm}) async {
     final TextEditingController codeController = TextEditingController();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme
+        .of(context)
+        .brightness == Brightness.dark;
 
     return showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
-        final fieldColor =
-            isDark ? Colors.grey.shade800 : const Color(0xFFF5F5F5);
+        final fieldColor = isDark ? Colors.grey.shade800 : const Color(
+            0xFFF5F5F5);
         return AlertDialog(
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular((16.0).rw(context))),
@@ -793,12 +827,13 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
             ],
           ),
           actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx),
+            TextButton(onPressed: () => Navigator.pop(ctx),
                 child: const Text("إلغاء")),
             FilledButton(
               onPressed: () {
-                if (codeController.text.trim().isEmpty) {
+                if (codeController.text
+                    .trim()
+                    .isEmpty) {
                   HelperUtils.showSnackBarMessage(
                       context, "يرجى إدخال كود الشراء");
                   return;
@@ -818,18 +853,19 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
     required String paymentMethodName,
     required String accountName,
     required String accountNumber,
-    required Future<void> Function(String name, String code, File? receipt)
-        onConfirm,
+    required Future<
+        void> Function(String name, String code, File? receipt) onConfirm,
   }) async {
     final TextEditingController nameController = TextEditingController();
-    final TextEditingController transferCodeController =
-        TextEditingController();
+    final TextEditingController transferCodeController = TextEditingController();
     final ValueNotifier<bool> isUploading = ValueNotifier(false);
     final ValueNotifier<File?> receiptImage = ValueNotifier(null);
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color fieldColor =
-        isDark ? Colors.grey.shade800 : const Color(0xFFF5F5F5);
+    final isDark = Theme
+        .of(context)
+        .brightness == Brightness.dark;
+    final Color fieldColor = isDark ? Colors.grey.shade800 : const Color(
+        0xFFF5F5F5);
     final Color mainColor = const Color(0xFFFF8000);
 
     return showDialog(
@@ -851,15 +887,16 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
                 // اسم الوسيلة
                 Text(
                   paymentMethodName,
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
+                  style: TextStyle(fontWeight: FontWeight.bold,
                       fontSize: 14,
                       color: mainColor),
                 ),
                 SizedBox(height: (6.0).rh(context)),
 
                 // رقم الحساب (إن وُجد) مع نسخ سريع
-                if (accountNumber.trim().isNotEmpty)
+                if (accountNumber
+                    .trim()
+                    .isNotEmpty)
                   InkWell(
                     onTap: () {
                       Clipboard.setData(ClipboardData(text: accountNumber));
@@ -874,8 +911,8 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
                         color: fieldColor,
                         borderRadius: BorderRadius.circular((10.0).rw(context)),
                       ),
-                      child: Text(accountNumber,
-                          style: const TextStyle(fontSize: 14)),
+                      child: Text(
+                          accountNumber, style: const TextStyle(fontSize: 14)),
                     ),
                   ),
 
@@ -919,8 +956,8 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: mainColor,
                               shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular((10.0).rw(context)),
+                                borderRadius: BorderRadius.circular(
+                                    (10.0).rw(context)),
                               ),
                             ),
                             onPressed: () async {
@@ -950,20 +987,19 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
                               return const SizedBox(
                                 height: 20,
                                 width: 20,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2),
                               );
                             }
                             if (file != null) {
                               return const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.check_circle,
-                                      color: Colors.green, size: 20),
+                                  Icon(Icons.check_circle, color: Colors.green,
+                                      size: 20),
                                   SizedBox(width: 4),
-                                  Text("مرفق",
-                                      style: TextStyle(
-                                          fontSize: 12, color: Colors.green)),
+                                  Text("مرفق", style: TextStyle(
+                                      fontSize: 12, color: Colors.green)),
                                 ],
                               );
                             }
@@ -985,11 +1021,15 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
             ),
             FilledButton(
               onPressed: () async {
-                if (nameController.text.trim().isEmpty) {
+                if (nameController.text
+                    .trim()
+                    .isEmpty) {
                   HelperUtils.showSnackBarMessage(context, "يرجى إدخال الاسم");
                   return;
                 }
-                if (transferCodeController.text.trim().isEmpty) {
+                if (transferCodeController.text
+                    .trim()
+                    .isEmpty) {
                   HelperUtils.showSnackBarMessage(
                       context, "يرجى إدخال رقم الحوالة");
                   return;
@@ -1009,6 +1049,9 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
     );
   }
 }
+
+
+
 
 /// =============================
 /// عناصر الواجهة (كما في النسخة السابقة)
@@ -1069,9 +1112,7 @@ class _AdHero extends StatelessWidget {
             const Positioned.fill(child: _ShimmerBox(height: double.infinity)),
             Positioned.fill(
               child: Image.network(
-                imageUrl.isEmpty
-                    ? 'https://via.placeholder.com/800x450?text=Ad'
-                    : imageUrl,
+                imageUrl.isEmpty ? 'https://via.placeholder.com/800x450?text=Ad' : imageUrl,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Container(
                   color: Colors.black12,
@@ -1084,24 +1125,18 @@ class _AdHero extends StatelessWidget {
               right: 8, // يمين الشاشة للجمهور العربي
               top: 8,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: badgeColor,
                   borderRadius: BorderRadius.circular(999),
-                  boxShadow: const [
-                    BoxShadow(color: Colors.black26, blurRadius: 8)
-                  ],
+                  boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8)],
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: const [
-                    Icon(Icons.local_fire_department,
-                        size: 16, color: Colors.white),
+                    Icon(Icons.local_fire_department, size: 16, color: Colors.white),
                     SizedBox(width: 6),
-                    Text('مُميز',
-                        style: TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.w700)),
+                    Text('مُميز', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
                   ],
                 ),
               ),
@@ -1164,8 +1199,7 @@ class _PricingCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('خطتك لتمييز الإعلان',
-              style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          Text('خطتك لتمييز الإعلان', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
           Text(
             'اختر المدة المناسبة وابدأ بجذب الانتباه فورًا.',
@@ -1173,6 +1207,7 @@ class _PricingCard extends StatelessWidget {
             textDirection: TextDirection.rtl,
           ),
           const SizedBox(height: 12),
+
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
@@ -1194,6 +1229,7 @@ class _PricingCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
+
           Row(
             children: [
               stepBtn(Icons.remove, onDec),
@@ -1204,8 +1240,7 @@ class _PricingCard extends StatelessWidget {
                     fit: BoxFit.scaleDown,
                     child: Text(
                       '$days ${_arabicDays(days)}',
-                      style:
-                          t.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                      style: t.titleMedium?.copyWith(fontWeight: FontWeight.w800),
                       textDirection: TextDirection.rtl,
                     ),
                   ),
@@ -1216,6 +1251,7 @@ class _PricingCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
+
           Row(
             children: [
               Icon(Icons.payments_outlined, color: cs.tertiary),
@@ -1235,13 +1271,7 @@ class _PricingCard extends StatelessWidget {
   }
 
   String _arabicDays(int d) {
-    return (d == 1)
-        ? 'يوم'
-        : (d == 2)
-            ? 'يومان'
-            : (d >= 3 && d <= 10)
-                ? 'أيام'
-                : 'يوماً';
+    return (d == 1) ? 'يوم' : (d == 2) ? 'يومان' : (d >= 3 && d <= 10) ? 'أيام' : 'يوماً';
   }
 }
 
@@ -1267,13 +1297,9 @@ class _SellingPoints extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style:
-                          t.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  Text(title, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 4),
-                  Text(sub,
-                      style: t.bodySmall
-                          ?.copyWith(color: cs.onSurface.withOpacity(.7))),
+                  Text(sub, style: t.bodySmall?.copyWith(color: cs.onSurface.withOpacity(.7))),
                 ],
               ),
             ),
@@ -1284,11 +1310,9 @@ class _SellingPoints extends StatelessWidget {
 
     return Column(
       children: [
-        chip(Icons.visibility, 'ظهور أعلى القوائم',
-            'إعلانك يبرز ويتقدّم نتائج البحث.'),
+        chip(Icons.visibility, 'ظهور أعلى القوائم', 'إعلانك يبرز ويتقدّم نتائج البحث.'),
         const SizedBox(height: 8),
-        chip(Icons.flash_on, 'تفاعل أسرع',
-            'نقرات أكثر ومحادثات خلال فترة التمييز.'),
+        chip(Icons.flash_on, 'تفاعل أسرع', 'نقرات أكثر ومحادثات خلال فترة التمييز.'),
       ],
     );
   }
@@ -1320,8 +1344,7 @@ class _ComparisonCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('الفرق بين العادي والمميز',
-              style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          Text('الفرق بين العادي والمميز', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
           line(Icons.filter_none, 'المميز يظهر أعلى النتائج وبشارة لافتة.'),
           const SizedBox(height: 6),
@@ -1375,8 +1398,7 @@ class _PaymentSectionOriginal extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 6.0),
         child: Material(
-          color:
-              selected ? cs.surface : Theme.of(context).scaffoldBackgroundColor,
+          color: selected ? cs.surface : Theme.of(context).scaffoldBackgroundColor,
           borderRadius: BorderRadius.circular(12),
           child: InkWell(
             borderRadius: BorderRadius.circular(12),
@@ -1384,8 +1406,7 @@ class _PaymentSectionOriginal extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                border: Border.all(
-                    color: selected ? cs.primary : cs.outlineVariant),
+                border: Border.all(color: selected ? cs.primary : cs.outlineVariant),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -1398,8 +1419,7 @@ class _PaymentSectionOriginal extends StatelessWidget {
                       width: 45,
                       height: 45,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          const Icon(Icons.account_balance_wallet),
+                      errorBuilder: (_, __, ___) => const Icon(Icons.account_balance_wallet),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1407,22 +1427,16 @@ class _PaymentSectionOriginal extends StatelessWidget {
                     child: Row(
                       children: [
                         Expanded(
-                          child: Text(name,
-                              style: t.titleSmall
-                                  ?.copyWith(fontWeight: FontWeight.w700)),
+                          child: Text(name, style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
                         ),
                         if (isInstant)
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: const Color(0xFFFF8000),
                               borderRadius: BorderRadius.circular(999),
                             ),
-                            child: const Text('فوري',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w700)),
+                            child: const Text('فوري', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
                           ),
                       ],
                     ),
@@ -1431,11 +1445,8 @@ class _PaymentSectionOriginal extends StatelessWidget {
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 200),
                     child: selected
-                        ? Icon(Icons.check_circle,
-                            color: const Color(0xFFFF8000),
-                            key: const ValueKey('on'))
-                        : const Icon(Icons.circle_outlined,
-                            key: ValueKey('off')),
+                        ? Icon(Icons.check_circle, color: const Color(0xFFFF8000), key: const ValueKey('on'))
+                        : const Icon(Icons.circle_outlined, key: ValueKey('off')),
                   ),
                 ],
               ),
@@ -1448,8 +1459,7 @@ class _PaymentSectionOriginal extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('الدفع',
-            style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+        Text('الدفع', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
         const SizedBox(height: 10),
         bankTile(
           index: 0,
@@ -1498,7 +1508,7 @@ class _ShimmerBox extends StatelessWidget {
   final double height;
   final double? width;
   final double radius;
-  const _ShimmerBox({required this.height, this.radius = 12});
+  const _ShimmerBox({required this.height, this.width, this.radius = 12});
 
   @override
   Widget build(BuildContext context) {
@@ -1528,7 +1538,6 @@ class _ShimmerTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    return Text(text,
-        style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700));
+    return Text(text, style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700));
   }
 }

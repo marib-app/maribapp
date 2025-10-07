@@ -6,6 +6,8 @@ import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:marib/ui/screens/widgets/errors/no_data_found.dart';
+import 'package:marib/ui/screens/settings/main_activity.dart';
 import 'package:marib/ui/screens/settings/main_activity.dart';
 import 'package:marib/ui/screens/home/widgets/category_home_card.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -17,6 +19,7 @@ class CategoryWidgetHome extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<FetchCategoryCubit, FetchCategoryState>(
       builder: (context, state) {
+
         if (state is FetchCategorySuccess) {
           if (state.categories.isNotEmpty) {
             return Padding(

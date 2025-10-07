@@ -3,6 +3,7 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:flutter/material.dart';
 
+
 class SomethingWentWrong extends StatelessWidget {
   final FlutterErrorDetails? error;
 

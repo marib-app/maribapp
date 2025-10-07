@@ -8,72 +8,71 @@ part of 'edit_profile.dart';
 /// ملاحظات التكامل:
 /// - isLazyLoading: من المنطق (true أثناء الجلب الكسول، false بعده)
 /// - onStartLazyLoad: كولباك يُستدعى تلقائيًا أول ما الشاشة تُعرض لبدء الجلب
-Widget buildUserProfileScreenUI(
-    {
-    // سياق وحالة
-    required BuildContext context,
-    required UserProfileScreenState state,
+Widget buildUserProfileScreenUI({
+  // سياق وحالة
+  required BuildContext context,
+  required UserProfileScreenState state,
 
-    // مفاتيح/حالة عامة
-    required GlobalKey<FormState> formKey,
-    required bool? isLoading,
-    required bool isNotificationsEnabled,
-    required bool isPersonalDetailShow,
-    required String? countryCode,
-    required int? userType,
+  // مفاتيح/حالة عامة
+  required GlobalKey<FormState> formKey,
+  required bool? isLoading,
+  required bool isNotificationsEnabled,
+  required bool isPersonalDetailShow,
+  required String? countryCode,
+  required int? userType,
 
-    // Controllers الأساسية
-    required TextEditingController phoneController,
-    required TextEditingController nameController,
-    required TextEditingController emailController,
-    required TextEditingController addressController,
+  // Controllers الأساسية
+  required TextEditingController phoneController,
+  required TextEditingController nameController,
+  required TextEditingController emailController,
+  required TextEditingController addressController,
 
-    // Controllers إضافية (تجاري/عقاري)
-    required TextEditingController businessNameController,
-    required TextEditingController businessLocationController,
-    required TextEditingController businessPhoneController,
-    required TextEditingController businessWhatsappController,
-    required TextEditingController officeNameController,
-    required TextEditingController officeLocationController,
-    required TextEditingController officePhoneController,
-    required TextEditingController officeWhatsappController,
+  // Controllers إضافية (تجاري/عقاري)
+  required TextEditingController businessNameController,
+  required TextEditingController businessLocationController,
+  required TextEditingController businessPhoneController,
+  required TextEditingController businessWhatsappController,
+  required TextEditingController officeNameController,
+  required TextEditingController officeLocationController,
+  required TextEditingController officePhoneController,
+  required TextEditingController officeWhatsappController,
 
-    // ملفات/صور
-    required File? fileUserimg,
-    required File? businessLogoImage,
-    required String? existingBusinessLogoUrl,
-    required String? existingCommercialRegisterUrl,
-    required File? commercialRegisterFile,
+  // ملفات/صور
+  required File? fileUserimg,
+  required File? businessLogoImage,
+  required String? existingBusinessLogoUrl,
+  required String? existingCommercialRegisterUrl,
+  required File? commercialRegisterFile,
 
-    // أوقات العمل
-    required TimeOfDay? openingTime,
-    required TimeOfDay? closingTime,
+  // أوقات العمل
+  required TimeOfDay? openingTime,
+  required TimeOfDay? closingTime,
 
-    // الموقع
-    required dynamic city,
-    required dynamic stateName,
-    required dynamic country,
-    required double? latitude,
-    required double? longitude,
+  // الموقع
+  required dynamic city,
+  required dynamic stateName,
+  required dynamic country,
+  required double? latitude,
+  required double? longitude,
 
-    // ردود الأفعال (Callbacks)
-    required VoidCallback onSubmit,
-    required VoidCallback onShowPicker,
-    required VoidCallback onSelectCountryCode,
-    required void Function(bool isOffice) onPickLogoImage,
-    required VoidCallback onPickCommercialRegister,
-    required Future<void> Function(bool isOpening) onSelectTime,
-    required ValueChanged<bool> onToggleNotifications,
-    required ValueChanged<bool> onTogglePersonalDetail,
-    required ValueChanged<String?> setCountryCode,
+  // ردود الأفعال (Callbacks)
+  required VoidCallback onSubmit,
+  required VoidCallback onShowPicker,
+  required VoidCallback onSelectCountryCode,
+  required void Function(bool isOffice) onPickLogoImage,
+  required VoidCallback onPickCommercialRegister,
+  required Future<void> Function(bool isOpening) onSelectTime,
+  required ValueChanged<bool> onToggleNotifications,
+  required ValueChanged<bool> onTogglePersonalDetail,
+  required ValueChanged<String?> setCountryCode,
 
-    // حالات أخرى
-    required bool setPhoneReadOnly,
+  // حالات أخرى
+  required bool setPhoneReadOnly,
 
-    // *** جديد: تحميل كسول + شيمر ***
-    required bool isLazyLoading, // ← حالة التحميل الكسول
-    required VoidCallback onStartLazyLoad // ← يبدأ لما الشاشة تفتح
-    }) {
+  // *** جديد: تحميل كسول + شيمر ***
+  required bool isLazyLoading,          // ← حالة التحميل الكسول
+  required VoidCallback onStartLazyLoad // ← يبدأ لما الشاشة تفتح
+}) {
   return _safeAreaCondition(
     from: state.widget.from,
     child: Scaffold(
@@ -95,6 +94,7 @@ Widget buildUserProfileScreenUI(
             child: UiUtils.buildButton(
               context,
               onPressed: isLoading == true || isLazyLoading ? () {} : onSubmit,
+
               height: 48.rh(context),
               buttonTitle: "updateProfile".translate(context),
             ),
@@ -110,8 +110,7 @@ Widget buildUserProfileScreenUI(
               behavior: RemoveGlow(),
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Form(
@@ -163,18 +162,16 @@ Widget buildUserProfileScreenUI(
                                     context,
                                     title: "fullName",
                                     controller: nameController,
-                                    validator:
-                                        CustomTextFieldValidator.nullCheck,
+                                    validator: CustomTextFieldValidator.nullCheck,
                                   ),
                                   buildTextField(
                                     context,
                                     readOnly: HiveUtils.getUserDetails().type ==
-                                                AuthenticationType.email.name ||
-                                            HiveUtils.getUserDetails().type ==
-                                                AuthenticationType
-                                                    .google.name ||
-                                            HiveUtils.getUserDetails().type ==
-                                                AuthenticationType.apple.name
+                                        AuthenticationType.email.name ||
+                                        HiveUtils.getUserDetails().type ==
+                                            AuthenticationType.google.name ||
+                                        HiveUtils.getUserDetails().type ==
+                                            AuthenticationType.apple.name
                                         ? true
                                         : false,
                                     title: "emailAddress",
@@ -225,8 +222,7 @@ Widget buildUserProfileScreenUI(
                                 children: [
                                   _SettingTileSwitch(
                                     title: "notification".translate(context),
-                                    subtitle: "enableOrDisableNotifications"
-                                        .translate(context),
+                                    subtitle: "enableOrDisableNotifications".translate(context),
                                     value: isNotificationsEnabled,
                                     onChanged: (v) {
                                       HapticFeedback.lightImpact();
@@ -237,8 +233,7 @@ Widget buildUserProfileScreenUI(
                                   const SizedBox(height: 8),
                                   _SettingTileSwitch(
                                     title: "personalDetails".translate(context),
-                                    subtitle:
-                                        "hideContactFromAds".translate(context),
+                                    subtitle: "hideContactFromAds".translate(context),
                                     value: isPersonalDetailShow,
                                     onChanged: (v) {
                                       HapticFeedback.lightImpact();
@@ -262,12 +257,12 @@ Widget buildUserProfileScreenUI(
                             delayMs: 280,
                             child: _sectionHeader(
                               context,
-                              title:
-                                  "realEstateAccountDetails".translate(context),
+                              title: "realEstateAccountDetails".translate(context),
                               icon: Icons.apartment_outlined,
                             ),
                           ),
                           const SizedBox(height: 8),
+
                           if (isLazyLoading)
                             _Appear(
                               delayMs: 320,
@@ -288,8 +283,7 @@ Widget buildUserProfileScreenUI(
                                       context: context,
                                       isOffice: true,
                                       businessLogoImage: businessLogoImage,
-                                      existingBusinessLogoUrl:
-                                          existingBusinessLogoUrl,
+                                      existingBusinessLogoUrl: existingBusinessLogoUrl,
                                       onPickLogoImage: onPickLogoImage,
                                     ),
                                     buildTextField(
@@ -306,15 +300,13 @@ Widget buildUserProfileScreenUI(
                                       context,
                                       title: "officePhone",
                                       controller: officePhoneController,
-                                      validator:
-                                          CustomTextFieldValidator.phoneNumber,
+                                      validator: CustomTextFieldValidator.phoneNumber,
                                     ),
                                     buildTextField(
                                       context,
                                       title: "officeWhatsapp",
                                       controller: officeWhatsappController,
-                                      validator:
-                                          CustomTextFieldValidator.phoneNumber,
+                                      validator: CustomTextFieldValidator.phoneNumber,
                                     ),
                                   ],
                                 ),
@@ -329,12 +321,12 @@ Widget buildUserProfileScreenUI(
                             delayMs: 280,
                             child: _sectionHeader(
                               context,
-                              title:
-                                  "commercialAccountDetails".translate(context),
+                              title: "commercialAccountDetails".translate(context),
                               icon: Icons.storefront_outlined,
                             ),
                           ),
                           const SizedBox(height: 8),
+
                           if (isLazyLoading)
                             _Appear(
                               delayMs: 320,
@@ -355,16 +347,14 @@ Widget buildUserProfileScreenUI(
                                       context: context,
                                       isOffice: false,
                                       businessLogoImage: businessLogoImage,
-                                      existingBusinessLogoUrl:
-                                          existingBusinessLogoUrl,
+                                      existingBusinessLogoUrl: existingBusinessLogoUrl,
                                       onPickLogoImage: onPickLogoImage,
                                     ),
                                     buildTextField(
                                       context,
                                       title: "businessName",
                                       controller: businessNameController,
-                                      validator:
-                                          CustomTextFieldValidator.nullCheck,
+                                      validator: CustomTextFieldValidator.nullCheck,
                                     ),
                                     buildTextField(
                                       context,
@@ -375,15 +365,13 @@ Widget buildUserProfileScreenUI(
                                       context,
                                       title: "businessPhone",
                                       controller: businessPhoneController,
-                                      validator:
-                                          CustomTextFieldValidator.phoneNumber,
+                                      validator: CustomTextFieldValidator.phoneNumber,
                                     ),
                                     buildTextField(
                                       context,
                                       title: "businessWhatsapp",
                                       controller: businessWhatsappController,
-                                      validator:
-                                          CustomTextFieldValidator.phoneNumber,
+                                      validator: CustomTextFieldValidator.phoneNumber,
                                     ),
                                     const SizedBox(height: 12),
                                     _buildWorkingHours(
@@ -397,12 +385,9 @@ Widget buildUserProfileScreenUI(
                                     const SizedBox(height: 8),
                                     _buildCommercialRegisterUpload(
                                       context: context,
-                                      commercialRegisterFile:
-                                          commercialRegisterFile,
-                                      existingCommercialRegisterUrl:
-                                          existingCommercialRegisterUrl,
-                                      onPickCommercialRegister:
-                                          onPickCommercialRegister,
+                                      commercialRegisterFile: commercialRegisterFile,
+                                      existingCommercialRegisterUrl: existingCommercialRegisterUrl,
+                                      onPickCommercialRegister: onPickCommercialRegister,
                                     ),
                                   ],
                                 ),
@@ -427,6 +412,7 @@ Widget buildUserProfileScreenUI(
     ),
   );
 }
+
 
 /// —————— تحميل كسول: ينفّذ onInit بعد أول بناء ——————
 class _LazyInit extends StatefulWidget {
@@ -462,7 +448,8 @@ class _Shimmer extends StatefulWidget {
   final double height;
   final double? width;
   final BorderRadius? radius;
-  const _Shimmer({required this.height, this.width});
+  const _Shimmer({required this.height, this.width, this.radius});
+
 
   @override
   State<_Shimmer> createState() => _ShimmerState();
@@ -527,12 +514,9 @@ class _BasicSectionShimmer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: const [
-        _Shimmer(height: 52),
-        SizedBox(height: 12),
-        _Shimmer(height: 52),
-        SizedBox(height: 12),
-        _Shimmer(height: 52),
-        SizedBox(height: 12),
+        _Shimmer(height: 52), SizedBox(height: 12),
+        _Shimmer(height: 52), SizedBox(height: 12),
+        _Shimmer(height: 52), SizedBox(height: 12),
         _Shimmer(height: 110),
       ],
     );
@@ -546,8 +530,7 @@ class _SwitchesShimmer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: const [
-        _Shimmer(height: 64),
-        SizedBox(height: 10),
+        _Shimmer(height: 64), SizedBox(height: 10),
         _Shimmer(height: 64),
       ],
     );
@@ -562,16 +545,11 @@ class _RealEstateSectionShimmer extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: const [
-        _Shimmer(height: 18, width: 120),
-        SizedBox(height: 8),
-        _Shimmer(height: 120, width: 120),
-        SizedBox(height: 12),
-        _Shimmer(height: 52),
-        SizedBox(height: 12),
-        _Shimmer(height: 52),
-        SizedBox(height: 12),
-        _Shimmer(height: 52),
-        SizedBox(height: 12),
+        _Shimmer(height: 18, width: 120), SizedBox(height: 8),
+        _Shimmer(height: 120, width: 120), SizedBox(height: 12),
+        _Shimmer(height: 52), SizedBox(height: 12),
+        _Shimmer(height: 52), SizedBox(height: 12),
+        _Shimmer(height: 52), SizedBox(height: 12),
         _Shimmer(height: 52),
       ],
     );
@@ -586,26 +564,16 @@ class _BusinessSectionShimmer extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: const [
-        _Shimmer(height: 18, width: 120),
-        SizedBox(height: 8),
-        _Shimmer(height: 120, width: 120),
-        SizedBox(height: 12),
-        _Shimmer(height: 52),
-        SizedBox(height: 12),
-        _Shimmer(height: 52),
-        SizedBox(height: 12),
-        _Shimmer(height: 52),
-        SizedBox(height: 12),
-        _Shimmer(height: 52),
-        SizedBox(height: 14),
-        _Shimmer(height: 52),
-        SizedBox(height: 14),
-        _Shimmer(height: 18, width: 160),
-        SizedBox(height: 8),
-        _Shimmer(height: 64),
-        SizedBox(height: 12),
-        _Shimmer(height: 18, width: 160),
-        SizedBox(height: 8),
+        _Shimmer(height: 18, width: 120), SizedBox(height: 8),
+        _Shimmer(height: 120, width: 120), SizedBox(height: 12),
+        _Shimmer(height: 52), SizedBox(height: 12),
+        _Shimmer(height: 52), SizedBox(height: 12),
+        _Shimmer(height: 52), SizedBox(height: 12),
+        _Shimmer(height: 52), SizedBox(height: 14),
+        _Shimmer(height: 52), SizedBox(height: 14),
+        _Shimmer(height: 18, width: 160), SizedBox(height: 8),
+        _Shimmer(height: 64), SizedBox(height: 12),
+        _Shimmer(height: 18, width: 160), SizedBox(height: 8),
         _Shimmer(height: 80),
       ],
     );
@@ -749,8 +717,7 @@ class _SettingTileSwitchState extends State<_SettingTileSwitch> {
                       widget.subtitle!,
                       style: TextStyle(
                         fontSize: widget.context.font.small,
-                        color:
-                            widget.context.color.textColorDark.withOpacity(.75),
+                        color: widget.context.color.textColorDark.withOpacity(.75),
                       ),
                     ),
                   ],
@@ -759,7 +726,7 @@ class _SettingTileSwitchState extends State<_SettingTileSwitch> {
             ),
             const SizedBox(width: 8),
             CupertinoSwitch(
-              activeTrackColor: widget.context.color.territoryColor,
+              activeColor: widget.context.color.territoryColor,
               value: widget.value,
               onChanged: (v) {
                 HapticFeedback.lightImpact();
@@ -777,12 +744,11 @@ class _Pressable extends StatefulWidget {
   final Widget child;
   final VoidCallback onTap;
   final ValueChanged<bool>? onPressChanged;
-  const _Pressable({required this.child, required this.onTap});
+  const _Pressable({required this.child, required this.onTap, this.onPressChanged});
 
   @override
   State<_Pressable> createState() => _PressableState();
 }
-
 class _PressableState extends State<_Pressable> {
   bool _down = false;
   void _setDown(bool v) {
@@ -820,6 +786,8 @@ class _PressableState extends State<_Pressable> {
   }
 }
 
+
+
 Widget _sectionHeader(BuildContext context,
     {required String title, required IconData icon}) {
   return Row(
@@ -856,6 +824,8 @@ Widget _sectionDivider(BuildContext context) {
     ),
   );
 }
+
+
 
 class _LoadingOverlay extends StatelessWidget {
   final bool visible;
@@ -919,7 +889,8 @@ Widget phoneWidget({
               }
             },
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8),
+              padding:
+              const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8),
               child: Center(
                 child: Text(_formatCountryCode(countryCode ?? ''))
                     .size(context.font.large)
@@ -940,12 +911,12 @@ String _formatCountryCode(String countryCode) {
 }
 
 Widget buildTextField(
-  BuildContext context, {
-  required String title,
-  required TextEditingController controller,
-  CustomTextFieldValidator? validator,
-  bool? readOnly,
-}) {
+    BuildContext context, {
+      required String title,
+      required TextEditingController controller,
+      CustomTextFieldValidator? validator,
+      bool? readOnly,
+    }) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -965,12 +936,12 @@ Widget buildTextField(
 }
 
 Widget buildAddressTextField(
-  BuildContext context, {
-  required String title,
-  required TextEditingController controller,
-  CustomTextFieldValidator? validator,
-  bool? readOnly,
-}) {
+    BuildContext context, {
+      required String title,
+      required TextEditingController controller,
+      CustomTextFieldValidator? validator,
+      bool? readOnly,
+    }) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -1123,34 +1094,34 @@ Widget _buildLogoSelector({
       ),
       child: businessLogoImage != null
           ? ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.file(businessLogoImage, fit: BoxFit.cover),
-            )
+        borderRadius: BorderRadius.circular(16),
+        child: Image.file(businessLogoImage, fit: BoxFit.cover),
+      )
           : existingBusinessLogoUrl != null &&
-                  existingBusinessLogoUrl.isNotEmpty
-              ? ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: UiUtils.getImage(
-                    existingBusinessLogoUrl,
-                    fit: BoxFit.cover,
-                  ),
-                )
-              : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.add_photo_alternate_outlined,
-                        size: 40, color: context.color.territoryColor),
-                    const SizedBox(height: 8),
-                    Text(
-                      "chooseLogo".translate(context),
-                      style: TextStyle(
-                        fontSize: context.font.small,
-                        color: context.color.textColorDark.withOpacity(0.7),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
+          existingBusinessLogoUrl.isNotEmpty
+          ? ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: UiUtils.getImage(
+          existingBusinessLogoUrl,
+          fit: BoxFit.cover,
+        ),
+      )
+          : Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.add_photo_alternate_outlined,
+              size: 40, color: context.color.territoryColor),
+          const SizedBox(height: 8),
+          Text(
+            "chooseLogo".translate(context),
+            style: TextStyle(
+              fontSize: context.font.small,
+              color: context.color.textColorDark.withOpacity(0.7),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     ),
   );
 }
@@ -1266,58 +1237,62 @@ Widget _buildCommercialRegisterUpload({
       ),
       child: commercialRegisterFile != null
           ? Row(
-              children: [
-                Icon(Icons.picture_as_pdf,
-                    size: 40, color: context.color.territoryColor),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    commercialRegisterFile.path.split('/').last,
-                    style: TextStyle(
-                      fontSize: context.font.normal,
-                      color: context.color.textDefaultColor,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            )
+        children: [
+          Icon(Icons.picture_as_pdf,
+              size: 40, color: context.color.territoryColor),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              commercialRegisterFile.path.split('/').last,
+              style: TextStyle(
+                fontSize: context.font.normal,
+                color: context.color.textDefaultColor,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      )
           : (existingCommercialRegisterUrl != null &&
-                  existingCommercialRegisterUrl.isNotEmpty)
-              ? Row(
-                  children: [
-                    Icon(Icons.picture_as_pdf,
-                        size: 40, color: context.color.territoryColor),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        "currentFile".translate(context),
-                        style: TextStyle(
-                          fontSize: context.font.normal,
-                          color: context.color.textDefaultColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                )
-              : Column(
-                  children: [
-                    Icon(Icons.upload_file,
-                        size: 40, color: context.color.territoryColor),
-                    const SizedBox(height: 8),
-                    Text(
-                      "uploadCommercialRegister".translate(context),
-                      style: TextStyle(
-                        fontSize: context.font.normal,
-                        color: context.color.textColorDark.withOpacity(0.7),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
+          existingCommercialRegisterUrl.isNotEmpty)
+          ? Row(
+        children: [
+          Icon(Icons.picture_as_pdf,
+              size: 40, color: context.color.territoryColor),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              "currentFile".translate(context),
+              style: TextStyle(
+                fontSize: context.font.normal,
+                color: context.color.textDefaultColor,
+              ),
+            ),
+          ),
+        ],
+      )
+          : Column(
+        children: [
+          Icon(Icons.upload_file,
+              size: 40, color: context.color.territoryColor),
+          const SizedBox(height: 8),
+          Text(
+            "uploadCommercialRegister".translate(context),
+            style: TextStyle(
+              fontSize: context.font.normal,
+              color:
+              context.color.textColorDark.withOpacity(0.7),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     ),
   );
 }
+
+
+
 
 // عنوان صغير قبل عنصر (مثل صورة/تحميل ملف)
 Widget _fieldLabel(BuildContext context, String key) {

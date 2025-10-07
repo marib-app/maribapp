@@ -13,6 +13,7 @@ class CartDiscount {
     this.currency,
     this.details,
     this.raw,
+
   });
 
   factory CartDiscount.fromJson(Map<String, dynamic> json) {
@@ -55,8 +56,7 @@ class CartDiscount {
     }();
 
     return CartDiscount(
-      code: readString(
-          data['code'] ?? data['coupon'] ?? data['coupon_code'] ?? data['id']),
+      code: readString(data['code'] ?? data['coupon'] ?? data['coupon_code'] ?? data['id']),
       status: readString(data['status'] ?? data['state'] ?? data['result']),
       label: readString(
         data['label'] ??
@@ -131,9 +131,8 @@ class CartDiscount {
   }
 
   String get displayMessage {
-    final String? messageCandidate = message ??
-        details?['message']?.toString() ??
-        raw?['message']?.toString();
+    final String? messageCandidate =
+        message ?? details?['message']?.toString() ?? raw?['message']?.toString();
     if (messageCandidate != null && messageCandidate.trim().isNotEmpty) {
       return messageCandidate.trim();
     }
@@ -173,7 +172,7 @@ class CartSummary {
     String? deliveryPaymentTiming,
   })  : items = List<Cart>.unmodifiable(List<Cart>.from(items)),
         discounts =
-            List<CartDiscount>.unmodifiable(List<CartDiscount>.from(discounts)),
+        List<CartDiscount>.unmodifiable(List<CartDiscount>.from(discounts)),
         raw = raw == null
             ? null
             : Map<String, dynamic>.unmodifiable(Map<String, dynamic>.from(raw)),
@@ -184,8 +183,8 @@ class CartSummary {
         deliveryPaymentOptions = deliveryPaymentOptions == null
             ? null
             : List<dynamic>.unmodifiable(List<dynamic>.from(
-                deliveryPaymentOptions,
-              )),
+          deliveryPaymentOptions,
+        )),
         deliveryPaymentTiming = deliveryPaymentTiming;
 
   final List<Cart> items;
@@ -228,15 +227,16 @@ class CartSummary {
       blocking: identical(blocking, _sentinel)
           ? this.blocking
           : blocking as Map<String, dynamic>?,
-      deliveryPaymentOptions: identical(deliveryPaymentOptions, _sentinel)
+      deliveryPaymentOptions:
+      identical(deliveryPaymentOptions, _sentinel)
           ? this.deliveryPaymentOptions
           : deliveryPaymentOptions as List<dynamic>?,
-      deliveryPaymentTiming: identical(deliveryPaymentTiming, _sentinel)
+      deliveryPaymentTiming:
+      identical(deliveryPaymentTiming, _sentinel)
           ? this.deliveryPaymentTiming
           : deliveryPaymentTiming as String?,
     );
   }
-
   static const Object _sentinel = Object();
 
   static Map<String, dynamic>? _normalizeMap(Map<String, dynamic>? source) {
@@ -245,4 +245,5 @@ class CartSummary {
     }
     return Map<String, dynamic>.unmodifiable(Map<String, dynamic>.from(source));
   }
+
 }

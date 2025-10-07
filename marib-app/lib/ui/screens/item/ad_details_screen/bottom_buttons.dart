@@ -5,6 +5,7 @@
 // - يعرض شريط سفلي (BottomBar) متناسق مع الثيم ويغطي كامل العرض
 
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // ل Clipboard
@@ -29,32 +30,44 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/ui/screens/chat/chat_screen.dart';
-import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/custom_field.dart';
+import '../add_item_screen/custom_filed_structure/custom_field.dart';
 import 'package:marib/data/helper/widgets.dart';
 import 'package:marib/utils/item_category_ids.dart';
 
 import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/delivery_department.dart';
 
-import 'package:marib/ui/screens/item/ad_details_screen/add_cart_sheet.dart';
-import 'package:marib/ui/screens/item/ad_details_screen/owner_action_bar.dart';
+
+import 'add_cart_sheet.dart';
+import 'owner_action_bar.dart';
+
+
 
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 import 'package:marib/data/cubits/item/change_my_items_status_cubit.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/utils/notification/notification_service.dart';
-import 'package:marib/ui/screens/item/ad_details_screen/cart_field_helpers.dart';
+import 'cart_field_helpers.dart';
+
 
 class BottomButtonsShimmer extends StatelessWidget {
   final bool isOwner;
   final int? buttonCount;
   final VoidCallback? onMakeOffer; // ← جديد
 
-  const BottomButtonsShimmer(
-      {super.key, this.isOwner = false, this.onMakeOffer, this.buttonCount});
+
+  const BottomButtonsShimmer({super.key,
+
+
+    this.isOwner = false,
+    this.onMakeOffer,
+
+    this.buttonCount});
+
 
   @override
   Widget build(BuildContext context) {
@@ -90,15 +103,20 @@ class BottomButtonsShimmer extends StatelessWidget {
   }
 }
 
+
+
+
+
+
 // --------------------------------------------------
 // 🔹 PrimaryButton: زر أساسي مع قابلية إضافة أيقونة
 // --------------------------------------------------
 class PrimaryButton extends StatelessWidget {
-  final String title; // نص الزر
+  final String title;       // نص الزر
   final VoidCallback onPressed; // حدث عند الضغط
-  final IconData? icon; // أيقونة اختيارية
-  final Color? color; // لون خلفية الزر
-  final Color? textColor; // لون النص
+  final IconData? icon;     // أيقونة اختيارية
+  final Color? color;       // لون خلفية الزر
+  final Color? textColor;   // لون النص
 
   const PrimaryButton({
     super.key,
@@ -127,15 +145,13 @@ class PrimaryButton extends StatelessWidget {
         foregroundColor: textColor ?? cs.onPrimary,
         minimumSize: Size(double.infinity, btnHeight), // يأخذ عرض كامل
         padding: EdgeInsets.symmetric(horizontal: narrow ? 12 : 16),
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius)),
         elevation: 0,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         visualDensity: VisualDensity.compact,
       ),
       onPressed: onPressed,
-      child: FittedBox(
-        // يمنع overflow ويصغّر النص إذا ما فيه مساحة
+      child: FittedBox( // يمنع overflow ويصغّر النص إذا ما فيه مساحة
         fit: BoxFit.scaleDown,
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -167,9 +183,12 @@ class PrimaryButton extends StatelessWidget {
   }
 }
 
+
 // --------------------------------------------------
 // 🔹 bottomButtonWidget: يحدد الأزرار حسب هل الإعلان لي أو لغيري
 // --------------------------------------------------
+
+
 
 Widget bottomButtonWidget({
   required BuildContext context,
@@ -205,6 +224,7 @@ Widget bottomButtonWidget({
           bool preferFailureMessage = false,
         }) {
           final cubit = BlocProvider.of<ChangeMyItemStatusCubit>(context);
+          if (cubit == null) return fallback;
 
           final statusState = cubit.state;
           if (statusState is ChangeMyItemStatusSuccess &&
@@ -250,8 +270,7 @@ Widget bottomButtonWidget({
             HelperUtils.showSnackBarMessage(
               context,
               _statusMessage(
-                fallback:
-                    cleaned.isNotEmpty ? cleaned : 'تعذر الإيقاف، حاول لاحقًا',
+                fallback: cleaned.isNotEmpty ? cleaned : 'تعذر الإيقاف، حاول لاحقًا',
                 preferFailureMessage: true,
               ),
             );
@@ -291,9 +310,7 @@ Widget bottomButtonWidget({
             HelperUtils.showSnackBarMessage(
               context,
               _statusMessage(
-                fallback: cleaned.isNotEmpty
-                    ? cleaned
-                    : 'تعذر الاستئناف، حاول لاحقًا',
+                fallback: cleaned.isNotEmpty ? cleaned : 'تعذر الاستئناف، حاول لاحقًا',
                 preferFailureMessage: true,
               ),
             );
@@ -309,7 +326,9 @@ Widget bottomButtonWidget({
           return OwnerActionBar(
             model: model,
             isFeatured: model.isFeature == true,
+
             onEdit: () => _goToEdit(context, model),
+
             onPromote: () {
               FocusScope.of(context).unfocus();
               Navigator.of(context, rootNavigator: true).pushNamed(
@@ -323,6 +342,7 @@ Widget bottomButtonWidget({
                 },
               );
             },
+
             onMarkSold: () {
               Navigator.pushNamed(
                 context,
@@ -334,18 +354,21 @@ Widget bottomButtonWidget({
                   "itemImage": model.image,
                 },
               );
-              HelperUtils.showSnackBarMessage(
-                  context, 'انتقلنا لوسم الإعلان كمباع');
+              HelperUtils.showSnackBarMessage(context, 'انتقلنا لوسم الإعلان كمباع');
             },
+
             onPause: (!pausedLocal && !_pausing) ? _doPause : null,
             onResume: (pausedLocal && !_resuming) ? _doResume : null,
+
             buildShareSlug: () => _slugOrId(model),
+
             onCopyLink: () async {
               final slug = _slugOrId(model);
               final link = HelperUtils.nativeDeepLinkUrlOfItem(slug);
               await Clipboard.setData(ClipboardData(text: link));
               HelperUtils.showSnackBarMessage(context, 'تم نسخ الرابط');
             },
+
             onDelete: () async {
               final confirm = await UiUtils.showBlurredDialoge(
                 context,
@@ -391,13 +414,16 @@ Widget bottomButtonWidget({
           return OwnerActionBar(
             model: model,
             onEdit: () => _goToEdit(context, model),
+
             buildShareSlug: () => _slugOrId(model),
+
             onCopyLink: () async {
               final slug = _slugOrId(model);
               final link = HelperUtils.nativeDeepLinkUrlOfItem(slug);
               await Clipboard.setData(ClipboardData(text: link));
               HelperUtils.showSnackBarMessage(context, 'تم نسخ الرابط');
             },
+
             onDelete: () async {
               final confirm = await UiUtils.showBlurredDialoge(
                 context,
@@ -447,6 +473,15 @@ Widget bottomButtonWidget({
   );
 }
 
+
+
+
+
+
+
+
+
+
 // --------------------------------------------------
 // 🔹 وضع الأزرار حسب نوع القسم (متجر/سلة أو إعلانات/عقارات)
 // --------------------------------------------------
@@ -456,27 +491,22 @@ enum AdActionMode { ecommerce, classifieds }
 // - kEcommerceIds: الأقسام التي تتصرف كمتجر (كمبيوترات، متاجر إلكترونية، شي إن...)
 // - kClassifiedIds: أقسام الإعلانات (عقارات، إعلانات عامة...)
 
+
 /// تُحدّد إن كان الإعلان من نمط المتجر/السلة بالاعتماد على categoryId فقط.
 /// الافتراضي: متجر (ecommerce) لتجنب تعطيل الأزرار إن كانت المعطيات ناقصة.
 bool _isEcommerceByCategory(ItemModel m) {
   final int? id = m.categoryId;
-  if (id == null) return true; // افتراضي متجر
-  if (kEcommerceIds.contains(id)) return true;
+  if (id == null) return true;          // افتراضي متجر
+  if (kEcommerceIds.contains(id))  return true;
   if (kClassifiedIds.contains(id)) return false;
-  return true; // افتراضي متجر
+  return true;                           // افتراضي متجر
 }
 
+
+
 // ===== ضبط القوائم حسب أقسامك =====
-const Set<int> kEcommerceIds = {
-  3,
-  4,
-  5
-}; // المتجر الإلكتروني / شي إن / الكمبيوتر
-const Set<int> kClassifiedIds = {
-  1,
-  2,
-  6
-}; // العقارات / السياحة / إعلانات الجمهور
+const Set<int> kEcommerceIds  = {3, 4, 5}; // المتجر الإلكتروني / شي إن / الكمبيوتر
+const Set<int> kClassifiedIds = {1, 2, 6}; // العقارات / السياحة / إعلانات الجمهور
 
 // ---- Helpers: نجمع كل IDs المتاحة من الموديل بأمان ----
 int? _toInt(dynamic v) {
@@ -513,20 +543,15 @@ AdActionMode resolveActionMode(ItemModel m) {
   final ids = _collectCategoryIds(m);
 
   // لو وجدنا أي ID ضمن مجموعاتنا، نقرر فورًا
-  if (ids.any(kEcommerceIds.contains)) return AdActionMode.ecommerce;
+  if (ids.any(kEcommerceIds.contains))  return AdActionMode.ecommerce;
   if (ids.any(kClassifiedIds.contains)) return AdActionMode.classifieds;
 
   // (اختياري) fallback خفيف عبر نوع العنصر (لو مشروعك يستخدمه)
   final kind = (m.itemType ?? m.type ?? '').toLowerCase();
-  if (kind.contains('real') ||
-      kind.contains('estate') ||
-      kind.contains('rent') ||
-      kind.contains('classified')) {
+  if (kind.contains('real') || kind.contains('estate') || kind.contains('rent') || kind.contains('classified')) {
     return AdActionMode.classifieds;
   }
-  if (kind.contains('store') ||
-      kind.contains('product') ||
-      kind.contains('ecommerce')) {
+  if (kind.contains('store') || kind.contains('product') || kind.contains('ecommerce')) {
     return AdActionMode.ecommerce;
   }
 
@@ -543,7 +568,12 @@ class AdDetailsBottomBar extends StatelessWidget {
   final void Function(List<CustomFieldBuilder>) onUpdateFields;
   final VoidCallback? onMakeOffer;
 
+
+
+
   const AdDetailsBottomBar({
+
+
     super.key,
     this.onMakeOffer,
     required this.model,
@@ -554,59 +584,65 @@ class AdDetailsBottomBar extends StatelessWidget {
   // --------------------------------------------
   // 📨 فتح الدردشة (يعتمد على منطقك الحالي في المشروع)
   // --------------------------------------------
-  void _openChat(
-      BuildContext context, ItemModel model, ChatedUser? chatedUser) {
+  void _openChat(BuildContext context, ItemModel model, ChatedUser? chatedUser) {
     UiUtils.checkUser(
       onNotGuest: () async {
         if (chatedUser != null) {
+
           _navigateToChat(context, model, chatedUser);
+
+
         } else {
           // أول مرة: اصنع محادثة/عرض ثم افتح الشات
           context
               .read<MakeAnOfferItemCubit>()
-              .makeAnOfferItem(id: model.id!, from: "chat");
-        }
+              .makeAnOfferItem(id: model.id!, from: "chat");        }
       },
       context: context,
     );
   }
 
+
   void _navigateToChat(
-    BuildContext context,
-    ItemModel model,
-    ChatedUser chatedUser, {
-    int? itemOfferPrice,
-  }) {
+      BuildContext context,
+      ItemModel model,
+      ChatedUser chatedUser, {
+        int? itemOfferPrice,
+      }) {
     final double resolvedItemPrice = model.price ?? 0;
 
     final double? resolvedOfferPrice =
         itemOfferPrice?.toDouble() ?? chatedUser.amount;
 
-    final String? currency = chatedUser.item?.currency ?? model.currency;
+    final String? currency =
+        chatedUser.item?.currency ?? model.currency;
     final String? currencySymbol = chatedUser.item?.currencySymbol ??
         chatedUser.item?.currency ??
         model.currency;
 
-    final int resolvedOfferId = chatedUser.itemOfferId ?? chatedUser.id ?? 0;
+    final int resolvedOfferId =
+        chatedUser.itemOfferId ?? chatedUser.id ?? 0;
     final String conversationId =
         chatedUser.conversationId ?? chatedUser.id?.toString() ?? '';
 
-    final List<ChatParticipant>? participants = chatedUser.participants ??
-        NotificationService.getCachedParticipants(
-          conversationId,
-          itemOfferId: resolvedOfferId > 0 ? resolvedOfferId : null,
-          senderId: model.user?.id?.toString(),
-          itemId: chatedUser.itemId?.toString(),
-        ) ??
-        NotificationService.buildParticipantsFromNotification(
-          data: {
-            'user_id': model.user?.id,
-            'user_name': model.user?.name,
-            'user_profile': model.user?.profile,
-            'conversation_id': conversationId,
-            'item_offer_id': resolvedOfferId,
-          },
-        );
+    final List<ChatParticipant>? participants =
+        chatedUser.participants ??
+            NotificationService.getCachedParticipants(
+              conversationId,
+              itemOfferId: resolvedOfferId > 0 ? resolvedOfferId : null,
+              senderId: model.user?.id?.toString(),
+              itemId: chatedUser.itemId?.toString(),
+            ) ??
+            NotificationService.buildParticipantsFromNotification(
+              data: {
+                'user_id': model.user?.id,
+                'user_name': model.user?.name,
+                'user_profile': model.user?.profile,
+                'conversation_id': conversationId,
+                'item_offer_id': resolvedOfferId,
+              },
+            );
+
 
     Navigator.push(
       context,
@@ -628,7 +664,7 @@ class AdDetailsBottomBar extends StatelessWidget {
             itemTitle: model.name ?? '',
             itemOfferId: chatedUser.itemOfferId ?? chatedUser.id ?? 0,
             conversationId:
-                chatedUser.conversationId ?? chatedUser.id?.toString() ?? '',
+            chatedUser.conversationId ?? chatedUser.id?.toString() ?? '',
             itemPrice: resolvedItemPrice,
             status: model.status ?? '',
             buyerId: HiveUtils.getUserId(),
@@ -638,6 +674,7 @@ class AdDetailsBottomBar extends StatelessWidget {
             participants: participants,
             currency: currency,
             currencySymbol: currencySymbol,
+
           ),
         ),
       ),
@@ -650,7 +687,7 @@ class AdDetailsBottomBar extends StatelessWidget {
     }
     if (raw is Map) {
       return raw.map<String, dynamic>(
-        (key, value) => MapEntry(key.toString(), value),
+            (key, value) => MapEntry(key.toString(), value),
       );
     }
     return null;
@@ -683,20 +720,20 @@ class AdDetailsBottomBar extends StatelessWidget {
     return null;
   }
 
+
   bool _isRealEstate() {
-    final n = (model.category?.name ?? '').toString().toLowerCase().trim();
+    final n = (model.category?.name ?? '')
+        .toString()
+        .toLowerCase()
+        .trim();
 
     const realEstateHints = [
-      'realestate',
-      'real-estate',
-      'estate',
-      'property',
-      'عقار',
-      'عقارات',
-      'العقارات'
+      'realestate', 'real-estate', 'estate', 'property',
+      'عقار', 'عقارات', 'العقارات'
     ];
     return realEstateHints.any((h) => n.contains(h));
   }
+
 
   // --------------------------------------------
   // 🚩 فتح نموذج الإبلاغ (بدّلها باستدعاء BottomSheet/شاشة الإبلاغ)
@@ -732,8 +769,9 @@ class AdDetailsBottomBar extends StatelessWidget {
           onUpdateFields(newFields);
         }
 
+
         final String? validationError =
-            validateRequiredCustomFieldSelections(moreDetailDynamicFields);
+        validateRequiredCustomFieldSelections(moreDetailDynamicFields);
 
         if (validationError != null) {
           HelperUtils.showSnackBarMessage(context, validationError);
@@ -741,7 +779,7 @@ class AdDetailsBottomBar extends StatelessWidget {
         }
 
         final List<Map<String, dynamic>> selectedCustomFields =
-            buildSelectedCustomFieldsPayload();
+        buildSelectedCustomFieldsPayload();
 
         if (model.id == null) {
           HelperUtils.showSnackBarMessage(
@@ -751,15 +789,19 @@ class AdDetailsBottomBar extends StatelessWidget {
           return;
         }
 
+
+
+
         final cartItem = Cart.fromItemModel(
           model,
           quantity: 1,
           selectedCustomFields:
-              selectedCustomFields.isEmpty ? null : selectedCustomFields,
+          selectedCustomFields.isEmpty ? null : selectedCustomFields,
         );
 
         final cartCubit = context.read<CartCubit>();
         final existingItems = cartCubit.state.items;
+
 
         String? normalizeCurrency(String? raw) {
           final String? trimmed = raw?.trim();
@@ -779,42 +821,20 @@ class AdDetailsBottomBar extends StatelessWidget {
           return null;
         }
 
-        String? canonicalSection(String? raw) {
-          if (raw == null) {
-            return null;
-          }
 
-          final String? normalized = normalizeDeliveryDepartment(raw);
-          if (normalized != null) {
-            return normalized;
-          }
+        final String incomingSection = cartItem.section.trim();
+        final String? existingSection =
+        existingItems.isNotEmpty ? existingItems.first.section.trim() : null;
 
-          final String trimmed = raw.trim();
-          if (trimmed.isEmpty) {
-            return null;
-          }
+        bool sectionsMatch(String? a, String? b) =>
+            a != null && b != null && a.toLowerCase() == b.toLowerCase();
 
-          return trimmed.toLowerCase();
-        }
-
-        final String? existingSectionRaw =
-            existingItems.isNotEmpty ? existingItems.first.section : null;
-        final String incomingSectionRaw = cartItem.section;
-
-        final String? existingSection = canonicalSection(existingSectionRaw);
-        final String? incomingSection = canonicalSection(incomingSectionRaw);
-
-        final bool sectionsMismatch = existingSection != null &&
-            incomingSection != null &&
-            existingSection != incomingSection;
-
-        if (sectionsMismatch) {
-          UiUtils.showBlurredDialoge(
+        if (existingSection != null && !sectionsMatch(existingSection, incomingSection)) {
+           UiUtils.showBlurredDialoge(
             context,
             dialoge: const BlurredDialogBox(
               title: "تنبيه السلة",
-              content: Text(
-                  "لا يمكنك خلط الأقسام داخل السلة. فضلاً أفرغ السلة قبل إضافة منتجات من قسم مختلف."),
+              content: Text("لا يمكنك خلط الأقسام داخل السلة. فضلاً أفرغ السلة قبل إضافة منتجات من قسم مختلف."),
               showCancleButton: false,
               acceptButtonName: "حسنًا",
             ),
@@ -822,12 +842,11 @@ class AdDetailsBottomBar extends StatelessWidget {
           return;
         }
 
-        final String? existingCurrency = activeCartCurrency(existingItems);
-        final String? incomingCurrency =
-            normalizeCurrency(cartItem.currency ?? model.currency);
 
-        if (existingCurrency != null &&
-            incomingCurrency != null &&
+        final String? existingCurrency = activeCartCurrency(existingItems);
+        final String? incomingCurrency = normalizeCurrency(cartItem.currency ?? model.currency);
+
+        if (existingCurrency != null && incomingCurrency != null &&
             existingCurrency != incomingCurrency) {
           HelperUtils.showSnackBarMessage(
             context,
@@ -847,6 +866,7 @@ class AdDetailsBottomBar extends StatelessWidget {
         try {
           await cartCubit.addItem(cartItem);
 
+
           final safetyTips = cartCubit.state.safetyTips;
           final bool shouldNavigateToCart =
               safetyTips == null || !safetyTips.hasTips;
@@ -856,6 +876,7 @@ class AdDetailsBottomBar extends StatelessWidget {
             navigator.popUntil((route) => route is! PopupRoute);
             navigator.pushNamed(Routes.cart);
           }
+
         } catch (e) {
           final message = DeliveryPricingGuard.readableErrorMessage(
             context,
@@ -872,6 +893,8 @@ class AdDetailsBottomBar extends StatelessWidget {
     );
   }
 
+
+
   Color _brandGreen(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return isDark ? Colors.green.shade400 : Colors.green.shade600;
@@ -887,164 +910,181 @@ class AdDetailsBottomBar extends StatelessWidget {
     return bg.computeLuminance() > 0.5 ? Colors.black87 : Colors.white;
   }
 
+
+
+
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<MakeAnOfferItemCubit, MakeAnOfferItemState>(
-      listener: (context, state) {
-        if (state is MakeAnOfferItemInProgress) {
-          Widgets.showLoader(context);
-        } else if (state is MakeAnOfferItemSuccess) {
-          Widgets.hideLoder(context);
+        listener: (context, state) {
+          if (state is MakeAnOfferItemInProgress) {
+            Widgets.showLoader(context);
+          } else if (state is MakeAnOfferItemSuccess) {
+            Widgets.hideLoder(context);
 
-          if (state.from == 'chat') {
-            final chatedUser = _parseChatedUserFromResponse(state.data);
-            if (chatedUser != null) {
-              final responseMap = _coerceResponseMap(state.data);
-              final offerPrice = responseMap != null
-                  ? _parseAmountAsInt(responseMap['amount'])
-                  : null;
+            if (state.from == 'chat') {
+              final chatedUser = _parseChatedUserFromResponse(state.data);
+              if (chatedUser != null) {
+                final responseMap = _coerceResponseMap(state.data);
+                final offerPrice = responseMap != null
+                    ? _parseAmountAsInt(responseMap['amount'])
+                    : null;
 
-              context.read<GetBuyerChatListCubit>().addNewChat(chatedUser);
+                context
+                    .read<GetBuyerChatListCubit>()
+                    .addNewChat(chatedUser);
 
-              _navigateToChat(
-                context,
-                model,
-                chatedUser,
-                itemOfferPrice: offerPrice,
-              );
+                _navigateToChat(
+                  context,
+                  model,
+                  chatedUser,
+                  itemOfferPrice: offerPrice,
+                );
+              }
             }
+          } else if (state is MakeAnOfferItemFailure) {
+            Widgets.hideLoder(context);
+            HelperUtils.showSnackBarMessage(
+              context,
+              state.errorMessage,
+              messageDuration: 3,
+            );
           }
-        } else if (state is MakeAnOfferItemFailure) {
-          Widgets.hideLoder(context);
-          HelperUtils.showSnackBarMessage(
-            context,
-            state.errorMessage,
-            messageDuration: 3,
-          );
-        }
-      },
-      child: Builder(
-        builder: (context) {
-          final cs = context.color;
-          final isDark = Theme.of(context).brightness == Brightness.dark;
+        },
+        child: Builder(
+            builder: (context) {
+              final cs = context.color;
+              final isDark = Theme.of(context).brightness == Brightness.dark;
 
-          final outlinedTextColor = isDark ? Colors.white : Colors.black87;
-          final outlinedBorderColor = isDark ? Colors.white54 : Colors.black26;
 
-          // تحديد نمط الإجراء لهذا الإعلان
-          final mode = resolveActionMode(model);
-          final bool isEcommerce = (mode == AdActionMode.ecommerce);
 
-          // إن وُجدت محادثة/عرض سابق لهذا المنتج
-          final ChatedUser? chatedUser = context.select(
-            (GetBuyerChatListCubit cubit) => cubit.getOfferForItem(model.id!),
-          );
+              final outlinedTextColor = isDark ? Colors.white : Colors.black87;
+              final outlinedBorderColor = isDark ? Colors.white54 : Colors.black26;
 
-          // نعرض "تقديم عرض" عندما لا يكون نمط الإعلان سلة/متجر
-          final bool showOffer = !isEcommerce;
+              // تحديد نمط الإجراء لهذا الإعلان
+              final mode = resolveActionMode(model);
+              final bool isEcommerce = (mode == AdActionMode.ecommerce);
 
-          return Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: cs.secondaryColor,
-              boxShadow: [
+              // إن وُجدت محادثة/عرض سابق لهذا المنتج
+              final ChatedUser? chatedUser = context.select(
+                    (GetBuyerChatListCubit cubit) => cubit.getOfferForItem(model.id!),
+              );
+
+
+
+
+              // نعرض "تقديم عرض" عندما لا يكون نمط الإعلان سلة/متجر
+              final bool showOffer = !isEcommerce;
+
+              return Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                    color: cs.secondaryColor,
+                    boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(.08),
-                  blurRadius: 12,
-                  offset: const Offset(0, -2),
+                color: Colors.black.withOpacity(.08),
+                blurRadius: 12,
+                offset: const Offset(0, -2),
                 ),
-              ],
-            ),
-            child: SafeArea(
-              top: false,
-              left: false,
-              right: false,
-              bottom: true,
-              child: Padding(
-                padding: const EdgeInsetsDirectional.fromSTEB(16, 10, 16, 10),
-                child: Row(
-                  textDirection: TextDirection.rtl,
-                  children: [
-                    // الزر الرئيسي
-                    Expanded(
-                      child: isEcommerce
-                          ? ElevatedButton(
-                              onPressed: () => _addToCart(context),
-                              style: ElevatedButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                backgroundColor: _brandGreen(context),
-                                foregroundColor: _onFor(_brandGreen(context)),
-                                elevation: 0,
-                              ),
-                              child: const Text('إضافة الى السلة'),
-                            )
-                          : ElevatedButton.icon(
-                              onPressed: () =>
-                                  _openChat(context, model, chatedUser),
-                              icon: const Icon(Icons.chat_bubble_outline,
-                                  size: 18),
-                              label: const Text('مراسلة المُعلن'),
-                              style: ElevatedButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                backgroundColor: _brandOrange(context),
-                                foregroundColor: _onFor(_brandOrange(context)),
-                                elevation: 0,
-                              ),
-                            ),
+                    ],
+                ),
+                  child: SafeArea(
+                    top: false,
+                    left: false,
+                    right: false,
+                    bottom: true,
+                    child: Padding(
+                        padding:
+                        const EdgeInsetsDirectional.fromSTEB(16, 10, 16, 10),
+                        child: Row(
+                            textDirection: TextDirection.rtl,
+                            children: [
+                        // الزر الرئيسي
+                        Expanded(
+                        child: isEcommerce
+                        ? ElevatedButton(
+                        onPressed: () => _addToCart(context),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      backgroundColor: _brandGreen(context),
+                      foregroundColor:
+                      _onFor(_brandGreen(context)),
+                      elevation: 0,
+                    ),
+                    child: const Text('إضافة الى السلة'),
+                  )
+                      : ElevatedButton.icon(
+                  onPressed: () =>
+                  _openChat(context, model, chatedUser),
+              icon: const Icon(Icons.chat_bubble_outline,
+              size: 18),
+              label: const Text('مراسلة المُعلن'),
+              style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(
+              vertical: 14),
+              shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              ),
+              backgroundColor: _brandOrange(context),
+              foregroundColor:
+              _onFor(_brandOrange(context)),
+              elevation: 0,
+              ),
+              ),
                     ),
 
-                    const SizedBox(width: 10),
+                              const SizedBox(width: 10),
 
-                    // الزر الثانوي
-                    if (isEcommerce)
-                      OutlinedButton.icon(
-                        onPressed: () => _openChat(context, model, chatedUser),
-                        icon: const Icon(Icons.chat_outlined, size: 18),
-                        label: const Text('راسل'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 14, horizontal: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          side: BorderSide(color: outlinedBorderColor),
-                          foregroundColor: outlinedTextColor,
-                        ),
-                      )
-                    else
-                      // 👇 بدّلنا "إبلاغ" إلى "تقديم عرض" دومًا لغير السلة
-                      OutlinedButton.icon(
-                        onPressed: showOffer ? (onMakeOffer ?? () {}) : null,
-                        icon: const Icon(Icons.local_offer_outlined, size: 18),
-                        label: const Text('تقديم عرض'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 14, horizontal: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          side: BorderSide(color: outlinedBorderColor),
-                          foregroundColor: outlinedTextColor,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
+                              // الزر الثانوي
+                              if (isEcommerce)
+                                OutlinedButton.icon(
+                                  onPressed: () =>
+                                      _openChat(context, model, chatedUser),
+                                  icon: const Icon(Icons.chat_outlined, size: 18),
+                                  label: const Text('راسل'),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 14, horizontal: 14),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    side: BorderSide(color: outlinedBorderColor),
+                                    foregroundColor: outlinedTextColor,
+                                  ),
+                                )
+                              else
+                              // 👇 بدّلنا "إبلاغ" إلى "تقديم عرض" دومًا لغير السلة
+                                OutlinedButton.icon(
+                                  onPressed: showOffer ? (onMakeOffer ?? () {}) : null,
+                                  icon: const Icon(Icons.local_offer_outlined, size: 18),
+                                  label: const Text('تقديم عرض'),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 14, horizontal: 14),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    side: BorderSide(color: outlinedBorderColor),
+                                    foregroundColor: outlinedTextColor,
+                                  ),
+                                ),
+                            ],                ),
+                    ),
+                  ),
+              );
+            },
       ),
     );
   }
+
+
 }
+
 
 // تعديل الاعلان
 
@@ -1056,15 +1096,17 @@ void _goToEdit(BuildContext context, ItemModel model) {
     Routes.addMoreDetailsScreen,
     arguments: {
       "isEdit": true,
-      "model": model, // مهم
-      "item": model, // احتياطي
-      "id": model.id, // اختياري
+      "model": model,           // مهم
+      "item": model,            // احتياطي
+      "id": model.id,           // اختياري
       "categoryId": model.categoryId, // اختياري
       "breadCrumbItems": null,
       "categoryIds": categoryIds.isEmpty ? null : categoryIds,
     },
   );
 }
+
+
 
 // تمييز الاعلان
 
@@ -1079,3 +1121,4 @@ void _goToPromote(BuildContext context, ItemModel model) {
     },
   );
 }
+

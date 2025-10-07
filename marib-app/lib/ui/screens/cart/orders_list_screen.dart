@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/model/orders/user_order.dart';
@@ -168,12 +169,10 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
 
   Widget _buildLoadingSkeleton() {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color baseColor = isDark
-        ? Colors.white.withOpacity(0.08)
-        : Colors.black.withOpacity(0.06);
-    final Color highlightColor = isDark
-        ? Colors.white.withOpacity(0.16)
-        : Colors.black.withOpacity(0.12);
+    final Color baseColor =
+    isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.06);
+    final Color highlightColor =
+    isDark ? Colors.white.withOpacity(0.16) : Colors.black.withOpacity(0.12);
 
     return RefreshIndicator(
       onRefresh: _refresh,
@@ -191,7 +190,13 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
       ),
     );
   }
+
 }
+
+
+
+
+
 
 class _StatusVisual {
   const _StatusVisual({
@@ -218,7 +223,7 @@ const _StatusVisual _reviewVisual = _StatusVisual(
 );
 
 const Map<String, _StatusVisual> _statusVisualDefinitions =
-    <String, _StatusVisual>{
+<String, _StatusVisual>{
   'قيد المراجعة': _reviewVisual,
   'قيد المعالجة': _StatusVisual(
     label: 'قيد المعالجة',
@@ -282,7 +287,8 @@ const Map<String, _StatusVisual> _statusVisualDefinitions =
   ),
 };
 
-const Map<String, String> _statusLabelOverridesDefinitions = <String, String>{
+const Map<String, String> _statusLabelOverridesDefinitions =
+<String, String>{
   'processing': 'قيد المعالجة',
   'processing order': 'قيد المعالجة',
   'in progress': 'قيد المعالجة',
@@ -340,17 +346,18 @@ const Map<String, String> _statusLabelOverridesDefinitions = <String, String>{
 };
 
 final Map<String, _StatusVisual> _statusVisualLookup =
-    Map<String, _StatusVisual>.unmodifiable(
+Map<String, _StatusVisual>.unmodifiable(
   _statusVisualDefinitions.map(
-    (String key, _StatusVisual value) =>
+        (String key, _StatusVisual value) =>
         MapEntry(_normalizeStatusKey(key), value),
   ),
 );
 
 final Map<String, String> _statusLabelOverrides =
-    Map<String, String>.unmodifiable(
+Map<String, String>.unmodifiable(
   _statusLabelOverridesDefinitions.map(
-    (String key, String value) => MapEntry(_normalizeStatusKey(key), value),
+        (String key, String value) =>
+        MapEntry(_normalizeStatusKey(key), value),
   ),
 );
 
@@ -360,7 +367,7 @@ _StatusVisual? _findStatusVisual(String normalizedLabel) {
     return direct;
   }
   for (final MapEntry<String, _StatusVisual> entry
-      in _statusVisualLookup.entries) {
+  in _statusVisualLookup.entries) {
     if (normalizedLabel.contains(entry.key)) {
       return entry.value;
     }
@@ -420,7 +427,7 @@ _StatusVisual _statusColors(String? rawStatus) {
 
   final _StatusVisual baseVisual = resolvedArabic != null
       ? (_findStatusVisual(_normalizeStatusKey(resolvedArabic)) ??
-          _reviewVisual)
+      _reviewVisual)
       : _reviewVisual;
 
   return _StatusVisual(
@@ -429,6 +436,12 @@ _StatusVisual _statusColors(String? rawStatus) {
     textColor: baseVisual.textColor,
   );
 }
+
+
+
+
+
+
 
 class _OrderCard extends StatelessWidget {
   const _OrderCard({
@@ -445,33 +458,37 @@ class _OrderCard extends StatelessWidget {
         ? dateFormat.format(order.createdAt!)
         : 'غير متوفر';
 
-    final String productName =
-        order.items.map((OrderLine line) => line.name.trim()).firstWhere(
-              (String name) => name.isNotEmpty,
-              orElse: () => 'غير متوفر',
-            );
+    final String productName = order.items
+        .map((OrderLine line) => line.name.trim())
+        .firstWhere(
+          (String name) => name.isNotEmpty,
+      orElse: () => 'غير متوفر',
+    );
 
     final TextTheme textTheme = Theme.of(context).textTheme;
     final Color textColor = context.color.textDefaultColor;
 
     final TextStyle labelStyle =
-        (textTheme.bodySmall ?? const TextStyle()).copyWith(
+    (textTheme.bodySmall ?? const TextStyle()).copyWith(
       fontWeight: FontWeight.w600,
       color: textColor.withOpacity(0.8),
     );
     final TextStyle valueStyle =
-        (textTheme.bodyLarge ?? const TextStyle(fontSize: 16)).copyWith(
+    (textTheme.bodyLarge ?? const TextStyle(fontSize: 16)).copyWith(
       fontWeight: FontWeight.w600,
       color: textColor,
     );
 
     final _StatusVisual statusVisual = _statusColors(order.statusLabel);
 
+
     final BorderRadius borderRadius = BorderRadius.circular(16);
     final Color splashColor =
-        Theme.of(context).colorScheme.primary.withOpacity(0.16);
+    Theme.of(context).colorScheme.primary.withOpacity(0.16);
     final Color highlightColor =
-        Theme.of(context).colorScheme.primary.withOpacity(0.08);
+    Theme.of(context).colorScheme.primary.withOpacity(0.08);
+
+
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -495,6 +512,8 @@ class _OrderCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+
+
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
@@ -568,6 +587,7 @@ class _OrderCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
+
             ],
           ),
         ),
@@ -584,7 +604,7 @@ class _OrderDetailItem extends StatelessWidget {
     required this.valueStyle,
     this.valueWidget,
   }) : assert(value != null || valueWidget != null,
-            'Either value or valueWidget must be provided.');
+  'Either value or valueWidget must be provided.');
 
   final String title;
   final String? value;
@@ -606,6 +626,7 @@ class _OrderDetailItem extends StatelessWidget {
         Text(title, style: titleStyle),
         const SizedBox(height: 4),
         content,
+
       ],
     );
   }
@@ -645,6 +666,8 @@ class _StatusChip extends StatelessWidget {
   }
 }
 
+
+
 class _OrderCardSkeleton extends StatelessWidget {
   const _OrderCardSkeleton();
 
@@ -653,9 +676,8 @@ class _OrderCardSkeleton extends StatelessWidget {
     final Color borderColor = context.color.borderColor;
     final Color cardColor = context.color.secondaryColor;
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color fillColor = isDark
-        ? Colors.white.withOpacity(0.12)
-        : Colors.black.withOpacity(0.08);
+    final Color fillColor =
+    isDark ? Colors.white.withOpacity(0.12) : Colors.black.withOpacity(0.08);
 
     Widget skeletonBox({double? width, double height = 12, double radius = 8}) {
       return Container(
@@ -730,10 +752,7 @@ class _OrderCardSkeleton extends StatelessWidget {
             const SizedBox(height: 4),
             skeletonBox(height: 10, radius: 6),
             const SizedBox(height: 4),
-            skeletonBox(
-                width: MediaQuery.of(context).size.width * 0.4,
-                height: 10,
-                radius: 6),
+            skeletonBox(width: MediaQuery.of(context).size.width * 0.4, height: 10, radius: 6),
           ],
         ),
       ),

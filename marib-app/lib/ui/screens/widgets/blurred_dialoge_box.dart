@@ -106,20 +106,20 @@ class BlurredDialogBox extends StatelessWidget implements BlurDialoge {
                         backgroundColor:
                             context.color.territoryColor.withOpacity(0.1),
                         child: SizedBox(
-                          // width: 87 / 2,
-                          // height: 87 / 2,
-                          //     child: UiUtils.getSvg(
-                          //   svgImagePath!,
-                          //   color: svgImageColor,
-                          // )
+                            // width: 87 / 2,
+                            // height: 87 / 2,
+                        //     child: UiUtils.getSvg(
+                        //   svgImagePath!,
+                        //   color: svgImageColor,
+                        // )
 
-                          child: Lottie.asset(
-                            // Replace with your Lottie file path
-                            svgImagePath!,
-                            width: 500, // Adjust the width as needed
-                            height: 370, // Adjust the height as needed
-                            fit: BoxFit.cover, // Adjust the fit if necessary
-                          ),
+                        child:  Lottie.asset(
+                              // Replace with your Lottie file path
+                               svgImagePath!,
+                              width: 500, // Adjust the width as needed
+                              height: 370, // Adjust the height as needed
+                              fit: BoxFit.cover, // Adjust the fit if necessary
+                            ),
                         ),
                       ),
                       const SizedBox(

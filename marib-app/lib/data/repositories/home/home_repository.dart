@@ -4,6 +4,8 @@ import 'package:marib/data/model/data_output.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
 
+
+
 class HomeRepository {
   Future<List<HomeScreenSection>> fetchHome({
     String? interfaceType,
@@ -12,11 +14,15 @@ class HomeRepository {
     String? city,
     String? slug,
     String? rootIdentifier,
+
     int? areaId,
   }) async {
+
+
     try {
       final String? trimmedSlug = slug?.trim();
       final String? trimmedRootIdentifier = rootIdentifier?.trim();
+
 
       final String? normalizedInterfaceType =
           SliderInterfaceMapper.normalize(interfaceType) ??
@@ -28,7 +34,8 @@ class HomeRepository {
           'section_type': normalizedInterfaceType,
           'interface_type': normalizedInterfaceType,
         },
-        if (trimmedSlug != null && trimmedSlug.isNotEmpty) 'slug': trimmedSlug,
+        if (trimmedSlug != null && trimmedSlug.isNotEmpty)
+          'slug': trimmedSlug,
         if (trimmedRootIdentifier != null && trimmedRootIdentifier.isNotEmpty)
           'root_identifier': trimmedRootIdentifier,
         // Location filters kept for future use (currently disabled)
@@ -36,6 +43,7 @@ class HomeRepository {
         // if (areaId != null) 'area_id': areaId,
         // if (country != null && country.isNotEmpty) 'country': country,
         // if (state != null && state.isNotEmpty) 'state': state,
+
       };
 
       Map<String, dynamic> response = await Api.get(
@@ -48,7 +56,9 @@ class HomeRepository {
 
       List<HomeScreenSection> parseSections(dynamic source) {
         if (source is List) {
-          return source.whereType<Map>().map<HomeScreenSection>((element) {
+          return source
+              .whereType<Map>()
+              .map<HomeScreenSection>((element) {
             final map = Map<String, dynamic>.from(element);
             return HomeScreenSection.fromJson(map);
           }).toList();
@@ -82,13 +92,13 @@ class HomeRepository {
 
   Future<DataOutput<ItemModel>> fetchHomeAllItems(
       {required int page,
-      String? country,
-      String? state,
-      String? city,
-      double? latitude,
-      double? longitude,
-      int? areaId,
-      int? radius}) async {
+        String? country,
+        String? state,
+        String? city,
+        double? latitude,
+        double? longitude,
+        int? areaId,
+        int? radius}) async {
     try {
       Map<String, dynamic> parameters = {
         "page": page,
@@ -106,7 +116,7 @@ class HomeRepository {
       };
 
       Map<String, dynamic> response =
-          await Api.get(url: Api.getItemApi, queryParameters: parameters);
+      await Api.get(url: Api.getItemApi, queryParameters: parameters);
       List<ItemModel> items = (response['data']['data'] as List)
           .map((e) => ItemModel.fromJson(e))
           .toList();
@@ -120,11 +130,11 @@ class HomeRepository {
 
   Future<DataOutput<ItemModel>> fetchSectionItems(
       {required int page,
-      required int sectionId,
-      String? country,
-      String? state,
-      String? city,
-      int? areaId}) async {
+        required int sectionId,
+        String? country,
+        String? state,
+        String? city,
+        int? areaId}) async {
     try {
       Map<String, dynamic> parameters = {
         "page": page,
@@ -137,7 +147,7 @@ class HomeRepository {
       };
 
       Map<String, dynamic> response =
-          await Api.get(url: Api.getItemApi, queryParameters: parameters);
+      await Api.get(url: Api.getItemApi, queryParameters: parameters);
       List<ItemModel> items = (response['data']['data'] as List)
           .map((e) => ItemModel.fromJson(e))
           .toList();

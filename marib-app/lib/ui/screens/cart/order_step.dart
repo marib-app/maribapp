@@ -10,11 +10,13 @@ import 'package:marib/utils/ui_utils.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
-import 'package:marib/ui/screens/cart/order_step_ui.dart';
+import 'order_step_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/cubits/orders/order_payment_cubit.dart';
-import 'package:marib/ui/screens/cart/components/order_payment_sheet.dart';
-import 'package:marib/ui/screens/cart/order_outstanding_info.dart';
+import 'components/order_payment_sheet.dart';
+import 'order_outstanding_info.dart';
+
+
 
 class OrderStepsScreen extends StatefulWidget {
   const OrderStepsScreen({super.key, this.orderId, this.initialDetails});
@@ -44,6 +46,7 @@ class OrderStepsScreen extends StatefulWidget {
     } else if (arguments is OrderDetails) {
       initialDetails = arguments;
       orderId = arguments.order.id;
+
     }
     orderId ??= initialDetails?.order.id;
 
@@ -143,6 +146,7 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
           _orderDetails = null;
           _activeDetailId = null;
         });
+
       }
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -185,8 +189,7 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
     });
 
     try {
-      final OrderDetails detailed =
-          await _ordersRepository.fetchOrderDetails(id);
+      final OrderDetails detailed = await _ordersRepository.fetchOrderDetails(id);
       if (!mounted || _activeDetailId != id) return;
 
       setState(() {
@@ -267,8 +270,10 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
       _invoiceLoading = true;
     });
     try {
+
+
       final InvoiceDownloadResult result =
-          await _ordersRepository.fetchInvoicePdf(order.id);
+      await _ordersRepository.fetchInvoicePdf(order.id);
       if (!mounted) {
         return;
       }
@@ -284,7 +289,7 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
           UiUtils.showSoftSnackBar(
             context,
             message:
-                'تم تنزيل الفاتورة لكن تعذر فتحها تلقائيًا. الموقع: ${file.path}',
+            'تم تنزيل الفاتورة لكن تعذر فتحها تلقائيًا. الموقع: ${file.path}',
           );
         }
         return;
@@ -311,6 +316,8 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
         context,
         message: error.message,
       );
+
+
     } catch (_) {
       if (!mounted) return;
       UiUtils.showSoftSnackBar(
@@ -326,6 +333,7 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
     }
   }
 
+
   Future<void> _handleCancel(UserOrder order) async {
     final bool confirmed = await _confirmCancellation(order);
     if (!confirmed || !mounted) {
@@ -338,8 +346,7 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
     });
 
     try {
-      final OrderDetails updated =
-          await _ordersRepository.cancelOrder(order.id);
+      final OrderDetails updated = await _ordersRepository.cancelOrder(order.id);
       if (!mounted) return;
       setState(() {
         _orderDetails = updated;
@@ -350,6 +357,8 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
       if (mounted) {
         await _loadOrderDetails(order.id, resetCurrent: true);
       }
+
+
     } on ApiException catch (error) {
       if (!mounted) return;
       UiUtils.showSoftSnackBar(
@@ -358,8 +367,7 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
       );
     } catch (_) {
       if (!mounted) return;
-      UiUtils.showSoftSnackBar(context,
-          message: 'تعذر إلغاء الطلب. حاول لاحقًا.');
+      UiUtils.showSoftSnackBar(context, message: 'تعذر إلغاء الطلب. حاول لاحقًا.');
     } finally {
       if (!mounted) return;
       setState(() => _cancelLoading = false);
@@ -374,8 +382,8 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
     final String message = actions.hasCancelDescription
         ? actions.cancelDescription!.trim()
         : actions.canRefundDeposit
-            ? 'سيتم إرسال طلب لاسترداد العربون وإلغاء الطلب الحالي. هل ترغب في المتابعة؟'
-            : 'سيتم إلغاء الطلب الحالي. هل ترغب في المتابعة؟';
+        ? 'سيتم إرسال طلب لاسترداد العربون وإلغاء الطلب الحالي. هل ترغب في المتابعة؟'
+        : 'سيتم إلغاء الطلب الحالي. هل ترغب في المتابعة؟';
     final String? hint = actions.hasCancelHint ? actions.cancelHint : null;
 
     final bool? result = await showDialog<bool>(
@@ -423,9 +431,11 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
     OrderOutstandingInfo? info;
 
     info = _selectOutstanding(info, _extractOutstanding(order.paymentSummary));
-    info = _selectOutstanding(
-        info, _extractOutstanding(order.deliveryPaymentSummary));
+    info =
+        _selectOutstanding(info, _extractOutstanding(order.deliveryPaymentSummary));
     info = _selectOutstanding(info, _extractOutstanding(order.raw));
+
+
 
     return info;
   }
@@ -468,7 +478,7 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
           final String entryKey = entry.key.toString();
           if (_isOutstandingKey(entryKey)) {
             final OrderOutstandingInfo? candidate =
-                _extractOutstandingValue(entry.value);
+            _extractOutstandingValue(entry.value);
             if (candidate != null) {
               resolved = _selectOutstanding(resolved, candidate);
             }
@@ -551,14 +561,15 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
         if (_isDisplayKey(key)) {
           final String? label = _asString(entry.value);
           if (label != null) {
-            nested = (nested ?? OrderOutstandingInfo(0, label: label.trim()))
-                .copyWith(label: label.trim());
+            nested =
+                (nested ?? OrderOutstandingInfo(0, label: label.trim()))
+                    .copyWith(label: label.trim());
           }
         }
 
         if (_isNumericKey(key)) {
           final OrderOutstandingInfo? candidate =
-              _extractOutstandingValue(entry.value);
+          _extractOutstandingValue(entry.value);
           if (candidate != null) {
             nested = _selectOutstanding(nested, candidate);
           }
@@ -603,8 +614,7 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
     if (value is Iterable) {
       OrderOutstandingInfo? result;
       for (final dynamic element in value) {
-        final OrderOutstandingInfo? candidate =
-            _extractOutstandingValue(element);
+        final OrderOutstandingInfo? candidate = _extractOutstandingValue(element);
         if (candidate != null) {
           result = _selectOutstanding(result, candidate);
         }
@@ -657,6 +667,8 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
 
   String? _asString(dynamic value) {
     if (value == null) {
+
+
       return null;
     }
     if (value is String) {
@@ -668,6 +680,7 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
     }
     return null;
   }
+
 
   double? _tryParseNumeric(dynamic value) {
     if (value == null) {
@@ -681,6 +694,7 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
       if (normalized.isEmpty) {
         return null;
       }
+
 
       final int lastComma = normalized.lastIndexOf(',');
       final int lastDot = normalized.lastIndexOf('.');
@@ -713,11 +727,12 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
 
   String _buildOutstandingMessage(OrderOutstandingInfo info) {
     final String? label = info.label;
-    final String suffix = label != null && label.trim().isNotEmpty
+    final String suffix =
+    label != null && label.trim().isNotEmpty
         ? ' (${label.trim()})'
         : info.amount > 0
-            ? ' (${NumberFormat('#,##0.##').format(info.amount)})'
-            : '';
+        ? ' (${NumberFormat('#,##0.##').format(info.amount)})'
+        : '';
     return 'لا يمكن عرض الفاتورة قبل تسوية جميع المبالغ المستحقة$suffix.';
   }
 
@@ -728,18 +743,19 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
     final NumberFormat formatter = NumberFormat('#,##0.##');
     final String formatted = formatter.format(info.amount);
     final String currency = (info.currency ?? '').trim();
-    final String suffix =
-        currency.isNotEmpty ? ' ${currency.toUpperCase()}' : '';
+    final String suffix = currency.isNotEmpty ? ' ${currency.toUpperCase()}' : '';
     return '$formatted$suffix'.trim();
   }
+
 
   Future<void> _handlePayOutstanding(
       UserOrder order, OrderOutstandingInfo outstanding) {
     return _showPaymentSheet(order, outstanding);
   }
 
-  Future<File> _persistInvoice(Uint8List bytes,
-      {required String fileName}) async {
+
+
+  Future<File> _persistInvoice(Uint8List bytes, {required String fileName}) async {
     final Directory directory = await getTemporaryDirectory();
     final String sanitized = _sanitizeFileName(fileName);
     final File file = File(path.join(directory.path, sanitized));
@@ -759,6 +775,7 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
     }
     return normalized;
   }
+
 
   Future<void> _showPaymentSheet(
       UserOrder order, OrderOutstandingInfo outstanding) async {
@@ -784,16 +801,19 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
     }
   }
 
+
+
   @override
   Widget build(BuildContext context) {
     final UserOrder? order = _orderDetails?.order;
     final bool showLoading = (_listLoading || _detailLoading) && order == null;
 
     final List<OrderStepData> steps =
-        order != null ? buildOrderStepData(order) : const <OrderStepData>[];
+    order != null ? buildOrderStepData(order) : const <OrderStepData>[];
+
 
     final OrderOutstandingInfo? outstanding =
-        order != null ? _findOutstandingInfo(order) : null;
+    order != null ? _findOutstandingInfo(order) : null;
     final OrderOutstandingInfo? outstandingWithCurrency = outstanding?.copyWith(
       currency: order?.currency,
     );
@@ -801,16 +821,17 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
         (outstandingWithCurrency == null ||
             outstandingWithCurrency.amount <= _outstandingEpsilon);
 
-    final String? invoiceBlockReason =
-        !canOpenInvoice && outstandingWithCurrency != null
-            ? _buildOutstandingMessage(outstandingWithCurrency)
-            : null;
+    final String? invoiceBlockReason = !canOpenInvoice &&
+        outstandingWithCurrency != null
+        ? _buildOutstandingMessage(outstandingWithCurrency)
+        : null;
 
     final bool hasOutstanding = outstandingWithCurrency != null &&
         outstandingWithCurrency.amount > _outstandingEpsilon;
     final String? outstandingLabel = hasOutstanding
         ? _formatOutstandingLabel(outstandingWithCurrency)
         : null;
+
 
     return OrderStepContent(
       isLoading: showLoading,
@@ -827,7 +848,8 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
       isInvoiceLoading: _invoiceLoading,
       invoiceBlockReason: invoiceBlockReason,
       outstanding: outstandingLabel,
-      onPayOutstanding: (order != null && hasOutstanding)
+      onPayOutstanding: (order != null && hasOutstanding &&
+          outstandingWithCurrency != null)
           ? () => _handlePayOutstanding(order, outstandingWithCurrency)
           : null,
       paymentSummary: _orderDetails?.paymentSummary ?? order?.paymentSummary,
@@ -837,3 +859,4 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
     );
   }
 }
+

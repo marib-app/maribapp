@@ -8,8 +8,9 @@ import 'package:marib/ui/theme/theme.dart';
 
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/api.dart';
+import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/ui_utils.dart';
-import 'package:flutter/services.dart'; // للنسخ إلى الحافظة
+import 'package:flutter/services.dart';   // للنسخ إلى الحافظة
 import 'package:share_plus/share_plus.dart'; // للمشاركة
 
 import 'package:marib/data/cubits/fetch_faqs_cubit.dart';
@@ -95,9 +96,9 @@ class _FaqsScreenState extends State<FaqsScreen> {
                       data: Theme.of(context).copyWith(
                         dividerColor: Colors.transparent,
                         splashColor:
-                            context.color.territoryColor.withOpacity(0.08),
+                        context.color.territoryColor.withOpacity(0.08),
                         highlightColor:
-                            context.color.territoryColor.withOpacity(0.05),
+                        context.color.territoryColor.withOpacity(0.05),
                       ),
                       child: ExpansionPanelList.radio(
                         animationDuration: const Duration(milliseconds: 300),
@@ -121,7 +122,8 @@ class _FaqsScreenState extends State<FaqsScreen> {
                               );
                             },
                             body: Padding(
-                              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                              padding:
+                              const EdgeInsets.fromLTRB(12, 0, 12, 12),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -132,9 +134,10 @@ class _FaqsScreenState extends State<FaqsScreen> {
                                         .textTheme
                                         .bodyMedium
                                         ?.copyWith(
-                                          color: context.color.textDefaultColor,
-                                          height: 1.4,
-                                        ),
+                                      color:
+                                      context.color.textDefaultColor,
+                                      height: 1.4,
+                                    ),
                                     linkStyle: TextStyle(
                                       color: context.color.territoryColor,
                                       decoration: TextDecoration.underline,
@@ -148,7 +151,8 @@ class _FaqsScreenState extends State<FaqsScreen> {
                                       if (await canLaunchUrl(uri)) {
                                         await launchUrl(
                                           uri,
-                                          mode: LaunchMode.externalApplication,
+                                          mode: LaunchMode
+                                              .externalApplication,
                                         );
                                       }
                                     },
@@ -158,7 +162,8 @@ class _FaqsScreenState extends State<FaqsScreen> {
 
                                   // شريط أكشنات بسيط: نسخ/مشاركة
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    mainAxisAlignment:
+                                    MainAxisAlignment.end,
                                     children: [
                                       IconButton(
                                         tooltip: "نسخ",
@@ -166,21 +171,19 @@ class _FaqsScreenState extends State<FaqsScreen> {
                                           Icons.copy_rounded,
                                           size: 18,
                                         ),
-                                        color: context.color.textDefaultColor
+                                        color: context
+                                            .color.textDefaultColor
                                             .withOpacity(0.7),
                                         onPressed: () {
-                                          final txt =
-                                              (item.answer ?? '').trim();
+                                          final txt = (item.answer ?? '').trim();
                                           if (txt.isNotEmpty) {
-                                            Clipboard.setData(
-                                                ClipboardData(text: txt));
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              const SnackBar(
-                                                  content: Text("تم النسخ")),
+                                            Clipboard.setData(ClipboardData(text: txt));
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text("تم النسخ")),
                                             );
                                           }
                                         },
+
                                       ),
                                       const SizedBox(width: 4),
                                       IconButton(
@@ -189,18 +192,18 @@ class _FaqsScreenState extends State<FaqsScreen> {
                                           Icons.share_rounded,
                                           size: 18,
                                         ),
-                                        color: context.color.textDefaultColor
+                                        color: context
+                                            .color.textDefaultColor
                                             .withOpacity(0.7),
                                         onPressed: () async {
-                                          final q =
-                                              (item.question ?? '').trim();
+                                          final q = (item.question ?? '').trim();
                                           final a = (item.answer ?? '').trim();
-                                          final share =
-                                              q.isEmpty ? a : "$q\n\n$a";
+                                          final share = q.isEmpty ? a : "$q\n\n$a";
                                           if (share.isNotEmpty) {
                                             await Share.share(share);
                                           }
                                         },
+
                                       ),
                                     ],
                                   ),

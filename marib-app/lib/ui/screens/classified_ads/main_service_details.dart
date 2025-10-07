@@ -10,12 +10,14 @@ import 'package:marib/utils/ui_utils.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 import 'package:marib/utils/api.dart';
+import 'package:marib/ui/screens/item/add_item_screen/more_details.dart';
+
 
 class MainServiceDetails extends StatefulWidget {
   final ClassifiedModel? service; // قد تأتي كاملة
-  final CategoryModel? category; // مطلوب لزر المتابعة
-  final int? id; // أو id فقط
-  final String? titleHint; // للـAppBar أثناء التحميل
+  final CategoryModel? category;  // مطلوب لزر المتابعة
+  final int? id;                  // أو id فقط
+  final String? titleHint;        // للـAppBar أثناء التحميل
 
   const MainServiceDetails({
     Key? key,
@@ -60,8 +62,7 @@ class MainServiceDetails extends StatefulWidget {
           }
 
           // id + title (لو تم تمريرهم فقط)
-          int? _asInt(dynamic v) =>
-              v == null ? null : (v is int ? v : int.tryParse('$v'));
+          int? _asInt(dynamic v) => v == null ? null : (v is int ? v : int.tryParse('$v'));
           id = _asInt(map['id']);
           titleHint = map['title']?.toString();
         }
@@ -87,6 +88,8 @@ class _MainServiceDetailsState extends State<MainServiceDetails> {
   String? _errorMsg;
 
   CategoryModel? get _category => widget.category;
+
+
 
   bool _hasSchemaData(dynamic value) {
     if (value == null) return false;
@@ -139,6 +142,9 @@ class _MainServiceDetailsState extends State<MainServiceDetails> {
     } catch (_) {}
     return null;
   }
+
+
+
 
   @override
   void initState() {
@@ -222,6 +228,7 @@ class _MainServiceDetailsState extends State<MainServiceDetails> {
     return null;
   }
 
+
   Map<String, dynamic>? _extractById(Map<String, dynamic>? resp, int wantedId) {
     if (resp == null) return null;
 
@@ -230,12 +237,7 @@ class _MainServiceDetailsState extends State<MainServiceDetails> {
 
     int? _readId(dynamic v) {
       if (v is Map) {
-        final idAny = v['id'] ??
-            v[Api.id] ??
-            v['item_id'] ??
-            v[Api.itemId] ??
-            v['items_id'] ??
-            v[Api.itemsId];
+        final idAny = v['id'] ?? v[Api.id] ?? v['item_id'] ?? v[Api.itemId] ?? v['items_id'] ?? v[Api.itemsId];
         if (idAny is int) return idAny;
         if (idAny is String) return int.tryParse(idAny);
       }
@@ -244,12 +246,7 @@ class _MainServiceDetailsState extends State<MainServiceDetails> {
 
     bool _match(dynamic v) => _readId(v) == wantedId;
 
-    dynamic bucket = resp[Api.data] ??
-        resp['data'] ??
-        resp['item'] ??
-        resp[Api.item] ??
-        resp['result'] ??
-        resp;
+    dynamic bucket = resp[Api.data] ?? resp['data'] ?? resp['item'] ?? resp[Api.item] ?? resp['result'] ?? resp;
 
     // لو Map مباشر
     final dm = asMap(bucket);
@@ -257,21 +254,12 @@ class _MainServiceDetailsState extends State<MainServiceDetails> {
 
     // داخل مفاتيح شائعة
     if (bucket is Map) {
-      for (final k in [
-        Api.data,
-        'data',
-        Api.item,
-        'item',
-        'payload',
-        'record'
-      ]) {
+      for (final k in [Api.data, 'data', Api.item, 'item', 'payload', 'record']) {
         final v = bucket[k];
         final m = asMap(v);
         if (m != null && _match(m)) return m;
         if (v is List) {
-          final hit = v
-              .cast<dynamic>()
-              .firstWhere((e) => _match(e), orElse: () => null);
+          final hit = v.cast<dynamic>().firstWhere((e) => _match(e), orElse: () => null);
           if (hit is Map) return hit.cast<String, dynamic>();
         }
       }
@@ -279,9 +267,7 @@ class _MainServiceDetailsState extends State<MainServiceDetails> {
 
     // لو List مباشرة
     if (bucket is List) {
-      final hit = bucket
-          .cast<dynamic>()
-          .firstWhere((e) => _match(e), orElse: () => null);
+      final hit = bucket.cast<dynamic>().firstWhere((e) => _match(e), orElse: () => null);
       if (hit is Map) return hit.cast<String, dynamic>();
     }
 
@@ -321,8 +307,8 @@ class _MainServiceDetailsState extends State<MainServiceDetails> {
         child: _loading
             ? _buildShimmer(context)
             : _error
-                ? _buildError(context)
-                : _buildContent(context),
+            ? _buildError(context)
+            : _buildContent(context),
       ),
 
       // زر ثابت بأسفل الصفحة: شيمر أثناء التحميل، وبعدها زر (ومع الخطأ يكون Disabled)
@@ -332,82 +318,88 @@ class _MainServiceDetailsState extends State<MainServiceDetails> {
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
           child: _loading
               ? ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: const SizedBox(
-                    height: 54,
-                    child: CustomShimmer(
-                      width: double.infinity,
-                      height: double.infinity,
-                    ),
-                  ),
-                )
+            borderRadius: BorderRadius.circular(10),
+            child: const SizedBox(
+              height: 54,
+              child: CustomShimmer(
+                width: double.infinity,
+                height: double.infinity,
+              ),
+            ),
+          )
               : UiUtils.buildButton(
-                  context,
-                  onPressed: () {
-                    if (_error) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('تعذر تحميل الخدمة')),
-                      );
-                      return;
-                    }
-                    final service = _data ?? widget.service;
-                    if (service == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('لا توجد خدمة متاحة للمتابعة')),
-                      );
-                      return;
-                    }
+            context,
+            onPressed: () {
+              if (_error) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('تعذر تحميل الخدمة')),
+                );
+                return;
+              }
+              final service = _data ?? widget.service;
+              if (service == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('لا توجد خدمة متاحة للمتابعة')),
+                );
+                return;
+              }
 
-                    final serviceId = service.id ?? widget.id;
-                    if (serviceId == null || serviceId == 0) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content:
-                                Text('لا يوجد معرّف صالح لبدء إضافة التفاصيل')),
-                      );
-                      return;
-                    }
+              final serviceId = service.id ?? widget.id;
+              if (serviceId == null || serviceId == 0) {
 
-                    final serviceTitle =
-                        (service.title ?? widget.titleHint)?.trim();
-                    final price = service.price;
-                    final currency = service.currency?.trim();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('لا يوجد معرّف صالح لبدء إضافة التفاصيل')),
+                );
+                return;
+              }
 
-                    final args = <String, dynamic>{
-                      'serviceId': serviceId,
-                      if (serviceTitle?.isNotEmpty ?? false)
-                        'serviceTitle': serviceTitle,
-                      if (price != null) 'amount': price,
-                      if (currency?.isNotEmpty ?? false) 'currency': currency,
-                    };
 
-                    final schema = _extractServiceSchema(service);
-                    if (_hasSchemaData(schema)) {
-                      args['service_fields_schema'] = schema;
-                    }
+              final serviceTitle = (service.title ?? widget.titleHint)?.trim();
+              final price = service.price;
+              final currency = service.currency?.trim();
 
-                    final category = _category;
-                    if (category != null) {
-                      args['categoryId'] = category.id;
-                      args['breadCrumbItems'] = [category];
-                    }
+              final args = <String, dynamic>{
+                'serviceId': serviceId,
+                if (serviceTitle?.isNotEmpty ?? false) 'serviceTitle': serviceTitle,
+                if (price != null) 'amount': price,
+                if (currency?.isNotEmpty ?? false) 'currency': currency,
+              };
 
-                    Navigator.pushNamed(
-                      context,
-                      Routes.serviceAddMoreDetails,
-                      arguments: args,
-                    );
-                  },
-                  buttonTitle: "createServiceContinue".translate(context),
-                  radius: 10,
-                  height: 54,
-                  disabledColor: const Color.fromARGB(255, 104, 102, 106),
-                ),
+              final schema = _extractServiceSchema(service);
+              if (_hasSchemaData(schema)) {
+                args['service_fields_schema'] = schema;
+              }
+
+              final category = _category;
+              if (category != null) {
+                args['categoryId'] = category.id;
+                args['breadCrumbItems'] = [category];
+              }
+
+              Navigator.pushNamed(
+                context,
+
+                Routes.serviceAddMoreDetails,
+                arguments: args,
+
+              );
+            },
+            buttonTitle: "createServiceContinue".translate(context),
+            radius: 10,
+            height: 54,
+            disabledColor: const Color.fromARGB(255, 104, 102, 106),
+          ),
         ),
       ),
+
     );
   }
+
+
+
+
+
+
 
   Widget _buildShimmer(BuildContext context) {
     return SingleChildScrollView(
@@ -429,12 +421,11 @@ class _MainServiceDetailsState extends State<MainServiceDetails> {
               ),
             ),
           ),
+
           SizedBox(height: 15.rh(context)),
-          Container(
-              width: 120, height: 10, color: context.color.secondaryColor),
+          Container(width: 120, height: 10, color: context.color.secondaryColor),
           const SizedBox(height: 12),
-          Container(
-              width: 220, height: 16, color: context.color.secondaryColor),
+          Container(width: 220, height: 16, color: context.color.secondaryColor),
           const SizedBox(height: 14),
           for (int i = 0; i < 6; i++)
             Container(
@@ -463,8 +454,7 @@ class _MainServiceDetailsState extends State<MainServiceDetails> {
               style: TextStyle(color: context.color.textColorDark),
             ),
             const SizedBox(height: 12),
-            OutlinedButton(
-                onPressed: _fetch, child: const Text('إعادة المحاولة')),
+            OutlinedButton(onPressed: _fetch, child: const Text('إعادة المحاولة')),
           ],
         ),
       ),
@@ -501,6 +491,7 @@ class _MainServiceDetailsState extends State<MainServiceDetails> {
                 ),
               ),
             if (!hasDetailImage && hasIconImage)
+
               Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
@@ -517,6 +508,7 @@ class _MainServiceDetailsState extends State<MainServiceDetails> {
                     ),
                   ),
                 ),
+
               ),
             SizedBox(height: 15.rh(context)),
             if (service.createdAt != null)
@@ -536,4 +528,5 @@ class _MainServiceDetailsState extends State<MainServiceDetails> {
       ),
     );
   }
+
 }

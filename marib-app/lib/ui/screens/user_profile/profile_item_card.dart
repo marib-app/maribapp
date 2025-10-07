@@ -7,6 +7,7 @@ import 'package:marib/ui/screens/widgets/promoted_widget.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/utils/string_extenstion.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/helper_utils.dart';
@@ -57,14 +58,19 @@ class StatusBadgeWidget extends StatelessWidget {
   }
 }
 
+
+
+
+
+
+
 Widget statusBadge(BuildContext context, String? status) {
   final label = _statusText(context, status) ?? '-';
   return Semantics(
     label: "الحالة: $label",
     child: AnimatedContainer(
       duration: const Duration(milliseconds: 200),
-      padding:
-          const EdgeInsetsDirectional.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsetsDirectional.symmetric(horizontal: 10, vertical: 4),
       constraints: const BoxConstraints(minHeight: 24),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
@@ -77,64 +83,67 @@ Widget statusBadge(BuildContext context, String? status) {
   );
 }
 
+
+
+
+
+
+
+
 String _statusText(BuildContext context, String? status) {
   switch (status) {
-    case "review":
-      return "underReview".translate(context);
-    case "active":
-      return "active".translate(context);
-    case "approved":
-      return "approved".translate(context);
-    case "inactive":
-      return "deactivate".translate(context);
-    case "sold out":
-      return "soldOut".translate(context);
-    case "rejected":
-      return "rejected".translate(context);
-    case "expired":
-      return "expired".translate(context);
-    default:
-      return status ?? "-";
+    case "review":  return "underReview".translate(context);
+    case "active":  return "active".translate(context);
+    case "approved":return "approved".translate(context);
+    case "inactive":return "deactivate".translate(context);
+    case "sold out":return "soldOut".translate(context);
+    case "rejected":return "rejected".translate(context);
+    case "expired": return "expired".translate(context);
+    default: return status ?? "-";
   }
 }
+
+
 
 Color _statusBgColor(BuildContext context, String? status) {
   switch (status) {
-    case "review":
-      return pendingButtonColor.withOpacity(0.1);
+    case "review":           return pendingButtonColor.withOpacity(0.1);
     case "active":
-    case "approved":
-      return activateButtonColor.withOpacity(0.1);
-    case "inactive":
-      return deactivateButtonColor.withOpacity(0.1);
-    case "sold out":
-      return soldOutButtonColor.withOpacity(0.1);
+    case "approved":         return activateButtonColor.withOpacity(0.1);
+    case "inactive":         return deactivateButtonColor.withOpacity(0.1);
+    case "sold out":         return soldOutButtonColor.withOpacity(0.1);
     case "rejected":
-    case "expired":
-      return deactivateButtonColor.withOpacity(0.1);
-    default:
-      return context.color.territoryColor.withOpacity(0.1);
+    case "expired":          return deactivateButtonColor.withOpacity(0.1);
+    default:                 return context.color.territoryColor.withOpacity(0.1);
   }
 }
 
+
 Color _statusTextColor(BuildContext context, String? status) {
   switch (status) {
-    case "review":
-      return pendingButtonColor;
+    case "review":  return pendingButtonColor;
     case "active":
-    case "approved":
-      return activateButtonColor;
-    case "inactive":
-      return deactivateButtonColor;
-    case "sold out":
-      return soldOutButtonColor;
+    case "approved":return activateButtonColor;
+    case "inactive":return deactivateButtonColor;
+    case "sold out":return soldOutButtonColor;
     case "rejected":
-    case "expired":
-      return deactivateButtonColor;
-    default:
-      return context.color.territoryColor;
+    case "expired": return deactivateButtonColor;
+    default:        return context.color.territoryColor;
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /// ---------------------------
 ///  شارة "جديد"
@@ -149,8 +158,7 @@ class _NewBadge extends StatelessWidget {
         color: Colors.black26,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: const Text("جديد",
-          style: TextStyle(color: Colors.white, fontSize: 12)),
+      child: const Text("جديد", style: TextStyle(color: Colors.white, fontSize: 12)),
     );
   }
 }
@@ -202,15 +210,13 @@ class ItemImageSection extends StatelessWidget {
                   height: imageHeight,
                   width: imageWidth,
                   color: Colors.grey.shade200,
-                  child: Icon(Icons.broken_image,
-                      size: 40, color: Colors.grey.shade400),
+                  child: Icon(Icons.broken_image, size: 40, color: Colors.grey.shade400),
                 ),
               ),
             ),
             if (item.isFeature ?? false)
               const PositionedDirectional(
-                start: 5,
-                top: 5,
+                start: 5, top: 5,
                 child: PromotedCard(type: PromoteCardType.icon),
               ),
             if (isNew)
@@ -247,6 +253,7 @@ class _PriceInline extends StatelessWidget {
     required this.textColor,
     required this.priceColor,
     required this.style,
+    this.spacing = 6.0,
   });
 
   @override
@@ -274,29 +281,30 @@ class _PriceInline extends StatelessWidget {
     }
     return formatted;
   }
+
+
 }
+
+
+
+
 
 // ---------------------------
 ///  شريط الإحصائيات (مشاهدات/إعجابات)
 // ---------------------------
 
-class _StatsRow extends StatelessWidget {
-  final ItemModel item;
-  final double iconSize;
-  final double fontSize;
-  final double spacing;
-  const _StatsRow(
-      {required this.item, required this.iconSize, required this.fontSize});
 
-  String _fmt(num n) {
-    if (n >= 1000000)
-      return "${(n / 1000000).toStringAsFixed(n % 1000000 == 0 ? 0 : 1)}M";
-    if (n >= 1000)
-      return "${(n / 1000).toStringAsFixed(n % 1000 == 0 ? 0 : 1)}K";
+class _StatsRow extends StatelessWidget {
+  final ItemModel item; final double iconSize; final double fontSize; final double spacing;
+  const _StatsRow({required this.item, required this.iconSize, required this.fontSize, this.spacing = 8});
+
+  String _fmt(num n){
+    if(n>=1000000) return "${(n/1000000).toStringAsFixed(n%1000000==0?0:1)}M";
+    if(n>=1000)    return "${(n/1000).toStringAsFixed(n%1000==0?0:1)}K";
     return n.toStringAsFixed(0);
   }
 
-  Widget _chip(BuildContext ctx, Widget icon, String value) {
+  Widget _chip(BuildContext ctx, Widget icon, String value){
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -317,29 +325,24 @@ class _StatsRow extends StatelessWidget {
     final likes = _fmt(item.totalLikes ?? 0);
 
     return Wrap(
-      spacing: spacing,
-      runSpacing: 4,
+      spacing: spacing, runSpacing: 4,
       children: [
         _chip(
           context,
-          UiUtils.getSvg(AppIcons.eye,
-              width: iconSize,
-              height: iconSize,
-              color: context.color.textDefaultColor),
+          UiUtils.getSvg(AppIcons.eye, width: iconSize, height: iconSize, color: context.color.textDefaultColor),
           views,
         ),
         _chip(
           context,
-          UiUtils.getSvg(AppIcons.like,
-              width: iconSize,
-              height: iconSize,
-              color: context.color.textDefaultColor),
+          UiUtils.getSvg(AppIcons.like, width: iconSize, height: iconSize, color: context.color.textDefaultColor),
           likes,
         ),
       ],
     );
   }
 }
+
+
 
 /// ---------------------------
 ///  تفاصيل يمين (عنوان + سعر + إحصائيات) — بدون موقع وبدون مفضلة
@@ -351,8 +354,7 @@ class ItemDetailsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final title = item.name?.firstUpperCase() ?? "بدون عنوان";
-    final dynamicFont =
-        title.length > 30 ? context.font.smaller : context.font.normal;
+    final dynamicFont = title.length > 30 ? context.font.smaller : context.font.normal;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -376,11 +378,9 @@ class ItemDetailsSection extends StatelessWidget {
               return SizedBox(
                 height: (style.fontSize ?? 14) + 2,
                 child: Marquee(
-                  text: title,
-                  style: style,
+                  text: title, style: style,
                   scrollAxis: Axis.horizontal,
-                  blankSpace: 30.0,
-                  velocity: 25.0,
+                  blankSpace: 30.0, velocity: 25.0,
                   pauseAfterRound: const Duration(seconds: 1),
                   startPadding: 10.0,
                   accelerationDuration: const Duration(seconds: 1),
@@ -388,8 +388,7 @@ class ItemDetailsSection extends StatelessWidget {
                 ),
               );
             }
-            return Text(title,
-                maxLines: 1, overflow: TextOverflow.ellipsis, style: style);
+            return Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: style);
           },
         ),
 
@@ -421,6 +420,7 @@ class ItemDetailsSection extends StatelessWidget {
 ///  بطاقة البروفايل الأفقية (جاهزة للاستخدام)
 /// ---------------------------
 
+
 class ProfileItemCard extends StatelessWidget {
   final ItemModel item;
   final VoidCallback? onTap;
@@ -441,14 +441,11 @@ class ProfileItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     // مقاسات مرنة
     final width = MediaQuery.of(context).size.width;
-    double clamp(double v, double min, double max) =>
-        v < min ? min : (v > max ? max : v);
+    double clamp(double v, double min, double max) => v < min ? min : (v > max ? max : v);
 
-    final double baseH =
-        clamp(width * 0.27, 108, 156); // حد أدنى منطقي حتى لا تختفي الصورة
+    final double baseH = clamp(width * 0.27, 108, 156); // حد أدنى منطقي حتى لا تختفي الصورة
     final double cardHeight = baseH + (additionalHeight ?? 0);
-    final double imageWidth =
-        clamp(width * 0.26, 92, 160) + (additionalImageWidth ?? 0);
+    final double imageWidth = clamp(width * 0.26, 92, 160) + (additionalImageWidth ?? 0);
 
     final radius = 15.0;
 
@@ -538,17 +535,23 @@ class ProfileItemCard extends StatelessWidget {
   }
 }
 
+
+
+
+
+
+
+
+
 // === Status chip (مطابق لألوان/أيقونات تفاصيل الإعلان) ===
 String _normalizeStatus(String? raw) {
   final s = (raw ?? '').trim().toLowerCase();
   if (s.isEmpty) return 'review';
-  if (['approved', 'active', 'published', 'enabled'].contains(s))
-    return 'approved';
-  if (['inactive', 'paused', 'disabled'].contains(s)) return 'inactive';
-  if (['rejected', 'declined'].contains(s)) return 'rejected';
-  if (['sold out', 'sold', 'completed'].contains(s)) return 'sold out';
-  if (['review', 'pending', 'under_review', 'inreview'].contains(s))
-    return 'review';
+  if (['approved','active','published','enabled'].contains(s)) return 'approved';
+  if (['inactive','paused','disabled'].contains(s)) return 'inactive';
+  if (['rejected','declined'].contains(s)) return 'rejected';
+  if (['sold out','sold','completed'].contains(s)) return 'sold out';
+  if (['review','pending','under_review','inreview'].contains(s)) return 'review';
   return s;
 }
 
@@ -556,12 +559,7 @@ class _StatusStyle {
   final Color bg, fg, border;
   final IconData icon;
   final String label;
-  const _StatusStyle(
-      {required this.bg,
-      required this.fg,
-      required this.border,
-      required this.icon,
-      required this.label});
+  const _StatusStyle({required this.bg, required this.fg, required this.border, required this.icon, required this.label});
 }
 
 Map<String, _StatusStyle> _statusStyles(BuildContext context) {
@@ -608,16 +606,15 @@ Map<String, _StatusStyle> _statusStyles(BuildContext context) {
 class StatusChipSmall extends StatelessWidget {
   final String? rawStatus;
   final bool dense;
-  const StatusChipSmall(
-      {super.key, required this.rawStatus, this.dense = true});
+  const StatusChipSmall({super.key, required this.rawStatus, this.dense = true});
 
   @override
   Widget build(BuildContext context) {
     final norm = _normalizeStatus(rawStatus);
-    final map = _statusStyles(context);
-    final st = map[norm] ?? map['review']!;
+    final map  = _statusStyles(context);
+    final st   = map[norm] ?? map['review']!;
     final padH = dense ? 10.0 : 12.0;
-    final padV = dense ? 6.0 : 8.0;
+    final padV = dense ? 6.0  : 8.0;
 
     return IgnorePointer(
       ignoring: true,
@@ -632,13 +629,8 @@ class StatusChipSmall extends StatelessWidget {
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           Icon(st.icon, size: dense ? 14 : 16, color: st.fg),
           const SizedBox(width: 6),
-          Text(st.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                  color: st.fg,
-                  fontWeight: FontWeight.w600,
-                  fontSize: dense ? 12 : 13)),
+          Text(st.label, maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: st.fg, fontWeight: FontWeight.w600, fontSize: dense ? 12 : 13)),
         ]),
       ),
     );

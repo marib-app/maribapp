@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:marib/data/model/data_output.dart';
 import 'package:marib/data/model/wallet/wallet_filter.dart';
 import 'package:marib/data/model/wallet/wallet_transaction.dart';
 import 'package:marib/data/repositories/wallet_repository.dart';
@@ -164,8 +165,7 @@ class WalletTransactionsCubit extends Cubit<WalletTransactionsState> {
     if (currentState is! WalletTransactionsSuccess) return;
     final updated = currentState.transactions.map((tx) {
       if (tx.idempotencyKey == idempotencyKey || tx.id == idempotencyKey) {
-        return tx.copyWith(
-            highlighted: true, deeplink: deeplink ?? tx.deeplink);
+        return tx.copyWith(highlighted: true, deeplink: deeplink ?? tx.deeplink);
       }
       return tx;
     }).toList();

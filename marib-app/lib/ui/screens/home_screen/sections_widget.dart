@@ -12,8 +12,7 @@ class ImageWithNavigationWidget extends StatefulWidget {
   });
 
   @override
-  State<ImageWithNavigationWidget> createState() =>
-      _ImageWithNavigationWidgetState();
+  State<ImageWithNavigationWidget> createState() => _ImageWithNavigationWidgetState();
 }
 
 class _ImageWithNavigationWidgetState extends State<ImageWithNavigationWidget> {
@@ -25,7 +24,7 @@ class _ImageWithNavigationWidgetState extends State<ImageWithNavigationWidget> {
 
     return Listener(
       onPointerDown: (_) => setState(() => _pressed = true),
-      onPointerUp: (_) => setState(() => _pressed = false),
+      onPointerUp:   (_) => setState(() => _pressed = false),
       onPointerCancel: (_) => setState(() => _pressed = false),
       child: AnimatedScale(
         scale: _pressed ? 0.985 : 1.0,
@@ -55,16 +54,13 @@ class _ImageWithNavigationWidgetState extends State<ImageWithNavigationWidget> {
             clipBehavior: Clip.antiAlias,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(radius),
-              side: BorderSide(
-                  color: Colors.black.withOpacity(0.10)), // إطار خفيف
+              side: BorderSide(color: Colors.black.withOpacity(0.10)), // إطار خفيف
             ),
             child: InkWell(
-              onTap: widget.onTap == null
-                  ? null
-                  : () {
-                      HapticFeedback.selectionClick();
-                      widget.onTap!.call();
-                    },
+              onTap: widget.onTap == null ? null : () {
+                HapticFeedback.selectionClick();
+                widget.onTap!.call();
+              },
               splashColor: Colors.white.withOpacity(0.08),
               highlightColor: Colors.white.withOpacity(0.02),
               child: Stack(

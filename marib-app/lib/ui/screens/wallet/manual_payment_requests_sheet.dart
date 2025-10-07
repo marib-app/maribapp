@@ -12,12 +12,10 @@ class ManualPaymentRequestsSheet extends StatefulWidget {
   const ManualPaymentRequestsSheet({super.key});
 
   @override
-  State<ManualPaymentRequestsSheet> createState() =>
-      _ManualPaymentRequestsSheetState();
+  State<ManualPaymentRequestsSheet> createState() => _ManualPaymentRequestsSheetState();
 }
 
-class _ManualPaymentRequestsSheetState
-    extends State<ManualPaymentRequestsSheet> {
+class _ManualPaymentRequestsSheetState extends State<ManualPaymentRequestsSheet> {
   final ScrollController _scrollController = ScrollController();
   final DateFormat _dateFormat = DateFormat('yyyy-MM-dd HH:mm');
 
@@ -75,8 +73,7 @@ class _ManualPaymentRequestsSheetState
               ),
               const SizedBox(height: 12),
               Expanded(
-                child: BlocBuilder<ManualPaymentRequestsCubit,
-                    ManualPaymentRequestsState>(
+                child: BlocBuilder<ManualPaymentRequestsCubit, ManualPaymentRequestsState>(
                   builder: (context, state) {
                     if (state is ManualPaymentRequestsLoading) {
                       return const Center(child: CircularProgressIndicator());
@@ -84,9 +81,7 @@ class _ManualPaymentRequestsSheetState
                     if (state is ManualPaymentRequestsFailure) {
                       return _ErrorView(
                         message: state.error.toString(),
-                        onRetry: () => context
-                            .read<ManualPaymentRequestsCubit>()
-                            .loadInitial(),
+                        onRetry: () => context.read<ManualPaymentRequestsCubit>().loadInitial(),
                       );
                     }
                     if (state is ManualPaymentRequestsSuccess) {
@@ -98,16 +93,13 @@ class _ManualPaymentRequestsSheetState
                         onRefresh: _refresh,
                         child: ListView.builder(
                           controller: _scrollController,
-                          physics: const AlwaysScrollableScrollPhysics(
-                              parent: BouncingScrollPhysics()),
-                          itemCount: state.requests.length +
-                              (state.isLoadingMore ? 1 : 0),
+                          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                          itemCount: state.requests.length + (state.isLoadingMore ? 1 : 0),
                           itemBuilder: (context, index) {
                             if (index >= state.requests.length) {
                               return const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 16),
-                                child:
-                                    Center(child: CircularProgressIndicator()),
+                                child: Center(child: CircularProgressIndicator()),
                               );
                             }
                             final request = state.requests[index];
@@ -151,25 +143,19 @@ class _ManualPaymentTile extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    payment.manualReference ??
-                        payment.transactionIdentifier ??
-                        '#${payment.manualPaymentId ?? ''}',
+                    payment.manualReference ?? payment.transactionIdentifier ?? '#${payment.manualPaymentId ?? ''}',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     payment.paymentStatus.capitalize(),
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: statusColor),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: statusColor),
                   ),
                 ),
               ],
@@ -280,8 +266,7 @@ class _EmptyView extends StatelessWidget {
       color: context.color.territoryColor,
       onRefresh: onRefresh,
       child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics()),
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),

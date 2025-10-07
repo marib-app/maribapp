@@ -16,9 +16,12 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'package:marib/data/cubits/system/language_cubit.dart';
 
+
+
 /////////////
 ///V-1.0.0//
 ////////////
+
 
 void main() => initApp();
 
@@ -63,11 +66,12 @@ class _AppState extends State<App> {
   void initState() {
     context.read<LanguageCubit>().loadCurrentLanguage();
 
+
     AppTheme currentTheme = HiveUtils.getCurrentTheme();
 
     // ///Initialized notification services
     // LocalAwsomeNotification().init(context);
-    /////////////
+    ///////////// 
     // NotificationService.init(context);
 
     /// Initialized dynamic links for share items feature

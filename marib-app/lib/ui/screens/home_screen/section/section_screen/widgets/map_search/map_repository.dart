@@ -1,6 +1,9 @@
 import 'package:marib/utils/api.dart';
 import 'package:marib/data/model/item/item_model.dart';
 
+import 'package:marib/data/model/category_model.dart';
+import 'package:marib/data/model/item/item_model.dart';
+
 class MapAdsRepository {
   final String endpoint; // Api.getItemApi
   MapAdsRepository({required this.endpoint});
@@ -42,8 +45,7 @@ class MapAdsRepository {
           final useBase = !_isAbsoluteUrl(pageUrl) ? true : false;
           resp = await Api.get(url: pageUrl, useBaseUrl: useBase);
         } else {
-          resp = await Api.get(
-              url: endpoint, queryParameters: {'page': nextPageNum});
+          resp = await Api.get(url: endpoint, queryParameters: {'page': nextPageNum});
         }
         _appendItems(resp, acc);
         curr = _toInt(resp['data']?['current_page']);
@@ -72,14 +74,13 @@ class MapAdsRepository {
       } else if (e is Map) {
         acc.add(ItemModel.fromJson(Map<String, dynamic>.from(e)));
       }
+
     }
   }
 
   String? _extractNext(Map<String, dynamic> r) {
     final data = r['data'];
-    if (data is Map &&
-        data['next_page_url'] != null &&
-        data['next_page_url'].toString().isNotEmpty) {
+    if (data is Map && data['next_page_url'] != null && data['next_page_url'].toString().isNotEmpty) {
       return data['next_page_url'].toString();
     }
     if (r['next'] is String && (r['next'] as String).isNotEmpty) {
@@ -97,27 +98,15 @@ String normalizeCategory(String? raw) {
   final s = raw.trim().toLowerCase().replaceAll(RegExp(r'[\s\-_]+'), '');
 
   const map = {
-    'سيارات': 'سيارات',
-    'سيارة': 'سيارات',
-    'cars': 'سيارات',
-    'car': 'سيارات',
-    'auto': 'سيارات',
-    'عقارات': 'عقارات',
-    'عقار': 'عقارات',
-    'realestate': 'عقارات',
-    'property': 'عقارات',
-    'اجهزة': 'أجهزة',
-    'أجهزة': 'أجهزة',
-    'الكترونيات': 'أجهزة',
-    'إلكترونيات': 'أجهزة',
-    'electronics': 'أجهزة',
-    'electronic': 'أجهزة',
+    'سيارات': 'سيارات', 'سيارة': 'سيارات', 'cars': 'سيارات', 'car': 'سيارات', 'auto': 'سيارات',
+    'عقارات': 'عقارات', 'عقار': 'عقارات', 'realestate': 'عقارات', 'property': 'عقارات',
+    'اجهزة': 'أجهزة', 'أجهزة': 'أجهزة', 'الكترونيات': 'أجهزة', 'إلكترونيات': 'أجهزة',
+    'electronics': 'أجهزة', 'electronic': 'أجهزة',
   };
 
   if (map.containsKey(s)) return map[s]!;
   if (s.contains('car') || s.contains('auto')) return 'سيارات';
-  if (s.contains('estate') || s.contains('real') || s.contains('property'))
-    return 'عقارات';
+  if (s.contains('estate') || s.contains('real') || s.contains('property')) return 'عقارات';
   if (s.contains('electro') || s.contains('device')) return 'أجهزة';
   return 'أخرى';
 }

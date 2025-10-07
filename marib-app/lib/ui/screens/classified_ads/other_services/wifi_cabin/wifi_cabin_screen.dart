@@ -1,13 +1,16 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart'; // للخريطة في نموذج إضافة شبكة
-// للمسافة/إذن الموقع
+import 'package:geolocator/geolocator.dart'; // للمسافة/إذن الموقع
 import 'package:shimmer/shimmer.dart';
 import 'package:marib/utils/ui_utils.dart';
 
+import 'package:marib/app/routes.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:marib/data/model/wifi/wifi_network.dart';
 import 'package:marib/data/model/wifi/wifi_plan.dart';
 import 'package:marib/ui/screens/classified_ads/other_services/wifi_cabin/wifi_cabin_controller.dart';
@@ -19,6 +22,8 @@ import 'package:marib/data/model/wifi/wifi_payment_gateway.dart';
 import 'package:intl/intl.dart';
 import 'package:marib/utils/api.dart';
 import 'package:flutter/services.dart';
+
+
 
 class WifiCabinScreen extends StatefulWidget {
   const WifiCabinScreen({super.key});
@@ -35,16 +40,19 @@ class WifiCabinScreen extends StatefulWidget {
 }
 
 class _WifiCabinScreenState extends State<WifiCabinScreen> {
+
   late final WifiCabinController _controller;
 
   final WifiRepository _repository = const WifiRepository();
   final ValueNotifier<List<WifiPurchase>> _purchasesNotifier =
-      ValueNotifier<List<WifiPurchase>>(<WifiPurchase>[]);
+  ValueNotifier<List<WifiPurchase>>(<WifiPurchase>[]);
   final ValueNotifier<bool> _purchasesLoadingNotifier =
-      ValueNotifier<bool>(false);
+  ValueNotifier<bool>(false);
   final ValueNotifier<String?> _purchasesErrorNotifier =
-      ValueNotifier<String?>(null);
+  ValueNotifier<String?>(null);
   bool _hasLoadedPurchases = false;
+
+
 
   @override
   void initState() {
@@ -53,7 +61,10 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _controller.bootstrap();
       _fetchPurchases();
+
     });
+
+
   }
 
   @override
@@ -66,48 +77,53 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
     super.dispose();
   }
 
+
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, _) {
-        final state = _controller.viewState;
 
-        return Scaffold(
-          backgroundColor: context.color.backgroundColor,
-          appBar: UiUtils.buildAppBar(
-            context,
-            showBackButton: true,
-            title: 'wifiCabin'.translate(context),
-          ),
-          body: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Column(
-              children: [
-                _HeaderFilterBar(
-                  locDenied: _controller.locationDenied,
-                  maxKm: _controller.maxKm,
-                  onEnableLocation: () => _controller.enableLocation(),
-                  onKmChanged: _controller.updateMaxKm,
-                ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    switchInCurve: Curves.easeOut,
-                    switchOutCurve: Curves.easeIn,
-                    child: _buildBodyForState(context, state),
-                  ),
-                ),
-              ],
+
+    return AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) {
+          final state = _controller.viewState;
+
+          return Scaffold(
+            backgroundColor: context.color.backgroundColor,
+            appBar: UiUtils.buildAppBar(
+              context,
+              showBackButton: true,
+              title: 'wifiCabin'.translate(context),
+
             ),
-          ),
-        );
-      },
+            body: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Column(
+                children: [
+                  _HeaderFilterBar(
+                    locDenied: _controller.locationDenied,
+                    maxKm: _controller.maxKm,
+                    onEnableLocation: () => _controller.enableLocation(),
+                    onKmChanged: _controller.updateMaxKm,
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      switchInCurve: Curves.easeOut,
+                      switchOutCurve: Curves.easeIn,
+                      child: _buildBodyForState(context, state),
+                    ),
+                  ),
+                ],
+            ),
+            ),
+          );
+        },
     );
   }
 
-  Widget _buildBodyForState(BuildContext context, WifiCabinViewState state) {
+  Widget _buildBodyForState(
+      BuildContext context, WifiCabinViewState state) {
     final grid = _buildNetworksGrid(state);
 
     switch (state.status) {
@@ -132,7 +148,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
               grid,
               _ErrorBanner(
                 message:
-                    state.errorMessage ?? 'تعذّر تحديث الشبكات، حاول مجددًا.',
+                state.errorMessage ?? 'تعذّر تحديث الشبكات، حاول مجددًا.',
                 onRetry: () => _controller.refreshNetworks(),
               ),
             ],
@@ -140,7 +156,8 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
         }
         return _ErrorState(
           key: const ValueKey('failure'),
-          message: state.errorMessage ?? 'تعذّر جلب الشبكات في الوقت الحالي.',
+          message:
+          state.errorMessage ?? 'تعذّر جلب الشبكات في الوقت الحالي.',
           onRetry: () => _controller.refreshNetworks(),
         );
     }
@@ -219,6 +236,8 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
     );
   }
 
+
+
   Future<void> _fetchPurchases({bool force = false}) async {
     if (_purchasesLoadingNotifier.value) return;
     if (!force && _hasLoadedPurchases) return;
@@ -237,9 +256,8 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
 
   void _registerPurchase(WifiPurchase purchase) {
     final List<WifiPurchase> current =
-        List<WifiPurchase>.from(_purchasesNotifier.value);
-    final int index =
-        current.indexWhere((element) => element.id == purchase.id);
+    List<WifiPurchase>.from(_purchasesNotifier.value);
+    final int index = current.indexWhere((element) => element.id == purchase.id);
     if (index >= 0) {
       current[index] = purchase;
     } else {
@@ -322,11 +340,12 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
 
   String _describeError(Object error) {
     if (error is ApiHttpException) {
-      final Map<String, dynamic> payload = error.payload is Map<String, dynamic>
+      final Map<String, dynamic> payload =
+      error.payload is Map<String, dynamic>
           ? Map<String, dynamic>.from(error.payload as Map)
           : error.payload is Map
-              ? Map<String, dynamic>.from(error.payload as Map)
-              : <String, dynamic>{};
+          ? Map<String, dynamic>.from(error.payload as Map)
+          : <String, dynamic>{};
       final String? base = _stringify(
         payload['message'] ?? payload['error'] ?? payload['detail'],
       );
@@ -385,6 +404,9 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
     return <String>[single];
   }
 
+
+
+
   Future<void> _openAddNetworkSheet(BuildContext context) async {
     final dynamic result = await showModalBottomSheet<dynamic>(
       context: context,
@@ -395,6 +417,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
         userLatLng: _controller.currentCenter,
         repository: _repository,
       ),
+
     );
 
     if (result != null) {
@@ -402,22 +425,21 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
       if (!mounted) return;
       String? message;
       if (result is Map) {
-        final map = Map<String, dynamic>.from(result);
-        message = (map['message'] as String?) ??
-            (() {
-              final String? name = map['name'] as String?;
-              final String? status = map['status'] as String?;
-              if (name != null && status != null) {
-                return 'تم إرسال طلب الشبكة "$name" (الحالة: $status)';
-              }
-              if (name != null) {
-                return 'تمت إضافة الشبكة "$name" بنجاح';
-              }
-              if (status != null) {
-                return 'تم إرسال الطلب (الحالة: $status)';
-              }
-              return null;
-            })();
+        final map = Map<String, dynamic>.from(result as Map);
+        message = (map['message'] as String?) ?? (() {
+          final String? name = map['name'] as String?;
+          final String? status = map['status'] as String?;
+          if (name != null && status != null) {
+            return 'تم إرسال طلب الشبكة "$name" (الحالة: $status)';
+          }
+          if (name != null) {
+            return 'تمت إضافة الشبكة "$name" بنجاح';
+          }
+          if (status != null) {
+            return 'تم إرسال الطلب (الحالة: $status)';
+          }
+          return null;
+        })();
       } else if (result is String) {
         message = 'تمت إضافة الشبكة "$result" بنجاح';
       }
@@ -429,8 +451,8 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
     }
   }
 
-  Future<void> _openPlansSheet(
-      BuildContext context, WifiNetwork network) async {
+  Future<void> _openPlansSheet(BuildContext context, WifiNetwork network) async {
+
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -446,7 +468,9 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
   }
 }
 
+
 class _HeaderFilterBar extends StatelessWidget {
+
   const _HeaderFilterBar({
     required this.locDenied,
     required this.maxKm,
@@ -567,6 +591,7 @@ class _NetworksGrid extends StatelessWidget {
 }
 
 class _WifiNetworkCard extends StatelessWidget {
+
   const _WifiNetworkCard({
     required this.name,
     required this.distanceText,
@@ -574,10 +599,12 @@ class _WifiNetworkCard extends StatelessWidget {
     required this.onTap,
   });
 
+
   final String name;
   final String distanceText;
   final double rating;
   final VoidCallback onTap;
+
 
   @override
   Widget build(BuildContext context) {
@@ -597,8 +624,7 @@ class _WifiNetworkCard extends StatelessWidget {
                 width: double.infinity,
                 color: color.secondaryColor,
                 alignment: Alignment.center,
-                child: const Icon(Icons.wifi,
-                    size: 36), // Placeholder أيقونة الشبكة
+                child: const Icon(Icons.wifi, size: 36), // Placeholder أيقونة الشبكة
               ),
             ),
             const SizedBox(height: 6),
@@ -646,7 +672,11 @@ class _WifiNetworkCard extends StatelessWidget {
   }
 }
 
+
+
 class _PlansSheet extends StatefulWidget {
+
+
   const _PlansSheet({
     required this.network,
     required this.onRegisterPurchase,
@@ -659,6 +689,7 @@ class _PlansSheet extends StatefulWidget {
   final Future<void> Function({bool force}) onRefreshPurchases;
   final Future<void> Function(WifiPurchase) onShowCodes;
 
+
   @override
   State<_PlansSheet> createState() => _PlansSheetState();
 }
@@ -668,6 +699,7 @@ class _PlansSheetState extends State<_PlansSheet> {
   List<WifiPlan> _plans = <WifiPlan>[];
   bool _isLoading = false;
   String? _error;
+
 
   @override
   void initState() {
@@ -705,6 +737,7 @@ class _PlansSheetState extends State<_PlansSheet> {
       }
     });
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -905,8 +938,8 @@ class _PlansSheetState extends State<_PlansSheet> {
     final messenger = ScaffoldMessenger.of(context);
 
     if (result.isPending) {
-      final String message =
-          result.message ?? 'تم إرسال طلب الدفع. سنخطرك عند اكتمال المعالجة.';
+      final String message = result.message ??
+          'تم إرسال طلب الدفع. سنخطرك عند اكتمال المعالجة.';
       messenger.showSnackBar(SnackBar(content: Text(message)));
       unawaited(widget.onRefreshPurchases(force: true));
       return;
@@ -929,11 +962,17 @@ class _PlansSheetState extends State<_PlansSheet> {
   }
 }
 
+
+
+
 class _PlanTile extends StatelessWidget {
+
   const _PlanTile({required this.plan, required this.onSelect});
+
 
   final WifiPlan plan;
   final VoidCallback onSelect;
+
 
   @override
   Widget build(BuildContext context) {
@@ -988,6 +1027,8 @@ class _PlanTile extends StatelessWidget {
   }
 }
 
+
+
 class _CheckoutSheet extends StatefulWidget {
   final WifiPlan plan;
 
@@ -1000,7 +1041,7 @@ class _CheckoutSheet extends StatefulWidget {
 class _CheckoutSheetState extends State<_CheckoutSheet> {
   final WifiRepository _repository = const WifiRepository();
   final Map<String, WifiPaymentGateway> _gatewayEntities =
-      <String, WifiPaymentGateway>{};
+  <String, WifiPaymentGateway>{};
 
   int _quantity = 1;
   String _gateway = 'wallet';
@@ -1010,6 +1051,8 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
   bool _isSubmitting = false;
 
   num get total => widget.plan.price * _quantity;
+
+
 
   @override
   void initState() {
@@ -1035,16 +1078,16 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
       views = gateways
           .map(
             (gateway) => PaymentGatewayView(
-              id: gateway.id,
-              name: gateway.name,
-              description: gateway.description,
-            ),
-          )
+          id: gateway.id,
+          name: gateway.name,
+          description: gateway.description,
+        ),
+      )
           .toList();
 
       if (views.isEmpty) {
-        final WifiPaymentGateway fallback = const WifiPaymentGateway(
-            id: 'wallet', name: 'المحفظة', isWallet: true);
+        final WifiPaymentGateway fallback =
+        const WifiPaymentGateway(id: 'wallet', name: 'المحفظة', isWallet: true);
         lookup = <String, WifiPaymentGateway>{fallback.id: fallback};
         views = const <PaymentGatewayView>[
           PaymentGatewayView(id: 'wallet', name: 'المحفظة'),
@@ -1057,8 +1100,8 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
           ? _extractErrorMessage(error.payload) ?? error.toString()
           : error.toString();
       if (_gateways.isEmpty) {
-        final WifiPaymentGateway fallback = const WifiPaymentGateway(
-            id: 'wallet', name: 'المحفظة', isWallet: true);
+        final WifiPaymentGateway fallback =
+        const WifiPaymentGateway(id: 'wallet', name: 'المحفظة', isWallet: true);
         lookup = <String, WifiPaymentGateway>{fallback.id: fallback};
         views = const <PaymentGatewayView>[
           PaymentGatewayView(id: 'wallet', name: 'المحفظة'),
@@ -1082,7 +1125,7 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
           );
         }
         if (selectedId != null) {
-          _gateway = selectedId;
+          _gateway = selectedId!;
         } else if (!_gateways.any((gateway) => gateway.id == _gateway) &&
             _gateways.isNotEmpty) {
           _gateway = _gateways.first.id;
@@ -1093,9 +1136,9 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
   }
 
   String _pickDefaultGatewayId(
-    List<WifiPaymentGateway> gateways,
-    String fallbackId,
-  ) {
+      List<WifiPaymentGateway> gateways,
+      String fallbackId,
+      ) {
     for (final gateway in gateways) {
       if (gateway.isDefault) {
         return gateway.id;
@@ -1152,7 +1195,7 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
     if (payload is Map) {
       final Map<String, dynamic> map = payload is Map<String, dynamic>
           ? payload
-          : Map<String, dynamic>.from(payload);
+          : Map<String, dynamic>.from(payload as Map);
       final String? base = _stringify(
         map['message'] ?? map['error'] ?? map['detail'],
       );
@@ -1224,11 +1267,12 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
           return Container(
             decoration: BoxDecoration(
               color: color.backgroundColor,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Column(
+
               children: [
+
                 const SizedBox(height: 8),
                 Container(
                   height: 4,
@@ -1254,8 +1298,7 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        widget.plan.description ??
-                            'راجع تفاصيل الخطة قبل المتابعة.',
+                        widget.plan.description ?? 'راجع تفاصيل الخطة قبل المتابعة.',
                         style: TextStyle(
                           color: color.textDefaultColor.withOpacity(0.7),
                         ),
@@ -1281,8 +1324,7 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                           const SizedBox(width: 12),
                           _QtyStepper(
                             value: _quantity,
-                            onChanged: (value) =>
-                                setState(() => _quantity = value),
+                            onChanged: (value) => setState(() => _quantity = value),
                           ),
                         ],
                       ),
@@ -1325,7 +1367,8 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                             child: Text(
                               'لا توجد طرق دفع متاحة حالياً.',
                               style: TextStyle(
-                                color: color.textDefaultColor.withOpacity(0.75),
+                                color:
+                                color.textDefaultColor.withOpacity(0.75),
                               ),
                             ),
                           ),
@@ -1349,7 +1392,8 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                                 ),
                                 TextButton(
                                   onPressed: _loadGateways,
-                                  child: const Text('إعادة محاولة تحميل الطرق'),
+                                  child:
+                                  const Text('إعادة محاولة تحميل الطرق'),
                                 ),
                               ],
                             ),
@@ -1377,29 +1421,29 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                         duration: const Duration(milliseconds: 200),
                         child: _isSubmitting
                             ? Row(
-                                key: const ValueKey('processing'),
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: const [
-                                  SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                  SizedBox(width: 12),
-                                  Text('جارٍ معالجة الدفع'),
-                                ],
-                              )
-                            : Row(
-                                key: const ValueKey('confirm'),
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: const [
-                                  Icon(Icons.check_circle_outline),
-                                  SizedBox(width: 8),
-                                  Text('تأكيد الدفع'),
-                                ],
+                          key: const ValueKey('processing'),
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
                               ),
+                            ),
+                            SizedBox(width: 12),
+                            Text('جارٍ معالجة الدفع'),
+                          ],
+                        )
+                            : Row(
+                          key: const ValueKey('confirm'),
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.check_circle_outline),
+                            SizedBox(width: 8),
+                            Text('تأكيد الدفع'),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -1420,13 +1464,19 @@ class _QtyStepper extends StatelessWidget {
   final int value;
   final ValueChanged<int> onChanged;
 
+
+
   @override
   Widget build(BuildContext context) {
     final color = context.color;
     return Container(
+
+
       decoration: BoxDecoration(
+
         borderRadius: BorderRadius.circular(12),
         color: color.secondaryColor.withOpacity(0.2),
+
       ),
       child: Row(
         children: [
@@ -1463,6 +1513,7 @@ class _TotalBar extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         color: color.secondaryColor.withOpacity(0.2),
@@ -1496,12 +1547,17 @@ class _GatewayPicker extends StatelessWidget {
     required this.value,
     required this.onChanged,
     this.enabled = true,
+
   });
+
+
 
   final List<PaymentGatewayView> gateways;
   final String value;
   final ValueChanged<String> onChanged;
   final bool enabled;
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -1511,28 +1567,28 @@ class _GatewayPicker extends StatelessWidget {
       children: gateways
           .map(
             (gateway) => RadioListTile<String>(
-              value: gateway.id,
-              groupValue: value,
+          value: gateway.id,
+          groupValue: value,
               onChanged: enabled
                   ? (val) {
-                      if (val != null) onChanged(val);
-                    }
+                if (val != null) onChanged(val);
+              }
                   : null,
-              title: Text(
-                gateway.name,
-                style: TextStyle(color: color.textDefaultColor),
-              ),
+          title: Text(
+            gateway.name,
+            style: TextStyle(color: color.textDefaultColor),
+          ),
               subtitle: gateway.description != null
                   ? Text(
-                      gateway.description!,
-                      style: TextStyle(
-                        color: color.textDefaultColor.withOpacity(0.65),
-                        fontSize: 12,
-                      ),
-                    )
+                gateway.description!,
+                style: TextStyle(
+                  color: color.textDefaultColor.withOpacity(0.65),
+                  fontSize: 12,
+                ),
+              )
                   : null,
-            ),
-          )
+        ),
+      )
           .toList(),
     );
   }
@@ -1624,6 +1680,7 @@ class _PurchasesSheetState extends State<_PurchasesSheet> {
     widget.errorListenable.addListener(_onChanged);
   }
 
+
   void _syncFromListenable() {
     _purchases = widget.purchasesListenable.value.toList();
     _isLoading = widget.loadingListenable.value;
@@ -1633,6 +1690,7 @@ class _PurchasesSheetState extends State<_PurchasesSheet> {
   void _onChanged() {
     if (!mounted) return;
     setState(_syncFromListenable);
+
   }
 
   @override
@@ -1661,7 +1719,7 @@ class _PurchasesSheetState extends State<_PurchasesSheet> {
             decoration: BoxDecoration(
               color: color.backgroundColor,
               borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
+              const BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Column(
               children: [
@@ -1713,9 +1771,9 @@ class _PurchasesSheetState extends State<_PurchasesSheet> {
   }
 
   Widget _buildBody(
-    BuildContext context,
-    ScrollController controller,
-  ) {
+      BuildContext context,
+      ScrollController controller,
+      ) {
     final color = context.color;
     if (_isLoading && _purchases.isEmpty) {
       return const Center(child: CircularProgressIndicator());
@@ -1855,7 +1913,7 @@ class _PurchaseTile extends StatelessWidget {
     final bool pending = _isPending(status);
     final DateTime? createdAt = purchase.createdAt;
     final String? created =
-        createdAt != null ? dateFormat.format(createdAt.toLocal()) : null;
+    createdAt != null ? dateFormat.format(createdAt.toLocal()) : null;
     final String? totalText = purchase.total != null
         ? '${purchase.total!.toStringAsFixed(2)} ${purchase.currency ?? ''}'
         : null;
@@ -1944,7 +2002,7 @@ class _PurchaseTile extends StatelessWidget {
               if (created != null) const Spacer(),
               Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: pending
                       ? color.secondaryColor.withOpacity(0.3)
@@ -1954,9 +2012,8 @@ class _PurchaseTile extends StatelessWidget {
                 child: Text(
                   status,
                   style: TextStyle(
-                    color: pending
-                        ? color.textDefaultColor
-                        : color.backgroundColor,
+                    color:
+                    pending ? color.textDefaultColor : color.backgroundColor,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1987,28 +2044,28 @@ class _PurchaseTile extends StatelessWidget {
               children: purchase.codes
                   .map(
                     (code) => Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: color.backgroundColor,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: color.secondaryColor.withOpacity(0.4),
-                        ),
-                      ),
-                      child: SelectableText(
-                        code,
-                        style: TextStyle(
-                          color: color.textDefaultColor,
-                          fontFamily: 'monospace',
-                          letterSpacing: 1.0,
-                          fontSize: 13,
-                        ),
-                      ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: color.backgroundColor,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: color.secondaryColor.withOpacity(0.4),
                     ),
-                  )
+                  ),
+                  child: SelectableText(
+                    code,
+                    style: TextStyle(
+                      color: color.textDefaultColor,
+                      fontFamily: 'monospace',
+                      letterSpacing: 1.0,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              )
                   .toList(),
             ),
           ] else
@@ -2023,11 +2080,15 @@ class _PurchaseTile extends StatelessWidget {
       ),
     );
   }
+
 }
 
+
 class _AddNetworkSheet extends StatefulWidget {
+
   const _AddNetworkSheet({this.userLatLng, WifiRepository? repository})
       : repository = repository ?? const WifiRepository();
+
 
   final LatLng? userLatLng;
   final WifiRepository repository;
@@ -2043,6 +2104,7 @@ class _AddNetworkSheetState extends State<_AddNetworkSheet> {
   bool _isSubmitting = false;
 
   static const LatLng _defaultLatLng = LatLng(15.3694, 44.1910);
+
 
   @override
   void initState() {
@@ -2073,6 +2135,7 @@ class _AddNetworkSheetState extends State<_AddNetworkSheet> {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
           ),
           child: Column(
+
             children: [
               const SizedBox(height: 8),
               Container(
@@ -2154,8 +2217,8 @@ class _AddNetworkSheetState extends State<_AddNetworkSheet> {
                       onChanged: _isSubmitting
                           ? null
                           : (value) {
-                              setState(() => _coverage = value);
-                            },
+                        setState(() => _coverage = value);
+                      },
                     ),
                   ],
                 ),
@@ -2169,10 +2232,10 @@ class _AddNetworkSheetState extends State<_AddNetworkSheet> {
                     onPressed: _isSubmitting ? null : _onSubmit,
                     child: _isSubmitting
                         ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2.5),
-                          )
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2.5),
+                    )
                         : const Text('إرسال الطلب'),
                   ),
                 ),
@@ -2216,7 +2279,7 @@ class _AddNetworkSheetState extends State<_AddNetworkSheet> {
     try {
       final double coverage = double.parse(_coverage.toStringAsFixed(1));
       final Map<String, dynamic> response =
-          await widget.repository.createOwnerRequest(
+      await widget.repository.createOwnerRequest(
         name: name,
         latitude: _selected!.latitude,
         longitude: _selected!.longitude,
@@ -2231,7 +2294,7 @@ class _AddNetworkSheetState extends State<_AddNetworkSheet> {
       if (rawData is Map<String, dynamic>) {
         payload = Map<String, dynamic>.from(rawData);
       } else if (rawData is Map) {
-        payload = Map<String, dynamic>.from(rawData);
+        payload = Map<String, dynamic>.from(rawData as Map);
       }
 
       final Map<String, dynamic> result = <String, dynamic>{
@@ -2361,6 +2424,7 @@ class _NetworkLocationPickerState extends State<_NetworkLocationPicker> {
 /* ========================== نماذج عرض (View Models) ========================== */
 class _LoadingOverlay extends StatelessWidget {
   const _LoadingOverlay();
+
 
   @override
   Widget build(BuildContext context) {

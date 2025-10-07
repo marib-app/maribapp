@@ -1,12 +1,14 @@
 // 📁 lib/ui/screens/home/Pc/ads_files/add_item_screen/widgets/image_section.dart
 
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/responsiveSize.dart';
+import 'package:marib/ui/screens/item/add_item_screen/widgets/image_adapter.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
@@ -40,7 +42,7 @@ mixin ImageSectionMixin<T extends StatefulWidget> on State<T> {
 
         // أبعاد متكيفة للبلاط
         final double targetTile =
-            isSmallPhone ? 96 : (isPhone ? 112 : (isTablet ? 140 : 180));
+        isSmallPhone ? 96 : (isPhone ? 112 : (isTablet ? 140 : 180));
 
         // حواف الشبكة والمسافات
         const double gridHPad = 8;
@@ -50,16 +52,15 @@ mixin ImageSectionMixin<T extends StatefulWidget> on State<T> {
         final int columns = width <= 340
             ? 2
             : ((width - (gridHPad * 2)) / (targetTile + gridSpacing))
-                .floor()
-                .clamp(3, 7);
+            .floor()
+            .clamp(3, 7);
 
         // عدد الصفوف حسب الجهاز (هنا 2 للموبايل، 3 لغيره)
         final int rows = isPhone ? 2 : 3;
 
         // حساب عرض البلاط الحقيقي بعد توزيع الأعمدة
-        final double tileWidth =
-            ((width - (gridHPad * 2) - (gridSpacing * (columns - 1))) / columns)
-                .clamp(72.0, 320.0);
+        final double tileWidth = ((width - (gridHPad * 2) - (gridSpacing * (columns - 1))) / columns)
+            .clamp(72.0, 320.0);
 
         // ارتفاع البلاط (مربع تقريباً)
         final double tileHeight = tileWidth;
@@ -104,8 +105,7 @@ mixin ImageSectionMixin<T extends StatefulWidget> on State<T> {
 
             if (i < imageCount) {
               final image = mixedItemImageList[i];
-              final bool isUploading =
-                  image is Map && image["uploading"] == true;
+              final bool isUploading = image is Map && image["uploading"] == true;
 
               int? imageId;
               if (image is Map) {
@@ -123,6 +123,8 @@ mixin ImageSectionMixin<T extends StatefulWidget> on State<T> {
               } else if (!isMain && i == 0) {
                 isMain = true;
               }
+
+
 
               ImageProvider<Object>? imageProvider;
               if (image is Map) {
@@ -145,14 +147,15 @@ mixin ImageSectionMixin<T extends StatefulWidget> on State<T> {
                 _ImageTile(
                   key: ValueKey(imageId ?? 'local_$i'),
                   id: imageId,
+
+
                   imageProvider: imageProvider,
                   isMain: isMain,
                   isUploading: isUploading,
                   color: color,
                   onOpen: () {
                     if (imageProvider == null) {
-                      HelperUtils.showSnackBarMessage(
-                          context, "الصورة لم تجهز بعد");
+                      HelperUtils.showSnackBarMessage(context, "الصورة لم تجهز بعد");
                       return;
                     }
                     Navigator.of(context).push(
@@ -241,9 +244,9 @@ mixin ImageSectionMixin<T extends StatefulWidget> on State<T> {
 
   // -------------------- حوار اختيار المصدر --------------------
   Future<void> showImageSourceDialog(
-    BuildContext context,
-    Function(ImageSource) onSelected,
-  ) async {
+      BuildContext context,
+      Function(ImageSource) onSelected,
+      ) async {
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
@@ -327,15 +330,14 @@ class _AddTile extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.add,
-                      size: 22, color: color.outline.withOpacity(0.55)),
+                  Icon(Icons.add, size: 22, color: color.outline.withOpacity(0.55)),
                   const SizedBox(width: 6),
                   Text(
                     "أضف صورة",
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: color.outline.withOpacity(0.75),
-                          fontWeight: FontWeight.w600,
-                        ),
+                      color: color.outline.withOpacity(0.75),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
@@ -410,26 +412,21 @@ class _ImageTile extends StatelessWidget {
                   width: isMain ? 2.2 : 1,
                 ),
                 boxShadow: const [
-                  BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 4,
-                      offset: Offset(0, 2)),
+                  BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
                 ],
               ),
               child: isUploading
                   ? Container(
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.28),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const SizedBox(
-                        width: 28,
-                        height: 28,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
-                      ),
-                    )
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.28),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const SizedBox(
+                  width: 28, height: 28,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                ),
+              )
                   : null,
             ),
           ),
@@ -438,8 +435,7 @@ class _ImageTile extends StatelessWidget {
         // تاج "أساسية"
         if (isMain)
           PositionedDirectional(
-            top: 6,
-            start: 6,
+            top: 6, start: 6,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
@@ -448,18 +444,14 @@ class _ImageTile extends StatelessWidget {
               ),
               child: const Text(
                 "أساسية",
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold),
+                style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
               ),
             ),
           ),
 
         // زر حذف
         PositionedDirectional(
-          top: 4,
-          end: 4,
+          top: 4, end: 4,
           child: Material(
             color: Colors.black45,
             shape: const CircleBorder(),
@@ -556,8 +548,7 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
                   child: Container(
                     color: Colors.black,
                     alignment: Alignment.center,
-                    child: const Icon(Icons.broken_image_outlined,
-                        color: Colors.white70, size: 42),
+                    child: const Icon(Icons.broken_image_outlined, color: Colors.white70, size: 42),
                   ),
                 );
               }
@@ -569,8 +560,7 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
               );
             },
             onPageChanged: (index) => _currentIndexNotifier.value = index,
-            loadingBuilder: (context, _) =>
-                const Center(child: CircularProgressIndicator()),
+            loadingBuilder: (context, _) => const Center(child: CircularProgressIndicator()),
             backgroundDecoration: const BoxDecoration(color: Colors.black),
           ),
 
@@ -603,8 +593,7 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
               padding: const EdgeInsets.symmetric(vertical: 6),
               margin: EdgeInsets.symmetric(horizontal: isPhone ? 64 : 120),
               decoration: BoxDecoration(
-                color:
-                    theme.colorScheme.surfaceContainerHighest.withOpacity(0.6),
+                color: theme.colorScheme.surfaceVariant.withOpacity(0.6),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Center(
@@ -637,11 +626,9 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
     final color = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: color.surfaceContainerHighest.withOpacity(0.9),
+        color: color.surfaceVariant.withOpacity(0.9),
         shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4)
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4)],
       ),
       child: IconButton(
         icon: Icon(icon, color: color.onSurface, size: 20),

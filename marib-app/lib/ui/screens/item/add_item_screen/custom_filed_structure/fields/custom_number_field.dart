@@ -10,6 +10,7 @@ import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart';
 import 'package:marib/ui/screens/widgets/custom_text_form_field.dart';
 
 import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/custom_field.dart';
+import 'package:marib/utils/validator.dart';
 
 /// =====================
 /// Logic (Controller)
@@ -127,6 +128,9 @@ class CustomNumberFieldView extends StatelessWidget {
     );
   }
 }
+
+
+
 
 /// هيدر موحّد (أيقونة + عنوان + ملاحظات)
 class _Header extends StatelessWidget {

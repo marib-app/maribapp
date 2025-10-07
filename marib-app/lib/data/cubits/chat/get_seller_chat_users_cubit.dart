@@ -7,6 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/ui/screens/chat/chat_badge_controller.dart';
 
+
+
+
 abstract class GetSellerChatListState {}
 
 class GetSellerChatListInitial extends GetSellerChatListState {}
@@ -103,6 +106,7 @@ class GetSellerChatListCubit extends Cubit<GetSellerChatListState> {
             page: 1),
       );
       _updateBadge(result.modelList);
+
     } catch (e) {
       emit(GetSellerChatListFailed(e));
     }
@@ -131,7 +135,7 @@ class GetSellerChatListCubit extends Cubit<GetSellerChatListState> {
       final newChatIdentifiers = _identifiersFor(user);
 
       bool contains = chatedUserList.any(
-        (element) {
+            (element) {
           final existingIdentifiers = _identifiersFor(element);
           return existingIdentifiers
               .any((identifier) => newChatIdentifiers.contains(identifier));
@@ -142,6 +146,7 @@ class GetSellerChatListCubit extends Cubit<GetSellerChatListState> {
         emit((state as GetSellerChatListSuccess)
             .copyWith(chatedUserList: chatedUserList));
         _updateBadge(chatedUserList);
+
       }
     }
   }
@@ -172,6 +177,7 @@ class GetSellerChatListCubit extends Cubit<GetSellerChatListState> {
           total: result.total,
         ));
         _updateBadge(messagesSuccessState.chatedUserList);
+
       }
     } catch (e) {
       emit((state as GetSellerChatListSuccess)
@@ -188,6 +194,7 @@ class GetSellerChatListCubit extends Cubit<GetSellerChatListState> {
     return false;
   }
 
+
   void incrementUnread(String conversationId) {
     if (state is! GetSellerChatListSuccess) return;
     final success = state as GetSellerChatListSuccess;
@@ -195,7 +202,7 @@ class GetSellerChatListCubit extends Cubit<GetSellerChatListState> {
         .map((chat) => ChatedUser.fromJson(chat.toJson()))
         .toList();
     final index = updatedList.indexWhere((chat) =>
-        (chat.conversationId ?? chat.id?.toString() ?? '') == conversationId);
+    (chat.conversationId ?? chat.id?.toString() ?? '') == conversationId);
     if (index == -1) {
       return;
     }
@@ -212,7 +219,7 @@ class GetSellerChatListCubit extends Cubit<GetSellerChatListState> {
         .map((chat) => ChatedUser.fromJson(chat.toJson()))
         .toList();
     final index = updatedList.indexWhere((chat) =>
-        (chat.conversationId ?? chat.id?.toString() ?? '') == conversationId);
+    (chat.conversationId ?? chat.id?.toString() ?? '') == conversationId);
     if (index == -1) {
       return;
     }
@@ -230,4 +237,7 @@ class GetSellerChatListCubit extends Cubit<GetSellerChatListState> {
       list.fold<int>(0, (sum, chat) => sum + (chat.unreadMessagesCount ?? 0)),
     );
   }
+
+
+
 }

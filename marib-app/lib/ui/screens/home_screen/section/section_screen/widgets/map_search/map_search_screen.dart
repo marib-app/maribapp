@@ -1,16 +1,19 @@
+import 'dart:async' show Completer;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/utils/api.dart';
-import 'package:marib/ui/screens/home_screen/section/section_screen/widgets/map_search/map_repository.dart';
-import 'package:marib/ui/screens/home_screen/section/section_screen/widgets/map_search/map_ui.dart';
-import 'package:marib/ui/screens/home_screen/section/section_screen/widgets/map_search/ads_google_map.dart';
+import 'map_repository.dart';
+import 'map_ui.dart';
+import 'ads_google_map.dart';
 import 'package:marib/utils/helper_utils.dart';
 
 import 'package:marib/data/model/item/item_model.dart';
+
 
 class MapSearchScreen extends StatefulWidget {
   const MapSearchScreen({super.key});
@@ -22,8 +25,8 @@ class MapSearchScreen extends StatefulWidget {
 class _MapSearchScreenState extends State<MapSearchScreen> {
   // ====== Map Controllers ======
   GoogleMapController? _mapController;
-  final Completer<GoogleMapController> _mapReady =
-      Completer<GoogleMapController>();
+  final Completer<GoogleMapController> _mapReady = Completer<
+      GoogleMapController>();
 
   // ====== State ======
   bool _isLoading = true;
@@ -79,8 +82,8 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
       throw 'الرجاء منح إذن الموقع من الإعدادات';
     }
 
-    _currentPosition = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high);
+    _currentPosition =
+    await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
 
     try {
       final placemarks = await placemarkFromCoordinates(
@@ -90,7 +93,7 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
       if (placemarks.isNotEmpty) {
         final p = placemarks[0];
         _currentAddress =
-            "${p.street}, ${p.locality}, ${p.administrativeArea}, ${p.country}";
+        "${p.street}, ${p.locality}, ${p.administrativeArea}, ${p.country}";
       }
     } catch (_) {}
   }
@@ -100,8 +103,9 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
       final ads = await _repo.fetchAllAds();
       _ads = ads;
 
-      final valid =
-          _ads.where((a) => _isValidLatLng(a.latitude, a.longitude)).length;
+      final valid = _ads
+          .where((a) => _isValidLatLng(a.latitude, a.longitude))
+          .length;
       debugPrint("ADS: total=${_ads.length}, with_valid_coords=$valid");
 
       _updateMarkers();
@@ -115,6 +119,7 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
 
   String? _categoryLabel(ItemModel ad) => ad.category?.name ?? ad.type;
 
+
   bool _isValidLatLng(double? lat, double? lng) {
     if (lat == null || lng == null) return false;
     if (lat == 0 && lng == 0) return false;
@@ -124,18 +129,18 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
   LatLngBounds _boundsFrom(List<LatLng> points) {
     double? minLat, maxLat, minLng, maxLng;
     for (final p in points) {
-      minLat = (minLat == null)
+      minLat = (minLat == null) ? p.latitude : (p.latitude < minLat
           ? p.latitude
-          : (p.latitude < minLat ? p.latitude : minLat);
-      maxLat = (maxLat == null)
+          : minLat);
+      maxLat = (maxLat == null) ? p.latitude : (p.latitude > maxLat
           ? p.latitude
-          : (p.latitude > maxLat ? p.latitude : maxLat);
-      minLng = (minLng == null)
+          : maxLat);
+      minLng = (minLng == null) ? p.longitude : (p.longitude < minLng
           ? p.longitude
-          : (p.longitude < minLng ? p.longitude : minLng);
-      maxLng = (maxLng == null)
+          : minLng);
+      maxLng = (maxLng == null) ? p.longitude : (p.longitude > maxLng
           ? p.longitude
-          : (p.longitude > maxLng ? p.longitude : maxLng);
+          : maxLng);
     }
     return LatLngBounds(
       southwest: LatLng(minLat!, minLng!),
@@ -145,29 +150,30 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
 
   Future<void> _fitToMarkers() async {
     if (_markers.isEmpty) return;
-    final controller =
-        _mapReady.isCompleted ? await _mapReady.future : _mapController!;
+    final controller = _mapReady.isCompleted
+        ? await _mapReady.future
+        : _mapController!;
     final pts = _markers.map((m) => m.position).toList();
 
     try {
       if (pts.length == 1) {
-        await controller
-            .animateCamera(CameraUpdate.newLatLngZoom(pts.first, 14));
+        await controller.animateCamera(
+            CameraUpdate.newLatLngZoom(pts.first, 14));
       } else {
         final bounds = _boundsFrom(pts);
-        await controller
-            .animateCamera(CameraUpdate.newLatLngBounds(bounds, 60));
+        await controller.animateCamera(
+            CameraUpdate.newLatLngBounds(bounds, 60));
       }
     } catch (_) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         try {
           if (pts.length == 1) {
-            await controller
-                .animateCamera(CameraUpdate.newLatLngZoom(pts.first, 14));
+            await controller.animateCamera(
+                CameraUpdate.newLatLngZoom(pts.first, 14));
           } else {
             final bounds = _boundsFrom(pts);
-            await controller
-                .animateCamera(CameraUpdate.newLatLngBounds(bounds, 60));
+            await controller.animateCamera(
+                CameraUpdate.newLatLngBounds(bounds, 60));
           }
         } catch (_) {}
       });
@@ -179,9 +185,9 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
     final filtered = _selectedCategory == 'الكل'
         ? _ads
         : _ads
-            .where((ad) =>
-                normalizeCategory(_categoryLabel(ad)) == _selectedCategory)
-            .toList();
+        .where((ad) =>
+    normalizeCategory(_categoryLabel(ad)) == _selectedCategory)
+        .toList();
 
     final newMarkers = <Marker>{};
 
@@ -190,8 +196,8 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
         _currentPosition?.latitude, _currentPosition?.longitude)) {
       newMarkers.add(Marker(
         markerId: const MarkerId('current_location'),
-        position:
-            LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+        position: LatLng(
+            _currentPosition!.latitude, _currentPosition!.longitude),
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
         infoWindow: const InfoWindow(title: 'موقعي الحالي'),
       ));
@@ -216,8 +222,7 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
           infoWindow: InfoWindow(
             title: ad.name ?? 'إعلان',
             snippet: (ad.price != null && (ad.currency ?? '').isNotEmpty)
-                ? '${ad.price} ${ad.currency}'
-                : null,
+                ? '${ad.price} ${ad.currency}' : null,
           ),
         ));
         added++;
@@ -227,15 +232,19 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
     setState(() => _markers = newMarkers);
 
     debugPrint(
-        "Markers: filtered_by='$_selectedCategory', user_marker=${_isValidLatLng(_currentPosition?.latitude, _currentPosition?.longitude) ? 1 : 0}, ads_added=$added");
+        "Markers: filtered_by='$_selectedCategory', user_marker=${_isValidLatLng(
+            _currentPosition?.latitude, _currentPosition?.longitude)
+            ? 1
+            : 0}, ads_added=$added");
     WidgetsBinding.instance.addPostFrameCallback((_) => _fitToMarkers());
   }
 
   Future<void> _goToUserLocation() async {
     if (_isValidLatLng(
         _currentPosition?.latitude, _currentPosition?.longitude)) {
-      final controller =
-          _mapReady.isCompleted ? await _mapReady.future : _mapController!;
+      final controller = _mapReady.isCompleted
+          ? await _mapReady.future
+          : _mapController!;
       await controller.animateCamera(
         CameraUpdate.newLatLngZoom(
           LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
@@ -256,64 +265,62 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : AdsGoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: _isValidLatLng(
-                        _currentPosition?.latitude, _currentPosition?.longitude)
-                    ? LatLng(
-                        _currentPosition!.latitude, _currentPosition!.longitude)
-                    : const LatLng(15.3694, 44.1910),
-                zoom: 12,
-              ),
-              // لن نستخدم markers عند تمرير ads
-              markers: const {},
-              onMapCreated: (c) {
-                _mapController = c;
-                if (!_mapReady.isCompleted) _mapReady.complete(c);
-              },
-              ads: _ads,
-              // قائمة الإعلانات كاملة من الـ API
-              activeCategory: _selectedCategory,
-              // "الكل" أو اسم فئة معيّن
-              userLatLng: _currentPosition != null
-                  ? LatLng(
-                      _currentPosition!.latitude, _currentPosition!.longitude)
-                  : null,
-              enableViewportSearch: true,
-              // زر "بحث في هذه المنطقة"
-              enableRadiusFilter: true,
-              // "حدد نطاق البحث (كم)"
-              initialRadiusKm: 0,
-              // 0 = غير مفعّل افتراضياً
-              applyAppMapStyle: true,
+        initialCameraPosition: CameraPosition(
+          target: _isValidLatLng(
+              _currentPosition?.latitude, _currentPosition?.longitude)
+              ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
+              : const LatLng(15.3694, 44.1910),
+          zoom: 12,
+        ),
+        // لن نستخدم markers عند تمرير ads
+        markers: const {},
+        onMapCreated: (c) {
+          _mapController = c;
+          if (!_mapReady.isCompleted) _mapReady.complete(c);
+        },
+        ads: _ads,
+        // قائمة الإعلانات كاملة من الـ API
+        activeCategory: _selectedCategory,
+        // "الكل" أو اسم فئة معيّن
+        userLatLng: _currentPosition != null
+            ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
+            : null,
+        enableViewportSearch: true,
+        // زر "بحث في هذه المنطقة"
+        enableRadiusFilter: true,
+        // "حدد نطاق البحث (كم)"
+        initialRadiusKm: 0,
+        // 0 = غير مفعّل افتراضياً
+        applyAppMapStyle: true,
 
-              // (اختياري) تنسيق عرض السعر + العملة على الماركر والكروت
-              priceFormatter: (ad) {
-                final formatted = HelperUtils.formatPrice(ad.price);
-                final currency = (ad.currency ?? '').trim();
+        // (اختياري) تنسيق عرض السعر + العملة على الماركر والكروت
+        priceFormatter: (ad) {
+          final formatted = HelperUtils.formatPrice(ad.price);
+          final currency = (ad.currency ?? '').trim();
 
-                if (currency.isEmpty) {
-                  return formatted;
-                }
+          if (currency.isEmpty) {
+            return formatted;
+          }
 
-                if (formatted.isEmpty) {
-                  return currency;
-                }
+          if (formatted.isEmpty) {
+            return currency;
+          }
 
-                return '$formatted $currency';
-              },
+          return '$formatted $currency';
+        },
 
-              // (اختياري) فتح صفحة تفاصيل الإعلان
-              onOpenAdDetails: (ad) {
-                Navigator.pushNamed(
-                  context,
-                  Routes.adDetailsScreen,
-                  arguments: {'model': ad},
-                );
-              },
+        // (اختياري) فتح صفحة تفاصيل الإعلان
+        onOpenAdDetails: (ad) {
+          Navigator.pushNamed(
+            context,
+            Routes.adDetailsScreen,
+            arguments: {'model': ad},
+          );
+        },
 
-              // (اختياري) لو حاب تستدعي API بحسب الـ bounds
-              // onSearchThisArea: (bounds) { ... },
-            ),
+        // (اختياري) لو حاب تستدعي API بحسب الـ bounds
+        // onSearchThisArea: (bounds) { ... },
+      ),
 
       // ملاحظة: أزلنا الـ FloatingActionButton الخارجي،
       // لأن AdsGoogleMap تعرض أزرار جانبية (منها زر "موقعي") بشكل أنيق ومتناسق.

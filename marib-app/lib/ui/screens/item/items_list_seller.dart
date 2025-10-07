@@ -24,6 +24,9 @@ import 'package:marib/data/repositories/seller/seller_repository.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 import 'package:marib/app/routes.dart';
 
+
+
+
 class ItemsListSeller extends StatefulWidget {
   final String categoryId, categoryName;
   final List<String> categoryIds;
@@ -212,8 +215,8 @@ class ItemsListListState extends State<ItemsListSeller> {
             if (state is FetchSellersProgress) {
               final shimmerItemCount = (lastSellersCount / 2).ceil();
               return SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
+                  delegate: SliverChildBuilderDelegate(
+                        (context, index) {
                     return Row(
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
@@ -238,19 +241,19 @@ class ItemsListListState extends State<ItemsListSeller> {
                       ],
                     );
                   },
-                  childCount: shimmerItemCount,
-                ),
+                    childCount: shimmerItemCount,
+                  ),
               );
             } else if (state is FetchSellersSuccess) {
               lastSellersCount = state.sellers.length;
               if (state.sellers.isEmpty) {
                 return SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: NoDataFound(onTap: () {
+                    hasScrollBody: false,
+                    child: NoDataFound(onTap: () {
                     context
                         .read<FetchSellersCubit>()
                         .fetchSellers(accountType: 3);
-                  }),
+                }),
                 );
               }
               return buildCardList(state.sellers);
@@ -270,29 +273,29 @@ class ItemsListListState extends State<ItemsListSeller> {
 
   Widget buildCardList(List<UserModel> sellers) {
     return SliverList(
-      delegate: SliverChildBuilderDelegate(
-        (context, index) {
-          int firstItemIndex = index * 2;
-          int? secondItemIndex =
-              (firstItemIndex + 1 < sellers.length) ? firstItemIndex + 1 : null;
+        delegate: SliverChildBuilderDelegate(
+              (context, index) {
+            int firstItemIndex = index * 2;
+            int? secondItemIndex =
+            (firstItemIndex + 1 < sellers.length) ? firstItemIndex + 1 : null;
 
-          return Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
+            return Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
               Expanded(
                 child: buildSellerCard(sellers[firstItemIndex]),
               ),
-              if (secondItemIndex != null)
-                Expanded(
-                  child: buildSellerCard(sellers[secondItemIndex]),
-                )
-              else
-                Expanded(child: Container()),
-            ],
-          );
-        },
-        childCount: (sellers.length / 2).ceil(),
-      ),
+                  if (secondItemIndex != null)
+                    Expanded(
+                      child: buildSellerCard(sellers[secondItemIndex]),
+                    )
+                  else
+                    Expanded(child: Container()),
+                ],
+            );
+              },
+          childCount: (sellers.length / 2).ceil(),
+        ),
     );
   }
 
@@ -315,6 +318,9 @@ class ItemsListListState extends State<ItemsListSeller> {
       showPersonalDetails: userModel.isPersonalDetailShow,
     );
   }
+
+
+
 
   Widget buildSellerCard(UserModel seller) {
     // استخراج شعار المتجر من البيانات الإضافية

@@ -13,17 +13,22 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/custom_field.dart';
 import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 
+
+
+
 class AdvancedSearchButton extends StatefulWidget {
-  final int parentId; // ← إلزامي وغير nullable
+  final int parentId;                         // ← إلزامي وغير nullable
   final CategoryModel? initiallySelected;
   final ValueChanged<CategoryModel?> onSaved;
-  final bool initialSaved; // إظهار "محفوظ" مبدئيًا (إن وُجد تخصيص سابق)
+  final bool initialSaved;                    // إظهار "محفوظ" مبدئيًا (إن وُجد تخصيص سابق)
 
   const AdvancedSearchButton({
     Key? key,
-    required this.parentId, // ← required
+    required this.parentId,                   // ← required
     this.initiallySelected,
     required this.onSaved,
     this.initialSaved = false,
@@ -52,13 +57,12 @@ class _AdvancedSearchButtonState extends State<AdvancedSearchButton> {
 
   @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context);
-    final accent = context.color.territoryColor; // لون مطابق للثيم
-    final isSaved = _hasSaved;
-    final label = isSaved ? 'بحث متقدم • محفوظ' : 'بحث متقدم';
-    final icon = isSaved
-        ? const Icon(Icons.check_circle_rounded,
-            color: Colors.green) // ✅ أخضر عند الحفظ
+    final t        = Theme.of(context);
+    final accent   = context.color.territoryColor;     // لون مطابق للثيم
+    final isSaved  = _hasSaved;
+    final label    = isSaved ? 'بحث متقدم • محفوظ' : 'بحث متقدم';
+    final icon     = isSaved
+        ? const Icon(Icons.check_circle_rounded, color: Colors.green) // ✅ أخضر عند الحفظ
         : Icon(Icons.tune_rounded, color: t.colorScheme.onPrimary);
 
     return SizedBox(
@@ -71,13 +75,12 @@ class _AdvancedSearchButtonState extends State<AdvancedSearchButton> {
           backgroundColor: accent,
           foregroundColor: t.colorScheme.onPrimary,
           minimumSize: const Size.fromHeight(46),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         onPressed: () {
           // نعيد استخدام نفس الـ cubits الموجودة
           final cfields = context.read<FetchCustomFieldsCubit>();
-          final cats = context.read<FetchCategoryCubit>();
+          final cats    = context.read<FetchCategoryCubit>();
 
           showModalBottomSheet(
             context: context,
@@ -108,10 +111,15 @@ class _AdvancedSearchButtonState extends State<AdvancedSearchButton> {
   }
 }
 
+
+
+
+
+
+
 class _AdvancedSearchSheet extends StatefulWidget {
   final int parentId; // إلزامي
-  const _AdvancedSearchSheet({Key? key, required this.parentId})
-      : super(key: key);
+  const _AdvancedSearchSheet({Key? key, required this.parentId}) : super(key: key);
 
   @override
   State<_AdvancedSearchSheet> createState() => _AdvancedSearchSheetState();
@@ -121,8 +129,8 @@ class _AdvancedSearchSheetState extends State<_AdvancedSearchSheet> {
   // تصفّح هرمي للفئات
   final List<CategoryModel> _path = [];
   List<CategoryModel> _currentCats = [];
-  CategoryModel? _treeRoot; // جذر القسم المحدّد
-  CategoryModel? _pickedLeaf; // الورقة المختارة
+  CategoryModel? _treeRoot;          // جذر القسم المحدّد
+  CategoryModel? _pickedLeaf;        // الورقة المختارة
 
   // حالة التحميل والبحث
   bool _loadingCats = false;
@@ -132,8 +140,7 @@ class _AdvancedSearchSheetState extends State<_AdvancedSearchSheet> {
   // حقول مخصّصة
   List<CustomFieldBuilder> _moreDetailDynamicFields = [];
 
-  bool get canSave =>
-      _pickedLeaf != null || AbstractField.fieldsData.isNotEmpty;
+  bool get canSave => _pickedLeaf != null || AbstractField.fieldsData.isNotEmpty;
 
   @override
   void initState() {
@@ -272,12 +279,11 @@ class _AdvancedSearchSheetState extends State<_AdvancedSearchSheet> {
 
       // حمّل الحقول الخاصة
       try {
-        UiUtils.showSoftSnackBar(context,
-            message: 'تم اختيار: ${node.name ?? ''}');
+        UiUtils.showSoftSnackBar(context, message: 'تم اختيار: ${node.name ?? ''}');
       } catch (_) {}
       context.read<FetchCustomFieldsCubit>().fetchCustomFields(
-            categoryIds: pid.toString(),
-          );
+        categoryIds: pid.toString(),
+      );
     } else {
       await _goDeeper(node);
     }
@@ -292,7 +298,7 @@ class _AdvancedSearchSheetState extends State<_AdvancedSearchSheet> {
 
     final t = Theme.of(context);
     final double boxH =
-        ((MediaQuery.of(context).size.height) * 0.32).clamp(180.0, 360.0);
+    ((MediaQuery.of(context).size.height) * 0.32).clamp(180.0, 360.0) as double;
 
     // breadcrumbs
     final crumbs = <Widget>[
@@ -319,8 +325,8 @@ class _AdvancedSearchSheetState extends State<_AdvancedSearchSheet> {
           onTap: () async => _goToDepth(i),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 6),
-            child:
-                Text(_path[i].name ?? '-').color(context.color.territoryColor),
+            child: Text(_path[i].name ?? '-')
+                .color(context.color.territoryColor),
           ),
         ),
       ],
@@ -412,8 +418,7 @@ class _AdvancedSearchSheetState extends State<_AdvancedSearchSheet> {
                           border: Border.all(color: Colors.white, width: 1.5),
                         ),
                         padding: const EdgeInsets.all(3),
-                        child: const Icon(Icons.check,
-                            size: 14, color: Colors.white),
+                        child: const Icon(Icons.check, size: 14, color: Colors.white),
                       ),
                     ),
                 ],
@@ -441,8 +446,7 @@ class _AdvancedSearchSheetState extends State<_AdvancedSearchSheet> {
           decoration: InputDecoration(
             hintText: 'ابحث داخل الفئات...',
             isDense: true,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             prefixIcon: const Icon(Icons.search, size: 20),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
           ),
@@ -461,9 +465,7 @@ class _AdvancedSearchSheetState extends State<_AdvancedSearchSheet> {
           final fetched = context.read<FetchCustomFieldsCubit>().getFields();
           _moreDetailDynamicFields = fetched
               .where((f) =>
-                  f.type != "fileinput" &&
-                  f.type != "textbox" &&
-                  f.type != "number")
+          f.type != "fileinput" && f.type != "textbox" && f.type != "number")
               .map((f) {
             final data = f.toMap();
             if (Constant.itemFilter?.customFields != null) {
@@ -507,7 +509,7 @@ class _AdvancedSearchSheetState extends State<_AdvancedSearchSheet> {
                 .color(context.color.textDefaultColor),
             const SizedBox(height: 8),
             ..._moreDetailDynamicFields.map(
-              (f) => Padding(
+                  (f) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 9.0),
                 child: f.build(context),
               ),
@@ -527,31 +529,31 @@ class _AdvancedSearchSheetState extends State<_AdvancedSearchSheet> {
 
     // فاصل بصري أنيق
     Widget separator(String text) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Row(
-            children: [
-              Expanded(child: Divider(color: t.dividerColor)),
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 8),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: t.colorScheme.surface.withOpacity(.6),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: t.dividerColor),
-                ),
-                child: Text(
-                  text,
-                  style: t.textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: onBg.withOpacity(.8),
-                  ),
-                ),
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          Expanded(child: Divider(color: t.dividerColor)),
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+            padding:
+            const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: t.colorScheme.surface.withOpacity(.6),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: t.dividerColor),
+            ),
+            child: Text(
+              text,
+              style: t.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: onBg.withOpacity(.8),
               ),
-              Expanded(child: Divider(color: t.dividerColor)),
-            ],
+            ),
           ),
-        );
+          Expanded(child: Divider(color: t.dividerColor)),
+        ],
+      ),
+    );
 
     return FractionallySizedBox(
       heightFactor: 0.94,
@@ -585,7 +587,7 @@ class _AdvancedSearchSheetState extends State<_AdvancedSearchSheet> {
               // رأس الشيت
               Padding(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
                   children: [
                     Icon(Icons.tune_rounded, size: 20, color: onBg),
@@ -690,7 +692,7 @@ class _AdvancedSearchSheetState extends State<_AdvancedSearchSheet> {
                                 ? accent
                                 : t.disabledColor.withOpacity(.12),
                             foregroundColor:
-                                canSave ? Colors.white : t.disabledColor,
+                            canSave ? Colors.white : t.disabledColor,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -709,3 +711,4 @@ class _AdvancedSearchSheetState extends State<_AdvancedSearchSheet> {
     );
   }
 }
+

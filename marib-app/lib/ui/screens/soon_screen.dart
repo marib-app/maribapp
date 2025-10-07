@@ -9,12 +9,12 @@ import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/ui/screens/subscription/packages_list.dart';
 
 // استيراد صريح لتفادي التعارض
-import 'package:marib/utils/payment/bank_transfer_screen.dart'
-    show BankTransferScreen;
-import 'package:marib/utils/payment/bank_transfer_args.dart'
-    show BankTransferArgs;
+import 'package:marib/utils/payment/bank_transfer_screen.dart' show BankTransferScreen;
+import 'package:marib/utils/payment/bank_transfer_args.dart' show BankTransferArgs;
 import 'package:marib/utils/payment/manual_payment_service.dart'
     show ManualPaymentSubmissionResult;
+
+
 
 class SoonScreen extends StatefulWidget {
   const SoonScreen({super.key});
@@ -36,7 +36,7 @@ class SoonScreenState extends State<SoonScreen> with TickerProviderStateMixin {
     int? itemId,
   }) async {
     final token = HiveUtils.getJWT();
-    if (token.isEmpty) {
+    if (token == null || token.isEmpty) {
       // UiUtils.showSnackBarMessage(context, "سجّل الدخول أولاً");
       return;
     }
@@ -63,6 +63,7 @@ class SoonScreenState extends State<SoonScreen> with TickerProviderStateMixin {
         ? result.success
         : result == true;
     if (success) {
+
       // UiUtils.showSnackBarMessage(context, "تم رفع الإيصال وبانتظار المراجعة");
       // UiUtils.showSnackBarMessage(context, "تم رفع الإيصال وبانتظار المراجعة");
     }
@@ -104,10 +105,8 @@ class SoonScreenState extends State<SoonScreen> with TickerProviderStateMixin {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: context.color.territoryColor,
                   foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: () async {
                   final res = await Navigator.of(context).push(
@@ -123,8 +122,7 @@ class SoonScreenState extends State<SoonScreen> with TickerProviderStateMixin {
                   }
                 },
                 child: const Text("جرّب شاشة الباقات",
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
 
               const SizedBox(height: 14),
@@ -132,13 +130,10 @@ class SoonScreenState extends State<SoonScreen> with TickerProviderStateMixin {
               // اختبار التحويل البنكي مباشرةً
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      context.color.territoryColor.withOpacity(0.85),
+                  backgroundColor: context.color.territoryColor.withOpacity(0.85),
                   foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: () async {
                   const pkgId = 1;
@@ -154,8 +149,7 @@ class SoonScreenState extends State<SoonScreen> with TickerProviderStateMixin {
                   );
                 },
                 child: const Text("ادفع الآن (تحويل بنكي)",
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ],
           ),

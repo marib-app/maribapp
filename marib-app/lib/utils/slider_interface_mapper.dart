@@ -17,7 +17,10 @@ class SliderInterfaceMapper {
     'computer_section': 'computer_section',
     'other_services': 'other_services',
     'e_store': 'e_store',
+
     'services_all': 'services_all',
+
+
     'jobs': 'jobs',
     'events_offers': 'events_offers',
     'marib_lost': 'marib_lost',
@@ -54,6 +57,8 @@ class SliderInterfaceMapper {
     'computersection': 'computer_section',
     'services': 'services_all',
     'servicesall': 'services_all',
+
+
   };
 
   /// Returns the canonical interface type value expected by the backend.

@@ -10,8 +10,7 @@ import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/payment/manual_payment.dart';
 
 class WalletManualPaymentsSection extends StatelessWidget {
-  WalletManualPaymentsSection({super.key})
-      : _dateFormat = DateFormat('dd MMM yyyy');
+  WalletManualPaymentsSection({super.key}) : _dateFormat = DateFormat('dd MMM yyyy');
 
   final DateFormat _dateFormat;
 
@@ -37,8 +36,7 @@ class WalletManualPaymentsSection extends StatelessWidget {
         if (state is ManualPaymentRequestsFailure) {
           return _ErrorCard(
             message: state.error.toString(),
-            onRetry: () =>
-                context.read<ManualPaymentRequestsCubit>().loadInitial(),
+            onRetry: () => context.read<ManualPaymentRequestsCubit>().loadInitial(),
           );
         }
 
@@ -49,8 +47,7 @@ class WalletManualPaymentsSection extends StatelessWidget {
             dateFormat: _dateFormat,
             onViewAll: () => _openSheet(context),
             isRefreshing: state.isRefreshing,
-            onRefresh: () =>
-                context.read<ManualPaymentRequestsCubit>().refresh(),
+            onRefresh: () => context.read<ManualPaymentRequestsCubit>().refresh(),
           );
         }
 
@@ -96,10 +93,10 @@ class _ManualPaymentsCard extends StatelessWidget {
                   onPressed: isRefreshing ? null : onRefresh,
                   child: isRefreshing
                       ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                       : const Text('تحديث'),
                 ),
                 const SizedBox(width: 4),
@@ -122,15 +119,12 @@ class _ManualPaymentsCard extends StatelessWidget {
                   final status = payment.paymentStatus.toString().capitalize();
                   return ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text(payment.manualReference ??
-                        payment.transactionIdentifier ??
-                        '#${payment.manualPaymentId ?? ''}'),
+                    title: Text(payment.manualReference ?? payment.transactionIdentifier ?? '#${payment.manualPaymentId ?? ''}'),
                     subtitle: Text(
                       '${payment.amount.toStringAsFixed(2)} ${payment.currency.toUpperCase()} · ${dateFormat.format(payment.createdAt.toLocal())}',
                     ),
                     trailing: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: context.color.territoryColor.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(12),

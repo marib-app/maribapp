@@ -15,10 +15,10 @@ class MyServicesRepository {
     };
 
     final Map<String, dynamic> response =
-        await Api.get(url: Api.myServicesApi, queryParameters: query);
+    await Api.get(url: Api.myServicesApi, queryParameters: query);
 
     final List<Map<String, dynamic>> rawServices =
-        _extractServiceList(response);
+    _extractServiceList(response);
     final List<ClassifiedModel> services = rawServices
         .map((Map<String, dynamic> e) => ClassifiedModel.fromJson(e))
         .toList();
@@ -34,11 +34,11 @@ class MyServicesRepository {
   }
 
   Future<ClassifiedModel> updateService(
-    int serviceId,
-    Map<String, dynamic> fields,
-  ) async {
-    final Map<String, dynamic> sanitized = _sanitizeUpdatePayload(fields)
-      ..['_method'] = 'PATCH';
+      int serviceId,
+      Map<String, dynamic> fields,
+      ) async {
+    final Map<String, dynamic> sanitized =
+    _sanitizeUpdatePayload(fields)..['_method'] = 'PATCH';
 
     final Map<String, dynamic> response = await Api.post(
       url: Api.myServiceManageApi(serviceId),
@@ -104,12 +104,13 @@ class MyServicesRepository {
       }
 
       if (current is Map) {
-        final Map<String, dynamic> map = current is Map<String, dynamic>
+        final Map<String, dynamic> map =
+        current is Map<String, dynamic>
             ? current
             : current.map(
-                (dynamic key, dynamic value) =>
-                    MapEntry<String, dynamic>(key.toString(), value),
-              );
+              (dynamic key, dynamic value) =>
+              MapEntry<String, dynamic>(key.toString(), value),
+        );
 
         for (final String key in <String>{
           'data',
@@ -141,13 +142,12 @@ class MyServicesRepository {
 
     bool _looksLikeService(Map<dynamic, dynamic> map) {
       final Set<String> keys =
-          map.keys.map((dynamic e) => e.toString().toLowerCase()).toSet();
+      map.keys.map((dynamic e) => e.toString().toLowerCase()).toSet();
       if (!keys.contains('id')) return false;
       if (keys.contains('service_uid') || keys.contains('serviceuid')) {
         return true;
       }
-      if (keys.contains('service_fields') ||
-          keys.contains('service_fields_schema')) {
+      if (keys.contains('service_fields') || keys.contains('service_fields_schema')) {
         return true;
       }
       if (keys.contains('title') || keys.contains('name')) {
@@ -212,8 +212,7 @@ class MyServicesRepository {
         if (<String>{'1', 'true', 'yes', 'active', 'on'}.contains(normalized)) {
           return true;
         }
-        if (<String>{'0', 'false', 'no', 'inactive', 'off'}
-            .contains(normalized)) {
+        if (<String>{'0', 'false', 'no', 'inactive', 'off'}.contains(normalized)) {
           return false;
         }
       }

@@ -1,15 +1,31 @@
 /// 🧱 عنصر يعرض بيانات الحقل (أيقونة + اسم + قيمة + فاصل)
 
 import 'dart:async';
+import 'package:timeago/timeago.dart' as timeago;
 import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'dart:ui';
 import 'package:marib/app/routes.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+import 'package:flutter/widgets.dart';
+import 'dart:ui' as ui;
+import 'package:share_plus/share_plus.dart';
+import 'AdImagesHeader.dart';
+import 'AdInfoSection.dart';
+import 'Description.dart';
+import 'ad_details_screen.dart';
+import 'dart:math';
 import 'package:marib/data/model/custom_field/custom_field_model.dart';
 import 'package:marib/utils/color_palette_utils.dart';
 import 'package:marib/data/constants/color_catalog.dart';
+
+
 
 class CustomFieldsWidget extends StatefulWidget {
   final List<dynamic>? fields;
@@ -39,20 +55,16 @@ class _CustomFieldsWidgetState extends State<CustomFieldsWidget> {
   bool isWideField(List<dynamic>? value) {
     if (value == null || value.isEmpty) return false;
     final url = value[0].toString().toLowerCase();
-    return url.endsWith(".pdf") ||
-        url.endsWith(".png") ||
-        url.endsWith(".jpg") ||
-        url.endsWith(".jpeg") ||
-        url.endsWith(".svg");
+    return url.endsWith(".pdf") || url.endsWith(".png") ||
+        url.endsWith(".jpg") || url.endsWith(".jpeg") || url.endsWith(".svg");
   }
+
 
   @override
   Widget build(BuildContext context) {
-    final customFields =
-        widget.fields?.where((f) => f.value?.isNotEmpty == true).toList();
+    final customFields = widget.fields?.where((f) => f.value?.isNotEmpty == true).toList();
 
-    if (customFields == null || customFields.isEmpty)
-      return const SizedBox.shrink();
+    if (customFields == null || customFields.isEmpty) return const SizedBox.shrink();
 
     const defaultCount = 10;
     final hasMore = customFields.length > defaultCount;
@@ -91,6 +103,7 @@ class _CustomFieldsWidgetState extends State<CustomFieldsWidget> {
       ),
     );
   }
+
 
   /// 🧱 عنصر يعرض بيانات الحقل (أيقونة + اسم + قيمة + فاصل)
   Widget _buildFieldItem(dynamic field, double width) {
@@ -136,8 +149,7 @@ class _CustomFieldsWidgetState extends State<CustomFieldsWidget> {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: context.font.small,
-                          color:
-                              context.color.textDefaultColor.withOpacity(0.6),
+                          color: context.color.textDefaultColor.withOpacity(0.6),
                         ),
                       ),
                     ),
@@ -159,14 +171,16 @@ class _CustomFieldsWidgetState extends State<CustomFieldsWidget> {
             child: Divider(
               height: 2,
               thickness: 0.6,
-              color: Color(
-                  0xFFE0E0E0), // ✅ يكون تلقائي بتناسق شبيه مع الألوان العامة
+              color: Color(0xFFE0E0E0), // ✅ يكون تلقائي بتناسق شبيه مع الألوان العامة
             ),
           ),
         ],
       ),
     );
   }
+
+
+
 
   /// 🔘 بناء زر "عرض المزيد" إذا كان هناك حقول إضافية
   Widget _buildMoreButton(bool hasMore, int extraCount) {
@@ -197,18 +211,17 @@ class _CustomFieldsWidgetState extends State<CustomFieldsWidget> {
         },
         child: loadingExtra
             ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        )
             : Text("عرض المزيد ($extraCount)"),
       ),
     );
   }
 
   /// 🧱 بناء قائمة الحقول
-  List<Widget> _buildFieldsList(
-      BoxConstraints constraints, List<dynamic> customFields) {
+  List<Widget> _buildFieldsList(BoxConstraints constraints, List<dynamic> customFields) {
     const int defaultCount = 10;
 
     // 🧱 التقسيم بين الحقول الأساسية والإضافية
@@ -219,8 +232,7 @@ class _CustomFieldsWidgetState extends State<CustomFieldsWidget> {
     final totalList = [
       ...base,
       if (showAll && !loadingExtra) ...extra,
-      if (loadingExtra)
-        ...List.filled(extra.length, null), // ➕ عناصر وهمية للشيمر
+      if (loadingExtra) ...List.filled(extra.length, null), // ➕ عناصر وهمية للشيمر
     ];
 
     // 🌓 تحديد الثيم الحالي لاختيار ألوان الشيمر
@@ -230,14 +242,13 @@ class _CustomFieldsWidgetState extends State<CustomFieldsWidget> {
 
     return List.generate(
       showInitialLoading ? defaultCount : totalList.length,
-      (index) {
+          (index) {
         final isShimmer = (showInitialLoading && index < defaultCount) ||
             (loadingExtra && index >= defaultCount);
 
         final field = isShimmer ? null : totalList[index];
         final wide = field != null && isWideField(field.value);
-        final width =
-            wide ? constraints.maxWidth : (constraints.maxWidth - 26) / 2;
+        final width = wide ? constraints.maxWidth : (constraints.maxWidth - 26) / 2;
 
         // ✨ عنصر shimmer مطابق للمحتوى الحقيقي
         if (isShimmer) {
@@ -292,8 +303,7 @@ class _CustomFieldsWidgetState extends State<CustomFieldsWidget> {
                   Divider(
                     height: 2,
                     thickness: 0.6,
-                    color:
-                        isDark ? Colors.grey.shade800 : const Color(0xFFE0E0E0),
+                    color: isDark ? Colors.grey.shade800 : const Color(0xFFE0E0E0),
                   ),
                 ],
               ),
@@ -307,187 +317,198 @@ class _CustomFieldsWidgetState extends State<CustomFieldsWidget> {
     );
   }
 
+
+
+
+
+
 //                             الحقول في صفحة الاعلان
 
-  /// ✅ تعرض محتوى الحقول (نص، صورة، PDF...) بتصميم متجاوب ومرن
 
-  Widget valueContent(
+/// ✅ تعرض محتوى الحقول (نص، صورة، PDF...) بتصميم متجاوب ومرن
+
+Widget valueContent(
     List<dynamic>? value,
     BuildContext context, {
-    // ⚙️ إعدادات قابلة للتخصيص
-    CustomFieldModel? field,
-    Color? buttonColor,
-    Color? iconColor,
-    Color? textColor,
-    double? fontSize,
-    double? iconSize,
-    double? borderRadius,
-    EdgeInsetsGeometry? padding,
-    void Function()? onTapFallback,
-    bool iconAtEnd = false,
-    bool hideIcon = false,
-  }) {
-    if (value == null || value.isEmpty) {
-      return Text("")
-          .color(context.color.textDefaultColor)
-          .size(fontSize ?? context.font.small);
-    }
+      // ⚙️ إعدادات قابلة للتخصيص
+      CustomFieldModel? field,
 
-    final width = MediaQuery.of(context).size.width;
-    final isSmall = width < 350;
+      Color? buttonColor,
+      Color? iconColor,
+      Color? textColor,
+      double? fontSize,
+      double? iconSize,
+      double? borderRadius,
+      EdgeInsetsGeometry? padding,
+      void Function()? onTapFallback,
+      bool iconAtEnd = false,
+      bool hideIcon = false,
+    }) {
+  if (value == null || value.isEmpty) {
+    return Text("")
+        .color(context.color.textDefaultColor)
+        .size(fontSize ?? context.font.small);
+  }
 
-    final double responsiveFont = fontSize ?? (isSmall ? 11 : 13);
-    final double responsiveIcon = iconSize ?? (isSmall ? 14 : 18);
-    final double responsiveRadius = borderRadius ?? 6;
-    final EdgeInsetsGeometry responsivePadding =
-        padding ?? EdgeInsets.symmetric(horizontal: 10, vertical: 6);
+  final width = MediaQuery.of(context).size.width;
+  final isSmall = width < 350;
 
-    final List<String> sanitizedValues = value
-        .map((e) => (e ?? '').toString().trim())
-        .where((element) => element.isNotEmpty)
+  final double responsiveFont = fontSize ?? (isSmall ? 11 : 13);
+  final double responsiveIcon = iconSize ?? (isSmall ? 14 : 18);
+  final double responsiveRadius = borderRadius ?? 6;
+  final EdgeInsetsGeometry responsivePadding =
+      padding ?? EdgeInsets.symmetric(horizontal: 10, vertical: 6);
+
+
+
+  final List<String> sanitizedValues = value
+      .map((e) => (e ?? '').toString().trim())
+      .where((element) => element.isNotEmpty)
+      .toList();
+
+  final bool isColorField = field?.type?.toLowerCase() == 'color';
+
+  if (isColorField) {
+    final hexRegExp = RegExp(r'^[0-9A-F]{6}$');
+    final hexValues = sanitizedValues
+        .map(ColorCatalog.sanitizeHex)
+        .where((hex) => hexRegExp.hasMatch(hex))
+        .toSet()
         .toList();
 
-    final bool isColorField = field?.type?.toLowerCase() == 'color';
+    if (hexValues.isEmpty) {
 
-    if (isColorField) {
-      final hexRegExp = RegExp(r'^[0-9A-F]{6}$');
-      final hexValues = sanitizedValues
-          .map(ColorCatalog.sanitizeHex)
-          .where((hex) => hexRegExp.hasMatch(hex))
-          .toSet()
-          .toList();
-
-      if (hexValues.isEmpty) {
-        return Text("")
-            .color(textColor ?? context.color.textDefaultColor)
-            .size(responsiveFont);
-      }
-
-      final borderColor = context.color.borderColor.withOpacity(0.5);
-      final chipBackground = context.color.secondaryColor;
-      final effectiveTextColor = textColor ?? context.color.textDefaultColor;
-
-      return Wrap(
-        spacing: 8,
-        runSpacing: 6,
-        children: hexValues.map((normalized) {
-          final swatchColor = ColorPaletteHelper.tryParseColor(normalized);
-          final label = ColorCatalog.nameForHex(normalized, context: context);
-
-          return Container(
-            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: chipBackground,
-              borderRadius: BorderRadius.circular(responsiveRadius),
-              border: Border.all(color: borderColor, width: 0.9),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: swatchColor ?? Colors.transparent,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: swatchColor == null
-                          ? borderColor
-                          : Colors.black.withOpacity(0.18),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(label).size(responsiveFont).color(effectiveTextColor),
-              ],
-            ),
-          );
-        }).toList(),
-      );
+      return Text("")
+          .color(textColor ?? context.color.textDefaultColor)
+          .size(responsiveFont);
     }
 
-    String url = value[0].toString().toLowerCase();
-    bool isImage = url.endsWith(".png") ||
-        url.endsWith(".jpg") ||
-        url.endsWith(".jpeg") ||
-        url.endsWith(".svg");
-    bool isPdf = url.endsWith(".pdf");
+    final borderColor = context.color.borderColor.withOpacity(0.5);
+    final chipBackground = context.color.secondaryColor;
+    final effectiveTextColor = textColor ?? context.color.textDefaultColor;
 
-    /// 🔘 زر ملف/صورة متجاوب
+    return Wrap(
+      spacing: 8,
+      runSpacing: 6,
+      children: hexValues.map((normalized) {
 
-    Widget fileButton({
-      required String label,
-      required IconData? icon,
-      required VoidCallback onTap,
-    }) {
-      return InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(responsiveRadius),
-        child: Container(
-          padding: responsivePadding,
+        final swatchColor = ColorPaletteHelper.tryParseColor(normalized);
+        final label = ColorCatalog.nameForHex(normalized, context: context);
+
+        return Container(
+          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: buttonColor ?? context.color.territoryColor.withOpacity(0.1),
+            color: chipBackground,
             borderRadius: BorderRadius.circular(responsiveRadius),
+            border: Border.all(color: borderColor, width: 0.9),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (!iconAtEnd && !hideIcon) ...[
-                Icon(icon,
-                    size: responsiveIcon,
-                    color: iconColor ?? context.color.territoryColor),
-                //       const SizedBox(width: 5),
-              ],
+              Container(
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: swatchColor ?? Colors.transparent,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: swatchColor == null
+                        ? borderColor
+                        : Colors.black.withOpacity(0.18),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
               Text(label)
                   .size(responsiveFont)
-                  .color(textColor ?? context.color.textColorDark)
-                  .bold(),
-              if (iconAtEnd && !hideIcon) ...[
-                const SizedBox(width: 5),
-                Icon(icon,
-                    size: responsiveIcon,
-                    color: iconColor ?? context.color.territoryColor),
-              ]
+                  .color(effectiveTextColor),
             ],
           ),
+        );
+      }).toList(),
+    );
+  }
+
+  String url = value[0].toString().toLowerCase();
+  bool isImage = url.endsWith(".png") || url.endsWith(".jpg") || url.endsWith(".jpeg") || url.endsWith(".svg");
+  bool isPdf = url.endsWith(".pdf");
+
+
+
+  /// 🔘 زر ملف/صورة متجاوب
+
+  Widget fileButton({
+    required String label,
+    required IconData? icon,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(responsiveRadius),
+      child: Container(
+        padding: responsivePadding,
+        decoration: BoxDecoration(
+          color: buttonColor ?? context.color.territoryColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(responsiveRadius),
         ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!iconAtEnd && !hideIcon) ...[
+              Icon(icon, size: responsiveIcon, color: iconColor ?? context.color.territoryColor),
+              //       const SizedBox(width: 5),
+            ],
+            Text(label)
+                .size(responsiveFont)
+                .color(textColor ?? context.color.textColorDark)
+                .bold(),
+            if (iconAtEnd && !hideIcon) ...[
+              const SizedBox(width: 5),
+              Icon(icon, size: responsiveIcon, color: iconColor ?? context.color.territoryColor),
+            ]
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ✅ ملف PDF
+  if (url.startsWith("http") || url.startsWith("https")) {
+    if (isPdf) {
+      return fileButton(
+        label: "📄 افتح الملف",
+        icon: null,
+        onTap: () {
+          Navigator.pushNamed(context, Routes.pdfViewerScreen, arguments: {"url": value[0]});
+        },
       );
     }
-
-    // ✅ ملف PDF
-    if (url.startsWith("http") || url.startsWith("https")) {
-      if (isPdf) {
-        return fileButton(
-          label: "📄 افتح الملف",
-          icon: null,
-          onTap: () {
-            Navigator.pushNamed(context, Routes.pdfViewerScreen,
-                arguments: {"url": value[0]});
-          },
-        );
-      }
-      // ✅ صورة
-      else if (isImage) {
-        return fileButton(
-          label: "📷 عرض الصورة",
-          icon: null,
-          onTap: () {
-            UiUtils.showFullScreenImage(context,
-                provider: NetworkImage(value[0]));
-          },
-        );
-      }
+    // ✅ صورة
+    else if (isImage) {
+      return fileButton(
+        label: "📷 عرض الصورة",
+        icon: null,
+        onTap: () {
+          UiUtils.showFullScreenImage(context, provider: NetworkImage(value[0]));
+        },
+      );
     }
-
-    // ✅ نص عادي
-    return Text(
-      sanitizedValues.isEmpty
-          ? value.length == 1
-              ? value[0].toString()
-              : value.join(' , ')
-          : sanitizedValues.length == 1
-              ? sanitizedValues.first
-              : sanitizedValues.join(' , '),
-    ).color(textColor ?? context.color.textDefaultColor).size(responsiveFont);
   }
+
+  // ✅ نص عادي
+  return Text(
+    sanitizedValues.isEmpty
+        ? value.length == 1
+        ? value[0].toString()
+        : value.join(' , ')
+        : sanitizedValues.length == 1
+        ? sanitizedValues.first
+        : sanitizedValues.join(' , '),
+
+  ).color(textColor ?? context.color.textDefaultColor).size(responsiveFont);
 }
+}
+
+
+
+

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:marib/utils/app_icon.dart';
 
-import 'package:marib/ui/screens/cart/components/delivery_and_payment/deposit_summary_card.dart';
-import 'package:marib/ui/screens/cart/components/delivery_and_payment/shared_widgets.dart';
+import 'deposit_summary_card.dart';
+import 'shared_widgets.dart';
 
 /// تبويب مخصص لعرض تفاصيل الوديعة وسياسة الإرجاع التابعة للقسم الحالي.
 class CartReturnAndDepositTab extends StatelessWidget {
@@ -37,19 +37,17 @@ class CartReturnAndDepositTab extends StatelessWidget {
   bool get _hasDepositContent {
     final Map<String, dynamic>? data = depositInfo;
     if (data == null) return false;
-    final dynamic amount =
-        data['amountDueNow'] ?? data['effectiveAmountDueDisplay'];
+    final dynamic amount = data['amountDueNow'] ?? data['effectiveAmountDueDisplay'];
     final dynamic total = data['totalAmount'] ?? data['effectiveTotalDisplay'];
     final dynamic percent = data['percent'];
     final dynamic goodsValue = data['goodsValue'];
-    final dynamic remaining =
-        data['remainingBalance'] ?? data['effectiveRemainingDisplay'];
+    final dynamic remaining = data['remainingBalance'] ?? data['effectiveRemainingDisplay'];
     final dynamic includesShipping = data['includesShipping'];
     final dynamic message = data['message'];
-    final bool hasToggle =
-        data['toggleAllowed'] == true || data['toggleRequired'] == true;
+    final bool hasToggle = data['toggleAllowed'] == true || data['toggleRequired'] == true;
     return _isNonEmptyString(amount) ||
         _isNonEmptyString(total) ||
+
         _isNonEmptyString(percent) ||
         _isNonEmptyString(goodsValue) ||
         _isNonEmptyString(remaining) ||
@@ -89,22 +87,22 @@ class CartReturnAndDepositTab extends StatelessWidget {
     final Widget body = (!_hasContent)
         ? buildLoadingSkeleton()
         : Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (_hasDepositContent)
-                  DepositSummaryCard(
-                    data: depositInfo,
-                    onToggle: onToggleDeposit,
-                  ),
-                if (_hasDepositContent && _hasReturnPolicy)
-                  const SizedBox(height: 12),
-                if (_hasReturnPolicy)
-                  buildReturnPolicyCard(context, returnPolicyText!),
-              ],
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_hasDepositContent)
+            DepositSummaryCard(
+              data: depositInfo,
+              onToggle: onToggleDeposit,
             ),
-          );
+          if (_hasDepositContent && _hasReturnPolicy)
+            const SizedBox(height: 12),
+          if (_hasReturnPolicy)
+            buildReturnPolicyCard(context, returnPolicyText!),
+        ],
+      ),
+    );
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -135,7 +133,7 @@ class CartReturnAndDepositTab extends StatelessWidget {
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
           childrenPadding:
-              const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+          const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
           children: [body],
         ),
       ),

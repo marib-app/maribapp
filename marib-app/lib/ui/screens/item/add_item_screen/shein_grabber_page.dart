@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
+
 class SheinGrabberPage extends StatefulWidget {
   final String startUrl;
   const SheinGrabberPage({super.key, required this.startUrl});
@@ -250,6 +251,7 @@ class _SheinGrabberPageState extends State<SheinGrabberPage> {
 })();
 """;
 
+
   Future<void> _extract() async {
     if (_ctrl == null || _extracting) return;
     setState(() => _extracting = true);
@@ -268,6 +270,7 @@ class _SheinGrabberPageState extends State<SheinGrabberPage> {
       if (mounted) setState(() => _extracting = false);
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -308,17 +311,16 @@ class _SheinGrabberPageState extends State<SheinGrabberPage> {
       // ↓↓↓ زر الاستخراج يظهر فقط عند اكتمال التحميل
       floatingActionButton: (_progress >= 1.0)
           ? FloatingActionButton.extended(
-              onPressed: _extracting ? null : _extract,
-              icon: _extracting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Icon(Icons.download_for_offline),
-              label: Text(_extracting ? 'جاري الاستخراج…' : 'استخراج'),
-            )
+        onPressed: _extracting ? null : _extract,
+        icon: _extracting
+            ? const SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+        )
+            : const Icon(Icons.download_for_offline),
+        label: Text(_extracting ? 'جاري الاستخراج…' : 'استخراج'),
+      )
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );

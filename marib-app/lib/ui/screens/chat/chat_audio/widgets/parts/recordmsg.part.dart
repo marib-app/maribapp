@@ -39,9 +39,11 @@ class _RecordMessageState extends State<RecordMessage> {
     audioPlayer.onPlayerStateChanged.listen((PlayerState event) {
       isPlaying = event == PlayerState.playing;
 
+
       if (event != PlayerState.playing) {
         isLoading = false;
       }
+
 
       setState(() {});
     });
@@ -49,6 +51,7 @@ class _RecordMessageState extends State<RecordMessage> {
       position = event.inSeconds;
       setState(() {});
     });
+
 
     audioPlayer.onPlayerComplete.listen((event) {
       position = durationChanged;
@@ -77,8 +80,10 @@ class _RecordMessageState extends State<RecordMessage> {
 
   @override
   Widget build(BuildContext context) {
-    final double maxSliderValue =
-        durationChanged == 0 ? 1 : durationChanged.toDouble();
+
+    final double maxSliderValue = durationChanged == 0
+        ? 1
+        : durationChanged.toDouble();
     final double sliderValue = position
         .clamp(0, durationChanged == 0 ? position : durationChanged)
         .toDouble();
@@ -87,48 +92,48 @@ class _RecordMessageState extends State<RecordMessage> {
       mainAxisSize: MainAxisSize.max,
       children: [
         GestureDetector(
-            onTap: () async {
-              if (!isPlaying) {
-                setState(() {
-                  isLoading = true;
-                });
-                final bool isRemote = widget.url.startsWith('http') ||
-                    widget.url.startsWith('https');
-                final Source source = isRemote
-                    ? UrlSource(widget.url)
-                    : DeviceFileSource(widget.url);
-                try {
-                  await audioPlayer.play(source);
-                } catch (_) {
-                  if (mounted) {
-                    setState(() {
-                      isLoading = false;
-                    });
-                  }
-                  audioPlayer.stop();
+        onTap: () async {
+      if (!isPlaying) {
+        setState(() {
+          isLoading = true;
+        });
+        final bool isRemote =
+            widget.url.startsWith('http') || widget.url.startsWith('https');
+        final Source source =
+        isRemote ? UrlSource(widget.url) : DeviceFileSource(widget.url);
+        try {
+          await audioPlayer.play(source);
+        } catch (_) {
+          if (mounted) {
+            setState(() {
+              isLoading = false;
+            });
+
+
                 }
-              } else {
-                await audioPlayer.stop();
+                audioPlayer.stop();
               }
-            },
+        } else {
+          await audioPlayer.stop();
+          }
+          },
             child: isLoading
                 ? SizedBox(
-                    height: 24,
-                    width: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                          widget.isSentByMe
-                              ? context.color.primaryColor
-                              : context.color.territoryColor),
-                    ),
-                  )
+              height: 24,
+              width: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(widget.isSentByMe
+                    ? context.color.primaryColor
+                    : context.color.territoryColor),
+              ),
+            )
                 : Icon(
-                    isPlaying ? Icons.pause : Icons.play_arrow,
-                    color: widget.isSentByMe
-                        ? context.color.primaryColor
-                        : context.color.territoryColor,
-                  )),
+              isPlaying ? Icons.pause : Icons.play_arrow,
+              color: widget.isSentByMe
+                  ? context.color.primaryColor
+                  : context.color.territoryColor,
+            )),
         const SizedBox(width: 8),
         Expanded(
           child: Slider(
@@ -142,13 +147,15 @@ class _RecordMessageState extends State<RecordMessage> {
             onChanged: durationChanged == 0
                 ? null
                 : (v) {
-                    audioPlayer.seek(Duration(seconds: v.toInt()));
-                    position = v.toInt();
-                    setState(() {});
-                  },
+              audioPlayer.seek(Duration(seconds: v.toInt()));
+              position = v.toInt();
+              setState(() {});
+            },
             min: 0,
             max: maxSliderValue,
           ),
+
+
         ),
         const SizedBox(width: 8),
         Text(

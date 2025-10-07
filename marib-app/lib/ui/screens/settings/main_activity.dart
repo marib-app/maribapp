@@ -35,12 +35,13 @@ import 'package:marib/utils/errorFilter.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
 // import 'package:marib/utils/hive_utils.dart'; // ← غير مستخدم الآن
+import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/svg/svg_edit.dart';
 
 // الواجهة (ملف منفصل للعرض فقط)
-import 'package:marib/ui/screens/settings/main_activity_ui.dart'
-    show MainActivityUI, MainTab;
+import 'main_activity_ui.dart' show MainActivityUI, MainTab;
+
 
 // متغيّرات مشتركة كما كانت
 List<ItemModel> myItemlist = [];
@@ -81,7 +82,7 @@ AccountType _resolveAccountType() {
 class MainActivity extends StatefulWidget {
   final String from;
   static final GlobalKey<MainActivityState> globalKey =
-      GlobalKey<MainActivityState>();
+  GlobalKey<MainActivityState>();
 
   MainActivity({Key? key, required this.from}) : super(key: globalKey);
 
@@ -96,8 +97,7 @@ class MainActivity extends StatefulWidget {
   }
 }
 
-class MainActivityState extends State<MainActivity>
-    with TickerProviderStateMixin {
+class MainActivityState extends State<MainActivity> with TickerProviderStateMixin {
   final PageController pageCntrlr = PageController(initialPage: 0);
   int currtab = 0;
   static final FirebaseMessaging firebaseMessaging = FirebaseMessaging.instance;
@@ -119,6 +119,7 @@ class MainActivityState extends State<MainActivity>
 
   final List<Widget?> _pages = List<Widget?>.filled(4, null, growable: false);
 
+
   @override
   void initState() {
     super.initState();
@@ -135,13 +136,10 @@ class MainActivityState extends State<MainActivity>
     });
 
     final settings = context.read<FetchSystemSettingsCubit>();
-    if (!const bool.fromEnvironment("force-disable-demo-mode",
-        defaultValue: false)) {
-      Constant.isDemoModeOn =
-          settings.getSetting(SystemSetting.demoMode) ?? false;
+    if (!const bool.fromEnvironment("force-disable-demo-mode", defaultValue: false)) {
+      Constant.isDemoModeOn = settings.getSetting(SystemSetting.demoMode) ?? false;
     }
-    final numberWithSuffix =
-        settings.getSetting(SystemSetting.numberWithSuffix);
+    final numberWithSuffix = settings.getSetting(SystemSetting.numberWithSuffix);
     Constant.isNumberWithSuffix = numberWithSuffix == "1";
 
     versionCheck(settings);
@@ -303,6 +301,7 @@ class MainActivityState extends State<MainActivity>
     }
   }
 
+
   Widget _buildPage(int index) {
     if (index < 0 || index >= _pages.length) {
       throw RangeError.index(index, _pages, '_pages');
@@ -340,6 +339,9 @@ class MainActivityState extends State<MainActivity>
     return page;
   }
 
+
+
+
   // تنقّلات مخصّصة حسب نوع الحساب
 
   void _refreshListingLimit() {
@@ -351,6 +353,7 @@ class MainActivityState extends State<MainActivity>
         .fetchUserPackageLimit(packageType: "item_listing");
   }
 
+
   void _goRealEstate() {
     Navigator.pushNamed(
       context,
@@ -361,8 +364,11 @@ class MainActivityState extends State<MainActivity>
         "categoryIds": ["1"],
         "interfaceType": "real_estate_services",
       },
+
     ).then((_) => _refreshListingLimit());
+
   }
+
 
   void _goPublicAds() {
     Navigator.pushNamed(
@@ -373,30 +379,35 @@ class MainActivityState extends State<MainActivity>
         'catName': "publicAds".translate(context),
         "interfaceType": "public_ads",
       },
+
     ).then((_) => _refreshListingLimit());
+
+
   }
 
   void _goAllCategoriesTemporarily() {
     // TODO: لاحقًا اربطها بتقييد أقسام الحسابات التجارية فقط
     Navigator.pushNamed(context, Routes.selectCategoryScreen,
-            arguments: const <String, dynamic>{})
+        arguments: const <String, dynamic>{})
         .then((_) => _refreshListingLimit());
+
+
   }
 
   // زر الإضافة العائم (يمرّر للواجهة)
   Widget _buildCenterAddButton() {
     final Widget iconChild = _addBusy
         ? const SizedBox(
-            width: 26,
-            height: 26,
-            child: CircularProgressIndicator(strokeWidth: 2.6),
-          )
+      width: 26,
+      height: 26,
+      child: CircularProgressIndicator(strokeWidth: 2.6),
+    )
         : (svgLoaded && _cachedFabSvg != null
-            ? Transform.rotate(
-                angle: 11.0,
-                child: SvgPicture.string(_cachedFabSvg!),
-              )
-            : const Icon(Icons.add, size: 32, color: Colors.white));
+        ? Transform.rotate(
+      angle: 11.0,
+      child: SvgPicture.string(_cachedFabSvg!),
+    )
+        : const Icon(Icons.add, size: 32, color: Colors.white));
 
     return Semantics(
       button: true,
@@ -411,17 +422,18 @@ class MainActivityState extends State<MainActivity>
         onPressed: _addBusy
             ? null
             : () {
-                HapticFeedback.selectionClick();
-                UiUtils.checkUser(
-                  onNotGuest: () {
-                    _pendingListingNavigation = true;
-                    context
-                        .read<FetchUserPackageLimitCubit>()
-                        .fetchUserPackageLimit(packageType: "item_listing");
-                  },
-                  context: context,
-                );
-              },
+
+          HapticFeedback.selectionClick();
+          UiUtils.checkUser(
+            onNotGuest: () {
+              _pendingListingNavigation = true;
+              context
+                  .read<FetchUserPackageLimitCubit>()
+                  .fetchUserPackageLimit(packageType: "item_listing");
+            },
+            context: context,
+          );
+        },
 
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 180),
@@ -442,8 +454,7 @@ class MainActivityState extends State<MainActivity>
         context: context,
         statusBarColor: colors.primaryColor,
       ),
-      child:
-          BlocListener<FetchUserPackageLimitCubit, FetchUserPackageLimitState>(
+      child: BlocListener<FetchUserPackageLimitCubit, FetchUserPackageLimitState>(
         listener: (context, state) {
           if (!mounted) return;
 
@@ -455,6 +466,7 @@ class MainActivityState extends State<MainActivity>
           }
 
           if (state is FetchUserPackageLimitInSuccess) {
+
             final summary = UiUtils.subscriptionLimitSummary(
               context,
               state.limit,
@@ -468,6 +480,8 @@ class MainActivityState extends State<MainActivity>
             }
 
             if (state.canCreateListing) {
+
+
               if (_pendingListingNavigation) {
                 final type = _resolveAccountType();
                 switch (type) {
@@ -482,6 +496,9 @@ class MainActivityState extends State<MainActivity>
                     break;
                 }
                 _pendingListingNavigation = false;
+
+
+
               }
             } else {
               _pendingListingNavigation = false;
@@ -507,8 +524,8 @@ class MainActivityState extends State<MainActivity>
             if (HelperUtils.isConnectivityOrServerError(rawMessage)) {
               final lowerCaseMessage = rawMessage.toLowerCase();
               final message = rawMessage.isNotEmpty &&
-                      !lowerCaseMessage.contains('server-not-available') &&
-                      !lowerCaseMessage.contains('server not available')
+                  !lowerCaseMessage.contains('server-not-available') &&
+                  !lowerCaseMessage.contains('server not available')
                   ? rawMessage
                   : "somethingWentWrong".translate(context);
 
@@ -526,13 +543,17 @@ class MainActivityState extends State<MainActivity>
             }
 
             final readableMessage =
-                HelperUtils.readableErrorMessage(context, rawMessage);
+            HelperUtils.readableErrorMessage(context, rawMessage);
+
+
 
             HelperUtils.showSnackBarMessage(
               context,
               readableMessage,
               type: MessageType.error,
             );
+
+
           }
         },
         child: PopScope(

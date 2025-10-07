@@ -112,7 +112,7 @@ class NearbyLocationScreenState extends State<NearbyLocationScreen>
     setState(() {});
   }
 
-  Future<void> preFillLocationWhileEdit() async {
+  preFillLocationWhileEdit() async {
     latitude = HiveUtils.getLatitude();
     longitude = HiveUtils.getLongitude();
     if (latitude != "" &&
@@ -181,7 +181,7 @@ class NearbyLocationScreenState extends State<NearbyLocationScreen>
     setState(() {});
   }
 
-  Future<void> getLocationFromLatitudeLongitude({LatLng? latLng}) async {
+  getLocationFromLatitudeLongitude({LatLng? latLng}) async {
     try {
       Placemark? placeMark = (await placemarkFromCoordinates(
               latLng?.latitude ?? _cameraPosition!.target.latitude,

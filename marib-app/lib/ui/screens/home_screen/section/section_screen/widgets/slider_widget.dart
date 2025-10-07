@@ -6,8 +6,10 @@ import 'package:shimmer/shimmer.dart';
 import 'package:marib/data/cubits/category/fetch_category_cubit.dart';
 import 'package:marib/data/cubits/item/fetch_item_from_category_cubit.dart';
 
+
 const _shimmerBaseColor = Color(0xFFB8BEC9);
 const _shimmerHighlightColor = Color(0xFFE4E8F0);
+
 
 class PcSliderWidget extends StatefulWidget {
   final int parentId;
@@ -62,14 +64,12 @@ class _PcSliderWidgetState extends State<PcSliderWidget> {
       _lastCenteredId = null;
     }
 
-    if (widget.selectedCategoryId != null &&
-        widget.selectedCategoryId != _selectedId) {
+    if (widget.selectedCategoryId != null && widget.selectedCategoryId != _selectedId) {
       setState(() {
         _selectedId = widget.selectedCategoryId!;
         _lastCenteredId = null;
       });
-      WidgetsBinding.instance
-          .addPostFrameCallback((_) => _centerCurrent(force: true));
+      WidgetsBinding.instance.addPostFrameCallback((_) => _centerCurrent(force: true));
     }
   }
 
@@ -96,9 +96,9 @@ class _PcSliderWidgetState extends State<PcSliderWidget> {
 
     if (id != 0) {
       context.read<FetchItemFromCategoryCubit>().fetchItemFromCategory(
-            categoryId: id,
-            search: "",
-          );
+        categoryId: id,
+        search: "",
+      );
     }
   }
 
@@ -156,11 +156,9 @@ class _PcSliderWidgetState extends State<PcSliderWidget> {
                   child: ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: _kListHPad),
                     scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(
-                        parent: AlwaysScrollableScrollPhysics()),
+                    physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                     itemCount: _display.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(width: _kChipSpacing),
+                    separatorBuilder: (_, __) => const SizedBox(width: _kChipSpacing),
                     itemBuilder: (context, index) {
                       final m = _display[index];
                       final id = m['id'] as int;
@@ -259,8 +257,7 @@ class _PcSliderWidgetState extends State<PcSliderWidget> {
                     ),
                   ),
                 ),
-                separatorBuilder: (_, __) =>
-                    const SizedBox(width: _kChipSpacing),
+                separatorBuilder: (_, __) => const SizedBox(width: _kChipSpacing),
                 itemCount: 10,
               ),
             ),
@@ -306,9 +303,9 @@ class _PcSliderWidgetState extends State<PcSliderWidget> {
   }
 
   List<Map<String, dynamic>> _buildDisplayList(
-    FetchCategorySuccess state,
-    int parentId,
-  ) {
+      FetchCategorySuccess state,
+      int parentId,
+      ) {
     try {
       final parent = state.categories.firstWhere((c) => c.id == parentId);
       final children = parent.children ?? const [];
@@ -340,27 +337,27 @@ Widget _chip({
 
   final decoration = fancySelection && isSelected
       ? BoxDecoration(
-          color: primary.withOpacity(.08),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: primary.withOpacity(.65), width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: primary.withOpacity(.12),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        )
+    color: primary.withOpacity(.08),
+    borderRadius: BorderRadius.circular(18),
+    border: Border.all(color: primary.withOpacity(.65), width: 1),
+    boxShadow: [
+      BoxShadow(
+        color: primary.withOpacity(.12),
+        blurRadius: 6,
+        offset: const Offset(0, 2),
+      ),
+    ],
+  )
       : BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: isSelected
-                ? primary.withOpacity(.40)
-                : theme.dividerColor.withOpacity(.15),
-            width: 1,
-          ),
-        );
+    color: bg,
+    borderRadius: BorderRadius.circular(18),
+    border: Border.all(
+      color: isSelected
+          ? primary.withOpacity(.40)
+          : theme.dividerColor.withOpacity(.15),
+      width: 1,
+    ),
+  );
 
   return Semantics(
     button: true,

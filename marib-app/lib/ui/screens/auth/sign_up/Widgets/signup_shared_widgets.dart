@@ -45,7 +45,7 @@ class RealEstateLogoPicker extends StatelessWidget {
     return Column(
       children: [
         // العنوان + (اختياري)
-        Text("$title (${"optional".translate(context)})")
+        Text("$title (${ "optional".translate(context) })")
             .size(context.font.normal)
             .color(context.color.textDefaultColor),
         const SizedBox(height: 8),
@@ -59,22 +59,17 @@ class RealEstateLogoPicker extends StatelessWidget {
             decoration: BoxDecoration(
               color: context.color.secondaryColor,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                  color: context.color.borderColor.darken(10), width: 1.5),
+              border: Border.all(color: context.color.borderColor.darken(10), width: 1.5),
               boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2)),
+                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2)),
               ],
             ),
             child: image != null
                 ? ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Image.file(image!, fit: BoxFit.cover),
-                  )
-                : Icon(Icons.add_photo_alternate_outlined,
-                    size: 50, color: context.color.territoryColor),
+              borderRadius: BorderRadius.circular(16),
+              child: Image.file(image!, fit: BoxFit.cover),
+            )
+                : Icon(Icons.add_photo_alternate_outlined, size: 50, color: context.color.territoryColor),
           ),
         ),
 
@@ -84,9 +79,7 @@ class RealEstateLogoPicker extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
               hint!,
-              style: TextStyle(
-                  fontSize: context.font.small,
-                  color: context.color.textColorDark.withOpacity(0.7)),
+              style: TextStyle(fontSize: context.font.small, color: context.color.textColorDark.withOpacity(0.7)),
               textAlign: TextAlign.center,
             ),
           ),
@@ -117,10 +110,11 @@ class BusinessLogoPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text("$title (${"optional".translate(context)})")
+        Text("$title (${ "optional".translate(context) })")
             .size(context.font.normal)
             .color(context.color.textDefaultColor),
         const SizedBox(height: 8),
+
         GestureDetector(
           onTap: onTap,
           child: Container(
@@ -129,32 +123,26 @@ class BusinessLogoPicker extends StatelessWidget {
             decoration: BoxDecoration(
               color: context.color.secondaryColor,
               borderRadius: BorderRadius.circular(20), // زوايا أكبر
-              border: Border.all(
-                  color: context.color.borderColor.darken(10), width: 1.5),
+              border: Border.all(color: context.color.borderColor.darken(10), width: 1.5),
               boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2)),
+                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2)),
               ],
             ),
             child: image != null
                 ? ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: Image.file(image!, fit: BoxFit.cover),
-                  )
-                : Icon(Icons.add_photo_alternate_outlined,
-                    size: 56, color: context.color.territoryColor),
+              borderRadius: BorderRadius.circular(20),
+              child: Image.file(image!, fit: BoxFit.cover),
+            )
+                : Icon(Icons.add_photo_alternate_outlined, size: 56, color: context.color.territoryColor),
           ),
         ),
+
         if (hint != null)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
               hint!,
-              style: TextStyle(
-                  fontSize: context.font.small,
-                  color: context.color.textColorDark.withOpacity(0.7)),
+              style: TextStyle(fontSize: context.font.small, color: context.color.textColorDark.withOpacity(0.7)),
               textAlign: TextAlign.center,
             ),
           ),
@@ -172,7 +160,7 @@ class BusinessLogoPicker extends StatelessWidget {
 class PhoneFieldsRow extends StatelessWidget {
   final TextEditingController phoneController;
   final TextEditingController whatsappController;
-  final String prefixText; // مثال: "🇾🇪 +967"
+  final String prefixText;       // مثال: "🇾🇪 +967"
   final VoidCallback onPickCountry; // اختيار الدولة عند الضغط على البادئة
 
   const PhoneFieldsRow({
@@ -188,29 +176,20 @@ class PhoneFieldsRow extends StatelessWidget {
     return Row(
       children: [
         // حقل رقم الاتصال
-        Expanded(
-            child: _phoneField(context,
-                label: "contactNumber".translate(context),
-                controller: phoneController)),
+        Expanded(child: _phoneField(context, label: "contactNumber".translate(context), controller: phoneController)),
         const SizedBox(width: 12),
         // حقل رقم واتساب
-        Expanded(
-            child: _phoneField(context,
-                label: "whatsappNumber".translate(context),
-                controller: whatsappController)),
+        Expanded(child: _phoneField(context, label: "whatsappNumber".translate(context), controller: whatsappController)),
       ],
     );
   }
 
   // ودجت خاص لحقل الهاتف/الواتساب ليُستخدم في العمودين
-  Widget _phoneField(BuildContext context,
-      {required String label, required TextEditingController controller}) {
+  Widget _phoneField(BuildContext context, {required String label, required TextEditingController controller}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label)
-            .size(context.font.normal)
-            .color(context.color.textDefaultColor),
+        Text(label).size(context.font.normal).color(context.color.textDefaultColor),
         const SizedBox(height: 8),
         CustomTextFormField(
           controller: controller,
@@ -224,16 +203,12 @@ class PhoneFieldsRow extends StatelessWidget {
               width: 80,
               height: 48,
               decoration: BoxDecoration(
-                border: Border(
-                    right: BorderSide(
-                        color: context.color.borderColor, width: 1.5)),
+                border: Border(right: BorderSide(color: context.color.borderColor, width: 1.5)),
               ),
               child: Center(
                 child: Text(
                   prefixText,
-                  style: TextStyle(
-                      fontSize: context.font.normal,
-                      color: context.color.textDefaultColor),
+                  style: TextStyle(fontSize: context.font.normal, color: context.color.textDefaultColor),
                 ),
               ),
             ),
@@ -269,25 +244,13 @@ class WorkingHoursPicker extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("workingHours".translate(context))
-            .size(context.font.normal)
-            .color(context.color.textDefaultColor),
+        Text("workingHours".translate(context)).size(context.font.normal).color(context.color.textDefaultColor),
         const SizedBox(height: 10),
         Row(
           children: [
-            Expanded(
-                child: _tile(context,
-                    title: openingTime != null
-                        ? "من ${openingTime!.format(context)}"
-                        : "fromTime".translate(context),
-                    onTap: onPickOpening)),
+            Expanded(child: _tile(context, title: openingTime != null ? "من ${openingTime!.format(context)}" : "fromTime".translate(context), onTap: onPickOpening)),
             const SizedBox(width: 12),
-            Expanded(
-                child: _tile(context,
-                    title: closingTime != null
-                        ? "إلى ${closingTime!.format(context)}"
-                        : "toTime".translate(context),
-                    onTap: onPickClosing)),
+            Expanded(child: _tile(context, title: closingTime != null ? "إلى ${closingTime!.format(context)}" : "toTime".translate(context), onTap: onPickClosing)),
           ],
         ),
         const SizedBox(height: 16),
@@ -296,8 +259,7 @@ class WorkingHoursPicker extends StatelessWidget {
   }
 
   // بطاقة أنيقة بضغطة تفتح الـ time picker (أنت توفر الدالة من الخارج)
-  Widget _tile(BuildContext context,
-      {required String title, required VoidCallback onTap}) {
+  Widget _tile(BuildContext context, {required String title, required VoidCallback onTap}) {
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: context.color.borderColor.darken(30)),
@@ -343,10 +305,11 @@ class FilePickerTile extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("$title (${"optional".translate(context)})")
+        Text("$title (${ "optional".translate(context) })")
             .size(context.font.normal)
             .color(context.color.textDefaultColor),
         const SizedBox(height: 8),
+
         GestureDetector(
           onTap: onTap,
           child: Container(
@@ -355,58 +318,45 @@ class FilePickerTile extends StatelessWidget {
             decoration: BoxDecoration(
               color: context.color.secondaryColor,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                  color: context.color.borderColor.darken(10), width: 1.5),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2))
-              ],
+              border: Border.all(color: context.color.borderColor.darken(10), width: 1.5),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))],
             ),
             child: file != null
                 ? Row(
-                    children: [
-                      const SizedBox(width: 16),
-                      Icon(Icons.picture_as_pdf,
-                          size: 40, color: context.color.territoryColor),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          file!.path.split('/').last, // اسم الملف فقط
-                          style: TextStyle(
-                              fontSize: context.font.normal,
-                              color: context.color.textDefaultColor),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                    ],
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.upload_file,
-                          size: 30, color: context.color.territoryColor),
-                      const SizedBox(width: 8),
-                      Text(
-                        placeholder,
-                        style: TextStyle(
-                            fontSize: context.font.normal,
-                            color: context.color.territoryColor),
-                      ),
-                    ],
+              children: [
+                const SizedBox(width: 16),
+                Icon(Icons.picture_as_pdf, size: 40, color: context.color.territoryColor),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    file!.path.split('/').last, // اسم الملف فقط
+                    style: TextStyle(fontSize: context.font.normal, color: context.color.textDefaultColor),
+                    overflow: TextOverflow.ellipsis,
                   ),
+                ),
+                const SizedBox(width: 16),
+              ],
+            )
+                : Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.upload_file, size: 30, color: context.color.territoryColor),
+                const SizedBox(width: 8),
+                Text(
+                  placeholder,
+                  style: TextStyle(fontSize: context.font.normal, color: context.color.territoryColor),
+                ),
+              ],
+            ),
           ),
         ),
+
         if (hint != null)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
               hint!,
-              style: TextStyle(
-                  fontSize: context.font.small,
-                  color: context.color.textColorDark.withOpacity(0.7)),
+              style: TextStyle(fontSize: context.font.small, color: context.color.textColorDark.withOpacity(0.7)),
             ),
           ),
       ],
@@ -451,7 +401,7 @@ class CategoriesShimmer extends StatelessWidget {
 /// - كل عنصر في [categories] يحتوي حقلي: name, id (مثل CategoryModel).
 class CategoriesChips extends StatelessWidget {
   final List<dynamic> categories; // مثال: List<CategoryModel>
-  final List<int> selectedIds; // المعرّفات المختارة
+  final List<int> selectedIds;    // المعرّفات المختارة
   final ValueChanged<int> onToggle;
 
   const CategoriesChips({
@@ -483,9 +433,7 @@ class CategoriesChips extends StatelessWidget {
             name,
             style: TextStyle(
               fontSize: context.font.normal,
-              color: isSelected
-                  ? context.color.territoryColor
-                  : context.color.textDefaultColor,
+              color: isSelected ? context.color.territoryColor : context.color.textDefaultColor,
             ),
           ),
           selected: isSelected,
@@ -494,9 +442,7 @@ class CategoriesChips extends StatelessWidget {
           backgroundColor: context.color.backgroundColor,
           checkmarkColor: context.color.territoryColor,
           side: BorderSide(
-            color: isSelected
-                ? context.color.territoryColor
-                : context.color.borderColor,
+            color: isSelected ? context.color.territoryColor : context.color.borderColor,
             width: 1.0,
           ),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -505,6 +451,12 @@ class CategoriesChips extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
+
 
 // ===== Email Only Section (for individual accounts) =====
 class EmailOnlySection extends StatelessWidget {
@@ -526,9 +478,12 @@ class EmailOnlySection extends StatelessWidget {
           fillColor: context.color.secondaryColor,
           hintText: "email".translate(context),
           borderColor: context.color.borderColor.darken(10),
-          keyboard: TextInputType.emailAddress,
-        ),
+          keyboard: TextInputType.emailAddress,         ),
       ],
     );
   }
 }
+
+
+
+

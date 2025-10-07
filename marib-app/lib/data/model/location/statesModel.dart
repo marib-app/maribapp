@@ -15,18 +15,18 @@ class StatesModel {
 
   StatesModel(
       {this.id,
-      this.name,
-      this.countryId,
-      this.countryCode,
-      this.fipsCode,
-      this.iso2,
-      this.type,
-      this.latitude,
-      this.longitude,
-      this.createdAt,
-      this.updatedAt,
-      this.flag,
-      this.wikiDataId});
+        this.name,
+        this.countryId,
+        this.countryCode,
+        this.fipsCode,
+        this.iso2,
+        this.type,
+        this.latitude,
+        this.longitude,
+        this.createdAt,
+        this.updatedAt,
+        this.flag,
+        this.wikiDataId});
 
   StatesModel.fromJson(Map<String, dynamic> json) {
     id = json['id'];

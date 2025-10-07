@@ -10,7 +10,8 @@ class ChatRepostiory {
 
   String? _normalizeField(String? value) {
     final String? trimmed = value?.trim();
-    if (trimmed == null || trimmed.isEmpty || trimmed.toLowerCase() == 'null') {
+    if (trimmed == null || trimmed.isEmpty ||
+        trimmed.toLowerCase() == 'null') {
       return null;
     }
     return trimmed;
@@ -53,16 +54,16 @@ class ChatRepostiory {
   }
 
   Future<DataOutput<ChatMessage>> getMessagesApi(
-      {required int page,
-      required int itemOfferId,
-      required String conversationId}) async {
+    {required int page,
+    required int itemOfferId,
+    required String conversationId}) async {
     Map<String, dynamic> response = await Api.get(
-      url: Api.chatMessagesApi,
-      queryParameters: {
-        "item_offer_id": itemOfferId,
-        "conversation_id": conversationId,
-        "page": page,
-      },
+    url: Api.chatMessagesApi,
+    queryParameters: {
+    "item_offer_id": itemOfferId,
+    "conversation_id": conversationId,
+    "page": page,
+    },
     );
 
     final Map<String, dynamic> responseData =
@@ -73,7 +74,7 @@ class ChatRepostiory {
 
     List<ChatMessage> modelList = resultList.map((result) {
       final Map<String, dynamic> resultMap =
-          Map<String, dynamic>.from(result as Map);
+      Map<String, dynamic>.from(result as Map);
 
       final dynamic senderIdRaw = resultMap['sender_id'];
       final int senderId = senderIdRaw is int
@@ -84,10 +85,13 @@ class ChatRepostiory {
       final String file = resultMap['file']?.toString() ?? '';
       final String audio = resultMap['audio']?.toString() ?? '';
       final String messageType = resultMap['message_type']?.toString() ?? '';
-      final String? status = _normalizeField(resultMap['status']?.toString());
+      final String? status =
+      _normalizeField(resultMap['status']?.toString());
       final String? deliveredAt =
-          _normalizeField(resultMap['delivered_at']?.toString());
-      final String? readAt = _normalizeField(resultMap['read_at']?.toString());
+      _normalizeField(resultMap['delivered_at']?.toString());
+      final String? readAt =
+      _normalizeField(resultMap['read_at']?.toString());
+
 
       final String createdAt = resultMap['created_at']?.toString() ?? '';
       final String updatedAt = resultMap['updated_at']?.toString() ?? createdAt;
@@ -98,8 +102,9 @@ class ChatRepostiory {
           : int.tryParse(itemOfferRaw?.toString() ?? '') ?? 0;
 
       final dynamic idRaw = resultMap['id'];
-      final int id =
-          idRaw is int ? idRaw : int.tryParse(idRaw?.toString() ?? '') ?? 0;
+      final int id = idRaw is int
+          ? idRaw
+          : int.tryParse(idRaw?.toString() ?? '') ?? 0;
 
       return ChatMessage(
         key: ValueKey(id),
@@ -124,6 +129,7 @@ class ChatRepostiory {
         : int.tryParse(totalRaw?.toString() ?? '') ?? modelList.length;
 
     return DataOutput(total: total, modelList: modelList);
+
   }
 
   Future<Map<String, dynamic>> sendMessageApi(
@@ -189,6 +195,7 @@ class ChatRepostiory {
     return DataOutput(modelList: modelList, total: modelList.length);
   }
 
+
   Future<ChatedUser?> fetchConversationDetails({
     required String conversationId,
     int? itemOfferId,
@@ -238,6 +245,7 @@ class ChatRepostiory {
     return data;
   }
 
+
   Future<void> markMessagesDelivered({
     required String conversationId,
     required Iterable<int> messageIds,
@@ -248,8 +256,10 @@ class ChatRepostiory {
       return;
     }
 
-    final List<int> sanitizedIds =
-        messageIds.where((id) => id > 0).toSet().toList(growable: false);
+    final List<int> sanitizedIds = messageIds
+        .where((id) => id > 0)
+        .toSet()
+        .toList(growable: false);
 
     if (sanitizedIds.isEmpty) {
       return;
@@ -277,8 +287,10 @@ class ChatRepostiory {
       return;
     }
 
-    final List<int> sanitizedIds =
-        messageIds.where((id) => id > 0).toSet().toList(growable: false);
+    final List<int> sanitizedIds = messageIds
+        .where((id) => id > 0)
+        .toSet()
+        .toList(growable: false);
 
     if (sanitizedIds.isEmpty) {
       return;
@@ -337,4 +349,8 @@ class ChatRepostiory {
       parameter: payload,
     );
   }
+
+
+
+
 }

@@ -1,5 +1,6 @@
 import 'package:marib/utils/constant.dart';
 
+
 /// Utility helpers for normalising delivery department identifiers sent to
 /// the pricing API. The backend expects lowercase ASCII slugs such as
 /// `shein`, `computer`, or `general`. Any other value should fall back to the
@@ -21,12 +22,17 @@ String? normalizeDeliveryDepartment(String? raw) {
     if (matched != null) {
       return matched;
     }
+
   }
 
   final String normalizedKey = _normalizeDepartmentKey(lower);
   if (normalizedKey.isEmpty) {
+
+
     return null;
   }
+
+
 
   return _matchDepartment(normalizedKey);
 }
@@ -34,8 +40,11 @@ String? normalizeDeliveryDepartment(String? raw) {
 String _asciiSlug(String value) {
   final String sanitized = value.replaceAll(RegExp(r'[^a-z0-9]+'), '');
 
+
   return sanitized;
 }
+
+
 
 String? _matchDepartment(String key) {
   if (key.isEmpty) {
@@ -127,6 +136,9 @@ String? resolveDeliveryDepartmentFromCategoryIds(Iterable<int> categoryIds) {
   return null;
 }
 
+
+
+
 String _normalizeDepartmentKey(String value) {
   String result = value
       .replaceAll(RegExp(r'[إأآٱ]'), 'ا')
@@ -191,6 +203,10 @@ const Map<String, String> _departmentAliases = <String, String>{
   'sheinproduct': 'shein',
   'sheinsection': 'shein',
   'category${Constant.sheinRootCategoryId}': 'shein',
+
+
+
+
 
   // Computer / electronics department aliases.
   'computer': 'computer',

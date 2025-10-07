@@ -2,6 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
+import 'package:flutter/services.dart';
+
+
+
+
+
+
 
 class MinimalMapAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
@@ -36,10 +43,9 @@ class MinimalMapAppBar extends StatelessWidget implements PreferredSizeWidget {
           Icons.arrow_back_ios_new_rounded,
           color: context.color.territoryColor,
         ),
-        onPressed: onBack ??
-            () {
-              if (Navigator.of(context).canPop()) Navigator.of(context).pop();
-            },
+        onPressed: onBack ?? () {
+          if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+        },
       ),
       // عنوان القسم
       title: Text(
@@ -56,6 +62,19 @@ class MinimalMapAppBar extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // ============== AdsGoogleMap (نسخة محسّنة) ==============
 
@@ -81,15 +100,12 @@ class MapFilterPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('تصفية حسب الفئة:',
-              style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('تصفية حسب الفئة:', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           DropdownButton<String>(
             value: selectedCategory,
             isExpanded: true,
-            items: categories
-                .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                .toList(),
+            items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
             onChanged: (v) {
               if (v != null) onChanged(v);
             },

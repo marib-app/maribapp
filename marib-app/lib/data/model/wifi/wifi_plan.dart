@@ -97,13 +97,13 @@ class WifiPlan extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        name,
-        price,
-        description,
-        currency,
-        dataCapGb,
-        durationDays,
-        isUnlimited,
-      ];
+    id,
+    name,
+    price,
+    description,
+    currency,
+    dataCapGb,
+    durationDays,
+    isUnlimited,
+  ];
 }

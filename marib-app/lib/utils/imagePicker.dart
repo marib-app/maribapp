@@ -26,7 +26,7 @@ class PickImage {
     _pickedFile = pickedFile;
   }
 
-  Future<void> pick(
+  pick(
       {ImageSource? source,
       bool? pickMultiple,
       int? imageLimit,

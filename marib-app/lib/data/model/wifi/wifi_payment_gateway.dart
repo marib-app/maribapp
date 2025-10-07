@@ -44,7 +44,7 @@ class WifiPaymentGateway extends Equatable {
         return value;
       }
       if (value is Map) {
-        return Map<String, dynamic>.from(value);
+        return Map<String, dynamic>.from(value as Map);
       }
       return const <String, dynamic>{};
     }
@@ -55,8 +55,9 @@ class WifiPaymentGateway extends Equatable {
       ...resolveMetadata(json['extras']),
     };
 
-    final String id =
-        (json['id'] ?? json['code'] ?? json['slug'] ?? '').toString().trim();
+    final String id = (json['id'] ?? json['code'] ?? json['slug'] ?? '')
+        .toString()
+        .trim();
 
     final String lowerId = id.toLowerCase();
     final String type = (json['type'] ?? '').toString().toLowerCase();
@@ -99,6 +100,5 @@ class WifiPaymentGateway extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [id, name, description, isWallet, isDefault, metadata];
+  List<Object?> get props => [id, name, description, isWallet, isDefault, metadata];
 }

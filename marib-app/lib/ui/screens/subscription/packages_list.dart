@@ -17,6 +17,8 @@ import 'package:marib/data/cubits/subscription/fetch_featured_subscription_packa
 import 'package:marib/data/model/subscription_pacakage_model.dart';
 import 'package:flutter/material.dart';
 
+import 'package:marib/utils/api.dart';
+
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/ui/screens/widgets/errors/no_data_found.dart';
@@ -25,10 +27,17 @@ import 'package:marib/ui/screens/widgets/errors/something_went_wrong.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+
 import 'package:marib/utils/payment/bank_transfer_args.dart';
 import 'package:marib/utils/payment/bank_transfer_screen.dart';
 import 'package:marib/utils/payment/manual_payment_service.dart';
 import 'package:marib/ui/screens/Transaction_screen.dart';
+
+
+
+
+
+
 
 class SubscriptionPackageListScreen extends StatefulWidget {
   const SubscriptionPackageListScreen({super.key});
@@ -57,16 +66,16 @@ class _SubscriptionPackageListScreenState
 
   // Controllers
   final PageController adsPageController =
-      PageController(initialPage: 0, viewportFraction: 0.86);
+  PageController(initialPage: 0, viewportFraction: 0.86);
   final PageController featuredPageController =
-      PageController(initialPage: 0, viewportFraction: 0.86);
+  PageController(initialPage: 0, viewportFraction: 0.86);
   TabController? _tabController;
 
   // Selection state per tab
   final ValueNotifier<SubscriptionPackageModel?> _selectedListing =
-      ValueNotifier<SubscriptionPackageModel?>(null);
+  ValueNotifier<SubscriptionPackageModel?>(null);
   final ValueNotifier<SubscriptionPackageModel?> _selectedFeatured =
-      ValueNotifier<SubscriptionPackageModel?>(null);
+  ValueNotifier<SubscriptionPackageModel?>(null);
 
   int _listingIndex = 0;
   int _featuredIndex = 0;
@@ -173,7 +182,7 @@ class _SubscriptionPackageListScreenState
                 indicatorWeight: 3,
                 labelColor: context.color.territoryColor,
                 unselectedLabelColor:
-                    context.color.textDefaultColor.withOpacity(0.5),
+                context.color.textDefaultColor.withOpacity(0.5),
                 labelStyle: const TextStyle(fontSize: 16),
                 labelPadding: const EdgeInsets.symmetric(horizontal: 16),
                 indicatorSize: TabBarIndicatorSize.tab,
@@ -347,6 +356,7 @@ class _SubscriptionPackageListScreenState
     });
   }
 
+
   Builder featuredAds() {
     return Builder(builder: (context) {
       if (!isInterstitialAdShown) {
@@ -442,11 +452,12 @@ class _SubscriptionPackageListScreenState
     });
   }
 
+
   // ===== BottomSheet لاختيار بوابة الدفع =====
   Future<void> _startManualBankTransfer(
-    SubscriptionPackageModel? selected, {
-    required bool isFeatured,
-  }) async {
+      SubscriptionPackageModel? selected, {
+        required bool isFeatured,
+      }) async {
     if (!OldHive.HiveUtils.isUserAuthenticated()) {
       _showSnack("يتطلب تسجيل الدخول لإتمام الشراء".translate(context));
       return;
@@ -475,8 +486,9 @@ class _SubscriptionPackageListScreenState
     }
 
     final type = selected.type?.trim() ?? '';
-    final packageType =
-        type.isNotEmpty ? type : (isFeatured ? 'featured_ad' : 'item_listing');
+    final packageType = type.isNotEmpty
+        ? type
+        : (isFeatured ? 'featured_ad' : 'item_listing');
 
     final args = BankTransferArgs(
       token: token,
@@ -523,6 +535,7 @@ class _SubscriptionPackageListScreenState
     }
   }
 
+
   String _resolveCurrency() {
     final candidates = [
       AppSettings.stripeCurrency,
@@ -552,8 +565,7 @@ class _CtaSwitcher extends StatelessWidget {
   final int listingIndex;
   final int featuredIndex;
 
-  final String Function(SubscriptionPackageModel?, bool isFeatured)
-      labelBuilder;
+  final String Function(SubscriptionPackageModel?, bool isFeatured) labelBuilder;
   final void Function(SubscriptionPackageModel?, _PackageType) onPickGateway;
 
   const _CtaSwitcher({
@@ -680,3 +692,5 @@ class _DotsIndicator extends StatelessWidget {
     );
   }
 }
+
+

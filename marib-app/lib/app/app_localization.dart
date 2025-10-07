@@ -21,21 +21,19 @@ class AppLocalization {
 
   //to load json(language) from assets
   Future loadJson() async {
+
     String jsonStringValues =
         await rootBundle.loadString('assets/languages/template.json');
     // value from root-bundle will be encoded string
     final Map<String, dynamic> templateJson =
-        Map<String, dynamic>.from(json.decode(jsonStringValues));
-    final Map<String, dynamic> mergedJson =
-        Map<String, dynamic>.from(templateJson);
+    Map<String, dynamic>.from(json.decode(jsonStringValues));
+    final Map<String, dynamic> mergedJson = Map<String, dynamic>.from(templateJson);
 
-    final String localeFilePath =
-        'assets/languages/${locale.languageCode}.json';
+    final String localeFilePath = 'assets/languages/${locale.languageCode}.json';
     try {
-      final String localeJsonString =
-          await rootBundle.loadString(localeFilePath);
+      final String localeJsonString = await rootBundle.loadString(localeFilePath);
       final Map<String, dynamic> localeJson =
-          Map<String, dynamic>.from(json.decode(localeJsonString));
+      Map<String, dynamic>.from(json.decode(localeJsonString));
       mergedJson.addAll(localeJson);
     } on FlutterError catch (_) {
       // ignore when specific locale file does not exist and fall back to template values
@@ -46,14 +44,15 @@ class AppLocalization {
     final dynamic hiveLanguage = HiveUtils.getLanguage();
     if (hiveLanguage != null && hiveLanguage['data'] != null) {
       final Map<String, dynamic> hiveJson =
-          Map<String, dynamic>.from(hiveLanguage['data']);
+      Map<String, dynamic>.from(hiveLanguage['data']);
       hiveJson.forEach((key, value) {
         mergedJson[key] = value;
       });
     }
 
-    _localizedValues =
-        mergedJson.map((key, value) => MapEntry(key, value.toString()));
+
+    _localizedValues = mergedJson
+        .map((key, value) => MapEntry(key, value.toString()));
   }
 
   //to get translated value of given title/key

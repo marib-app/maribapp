@@ -23,10 +23,10 @@ class IsolateDataLoader<T> {
         completer.complete(message);
         receivePort.close();
         isolate.kill();
-      } else
-        completer.completeError(message);
+      } else      completer.completeError(message);
       receivePort.close();
       isolate.kill();
+    
     });
 
     return completer.future;
@@ -37,11 +37,14 @@ class IsolateDataLoader<T> {
     sendPort.send(port.sendPort);
     port.listen((message) async {
       try {
+
+
         final Function loadingFunction = message as Function;
 
         var result = await loadingFunction();
         sendPort.send(result);
       } catch (error) {
+
         sendPort.send(error);
       }
     });

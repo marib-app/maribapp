@@ -1,6 +1,5 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'dart:async';
-
 class CheckInternet {
   CheckInternet();
 
@@ -16,6 +15,7 @@ class CheckInternet {
       if (onNoInternet != null) {
         await Future.sync(onNoInternet);
       }
+
     } else {
       await Future.sync(onInternet);
     }

@@ -25,6 +25,7 @@ class LoadChatMessagesSuccess extends LoadChatMessagesState {
     required this.currentPage,
     required this.itemOfferId,
     required this.conversationId,
+
     required this.totalPage,
     required this.isLoadingMore,
   });
@@ -35,6 +36,7 @@ class LoadChatMessagesSuccess extends LoadChatMessagesState {
     int? userId,
     int? itemOfferId,
     String? conversationId,
+
     int? totalPage,
     bool? isLoadingMore,
   }) {
@@ -43,6 +45,7 @@ class LoadChatMessagesSuccess extends LoadChatMessagesState {
       currentPage: currentPage ?? this.currentPage,
       itemOfferId: itemOfferId ?? this.itemOfferId,
       conversationId: conversationId ?? this.conversationId,
+
       totalPage: totalPage ?? this.totalPage,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
     );
@@ -66,13 +69,13 @@ class LoadChatMessagesCubit extends Cubit<LoadChatMessagesState> {
   LoadChatMessagesCubit() : super(LoadChatMessagesInitial());
   final ChatRepostiory _chatRepostiory = ChatRepostiory();
 
-  Future<void> load(
-      {required int itemOfferId, required String conversationId}) async {
+  Future<void> load({required int itemOfferId, required String conversationId}) async {
     try {
       emit(LoadChatMessagesInProgress());
       DataOutput<ChatMessage> result = await _chatRepostiory.getMessagesApi(
         itemOfferId: itemOfferId,
         conversationId: conversationId,
+
         page: 1,
       );
 
@@ -81,6 +84,7 @@ class LoadChatMessagesCubit extends Cubit<LoadChatMessagesState> {
         currentPage: 1,
         itemOfferId: itemOfferId,
         conversationId: conversationId,
+
         isLoadingMore: false,
         totalPage: result.total,
       ));
@@ -111,6 +115,7 @@ class LoadChatMessagesCubit extends Cubit<LoadChatMessagesState> {
           messages: messagesSuccessState.messages,
           currentPage: (state as LoadChatMessagesSuccess).currentPage + 1,
           conversationId: (state as LoadChatMessagesSuccess).conversationId,
+
           itemOfferId: (state as LoadChatMessagesSuccess).itemOfferId,
           isLoadingMore: false,
           totalPage: result.total,

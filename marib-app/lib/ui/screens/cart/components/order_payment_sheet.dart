@@ -6,6 +6,8 @@ import 'package:marib/data/model/orders/order_payment.dart';
 import 'package:marib/utils/payment/gatways/payment_webview.dart';
 import 'package:marib/utils/helper_utils.dart';
 
+
+
 class OrderPaymentSheet extends StatefulWidget {
   const OrderPaymentSheet({
     super.key,
@@ -37,15 +39,14 @@ class _OrderPaymentSheetState extends State<OrderPaymentSheet> {
 
   void _loadOptions() {
     context.read<OrderPaymentCubit>().loadOptions(
-          orderId: widget.orderId,
-          amount: widget.outstandingAmount,
-          currency: widget.currency,
-        );
+      orderId: widget.orderId,
+      amount: widget.outstandingAmount,
+      currency: widget.currency,
+    );
   }
 
   String get _formattedAmount {
-    if (widget.outstandingLabel != null &&
-        widget.outstandingLabel!.trim().isNotEmpty) {
+    if (widget.outstandingLabel != null && widget.outstandingLabel!.trim().isNotEmpty) {
       return widget.outstandingLabel!.trim();
     }
     final NumberFormat formatter = NumberFormat.currency(
@@ -117,15 +118,13 @@ class _OrderPaymentSheetState extends State<OrderPaymentSheet> {
           builder: (BuildContext context, OrderPaymentState state) {
             final List<OrderPaymentMethod> methods = state.methods;
             final OrderPaymentMethod? selectedMethod = state.selectedMethod;
-            final bool isBusy = state.isBusy ||
-                state.status == OrderPaymentStatus.actionRequired;
+            final bool isBusy = state.isBusy || state.status == OrderPaymentStatus.actionRequired;
 
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: BoxDecoration(
                 color: Theme.of(context).scaffoldBackgroundColor,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               child: SingleChildScrollView(
                 child: Column(
@@ -145,15 +144,11 @@ class _OrderPaymentSheetState extends State<OrderPaymentSheet> {
                     ),
                     Text(
                       'تسديد المبلغ المتبقي',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      widget.orderLabel != null &&
-                              widget.orderLabel!.trim().isNotEmpty
+                      widget.orderLabel != null && widget.orderLabel!.trim().isNotEmpty
                           ? 'الطلب: ${widget.orderLabel!.trim()}'
                           : 'رقم الطلب: ${widget.orderId}',
                       style: Theme.of(context).textTheme.bodySmall,
@@ -176,17 +171,13 @@ class _OrderPaymentSheetState extends State<OrderPaymentSheet> {
                           const SizedBox(height: 6),
                           Text(
                             _formattedAmount,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(fontWeight: FontWeight.bold),
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 20),
-                    if (state.status == OrderPaymentStatus.loading &&
-                        methods.isEmpty)
+                    if (state.status == OrderPaymentStatus.loading && methods.isEmpty)
                       const Center(
                         child: Padding(
                           padding: EdgeInsets.symmetric(vertical: 16),
@@ -200,22 +191,18 @@ class _OrderPaymentSheetState extends State<OrderPaymentSheet> {
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
                           ...methods.map(
-                            (OrderPaymentMethod method) =>
-                                RadioListTile<OrderPaymentMethod>(
+                                (OrderPaymentMethod method) => RadioListTile<OrderPaymentMethod>(
                               value: method,
                               groupValue: selectedMethod,
                               onChanged: isBusy
                                   ? null
                                   : (OrderPaymentMethod? value) {
-                                      if (value != null) {
-                                        context
-                                            .read<OrderPaymentCubit>()
-                                            .selectMethod(value);
-                                      }
-                                    },
+                                if (value != null) {
+                                  context.read<OrderPaymentCubit>().selectMethod(value);
+                                }
+                              },
                               title: Text(method.label),
-                              subtitle: method.gateway != null &&
-                                      method.gateway!.trim().isNotEmpty
+                              subtitle: method.gateway != null && method.gateway!.trim().isNotEmpty
                                   ? Text(method.gateway!)
                                   : null,
                             ),
@@ -226,29 +213,23 @@ class _OrderPaymentSheetState extends State<OrderPaymentSheet> {
                             child: ElevatedButton(
                               onPressed: isBusy
                                   ? null
-                                  : () => context
-                                      .read<OrderPaymentCubit>()
-                                      .submitPayment(),
+                                  : () => context.read<OrderPaymentCubit>().submitPayment(),
                               child: isBusy
                                   ? const SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2),
-                                    )
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
                                   : const Text('متابعة الدفع'),
                             ),
                           ),
                         ],
                       ),
                     const SizedBox(height: 12),
-                    if (state.errorMessage != null &&
-                        state.errorMessage!.isNotEmpty &&
-                        methods.isNotEmpty)
+                    if (state.errorMessage != null && state.errorMessage!.isNotEmpty && methods.isNotEmpty)
                       Text(
                         state.errorMessage!,
-                        style: TextStyle(
-                            color: Theme.of(context).colorScheme.error),
+                        style: TextStyle(color: Theme.of(context).colorScheme.error),
                       ),
                   ],
                 ),

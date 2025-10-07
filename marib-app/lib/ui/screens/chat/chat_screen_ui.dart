@@ -1,6 +1,7 @@
 part of 'chat_screen.dart';
 
 extension _ChatScreenUi on _ChatScreenState {
+
   String _resolveCurrencySymbol() {
     final symbol = widget.currencySymbol?.trim();
     if (symbol != null && symbol.isNotEmpty) {
@@ -39,11 +40,14 @@ extension _ChatScreenUi on _ChatScreenState {
           (messageAttachment?.path?.split(".").last.toLowerCase()) ?? "";
     }
 
+
     final presenceText = _presenceLabel(context);
-    final Color presenceColor = (_otherParticipantStatus?.isTyping ?? false)
+    final Color presenceColor =
+    (_otherParticipantStatus?.isTyping ?? false)
         ? context.color.territoryColor
         : context.color.textLightColor;
     final resolvedCurrencySymbol = _resolveCurrencySymbol();
+
 
     return PopScope(
       canPop: true,
@@ -126,7 +130,7 @@ extension _ChatScreenUi on _ChatScreenState {
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 8.0),
                           child:
-                              AttachmentMessage(url: messageAttachment!.path!),
+                          AttachmentMessage(url: messageAttachment!.path!),
                         ),
                       ),
                     ],
@@ -141,309 +145,308 @@ extension _ChatScreenUi on _ChatScreenState {
                     child: Directionality(
                       textDirection: Directionality.of(context),
                       child: widget.status == "review" ||
-                              widget.status == "rejected" ||
-                              widget.status == "sold out" ||
-                              widget.status == "inactive"
+                          widget.status == "rejected" ||
+                          widget.status == "sold out" ||
+                          widget.status == "inactive"
                           ? Container(
-                              height: 40,
-                              width: double.maxFinite,
-                              color: context.color.secondaryColor,
-                              alignment: Alignment.center,
-                              child: Text(
-                                      "${"thisItemIs".translate(context)} ${widget.status}")
-                                  .size(context.font.large))
+                          height: 40,
+                          width: double.maxFinite,
+                          color: context.color.secondaryColor,
+                          alignment: Alignment.center,
+                          child: Text(
+                              "${"thisItemIs".translate(context)} ${widget.status}")
+                              .size(context.font.large))
                           : Column(
-                              children: [
-                                BlocProvider(
-                                    create: (context) => UnblockUserCubit(),
-                                    child: Builder(builder: (context) {
-                                      bool isBlocked = context
-                                          .read<BlockedUsersListCubit>()
-                                          .isUserBlocked(
-                                              int.parse(widget.userId));
-                                      return BlocConsumer<BlockedUsersListCubit,
-                                              BlockedUsersListState>(
-                                          listener: (context, state) {
-                                        if (state is BlockedUsersListSuccess) {
-                                          isBlocked = context
-                                              .read<BlockedUsersListCubit>()
-                                              .isUserBlocked(
-                                                  int.parse(widget.userId));
+                        children: [
+                          BlocProvider(
+                              create: (context) => UnblockUserCubit(),
+                              child: Builder(builder: (context) {
+                                bool isBlocked = context
+                                    .read<BlockedUsersListCubit>()
+                                    .isUserBlocked(
+                                    int.parse(widget.userId));
+                                return BlocConsumer<BlockedUsersListCubit,
+                                    BlockedUsersListState>(
+                                    listener: (context, state) {
+                                      if (state is BlockedUsersListSuccess) {
+                                        isBlocked = context
+                                            .read<BlockedUsersListCubit>()
+                                            .isUserBlocked(
+                                            int.parse(widget.userId));
+                                      }
+                                    }, builder:
+                                    (context, blockedUsersListState) {
+                                  return isBlocked
+                                      ? BlocListener<UnblockUserCubit,
+                                      UnblockUserState>(
+                                      listener:
+                                          (context, unblockState) {
+                                        if (unblockState
+                                        is UnblockUserSuccess) {
+                                          // Remove the unblocked user from the list
+                                          context
+                                              .read<
+                                              BlockedUsersListCubit>()
+                                              .unblockUser(int.parse(
+                                              widget.userId));
+                                          HelperUtils
+                                              .showSnackBarMessage(
+                                              context,
+                                              unblockState
+                                                  .message);
+                                        } else if (unblockState
+                                        is UnblockUserFail) {
+                                          HelperUtils
+                                              .showSnackBarMessage(
+                                              context,
+                                              unblockState.error
+                                                  .toString());
                                         }
-                                      }, builder:
-                                              (context, blockedUsersListState) {
-                                        return isBlocked
-                                            ? BlocListener<UnblockUserCubit,
-                                                    UnblockUserState>(
-                                                listener:
-                                                    (context, unblockState) {
-                                                  if (unblockState
-                                                      is UnblockUserSuccess) {
-                                                    // Remove the unblocked user from the list
-                                                    context
-                                                        .read<
-                                                            BlockedUsersListCubit>()
-                                                        .unblockUser(int.parse(
-                                                            widget.userId));
-                                                    HelperUtils
-                                                        .showSnackBarMessage(
-                                                            context,
-                                                            unblockState
-                                                                .message);
-                                                  } else if (unblockState
-                                                      is UnblockUserFail) {
-                                                    HelperUtils
-                                                        .showSnackBarMessage(
-                                                            context,
-                                                            unblockState.error
-                                                                .toString());
-                                                  }
-                                                },
-                                                child: InkWell(
-                                                  child: Text(
-                                                          "youBlockedThisContact"
-                                                              .translate(
-                                                                  context))
-                                                      .color(context
-                                                          .color.textColorDark
-                                                          .withOpacity(0.7)),
-                                                  onTap: () async {
-                                                    var unBlock = await UiUtils
-                                                        .showBlurredDialoge(
-                                                      context,
-                                                      dialoge: BlurredDialogBox(
-                                                        acceptButtonName:
-                                                            "unBlockLbl"
-                                                                .translate(
-                                                                    context),
-                                                        content: Text(
-                                                          "${"unBlockLbl".translate(context)}\t${widget.userName}\t${"toSendMessage".translate(context)}"
-                                                              .translate(
-                                                                  context),
-                                                        ),
-                                                      ),
-                                                    );
-                                                    if (unBlock == true) {
-                                                      Future.delayed(
-                                                          Duration.zero, () {
-                                                        context
-                                                            .read<
-                                                                UnblockUserCubit>()
-                                                            .unBlockUser(
-                                                              blockUserId: int
-                                                                  .parse(widget
-                                                                      .userId),
-                                                            );
-                                                      });
-                                                    }
-                                                  },
-                                                ))
-                                            : SizedBox();
-                                      });
-                                    })),
-                                SizedBox(
-                                  height: 8,
-                                ),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: TextField(
-                                        controller: controller,
-                                        cursorColor:
-                                            context.color.territoryColor,
-                                        onTap: () {
-                                          showDeletebutton.value = false;
-                                        },
-                                        textInputAction:
-                                            TextInputAction.newline,
-                                        minLines: 1,
-                                        maxLines: null,
-                                        decoration: InputDecoration(
-                                          suffixIconColor:
-                                              context.color.textLightColor,
-                                          suffixIcon: IconButton(
-                                            onPressed: () async {
-                                              if (messageAttachment == null) {
-                                                FilePickerResult?
-                                                    pickedAttachment =
-                                                    await FilePicker.platform
-                                                        .pickFiles(
-                                                  allowMultiple: false,
-                                                  type: FileType.custom,
-                                                  allowedExtensions: [
-                                                    'jpg',
-                                                    'jpeg',
-                                                    'png'
-                                                  ],
-                                                );
-
-                                                messageAttachment =
-                                                    pickedAttachment
-                                                        ?.files.first;
-                                                _updateInputMode();
-                                                setState(() {});
-                                              } else {
-                                                messageAttachment = null;
-                                                _updateInputMode();
-                                                setState(() {});
-                                              }
-                                            },
-                                            icon: messageAttachment != null
-                                                ? const Icon(Icons.close)
-                                                : Transform.rotate(
-                                                    angle: -3.14 / 5.0,
-                                                    child: const Icon(
-                                                      Icons.attachment,
-                                                    ),
-                                                  ),
-                                          ),
-                                          contentPadding:
-                                              const EdgeInsets.symmetric(
-                                                  vertical: 6, horizontal: 8),
-                                          border: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
-                                              borderSide: BorderSide(
-                                                  color: context
-                                                      .color.territoryColor)),
-                                          focusedBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
-                                              borderSide: BorderSide(
-                                                  color: context
-                                                      .color.territoryColor)),
-                                          hintText:
-                                              "writeHere".translate(context),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(
-                                      width: 9.5,
-                                    ),
-                                    if (showRecordButton)
-                                      RecordButton(
-                                        controller: _recordButtonAnimation,
-                                        callback: (path) {
-                                          /*if (Constant.isDemoModeOn) {
-                                  HelperUtils.showSnackBarMessage(
-                                      context,
-                                      "thisActionNotValidDemo"
-                                          .translate(context));
-                                  return;
-                                }*/
-
-                                          //This is adding Chat widget in stream with BlocProvider , because we will need to do api process to store chat message to server, when it will be added to list it's initState method will be called
-                                          ChatMessageHandler.add(
-                                            BlocProvider(
-                                              create: (context) =>
-                                                  SendMessageCubit(),
-                                              child: ChatMessage(
-                                                  key: ValueKey(DateTime.now()
-                                                      .toString()
-                                                      .toString()),
-                                                  message: controller.text,
-                                                  senderId: int.parse(
-                                                      HiveUtils.getUserId()!),
-                                                  createdAt:
-                                                      DateTime.now().toString(),
-                                                  isSentNow: true,
-                                                  audio: path,
-                                                  messageType: 'audio',
-                                                  itemOfferId:
-                                                      widget.itemOfferId,
-                                                  file: "",
-                                                  updatedAt: DateTime.now()
-                                                      .toString()),
-                                            ),
-                                          );
-
-                                          totalMessageCount++;
-
-                                          setState(() {});
-                                        },
-                                        isSending: false,
-                                      ),
-                                    if (!showRecordButton)
-                                      GestureDetector(
-                                        onTap: () {
-                                          /* if (Constant.isDemoModeOn) {
-                                  HelperUtils.showSnackBarMessage(
-                                      context,
-                                      "thisActionNotValidDemo"
-                                          .translate(context));
-                                  return;
-                                }*/
-                                          showDeletebutton.value = false;
-
-                                          //if file is selected then user can send message without text
-                                          if (controller.text.trim().isEmpty &&
-                                              messageAttachment == null) return;
-                                          //This is adding Chat widget in stream with BlocProvider , because we will need to do api process to store chat message to server, when it will be added to list it's initState method will be called
-
-                                          String? messageType;
-                                          final attachmentPath =
-                                              messageAttachment?.path;
-                                          if (attachmentPath != null &&
-                                              attachmentPath.isNotEmpty) {
-                                            messageType =
-                                                _isImageAttachmentPath(
-                                                        attachmentPath)
-                                                    ? 'image'
-                                                    : 'file';
-                                          } else if (controller.text
-                                              .trim()
-                                              .isNotEmpty) {
-                                            messageType = 'text';
-                                          }
-
-                                          ChatMessageHandler.add(
-                                            BlocProvider(
-                                              key: ValueKey(DateTime.now()
-                                                  .toString()
-                                                  .toString()),
-                                              create: (context) =>
-                                                  SendMessageCubit(),
-                                              child: ChatMessage(
-                                                key: ValueKey(DateTime.now()
-                                                    .toString()
-                                                    .toString()),
-                                                message: controller.text,
-                                                senderId: int.parse(
-                                                    HiveUtils.getUserId()!),
-                                                createdAt:
-                                                    DateTime.now().toString(),
-                                                isSentNow: true,
-                                                updatedAt:
-                                                    DateTime.now().toString(),
-                                                audio: "",
-                                                file: messageAttachment != null
-                                                    ? messageAttachment?.path
-                                                    : "",
-                                                itemOfferId: widget.itemOfferId,
-                                                messageType: messageType,
+                                      },
+                                      child: InkWell(
+                                        child: Text(
+                                            "youBlockedThisContact"
+                                                .translate(
+                                                context))
+                                            .color(context
+                                            .color.textColorDark
+                                            .withOpacity(0.7)),
+                                        onTap: () async {
+                                          var unBlock = await UiUtils
+                                              .showBlurredDialoge(
+                                            context,
+                                            dialoge: BlurredDialogBox(
+                                              acceptButtonName:
+                                              "unBlockLbl"
+                                                  .translate(
+                                                  context),
+                                              content: Text(
+                                                "${"unBlockLbl".translate(context)}\t${widget.userName}\t${"toSendMessage".translate(context)}"
+                                                    .translate(
+                                                    context),
                                               ),
                                             ),
                                           );
-                                          totalMessageCount++;
-                                          controller.text = "";
+                                          if (unBlock == true) {
+                                            Future.delayed(
+                                                Duration.zero, () {
+                                              context
+                                                  .read<
+                                                  UnblockUserCubit>()
+                                                  .unBlockUser(
+                                                blockUserId: int
+                                                    .parse(widget
+                                                    .userId),
+                                              );
+                                            });
+                                          }
+                                        },
+                                      ))
+                                      : SizedBox();
+                                });
+                              })),
+                          SizedBox(
+                            height: 8,
+                          ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: controller,
+                                  cursorColor:
+                                  context.color.territoryColor,
+                                  onTap: () {
+                                    showDeletebutton.value = false;
+                                  },
+                                  textInputAction:
+                                  TextInputAction.newline,
+                                  minLines: 1,
+                                  maxLines: null,
+                                  decoration: InputDecoration(
+                                    suffixIconColor:
+                                    context.color.textLightColor,
+                                    suffixIcon: IconButton(
+                                      onPressed: () async {
+                                        if (messageAttachment == null) {
+                                          FilePickerResult?
+                                          pickedAttachment =
+                                          await FilePicker.platform
+                                              .pickFiles(
+                                            allowMultiple: false,
+                                            type: FileType.custom,
+                                            allowedExtensions: [
+                                              'jpg',
+                                              'jpeg',
+                                              'png'
+                                            ],
+                                          );
+
+                                          messageAttachment =
+                                              pickedAttachment
+                                                  ?.files.first;
+                                          _updateInputMode();
+                                          setState(() {});
+                                        } else {
                                           messageAttachment = null;
                                           _updateInputMode();
                                           setState(() {});
-                                        },
-                                        child: CircleAvatar(
-                                          radius: 20,
-                                          backgroundColor:
-                                              context.color.territoryColor,
-                                          child: Icon(
-                                            Icons.send,
-                                            color: context.color.buttonColor,
-                                          ),
+                                        }
+                                      },
+                                      icon: messageAttachment != null
+                                          ? const Icon(Icons.close)
+                                          : Transform.rotate(
+                                        angle: -3.14 / 5.0,
+                                        child: const Icon(
+                                          Icons.attachment,
                                         ),
-                                      )
-                                  ],
+                                      ),
+                                    ),
+                                    contentPadding:
+                                    const EdgeInsets.symmetric(
+                                        vertical: 6, horizontal: 8),
+                                    border: OutlineInputBorder(
+                                        borderRadius:
+                                        BorderRadius.circular(20),
+                                        borderSide: BorderSide(
+                                            color: context
+                                                .color.territoryColor)),
+                                    focusedBorder: OutlineInputBorder(
+                                        borderRadius:
+                                        BorderRadius.circular(20),
+                                        borderSide: BorderSide(
+                                            color: context
+                                                .color.territoryColor)),
+                                    hintText:
+                                    "writeHere".translate(context),
+                                  ),
                                 ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(
+                                width: 9.5,
+                              ),
+                              if (showRecordButton)
+                                RecordButton(
+                                  controller: _recordButtonAnimation,
+                                  callback: (path) {
+                                    /*if (Constant.isDemoModeOn) {
+                                  HelperUtils.showSnackBarMessage(
+                                      context,
+                                      "thisActionNotValidDemo"
+                                          .translate(context));
+                                  return;
+                                }*/
+
+                                    //This is adding Chat widget in stream with BlocProvider , because we will need to do api process to store chat message to server, when it will be added to list it's initState method will be called
+                                    ChatMessageHandler.add(
+                                      BlocProvider(
+                                        create: (context) =>
+                                            SendMessageCubit(),
+                                        child: ChatMessage(
+                                            key: ValueKey(DateTime.now()
+                                                .toString()
+                                                .toString()),
+                                            message: controller.text,
+                                            senderId: int.parse(
+                                                HiveUtils.getUserId()!),
+                                            createdAt:
+                                            DateTime.now().toString(),
+                                            isSentNow: true,
+                                            audio: path,
+                                            messageType: 'audio',
+                                            itemOfferId: widget.itemOfferId,
+                                            file: "",
+                                            updatedAt:
+                                            DateTime.now().toString()),
+
+                                      ),
+                                    );
+
+
+
+                                    totalMessageCount++;
+
+                                    setState(() {});
+                                  },
+                                  isSending: false,
+                                ),
+                              if (!showRecordButton)
+                                GestureDetector(
+                                  onTap: () {
+                                    /* if (Constant.isDemoModeOn) {
+                                  HelperUtils.showSnackBarMessage(
+                                      context,
+                                      "thisActionNotValidDemo"
+                                          .translate(context));
+                                  return;
+                                }*/
+                                    showDeletebutton.value = false;
+
+                                    //if file is selected then user can send message without text
+                                    if (controller.text.trim().isEmpty &&
+                                        messageAttachment == null) return;
+                                    //This is adding Chat widget in stream with BlocProvider , because we will need to do api process to store chat message to server, when it will be added to list it's initState method will be called
+
+
+                                    String? messageType;
+                                    final attachmentPath = messageAttachment?.path;
+                                    if (attachmentPath != null &&
+                                        attachmentPath.isNotEmpty) {
+                                      messageType = _isImageAttachmentPath(attachmentPath)
+                                          ? 'image'
+                                          : 'file';
+                                    } else if (controller.text.trim().isNotEmpty) {
+                                      messageType = 'text';
+                                    }
+
+                                    ChatMessageHandler.add(
+                                      BlocProvider(
+                                        key: ValueKey(DateTime.now()
+                                            .toString()
+                                            .toString()),
+                                        create: (context) =>
+                                            SendMessageCubit(),
+                                        child: ChatMessage(
+                                          key: ValueKey(DateTime.now()
+                                              .toString()
+                                              .toString()),
+                                          message: controller.text,
+                                          senderId: int.parse(
+                                              HiveUtils.getUserId()!),
+                                          createdAt:
+                                          DateTime.now().toString(),
+                                          isSentNow: true,
+                                          updatedAt:
+                                          DateTime.now().toString(),
+                                          audio: "",
+                                          file: messageAttachment != null
+                                              ? messageAttachment?.path
+                                              : "",
+                                          itemOfferId: widget.itemOfferId,
+                                          messageType: messageType,
+
+                                        ),
+                                      ),
+                                    );
+                                    totalMessageCount++;
+                                    controller.text = "";
+                                    messageAttachment = null;
+                                    _updateInputMode();
+                                    setState(() {});
+                                    },
+                                  child: CircleAvatar(
+                                    radius: 20,
+                                    backgroundColor:
+                                    context.color.territoryColor,
+                                    child: Icon(
+                                      Icons.send,
+                                      color: context.color.buttonColor,
+                                    ),
+                                  ),
+                                )
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -467,9 +470,9 @@ extension _ChatScreenUi on _ChatScreenState {
                         textDirection: Directionality.of(context),
                         child: RotatedBox(
                           quarterTurns:
-                              Directionality.of(context) == TextDirection.rtl
-                                  ? 2
-                                  : -4,
+                          Directionality.of(context) == TextDirection.rtl
+                              ? 2
+                              : -4,
                           child: UiUtils.getSvg(AppIcons.arrowLeft,
                               fit: BoxFit.none,
                               color: context.color.textDefaultColor),
@@ -502,12 +505,12 @@ extension _ChatScreenUi on _ChatScreenState {
                                 Widgets.showLoader(context);
 
                                 DataOutput<ItemModel> dataOutput =
-                                    await ItemRepository().fetchItemFromItemId(
-                                        int.parse(widget.itemId));
+                                await ItemRepository().fetchItemFromItemId(
+                                    int.parse(widget.itemId));
 
                                 Future.delayed(
                                   Duration.zero,
-                                  () {
+                                      () {
                                     Widgets.hideLoder(context);
                                     Navigator.pushNamed(
                                         context, Routes.adDetailsScreen,
@@ -555,7 +558,7 @@ extension _ChatScreenUi on _ChatScreenState {
                                 ),
                                 Padding(
                                   padding:
-                                      EdgeInsetsDirectional.only(start: 15.0),
+                                  EdgeInsetsDirectional.only(start: 15.0),
                                   child: Text(
                                     _formatPriceWithCurrency(
                                       widget.itemPrice,
@@ -617,13 +620,13 @@ extension _ChatScreenUi on _ChatScreenState {
                             context
                                 .read<BlockedUsersListCubit>()
                                 .addBlockedUser(
-                                  BlockedUserModel(
-                                      id: int.parse(widget.userId),
-                                      name: widget.userName,
-                                      profile: widget.profilePicture
-                                      // Add other necessary user data
-                                      ),
-                                );
+                              BlockedUserModel(
+                                  id: int.parse(widget.userId),
+                                  name: widget.userName,
+                                  profile: widget.profilePicture
+                                // Add other necessary user data
+                              ),
+                            );
                             HelperUtils.showSnackBarMessage(
                                 context, blockState.message);
                           } else if (blockState is BlockUserFail) {
@@ -677,13 +680,13 @@ extension _ChatScreenUi on _ChatScreenState {
                                     PopupMenuItem(
                                       onTap: () async {
                                         var block =
-                                            await UiUtils.showBlurredDialoge(
+                                        await UiUtils.showBlurredDialoge(
                                           context,
                                           dialoge: BlurredDialogBox(
                                             acceptButtonName:
-                                                "blockLbl".translate(context),
+                                            "blockLbl".translate(context),
                                             title:
-                                                "${"blockLbl".translate(context)}\t${widget.userName}?",
+                                            "${"blockLbl".translate(context)}\t${widget.userName}?",
                                             content: Text(
                                               "blockWarning".translate(context),
                                             ),
@@ -694,9 +697,9 @@ extension _ChatScreenUi on _ChatScreenState {
                                             context
                                                 .read<BlockUserCubit>()
                                                 .blockUser(
-                                                  blockUserId:
-                                                      int.parse(widget.userId),
-                                                );
+                                              blockUserId:
+                                              int.parse(widget.userId),
+                                            );
                                           });
                                         }
                                       },
@@ -707,11 +710,11 @@ extension _ChatScreenUi on _ChatScreenState {
                                     PopupMenuItem(
                                       onTap: () async {
                                         var unBlock =
-                                            await UiUtils.showBlurredDialoge(
+                                        await UiUtils.showBlurredDialoge(
                                           context,
                                           dialoge: BlurredDialogBox(
                                             acceptButtonName:
-                                                "unBlockLbl".translate(context),
+                                            "unBlockLbl".translate(context),
                                             content: Text(
                                               "${"unBlockLbl".translate(context)}\t${widget.userName}\t${"toSendMessage".translate(context)}"
                                                   .translate(context),
@@ -723,14 +726,14 @@ extension _ChatScreenUi on _ChatScreenState {
                                             context
                                                 .read<UnblockUserCubit>()
                                                 .unBlockUser(
-                                                  blockUserId:
-                                                      int.parse(widget.userId),
-                                                );
+                                              blockUserId:
+                                              int.parse(widget.userId),
+                                            );
                                           });
                                         }
                                       },
                                       child: Text(
-                                              "unBlockLbl".translate(context))
+                                          "unBlockLbl".translate(context))
                                           .color(context.color.textColorDark),
                                     ),
                                 ],
@@ -750,47 +753,48 @@ extension _ChatScreenUi on _ChatScreenState {
                 children: [
                   widget.profilePicture == ""
                       ? CircleAvatar(
-                          backgroundColor: context.color.territoryColor,
-                          child: SvgPicture.asset(
-                            AppIcons.profile,
-                            colorFilter: ColorFilter.mode(
-                                context.color.buttonColor, BlendMode.srcIn),
-                          ),
-                        )
+                    backgroundColor: context.color.territoryColor,
+                    child: SvgPicture.asset(
+                      AppIcons.profile,
+                      colorFilter: ColorFilter.mode(
+                          context.color.buttonColor, BlendMode.srcIn),
+                    ),
+                  )
                       : GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              TransparantRoute(
-                                barrierDismiss: true,
-                                builder: (context) {
-                                  return GestureDetector(
-                                    onTap: () {
-                                      Navigator.pop(context);
-                                    },
-                                    child: Container(
-                                      color: const Color.fromARGB(69, 0, 0, 0),
-                                    ),
-                                  );
-                                },
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        TransparantRoute(
+                          barrierDismiss: true,
+                          builder: (context) {
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.pop(context);
+                              },
+                              child: Container(
+                                color: const Color.fromARGB(69, 0, 0, 0),
                               ),
                             );
                           },
-                          child: CustomImageHeroAnimation(
-                            type: CImageType.Network,
-                            image: widget.profilePicture,
-                            child: CircleAvatar(
-                              backgroundImage: CachedNetworkImageProvider(
-                                widget.profilePicture,
-                              ),
-                            ),
-                          ),
                         ),
+                      );
+                    },
+                    child: CustomImageHeroAnimation(
+                      type: CImageType.Network,
+                      image: widget.profilePicture,
+                      child: CircleAvatar(
+                        backgroundImage: CachedNetworkImageProvider(
+                          widget.profilePicture,
+                        ),
+                      ),
+                    ),
+                  ),
                   const SizedBox(
                     width: 10,
                   ),
                   GestureDetector(
                     onTap: () {},
+
                     child: SizedBox(
                       width: context.screenWidth * 0.45,
                       child: Column(
@@ -806,6 +810,7 @@ extension _ChatScreenUi on _ChatScreenState {
                                 .color(presenceColor),
                         ],
                       ),
+
                     ),
                   ),
                 ],
@@ -917,9 +922,9 @@ extension _ChatScreenUi on _ChatScreenState {
                                   }
 
                                   if (snapshot.connectionState ==
-                                          ConnectionState.active ||
-                                      snapshot.connectionState ==
-                                          ConnectionState.done) {
+                                  ConnectionState.active ||
+                                  snapshot.connectionState ==
+                                  ConnectionState.done) {
                                     if ((snapshot.data as List).isEmpty) {
                                       return offerWidget();
                                     }
@@ -937,7 +942,7 @@ extension _ChatScreenUi on _ChatScreenState {
                                               reverse: true,
                                               shrinkWrap: true,
                                               physics:
-                                                  const AlwaysScrollableScrollPhysics(),
+                                              const AlwaysScrollableScrollPhysics(),
                                               controller: _pageScrollController,
                                               addAutomaticKeepAlives: true,
                                               itemCount: snapshot.data!.length,
@@ -950,11 +955,11 @@ extension _ChatScreenUi on _ChatScreenState {
                                                   .elementAt(index); */
 
                                                 dynamic chat =
-                                                    snapshot.data![index];
+                                                snapshot.data![index];
 
                                                 return Column(
                                                   mainAxisSize:
-                                                      MainAxisSize.min,
+                                                  MainAxisSize.min,
                                                   children: [
                                                     if (index ==
                                                         snapshot.data!.length -
@@ -997,7 +1002,7 @@ extension _ChatScreenUi on _ChatScreenState {
 
     if (offerPrice != null) {
       final String offerLabel =
-          _formatPriceWithCurrency(offerPrice, offerCurrencySymbol);
+      _formatPriceWithCurrency(offerPrice, offerCurrencySymbol);
 
       if (int.parse(HiveUtils.getUserId()!) == int.parse(widget.buyerId!)) {
         return Align(
@@ -1024,6 +1029,7 @@ extension _ChatScreenUi on _ChatScreenState {
                   /*  Text("yourOffer".translate(context))
                   .color(context.color.textDefaultColor.withOpacity(0.5)),*/
                   Text(offerLabel)
+
                       .bold()
                       .size(context.font.larger)
                       .color(context.color.textDefaultColor)
@@ -1036,7 +1042,7 @@ extension _ChatScreenUi on _ChatScreenState {
           child: Container(
               height: 71,
               margin:
-                  EdgeInsetsDirectional.only(top: 15, bottom: 15, start: 15),
+              EdgeInsetsDirectional.only(top: 15, bottom: 15, start: 15),
               padding: EdgeInsets.all(12),
               decoration: BoxDecoration(
                   border: Border.all(
@@ -1053,6 +1059,7 @@ extension _ChatScreenUi on _ChatScreenState {
                   Text("offerLbl".translate(context))
                       .color(context.color.textDefaultColor.withOpacity(0.5)),
                   Text(offerLabel)
+
                       .bold()
                       .size(context.font.larger)
                       .color(context.color.textDefaultColor)

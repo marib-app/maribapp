@@ -6,6 +6,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/cubits/service_requests_cubit.dart';
 import 'package:marib/data/model/service_request_model.dart';
 
+
+
+
+
+
+
+
+
 class ServiceRequestsScreen extends StatefulWidget {
   final Map<String, dynamic>? pending;
   final int? categoryId;
@@ -14,8 +22,7 @@ class ServiceRequestsScreen extends StatefulWidget {
 
   /// arguments: { pendingRequest?: Map }
   static Route route(RouteSettings settings) {
-    final args =
-        (settings.arguments is Map) ? settings.arguments as Map : const {};
+    final args = (settings.arguments is Map) ? settings.arguments as Map : const {};
     final Map<String, dynamic>? p = args['pendingRequest'] is Map
         ? (args['pendingRequest'] as Map).cast<String, dynamic>()
         : null;
@@ -24,14 +31,13 @@ class ServiceRequestsScreen extends StatefulWidget {
         : int.tryParse('${args['categoryId'] ?? ''}');
     return BlurredRouter(
       builder: (_) => BlocProvider(
-        create: (_) =>
-            ServiceRequestsCubit()..fetchRequests(categoryId: categoryId),
+        create: (_) => ServiceRequestsCubit()
+          ..fetchRequests(categoryId: categoryId),
         child: ServiceRequestsScreen(
           pending: p,
           categoryId: categoryId,
         ),
-      ),
-      settings: settings,
+      ),      settings: settings,
     );
   }
 
@@ -42,13 +48,16 @@ class ServiceRequestsScreen extends StatefulWidget {
 class _ServiceRequestsScreenState extends State<ServiceRequestsScreen> {
   bool _pendingInjected = false;
 
+
   @override
   void initState() {
     super.initState();
+
   }
 
   Future<void> _refresh() async {
     await context.read<ServiceRequestsCubit>().refresh();
+
   }
 
   String _fmt(DateTime d) {
@@ -75,12 +84,9 @@ class _ServiceRequestsScreenState extends State<ServiceRequestsScreen> {
         body: BlocListener<ServiceRequestsCubit, ServiceRequestsState>(
           listenWhen: (_, current) => current is ServiceRequestsLoadSuccess,
           listener: (context, state) {
-            if (!_pendingInjected &&
-                widget.pending != null &&
+            if (!_pendingInjected && widget.pending != null &&
                 state is ServiceRequestsLoadSuccess) {
-              context
-                  .read<ServiceRequestsCubit>()
-                  .addOrUpdateFromMap(widget.pending!);
+              context.read<ServiceRequestsCubit>().addOrUpdateFromMap(widget.pending!);
               _pendingInjected = true;
             }
           },
@@ -91,8 +97,8 @@ class _ServiceRequestsScreenState extends State<ServiceRequestsScreen> {
                   error: '${state.error}',
                   onRetry: () =>
                       context.read<ServiceRequestsCubit>().fetchRequests(
-                            categoryId: widget.categoryId,
-                          ),
+                        categoryId: widget.categoryId,
+                      ),
                 );
               }
 
@@ -140,16 +146,23 @@ class _ServiceRequestsScreenState extends State<ServiceRequestsScreen> {
                           ),
                         ],
                       ),
+
                     ),
-                  ),
-                ],
-              );
-            },
+            ),
+            ],
+            );
+          },
           ),
         ),
       ),
     );
   }
+
+
+
+
+
+
 
   void _showDetails(ServiceRequestModel vm) {
     dynamic customFields;
@@ -162,6 +175,7 @@ class _ServiceRequestsScreenState extends State<ServiceRequestsScreen> {
       }
     }
 
+
     final jsonPretty = const JsonEncoder.withIndent('  ').convert({
       'id': vm.id,
       'title': vm.serviceTitle ?? 'خدمة',
@@ -170,6 +184,7 @@ class _ServiceRequestsScreenState extends State<ServiceRequestsScreen> {
       if (vm.amount != null) 'amount': vm.amount,
       if (vm.currency?.isNotEmpty == true) 'currency': vm.currency,
       if (customFields != null) 'custom_fields': customFields,
+
     });
 
     showModalBottomSheet(
@@ -184,14 +199,18 @@ class _ServiceRequestsScreenState extends State<ServiceRequestsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(vm.serviceTitle ?? 'خدمة',
-                    style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.w600)),
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+
+
                 const SizedBox(height: 6),
                 Row(
                   children: [
                     _StatusChip(status: vm.status),
                     const SizedBox(width: 8),
-                    Text(vm.submittedAt != null ? _fmt(vm.submittedAt!) : '—'),
+                    Text(vm.submittedAt != null
+                        ? _fmt(vm.submittedAt!)
+                        : '—'),
+
                   ],
                 ),
                 if ((vm.amount ?? 0) > 0) ...[
@@ -201,8 +220,7 @@ class _ServiceRequestsScreenState extends State<ServiceRequestsScreen> {
                 const SizedBox(height: 12),
                 const Divider(height: 1),
                 const SizedBox(height: 12),
-                const Text('البيانات (مؤقتًا):',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
+                const Text('البيانات (مؤقتًا):', style: TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 6),
                 Container(
                   width: double.infinity,
@@ -302,6 +320,9 @@ class _RequestsList extends StatelessWidget {
   }
 }
 
+
+
+
 class _ErrorView extends StatelessWidget {
   final String error;
   final VoidCallback onRetry;
@@ -333,6 +354,10 @@ class _ErrorView extends StatelessWidget {
     );
   }
 }
+
+
+
+
 
 class _TitleSubtitle extends StatelessWidget {
   final String title;
@@ -432,3 +457,5 @@ class _StatusChip extends StatelessWidget {
     );
   }
 }
+
+

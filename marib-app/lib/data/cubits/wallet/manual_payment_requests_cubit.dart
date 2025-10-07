@@ -101,8 +101,7 @@ class ManualPaymentRequestsCubit extends Cubit<ManualPaymentRequestsState> {
 
     try {
       final nextPage = currentState.currentPage + 1;
-      final result =
-          await _repository.fetchManualPaymentRequests(page: nextPage);
+      final result = await _repository.fetchManualPaymentRequests(page: nextPage);
       final meta = result.extraData?.data is WalletWithdrawalsMeta
           ? result.extraData!.data as WalletWithdrawalsMeta
           : WalletWithdrawalsMeta(currentPage: nextPage);

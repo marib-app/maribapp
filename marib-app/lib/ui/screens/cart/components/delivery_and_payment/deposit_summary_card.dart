@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class DepositSummaryCard extends StatelessWidget {
   const DepositSummaryCard({
@@ -9,6 +10,7 @@ class DepositSummaryCard extends StatelessWidget {
 
   final Map<String, dynamic>? data;
   final ValueChanged<bool>? onToggle;
+
 
   @override
   Widget build(BuildContext context) {
@@ -31,15 +33,19 @@ class DepositSummaryCard extends StatelessWidget {
 
     final bool depositActive = toggleRequired ||
         (!toggleAllowed && (serverEnabled || appliedRaw)) ||
+
         (toggleAllowed && toggleValue);
     final bool previewMode = toggleAllowed && !depositActive;
 
-    final String title = _asString(deposit['title']) ?? 'تفاصيل الدفعة المقدمة';
+    final String title =
+        _asString(deposit['title']) ?? 'تفاصيل الدفعة المقدمة';
     final String? toggleLabel = _asString(deposit['toggleLabel']);
     final String? toggleDescription = _asString(deposit['toggleDescription']);
 
-    final String? totalDisplay = _asString(deposit['effectiveTotalDisplay']) ??
-        _asString(deposit['totalAmount']);
+
+    final String? totalDisplay =
+        _asString(deposit['effectiveTotalDisplay']) ??
+            _asString(deposit['totalAmount']);
     final String? amountDueDisplay =
         _asString(deposit['effectiveAmountDueDisplay']) ??
             _asString(deposit['previewAmountDueDisplay']) ??
@@ -54,20 +60,26 @@ class DepositSummaryCard extends StatelessWidget {
         ? rawRemainingDisplay
         : (previewMode ? rawRemainingDisplay : null);
 
+
     final double? amountDueValue =
         _asDouble(deposit['effectiveAmountDueValue']) ??
             _asDouble(deposit['amountDueNowValue']);
-    final double? totalValue = _asDouble(deposit['effectiveTotalValue']) ??
-        _asDouble(deposit['totalAmountValue']);
+    final double? totalValue =
+        _asDouble(deposit['effectiveTotalValue']) ??
+            _asDouble(deposit['totalAmountValue']);
     final double? ratioValue = _asDouble(deposit['ratioValue']) ??
         ((amountDueValue != null && totalValue != null && totalValue != 0)
+
             ? amountDueValue / totalValue
             : null);
     final String? percent =
         _asString(deposit['percent']) ?? _formatPercentFromRatio(ratioValue);
 
+
+
     final String? goodsValue = _asString(deposit['goodsValue']);
     final String? shippingFee = _asString(deposit['shippingFee']);
+
 
     final bool? includesShipping = deposit['includesShipping'] as bool?;
     final bool hasDetails = <String?>[
@@ -79,55 +91,59 @@ class DepositSummaryCard extends StatelessWidget {
       shippingFee,
     ].any((String? value) => value != null && value.trim().isNotEmpty);
 
+
     // لا نعرض التفاصيل الحساسة (المبلغ المطلوب والمبلغ المتبقي) إلا بعد التفعيل الفعلي
     // للدفعة المقدمة، وذلك ليتوافق مع السلوك المطلوب من النقر على البطاقة لتفعيلها
     // ثم الكشف عن الأرقام ذات الصلة للمستخدم.
     final bool showDetails = hasDetails && depositActive;
 
-    final String? previewMessage = _asString(deposit['previewMessage']) ??
-        _asString(deposit['inactiveMessage']);
-    String? message =
-        depositActive ? _asString(deposit['message']) : previewMessage;
+    final String? previewMessage =
+        _asString(deposit['previewMessage']) ?? _asString(deposit['inactiveMessage']);
+    String? message = depositActive
+        ? _asString(deposit['message'])
+        : previewMessage;
+
 
     if (message == null) {
       if (depositActive) {
-        if (percent != null &&
-            amountDueDisplay != null &&
-            totalDisplay != null) {
+        if (percent != null && amountDueDisplay != null && totalDisplay != null) {
           message =
-              'يمكنك دفع $percent من إجمالي طلبك ($totalDisplay) كدفعة مقدمة الآن بمبلغ $amountDueDisplay، وسيتم تحصيل المبلغ المتبقي لاحقًا.';
+          'يمكنك دفع $percent من إجمالي طلبك ($totalDisplay) كدفعة مقدمة الآن بمبلغ $amountDueDisplay، وسيتم تحصيل المبلغ المتبقي لاحقًا.';
         } else if (percent != null && amountDueDisplay != null) {
           message =
-              'يمكنك دفع $percent من قيمة طلبك الآن بمبلغ $amountDueDisplay، ويتم تحصيل الباقي لاحقًا.';
+          'يمكنك دفع $percent من قيمة طلبك الآن بمبلغ $amountDueDisplay، ويتم تحصيل الباقي لاحقًا.';
         } else if (percent != null) {
           message =
-              'يمكنك دفع $percent من إجمالي الطلب كدفعة مقدمة الآن، ويتم تحصيل الباقي لاحقًا.';
+          'يمكنك دفع $percent من إجمالي الطلب كدفعة مقدمة الآن، ويتم تحصيل الباقي لاحقًا.';
         } else if (amountDueDisplay != null && totalDisplay != null) {
           message =
-              'يمكنك دفع $amountDueDisplay الآن من أصل $totalDisplay، وسيتم تحصيل المتبقي عند التسليم.';
+          'يمكنك دفع $amountDueDisplay الآن من أصل $totalDisplay، وسيتم تحصيل المتبقي عند التسليم.';
         }
       } else {
         if (percent != null && totalDisplay != null) {
           message =
-              'عند تفعيل الدفعة المقدمة ستدفع $percent من إجمالي طلبك ($totalDisplay) الآن ويتم جدولة الباقي لاحقًا.';
+          'عند تفعيل الدفعة المقدمة ستدفع $percent من إجمالي طلبك ($totalDisplay) الآن ويتم جدولة الباقي لاحقًا.';
         } else if (percent != null) {
           message =
-              'يمكنك تفعيل خيار الدفعة المقدمة لدفع $percent من قيمة طلبك الآن وترك الباقي للتسليم.';
+          'يمكنك تفعيل خيار الدفعة المقدمة لدفع $percent من قيمة طلبك الآن وترك الباقي للتسليم.';
         } else if (totalDisplay != null) {
           message =
-              'يمكنك دفع جزء من إجمالي طلبك ($totalDisplay) مقدمًا وترك المتبقي للتسليم عند تفعيل هذا الخيار.';
+          'يمكنك دفع جزء من إجمالي طلبك ($totalDisplay) مقدمًا وترك المتبقي للتسليم عند تفعيل هذا الخيار.';
         } else {
           message =
-              'يمكنك تفعيل خيار الدفعة المقدمة لدفع جزء من المبلغ الآن وترك الباقي لحين التسليم. لن يتم احتساب الدفعة إلا بعد اختيار هذا الخيار.';
+          'يمكنك تفعيل خيار الدفعة المقدمة لدفع جزء من المبلغ الآن وترك الباقي لحين التسليم. لن يتم احتساب الدفعة إلا بعد اختيار هذا الخيار.';
         }
       }
     }
 
-    final String statusText =
-        toggleRequired ? 'إجباري' : (depositActive ? 'مفعّلة' : 'غير مفعّلة');
+
+    final String statusText = toggleRequired
+        ? 'إجباري'
+        : (depositActive ? 'مفعّلة' : 'غير مفعّلة');
     final Color statusColor = toggleRequired
         ? Colors.deepOrange
         : (depositActive ? Colors.teal : Colors.blueGrey);
+
 
     final List<Widget> badges = <Widget>[
       _buildBadge(statusText, statusColor, isDark),
@@ -159,9 +175,8 @@ class DepositSummaryCard extends StatelessWidget {
         child: InkWell(
           borderRadius: borderRadius,
           splashColor: Colors.teal.withOpacity(0.12),
-          highlightColor: isDark
-              ? Colors.teal.withOpacity(0.08)
-              : Colors.teal.withOpacity(0.05),
+          highlightColor: isDark ? Colors.teal.withOpacity(0.08) : Colors.teal.withOpacity(0.05),
+
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -188,9 +203,7 @@ class DepositSummaryCard extends StatelessWidget {
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? Colors.teal.shade700
-                            : Colors.teal.shade100,
+                        color: isDark ? Colors.teal.shade700 : Colors.teal.shade100,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
@@ -208,9 +221,7 @@ class DepositSummaryCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
-                              color: isDark
-                                  ? Colors.white
-                                  : const Color(0xFF1F1F1F),
+                              color: isDark ? Colors.white : const Color(0xFF1F1F1F),
                             ),
                           ),
                           if (badges.isNotEmpty) ...<Widget>[
@@ -224,7 +235,7 @@ class DepositSummaryCard extends StatelessWidget {
                           if (message != null) ...<Widget>[
                             const SizedBox(height: 10),
                             Text(
-                              message,
+                              message!,
                               style: TextStyle(
                                 fontSize: 13.5,
                                 height: 1.5,
@@ -313,9 +324,7 @@ class DepositSummaryCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                ] else if (!depositActive &&
-                    toggleAllowed &&
-                    !showDetails) ...<Widget>[
+                ] else if (!depositActive && toggleAllowed && !showDetails) ...<Widget>[
                   const SizedBox(height: 16),
                   const Divider(height: 1),
                   const SizedBox(height: 12),
@@ -337,6 +346,7 @@ class DepositSummaryCard extends StatelessWidget {
     );
   }
 
+
   Widget _buildEmptyState(bool isDark) {
     return Container(
       width: double.infinity,
@@ -357,8 +367,9 @@ class DepositSummaryCard extends StatelessWidget {
   }
 
   Widget _buildBadge(String label, Color color, bool isDark) {
-    final Color textColor =
-        isDark ? Colors.white : Color.lerp(color, Colors.black, 0.35) ?? color;
+    final Color textColor = isDark
+        ? Colors.white
+        : Color.lerp(color, Colors.black, 0.35) ?? color;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -378,12 +389,12 @@ class DepositSummaryCard extends StatelessWidget {
   }
 
   Widget _buildToggle(
-    BuildContext context, {
-    required String label,
-    String? description,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
+      BuildContext context, {
+        required String label,
+        String? description,
+        required bool value,
+        required ValueChanged<bool> onChanged,
+      }) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -456,8 +467,9 @@ class DepositSummaryCard extends StatelessWidget {
         children: <Widget>[
           Icon(
             Icons.lock_outline,
-            color:
-                isDark ? Colors.orangeAccent.shade100 : Colors.orange.shade700,
+            color: isDark
+                ? Colors.orangeAccent.shade100
+                : Colors.orange.shade700,
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -478,17 +490,18 @@ class DepositSummaryCard extends StatelessWidget {
   }
 
   List<Widget> _buildDetails(
-    BuildContext context, {
-    String? totalDisplay,
-    String? amountDueDisplay,
-    String? remainingDisplay,
-    String? percent,
-    String? goodsValue,
-    String? shippingFee,
-    bool? includesShipping,
-    bool previewMode = false,
-    required bool isDark,
-  }) {
+      BuildContext context, {
+        String? totalDisplay,
+        String? amountDueDisplay,
+        String? remainingDisplay,
+        String? percent,
+        String? goodsValue,
+        String? shippingFee,
+        bool? includesShipping,
+        bool previewMode = false,
+
+        required bool isDark,
+      }) {
     final List<Widget> rows = <Widget>[];
 
     void addRow(String label, String? value,
@@ -506,8 +519,9 @@ class DepositSummaryCard extends StatelessWidget {
                 Icon(
                   icon,
                   size: 18,
-                  color:
-                      isDark ? Colors.grey.shade300 : Colors.blueGrey.shade400,
+                  color: isDark
+                      ? Colors.grey.shade300
+                      : Colors.blueGrey.shade400,
                 ),
                 const SizedBox(width: 8),
               ],
@@ -517,8 +531,9 @@ class DepositSummaryCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 13.2,
                     fontWeight: FontWeight.w600,
-                    color:
-                        isDark ? Colors.grey.shade200 : const Color(0xFF1F1F1F),
+                    color: isDark
+                        ? Colors.grey.shade200
+                        : const Color(0xFF1F1F1F),
                   ),
                 ),
               ),
@@ -529,7 +544,9 @@ class DepositSummaryCard extends StatelessWidget {
                   fontSize: 13.2,
                   fontWeight: FontWeight.w700,
                   color: valueColor ??
-                      (isDark ? Colors.white : Colors.blueGrey.shade900),
+                      (isDark
+                          ? Colors.white
+                          : Colors.blueGrey.shade900),
                 ),
                 textAlign: TextAlign.end,
               ),
@@ -548,6 +565,7 @@ class DepositSummaryCard extends StatelessWidget {
       amountDueDisplay,
       icon: Icons.payments_outlined,
       valueColor: dueColor,
+
     );
     if (remainingDisplay != null && remainingDisplay.trim().isNotEmpty) {
       final Color remainingColor = previewMode
@@ -559,14 +577,16 @@ class DepositSummaryCard extends StatelessWidget {
         remainingDisplay,
         icon: Icons.schedule_outlined,
         valueColor: remainingColor,
+
       );
     }
     addRow('نسبة الدفعة المقدمة', percent, icon: Icons.percent);
     addRow('قيمة المنتجات', goodsValue, icon: Icons.shopping_bag_outlined);
     final String? shippingLabel;
     if (shippingFee != null && shippingFee.trim().isNotEmpty) {
-      shippingLabel =
-          includesShipping == false ? '$shippingFee (غير مشمولة)' : shippingFee;
+      shippingLabel = includesShipping == false
+          ? '$shippingFee (غير مشمولة)'
+          : shippingFee;
     } else {
       shippingLabel = shippingFee;
     }
@@ -574,7 +594,6 @@ class DepositSummaryCard extends StatelessWidget {
 
     return rows;
   }
-
   String? _asString(dynamic value) {
     if (value == null) return null;
     if (value is String) {
@@ -607,10 +626,9 @@ class DepositSummaryCard extends StatelessWidget {
       if (sanitized.isEmpty) {
         return null;
       }
-      final String normalized =
-          sanitized.contains(',') && !sanitized.contains('.')
-              ? sanitized.replaceAll(',', '.')
-              : sanitized.replaceAll(',', '');
+      final String normalized = sanitized.contains(',') && !sanitized.contains('.')
+          ? sanitized.replaceAll(',', '.')
+          : sanitized.replaceAll(',', '');
       return double.tryParse(normalized);
     }
     return null;

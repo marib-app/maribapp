@@ -1,5 +1,6 @@
 import 'dart:collection';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_svg/flutter_svg.dart' as svg;
 import 'package:marib/data/model/custom_field/custom_field_model.dart';
 
@@ -69,25 +70,33 @@ class AdCustomFieldsShimmer extends StatelessWidget {
   }
 }
 
+
+
+
+
+
+
+
+
 /// ===============================
 /// إعدادات قابلة للتخصيص لكل جزئية
 /// ===============================
 class AdFieldsStyle {
   // أحجام الأيقونات
-  final double leadingBoxSize; // صندوق الأيقونة في الصفوف/الأزرار
-  final double leadingIconSize; // الأيقونة داخل الصندوق
-  final double actionIconSize; // حجم أيقونة الأزرار السفلية (إن وجدت)
+  final double leadingBoxSize;      // صندوق الأيقونة في الصفوف/الأزرار
+  final double leadingIconSize;     // الأيقونة داخل الصندوق
+  final double actionIconSize;      // حجم أيقونة الأزرار السفلية (إن وجدت)
 
   // line-heights والتباعدات
-  final double titleLineHeight; // سطر عنوان الحقل
-  final double valueLineHeight; // سطر القيمة/الرابط
-  final double titleToValueGap; // المسافة بين العنوان والقيمة
-  final double rowToDividerGap; // المسافة قبل الـDivider
-  final double wrapSpacing; // تباعد أفقي بين عناصر الشبكة
-  final double wrapRunSpacing; // تباعد عمودي بين الصفوف بالشبكة
+  final double titleLineHeight;     // سطر عنوان الحقل
+  final double valueLineHeight;     // سطر القيمة/الرابط
+  final double titleToValueGap;     // المسافة بين العنوان والقيمة
+  final double rowToDividerGap;     // المسافة قبل الـDivider
+  final double wrapSpacing;         // تباعد أفقي بين عناصر الشبكة
+  final double wrapRunSpacing;      // تباعد عمودي بين الصفوف بالشبكة
 
   // عرض أيقونات السيرفر
-  final bool showServerIconOnTextRows; // في صفوف الشبكة العلوية
+  final bool showServerIconOnTextRows;      // في صفوف الشبكة العلوية
   final bool showServerIconOnActionButtons; // في منطقة الأزرار السفلية
 
   // تخصيص خطوط وأزرار
@@ -98,9 +107,9 @@ class AdFieldsStyle {
 
   // قوالب نصوص (بدون {label} لإلغاء التكرار) – تدعم {count}
   final String emptyPlaceholder;
-  final String imagesButtonLabel; // مثال: 'عرض الصور ({count})'
-  final String filesButtonLabel; // مثال: 'عرض الملفات ({count})'
-  final String checkboxButtonLabel; // مثال: 'عرض القيم ({count})'
+  final String imagesButtonLabel;     // مثال: 'عرض الصور ({count})'
+  final String filesButtonLabel;      // مثال: 'عرض الملفات ({count})'
+  final String checkboxButtonLabel;   // مثال: 'عرض القيم ({count})'
 
   // نصوص واجهة Dialog للـCheckbox
   final String dialogCloseText;
@@ -109,7 +118,7 @@ class AdFieldsStyle {
 
   // نص زر التحكّم الواحد
   final String collapsedText; // يُعرض عند الطي (مثلاً: "عرض المزيد (N)")
-  final String expandedText; // يُعرض عند التوسيع (مثلاً: "إخفاء الكل")
+  final String expandedText;  // يُعرض عند التوسيع (مثلاً: "إخفاء الكل")
 
   const AdFieldsStyle({
     this.leadingBoxSize = 24,
@@ -129,13 +138,13 @@ class AdFieldsStyle {
     this.actionButtonStyle,
     this.emptyPlaceholder = 'غير محدد',
     this.imagesButtonLabel = 'عرض الصور ({count})',
-    this.filesButtonLabel = 'عرض الملفات ({count})',
+    this.filesButtonLabel  = 'عرض الملفات ({count})',
     this.checkboxButtonLabel = 'عرض القيم ({count})',
     this.dialogCloseText = 'إغلاق',
     this.dialogSearchHint = 'ابحث داخل القيم…',
     this.dialogCopyAll = 'نسخ الكل',
     this.collapsedText = 'عرض المزيد',
-    this.expandedText = 'إخفاء الكل',
+    this.expandedText  = 'إخفاء الكل',
   });
 
   ButtonStyle effectiveActionButtonStyle(BuildContext context) {
@@ -187,15 +196,15 @@ class AdCustomFieldsSection extends StatefulWidget {
 
 /// سجل موحّد لكل عنصر
 typedef _FieldRec = ({
-  Map<String, dynamic> map,
-  String label,
-  String value, // قيمة نصية مختصرة للعرض العادي
-  String? iconUrl, // أيقونة الحقل من السيرفر إن وُجدت
-  bool wide, // طلب عرض صف كامل (للصور/الملفات)
-  bool checkbox, // هل هو حقل Checkbox؟
-  List<String> labels, // ملصقات القيم المختارة (للـ Checkbox)
-  String kind, // 'text' | 'image' | 'file' | 'checkbox'
-  List<String> mediaUrls, // روابط الصور/الملفات إن وجدت
+Map<String, dynamic> map,
+String label,
+String value,            // قيمة نصية مختصرة للعرض العادي
+String? iconUrl,         // أيقونة الحقل من السيرفر إن وُجدت
+bool wide,               // طلب عرض صف كامل (للصور/الملفات)
+bool checkbox,           // هل هو حقل Checkbox؟
+List<String> labels,     // ملصقات القيم المختارة (للـ Checkbox)
+String kind,             // 'text' | 'image' | 'file' | 'checkbox'
+List<String> mediaUrls,  // روابط الصور/الملفات إن وجدت
 });
 
 class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
@@ -210,48 +219,40 @@ class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
   @override
   Widget build(BuildContext context) {
     // 1) بناء العناصر + كشف النوع
-    final List<_FieldRec> items = widget.fields
-        .map<_FieldRec?>((f) {
-          final map = _safeMap(f);
-          final label = _labelOf(map);
-          if (label.isEmpty) return null;
+    final List<_FieldRec> items = widget.fields.map<_FieldRec?>((f) {
+      final map = _safeMap(f);
+      final label = _labelOf(map);
+      if (label.isEmpty) return null;
 
-          final raw =
-              map['value'] ?? map['display_value'] ?? map['displayValue'];
-          final (textValue, _) = _valueOf(map);
+      final raw = map['value'] ?? map['display_value'] ?? map['displayValue'];
+      final (textValue, _) = _valueOf(map);
 
-          final urls = _collectUrls(raw);
-          final isChk = _isCheckbox(map);
-          final kind = isChk
-              ? 'checkbox'
-              : (urls.any(_isImageUrl)
-                  ? 'image'
-                  : urls.isNotEmpty
-                      ? 'file'
-                      : 'text');
+      final urls = _collectUrls(raw);
+      final isChk = _isCheckbox(map);
+      final kind = isChk
+          ? 'checkbox'
+          : (urls.any(_isImageUrl) ? 'image' : urls.isNotEmpty ? 'file' : 'text');
 
-          final labels = isChk ? _extractCheckboxLabels(map) : const <String>[];
-          final isWide = (kind == 'image' || kind == 'file');
+      final labels = isChk ? _extractCheckboxLabels(map) : const <String>[];
+      final isWide = (kind == 'image' || kind == 'file');
 
-          // تجاهل النص الفارغ
-          if (!isChk && kind == 'text' && textValue.isEmpty) return null;
+      // تجاهل النص الفارغ
+      if (!isChk && kind == 'text' && textValue.isEmpty) return null;
 
-          final iconUrl = _iconUrlOf(map);
+      final iconUrl = _iconUrlOf(map);
 
-          return (
-            map: map,
-            label: label,
-            value: textValue,
-            iconUrl: iconUrl,
-            wide: isWide,
-            checkbox: isChk,
-            labels: labels,
-            kind: kind,
-            mediaUrls: urls
-          );
-        })
-        .whereType<_FieldRec>()
-        .toList();
+      return (
+      map: map,
+      label: label,
+      value: textValue,
+      iconUrl: iconUrl,
+      wide: isWide,
+      checkbox: isChk,
+      labels: labels,
+      kind: kind,
+      mediaUrls: urls
+      );
+    }).whereType<_FieldRec>().toList();
 
     if (items.isEmpty) return const SizedBox.shrink();
 
@@ -259,17 +260,15 @@ class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
     final cs = theme.colorScheme;
 
     // 2) نقسم: Grid للنصوص + Actions سفلية
-    final gridItems = items.where((e) => e.kind == 'text').toList();
-    final cbxActions = items.where((e) => e.kind == 'checkbox').toList();
-    final imgActions = items.where((e) => e.kind == 'image').toList();
+    final gridItems   = items.where((e) => e.kind == 'text').toList();
+    final cbxActions  = items.where((e) => e.kind == 'checkbox').toList();
+    final imgActions  = items.where((e) => e.kind == 'image').toList();
     final fileActions = items.where((e) => e.kind == 'file').toList();
 
-    final bool hasActions = cbxActions.isNotEmpty ||
-        imgActions.isNotEmpty ||
-        fileActions.isNotEmpty;
+    final bool hasActions = cbxActions.isNotEmpty || imgActions.isNotEmpty || fileActions.isNotEmpty;
     final bool hasMore = gridItems.length > _defaultCount;
 
-    final List<_FieldRec> base = gridItems.take(_defaultCount).toList();
+    final List<_FieldRec> base  = gridItems.take(_defaultCount).toList();
     final List<_FieldRec> extra = gridItems.skip(_defaultCount).toList();
 
     final List<_FieldRec> visibleGrid = _expanded ? [...base, ...extra] : base;
@@ -281,8 +280,7 @@ class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
           final fullWidth = constraints.maxWidth;
           final spacing = style.wrapSpacing;
 
-          int colCount =
-              widget.columns <= 1 ? 1 : widget.columns; // 2 افتراضيًا
+          int colCount = widget.columns <= 1 ? 1 : widget.columns; // 2 افتراضيًا
           if (fullWidth < 340) colCount = 1;
           final itemW = (fullWidth - spacing * (colCount - 1)) / colCount;
 
@@ -322,13 +320,15 @@ class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
                 }).toList(),
               ),
 
+
+
+
               // زر "عرض المزيد" يظهر فقط قبل التوسيع.
               if (!_expanded && (hasMore || hasActions)) ...[
                 const SizedBox(height: 10),
                 Center(
                   child: TextButton.icon(
-                    onPressed: () =>
-                        setState(() => _expanded = true), // فقط تفعيل التوسيع
+                    onPressed: () => setState(() => _expanded = true), // فقط تفعيل التوسيع
                     icon: const Icon(Icons.expand_more),
                     label: Text(
                       hasMore
@@ -337,12 +337,9 @@ class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
                     ),
                     style: TextButton.styleFrom(
                       foregroundColor: cs.primary,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      textStyle: theme.textTheme.bodyMedium
-                          ?.copyWith(fontWeight: FontWeight.w700),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      textStyle: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
@@ -450,20 +447,12 @@ class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
   }
 
   (String, bool) _valueOf(Map<String, dynamic> m) {
-    final dynamic direct =
-        m['value'] ?? m['display_value'] ?? m['displayValue'];
+    final dynamic direct = m['value'] ?? m['display_value'] ?? m['displayValue'];
     String text = _stringify(direct);
     bool wide = _looksLikeFileOrImage(direct);
 
     if (text.isEmpty) {
-      for (final k in [
-        'value_string',
-        'valueString',
-        'text',
-        'val',
-        'selected',
-        'option'
-      ]) {
+      for (final k in ['value_string', 'valueString', 'text', 'val', 'selected', 'option']) {
         final v = m[k];
         text = _stringify(v);
         wide = wide || _looksLikeFileOrImage(v);
@@ -517,7 +506,6 @@ class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
         return;
       }
     }
-
     walk(node);
     return LinkedHashSet<String>.from(out).toList(growable: false);
   }
@@ -533,15 +521,7 @@ class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
   }
 
   String? _iconUrlOf(Map<String, dynamic> m) {
-    for (final k in [
-      'icon',
-      'icon_url',
-      'iconUrl',
-      'iconPath',
-      'icon_image',
-      'image',
-      'media'
-    ]) {
+    for (final k in ['icon', 'icon_url', 'iconUrl', 'iconPath', 'icon_image', 'image', 'media']) {
       if (m.containsKey(k)) {
         final u = _findFirstUrl(m[k]);
         if (u != null) return u;
@@ -573,11 +553,12 @@ class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
   }
 
   /// أيقونة شبكة الحقول (صندوق ثابت + شيمر)
-  Widget? _buildServerIcon(
-      BuildContext context, Map<String, dynamic> map, String? url) {
+  Widget? _buildServerIcon(BuildContext context, Map<String, dynamic> map, String? url) {
     if (widget.iconBuilder != null) {
       final w = widget.iconBuilder!(map, _labelOf(map));
-      return _iconBox(child: w, size: style.leadingBoxSize);
+      if (w != null) {
+        return _iconBox(child: w, size: style.leadingBoxSize);
+      }
     }
     url ??= _iconUrlOf(map);
     if (url == null || url.isEmpty) return null;
@@ -588,8 +569,7 @@ class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
   }
 
   /// أيقونة الأزرار السفلية — من السيرفر فقط (بدون fallback)
-  Widget? _buildServerActionIcon(
-      BuildContext context, Map<String, dynamic> map, String? url) {
+  Widget? _buildServerActionIcon(BuildContext context, Map<String, dynamic> map, String? url) {
     url ??= _iconUrlOf(map);
     if (url == null || url.isEmpty) return null;
     return SizedBox.square(
@@ -601,10 +581,7 @@ class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
   // ===== Helpers خاصة بالـ Checkbox =====
   bool _isCheckbox(Map<String, dynamic> m) {
     final t = _typeOf(m);
-    return t == 'checkbox' ||
-        t == 'multi_checkbox' ||
-        t == 'multi-check' ||
-        t == 'checks';
+    return t == 'checkbox' || t == 'multi_checkbox' || t == 'multi-check' || t == 'checks';
   }
 
   String _typeOf(Map<String, dynamic> m) {
@@ -621,8 +598,7 @@ class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
       if (e is Map) {
         final v = e['value']?.toString();
         final l = e['label']?.toString();
-        if (v != null && v.isNotEmpty)
-          map[v] = (l == null || l.isEmpty) ? v : l;
+        if (v != null && v.isNotEmpty) map[v] = (l == null || l.isEmpty) ? v : l;
       } else if (e != null) {
         final s = e.toString();
         if (s.isNotEmpty) map[s] = s;
@@ -635,20 +611,14 @@ class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
     if (node == null) return const [];
     if (node is List) return node;
     if (node is String && node.contains(',')) {
-      return node
-          .split(',')
-          .map((s) => s.trim())
-          .where((s) => s.isNotEmpty)
-          .toList();
+      return node.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
     }
     return [node];
   }
 
   List<String> _extractCheckboxLabels(Map<String, dynamic> m) {
-    final selectedNode =
-        m['selected'] ?? m['value'] ?? m['values'] ?? m['options'];
-    final allNode =
-        m['all_values'] ?? m['values'] ?? m['options'] ?? m['choices'];
+    final selectedNode = m['selected'] ?? m['value'] ?? m['values'] ?? m['options'];
+    final allNode = m['all_values'] ?? m['values'] ?? m['options'] ?? m['choices'];
 
     final selected = _toList(selectedNode);
     final all = _toList(allNode);
@@ -660,8 +630,7 @@ class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
       if (e is Map) {
         final lbl = (e['label']?.toString() ?? '').trim();
         final val = (e['value']?.toString() ?? '').trim();
-        final resolved =
-            lbl.isNotEmpty ? lbl : (val.isNotEmpty ? (index[val] ?? val) : '');
+        final resolved = lbl.isNotEmpty ? lbl : (val.isNotEmpty ? (index[val] ?? val) : '');
         if (resolved.isNotEmpty) seen.add(resolved);
       } else if (e != null) {
         final s = e.toString().trim();
@@ -693,15 +662,13 @@ class _FieldRow extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    final labelStyle =
-        (style.labelTextStyle ?? theme.textTheme.bodyMedium)?.copyWith(
+    final labelStyle = (style.labelTextStyle ?? theme.textTheme.bodyMedium)?.copyWith(
       color: cs.onSurface.withOpacity(.70),
       fontWeight: FontWeight.w700,
       height: style.titleLineHeight,
     );
 
-    final valueStyle =
-        (style.valueTextStyle ?? theme.textTheme.bodySmall)?.copyWith(
+    final valueStyle = (style.valueTextStyle ?? theme.textTheme.bodySmall)?.copyWith(
       color: cs.onSurface,
       height: style.valueLineHeight,
     );
@@ -712,9 +679,7 @@ class _FieldRow extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            (leadingIcon ??
-                SizedBox(
-                    width: style.leadingBoxSize, height: style.leadingBoxSize)),
+            (leadingIcon ?? SizedBox(width: style.leadingBoxSize, height: style.leadingBoxSize)),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -771,8 +736,7 @@ class _ActionLine extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    final labelStyle =
-        (style.labelTextStyle ?? theme.textTheme.bodyMedium)?.copyWith(
+    final labelStyle = (style.labelTextStyle ?? theme.textTheme.bodyMedium)?.copyWith(
       color: cs.onSurface.withOpacity(.70),
       fontWeight: FontWeight.w700,
       height: style.titleLineHeight,
@@ -786,9 +750,7 @@ class _ActionLine extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // أيقونة السيرفر (إن وُجدت) أو فراغ محجوز للمحاذاة
-            (leading ??
-                SizedBox(
-                    width: style.leadingBoxSize, height: style.leadingBoxSize)),
+            (leading ?? SizedBox(width: style.leadingBoxSize, height: style.leadingBoxSize)),
             const SizedBox(width: 8),
 
             // عنوان الحقل
@@ -815,11 +777,16 @@ class _ActionLine extends StatelessWidget {
   }
 }
 
+
+
+
+
 // ===============================
 // أزرار الأكشن
 // ===============================
 
 // Checkbox: يفتح Dialog بحث/نسخ (القيم النصية)
+
 
 class _CheckboxActionButton extends StatelessWidget {
   const _CheckboxActionButton({
@@ -839,41 +806,36 @@ class _CheckboxActionButton extends StatelessWidget {
     final theme = Theme.of(context);
     return OutlinedButton(
       onPressed: () => _showDialog(context, title, labels, style),
-      child: Text(buttonText,
-          style: style.actionButtonTextStyle ?? theme.textTheme.bodySmall),
+      child: Text(buttonText, style: style.actionButtonTextStyle ?? theme.textTheme.bodySmall),
       style: style.effectiveActionButtonStyle(context),
     );
   }
 
   static Future<void> _showDialog(
-    BuildContext context,
-    String title,
-    List<String> labels,
-    AdFieldsStyle style,
-  ) async {
+      BuildContext context,
+      String title,
+      List<String> labels,
+      AdFieldsStyle style,
+      ) async {
     final theme = Theme.of(context);
     await showDialog(
       context: context,
       builder: (ctx) {
         final controller = TextEditingController();
-        final ValueNotifier<List<String>> filtered =
-            ValueNotifier<List<String>>(labels);
+        final ValueNotifier<List<String>> filtered = ValueNotifier<List<String>>(labels);
 
         void applyFilter(String s) {
           if (s.trim().isEmpty) {
             filtered.value = labels;
           } else {
             final t = s.toLowerCase();
-            filtered.value =
-                labels.where((e) => e.toLowerCase().contains(t)).toList();
+            filtered.value = labels.where((e) => e.toLowerCase().contains(t)).toList();
           }
         }
 
         return Dialog(
-          insetPadding:
-              const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 560, maxHeight: 520),
             child: Padding(
@@ -888,8 +850,7 @@ class _CheckboxActionButton extends StatelessWidget {
                           title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w700),
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                         ),
                       ),
                       IconButton(
@@ -903,9 +864,7 @@ class _CheckboxActionButton extends StatelessWidget {
 
                   // قائمة القيم
                   const SizedBox(height: 6),
-                  Divider(
-                      height: 1,
-                      color: theme.colorScheme.outline.withOpacity(.25)),
+                  Divider(height: 1, color: theme.colorScheme.outline.withOpacity(.25)),
                   const SizedBox(height: 6),
 
                   Expanded(
@@ -917,8 +876,7 @@ class _CheckboxActionButton extends StatelessWidget {
                             child: Text(
                               style.emptyPlaceholder,
                               style: theme.textTheme.bodyMedium?.copyWith(
-                                color:
-                                    theme.colorScheme.onSurface.withOpacity(.6),
+                                color: theme.colorScheme.onSurface.withOpacity(.6),
                               ),
                             ),
                           );
@@ -926,8 +884,7 @@ class _CheckboxActionButton extends StatelessWidget {
                         return Scrollbar(
                           thumbVisibility: true,
                           child: ListView.separated(
-                            physics: const BouncingScrollPhysics(
-                                parent: AlwaysScrollableScrollPhysics()),
+                            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                             padding: const EdgeInsets.symmetric(vertical: 6),
                             itemCount: list.length,
                             separatorBuilder: (_, __) => Divider(
@@ -937,10 +894,8 @@ class _CheckboxActionButton extends StatelessWidget {
                             itemBuilder: (_, i) => ListTile(
                               dense: true,
                               leading: const Icon(Icons.check, size: 18),
-                              title: Text(list[i],
-                                  style: theme.textTheme.bodyMedium),
-                              contentPadding:
-                                  const EdgeInsets.symmetric(horizontal: 4),
+                              title: Text(list[i], style: theme.textTheme.bodyMedium),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 4),
                               visualDensity: VisualDensity.compact,
                             ),
                           ),
@@ -966,6 +921,9 @@ class _CheckboxActionButton extends StatelessWidget {
     );
   }
 }
+
+
+
 
 // Images: يفتح أول صورة مباشرة (view) — بدون أي Dialog
 
@@ -1001,12 +959,14 @@ class _ImagesOpenButton extends StatelessWidget {
           );
         }
       },
-      child: Text(buttonText,
-          style: style.actionButtonTextStyle ?? theme.textTheme.bodySmall),
+      child: Text(buttonText, style: style.actionButtonTextStyle ?? theme.textTheme.bodySmall),
       style: style.effectiveActionButtonStyle(context),
     );
   }
 }
+
+
+
 
 // Files: يفتح أول ملف مباشرة (view) — بدون أي Dialog
 class _FilesOpenButton extends StatelessWidget {
@@ -1041,23 +1001,25 @@ class _FilesOpenButton extends StatelessWidget {
           );
         }
       },
-      child: Text(buttonText,
-          style: style.actionButtonTextStyle ?? theme.textTheme.bodySmall),
+      child: Text(buttonText, style: style.actionButtonTextStyle ?? theme.textTheme.bodySmall),
       style: style.effectiveActionButtonStyle(context),
     );
   }
 }
 
+
+
+
 /// ===============================
 /// أدوات مشتركة: Divider, Icon Box, ServerIcon, Shimmer
 /// ===============================
 Widget _standardDivider(BuildContext context) => Divider(
-      height: 1,
-      thickness: .6,
-      color: Theme.of(context).brightness == Brightness.dark
-          ? Colors.grey.shade800
-          : const Color(0xFFE0E0E0),
-    );
+  height: 1,
+  thickness: .6,
+  color: Theme.of(context).brightness == Brightness.dark
+      ? Colors.grey.shade800
+      : const Color(0xFFE0E0E0),
+);
 
 Widget _iconBox({required Widget child, double size = 24}) =>
     SizedBox(width: size, height: size, child: Center(child: child));
@@ -1070,8 +1032,7 @@ class _ServerIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final clean = url.split('?').first.toLowerCase();
-    final isSvg =
-        clean.endsWith('.svg') || url.startsWith('data:image/svg+xml');
+    final isSvg = clean.endsWith('.svg') || url.startsWith('data:image/svg+xml');
 
     if (isSvg) {
       return svg.SvgPicture.network(
@@ -1079,8 +1040,7 @@ class _ServerIcon extends StatelessWidget {
         width: size,
         height: size,
         fit: BoxFit.contain,
-        placeholderBuilder: (_) =>
-            _ShimmerBox(width: size, height: size, radius: 4),
+        placeholderBuilder: (_) => _ShimmerBox(width: size, height: size, radius: 4),
       );
     }
 
@@ -1115,8 +1075,8 @@ class _ShimmerBox extends StatefulWidget {
 
 class _ShimmerBoxState extends State<_ShimmerBox>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _ac = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 1100))
+  late final AnimationController _ac =
+  AnimationController(vsync: this, duration: const Duration(milliseconds: 1100))
     ..repeat();
 
   @override
@@ -1130,8 +1090,7 @@ class _ShimmerBoxState extends State<_ShimmerBox>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final base = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE9E9E9);
-    final highlight =
-        isDark ? const Color(0xFF3A3A3A) : const Color(0xFFF5F5F5);
+    final highlight = isDark ? const Color(0xFF3A3A3A) : const Color(0xFFF5F5F5);
 
     return AnimatedBuilder(
       animation: _ac,

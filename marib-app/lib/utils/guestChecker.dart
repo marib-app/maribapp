@@ -12,13 +12,13 @@ class GuestChecker {
 */
 /*  static void set() {
     _isGuest.value = HiveUtils.isUserAuthenticated();
-  }*/ /*
+  }*//*
 
 
 */
 /*  static void setContext(BuildContext context) {
     _context = context;
-  }*/ /*
+  }*//*
 
 
   static void check({required Function() onNotGuest,required BuildContext context}) {
@@ -34,7 +34,7 @@ class GuestChecker {
 */
 /*  static bool get value {
     return _isGuest.value ?? true;
-  }*/ /*
+  }*//*
 
 
   static ValueNotifier<bool?> listen() {
@@ -51,7 +51,7 @@ class GuestChecker {
         return onChangeStatus.call(value);
       },
     );
-  }*/ /*
+  }*//*
 
 
   static _loginBox(BuildContext context) {

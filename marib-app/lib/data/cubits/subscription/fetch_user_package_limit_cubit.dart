@@ -2,6 +2,9 @@ import 'package:marib/data/repositories/advertisement_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/model/subscription_package_limit.dart';
 
+
+
+
 abstract class FetchUserPackageLimitState {}
 
 class FetchUserPackageLimitInitial extends FetchUserPackageLimitState {}
@@ -19,6 +22,9 @@ class FetchUserPackageLimitInSuccess extends FetchUserPackageLimitState {
     required this.limit,
     required this.canCreateListing,
   });
+
+
+
 }
 
 class FetchUserPackageLimitFailure extends FetchUserPackageLimitState {
@@ -52,6 +58,7 @@ class FetchUserPackageLimitCubit extends Cubit<FetchUserPackageLimitState> {
         canCreateListing = (limit.remaining ?? 0) > 0;
       }
 
+
       emit(
         FetchUserPackageLimitInSuccess(
           responseMessage: value['message']?.toString() ?? '',
@@ -64,15 +71,21 @@ class FetchUserPackageLimitCubit extends Cubit<FetchUserPackageLimitState> {
     }
   }
 
+
   Map<String, dynamic> _asMap(dynamic raw) {
     if (raw is Map<String, dynamic>) {
+
       return raw;
     }
 
     if (raw is Map) {
       return raw.map((key, value) => MapEntry(key.toString(), value));
+
     }
 
     return <String, dynamic>{};
   }
+
+
+
 }

@@ -4,9 +4,9 @@ class BankAccount {
   final String? accountName;
   final String? accountNumber;
   final String? iban;
-  final String? swift; // اختياري
-  final String? branch; // اختياري
-  final String? notes; // اختياري
+  final String? swift;     // اختياري
+  final String? branch;    // اختياري
+  final String? notes;     // اختياري
   final String? logoUrl;
   final bool isActive;
   final int? displayOrder;
@@ -60,16 +60,19 @@ class BankAccount {
     }
 
     return BankAccount(
+
       id: intFromKeys(const [
-            'id',
-            'bank_id',
-            'bankId',
-            'bankID',
-            'bank_account_id',
-            'bankAccountId',
-            'bankAccountID',
-          ]) ??
+        'id',
+        'bank_id',
+        'bankId',
+        'bankID',
+        'bank_account_id',
+        'bankAccountId',
+        'bankAccountID',
+      ]) ??
           0,
+
+
       bankName: j['bank_name'] ?? j['name'] ?? '',
       accountName: stringFromKeys(const [
         'account_name',
@@ -78,8 +81,10 @@ class BankAccount {
         'account_holder',
         'holder',
       ]),
-      accountNumber:
-          stringFromKeys(const ['account_number', 'number', 'accountNumber']),
+      accountNumber: stringFromKeys(
+          const ['account_number', 'number', 'accountNumber']),
+
+
       iban: j['iban'],
       swift: j['swift'],
       branch: j['branch'],

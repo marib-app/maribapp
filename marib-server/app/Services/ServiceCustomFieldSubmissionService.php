@@ -131,6 +131,50 @@ class ServiceCustomFieldSubmissionService
         })->values();
     }
 
+
+
+    private function normalizeInputKey($key): string
+    {
+        if (is_int($key)) {
+            return (string) $key;
+        }
+
+        $key = trim((string) $key);
+        if ($key === '') {
+            return '';
+        }
+
+        $bracketPatterns = [
+            '/^custom_fields\[(.+)\]$/',
+            '/^custom_field_files\[(.+)\]$/',
+            '/^fields\[(.+)\]$/',
+            '/^field\[(.+)\]$/',
+        ];
+
+        foreach ($bracketPatterns as $pattern) {
+            if (preg_match($pattern, $key, $matches)) {
+                $key = $matches[1];
+                break;
+            }
+        }
+
+        if (str_contains($key, '.')) {
+            $parts = array_values(array_filter(explode('.', $key), static function ($part) {
+                return $part !== '';
+            }));
+
+            if (!empty($parts)) {
+                if (in_array($parts[0], ['custom_fields', 'fields', 'customField', 'field'], true)) {
+                    $key = end($parts);
+                }
+            }
+        }
+
+        return trim($key);
+    }
+
+
+
     private function normalizeFieldType(string $type): string
     {
         $type = strtolower(trim($type));
@@ -240,7 +284,17 @@ class ServiceCustomFieldSubmissionService
     private function normalizeCustomFieldValues(array $inputs): array
     {
         if (Arr::isAssoc($inputs)) {
-            return $inputs;
+            $normalizedAssoc = [];
+            foreach ($inputs as $key => $value) {
+                $normalizedKey = $this->normalizeInputKey($key);
+                if ($normalizedKey === '') {
+                    continue;
+                }
+                $normalizedAssoc[$normalizedKey] = $value;
+            }
+
+            return $normalizedAssoc;
+        
         }
 
         $normalized = [];
@@ -252,6 +306,14 @@ class ServiceCustomFieldSubmissionService
 
             $key = $entry['name'] ?? $entry['key'] ?? $entry['form_key'] ?? $entry['id'] ?? null;
             if ($key === null || $key === '') {
+                continue;
+            }
+
+
+
+            $key = $this->normalizeInputKey($key);
+
+            if ($key === '') {
                 continue;
             }
 
@@ -276,8 +338,15 @@ class ServiceCustomFieldSubmissionService
         $normalized = [];
 
         foreach ($inputs as $key => $value) {
+
+
+            $normalizedKey = $this->normalizeInputKey($key);
+            if ($normalizedKey === '') {
+                continue;
+            }
+
             if ($value instanceof UploadedFile) {
-                $normalized[$key] = $value;
+                $normalized[$normalizedKey] = $value;
                 continue;
             }
 
@@ -287,12 +356,16 @@ class ServiceCustomFieldSubmissionService
 
             foreach ($value as $nestedKey => $nestedValue) {
                 if ($nestedValue instanceof UploadedFile) {
-                    if (!is_int($nestedKey)) {
-                        $normalized[$nestedKey] = $nestedValue;
+                    $normalizedNestedKey = $this->normalizeInputKey($nestedKey);
+
+                    if ($normalizedNestedKey !== '') {
+                        $normalized[$normalizedNestedKey] = $nestedValue;
+
+
                     }
 
-                    if (!isset($normalized[$key])) {
-                        $normalized[$key] = $nestedValue;
+                    if (!isset($normalized[$normalizedKey])) {
+                        $normalized[$normalizedKey] = $nestedValue;
                     }
                 }
             }

@@ -287,8 +287,8 @@ class _ServiceAddMoreDetailsScreenState
     m['input_type'] = m['input_type'] ?? t;
 
     // ===== العنوان (نوسع المرادفات + منع أرقام صِرفة) =====
-    String? title = _str(m['title']) ??
-        _str(m['label']) ??
+    String? title = _str(m['label']) ??
+        _str(m['title']) ??
         _str(m['name']) ??
         _str(m['field_name']) ??
         _str(m['display_name']) ??
@@ -307,17 +307,24 @@ class _ServiceAddMoreDetailsScreenState
 
     // ===== المفتاح/المعرّف =====
     final fallbackKey = 'field_${DateTime.now().microsecondsSinceEpoch}';
-    final key = _str(m['key']) ??
+    final originalId = _str(m['id']) ?? _str(m['field_id']) ?? _str(m['custom_field_id']);
+    String? key = _str(m['key']) ??
+
         _str(m['field_key']) ??
         _str(m['slug']) ??
-        _str(m['id']) ??
         _str(m['name']) ??
-        fallbackKey;
+        originalId;
+
+    key = _str(key) ?? fallbackKey;
+
+    if (originalId != null && originalId.isNotEmpty && originalId != key) {
+      m['field_numeric_id'] = originalId;
+    }
 
     m['key'] = key;
     m['field_key'] = m['field_key'] ?? key;
     m['slug'] = m['slug'] ?? key;
-    m['id'] = m['id'] ?? key;
+    m['id'] = key;
 
     // ===== مطلوب؟ =====
     final req = m['required'] ?? m['is_required'] ?? m['mandatory'] ?? m['status'];

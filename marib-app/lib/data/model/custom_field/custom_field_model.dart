@@ -102,6 +102,8 @@ class CustomFieldModel {
     return {
       'id': id,
       'name': name,
+      'title': name,
+      'label': name,
       'type': type,
       'image': image,
       'required': required,
@@ -123,7 +125,18 @@ class CustomFieldModel {
 
     return CustomFieldModel(
       id: _asInt(map['id']),
-      name: _asStr(map['name']),
+      name: _asStr(
+        map['title'] ??
+            map['label'] ??
+            map['display_name'] ??
+            map['placeholder'] ??
+            map['name'] ??
+            map['field'] ??
+            map['slug'],
+      ) ??
+          _asStr(map['notes']) ??
+          _asStr(map['hint']),
+
       type: _asStr(map['type']) ?? 'textbox',
       image: _asStr(map['image']),
       required: _asInt(reqRaw) ?? 0,
@@ -174,6 +187,8 @@ class VerificationFieldModel {
     return {
       'id': id,
       'name': name,
+      'title': name,
+      'label': name,
       'type': type,
       'required': required,
       'min_length': minLength,

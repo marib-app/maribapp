@@ -1,0 +1,306 @@
+:root {
+    --dark-bg: #1a1a1a;
+    --dark-card: #2d2d2d;
+    --dark-text: #ffffff;
+    --dark-border: #404040;
+    --dark-hover: #EB5924;
+    --dark-link: #7cc7ff;
+    --dark-sidebar-bg: #1a1a1a;
+    --dark-footer-bg: #2d2d2d;
+    --dark-theme-icon: #4a90e2;
+    --transition-speed: 0.3s;
+    --menu-transition: 0.25s ease-in-out;
+    --dropdown-rtl-width: 220px;
+}
+
+html[data-bs-theme="dark"] {
+    background-color: var(--dark-bg);
+}
+
+/* Ensure immediate dark mode application */
+.dark-mode {
+    background-color: var(--dark-bg) !important;
+    color: var(--dark-text) !important;
+}
+
+/* Add smooth transitions */
+html, body, .card, .navbar, #sidebar, #auth-box, .dropdown-menu,
+.form-control, .form-select, .modal-content, .list-group-item,
+.sidebar-item, .submenu-item, .menu-link, .content-wrapper {
+    transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease !important;
+    backface-visibility: hidden;
+    -webkit-font-smoothing: antialiased;
+    will-change: background-color, color;
+}
+
+/* Fix RTL dropdown icons */
+[dir="rtl"] .dropdown-menu {
+    text-align: right;
+    width: var(--dropdown-rtl-width);
+}
+
+[dir="rtl"] .dropdown-item i,
+[dir="rtl"] .dropdown-item .bi {
+    font-size: 1rem;
+    line-height: 1.5;
+    margin-left: 0.75rem;
+    margin-right: 0;
+    vertical-align: middle;
+}
+
+/* Professional icon styles */
+.dark-mode .bi,
+.dark-mode .fas,
+.dark-mode .far,
+.dark-mode .fa {
+    color: var(--dark-text);
+    opacity: 0.9;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.dark-mode .bi:hover,
+.dark-mode .fas:hover,
+.dark-mode .far:hover,
+.dark-mode .fa:hover {
+    opacity: 1;
+    transform: scale(1.05);
+}
+
+/* Global text color for dark mode */
+.dark-mode * {
+    color: var(--dark-text);
+}
+
+/* Override specific text colors for icons and links */
+.dark-mode a:not(.btn) {
+    color: var(--dark-link);
+}
+
+.dark-mode .text-dark {
+    color: var(--dark-text) !important;
+}
+
+body.dark-mode {
+    background-color: var(--dark-bg);
+    color: var(--dark-text);
+}
+
+.dark-mode .card,
+.dark-mode .navbar,
+.dark-mode #sidebar,
+.dark-mode #auth-box {
+    background-color: var(--dark-card) !important;
+    color: var(--dark-text);
+}
+
+.dark-mode .dropdown-menu {
+    background-color: var(--dark-card);
+    border-color: var(--dark-border);
+}
+
+.dark-mode .dropdown-item {
+    color: #000000;
+}
+
+.dark-mode .dropdown-item:hover {
+    background-color: var(--dark-hover);
+}
+
+.dark-mode .table {
+    color: var(--dark-text);
+}
+
+.dark-mode .table th {
+    background-color: var(--dark-bg);
+    color: var(--dark-text);
+    border-color: var(--dark-border);
+}
+
+.dark-mode .table td {
+    background-color: var(--dark-card);
+    color: var(--dark-text) !important;
+    border-color: var(--dark-border);
+}
+
+.dark-mode .form-control,
+.dark-mode .form-select {
+    background-color: var(--dark-card);
+    border-color: var(--dark-border);
+    color: var(--dark-text);
+}
+
+.dark-mode .theme-toggle-icon {
+    color: var(--dark-theme-icon);
+    cursor: pointer;
+    transition: all var(--transition-speed) ease;
+}
+
+.dark-mode .theme-toggle-icon:hover {
+    transform: scale(1.1);
+    opacity: 0.9;
+}
+
+.dark-mode .bi {
+    color: var(--dark-text);
+}
+
+.dark-mode .divider-text {
+    color: var(--dark-text);
+}
+
+/* Sidebar Styles */
+.dark-mode #sidebar {
+    background-color: var(--dark-sidebar-bg) !important;
+    border-right: 1px solid var(--dark-border);
+}
+
+.dark-mode #sidebar .sidebar-wrapper {
+    background-color: var(--dark-sidebar-bg) !important;
+}
+
+.dark-mode #sidebar .sidebar-wrapper .menu .sidebar-item a {
+    color: var(--dark-text);
+    transition: all var(--menu-transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.dark-mode #sidebar .sidebar-wrapper .menu .sidebar-item a:hover {
+    background-color: var(--dark-hover);
+    transform: translateX(5px);
+}
+
+.dark-mode #sidebar .sidebar-wrapper .menu .submenu .submenu-item a {
+    color: var(--dark-text);
+    transition: all var(--menu-transition);
+}
+
+.dark-mode #sidebar .sidebar-wrapper .menu .submenu .submenu-item a:hover {
+    background-color: var(--dark-hover);
+    transform: translateX(5px);
+}
+
+/* Footer Styles */
+.dark-mode .footer {
+    background-color: var(--dark-footer-bg);
+    border-top: 1px solid var(--dark-border);
+    color: var(--dark-text);
+}
+
+.dark-mode .footer a {
+    color: var(--dark-link);
+}
+
+/* Header and Sub-header Area */
+.dark-mode .content-header {
+    background-color: var(--dark-card);
+    border-bottom: 1px solid var(--dark-border);
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.dark-mode .content-wrapper {
+    background-color: var(--dark-bg);
+}
+
+.dark-mode main {
+    background-color: var(--dark-bg);
+}
+
+.dark-mode .content-header-title {
+    color: var(--dark-text);
+    font-weight: 600;
+}
+
+.dark-mode .content-header-subtitle {
+    color: var(--dark-text);
+    opacity: 0.8;
+}
+
+/* Additional UI Elements */
+.dark-mode .card-header {
+    background-color: var(--dark-card);
+    border-bottom: 1px solid var(--dark-border);
+}
+
+.dark-mode .modal-content {
+    background-color: var(--dark-card);
+    border: 1px solid var(--dark-border);
+}
+
+.dark-mode .modal-header,
+.dark-mode .modal-footer {
+    border-color: var(--dark-border);
+}
+
+.dark-mode .list-group-item {
+    background-color: var(--dark-card);
+    border-color: var(--dark-border);
+    color: var(--dark-text);
+}
+
+/* تحسينات لجداول Bootstrap Table */
+.bootstrap-table {
+    opacity: 1;
+    transition: all 0.3s ease-in-out;
+}
+
+.bootstrap-table .fixed-table-container .fixed-table-body .fixed-table-loading {
+    transition: all 0.3s ease-in-out;
+    visibility: visible !important;
+}
+
+/* قواعد الجداول في الوضع الفاتح */
+.bootstrap-table .fixed-table-container {
+    background-color: #ffffff !important;
+    transition: background-color 0.3s ease-in-out;
+}
+
+.bootstrap-table .table {
+    background-color: #ffffff !important;
+    color: #333333 !important;
+    border-color: #dee2e6 !important;
+    transition: all 0.3s ease-in-out;
+}
+
+.bootstrap-table .table thead th,
+.bootstrap-table .table tbody td {
+    background-color: #ffffff !important;
+    color: #333333 !important;
+    border-color: #dee2e6 !important;
+    transition: all 0.3s ease-in-out;
+}
+
+.bootstrap-table .table tbody tr:hover {
+    background-color: #f8f9fa !important;
+}
+
+/* قواعد الجداول في الوضع المظلم */
+.dark-mode .bootstrap-table .fixed-table-container {
+    background-color: var(--dark-card) !important;
+}
+
+.dark-mode .bootstrap-table .fixed-table-container .fixed-table-body .fixed-table-loading {
+    background-color: var(--dark-card) !important;
+    color: var(--dark-text) !important;
+}
+
+.dark-mode .bootstrap-table .fixed-table-container .fixed-table-body .fixed-table-loading .loading-text {
+    color: var(--dark-text) !important;
+}
+
+.dark-mode .bootstrap-table .table {
+    background-color: var(--dark-card) !important;
+    color: var(--dark-text) !important;
+    border-color: var(--dark-border) !important;
+}
+
+.dark-mode .bootstrap-table .table thead th,
+.dark-mode .bootstrap-table .table tbody td {
+    background-color: var(--dark-card) !important;
+    color: var(--dark-text) !important;
+    border-color: var(--dark-border) !important;
+}
+
+.dark-mode .bootstrap-table .table tbody tr:hover {
+    background-color: var(--dark-bg) !important;}

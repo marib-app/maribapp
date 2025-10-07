@@ -1,0 +1,112 @@
+plugins {
+    id "com.android.application"
+    id "org.jetbrains.kotlin.android"        // كان kotlin-android
+    id "dev.flutter.flutter-gradle-plugin"
+    id "com.google.gms.google-services"
+}
+
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterRoot = localProperties.getProperty('flutter.sdk')
+if (flutterRoot == null) {
+    throw GradleException("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
+}
+
+def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
+if (flutterVersionCode == null) {
+    flutterVersionCode = '20'
+}
+
+def flutterVersionName = localProperties.getProperty('flutter.versionName')
+if (flutterVersionName == null) {
+    flutterVersionName = '2.2.0'
+}
+
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+android {
+    namespace "com.marib.app"
+
+    // صيغة AGP الحديثة
+    compileSdk 36                      // كان 35
+    ndkVersion "27.0.12077973"
+
+    defaultConfig {
+        applicationId "com.marib.app"
+        minSdk 24
+        targetSdk 36                  // كان 35
+        multiDexEnabled true
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
+    }
+
+    // تمكين desugaring مع Java 17
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+        coreLibraryDesugaringEnabled true
+    }
+    kotlinOptions { jvmTarget = '17' }
+
+    // lintOptions قديمة؛ استبدالها بـ lint{}
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
+
+    // مسار ملفات كوتلن
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    signingConfigs {
+        release {
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
+            storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+            storePassword keystoreProperties['storePassword']
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+            shrinkResources false
+        }
+        debug {
+            // الإعداد الافتراضي مناسب
+        }
+    }
+}
+
+flutter {
+    source '../..'
+}
+
+dependencies {
+    implementation platform('com.google.firebase:firebase-bom:33.7.0')
+    implementation 'com.google.firebase:firebase-analytics'
+    implementation 'com.google.firebase:firebase-messaging:24.1.0'
+
+    // AndroidX Multidex (بديل support القديم)
+    implementation 'androidx.multidex:multidex:2.0.1'
+
+    implementation 'com.google.android.gms:play-services-location:21.3.0'
+    implementation 'com.google.android.gms:play-services-maps:19.0.0'
+    implementation 'com.google.android.play:integrity:1.4.0'
+    implementation 'androidx.media:media:1.7.0'
+
+    // ضروري مع coreLibraryDesugaringEnabled
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
+}

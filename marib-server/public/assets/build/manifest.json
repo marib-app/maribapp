@@ -1,0 +1,26 @@
+{
+  "resources/js/app.js": {
+    "file": "assets/app.002c9b7f.js",
+    "src": "resources/js/app.js",
+    "isEntry": true,
+    "imports": [
+      "_bootstrap.5e2e5b9f.js"
+    ]
+  },
+  "resources/js/pages/admin-dashboard.js": {
+    "file": "assets/admin-dashboard.9c21ef77.js",
+    "src": "resources/js/pages/admin-dashboard.js",
+    "isEntry": true,
+    "imports": [
+      "_bootstrap.5e2e5b9f.js"
+    ]
+  },
+  "_bootstrap.5e2e5b9f.js": {
+    "file": "assets/bootstrap.5e2e5b9f.js"
+  },
+  "resources/sass/app.scss": {
+    "file": "assets/app.5380b351.css",
+    "src": "resources/sass/app.scss",
+    "isEntry": true
+  }
+}

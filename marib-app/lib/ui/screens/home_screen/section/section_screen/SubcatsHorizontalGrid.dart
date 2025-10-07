@@ -1,0 +1,697 @@
+import 'dart:math' show min, max;
+
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:marquee/marquee.dart';
+import 'package:marib/data/model/category_model.dart';
+import 'package:shimmer/shimmer.dart';
+import 'shimmer_colors.dart';
+
+
+const double _subcatCardRadius = 20.0;
+
+const double _verticalSpacingBetweenRows = 12.0;
+
+class SubcatsHorizontalGrid extends StatefulWidget {
+  final List<CategoryModel> subcats;
+  final int? selectedId;
+  final ValueChanged<int?> onTap; // إبقائها للتوافق
+  final Color brand;
+
+  /// هل هذا الصف يمثّل أبناء "الكل" (Top-Level) أم أبناء فئة علوية محددة؟
+  final bool isTopLevel;
+
+  final void Function(CategoryModel c) onTopCategoryPick;
+  final void Function(CategoryModel c) onSubcatPick;
+
+  const SubcatsHorizontalGrid({
+    super.key,
+    required this.subcats,
+    required this.selectedId,
+    required this.onTap,
+    required this.brand,
+    required this.isTopLevel,
+    required this.onTopCategoryPick,
+    required this.onSubcatPick,
+  });
+
+  @override
+  State<SubcatsHorizontalGrid> createState() => SubcatsHorizontalGridState();
+}
+
+class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
+  static const double _hPad = 12.0;
+  static const double _spacing = 10.0;
+
+  int _itemsPerPage = 4;
+  int _itemsPerRow = 4;
+  int _maxRows = 1;
+
+  late final PageController _pageController;
+  int _current = 0;
+
+  int _indexOf(int? id) {
+    if (id == null) return -1;
+    return widget.subcats.indexWhere((c) => c.id == id);
+  }
+
+  int _pageOfIndex(int index, {int? itemsPerPage}) {
+    if (index < 0) return 0;
+    final perPage = itemsPerPage ?? _itemsPerPage;
+    if (perPage <= 0) return 0;
+    return index ~/ perPage;
+  }
+
+  int _initialPage() {
+    final idx = _indexOf(widget.selectedId);
+    return _pageOfIndex(idx);
+  }
+
+
+  int _calculateItemsPerRow(double maxWidth, int totalItems) {
+    final availableWidth = maxWidth - (_hPad * 2);
+    if (availableWidth <= 0) return 1;
+    final maxColumns = max(1, min(totalItems, 6));
+    int result = 1;
+    for (var cols = 1; cols <= maxColumns; cols++) {
+      final spacing = _spacing * (cols - 1);
+      final widthForItems = availableWidth - spacing;
+      final perItem = widthForItems / cols;
+      if (perItem >= 70.0) {
+        result = cols;
+      } else {
+        break;
+      }
+    }
+    return result;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final initPage = _initialPage();
+    _pageController = PageController(initialPage: initPage);
+    _current = initPage;
+  }
+
+  @override
+  void didUpdateWidget(covariant SubcatsHorizontalGrid oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // لو تغيّر الاختيار أو تغيّر ترتيب/عدد العناصر، حافظ على الصفحة
+    final idx = _indexOf(widget.selectedId);
+    final tgt = _pageOfIndex(idx);
+
+    if (tgt != _current) {
+      _current = tgt;
+      // لا تقفز للبداية — فقط انتقل للصفحة المطلوبة عند الحاجة
+      if (mounted) {
+        _pageController.animateToPage(
+          tgt,
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOut,
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.subcats.isEmpty) return const SizedBox.shrink();
+
+    final total = widget.subcats.length;
+    final pages = (total / _itemsPerPage).ceil();
+
+    return LayoutBuilder(
+      builder: (context, cons) {
+        final w = cons.maxWidth;
+        final itemsPerRow = _calculateItemsPerRow(w, total);
+        final maxRows = total <= itemsPerRow ? 1 : 2;
+        final itemsPerPage = itemsPerRow * maxRows;
+        final totalSpacing = _spacing * (itemsPerRow - 1);
+        final widthForItems = (w - (_hPad * 2) - totalSpacing).clamp(0.0, 4000.0);
+        final itemWidth = (widthForItems / itemsPerRow).clamp(70.0, 120.0);
+
+        final circleSize = (itemWidth * 0.82).clamp(48.0, 64.0);
+        const titleHeight = 30.0;
+        const gap = 6.0;
+        final rowHeight = circleSize + gap + titleHeight;
+
+        final gridHeight = rowHeight * maxRows + _verticalSpacingBetweenRows * (maxRows - 1);
+        final pages = (total / itemsPerPage).ceil();
+
+        if (_itemsPerRow != itemsPerRow || _maxRows != maxRows || _itemsPerPage != itemsPerPage) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            final idx = _indexOf(widget.selectedId);
+            final targetPage = _pageOfIndex(idx, itemsPerPage: itemsPerPage);
+            final safePages = pages == 0 ? 1 : pages;
+            final clamped = targetPage.clamp(0, safePages - 1);
+            final shouldJump = _current != clamped;
+            setState(() {
+              _itemsPerRow = itemsPerRow;
+              _maxRows = maxRows;
+              _itemsPerPage = itemsPerPage;
+              _current = clamped;
+            });
+            if (shouldJump && _pageController.hasClients) {
+              _pageController.jumpToPage(clamped);
+            }
+          });
+        }
+
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              height: gridHeight,
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: pages,
+                onPageChanged: (i) => setState(() => _current = i),
+                itemBuilder: (ctx, pageIndex) {
+                  final start = pageIndex * itemsPerPage;
+                  final padded = List<CategoryModel?>.generate(
+                    itemsPerPage,
+                        (i) {
+                      final absoluteIndex = start + i;
+                      if (absoluteIndex >= total) return null;
+                      return widget.subcats[absoluteIndex];
+                    },
+                  );
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: _hPad),
+                  child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: List.generate(maxRows, (rowIndex) {
+                  final rowStart = rowIndex * itemsPerRow;
+                  final rowItems = padded.skip(rowStart).take(itemsPerRow).toList();
+                  return Padding(
+                  padding: EdgeInsets.only(top: rowIndex == 0 ? 0 : _verticalSpacingBetweenRows),
+                  child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: List.generate(itemsPerRow, (colIndex) {
+                  final item = rowItems.length > colIndex ? rowItems[colIndex] : null;
+                  if (item == null) {
+                  return SizedBox(width: itemWidth, height: rowHeight);
+                              }
+                  final sel = item.id == widget.selectedId;
+                  return SizedBox(
+                  width: itemWidth,
+                  height: rowHeight,
+                  child: _SubcatCircle(
+                  label: item.name ?? '',
+                  brand: widget.brand,
+                  selected: sel,
+                  circleSize: circleSize,
+                  imageUrl: item.url,
+                  useImage: (item.url ?? '').isNotEmpty,
+                  onTap: () {
+                  // لا تغيّر الصفحة هنا — فقط نبلغ بالأكشن الصحيح
+                  widget.onTap(item.id);
+                  if (widget.isTopLevel) {
+                  widget.onTopCategoryPick(item);
+                  } else {
+                  widget.onSubcatPick(item);
+                  }
+                  },
+                  ),
+                  );
+                  }),
+                          ),
+                        );
+                      }),
+                    ),
+                  );
+                },
+              ),
+            ),
+            if (pages > 1)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: _DotsIndicator(
+                  current: _current,
+                  count: pages,
+                  color: widget.brand,
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _SubcatCircle extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final Color brand;
+
+  final String? imageUrl;
+  final bool useImage;
+  final double circleSize;
+
+  const _SubcatCircle({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    required this.brand,
+    required this.circleSize,
+    this.imageUrl,
+    this.useImage = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textColor = theme.textTheme.bodyMedium?.color ?? colorScheme.onSurface;
+
+    final shimmerBase = colorScheme.shimmerBaseColor;
+    final shimmerHighlight = colorScheme.shimmerHighlightColor;
+    final shimmerContent = colorScheme.shimmerContentColor;
+
+    final cardRadius = BorderRadius.circular(_subcatCardRadius);
+    final unselectedBackground = Color.alphaBlend(
+      colorScheme.surfaceVariant.withOpacity(theme.brightness == Brightness.dark ? 0.35 : 0.18),
+      colorScheme.surface,
+    );
+    final selectedBackground = Color.alphaBlend(
+      brand.withOpacity(theme.brightness == Brightness.dark ? 0.18 : 0.12),
+      colorScheme.surface,
+    );
+    final borderColor = selected
+        ? brand
+        : colorScheme.outline.withOpacity(theme.brightness == Brightness.dark ? 0.35 : 0.2);
+    final boxShadow = selected
+        ? [
+      BoxShadow(
+        color: brand.withOpacity(theme.brightness == Brightness.dark ? 0.35 : 0.25),
+        blurRadius: 18,
+        spreadRadius: 1,
+        offset: const Offset(0, 6),
+      ),
+    ]
+        : [
+      BoxShadow(
+        color: colorScheme.shadow.withOpacity(theme.brightness == Brightness.dark ? 0.25 : 0.06),
+        blurRadius: 10,
+        spreadRadius: 0,
+        offset: const Offset(0, 4),
+      ),
+    ];
+
+    final titleStyle = TextStyle(
+      fontSize: 12,
+      fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+      color: selected ? brand : textColor.withOpacity(.9),
+      height: 1.1,
+    );
+
+    Widget avatar;
+    if (useImage) {
+      Widget shimmerTile() => Shimmer.fromColors(
+
+            baseColor: shimmerBase,
+            highlightColor: shimmerHighlight,
+        period: const Duration(milliseconds: 1150),
+        child: Container(
+              width: circleSize,
+              height: circleSize,
+          decoration: BoxDecoration(
+            borderRadius: cardRadius,
+            color: shimmerContent,
+          ),
+        ),
+      );
+
+      avatar = ClipRRect(
+        borderRadius: cardRadius,
+        child: CachedNetworkImage(
+          imageUrl: imageUrl!,
+          fit: BoxFit.cover,
+          placeholder: (_, __) => shimmerTile(),
+          errorWidget: (_, __, ___) => shimmerTile(),
+
+        ),
+      );
+    } else {
+      avatar = Icon(
+        Icons.category_outlined,
+        size: circleSize * .55,
+        color: selected ? brand : textColor.withOpacity(.8),
+      );
+    }
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: cardRadius,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // الصندوق الدائري مع إبراز الاختيار
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            width: circleSize,
+            height: circleSize,
+            decoration: BoxDecoration(
+              borderRadius: cardRadius,
+              color: selected ? selectedBackground : unselectedBackground,
+              border: Border.all(color: borderColor, width: selected ? 1.6 : 1),
+              boxShadow: boxShadow,
+            ),
+            alignment: Alignment.center,
+            clipBehavior: Clip.antiAlias,
+            child: avatar,
+          ),
+
+          const SizedBox(height: 6),
+
+          // العنوان + خط سفلي متحرك للمختار
+          SizedBox(
+            width: circleSize + 12,
+            height: 30,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _FittedOrMarquee(text: label, style: titleStyle),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
+                  margin: const EdgeInsets.only(top: 4),
+                  height: selected ? 3 : 0,
+                  width: selected ? (circleSize * 0.5) : 0,
+                  decoration: BoxDecoration(
+                    color: brand,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// يختار بين FittedText البسيط أو Marquee لو النص طويل
+class _FittedOrMarquee extends StatelessWidget {
+  final String text;
+  final TextStyle style;
+  const _FittedOrMarquee({required this.text, required this.style});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (context, cons) {
+      final tp = TextPainter(
+        text: TextSpan(text: text, style: style),
+        maxLines: 1,
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: cons.maxWidth);
+
+      if (tp.width > cons.maxWidth) {
+        return SizedBox(
+          height: style.fontSize != null ? style.fontSize! * 1.25 : 14,
+          child: Marquee(
+            text: text,
+            style: style,
+            blankSpace: 24,
+            velocity: 28,
+            pauseAfterRound: const Duration(milliseconds: 800),
+            startPadding: 8,
+            accelerationDuration: const Duration(milliseconds: 400),
+            decelerationDuration: const Duration(milliseconds: 300),
+          ),
+        );
+      }
+      return Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: style, textAlign: TextAlign.center);
+    });
+  }
+}
+
+class _DotsIndicator extends StatelessWidget {
+  final int current;
+  final int count;
+  final Color color;
+
+  const _DotsIndicator({required this.current, required this.count, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final inactive = Theme.of(context).brightness == Brightness.dark
+        ? Colors.grey.shade700
+        : Colors.grey.shade300;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(count, (i) {
+        final sel = i == current;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          width: sel ? 18 : 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: sel ? color : inactive,
+            borderRadius: BorderRadius.circular(20),
+          ),
+        );
+      }),
+    );
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/// كتلة “جلب مؤجّل + شيمر” للفئات الفرعية تحت السلايدر.
+/// قبل التفعيل (enabled=false): شيمر فقط.
+/// عند التحويل إلى true: يبدأ الجلب مرّة واحدة، ويستمر الشيمر حتى تجهز البيانات.
+class SubcatsDeferredBlock extends StatefulWidget {
+  /// فعل التحميل المؤجّل (لن يبدأ أي جلب ما لم تصبح true)
+  final bool enabled;
+
+  /// ضع فيها جلبك الحقيقي (Cubit/Repo). تُنادى مرّة واحدة فقط.
+  final Future<void> Function()? onDeferLoad;
+
+  /// يبني المحتوى الحقيقي بعد الجلب
+  final Widget Function() builderWhenReady;
+
+  /// شيمر مخصص (اختياري). إن تُركت null نستخدم شيمر افتراضي بنفس ارتفاع الشبكة.
+  final Widget Function(BuildContext context, double rowHeight, int maxRows)? shimmerBuilder;
+
+  /// حد أدنى لعرض الشيمر لتجنب “وميض” سريع
+  final Duration minShimmer;
+
+  /// لضبط ارتفاع الشيمر تمامًا مثل الشبكة (افتراضي 92 = 56 + 6 + 30)
+  final double rowHeight;
+
+
+  /// عدد الصفوف المفترض للشبكة (1 أو 2 عادةً).
+  final int maxRows;
+
+  const SubcatsDeferredBlock({
+    super.key,
+    required this.enabled,
+    required this.builderWhenReady,
+    this.onDeferLoad,
+    this.shimmerBuilder,
+    this.minShimmer = const Duration(milliseconds: 400),
+    this.rowHeight = 92.0,
+    this.maxRows = 1,
+
+  });
+
+  @override
+  State<SubcatsDeferredBlock> createState() => SubcatsDeferredBlockState();
+}
+
+class SubcatsDeferredBlockState extends State<SubcatsDeferredBlock> {
+  bool _started = false;
+  bool _ready = false;
+  DateTime? _t0;
+
+  @override
+  void initState() {
+    super.initState();
+    _kickoffIfNeeded();
+  }
+
+  @override
+  void didUpdateWidget(covariant SubcatsDeferredBlock oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _kickoffIfNeeded();
+  }
+
+  void _kickoffIfNeeded() {
+    if (!_started && widget.enabled) {
+      _started = true;
+      _t0 = DateTime.now();
+      _defer();
+    }
+  }
+
+  Future<void> _defer() async {
+    try {
+      if (widget.onDeferLoad != null) {
+        await widget.onDeferLoad!();
+      }
+    } finally {
+      final elapsed = DateTime.now().difference(_t0 ?? DateTime.now());
+      final extra = elapsed >= widget.minShimmer ? Duration.zero : (widget.minShimmer - elapsed);
+      if (extra > Duration.zero) {
+        await Future.delayed(extra);
+      }
+      if (mounted) setState(() => _ready = true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // قبل التفعيل أو أثناء الجلب الأول: شيمر
+    if (!widget.enabled || !_ready) {
+      return widget.shimmerBuilder?.call(context, widget.rowHeight, widget.maxRows)
+          ?? _defaultShimmer(context, widget.rowHeight, widget.maxRows);
+    }
+    // جاهز: UI الحقيقي
+    return widget.builderWhenReady();
+  }
+
+  // شيمر افتراضي: صف أفقي 4 عناصر بنفس ارتفاع الشبكة لتجنّب الاهتزاز
+  Widget _defaultShimmer(BuildContext context, double rowHeight, int rows) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final shimmerBase = colorScheme.shimmerBaseColor;
+    final shimmerHighlight = colorScheme.shimmerHighlightColor;
+    final shimmerContent = colorScheme.shimmerContentColor;
+    final cardRadius = BorderRadius.circular(_subcatCardRadius);
+
+    // تفكيك الارتفاع: دائرة + فجوة + عنوان
+    const gap = 6.0;
+    const titleH = 30.0;
+    const indicatorGap = 6.0;
+    const indicatorHeight = 8.0;
+    final circle = (rowHeight - gap - titleH).clamp(48.0, 64.0);
+    final textWidth = circle + 12.0;
+    final gridHeight = rowHeight * rows + _verticalSpacingBetweenRows * (rows - 1);
+    final totalHeight = gridHeight + indicatorGap + indicatorHeight;
+
+    return SizedBox(
+      height: totalHeight,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Column(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(rows, (rowIndex) {
+              return Padding(
+                padding: EdgeInsets.only(top: rowIndex == 0 ? 0 : _verticalSpacingBetweenRows),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: List.generate(4, (_) {
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                      Shimmer.fromColors(
+                      baseColor: shimmerBase,
+                      highlightColor: shimmerHighlight,
+                      period: const Duration(milliseconds: 1150),
+                      child: Container(
+                        width: circle,
+                        height: circle,
+                        decoration: BoxDecoration(
+                          borderRadius: cardRadius,
+                          color: shimmerContent,
+                        ),
+                        ),
+                      ),
+
+                    const SizedBox(height: gap),
+                    SizedBox(
+                    height: titleH,
+                            width: textWidth,
+                    child: Align(
+                    alignment: Alignment.topCenter,
+                    child: Shimmer.fromColors(
+                      baseColor: shimmerBase,
+                      highlightColor: shimmerHighlight,
+                      period: const Duration(milliseconds: 1150),
+                      child: Container(
+                        height: 12,
+                        width: textWidth,
+                        decoration: BoxDecoration(
+                          color: shimmerContent,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                    ),
+                            ),
+                          ),
+                      ],
+                    );
+                  }),
+                ),
+                );
+              }),
+            ),
+            const SizedBox(height: indicatorGap),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(4, (index) {
+                final isActive = index == 0;
+                final width = isActive ? 18.0 : 8.0;
+                return Shimmer.fromColors(
+
+
+                  baseColor: shimmerBase,
+                  highlightColor: shimmerHighlight,
+                  period: const Duration(milliseconds: 1150),
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    width: width,
+                    height: indicatorHeight,
+
+
+                    decoration: BoxDecoration(
+                      color: shimmerContent,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+            );
+          }),
+        ),
+          ],
+        ),
+      ),
+    );
+  }
+}

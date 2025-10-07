@@ -1,0 +1,2565 @@
+import 'dart:async';
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart'; // للخريطة في نموذج إضافة شبكة
+import 'package:geolocator/geolocator.dart'; // للمسافة/إذن الموقع
+import 'package:shimmer/shimmer.dart';
+import 'package:marib/utils/ui_utils.dart';
+
+import 'package:marib/app/routes.dart';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/extensions/extensions.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:marib/data/model/wifi/wifi_network.dart';
+import 'package:marib/data/model/wifi/wifi_plan.dart';
+import 'package:marib/ui/screens/classified_ads/other_services/wifi_cabin/wifi_cabin_controller.dart';
+import 'package:flutter/foundation.dart';
+import 'package:marib/data/model/wifi/wifi_purchase.dart';
+import 'package:marib/data/model/wifi/wifi_purchase_result.dart';
+import 'package:marib/data/wifi/wifi_repository.dart';
+import 'package:marib/data/model/wifi/wifi_payment_gateway.dart';
+import 'package:intl/intl.dart';
+import 'package:marib/utils/api.dart';
+import 'package:flutter/services.dart';
+
+
+
+class WifiCabinScreen extends StatefulWidget {
+  const WifiCabinScreen({super.key});
+  static Route route(RouteSettings settings) {
+    return MaterialPageRoute(
+      builder: (_) => const WifiCabinScreen(),
+      settings: settings,
+      maintainState: true,
+    );
+  }
+
+  @override
+  State<WifiCabinScreen> createState() => _WifiCabinScreenState();
+}
+
+class _WifiCabinScreenState extends State<WifiCabinScreen> {
+
+  late final WifiCabinController _controller;
+
+  final WifiRepository _repository = const WifiRepository();
+  final ValueNotifier<List<WifiPurchase>> _purchasesNotifier =
+  ValueNotifier<List<WifiPurchase>>(<WifiPurchase>[]);
+  final ValueNotifier<bool> _purchasesLoadingNotifier =
+  ValueNotifier<bool>(false);
+  final ValueNotifier<String?> _purchasesErrorNotifier =
+  ValueNotifier<String?>(null);
+  bool _hasLoadedPurchases = false;
+
+
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = WifiCabinController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _controller.bootstrap();
+      _fetchPurchases();
+
+    });
+
+
+  }
+
+  @override
+  void dispose() {
+    _purchasesNotifier.dispose();
+    _purchasesLoadingNotifier.dispose();
+    _purchasesErrorNotifier.dispose();
+    _controller.dispose();
+
+    super.dispose();
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+
+
+    return AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) {
+          final state = _controller.viewState;
+
+          return Scaffold(
+            backgroundColor: context.color.backgroundColor,
+            appBar: UiUtils.buildAppBar(
+              context,
+              showBackButton: true,
+              title: 'wifiCabin'.translate(context),
+
+            ),
+            body: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Column(
+                children: [
+                  _HeaderFilterBar(
+                    locDenied: _controller.locationDenied,
+                    maxKm: _controller.maxKm,
+                    onEnableLocation: () => _controller.enableLocation(),
+                    onKmChanged: _controller.updateMaxKm,
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      switchInCurve: Curves.easeOut,
+                      switchOutCurve: Curves.easeIn,
+                      child: _buildBodyForState(context, state),
+                    ),
+                  ),
+                ],
+            ),
+            ),
+          );
+        },
+    );
+  }
+
+  Widget _buildBodyForState(
+      BuildContext context, WifiCabinViewState state) {
+    final grid = _buildNetworksGrid(state);
+
+    switch (state.status) {
+      case WifiCabinLoadStatus.loading:
+        if (state.hasData) {
+          return Stack(
+            key: const ValueKey('loading_with_data'),
+            children: [
+              grid,
+              const _LoadingOverlay(),
+            ],
+          );
+        }
+        return _buildShimmerGrid();
+      case WifiCabinLoadStatus.success:
+        return _buildNetworksGrid(state, key: const ValueKey('success'));
+      case WifiCabinLoadStatus.failure:
+        if (state.hasData) {
+          return Stack(
+            key: const ValueKey('failure_with_data'),
+            children: [
+              grid,
+              _ErrorBanner(
+                message:
+                state.errorMessage ?? 'تعذّر تحديث الشبكات، حاول مجددًا.',
+                onRetry: () => _controller.refreshNetworks(),
+              ),
+            ],
+          );
+        }
+        return _ErrorState(
+          key: const ValueKey('failure'),
+          message:
+          state.errorMessage ?? 'تعذّر جلب الشبكات في الوقت الحالي.',
+          onRetry: () => _controller.refreshNetworks(),
+        );
+    }
+  }
+
+  Widget _buildNetworksGrid(WifiCabinViewState state, {Key? key}) {
+    return _NetworksGrid(
+      key: key,
+      networks: state.networks,
+      onSelect: (network) => _openPlansSheet(context, network),
+      locationDenied: _controller.locationDenied,
+      onEnableLocation: () => _controller.enableLocation(),
+    );
+  }
+
+  Widget _buildShimmerGrid() {
+    final color = context.color.secondaryColor;
+    final base = color.withOpacity(0.35);
+    final highlight = color.withOpacity(0.18);
+
+    return GridView.builder(
+      key: const ValueKey('loading_shimmer'),
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 0.9,
+      ),
+      itemCount: 6,
+      itemBuilder: (context, _) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: Shimmer.fromColors(
+                baseColor: base,
+                highlightColor: highlight,
+                child: Container(
+                  height: 70,
+                  width: double.infinity,
+                  color: base,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Shimmer.fromColors(
+              baseColor: base,
+              highlightColor: highlight,
+              child: Container(
+                height: 12,
+                width: 90,
+                decoration: BoxDecoration(
+                  color: base,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Shimmer.fromColors(
+              baseColor: base,
+              highlightColor: highlight,
+              child: Container(
+                height: 10,
+                width: 60,
+                decoration: BoxDecoration(
+                  color: base,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+
+
+  Future<void> _fetchPurchases({bool force = false}) async {
+    if (_purchasesLoadingNotifier.value) return;
+    if (!force && _hasLoadedPurchases) return;
+    _hasLoadedPurchases = true;
+    _purchasesLoadingNotifier.value = true;
+    _purchasesErrorNotifier.value = null;
+    try {
+      final purchases = await _repository.fetchPurchases();
+      _purchasesNotifier.value = purchases;
+    } catch (error) {
+      _purchasesErrorNotifier.value = _describeError(error);
+    } finally {
+      _purchasesLoadingNotifier.value = false;
+    }
+  }
+
+  void _registerPurchase(WifiPurchase purchase) {
+    final List<WifiPurchase> current =
+    List<WifiPurchase>.from(_purchasesNotifier.value);
+    final int index = current.indexWhere((element) => element.id == purchase.id);
+    if (index >= 0) {
+      current[index] = purchase;
+    } else {
+      current.insert(0, purchase);
+    }
+    _purchasesNotifier.value = current;
+    _purchasesErrorNotifier.value = null;
+    _hasLoadedPurchases = true;
+  }
+
+  Future<void> _openPurchasesSheet(BuildContext context) async {
+    unawaited(_fetchPurchases());
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: context.color.backgroundColor,
+      builder: (_) => _PurchasesSheet(
+        purchasesListenable: _purchasesNotifier,
+        loadingListenable: _purchasesLoadingNotifier,
+        errorListenable: _purchasesErrorNotifier,
+        onRefresh: () => _fetchPurchases(force: true),
+      ),
+    );
+  }
+
+  Future<void> _showCodesDialog(WifiPurchase purchase) async {
+    final List<String> codes = purchase.codes;
+    if (codes.isEmpty) return;
+    final messenger = ScaffoldMessenger.of(context);
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        final color = dialogContext.color;
+        return AlertDialog(
+          title: Text(
+            'أكواد ${purchase.planName ?? 'الخطة'}',
+            style: TextStyle(color: color.textDefaultColor),
+          ),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 260),
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: codes.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (_, index) {
+                final code = codes[index];
+                return _CodeTile(
+                  code: code,
+                  onCopy: () {
+                    Clipboard.setData(ClipboardData(text: code));
+                    messenger.showSnackBar(
+                      SnackBar(content: Text('تم نسخ الكود: $code')),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            if (codes.length > 1)
+              TextButton(
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: codes.join('\n')));
+                  messenger.showSnackBar(
+                    const SnackBar(content: Text('تم نسخ جميع الأكواد.')),
+                  );
+                },
+                child: const Text('نسخ الكل'),
+              ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('تم'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  String _describeError(Object error) {
+    if (error is ApiHttpException) {
+      final Map<String, dynamic> payload =
+      error.payload is Map<String, dynamic>
+          ? Map<String, dynamic>.from(error.payload as Map)
+          : error.payload is Map
+          ? Map<String, dynamic>.from(error.payload as Map)
+          : <String, dynamic>{};
+      final String? base = _stringify(
+        payload['message'] ?? payload['error'] ?? payload['detail'],
+      );
+      final List<String> details = _flattenErrors(payload['errors']);
+      final List<String> parts = <String>[
+        if (base != null && base.isNotEmpty) base,
+        if (details.isNotEmpty) details.join('\n'),
+      ];
+      if (parts.isEmpty) {
+        return error.toString();
+      }
+      return parts.join('\n');
+    }
+    if (error is ApiException) {
+      return error.toString();
+    }
+    return error.toString();
+  }
+
+  String? _stringify(dynamic value) {
+    if (value == null) return null;
+    if (value is String) {
+      return value.trim().isEmpty ? null : value.trim();
+    }
+    return value.toString();
+  }
+
+  List<String> _flattenErrors(dynamic value) {
+    if (value == null) return const <String>[];
+    if (value is List) {
+      return value
+          .map((dynamic element) => _stringify(element))
+          .whereType<String>()
+          .where((element) => element.isNotEmpty)
+          .toList();
+    }
+    if (value is Map) {
+      final List<String> results = <String>[];
+      value.forEach((_, dynamic element) {
+        final List<String> nested = _flattenErrors(element);
+        if (nested.isEmpty) {
+          final String? candidate = _stringify(element);
+          if (candidate != null && candidate.isNotEmpty) {
+            results.add(candidate);
+          }
+        } else {
+          results.addAll(nested);
+        }
+      });
+      return results;
+    }
+    final String? single = _stringify(value);
+    if (single == null || single.isEmpty) {
+      return const <String>[];
+    }
+    return <String>[single];
+  }
+
+
+
+
+  Future<void> _openAddNetworkSheet(BuildContext context) async {
+    final dynamic result = await showModalBottomSheet<dynamic>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: context.color.backgroundColor,
+      builder: (_) => _AddNetworkSheet(
+        userLatLng: _controller.currentCenter,
+        repository: _repository,
+      ),
+
+    );
+
+    if (result != null) {
+      await _controller.refreshNetworks();
+      if (!mounted) return;
+      String? message;
+      if (result is Map) {
+        final map = Map<String, dynamic>.from(result as Map);
+        message = (map['message'] as String?) ?? (() {
+          final String? name = map['name'] as String?;
+          final String? status = map['status'] as String?;
+          if (name != null && status != null) {
+            return 'تم إرسال طلب الشبكة "$name" (الحالة: $status)';
+          }
+          if (name != null) {
+            return 'تمت إضافة الشبكة "$name" بنجاح';
+          }
+          if (status != null) {
+            return 'تم إرسال الطلب (الحالة: $status)';
+          }
+          return null;
+        })();
+      } else if (result is String) {
+        message = 'تمت إضافة الشبكة "$result" بنجاح';
+      }
+      message ??= 'تم إرسال طلب الشبكة بنجاح';
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
+  }
+
+  Future<void> _openPlansSheet(BuildContext context, WifiNetwork network) async {
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: context.color.backgroundColor,
+      builder: (_) => _PlansSheet(
+        network: network,
+        onRegisterPurchase: _registerPurchase,
+        onRefreshPurchases: _fetchPurchases,
+        onShowCodes: _showCodesDialog,
+      ),
+    );
+  }
+}
+
+
+class _HeaderFilterBar extends StatelessWidget {
+
+  const _HeaderFilterBar({
+    required this.locDenied,
+    required this.maxKm,
+    required this.onEnableLocation,
+    required this.onKmChanged,
+  });
+
+  final bool locDenied;
+  final double maxKm;
+  final VoidCallback onEnableLocation;
+  final ValueChanged<double> onKmChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.color;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.secondaryColor.withOpacity(0.25),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.wifi_tethering, color: color.textDefaultColor),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  locDenied
+                      ? 'عطّل الموقع — عرض نتائج عامة'
+                      : 'اعرض الشبكات الأقرب لموقعك',
+                  style: TextStyle(
+                    color: color.textDefaultColor,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              if (locDenied)
+                TextButton(
+                  onPressed: onEnableLocation,
+                  child: const Text('تشغيل الموقع'),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'النطاق: ${maxKm.toStringAsFixed(0)} كم',
+            style: TextStyle(color: color.textDefaultColor),
+          ),
+          Slider(
+            value: maxKm.clamp(1, 50),
+            min: 1,
+            max: 50,
+            divisions: 49,
+            label: '${maxKm.toStringAsFixed(0)} كم',
+            onChanged: onKmChanged,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NetworksGrid extends StatelessWidget {
+  const _NetworksGrid({
+    super.key,
+    required this.networks,
+    required this.onSelect,
+    required this.locationDenied,
+    required this.onEnableLocation,
+  });
+
+  final List<WifiNetwork> networks;
+  final ValueChanged<WifiNetwork> onSelect;
+  final bool locationDenied;
+  final VoidCallback onEnableLocation;
+
+  @override
+  Widget build(BuildContext context) {
+    if (networks.isEmpty) {
+      return _EmptyState(
+        title: 'لا توجد شبكات ضمن النطاق',
+        subtitle: locationDenied
+            ? 'فعّل خدمات الموقع أو زد نطاق البحث.'
+            : 'جرّب زيادة نطاق البحث بالكيلومترات.',
+        onAction: locationDenied ? onEnableLocation : null,
+      );
+    }
+
+    return GridView.builder(
+      physics: const BouncingScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 0.9,
+      ),
+      itemCount: networks.length,
+      itemBuilder: (context, index) {
+        final network = networks[index];
+        final distance = network.distanceKm;
+        final distanceLabel = distance == null
+            ? 'المسافة غير متاحة'
+            : 'يبعد ${distance.toStringAsFixed(1)} كم';
+
+        return _WifiNetworkCard(
+          name: network.name,
+          distanceText: distanceLabel,
+          rating: network.rating ?? 0,
+          onTap: () => onSelect(network),
+        );
+      },
+    );
+  }
+}
+
+class _WifiNetworkCard extends StatelessWidget {
+
+  const _WifiNetworkCard({
+    required this.name,
+    required this.distanceText,
+    required this.rating,
+    required this.onTap,
+  });
+
+
+  final String name;
+  final String distanceText;
+  final double rating;
+  final VoidCallback onTap;
+
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.color;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Column(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: Container(
+                height: 70,
+                width: double.infinity,
+                color: color.secondaryColor,
+                alignment: Alignment.center,
+                child: const Icon(Icons.wifi, size: 36), // Placeholder أيقونة الشبكة
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: color.textDefaultColor,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              distanceText,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: color.textDefaultColor.withOpacity(0.8),
+                fontSize: 11,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.star, size: 14, color: Colors.amber),
+                const SizedBox(width: 4),
+                Text(
+                  rating.toStringAsFixed(1),
+                  style: TextStyle(
+                    color: color.textDefaultColor.withOpacity(0.85),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+
+class _PlansSheet extends StatefulWidget {
+
+
+  const _PlansSheet({
+    required this.network,
+    required this.onRegisterPurchase,
+    required this.onRefreshPurchases,
+    required this.onShowCodes,
+  });
+
+  final WifiNetwork network;
+  final ValueChanged<WifiPurchase> onRegisterPurchase;
+  final Future<void> Function({bool force}) onRefreshPurchases;
+  final Future<void> Function(WifiPurchase) onShowCodes;
+
+
+  @override
+  State<_PlansSheet> createState() => _PlansSheetState();
+}
+
+class _PlansSheetState extends State<_PlansSheet> {
+  final WifiRepository _repository = const WifiRepository();
+  List<WifiPlan> _plans = <WifiPlan>[];
+  bool _isLoading = false;
+  String? _error;
+
+
+  @override
+  void initState() {
+    super.initState();
+    _plans = List<WifiPlan>.from(widget.network.plans);
+    _fetchPlans();
+  }
+
+  Future<void> _fetchPlans({bool force = false}) async {
+    if (_isLoading) return;
+    setState(() {
+      _isLoading = true;
+      if (force) {
+        _error = null;
+      }
+    });
+
+    List<WifiPlan> fetched = _plans;
+    String? errorMessage;
+
+    try {
+      fetched = await _repository.fetchNetworkPlans(widget.network.id);
+    } catch (error) {
+      errorMessage = error.toString();
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _isLoading = false;
+      if (errorMessage != null) {
+        _error = errorMessage;
+      } else {
+        _plans = fetched;
+        _error = null;
+      }
+    });
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.color;
+
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.78,
+      minChildSize: 0.6,
+      maxChildSize: 0.95,
+      builder: (context, controller) {
+        return Container(
+          decoration: BoxDecoration(
+            color: color.backgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                height: 4,
+                width: 44,
+                decoration: BoxDecoration(
+                  color: color.secondaryColor,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    const Icon(Icons.wifi),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        widget.network.name,
+                        style: TextStyle(
+                          color: color.textDefaultColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      'خطط الشبكة',
+                      style: TextStyle(
+                        color: color.textDefaultColor.withOpacity(0.8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: Builder(
+                  builder: (_) {
+                    if (_isLoading && _plans.isEmpty) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (_error != null && _plans.isEmpty) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.error_outline,
+                                  size: 36, color: color.error),
+                              const SizedBox(height: 12),
+                              Text(
+                                _error!,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: color.textDefaultColor,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              ElevatedButton(
+                                onPressed: () => _fetchPlans(force: true),
+                                child: const Text('إعادة المحاولة'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    if (_plans.isEmpty) {
+                      return RefreshIndicator(
+                        onRefresh: () => _fetchPlans(force: true),
+                        child: ListView(
+                          controller: controller,
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 32,
+                          ),
+                          children: [
+                            const SizedBox(height: 40),
+                            Icon(Icons.layers_outlined,
+                                size: 48, color: color.secondaryColor),
+                            const SizedBox(height: 16),
+                            Text(
+                              'لا توجد خطط متاحة حالياً',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: color.textDefaultColor.withOpacity(0.7),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'جرّب تحديث الشبكة لاحقاً لمعرفة أحدث العروض.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: color.textDefaultColor.withOpacity(0.6),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    return RefreshIndicator(
+                      onRefresh: () => _fetchPlans(force: true),
+                      child: ListView(
+                        controller: controller,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        children: [
+                          if (_isLoading)
+                            const Padding(
+                              padding: EdgeInsets.only(bottom: 12),
+                              child: LinearProgressIndicator(minHeight: 2),
+                            ),
+                          if (_error != null)
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                color: color.error.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      _error!,
+                                      style: TextStyle(
+                                        color: color.error,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => _fetchPlans(force: true),
+                                    child: const Text('تحديث'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          for (int i = 0; i < _plans.length; i++) ...[
+                            if (i > 0) const SizedBox(height: 10),
+                            _PlanTile(
+                              plan: _plans[i],
+                              onSelect: () => _openCheckout(context, _plans[i]),
+                            ),
+                          ],
+                          const SizedBox(height: 16),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _openCheckout(BuildContext context, WifiPlan plan) async {
+    final result = await showModalBottomSheet<WifiPurchaseResult>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: context.color.backgroundColor,
+      builder: (_) => _CheckoutSheet(plan: plan),
+    );
+    if (result == null) return;
+
+    final WifiPurchase? purchase = result.purchase;
+    if (purchase != null) {
+      widget.onRegisterPurchase(purchase);
+    }
+
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+
+    if (result.isPending) {
+      final String message = result.message ??
+          'تم إرسال طلب الدفع. سنخطرك عند اكتمال المعالجة.';
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+      unawaited(widget.onRefreshPurchases(force: true));
+      return;
+    }
+
+    if (purchase != null) {
+      if (purchase.codes.isNotEmpty) {
+        await widget.onShowCodes(purchase);
+      } else {
+        final String message = result.message ?? 'تمت عملية الشراء بنجاح.';
+        messenger.showSnackBar(SnackBar(content: Text(message)));
+      }
+      unawaited(widget.onRefreshPurchases(force: true));
+      return;
+    }
+
+    if (result.message != null && result.message!.isNotEmpty) {
+      messenger.showSnackBar(SnackBar(content: Text(result.message!)));
+    }
+  }
+}
+
+
+
+
+class _PlanTile extends StatelessWidget {
+
+  const _PlanTile({required this.plan, required this.onSelect});
+
+
+  final WifiPlan plan;
+  final VoidCallback onSelect;
+
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.color;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: onSelect,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          color: color.secondaryColor.withOpacity(0.2),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              plan.name,
+              style: TextStyle(
+                color: color.textDefaultColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              plan.description ?? 'تفاصيل الخطة ستظهر هنا.',
+              style: TextStyle(
+                color: color.textDefaultColor.withOpacity(0.75),
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Text(
+                  '${plan.price.toStringAsFixed(2)} ${plan.currency ?? 'ريال'}',
+                  style: TextStyle(
+                    color: color.textDefaultColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                const Icon(Icons.arrow_forward_ios, size: 16),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+
+class _CheckoutSheet extends StatefulWidget {
+  final WifiPlan plan;
+
+  const _CheckoutSheet({required this.plan});
+
+  @override
+  State<_CheckoutSheet> createState() => _CheckoutSheetState();
+}
+
+class _CheckoutSheetState extends State<_CheckoutSheet> {
+  final WifiRepository _repository = const WifiRepository();
+  final Map<String, WifiPaymentGateway> _gatewayEntities =
+  <String, WifiPaymentGateway>{};
+
+  int _quantity = 1;
+  String _gateway = 'wallet';
+  List<PaymentGatewayView> _gateways = <PaymentGatewayView>[];
+  bool _loadingGateways = false;
+  String? _gatewaysError;
+  bool _isSubmitting = false;
+
+  num get total => widget.plan.price * _quantity;
+
+
+
+  @override
+  void initState() {
+    super.initState();
+    _loadGateways();
+  }
+
+  Future<void> _loadGateways() async {
+    if (_loadingGateways) return;
+    setState(() {
+      _loadingGateways = true;
+      _gatewaysError = null;
+    });
+
+    List<PaymentGatewayView> views = _gateways;
+    Map<String, WifiPaymentGateway> lookup = <String, WifiPaymentGateway>{};
+    String? selectedId;
+    String? errorMessage;
+
+    try {
+      final gateways = await _repository.fetchPaymentGateways();
+      lookup = {for (final gateway in gateways) gateway.id: gateway};
+      views = gateways
+          .map(
+            (gateway) => PaymentGatewayView(
+          id: gateway.id,
+          name: gateway.name,
+          description: gateway.description,
+        ),
+      )
+          .toList();
+
+      if (views.isEmpty) {
+        final WifiPaymentGateway fallback =
+        const WifiPaymentGateway(id: 'wallet', name: 'المحفظة', isWallet: true);
+        lookup = <String, WifiPaymentGateway>{fallback.id: fallback};
+        views = const <PaymentGatewayView>[
+          PaymentGatewayView(id: 'wallet', name: 'المحفظة'),
+        ];
+      }
+
+      selectedId = _pickDefaultGatewayId(gateways, views.first.id);
+    } catch (error) {
+      errorMessage = error is ApiHttpException
+          ? _extractErrorMessage(error.payload) ?? error.toString()
+          : error.toString();
+      if (_gateways.isEmpty) {
+        final WifiPaymentGateway fallback =
+        const WifiPaymentGateway(id: 'wallet', name: 'المحفظة', isWallet: true);
+        lookup = <String, WifiPaymentGateway>{fallback.id: fallback};
+        views = const <PaymentGatewayView>[
+          PaymentGatewayView(id: 'wallet', name: 'المحفظة'),
+        ];
+      }
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _loadingGateways = false;
+        _gateways = views;
+        if (lookup.isNotEmpty) {
+          _gatewayEntities
+            ..clear()
+            ..addAll(lookup);
+        } else if (_gateways.isNotEmpty &&
+            !_gatewayEntities.containsKey(_gateways.first.id)) {
+          _gatewayEntities[_gateways.first.id] = WifiPaymentGateway(
+            id: _gateways.first.id,
+            name: _gateways.first.name,
+            isWallet: _gateways.first.id.toLowerCase() == 'wallet',
+          );
+        }
+        if (selectedId != null) {
+          _gateway = selectedId!;
+        } else if (!_gateways.any((gateway) => gateway.id == _gateway) &&
+            _gateways.isNotEmpty) {
+          _gateway = _gateways.first.id;
+        }
+        _gatewaysError = errorMessage;
+      });
+    }
+  }
+
+  String _pickDefaultGatewayId(
+      List<WifiPaymentGateway> gateways,
+      String fallbackId,
+      ) {
+    for (final gateway in gateways) {
+      if (gateway.isDefault) {
+        return gateway.id;
+      }
+    }
+    for (final gateway in gateways) {
+      if (gateway.isWallet) {
+        return gateway.id;
+      }
+    }
+    return fallbackId;
+  }
+
+  String? _stringify(dynamic value) {
+    if (value == null) return null;
+    if (value is String) {
+      return value.trim().isEmpty ? null : value.trim();
+    }
+    return value.toString();
+  }
+
+  List<String> _flattenErrors(dynamic value) {
+    if (value == null) return const <String>[];
+    if (value is List) {
+      return value
+          .map((dynamic element) => _stringify(element))
+          .whereType<String>()
+          .where((element) => element.isNotEmpty)
+          .toList();
+    }
+    if (value is Map) {
+      final List<String> results = <String>[];
+      value.forEach((_, dynamic element) {
+        final List<String> nested = _flattenErrors(element);
+        if (nested.isEmpty) {
+          final String? candidate = _stringify(element);
+          if (candidate != null && candidate.isNotEmpty) {
+            results.add(candidate);
+          }
+        } else {
+          results.addAll(nested);
+        }
+      });
+      return results;
+    }
+    final String? single = _stringify(value);
+    if (single == null || single.isEmpty) {
+      return const <String>[];
+    }
+    return <String>[single];
+  }
+
+  String? _extractErrorMessage(dynamic payload) {
+    if (payload is Map) {
+      final Map<String, dynamic> map = payload is Map<String, dynamic>
+          ? payload
+          : Map<String, dynamic>.from(payload as Map);
+      final String? base = _stringify(
+        map['message'] ?? map['error'] ?? map['detail'],
+      );
+      final List<String> details = _flattenErrors(map['errors']);
+      final List<String> parts = <String>[
+        if (base != null && base.isNotEmpty) base,
+        if (details.isNotEmpty) details.join('\n'),
+      ];
+      if (parts.isEmpty) {
+        return null;
+      }
+      return parts.join('\n');
+    }
+    return _stringify(payload);
+  }
+
+  void _showErrorMessage(String message) {
+    if (message.isEmpty) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _onConfirm() async {
+    if (_isSubmitting) return;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final result = await _repository.purchasePlan(
+        planId: widget.plan.id,
+        quantity: _quantity,
+        paymentGateway: _gateway,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop(result);
+    } on ApiHttpException catch (error) {
+      final String message =
+          _extractErrorMessage(error.payload) ?? error.toString();
+      _showErrorMessage(message);
+    } on ApiException catch (error) {
+      _showErrorMessage(error.toString());
+    } catch (error) {
+      _showErrorMessage(error.toString());
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.color;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.6,
+        minChildSize: 0.45,
+        maxChildSize: 0.92,
+        builder: (context, controller) {
+          return Container(
+            decoration: BoxDecoration(
+              color: color.backgroundColor,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            child: Column(
+
+              children: [
+
+                const SizedBox(height: 8),
+                Container(
+                  height: 4,
+                  width: 44,
+                  decoration: BoxDecoration(
+                    color: color.secondaryColor,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.plan.name,
+                        style: TextStyle(
+                          color: color.textDefaultColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.plan.description ?? 'راجع تفاصيل الخطة قبل المتابعة.',
+                        style: TextStyle(
+                          color: color.textDefaultColor.withOpacity(0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: ListView(
+                    controller: controller,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'الكمية',
+                            style: TextStyle(
+                              color: color.textDefaultColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          _QtyStepper(
+                            value: _quantity,
+                            onChanged: (value) => setState(() => _quantity = value),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      _TotalBar(
+                        total: total,
+                        currency: widget.plan.currency,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'طريقة الدفع',
+                        style: TextStyle(
+                          color: color.textDefaultColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (_loadingGateways && _gateways.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 18),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else ...[
+                        if (_gateways.isNotEmpty)
+                          _GatewayPicker(
+                            gateways: _gateways,
+                            value: _gateway,
+                            enabled: !_isSubmitting,
+                            onChanged: (value) =>
+                                setState(() => _gateway = value),
+                          )
+                        else
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 14, horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: color.secondaryColor.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'لا توجد طرق دفع متاحة حالياً.',
+                              style: TextStyle(
+                                color:
+                                color.textDefaultColor.withOpacity(0.75),
+                              ),
+                            ),
+                          ),
+                        if (_loadingGateways && _gateways.isNotEmpty)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 8),
+                            child: LinearProgressIndicator(minHeight: 2),
+                          ),
+                        if (_gatewaysError != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _gatewaysError!,
+                                  style: TextStyle(
+                                    color: color.error,
+                                    fontSize: 12.5,
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: _loadGateways,
+                                  child:
+                                  const Text('إعادة محاولة تحميل الطرق'),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton(
+                              onPressed: _loadGateways,
+                              child: const Text('تحديث طرق الدفع'),
+                            ),
+                          ),
+                      ],
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: _isSubmitting ? null : _onConfirm,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        child: _isSubmitting
+                            ? Row(
+                          key: const ValueKey('processing'),
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Text('جارٍ معالجة الدفع'),
+                          ],
+                        )
+                            : Row(
+                          key: const ValueKey('confirm'),
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.check_circle_outline),
+                            SizedBox(width: 8),
+                            Text('تأكيد الدفع'),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/* ========================== Widgets صغيرة مساعدة ========================== */
+class _QtyStepper extends StatelessWidget {
+  const _QtyStepper({required this.value, required this.onChanged});
+
+  final int value;
+  final ValueChanged<int> onChanged;
+
+
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.color;
+    return Container(
+
+
+      decoration: BoxDecoration(
+
+        borderRadius: BorderRadius.circular(12),
+        color: color.secondaryColor.withOpacity(0.2),
+
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: value > 1 ? () => onChanged(value - 1) : null,
+            icon: const Icon(Icons.remove),
+          ),
+          Text(
+            value.toString(),
+            style: TextStyle(
+              color: color.textDefaultColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          IconButton(
+            onPressed: () => onChanged(value + 1),
+            icon: const Icon(Icons.add),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TotalBar extends StatelessWidget {
+  const _TotalBar({required this.total, this.currency});
+
+  final num total;
+  final String? currency;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.color;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: color.secondaryColor.withOpacity(0.2),
+      ),
+      child: Row(
+        children: [
+          Text(
+            'الإجمالي',
+            style: TextStyle(
+              color: color.textDefaultColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            '${total.toStringAsFixed(2)} ${currency ?? 'ريال'}',
+            style: TextStyle(
+              color: color.textDefaultColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GatewayPicker extends StatelessWidget {
+  const _GatewayPicker({
+    required this.gateways,
+    required this.value,
+    required this.onChanged,
+    this.enabled = true,
+
+  });
+
+
+
+  final List<PaymentGatewayView> gateways;
+  final String value;
+  final ValueChanged<String> onChanged;
+  final bool enabled;
+
+
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.color;
+
+    return Column(
+      children: gateways
+          .map(
+            (gateway) => RadioListTile<String>(
+          value: gateway.id,
+          groupValue: value,
+              onChanged: enabled
+                  ? (val) {
+                if (val != null) onChanged(val);
+              }
+                  : null,
+          title: Text(
+            gateway.name,
+            style: TextStyle(color: color.textDefaultColor),
+          ),
+              subtitle: gateway.description != null
+                  ? Text(
+                gateway.description!,
+                style: TextStyle(
+                  color: color.textDefaultColor.withOpacity(0.65),
+                  fontSize: 12,
+                ),
+              )
+                  : null,
+        ),
+      )
+          .toList(),
+    );
+  }
+}
+
+/* ========================== BottomSheet إضافة شبكة (مالك) ========================== */
+class PaymentGatewayView {
+  const PaymentGatewayView({
+    required this.id,
+    required this.name,
+    this.description,
+  });
+
+  final String id;
+  final String name;
+  final String? description;
+}
+
+class _CodeTile extends StatelessWidget {
+  const _CodeTile({required this.code, required this.onCopy});
+
+  final String code;
+  final VoidCallback onCopy;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.color;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.secondaryColor.withOpacity(0.18),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: SelectableText(
+              code,
+              style: TextStyle(
+                color: color.textDefaultColor,
+                fontFamily: 'monospace',
+                letterSpacing: 1.05,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: onCopy,
+            tooltip: 'نسخ الكود',
+            icon: const Icon(Icons.copy, size: 18),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PurchasesSheet extends StatefulWidget {
+  const _PurchasesSheet({
+    required this.purchasesListenable,
+    required this.loadingListenable,
+    required this.errorListenable,
+    required this.onRefresh,
+  });
+
+  final ValueListenable<List<WifiPurchase>> purchasesListenable;
+  final ValueListenable<bool> loadingListenable;
+  final ValueListenable<String?> errorListenable;
+  final Future<void> Function() onRefresh;
+
+  @override
+  State<_PurchasesSheet> createState() => _PurchasesSheetState();
+}
+
+class _PurchasesSheetState extends State<_PurchasesSheet> {
+  late List<WifiPurchase> _purchases;
+  late bool _isLoading;
+  String? _error;
+  final DateFormat _dateFormat = DateFormat('yyyy-MM-dd HH:mm');
+
+  @override
+  void initState() {
+    super.initState();
+    _syncFromListenable();
+
+    widget.purchasesListenable.addListener(_onChanged);
+    widget.loadingListenable.addListener(_onChanged);
+    widget.errorListenable.addListener(_onChanged);
+  }
+
+
+  void _syncFromListenable() {
+    _purchases = widget.purchasesListenable.value.toList();
+    _isLoading = widget.loadingListenable.value;
+    _error = widget.errorListenable.value;
+  }
+
+  void _onChanged() {
+    if (!mounted) return;
+    setState(_syncFromListenable);
+
+  }
+
+  @override
+  void dispose() {
+    widget.purchasesListenable.removeListener(_onChanged);
+    widget.loadingListenable.removeListener(_onChanged);
+    widget.errorListenable.removeListener(_onChanged);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.color;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.75,
+        minChildSize: 0.55,
+        maxChildSize: 0.95,
+        builder: (context, controller) {
+          return Container(
+            decoration: BoxDecoration(
+              color: color.backgroundColor,
+              borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 8),
+                Container(
+                  height: 4,
+                  width: 44,
+                  decoration: BoxDecoration(
+                    color: color.secondaryColor,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.receipt_long),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'سجل المشتريات',
+                          style: TextStyle(
+                            color: color.textDefaultColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      if (_isLoading)
+                        const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: _buildBody(context, controller),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildBody(
+      BuildContext context,
+      ScrollController controller,
+      ) {
+    final color = context.color;
+    if (_isLoading && _purchases.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_error != null && _purchases.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.error_outline, size: 38, color: color.error),
+              const SizedBox(height: 12),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: color.textDefaultColor),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: widget.onRefresh,
+                child: const Text('إعادة المحاولة'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_purchases.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: widget.onRefresh,
+        child: ListView(
+          controller: controller,
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
+          children: [
+            const SizedBox(height: 30),
+            Icon(Icons.shopping_bag_outlined,
+                size: 48, color: color.secondaryColor),
+            const SizedBox(height: 12),
+            Text(
+              'لم تقم بشراء أي خطة بعد.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: color.textDefaultColor.withOpacity(0.75),
+                fontSize: 13.5,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'عند إتمام عمليات شراء جديدة ستظهر الأكواد هنا.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: color.textDefaultColor.withOpacity(0.6),
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: widget.onRefresh,
+      child: ListView.separated(
+        controller: controller,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        itemBuilder: (context, index) {
+          if (_error != null) {
+            if (index == 0) {
+              return Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.error.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _error!,
+                        style: TextStyle(
+                          color: color.error,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: widget.onRefresh,
+                      child: const Text('تحديث'),
+                    ),
+                  ],
+                ),
+              );
+            }
+            final purchase = _purchases[index - 1];
+            return _PurchaseTile(
+              purchase: purchase,
+              dateFormat: _dateFormat,
+            );
+          }
+          final purchase = _purchases[index];
+          return _PurchaseTile(
+            purchase: purchase,
+            dateFormat: _dateFormat,
+          );
+        },
+        separatorBuilder: (context, index) => const SizedBox(height: 12),
+        itemCount: _error != null ? _purchases.length + 1 : _purchases.length,
+      ),
+    );
+  }
+}
+
+class _PurchaseTile extends StatelessWidget {
+  const _PurchaseTile({required this.purchase, required this.dateFormat});
+
+  final WifiPurchase purchase;
+  final DateFormat dateFormat;
+
+  bool _isPending(String status) {
+    final lower = status.toLowerCase();
+    return lower.contains('pending') ||
+        lower.contains('processing') ||
+        lower.contains('await') ||
+        lower.contains('انتظار') ||
+        lower.contains('قيد');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.color;
+    final String status = purchase.statusLabel ?? 'غير محدد';
+    final bool pending = _isPending(status);
+    final DateTime? createdAt = purchase.createdAt;
+    final String? created =
+    createdAt != null ? dateFormat.format(createdAt.toLocal()) : null;
+    final String? totalText = purchase.total != null
+        ? '${purchase.total!.toStringAsFixed(2)} ${purchase.currency ?? ''}'
+        : null;
+    final List<Widget> meta = <Widget>[
+      Text(
+        'الكمية: ${purchase.quantity}',
+        style: TextStyle(
+          color: color.textDefaultColor.withOpacity(0.7),
+          fontSize: 12.5,
+        ),
+      ),
+    ];
+    if (totalText != null && totalText.trim().isNotEmpty) {
+      meta.add(
+        Text(
+          'الإجمالي: $totalText',
+          style: TextStyle(
+            color: color.textDefaultColor.withOpacity(0.7),
+            fontSize: 12.5,
+          ),
+        ),
+      );
+    }
+    if (purchase.paymentGateway != null &&
+        purchase.paymentGateway!.trim().isNotEmpty) {
+      meta.add(
+        Text(
+          'بوابة الدفع: ${purchase.paymentGateway}',
+          style: TextStyle(
+            color: color.textDefaultColor.withOpacity(0.7),
+            fontSize: 12.5,
+          ),
+        ),
+      );
+    }
+    if (purchase.reference != null && purchase.reference!.trim().isNotEmpty) {
+      meta.add(
+        Text(
+          'مرجع: ${purchase.reference}',
+          style: TextStyle(
+            color: color.textDefaultColor.withOpacity(0.65),
+            fontSize: 12,
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.secondaryColor.withOpacity(0.18),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            purchase.planName ?? 'خطة غير معروفة',
+            style: TextStyle(
+              color: color.textDefaultColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+            ),
+          ),
+          if (purchase.networkName != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              purchase.networkName!,
+              style: TextStyle(
+                color: color.textDefaultColor.withOpacity(0.75),
+                fontSize: 12.5,
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              if (created != null)
+                Text(
+                  created,
+                  style: TextStyle(
+                    color: color.textDefaultColor.withOpacity(0.7),
+                    fontSize: 12,
+                  ),
+                ),
+              if (created != null) const Spacer(),
+              Container(
+                padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: pending
+                      ? color.secondaryColor.withOpacity(0.3)
+                      : color.secondaryColor,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  status,
+                  style: TextStyle(
+                    color:
+                    pending ? color.textDefaultColor : color.backgroundColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 12,
+            runSpacing: 6,
+            children: meta,
+          ),
+          const SizedBox(height: 12),
+          if (purchase.codes.isNotEmpty) ...[
+            Text(
+              'الأكواد المصدرة',
+              style: TextStyle(
+                color: color.textDefaultColor,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: purchase.codes
+                  .map(
+                    (code) => Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: color.backgroundColor,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: color.secondaryColor.withOpacity(0.4),
+                    ),
+                  ),
+                  child: SelectableText(
+                    code,
+                    style: TextStyle(
+                      color: color.textDefaultColor,
+                      fontFamily: 'monospace',
+                      letterSpacing: 1.0,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              )
+                  .toList(),
+            ),
+          ] else
+            Text(
+              'لم يتم إصدار أكواد بعد — بانتظار اكتمال الدفع.',
+              style: TextStyle(
+                color: color.textDefaultColor.withOpacity(0.6),
+                fontSize: 12.5,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+}
+
+
+class _AddNetworkSheet extends StatefulWidget {
+
+  const _AddNetworkSheet({this.userLatLng, WifiRepository? repository})
+      : repository = repository ?? const WifiRepository();
+
+
+  final LatLng? userLatLng;
+  final WifiRepository repository;
+
+  @override
+  State<_AddNetworkSheet> createState() => _AddNetworkSheetState();
+}
+
+class _AddNetworkSheetState extends State<_AddNetworkSheet> {
+  final TextEditingController _nameController = TextEditingController();
+  LatLng? _selected;
+  double _coverage = 3;
+  bool _isSubmitting = false;
+
+  static const LatLng _defaultLatLng = LatLng(15.3694, 44.1910);
+
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = widget.userLatLng;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.color;
+
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.9,
+      minChildSize: 0.6,
+      maxChildSize: 0.95,
+      builder: (context, controller) {
+        return Container(
+          decoration: BoxDecoration(
+            color: color.backgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          child: Column(
+
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                height: 4,
+                width: 44,
+                decoration: BoxDecoration(
+                  color: color.secondaryColor,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: ListView(
+                  controller: controller,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  children: [
+                    Text(
+                      'أضف شبكتك',
+                      style: TextStyle(
+                        color: color.textDefaultColor,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'اسم الشبكة',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    GestureDetector(
+                      onTap: _isSubmitting ? null : _selectLocation,
+                      child: Container(
+                        height: 220,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          color: color.secondaryColor.withOpacity(0.2),
+                        ),
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.map_outlined,
+                              color: color.textDefaultColor.withOpacity(0.65),
+                              size: 42,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              _selected == null
+                                  ? 'اضغط لاختيار الموقع على الخريطة'
+                                  : 'الموقع المحدد: ${_selected!.latitude.toStringAsFixed(4)}, ${_selected!.longitude.toStringAsFixed(4)}',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: color.textDefaultColor.withOpacity(0.85),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'نطاق التغطية (كم)',
+                      style: TextStyle(
+                        color: color.textDefaultColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Slider(
+                      value: _coverage,
+                      min: 1,
+                      max: 10,
+                      divisions: 9,
+                      label: _coverage.toStringAsFixed(0),
+                      onChanged: _isSubmitting
+                          ? null
+                          : (value) {
+                        setState(() => _coverage = value);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: _isSubmitting ? null : _onSubmit,
+                    child: _isSubmitting
+                        ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2.5),
+                    )
+                        : const Text('إرسال الطلب'),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _selectLocation() async {
+    FocusScope.of(context).unfocus();
+    final LatLng initial = _selected ?? widget.userLatLng ?? _defaultLatLng;
+    final LatLng? result = await Navigator.of(context).push<LatLng>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => _NetworkLocationPicker(initialPosition: initial),
+      ),
+    );
+
+    if (result != null) {
+      setState(() => _selected = result);
+    }
+  }
+
+  Future<void> _onSubmit() async {
+    if (_isSubmitting) return;
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      _showError('يرجى إدخال اسم الشبكة.');
+
+      return;
+    }
+    if (_selected == null) {
+      _showError('يرجى اختيار موقع الشبكة على الخريطة.');
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    try {
+      final double coverage = double.parse(_coverage.toStringAsFixed(1));
+      final Map<String, dynamic> response =
+      await widget.repository.createOwnerRequest(
+        name: name,
+        latitude: _selected!.latitude,
+        longitude: _selected!.longitude,
+        coverageKm: coverage,
+      );
+
+      Map<String, dynamic> payload = <String, dynamic>{};
+      final dynamic rawData = response['data'] ??
+          response['network'] ??
+          response['request'] ??
+          response['payload'];
+      if (rawData is Map<String, dynamic>) {
+        payload = Map<String, dynamic>.from(rawData);
+      } else if (rawData is Map) {
+        payload = Map<String, dynamic>.from(rawData as Map);
+      }
+
+      final Map<String, dynamic> result = <String, dynamic>{
+        'name': payload['name'] ?? name,
+        'status': payload['status'] ??
+            payload['state'] ??
+            payload['request_status'] ??
+            response['status'] ??
+            response['state'],
+        'message': _stringify(
+          response['message'] ??
+              response['note'] ??
+              payload['message'] ??
+              payload['status_message'],
+        ),
+        'id': payload['id'] ?? response['id'],
+      }..removeWhere((key, value) => value == null);
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.of(context).pop(result);
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      _showError(error.toString());
+      setState(() => _isSubmitting = false);
+    } catch (_) {
+      if (!mounted) return;
+      _showError('تعذّر إرسال الطلب، حاول لاحقًا.');
+      setState(() => _isSubmitting = false);
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  String? _stringify(dynamic value) {
+    if (value == null) return null;
+    final String text = value.toString().trim();
+    if (text.isEmpty) return null;
+    return text;
+  }
+}
+
+class _NetworkLocationPicker extends StatefulWidget {
+  const _NetworkLocationPicker({required this.initialPosition});
+
+  final LatLng initialPosition;
+
+  @override
+  State<_NetworkLocationPicker> createState() => _NetworkLocationPickerState();
+}
+
+class _NetworkLocationPickerState extends State<_NetworkLocationPicker> {
+  late LatLng _current;
+  GoogleMapController? _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _current = widget.initialPosition;
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _updateSelection(LatLng value) async {
+    if (!mounted) return;
+    setState(() => _current = value);
+    await _controller?.animateCamera(
+      CameraUpdate.newLatLng(value),
+    );
+  }
+
+  void _confirm() {
+    Navigator.of(context).pop(_current);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('حدد موقع الشبكة'),
+        actions: [
+          TextButton(
+            onPressed: _confirm,
+            child: const Text('تم'),
+          ),
+        ],
+      ),
+      body: GoogleMap(
+        initialCameraPosition: CameraPosition(target: _current, zoom: 14.5),
+        markers: {
+          Marker(
+            markerId: const MarkerId('selected_location'),
+            position: _current,
+            draggable: true,
+            onDragEnd: (value) {
+              unawaited(_updateSelection(value));
+            },
+          ),
+        },
+        onMapCreated: (controller) => _controller = controller,
+        onTap: (value) {
+          unawaited(_updateSelection(value));
+        },
+        zoomControlsEnabled: false,
+        myLocationButtonEnabled: false,
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _confirm,
+        icon: const Icon(Icons.check),
+        label: const Text('تأكيد'),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
+  }
+}
+
+/* ========================== نماذج عرض (View Models) ========================== */
+class _LoadingOverlay extends StatelessWidget {
+  const _LoadingOverlay();
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.black.withOpacity(0.12),
+      child: const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+  }
+}
+
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.color;
+
+    return Align(
+      alignment: Alignment.topCenter,
+      child: Container(
+        margin: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: color.error.withOpacity(0.95),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
+            const SizedBox(width: 8),
+            TextButton(
+              onPressed: onRetry,
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
+              child: const Text('إعادة المحاولة'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({super.key, required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.color;
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.wifi_off, size: 48, color: color.error),
+          const SizedBox(height: 12),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: color.textDefaultColor,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton(
+            onPressed: onRetry,
+            child: const Text('إعادة المحاولة'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({
+    required this.title,
+    required this.subtitle,
+    this.onAction,
+  });
+
+  final String title;
+  final String subtitle;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.color;
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.wifi_find, size: 52, color: color.secondaryColor),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: color.textDefaultColor,
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: color.textDefaultColor.withOpacity(0.75),
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (onAction != null)
+            OutlinedButton(
+              onPressed: onAction,
+              child: const Text('تشغيل الموقع'),
+            ),
+        ],
+      ),
+    );
+  }
+}

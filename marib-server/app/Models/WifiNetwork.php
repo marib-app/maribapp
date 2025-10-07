@@ -1,0 +1,132 @@
+<?php
+
+namespace App\Models;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Arr;
+
+class WifiNetwork extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'user_id',
+        'name',
+       'slug',
+
+        'description',
+        'location_name',
+        'latitude',
+        'longitude',
+        'commission_rate',
+        'commission_flat',
+        'logo_path',
+        'login_screenshot_path',
+        'coverage_radius_km',
+        'contacts',
+        'notes',
+        'wallet_id',
+
+        'is_active',
+        'meta',
+    ];
+
+    protected $casts = [
+        'latitude' => 'float',
+        'longitude' => 'float',
+        'commission_rate' => 'decimal:2',
+        'commission_flat' => 'decimal:2',
+        'coverage_radius_km' => 'float',
+        'is_active' => 'boolean',
+        'meta' => 'array',
+        'contacts' => 'array',
+
+
+    ];
+
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+
+    public function wallet(): BelongsTo
+    {
+        return $this->belongsTo(WalletAccount::class, 'wallet_id');
+    }
+
+
+
+    public function plans(): HasMany
+    {
+        return $this->hasMany(WifiPlan::class);
+    }
+
+    public function codeBatches(): HasMany
+    {
+        return $this->hasMany(WifiCodeBatch::class);
+    }
+
+    public function codes(): HasMany
+    {
+        return $this->hasMany(WifiCode::class);
+    }
+
+    public function effectiveCommissionRate(?WifiPlan $plan = null): float
+    {
+        if ($plan && $plan->commission_rate_override !== null) {
+            return (float) $plan->commission_rate_override;
+        }
+
+        return (float) $this->commission_rate;
+    }
+
+    protected function contacts(): Attribute
+    {
+        return Attribute::make(
+            set: function ($value) {
+                if ($value === null) {
+                    return null;
+                }
+
+                $contacts = collect(is_string($value) ? preg_split('/[\r\n,;]+/', $value) : Arr::flatten(Arr::wrap($value)))
+                    ->map(static function ($contact) {
+                        $contact = trim(is_string($contact) ? $contact : (string) $contact);
+
+                        if ($contact === '') {
+                            return null;
+                        }
+
+                        $normalized = preg_replace('/[^0-9+]/', '', $contact);
+
+                        if ($normalized === '') {
+                            return null;
+                        }
+
+                        if (str_starts_with($normalized, '++')) {
+                            $normalized = '+' . ltrim($normalized, '+');
+                        }
+
+                        if (str_starts_with($normalized, '+')) {
+                            $normalized = '+' . preg_replace('/\D/', '', substr($normalized, 1));
+                        } else {
+                            $normalized = preg_replace('/\D/', '', $normalized);
+                        }
+
+                        return $normalized ?: null;
+                    })
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                return $contacts === [] ? null : $contacts;
+            }
+        );
+    }
+
+}

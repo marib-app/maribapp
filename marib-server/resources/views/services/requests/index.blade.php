@@ -1,0 +1,288 @@
+@extends('layouts.main')
+
+@section('title')
+    {{ __('طلبات الخدمات') }}
+@endsection
+
+@section('page-style')
+<style>
+    .card-body { overflow-x: hidden; }
+    .table-responsive { overflow-x: auto; margin-bottom: 1rem; }
+    .select2-container { width: 100% !important; }
+    #filters select { height: 45px; font-size: 1.1rem; padding: 8px 12px; }
+    #filters label { font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; }
+    .select2-container--default .select2-selection--single { height: 45px !important; padding: 8px 0; }
+    .select2-container--default .select2-selection--single .select2-selection__arrow { height: 45px !important; }
+    #table_list { width: 100%; }
+</style>
+@endsection
+
+@section('page-title')
+    <div class="page-title">
+        <div class="row">
+            <div class="col-12 col-md-6 order-md-1 order-last">
+                <h4>@yield('title')</h4>
+            </div>
+            <div class="col-12 col-md-6 order-md-2 order-first"></div>
+        </div>
+    </div>
+@endsection
+
+@section('content')
+    <section class="section">
+        <div class="card">
+            <div class="card-body">
+
+                {{-- فلاتر --}}
+                <div class="row">
+                    <div class="col-12">
+                        <div id="filters" class="row mb-4">
+                            <div class="col-md-4 mb-3">
+                                <label for="filter" class="d-block">{{__("Status")}}</label>
+                                <select class="form-control bootstrap-table-filter-control-status" id="filter">
+                                    <option value="">{{__("All")}}</option>
+                                    <option value="review">{{__("Under Review")}}</option>
+                                    <option value="approved">{{__("Approved")}}</option>
+                                    <option value="rejected">{{__("Rejected")}}</option>
+                                    <option value="sold out">{{__("Sold Out")}}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-8 mb-3">
+                                <label for="category_filter" class="d-block">{{__("Category")}}</label>
+                                <select class="form-control select2" id="category_filter" name="category_filter" style="width: 100%;">
+                                    <option value="">{{__("All Categories")}}</option>
+                                    @foreach($categories as $category)
+                                        <option value="{{ $category->id }}">{{ $category->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- الجدول --}}
+                <div class="row">
+                    <div class="table-responsive">
+                        <table
+                           class="table-borderless table-striped"
+                           aria-describedby="mydesc"
+                           id="table_list"
+                           data-toggle="table"
+                           data-url="{{ route('service.requests.show', 'list') }}"
+                           data-click-to-select="true"
+                           data-side-pagination="server"
+                           data-pagination="true"
+                           data-page-list="[5, 10, 20, 50, 100, 200]"
+                           data-search="true"
+                           data-show-columns="true"
+                           data-show-refresh="true"
+                           data-trim-on-search="false"
+                           data-escape="true"
+                           data-responsive="true"
+                           data-sort-name="id"
+                           data-sort-order="desc"
+                           data-pagination-successively-size="3"
+                           data-table="items"
+                           data-status-column="deleted_at"
+                           data-show-export="true"
+                           data-export-options='{"fileName": "service-requests-list","ignoreColumn": ["operate"]}'
+                           data-export-types='["pdf","json","xml","csv","txt","sql","doc","excel"]'
+                           data-mobile-responsive="true"
+                           data-filter-control="true"
+                           data-filter-control-container="#filters"
+                           data-toolbar="#filters"
+                           data-query-params="queryParams">
+                            <thead class="thead-dark">
+                            <tr>
+                                <th data-field="id" data-sortable="true">{{ __('ID') }}</th>
+                                <th data-field="name" data-sortable="true">{{ __('Name') }}</th>
+                                <th data-field="category.name" data-sortable="true" data-formatter="serviceTypeFormatter" data-filter-control="select">{{ __('نوع الخدمة') }}</th>
+                                <th data-field="description" data-align="center" data-sortable="true" data-formatter="descriptionFormatter">{{ __('Description') }}</th>
+                                <th data-field="user.name" data-sort-name="user_name" data-sortable="true">{{ __('User') }}</th>
+
+                                {{-- عمود جديد: الحقول المُعبأة كتقرير (زر يفتح المودال) --}}
+                                <th data-field="custom_fields" data-sortable="false" data-escape="false" data-formatter="customFieldsFormatter" data-events="fieldsEvents">{{ __('الحقول المُعبأة') }}</th>
+
+                                <th data-field="status" data-sortable="true" data-filter-control="select" data-escape="false" data-formatter="itemStatusFormatter">{{ __('Status') }}</th>
+
+                                @can('service-requests-update')
+                                    <th data-field="active_status" data-sortable="true" data-sort-name="deleted_at" data-escape="false" data-formatter="statusSwitchFormatter">{{ __('Active') }}</th>
+                                @endcan
+
+                                <th data-field="rejected_reason" data-sortable="true">{{ __('Rejected Reason') }}</th>
+
+                                {{-- أخفي تواريخ/معرّفات إضافية فقط للبحث --}}
+                                <th data-field="created_at" data-sortable="true" data-visible="false">{{ __('Created At') }}</th>
+                                <th data-field="updated_at" data-sortable="true" data-visible="false">{{ __('Updated At') }}</th>
+                                <th data-field="user_id" data-sortable="true" data-visible="false">{{ __('User ID') }}</th>
+                                <th data-field="category_id" data-sortable="true" data-visible="false">{{ __('Category ID') }}</th>
+
+                                @canany(['service-requests-update','service-requests-delete'])
+                                    <th data-field="operate" data-align="center" data-sortable="false" data-events="itemEvents" data-escape="false">{{ __('Action') }}</th>
+                                @endcanany
+                            </tr>
+                            </thead>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        {{-- مودال عرض الحقول المعبأة --}}
+        <div id="editModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel1" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="myModalLabel1">{{ __('Service Request Details') }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="center" id="custom_fields"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- مودال تغيير الحالة --}}
+        <div id="editStatusModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="myModalLabel1">{{ __('Status') }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form class="edit-form" action="" method="POST" data-success-function="updateApprovalSuccess">
+                            @csrf
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <select name="status" class="form-select" id="status" aria-label="status">
+                                        <option value="review">{{__("Under Review")}}</option>
+                                        <option value="approved">{{__("Approve")}}</option>
+                                        <option value="rejected">{{__("Reject")}}</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div id="rejected_reason_container" class="col-md-12" style="display:none;">
+                                <label for="rejected_reason" class="mandatory form-label">{{ __('Reason') }}</label>
+                                <textarea name="rejected_reason" id="rejected_reason" class="form-control" placeholder="{{ __('Reason') }}"></textarea>
+                            </div>
+                            <input type="submit" value="{{__("Save")}}" class="btn btn-primary mt-3">
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+@endsection
+
+@section('script')
+<script>
+    function updateApprovalSuccess() { $('#editStatusModal').modal('hide'); }
+
+    // اسم الفئة كبادج
+    function serviceTypeFormatter(value, row) {
+        if (row.category && row.category.name) {
+            return '<span class="badge bg-light-primary">' + row.category.name + '</span>';
+        }
+        return '<span class="badge bg-light-secondary">-</span>';
+    }
+
+    // زر "عرض الحقول" + عدّاد
+    function customFieldsFormatter(value, row) {
+        var count = Array.isArray(row.custom_fields) ? row.custom_fields.length : 0;
+        return '<button class="btn btn-sm btn-outline-secondary view-fields">'+
+                   '{{ __("View") }}'+
+               '</button> ' +
+               '<span class="badge bg-light text-dark ms-1">'+ count +'</span>';
+    }
+
+    // بناء جدول الحقول داخل المودال
+    function renderCustomFieldsTable(fields) {
+        if (!Array.isArray(fields) || !fields.length) {
+            return '<div class="text-muted">{{ __("No custom fields filled") }}</div>';
+        }
+        var html = '<div class="table-responsive"><table class="table table-sm table-bordered mb-0"><thead><tr>'+
+                   '<th style="width:30%">{{ __("Field") }}</th><th>{{ __("Value") }}</th></tr></thead><tbody>';
+
+        fields.forEach(function(f) {
+            var label = f.label || f.name || f.key || '-';
+            var val   = '';
+            if (Array.isArray(f.values) && f.values.length) {
+                val = f.values.join(', ');
+            } else if (typeof f.value === 'object' && f.value !== null) {
+                try { val = Object.values(f.value).join(', '); } catch(e) { val = JSON.stringify(f.value); }
+            } else {
+                val = (f.value !== undefined && f.value !== null) ? String(f.value) : (f.text || f.display || '-');
+            }
+            html += '<tr><td><strong>'+ escapeHtml(label) +'</strong></td><td>'+ escapeHtml(val) +'</td></tr>';
+        });
+
+        html += '</tbody></table></div>';
+        return html;
+    }
+
+    // أحداث عمود الحقول
+    window.fieldsEvents = {
+        'click .view-fields': function (e, value, row, index) {
+            var html = renderCustomFieldsTable(row.custom_fields || row.attributes || []);
+            $('#custom_fields').html(html);
+            $('#editModal').modal('show');
+        }
+    };
+
+    // تمرير الفلاتر للسيرفر
+    function queryParams(params) {
+        return {
+            category_filter: $('#category_filter').val(),
+            status_filter: $('#filter').val(),
+            offset: params.offset,
+            limit: params.limit,
+            search: params.search,
+            sort: params.sort,
+            order: params.order,
+            filter: params.filter
+        };
+    }
+
+    // أدوات مساعدة
+    function escapeHtml(s) {
+        if (s === null || s === undefined) return '';
+        return String(s).replace(/[&<>"'`=\/]/g, function (c) {
+            return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;','`':'&#x60;','=':'&#x3D;'}[c];
+        });
+    }
+
+    $(document).ready(function() {
+        $('#category_filter').select2({
+            placeholder: "{{__('Search Categories')}}",
+            allowClear: true,
+            width: '100%',
+            dropdownAutoWidth: true,
+            dropdownParent: $('#filters')
+        });
+
+        setTimeout(function() {
+            $('.select2-selection__rendered').css('line-height', '30px');
+        }, 100);
+
+        $(window).resize(function() {
+            $('#category_filter').select2({ width: '100%' });
+            $('.select2-selection__rendered').css('line-height', '30px');
+        });
+
+        // تحديث الجدول عند تغيير الفلاتر
+        $('#category_filter, #filter').on('change', function() {
+            let opts = $('#table_list').bootstrapTable('getOptions');
+            opts.pageNumber = 1;
+            $('#table_list').bootstrapTable('refresh');
+        });
+
+        // إظهار/إخفاء سبب الرفض
+        $('#status').on('change', function() {
+            $('#rejected_reason_container').toggle($(this).val() === 'rejected');
+        });
+    });
+</script>
+@endsection

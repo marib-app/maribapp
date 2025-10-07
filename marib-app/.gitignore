@@ -1,0 +1,56 @@
+# Flutter-specific
+.dart_tool/
+.build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.idea/
+.vscode/
+*.iml
+pubspec.lock
+
+# Android-specific
+.gradle/
+local.properties
+GeneratedPluginRegistrant.java
+captures/
+*.keystore
+*.jks
+
+# iOS/macOS-specific
+ios/Flutter/Generated.xcconfig
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/flutter_export_environment.sh
+Pods/
+*.xcworkspace
+*.xcuserstate
+*.lock
+*.pbxproj
+*.plist
+.DS_Store
+
+# Windows-specific
+windows/flutter/generated_plugin_registrant.cc
+build/
+
+windows/runner/grunner.exe.manifest
+windows/runner/grunner.exe.manifico
+# Linux-specific
+linux/flutter/generated_plugin_registrant.cc
+
+# Web-specific
+web/flutter/generated_plugin_registrant.dart
+
+# Temporary files
+*.tmp
+*.log
+*.swp
+*.swo
+*.bak
+
+# Others
+.idea/
+.vscode/
+*.iml
+*.lock

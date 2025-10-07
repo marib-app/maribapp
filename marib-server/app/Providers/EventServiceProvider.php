@@ -1,0 +1,66 @@
+<?php
+
+namespace App\Providers;
+
+use App\Events\CompetitionAnnounced;
+use App\Events\OrderStatusChanged;
+use App\Events\OrderNoteUpdated;
+use App\Listeners\SendOrderNoteNotification;
+use App\Listeners\HandleMarketingAutomation;
+use App\Listeners\RecordOrderStatusTelemetry;
+use App\Listeners\SendOrderStatusChangedNotification;
+use App\Events\SubscriptionExpired;
+use App\Events\UserWentInactive;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
+use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
+
+class EventServiceProvider extends ServiceProvider
+{
+
+    /**
+     * The event to listener mappings for the application.
+     *
+     * @var array<class-string, array<int, class-string>>
+     */
+    protected $listen = [
+        Registered::class => [
+            SendEmailVerificationNotification::class,
+        ],
+
+
+        UserWentInactive::class => [
+            HandleMarketingAutomation::class,
+        ],
+        SubscriptionExpired::class => [
+            HandleMarketingAutomation::class,
+        ],
+        CompetitionAnnounced::class => [
+            HandleMarketingAutomation::class,
+        ],
+
+
+        OrderStatusChanged::class => [
+            SendOrderStatusChangedNotification::class,
+            RecordOrderStatusTelemetry::class,
+        ],
+        OrderNoteUpdated::class => [
+            SendOrderNoteNotification::class,
+        ],
+
+    ];
+
+    public function boot(): void
+    {
+
+
+        //
+    }
+
+    public function shouldDiscoverEvents(): bool
+    {
+
+        
+        return false;
+    }
+}

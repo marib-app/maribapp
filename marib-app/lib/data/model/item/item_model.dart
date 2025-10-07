@@ -1,0 +1,699 @@
+import 'package:marib/data/model/category_model.dart';
+import 'package:marib/data/model/custom_field/custom_field_model.dart';
+import 'package:marib/data/model/seller_ratings_model.dart';
+
+
+
+
+
+class ItemSummary {
+  final int? id;
+  final String? name;
+  final String? slug;
+  final String? description;
+  final double? price;
+  final String? image;
+  final String? productLink;
+  final dynamic watermarkImage;
+  final double? latitude;
+  final double? longitude;
+  final String? address;
+  final String? type;
+  final String? status;
+  final bool? isFeature;
+  final bool? isLike;
+  final String? created;
+  final String? itemType;
+  final int? userId;
+  final int? categoryId;
+  final int? totalLikes;
+  final int? views;
+  final String? currency;
+  final String? city;
+  final String? state;
+  final String? country;
+
+  const ItemSummary({
+    this.id,
+    this.name,
+    this.slug,
+    this.description,
+    this.price,
+    this.image,
+    this.productLink,
+    this.watermarkImage,
+    this.latitude,
+    this.longitude,
+    this.address,
+    this.type,
+    this.status,
+    this.isFeature,
+    this.isLike,
+    this.created,
+    this.itemType,
+    this.userId,
+    this.categoryId,
+    this.totalLikes,
+    this.views,
+    this.currency,
+    this.city,
+    this.state,
+    this.country,
+  });
+
+  factory ItemSummary.fromJson(Map<String, dynamic> json) {
+    return ItemSummary(
+      id: ItemModel._toInt(json['id']),
+      name: json['name'],
+      slug: json['slug'],
+      description: json['description'],
+      price: ItemModel._toDouble(json['price']),
+      image: json['image'],
+      productLink: json['product_link'],
+      watermarkImage: json['watermark_image'],
+      latitude: ItemModel._toDouble(json['latitude'] ?? json['lat']),
+      longitude: ItemModel._toDouble(json['longitude'] ?? json['lng']),
+      address: json['address'],
+      type: json['type'],
+      status: json['status'],
+      isFeature: ItemModel._toBool(json['is_feature']),
+      isLike: ItemModel._toBool(json['is_liked']),
+      created: json['created_at'] ?? json['created'],
+      itemType: json['item_type'],
+      userId: ItemModel._toInt(json['user_id']),
+      categoryId: ItemModel._toInt(json['category_id']),
+      totalLikes: ItemModel._toInt(json['total_likes']),
+      views: ItemModel._toInt(json['clicks']),
+      currency: json['currency'],
+      city: json['city'],
+      state: json['state'],
+      country: json['country'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      'name': name,
+      'slug': slug,
+      'description': description,
+      'price': price,
+      'image': image,
+      'product_link': productLink,
+      'watermark_image': watermarkImage,
+      'latitude': latitude,
+      'longitude': longitude,
+      'address': address,
+      'type': type,
+      'status': status,
+      'is_feature': isFeature,
+      'is_liked': isLike,
+      'created_at': created,
+      'item_type': itemType,
+      'user_id': userId,
+      'category_id': categoryId,
+      'total_likes': totalLikes,
+      'clicks': views,
+      'currency': currency,
+      'city': city,
+      'state': state,
+      'country': country,
+    };
+  }
+}
+
+extension ItemSummaryX on ItemSummary {
+  ItemModel toItemModelSkeleton() {
+    return ItemModel(
+      id: id,
+      name: name,
+      slug: slug,
+      description: description,
+      price: price,
+      image: image,
+      productLink: productLink,
+      watermarkimage: watermarkImage,
+      latitude: latitude,
+      longitude: longitude,
+      address: address,
+      type: type,
+      status: status,
+      isFeature: isFeature,
+      isLike: isLike,
+      created: created,
+      itemType: itemType,
+      userId: userId,
+      categoryId: categoryId,
+      totalLikes: totalLikes,
+      views: views,
+      currency: currency,
+      city: city,
+      state: state,
+      country: country,
+    );
+  }
+}
+
+
+
+
+
+
+
+class ItemModel {
+  int? id;
+  String? name;
+  String? slug;
+  String? description;
+  double? price;
+  String? image;
+  dynamic watermarkimage;
+
+  double? _latitude;
+  double? _longitude;
+
+  String? address;
+  String? contact;
+  int? totalLikes;
+  int? views;
+  String? type;
+  String? status;
+  bool? active;
+  String? videoLink;
+  String? reviewLink;
+  String? productLink;
+
+  User? user;
+  List<GalleryImages>? galleryImages;
+  List<ItemOffers>? itemOffers;
+  CategoryModel? category;
+  List<CustomFieldModel>? customFields;
+
+  bool? isLike;
+  bool? isFeature;
+  String? created;
+  String? itemType;
+  int? userId;
+  int? categoryId;
+  bool? isAlreadyOffered;
+  bool? isAlreadyReported;
+  String? allCategoryIds;
+  String? rejectedReason;
+
+  int? areaId;
+  String? area;
+  String? city;
+  String? state;
+  String? country;
+
+  int? isPurchased;
+  List<UserRatings>? review;
+  String? currency;
+
+  double? get latitude => _latitude;
+  set latitude(dynamic value) {
+    _latitude = _toDouble(value);
+  }
+
+  double? get longitude => _longitude;
+  set longitude(dynamic value) {
+    _longitude = _toDouble(value);
+  }
+
+  ItemModel({
+    this.id,
+    this.name,
+    this.slug,
+    this.category,
+    this.description,
+    this.price,
+    this.image,
+    this.watermarkimage,
+    dynamic latitude,
+    dynamic longitude,
+    this.address,
+    this.contact,
+    this.type,
+    this.status,
+    this.active,
+    this.totalLikes,
+    this.views,
+    this.videoLink,
+    this.reviewLink,
+    this.productLink,
+    this.user,
+    this.galleryImages,
+    this.itemOffers,
+    this.customFields,
+    this.isLike,
+    this.isFeature,
+    this.created,
+    this.itemType,
+    this.userId,
+    this.categoryId,
+    this.isAlreadyOffered,
+    this.isAlreadyReported,
+    this.rejectedReason,
+    this.allCategoryIds,
+    this.areaId,
+    this.area,
+    this.city,
+    this.state,
+    this.country,
+    this.review,
+    this.currency,
+    this.isPurchased,
+  }) {
+    this.latitude = latitude;
+    this.longitude = longitude;
+  }
+
+  ItemModel copyWith({
+    int? id,
+    String? name,
+    String? slug,
+    String? description,
+    double? price,
+    String? image,
+    dynamic watermarkimage,
+    dynamic latitude,
+    dynamic longitude,
+    String? address,
+    String? contact,
+    int? totalLikes,
+    int? views,
+    String? type,
+    String? status,
+    bool? active,
+    String? videoLink,
+    String? reviewLink,
+    String? productLink,
+
+    User? user,
+    List<GalleryImages>? galleryImages,
+    List<ItemOffers>? itemOffers,
+    CategoryModel? category,
+    List<CustomFieldModel>? customFields,
+    bool? isLike,
+    bool? isFeature,
+    String? created,
+    String? itemType,
+    int? userId,
+    bool? isAlreadyOffered,
+    bool? isAlreadyReported,
+    String? allCategoryIds,
+    int? categoryId,
+    int? areaId,
+    String? area,
+    String? city,
+    String? state,
+    String? country,
+    int? isPurchased,
+    String? currency,
+    List<UserRatings>? review,
+  }) {
+    return ItemModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      slug: slug ?? this.slug,
+      category: category ?? this.category,
+      description: description ?? this.description,
+      price: price ?? this.price,
+      image: image ?? this.image,
+      watermarkimage: watermarkimage ?? this.watermarkimage,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      address: address ?? this.address,
+      contact: contact ?? this.contact,
+      type: type ?? this.type,
+      status: status ?? this.status,
+      active: active ?? this.active,
+      totalLikes: totalLikes ?? this.totalLikes,
+      views: views ?? this.views,
+      videoLink: videoLink ?? this.videoLink,
+      reviewLink: reviewLink ?? this.reviewLink,
+      productLink: productLink ?? this.productLink,
+
+      user: user ?? this.user,
+      galleryImages: galleryImages ?? this.galleryImages,
+      itemOffers: itemOffers ?? this.itemOffers,
+      customFields: customFields ?? this.customFields,
+      isLike: isLike ?? this.isLike,
+      isFeature: isFeature ?? this.isFeature,
+      created: created ?? this.created,
+      itemType: itemType ?? this.itemType,
+      userId: userId ?? this.userId,
+      categoryId: categoryId ?? this.categoryId,
+      isAlreadyOffered: isAlreadyOffered ?? this.isAlreadyOffered,
+      isAlreadyReported: isAlreadyReported ?? this.isAlreadyReported,
+      allCategoryIds: allCategoryIds ?? this.allCategoryIds,
+      rejectedReason: rejectedReason ?? this.rejectedReason,
+      areaId: areaId ?? this.areaId,
+      area: area ?? this.area,
+      city: city ?? this.city,
+      state: state ?? this.state,
+      country: country ?? this.country,
+      currency: currency ?? this.currency,
+      isPurchased: isPurchased ?? this.isPurchased,
+      review: review ?? this.review,
+    );
+  }
+
+  factory ItemModel.fromJson(Map<String, dynamic> json) {
+    final m = ItemModel();
+
+    // area (يدعم Map فقط)
+    if (json['area'] is Map<String, dynamic>) {
+      final a = json['area'] as Map<String, dynamic>;
+      m.areaId = a['id'];
+      m.area = a['name'];
+    }
+
+    // price يدعم int/double/String
+    m.price = _toDouble(json['price']);
+
+    m.id = json['id'];
+    m.name = json['name'];
+    m.slug = json['slug'];
+
+    // category آمن
+    if (json['category'] is Map<String, dynamic>) {
+      m.category = CategoryModel.fromJson(json['category']);
+    }
+
+    m.totalLikes = _toInt(json['total_likes']);
+    m.views = _toInt(json['clicks']);
+    m.description = json['description'];
+
+    m.image = json['image'];
+    m.watermarkimage = json['watermark_image'];
+
+    // يدعم مفاتيح بديلة lat/lng
+    m.latitude = json['latitude'] ?? json['lat'];
+    m.longitude = json['longitude'] ?? json['lng'];
+
+    m.address = json['address'];
+    m.contact = json['contact'];
+    m.type = json['type'];
+    m.status = json['status'];
+    m.active = _toBool(json['active']);
+    m.videoLink = json['video_link'];
+    m.reviewLink = json['review_link'];
+    m.productLink = json['product_link'];
+
+    m.isLike = _toBool(json['is_liked']);
+    m.isFeature = _toBool(json['is_feature']);
+    m.created = json['created_at'];
+    m.itemType = json['item_type'];
+    m.userId = _toInt(json['user_id']);
+    m.categoryId = _toInt(json['category_id']);
+    m.isAlreadyOffered = _toBool(json['is_already_offered']);
+    m.isAlreadyReported = _toBool(json['is_already_reported']);
+    m.allCategoryIds = json['all_category_ids'];
+    m.rejectedReason = json['rejected_reason'];
+    m.currency = json['currency'];
+    m.city = json['city'];
+    m.state = json['state'];
+    m.country = json['country'];
+    m.isPurchased = _toInt(json['is_purchased']);
+
+    // review أو seller_review (List أو Map)
+    final reviewsRaw = json['review'] ?? json['seller_review'];
+    if (reviewsRaw != null) {
+      m.review = <UserRatings>[];
+      if (reviewsRaw is List) {
+        for (final v in reviewsRaw) {
+          if (v is Map<String, dynamic>) {
+            m.review!.add(UserRatings.fromJson(v));
+          }
+        }
+      } else if (reviewsRaw is Map<String, dynamic>) {
+        m.review!.add(UserRatings.fromJson(reviewsRaw));
+      }
+    }
+
+    // user آمن
+    if (json['user'] is Map<String, dynamic>) {
+      m.user = User.fromJson(json['user']);
+    }
+
+    if (json['gallery_images'] is List) {
+      m.galleryImages = (json['gallery_images'] as List)
+          .whereType<Map<String, dynamic>>()
+          .map((v) => GalleryImages.fromJson(v))
+          .toList();
+    }
+
+    if (json['item_offers'] is List) {
+      m.itemOffers = (json['item_offers'] as List)
+          .whereType<Map<String, dynamic>>()
+          .map((v) => ItemOffers.fromJson(v))
+          .toList();
+    }
+
+    if (json['custom_fields'] is List) {
+      m.customFields = (json['custom_fields'] as List)
+          .whereType<Map<String, dynamic>>()
+          .map((v) => CustomFieldModel.fromMap(v))
+          .toList();
+    }
+
+    return m;
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['id'] = id;
+    data['name'] = name;
+    data['slug'] = slug;
+    data['description'] = description;
+    data['price'] = price;
+    data['total_likes'] = totalLikes;
+    data['clicks'] = views;
+    data['image'] = image;
+    data['watermark_image'] = watermarkimage;
+    data['latitude'] = latitude;
+    data['longitude'] = longitude;
+    data['address'] = address;
+    data['contact'] = contact;
+    data['type'] = type;
+    data['status'] = status;
+    data['active'] = active;
+    data['video_link'] = videoLink;
+    data['review_link'] = reviewLink;
+    data['product_link'] = productLink;
+    data['is_liked'] = isLike;
+    data['is_feature'] = isFeature;
+    data['created_at'] = created;
+    data['item_type'] = itemType;
+    data['user_id'] = userId;
+    data['category_id'] = categoryId;
+    data['is_already_offered'] = isAlreadyOffered;
+    data['is_already_reported'] = isAlreadyReported;
+    data['all_category_ids'] = allCategoryIds;
+    data['currency'] = currency;
+    data['rejected_reason'] = rejectedReason;
+    data['is_purchased'] = isPurchased;
+
+    if (review != null) {
+      data['review'] = review!.map((v) => v.toJson()).toList();
+    }
+
+    data['city'] = city;
+    data['state'] = state;
+    data['country'] = country;
+
+    // 🔒 آمن: لا نرسل category/user إلا إذا وُجدت
+    if (category != null) data['category'] = category!.toJson();
+
+    if (areaId != null && area != null) {
+      data['area'] = {'id': areaId, 'name': area};
+    }
+
+    if (user != null) data['user'] = user!.toJson();
+
+    if (galleryImages != null) {
+      data['gallery_images'] = galleryImages!.map((v) => v.toJson()).toList();
+    }
+    if (itemOffers != null) {
+      data['item_offers'] = itemOffers!.map((v) => v.toJson()).toList();
+    }
+    if (customFields != null) {
+      data['custom_fields'] = customFields!.map((v) => v.toMap()).toList();
+    }
+    return data;
+  }
+
+  @override
+  String toString() {
+    return 'ItemModel{id: $id, name: $name, slug:$slug, description: $description, price: $price, image: $image, watermarkimage: $watermarkimage, latitude: $latitude, longitude: $longitude, address: $address, contact: $contact, total_likes: $totalLikes, isLiked: $isLike, isFeature: $isFeature, views: $views, type: $type, status: $status, active: $active, videoLink: $videoLink, reviewLink: $reviewLink, user: $user, galleryImages: $galleryImages, itemOffers:$itemOffers, category: $category, customFields: $customFields, createdAt:$created, itemType:$itemType, userId:$userId, categoryId:$categoryId, isAlreadyOffered:$isAlreadyOffered, isAlreadyReported:$isAlreadyReported, allCategoryId:$allCategoryIds, rejected_reason:$rejectedReason, area_id:$areaId, area:$area, city:$city, state:$state, country:$country, is_purchased:$isPurchased, review:$review}';
+  }
+
+  // ===== helpers =====
+  static double? _toDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v.replaceAll(',', ''));
+    return null;
+  }
+
+  static int? _toInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    if (v is double) return v.toInt();
+    if (v is String) return int.tryParse(v);
+    return null;
+  }
+
+  static bool? _toBool(dynamic v) {
+    if (v == null) return null;
+    if (v is bool) return v;
+    if (v is num) return v != 0;
+    if (v is String) {
+      final s = v.toLowerCase().trim();
+      if (s == 'true' || s == '1') return true;
+      if (s == 'false' || s == '0') return false;
+    }
+    return null;
+  }
+}
+
+class User {
+  int? id;
+  String? name;
+  String? mobile;
+  String? email;
+  String? type;
+  String? profile;
+  String? fcmId;
+  String? firebaseId;
+  int? status;
+  String? apiToken;
+  dynamic address;
+  String? createdAt;
+  String? updatedAt;
+  int? showPersonalDetails;
+  int? isVerified;
+
+  User({
+    this.id,
+    this.name,
+    this.mobile,
+    this.email,
+    this.type,
+    this.profile,
+    this.fcmId,
+    this.firebaseId,
+    this.status,
+    this.apiToken,
+    this.address,
+    this.createdAt,
+    this.updatedAt,
+    this.isVerified,
+    this.showPersonalDetails,
+  });
+
+  User.fromJson(Map<String, dynamic> json) {
+    id = ItemModel._toInt(json['id']);
+    name = json['name'];
+    mobile = json['mobile'];
+    email = json['email'];
+    type = json['type'];
+    profile = json['profile'];
+    fcmId = json['fcm_id'];
+    firebaseId = json['firebase_id'];
+    status = ItemModel._toInt(json['status']);
+    apiToken = json['api_token'];
+    address = json['address'];
+    createdAt = json['created_at'];
+    updatedAt = json['updated_at'];
+    isVerified = ItemModel._toInt(json['is_verified']);
+    showPersonalDetails = ItemModel._toInt(json['show_personal_details']);
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['id'] = id;
+    data['name'] = name;
+    data['mobile'] = mobile;
+    data['email'] = email;
+    data['type'] = type;
+    data['profile'] = profile;
+    data['fcm_id'] = fcmId;
+    data['firebase_id'] = firebaseId;
+    data['status'] = status;
+    data['api_token'] = apiToken;
+    data['address'] = address;
+    data['created_at'] = createdAt;
+    data['updated_at'] = updatedAt;
+    data['is_verified'] = isVerified;
+    data['show_personal_details'] = showPersonalDetails;
+    return data;
+  }
+}
+
+class GalleryImages {
+  int? id;
+  String? image;
+  String? createdAt;
+  String? updatedAt;
+  int? itemId;
+
+  GalleryImages({this.id, this.image, this.createdAt, this.updatedAt, this.itemId});
+
+  GalleryImages.fromJson(Map<String, dynamic> json) {
+    id = ItemModel._toInt(json['id']);
+    image = json['image'];
+    createdAt = json['created_at'];
+    updatedAt = json['updated_at'];
+    itemId = ItemModel._toInt(json['item_id']);
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['id'] = id;
+    data['image'] = image;
+    data['created_at'] = createdAt;
+    data['updated_at'] = updatedAt;
+    data['item_id'] = itemId;
+    return data;
+  }
+}
+
+class ItemOffers {
+  int? id;
+  int? sellerId;
+  int? buyerId;
+  String? createdAt;
+  String? updatedAt;
+  double? amount;
+
+  ItemOffers({
+    this.id,
+    this.sellerId,
+    this.createdAt,
+    this.updatedAt,
+    this.buyerId,
+    this.amount,
+  });
+
+  ItemOffers.fromJson(Map<String, dynamic> json) {
+    id = ItemModel._toInt(json['id']);
+    buyerId = ItemModel._toInt(json['buyer_id']);
+    sellerId = ItemModel._toInt(json['seller_id']);
+    createdAt = json['created_at'];
+    updatedAt = json['updated_at'];
+    amount = ItemModel._toDouble(json['amount']);
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['id'] = id;
+    data['buyer_id'] = buyerId;
+    data['seller_id'] = sellerId;
+    data['created_at'] = createdAt;
+    data['updated_at'] = updatedAt;
+    data['amount'] = amount;
+    return data;
+  }
+}

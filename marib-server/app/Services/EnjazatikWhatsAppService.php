@@ -1,0 +1,36 @@
+<?php
+
+
+namespace App\Services;
+
+use Illuminate\Support\Facades\Http;
+
+class EnjazatikWhatsAppService
+{
+    protected $baseUrl = 'https://business.enjazatik.com/api/v1/';
+    protected $token;
+
+    public function __construct()
+    {
+        $this->token = config('services.whatsapp.token');
+    }
+
+    public function checkNumber(string $phone): array
+    {
+        $response = Http::withToken($this->token)
+            ->post($this->baseUrl . 'check-number', ['number' => $phone]);
+
+        return $response->json();
+    }
+
+    public function sendMessage(string $phone, string $message): array
+    {
+        $response = Http::withToken($this->token)
+            ->post($this->baseUrl . 'send-message', [
+                'number' => $phone,
+                'message' => $message,
+            ]);
+
+        return $response->json();
+    }
+}

@@ -1,0 +1,246 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Order;
+use Barryvdh\DomPDF\PDF;
+use Illuminate\Contracts\View\Factory as ViewFactory;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+
+
+class InvoicePdfService
+{
+
+    private const DEFAULT_VIEW = 'invoices.default';
+    private const DEFAULT_FONT = 'DejaVu Sans';
+    private const REQUIRED_FONTS = [
+        'DejaVuSans.ttf' => 'vendor/dompdf/dompdf/lib/fonts/DejaVuSans.ttf',
+        'DejaVuSans-Bold.ttf' => 'vendor/dompdf/dompdf/lib/fonts/DejaVuSans-Bold.ttf',
+    ];
+
+    public function __construct(private readonly ViewFactory $viewFactory)
+    {
+    }
+
+
+    public function generate(Order $order): string
+    {
+        $order->loadMissing(['items', 'user']);
+        Carbon::setLocale(app()->getLocale() ?? 'ar');
+
+        $settings = $this->resolveSettings();
+
+        $company = [
+            'name' => $settings['invoice_company_name'] ?? $settings['company_name'] ?? '',
+            'address' => $settings['invoice_company_address'] ?? $settings['company_address'] ?? '',
+            'tax_id' => $settings['invoice_company_tax_id'] ?? '',
+            'email' => $settings['invoice_company_email'] ?? $settings['company_email'] ?? '',
+            'phone' => $settings['invoice_company_phone'] ?? $settings['company_tel1'] ?? '',
+            'footer_note' => $settings['invoice_footer_note'] ?? '',
+            'logo' => $this->resolveLogoDataUri($settings['invoice_logo'] ?? $settings['company_logo'] ?? ''),
+
+
+        ];
+
+        $currency = $settings['currency_symbol'] ?? 'ر.س';
+
+
+        $summary = [
+            'items_total' => (float) ($order->total_amount ?? 0),
+            'tax' => (float) ($order->tax_amount ?? 0),
+            'discount' => (float) ($order->discount_amount ?? 0),
+            'delivery' => (float) ($order->delivery_total ?? 0),
+            'final' => (float) ($order->final_amount ?? 0),
+        ];
+
+        $items = $order->items->map(function ($item) {
+            return [
+                'name' => $item->item_name ?? Arr::get($item->item_snapshot, 'name', ''),
+                'quantity' => (int) $item->quantity,
+                'unit_price' => (float) ($item->price ?? 0),
+                'subtotal' => (float) ($item->subtotal ?? 0),
+            ];
+        })->toArray();
+
+
+        $paymentStatus = $order->payment_status
+            ? (Order::PAYMENT_STATUS_LABELS[$order->payment_status] ?? $order->payment_status)
+            : null;
+
+        $paymentMethod = $order->payment_method ?: null;
+
+        $data = [
+            'order' => $order,
+            'items' => $items,
+            'summary' => $summary,
+            'company' => $company,
+            'currency' => $currency,
+            'customer' => $order->user,
+            'issued_at' => $order->created_at ? Carbon::parse($order->created_at) : null,
+            'generated_at' => Carbon::now(),
+            'payment' => [
+
+                'method' => $paymentMethod ? __($paymentMethod) : __('غير محدد'),
+                'status' => $paymentStatus ? __($paymentStatus) : __('غير محدد'),
+            ],
+            'billing_address' => $order->billing_address ?? Arr::get($order->address_snapshot, 'billing.address'),
+            'shipping_address' => $order->shipping_address ?? Arr::get($order->address_snapshot, 'shipping.address'),
+            'invoice_number' => $order->invoice_no ?: $order->order_number,
+
+        ];
+
+
+        $this->ensureFontDirectoryExists();
+
+        $html = $this->viewFactory->make(self::DEFAULT_VIEW, $data)->render();
+
+
+        /** @var PDF $pdf */
+        $pdf = app('dompdf.wrapper');
+
+
+
+        $pdf->setOptions([
+            'defaultFont' => self::DEFAULT_FONT,
+            'isHtml5ParserEnabled' => true,
+            'isRemoteEnabled' => true,
+            'fontDir' => storage_path('fonts'),
+            'fontCache' => storage_path('fonts'),
+        ]);
+        $pdf->loadHTML($html);
+        $pdf->setPaper('a4', 'portrait');
+
+        return $pdf->output();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function resolveSettings(): array
+    {
+        $settings = CachingService::getSystemSettings();
+
+        if ($settings instanceof \Illuminate\Support\Collection) {
+            return $settings->toArray();
+        }
+
+         if (is_array($settings)) {
+            return $settings;
+        }
+
+        return [];
+    }
+
+    private function resolveLogoDataUri(?string $logo): ?string
+
+    {
+        if (empty($logo)) {
+            return null;
+        }
+
+
+
+        if (Str::startsWith($logo, 'data:')) {
+            return $logo;
+        }
+
+        if (Str::startsWith($logo, ['http://', 'https://'])) {
+            $path = parse_url($logo, PHP_URL_PATH) ?: '';
+
+            if (Str::startsWith($path, '/storage/')) {
+                $relative = ltrim(Str::after($path, '/storage/'), '/');
+
+
+
+                if ($relative && Storage::disk(config('filesystems.default'))->exists($relative)) {
+                    return $this->encodeStorageImage($relative);
+                }
+            }
+
+
+            return $logo;
+        }
+
+        if (Str::startsWith($logo, 'assets/')) {
+            $filePath = public_path($logo);
+
+            if (is_readable($filePath)) {
+                return $this->encodeFileToDataUri($filePath);
+            }
+        }
+
+        if (Storage::disk(config('filesystems.default'))->exists($logo)) {
+            return $this->encodeStorageImage($logo);
+        }
+
+        $filePath = public_path($logo);
+
+        if (is_readable($filePath)) {
+            return $this->encodeFileToDataUri($filePath);
+
+        }
+
+        return $logo;
+    }
+
+    private function ensureFontDirectoryExists(): void
+    {
+        $fontPath = storage_path('fonts');
+
+        if (! is_dir($fontPath)) {
+            mkdir($fontPath, 0755, true);
+        }
+
+
+        $this->ensureDefaultFontsPresent($fontPath);
+    }
+
+    private function ensureDefaultFontsPresent(string $fontPath): void
+    {
+        foreach (self::REQUIRED_FONTS as $fileName => $vendorRelativePath) {
+            $targetPath = $fontPath . DIRECTORY_SEPARATOR . $fileName;
+
+            if (file_exists($targetPath)) {
+                continue;
+            }
+
+            $sourcePath = base_path($vendorRelativePath);
+
+            if (is_readable($sourcePath)) {
+                copy($sourcePath, $targetPath);
+            }
+        }
+
+    }
+
+
+
+    private function encodeStorageImage(string $relativePath): ?string
+    {
+        $disk = Storage::disk(config('filesystems.default'));
+        $contents = $disk->get($relativePath);
+        $mimeType = $disk->mimeType($relativePath) ?? 'image/png';
+
+        return $this->encodeRawToDataUri($contents, $mimeType);
+    }
+
+    private function encodeFileToDataUri(string $filePath): ?string
+    {
+        $contents = file_get_contents($filePath);
+        $mimeType = mime_content_type($filePath) ?: 'image/png';
+
+        return $this->encodeRawToDataUri($contents, $mimeType);
+    }
+
+    private function encodeRawToDataUri(string|false $contents, string $mimeType): ?string
+    {
+        if ($contents === false) {
+            return null;
+        }
+
+        return sprintf('data:%s;base64,%s', $mimeType, base64_encode($contents));
+    }
+}

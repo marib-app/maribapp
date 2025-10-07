@@ -1,0 +1,451 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/utils/constant.dart';
+import 'package:marib/utils/hive_utils.dart';
+import 'package:marib/utils/api.dart';
+import 'package:marib/data/model/item_filter_model.dart';
+import 'package:marib/data/cubits/item/fetch_item_from_category_cubit.dart';
+import 'package:marib/data/cubits/item/fetch_item_summary_cubit.dart';
+import 'package:marib/data/cubits/home/fetch_home_screen_cubit.dart';
+
+
+import 'package:marib/data/cubits/slider_cubit.dart';
+
+
+import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
+
+import 'widgets/filter_sort_bar/filter_sort_bar.dart';
+import 'widgets/items_body_box.dart';
+import 'package:marib/utils/slider_interface_mapper.dart';
+
+
+class Section_screen extends StatefulWidget {
+  final String categoryId;        // معرف الفئة الحالية
+  final String categoryName;      // اسم الفئة الحالية
+  final List<String> categoryIds; // قائمة معرفات الفئات
+  final String? interfaceType;
+
+
+  const Section_screen({
+    super.key,
+    required this.categoryId,
+    required this.categoryName,
+    required this.categoryIds,
+    this.interfaceType,
+  });
+
+  @override
+  Section_screenState createState() => Section_screenState();
+
+  static Route route(RouteSettings routeSettings) {
+    final Map? arguments = routeSettings.arguments as Map?;
+    final dynamic rawInterfaceType = arguments?['interfaceType'];
+    final String? interfaceType =
+    rawInterfaceType is String && rawInterfaceType.trim().isNotEmpty
+        ? rawInterfaceType.trim()
+        : null;
+    return BlurredRouter(
+      builder: (_) => BlocProvider(
+        create: (context) => FetchHomeScreenCubit(
+          defaultInterfaceType: interfaceType,
+        ),
+
+        child: Section_screen(
+          categoryId: arguments?['catID'] as String,
+          categoryName: arguments?['catName'],
+          categoryIds: arguments?['categoryIds'],
+          interfaceType: interfaceType,
+        ),
+
+      ),
+    );
+  }
+}
+
+class Section_screenState extends State<Section_screen> {
+  // =========================
+  // متغيرات الحالة / الأداء
+  // =========================
+
+  // ✅ تحويل categoryId مرة واحدة
+  late final int _catId = int.parse(widget.categoryId);
+
+  // ✅ حقل البحث + ديباونس
+  final TextEditingController searchController = TextEditingController();
+
+
+  // ✅ تحميل المزيد
+  bool _isLoadingMore = false;
+
+  // ✅ إظهار shimmer
+  bool showShimmer = true;
+
+  // ✅ فرز وفلاتر
+  String? sortBy;
+  ItemFilterModel? filter;
+  ItemFilterModel? _initialFilter;
+
+  // ✅ تبليغ الفئة المختارة
+  final ValueNotifier<int?> selectedCategoryId = ValueNotifier<int?>(0);
+
+  // ✅ تحكم ظهور شريط التصنيفات الحقيقي
+  bool _showSlider = false;
+
+  // ✅ لإجبار إظهار الشيمر فترة دنيا بعد أول Loading
+  bool _sawLoading = false;
+  DateTime? _loadingStart;
+  static const Duration _minShimmer = Duration(milliseconds: 350);
+  late final bool _hasAdSlider;
+
+  bool _showAdSlider = false;
+  bool _requestedSlider = false;
+
+
+  ItemFilterModel _buildEffectiveFilter({
+    ItemFilterModel? base,
+    int? categoryIdOverride,
+  }) {
+    final ItemFilterModel? source = base ?? filter ?? _initialFilter;
+    final int resolvedCategoryId = categoryIdOverride ?? _catId;
+
+    if (source == null) {
+      return ItemFilterModel(
+        categoryId: resolvedCategoryId.toString(),
+      );
+    }
+
+    return source.copyWith(
+      categoryId: resolvedCategoryId.toString(),
+    );
+  }
+
+
+
+  void _requestFeaturedSections({int? rootId, String? slug}) {
+    final String? interfaceType = widget.interfaceType?.trim();
+    if (interfaceType == null || interfaceType.isEmpty) {
+      context.read<FetchHomeScreenCubit>().fetch();
+      return;
+    }
+
+    final String? cleanedSlug = slug?.trim();
+
+    context.read<FetchHomeScreenCubit>().loadFeaturedSections(
+      interfaceType: interfaceType,
+      slug: (cleanedSlug != null && cleanedSlug.isNotEmpty) ? cleanedSlug : null,
+    );
+  }
+
+  Future<void> _refreshData({
+    ItemFilterModel? baseFilter,
+    String? search,
+    int? categoryId,
+  }) async {
+    final int resolvedCategoryId = categoryId ?? _catId;
+    final ItemFilterModel effectiveFilter = _buildEffectiveFilter(
+      base: baseFilter,
+      categoryIdOverride: resolvedCategoryId,
+    );
+
+    filter = effectiveFilter;
+
+    final String query = search ?? searchController.text;
+
+    await Future.wait([
+      context.read<FetchItemSummaryCubit>().fetchSummaries(
+        categoryId: resolvedCategoryId,
+        search: query,
+        sortBy: sortBy,
+        filter: effectiveFilter,
+      ),
+      context.read<FetchItemFromCategoryCubit>().fetchItemFromCategory(
+        categoryId: resolvedCategoryId,
+        search: query,
+        sortBy: sortBy,
+        filter: effectiveFilter,
+      ),
+    ]);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    // (اختياري) لو هذه المتغيرات عندك أصلاً — وإلا احذف السطور الثلاثة:
+    // searchbody = {};
+    // selectedcategoryId = widget.categoryId;
+    // selectedcategoryName = widget.categoryName;
+    // searchbody[Api.categoryId] = widget.categoryId;
+
+
+    // 2) الجلب الأولي بعوامل الموقع
+    final country = HiveUtils.getCountryName() ?? "";
+    final areaId = HiveUtils.getAreaId() != null
+        ? int.parse(HiveUtils.getAreaId().toString())
+        : null;
+    final city = HiveUtils.getCityName() ?? "";
+    final state = HiveUtils.getStateName() ?? "";
+    final radius = HiveUtils.getNearbyRadius();
+    final lat = HiveUtils.getLatitude();
+    final lon = HiveUtils.getLongitude();
+
+    final ItemFilterModel locationFilter = ItemFilterModel(
+      country: country,
+      areaId: areaId,
+      city: city,
+      state: state,
+      categoryId: widget.categoryId,
+      radius: radius,
+      latitude: lat,
+      longitude: lon,
+    );
+
+
+    final ItemFilterModel effectiveFilter = _buildEffectiveFilter(
+      base: locationFilter,
+      categoryIdOverride: _catId,
+    );
+
+    _initialFilter = effectiveFilter;
+    filter = effectiveFilter;
+
+    unawaited(
+      _refreshData(
+        baseFilter: effectiveFilter,
+        categoryId: _catId,
+        search: '',
+      ),
+    );
+
+    _hasAdSlider = widget.interfaceType?.trim().isNotEmpty ?? false;
+
+    final String? interfaceType = widget.interfaceType?.trim();
+    if (interfaceType != null && interfaceType.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _requestedSlider) {
+          return;
+        }
+        _requestedSlider = true;
+        unawaited(
+          context.read<SliderCubit>().fetchSlider(
+            context,
+            forceRefresh: true,
+            interfaceType: interfaceType,
+          ),
+        );
+      });
+    }
+
+
+    // 3) حالة البداية: اعتبر أننا سنرى Loading حالًا
+    showShimmer = true;
+    _showSlider = false;
+    _showAdSlider = _hasAdSlider;
+
+  }
+
+
+
+
+
+  @override
+  void dispose() {
+    selectedCategoryId.dispose();
+    searchController.dispose();
+    super.dispose();
+  }
+
+
+
+  // =========================
+  // تحميل لانهائي
+  // =========================
+  void _handleLoadMoreState(bool isLoading) {
+    if (_isLoadingMore == isLoading) return;
+    setState(() => _isLoadingMore = isLoading);
+  }
+
+  // =========================
+  // سحب للتحديث
+  // =========================
+  Future<void> _handleRefresh() async {
+    try {
+      HapticFeedback.selectionClick();
+      setState(() => showShimmer = true);
+
+
+      final String? normalizedInterfaceType =
+      SliderInterfaceMapper.normalize(widget.interfaceType);
+      unawaited(
+        context.read<SliderCubit>().fetchSlider(
+          context,
+          forceRefresh: true,
+          interfaceType: normalizedInterfaceType ?? widget.interfaceType,
+        ),
+      );
+
+      await context.read<FetchItemSummaryCubit>().fetchSummaries(
+        categoryId: _catId,
+        search: searchController.text,
+        sortBy: sortBy,
+        filter: filter?.copyWith(categoryId: widget.categoryId),
+      );
+
+
+
+
+      // (اختياري)
+      // Constant.itemFilter = null;
+      // searchbody = {};
+    } finally {
+      if (mounted) setState(() => showShimmer = false);
+    }
+  }
+
+
+
+  @override
+  Widget build(BuildContext context) {
+    final overlay = UiUtils.getSystemUiOverlayStyle(
+      context: context,
+      statusBarColor: context.color.secondaryColor,
+    );
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: overlay,
+      child: BlocListener<FetchItemSummaryCubit, FetchItemSummaryState>(
+        listenWhen: (prev, curr) => prev.runtimeType != curr.runtimeType,
+        listener: (_, state) async {
+          if (!mounted) return;
+
+          if (state is FetchItemSummaryInitial ||
+              state is FetchItemSummaryLoading) {
+            debugPrint('[Realestate] state=Loading');
+            _sawLoading = true;
+            _loadingStart = DateTime.now();
+
+            setState(() {
+              showShimmer   = true;
+              _showSlider   = false; // اخفِ شريط التصنيفات
+              _showAdSlider = _hasAdSlider; // حافظ على حالة السلايدر الإعلاني
+            });
+            return;
+          }
+
+          if (state is FetchItemSummarySuccess) {
+            debugPrint('[Realestate] state=Success');
+
+            // فرض مدة دنيا للشيمر
+            final elapsed = _loadingStart == null
+                ? _minShimmer
+                : DateTime.now().difference(_loadingStart!);
+            final wait = elapsed >= _minShimmer ? Duration.zero : (_minShimmer - elapsed);
+
+            if (wait > Duration.zero) {
+              await Future.delayed(wait);
+              if (!mounted) return;
+            }
+
+            setState(() {
+              showShimmer   = false;
+              _showSlider   = true;  // أظهر التصنيفات
+              _showAdSlider = _hasAdSlider;  // أظهر السلايدر الإعلاني (يبدأ الجلب الآن)
+            });
+
+            _sawLoading = false;
+            _loadingStart = null;
+            return;
+          }
+
+          if (state is FetchItemSummaryFailure) {
+            debugPrint('[Realestate] state=Failure');
+            setState(() {
+              showShimmer   = false;
+              _showSlider   = false;
+              _showAdSlider = false;
+            });
+            _sawLoading = false;
+            _loadingStart = null;
+          }
+        },
+        child: Scaffold(
+          backgroundColor: context.color.primaryColor,
+          appBar: null, // AppBar داخل ItemsBodyBox
+
+          bottomNavigationBar: FilterSortBar(
+            categoryIds: widget.categoryIds,
+            categoryId: widget.categoryId,
+            searchController: searchController,
+            onFilterChanged: (newFilter) {
+              filter = newFilter.copyWith(categoryId: widget.categoryId);
+              context.read<FetchItemSummaryCubit>().fetchSummaries(
+                categoryId: _catId,
+                search: searchController.text,
+                filter: filter,
+                sortBy: sortBy,
+              );
+            },
+            onSortChanged: (newSort) {
+              sortBy = newSort;
+              context.read<FetchItemSummaryCubit>().fetchSummaries(
+                categoryId: _catId,
+                search: searchController.text,
+                filter: filter?.copyWith(categoryId: widget.categoryId),
+                sortBy: sortBy,
+              );
+            },
+              onMapSearchTap: () {
+                Navigator.pushNamed(context, '/mapSearch');
+              }
+
+          ),
+
+          body: Column(
+            children: [
+              Expanded(
+                child: RepaintBoundary(
+                  child: NotificationListener<ScrollNotification>(
+                    onNotification: (_) => false,
+                    child: RefreshIndicator(
+                      onRefresh: _handleRefresh,
+                      color: context.color.territoryColor,
+                      displacement: 40,
+                      strokeWidth: 3.0,
+                      triggerMode: RefreshIndicatorTriggerMode.onEdge,
+                      notificationPredicate: (notification) {
+                        if (_isLoadingMore) return false;
+                        return defaultScrollNotificationPredicate(notification);
+                      },
+                      child: ItemsBodyBox(
+                        key: ValueKey('items_${widget.categoryId}'),
+                        categoryId: widget.categoryId,
+                        selectedCategoryId: selectedCategoryId,
+                        showShimmer: showShimmer,
+                        searchController: searchController,
+                        enableTopBar: _showSlider,
+                        enableAdSlider: _showAdSlider,        // إن كانت موجودة عندك
+                        adInterfaceType: widget.interfaceType, // إن كانت موجودة عندك
+                        sortBy: sortBy,                       // ← جديد
+                        filter: filter,                       // ← جديد
+                        enableSubcats: _showSlider,           // ← نفس منطق التأجيل (أظهر بعد Success)
+                        onLoadMore: _handleLoadMoreState,
+
+                      ),
+
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+}

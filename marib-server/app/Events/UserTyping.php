@@ -1,0 +1,55 @@
+<?php
+
+namespace App\Events;
+
+use App\Models\Chat;
+use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Broadcasting\PresenceChannel;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+
+class UserTyping implements ShouldBroadcastNow
+{
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
+    public int $conversationId;
+
+    /**
+     * @var array<string, mixed>
+     */
+    public array $user;
+
+    public bool $isTyping;
+
+    public string $lastTypingAt;
+
+    public function __construct(public Chat $conversation, public User $userModel, public bool $isTypingStatus, public Carbon $timestamp)
+    {
+        $this->conversationId = $conversation->id;
+        $this->user = [
+            'id' => $userModel->id,
+            'name' => $userModel->name,
+            'profile' => $userModel->profile,
+        ];
+        $this->isTyping = $isTypingStatus;
+        $this->lastTypingAt = $timestamp->toISOString();
+    }
+
+    public function broadcastOn(): PresenceChannel
+    {
+        return new PresenceChannel('chat.conversation.' . $this->conversationId);
+    }
+
+    public function broadcastWith(): array
+    {
+        return [
+            'conversation_id' => $this->conversationId,
+            'user' => $this->user,
+            'is_typing' => $this->isTyping,
+            'last_typing_at' => $this->lastTypingAt,
+        ];
+    }
+}

@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "574561339365",
+    "project_id": "marib-service",
+    "storage_bucket": "marib-service.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:574561339365:android:92df2111e6820d6b7f510c",
+        "android_client_info": {
+          "package_name": "com.marib.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "574561339365-olk6kl6h6c11kgcjh3d7436uck0to8od.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.marib.app",
+            "certificate_hash": "188ad412ad82f3085f234de0e0cde77b17952660"
+          }
+        },
+        {
+          "client_id": "574561339365-oqkvmj4au6u2t7ilh65iua5ml6hb6lpr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBmjgJ75xEE93RRlACVX9-0GFI8joS6DGk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "574561339365-oqkvmj4au6u2t7ilh65iua5ml6hb6lpr.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

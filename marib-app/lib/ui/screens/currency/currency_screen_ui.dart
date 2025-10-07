@@ -1,0 +1,1052 @@
+// lib/new_code/ui/currency/currency_screen_ui.dart
+//
+// UI-Only — ثلاث كلاسات فقط:
+// 1) CurrencyScreenUI  (الهيكل العام + التبويبات)
+// 2) RatesTabView      (تبويب الأسعار)
+// 3) ConvertTabView    (تبويب التحويل)
+// 4) GoldTabView       (تبويب الذهب)
+//
+// ملاحظات:
+// - الخلفية: أبيض في الفاتح / أسود في الداكن.
+// - تمييز رمادي خفيف وحدود رفيعة.
+// - لون الهوية من context.color.territoryColor.
+// - لا يوجد Widgets مساعدة إضافية؛ كل شيء بدوال خاصة داخل الكلاسات.
+// - يعتمد على CurrencyViewState/CurrencyPageStatus من ملف المنطق.
+//
+// تأكد أن TabController في المنطق length: 3.
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart' show DateFormat, NumberFormat;
+import 'package:shimmer/shimmer.dart';
+
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/utils/extensions/extensions.dart'; // context.color
+
+import 'currency_screen.dart' show CurrencyViewState, CurrencyPageStatus;
+
+
+
+class CurrencyScreenUI extends StatelessWidget {
+  const CurrencyScreenUI({
+    super.key,
+    required this.state,
+    required this.tabController,
+    required this.amountController,
+    required this.onChangeFrom,
+    required this.onChangeTo,
+    required this.onAmountChanged,
+    required this.onReset,
+    required this.onConvert,
+    required this.onShareRates,
+    required this.amountInputFormatters,
+    required this.systemUiOverlayStyle,
+  });
+
+  final CurrencyViewState state;
+
+  final TabController tabController;
+  final TextEditingController amountController;
+
+  final ValueChanged<String> onChangeFrom;
+  final ValueChanged<String> onChangeTo;
+  final ValueChanged<String> onAmountChanged;
+  final VoidCallback onReset;
+  final VoidCallback onConvert;
+  final VoidCallback onShareRates;
+
+  final List<TextInputFormatter> amountInputFormatters;
+  final SystemUiOverlayStyle systemUiOverlayStyle;
+
+  bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = _isDark(context) ? Colors.black : Colors.white;
+    final onBg = _isDark(context) ? Colors.white : Colors.black;
+    final brand = context.color.territoryColor;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: systemUiOverlayStyle,
+      child: Scaffold(
+        backgroundColor: bg,
+        appBar: UiUtils.buildAppBar(
+          context,
+          showBackButton: true,
+          title: 'العملات والذهب',
+        ),
+        body: Column(
+          children: [
+            const SizedBox(height: 8),
+            _buildSegmentedTabs(context, brand, bg, onBg),
+            const SizedBox(height: 4),
+            Expanded(child: _buildBody(context, brand, onBg)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ——— تبويبات موحدة الخط ———
+  Widget _buildSegmentedTabs(
+      BuildContext context, Color brand, Color bg, Color onBg) {
+    final theme = Theme.of(context);
+    final isDark = _isDark(context);
+    final border = isDark ? Colors.white12 : Colors.black12;
+
+    final base = theme.textTheme.labelLarge ?? const TextStyle(fontSize: 14);
+    final selected = base.copyWith(fontWeight: FontWeight.w700, height: 1.1);
+    final unselected = base.copyWith(fontWeight: FontWeight.w500, height: 1.1);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: border),
+      ),
+      child: TabBar(
+        controller: tabController,
+        tabs: const [Tab(text: 'الأسعار'), Tab(text: 'التحويل'), Tab(text: 'الذهب')],
+        indicator: UnderlineTabIndicator(
+          borderSide: BorderSide(color: brand, width: 3),
+          insets: const EdgeInsets.symmetric(horizontal: 24),
+        ),
+        labelStyle: selected,
+        unselectedLabelStyle: unselected,
+        labelColor: onBg,
+        unselectedLabelColor: onBg.withOpacity(0.5),
+        overlayColor: MaterialStateProperty.all(Colors.transparent),
+      ),
+    );
+  }
+
+  // ——— محتوى الصفحة ———
+  Widget _buildBody(BuildContext context, Color brand, Color onBg) {
+    switch (state.status) {
+      case CurrencyPageStatus.loading:
+        return _buildLoadingShimmer(context); // 👈 شيمر بدل الدائرة
+      case CurrencyPageStatus.error:
+        return Center(child: Text(state.errorMessage ?? 'حدث خطأ ما'));
+      case CurrencyPageStatus.ready:
+        return TabBarView(
+          controller: tabController,
+          physics: const BouncingScrollPhysics(),
+          children: [
+            RatesTabView(state: state, onShareRates: onShareRates, brand: brand),
+            ConvertTabView(
+              state: state,
+              amountController: amountController,
+              onChangeFrom: onChangeFrom,
+              onChangeTo: onChangeTo,
+              onAmountChanged: onAmountChanged,
+              onReset: onReset,
+              onConvert: onConvert,
+              amountInputFormatters: amountInputFormatters,
+              brand: brand,
+            ),
+            GoldTabView(state: state, onShareRates: onShareRates, brand: brand),
+          ],
+        );
+    }
+  }
+
+  // ——— شيمر خفيف جدًا للوضعين ———
+  Widget _buildLoadingShimmer(BuildContext context) {
+    final isDark = _isDark(context);
+    // ألوان خفيفة جدًا
+    final base = isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.06);
+    final highlight = isDark ? Colors.white.withOpacity(0.16) : Colors.black.withOpacity(0.12);
+
+    return Shimmer.fromColors(
+      baseColor: base,
+      highlightColor: highlight,
+      period: const Duration(milliseconds: 1200),
+      child: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // شريط علوي شبيه بالترويسة
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+              child: _skeletonBar(height: 44, radius: 12),
+            ),
+          ),
+          // عناصر قائمة (٦ صفوف)
+          SliverList.separated(
+            itemCount: 6,
+            itemBuilder: (ctx, i) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  _skeletonCircle(size: 28),
+                  const SizedBox(width: 10),
+                  // اسم العملة (سطر طويل قليلًا)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _skeletonLine(widthFactor: 0.45, height: 12, radius: 6),
+                        const SizedBox(height: 10),
+                        // شارتا سعر صغيرتان يمينًا
+                        Row(
+                          children: [
+                            _skeletonPill(width: 70, height: 22, radius: 999),
+                            const SizedBox(width: 8),
+                            _skeletonPill(width: 70, height: 22, radius: 999),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            separatorBuilder: (_, __) => Divider(
+              height: 1,
+              color: isDark ? Colors.white12 : Colors.black12,
+            ),
+          ),
+          // سطر ملاحظة سفلي
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 18),
+              child: _skeletonBar(height: 40, radius: 10),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ——— دوال عناصر الشيمر ———
+
+  Widget _skeletonBar({required double height, double radius = 8}) {
+    return Container(
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.white, // اللون يتصبغ بالشيمر
+        borderRadius: BorderRadius.circular(radius),
+      ),
+    );
+  }
+
+  Widget _skeletonCircle({required double size}) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: const BoxDecoration(
+        color: Colors.white, // اللون يتصبغ بالشيمر
+        shape: BoxShape.circle,
+      ),
+    );
+  }
+
+  Widget _skeletonLine({double widthFactor = 1, double height = 10, double radius = 6}) {
+    return FractionallySizedBox(
+      widthFactor: widthFactor,
+      child: Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: Colors.white, // اللون يتصبغ بالشيمر
+          borderRadius: BorderRadius.circular(radius),
+        ),
+      ),
+    );
+  }
+
+  Widget _skeletonPill({required double width, required double height, double radius = 999}) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.white, // اللون يتصبغ بالشيمر
+        borderRadius: BorderRadius.circular(radius),
+      ),
+    );
+  }
+}
+
+
+
+
+
+class RatesTabView extends StatelessWidget {
+  const RatesTabView({
+    super.key,
+    required this.state,
+    required this.onShareRates,
+    required this.brand,
+  });
+
+  final CurrencyViewState state;
+  final VoidCallback onShareRates;
+  final Color brand;
+
+  bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
+
+  // ---------- Header (بسيط بدون إطارات ثقيلة) ----------
+  Widget _header(BuildContext context) {
+    final theme = Theme.of(context);
+    final onBg = _isDark(context) ? Colors.white : Colors.black;
+
+    final hasTime = state.lastUpdatedAt != null;
+    final dateStr = hasTime ? DateFormat('yyyy-MM-dd').format(state.lastUpdatedAt!) : 'غير متاح';
+    final timeStr = hasTime ? DateFormat('HH:mm').format(state.lastUpdatedAt!) : '--:--';
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // العنوان + أيقونة مشاركة فقط
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  "آخر تحديث للبيانات كان في:",
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: onBg.withOpacity(0.9),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              IconButton(
+                onPressed: onShareRates,
+                icon: const Icon(Icons.share_outlined),
+                splashRadius: 20,
+                color: brand,
+                tooltip: "مشاركة",
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            "التاريخ: $dateStr  •  الساعة: $timeStr",
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: onBg.withOpacity(0.65),
+              fontWeight: FontWeight.w600,
+            ),
+            textDirection: TextDirection.rtl,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------- صفّ العملة (نظيف مع عرض بيع/شراء احترافي) ----------
+  Widget _row(
+      BuildContext context, {
+        required String name,
+        required String sell,
+        required String buy,
+      }) {
+    final theme = Theme.of(context);
+    final onBg = _isDark(context) ? Colors.white : Colors.black;
+    final divider = _isDark(context) ? Colors.white12 : Colors.black12;
+
+    // تنسيق الرقم إن أمكن
+    String _fmt(String v) {
+      final d = double.tryParse(v.replaceAll(',', ''));
+      return d == null ? v : NumberFormat('#,##0.####').format(d);
+    }
+
+    final nameStyle = theme.textTheme.titleSmall?.copyWith(
+      color: onBg,
+      fontWeight: FontWeight.w800,
+    ) ??
+        TextStyle(color: onBg, fontWeight: FontWeight.w800, fontSize: 15.5);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {},
+        splashColor: brand.withOpacity(0.06),
+        highlightColor: brand.withOpacity(0.03),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: divider, width: 1)),
+          ),
+          child: LayoutBuilder(
+            builder: (ctx, cons) {
+              final narrow = cons.maxWidth < 360; // استجابة للشاشات الصغيرة
+
+              // أيقونة عامة مناسبة لكل العملات
+              final leading = Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 26,
+                    height: 26,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: onBg.withOpacity(0.20)),
+                    ),
+                    child: Icon(Icons.account_balance_wallet_outlined, size: 15, color: brand),
+                  ),
+                  const SizedBox(width: 8),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 170),
+                    child: Text(
+                      name,
+                      style: nameStyle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textDirection: TextDirection.rtl,
+                    ),
+                  ),
+                ],
+              );
+
+              // مقطع سعر واحد (Label فوق + قيمة واضحة) بدون حشوات لونية
+              Widget priceStat(String label, String value, Color accent) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      label,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: onBg.withOpacity(0.6),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // فاصل رأسي رفيع ملوّن يعطي لمسة احترافية
+                        Container(width: 2, height: 18, color: accent.withOpacity(0.9)),
+                        const SizedBox(width: 6),
+                        Text(
+                          _fmt(value),
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: accent,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.2,
+                          ) ??
+                              TextStyle(
+                                color: accent,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.2,
+                                fontSize: 15.5,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              }
+
+              final sellBlock = priceStat("بيع", sell, Colors.redAccent);
+              final buyBlock = priceStat("شراء", buy, Colors.green);
+
+              return Row(
+                children: [
+                  Expanded(child: leading),
+                  const SizedBox(width: 10),
+                  if (narrow)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        sellBlock,
+                        const SizedBox(height: 6),
+                        buyBlock,
+                      ],
+                    )
+                  else
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        sellBlock,
+                        // فاصل عمودي خافت بين البيع والشراء
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 10),
+                          width: 1,
+                          height: 22,
+                          color: onBg.withOpacity(0.12),
+                        ),
+                        buyBlock,
+                      ],
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------- بطاقة الملاحظة (احتفظنا بها كما أعجبتك) ----------
+  Widget _noteCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final onBg = _isDark(context) ? Colors.white : Colors.black;
+
+    // TODO(backend): مرّر نص الملاحظة من السيرفر عبر state.note مثلاً
+    final serverNote = null; // استبدلها لاحقًا بقيمة قادمة من الـ API
+    final text = serverNote ??
+        "الأسعار المعروضة يتم جلبها من بنك الشرق اليمني، وهي الأسعار الرسمية المعتمدة من البنك المركزي - عدن.";
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 12, 12, 18),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: brand.withOpacity(0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline_rounded, size: 18, color: brand),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("ملاحظة",
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: onBg.withOpacity(0.9),
+                      fontWeight: FontWeight.w800,
+                    )),
+                const SizedBox(height: 4),
+                Text(
+                  text,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: onBg.withOpacity(0.78),
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  "⚙ يمكن استبدال هذا النص من السيرفر لاحقًا.",
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: onBg.withOpacity(0.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------- Build ----------
+  @override
+  Widget build(BuildContext context) {
+    final rates = state.rates;
+
+    String _name(d) => (d as dynamic).currencyName?.toString() ?? '';
+    String _sell(d) => (d as dynamic).sellPrice?.toString() ?? '';
+    String _buy(d)  => (d as dynamic).buyPrice?.toString() ?? '';
+
+    if (rates.isEmpty) {
+      final onBg = _isDark(context) ? Colors.white : Colors.black;
+      return ListView(
+        physics: const BouncingScrollPhysics(),
+        children: [
+          _header(context),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 40),
+            child: Center(
+              child: Text(
+                'لا توجد بيانات حالياً',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: onBg,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+          _noteCard(context),
+        ],
+      );
+    }
+
+    return ListView.builder(
+      physics: const BouncingScrollPhysics(),
+      itemCount: rates.length + 2, // + header + note
+      itemBuilder: (ctx, i) {
+        if (i == 0) return _header(context);
+        if (i == rates.length + 1) return _noteCard(context);
+        final r = rates[i - 1];
+        return _row(
+          context,
+          name: _name(r),
+          sell: _sell(r),
+          buy: _buy(r),
+        );
+      },
+    );
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+// ===================================================================
+// تبويب 2: التحويل — تخطيط رأسي + زر تبادل في المنتصف (بدوال داخلية)
+// ===================================================================
+class ConvertTabView extends StatelessWidget {
+  const ConvertTabView({
+    super.key,
+    required this.state,
+    required this.amountController,
+    required this.onChangeFrom,
+    required this.onChangeTo,
+    required this.onAmountChanged,
+    required this.onReset,
+    required this.onConvert,
+    required this.amountInputFormatters,
+    required this.brand,
+  });
+
+  final CurrencyViewState state;
+  final TextEditingController amountController;
+  final ValueChanged<String> onChangeFrom;
+  final ValueChanged<String> onChangeTo;
+  final ValueChanged<String> onAmountChanged;
+  final VoidCallback onReset;
+  final VoidCallback onConvert;
+  final List<TextInputFormatter> amountInputFormatters;
+  final Color brand;
+
+  bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
+
+  // ——— دوال داخلية ———
+  OutlineInputBorder _border(BuildContext context) {
+    final color = _isDark(context) ? Colors.white12 : Colors.black12;
+    return OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: color),
+    );
+  }
+
+  Widget _labeledBox(BuildContext context, String label, Widget child) {
+    final onBg = _isDark(context) ? Colors.white : Colors.black;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: TextStyle(
+              color: onBg.withOpacity(0.7),
+              fontWeight: FontWeight.w700,
+            )),
+        const SizedBox(height: 6),
+        child,
+      ],
+    );
+  }
+
+  Widget _swapButton(BuildContext context) {
+    return Center(
+      child: InkResponse(
+        onTap: () {
+          if (state.toCurrency.isNotEmpty && state.fromCurrency.isNotEmpty) {
+            final oldFrom = state.fromCurrency;
+            final oldTo = state.toCurrency;
+            onChangeFrom(oldTo);
+            onChangeTo(oldFrom);
+          }
+        },
+        radius: 28,
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: brand.withOpacity(0.45)),
+          ),
+          child: Icon(Icons.swap_vert, color: brand),
+        ),
+      ),
+    );
+  }
+
+  Widget _resultStrip(BuildContext context, String value) {
+    final onBg = _isDark(context) ? Colors.white : Colors.black;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: brand.withOpacity(0.35)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              "المبلغ المحول",
+              style: TextStyle(
+                color: onBg.withOpacity(0.75),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              color: onBg,
+              fontWeight: FontWeight.w900,
+              fontSize: 18,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _primaryBtn(BuildContext context, {required String label, required IconData icon, required VoidCallback onPressed}) {
+    return FilledButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon),
+      label: Text(label),
+      style: FilledButton.styleFrom(
+        backgroundColor: brand,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        textStyle: const TextStyle(fontWeight: FontWeight.w800),
+      ),
+    );
+  }
+
+  Widget _ghostBtn(BuildContext context, {required String label, required IconData icon, required VoidCallback onPressed}) {
+    final onBg = _isDark(context) ? Colors.white : Colors.black;
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, color: onBg),
+      label: Text(label),
+      style: OutlinedButton.styleFrom(
+        side: BorderSide(color: onBg.withOpacity(0.25)),
+        foregroundColor: onBg,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        textStyle: const TextStyle(fontWeight: FontWeight.w800),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final edge = const EdgeInsets.fromLTRB(12, 8, 12, 18);
+
+    String _name(d) => (d as dynamic).currencyName?.toString() ?? '';
+    final all = state.rates;
+    final fromItems = all
+        .map<DropdownMenuItem<String>>((r) {
+      final v = _name(r);
+      return DropdownMenuItem(value: v, child: Text(v));
+    })
+        .toList(growable: false);
+    final toItems = all
+        .where((r) => _name(r) != state.fromCurrency)
+        .map<DropdownMenuItem<String>>((r) {
+      final v = _name(r);
+      return DropdownMenuItem(value: v, child: Text(v));
+    })
+        .toList(growable: false);
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: edge,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // من
+          _labeledBox(
+            context,
+            'من',
+            DropdownButtonFormField<String>(
+              value: state.fromCurrency.isEmpty ? null : state.fromCurrency,
+              items: fromItems,
+              onChanged: (v) => v != null ? onChangeFrom(v) : null,
+              decoration: InputDecoration(
+                border: _border(context),
+                enabledBorder: _border(context),
+                focusedBorder: _border(context),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // تبادل
+          _swapButton(context),
+          const SizedBox(height: 10),
+
+          // إلى
+          _labeledBox(
+            context,
+            'إلى',
+            DropdownButtonFormField<String>(
+              value: state.toCurrency.isEmpty ? null : state.toCurrency,
+              items: toItems,
+              onChanged: (v) => v != null ? onChangeTo(v) : null,
+              decoration: InputDecoration(
+                border: _border(context),
+                enabledBorder: _border(context),
+                focusedBorder: _border(context),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // المبلغ
+          _labeledBox(
+            context,
+            'المبلغ',
+            TextField(
+              controller: amountController,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              inputFormatters: amountInputFormatters,
+              onChanged: onAmountChanged,
+              decoration: InputDecoration(
+                hintText: "ادخل المبلغ",
+                border: _border(context),
+                enabledBorder: _border(context),
+                focusedBorder: _border(context),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // النتيجة
+          _resultStrip(
+            context,
+            state.hasCalculated
+                ? "${NumberFormat('#,##0.##').format(state.convertedAmount)} ${state.toCurrency}"
+                : "---",
+          ),
+          const SizedBox(height: 12),
+
+          // الأزرار
+          Row(
+            children: [
+              Expanded(
+                child: _primaryBtn(context, label: "تحويل", icon: Icons.check, onPressed: onConvert),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _ghostBtn(context, label: "تصفير", icon: Icons.refresh, onPressed: onReset),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ===================================================================
+// تبويب 3: الذهب — نفس منطق الأسعار مع فلترة (ذهب/عيار/Gold)
+// ===================================================================
+class GoldTabView extends StatelessWidget {
+  const GoldTabView({
+    super.key,
+    required this.state,
+    required this.onShareRates,
+    required this.brand,
+  });
+
+  final CurrencyViewState state;
+  final VoidCallback onShareRates;
+  final Color brand;
+
+  bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
+
+  // ——— دوال داخلية ———
+  Widget _header(BuildContext context) {
+    final onBg = _isDark(context) ? Colors.white : Colors.black;
+    final border = _isDark(context) ? Colors.white12 : Colors.black12;
+    final text = state.lastUpdatedAt == null
+        ? "أسعار الذهب — آخر تحديث غير متاح"
+        : "أسعار الذهب — ${DateFormat('yyyy-MM-dd HH:mm').format(state.lastUpdatedAt!)}";
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.workspace_premium_outlined, size: 18, color: onBg.withOpacity(0.7)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: onBg.withOpacity(0.85),
+                fontWeight: FontWeight.w700,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textDirection: TextDirection.rtl,
+            ),
+          ),
+          IconButton(
+            onPressed: onShareRates,
+            icon: Icon(Icons.ios_share, size: 18, color: brand),
+            splashRadius: 18,
+            tooltip: "مشاركة",
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _row(BuildContext context, {required String name, required String sell, required String buy}) {
+    final onBg = _isDark(context) ? Colors.white : Colors.black;
+
+    TextStyle nameStyle = Theme.of(context).textTheme.titleSmall?.copyWith(
+      color: onBg,
+      fontWeight: FontWeight.w800,
+    ) ??
+        TextStyle(color: onBg, fontWeight: FontWeight.w800, fontSize: 15.5);
+    TextStyle labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+      color: onBg.withOpacity(0.6),
+      fontWeight: FontWeight.w700,
+    ) ??
+        TextStyle(color: onBg.withOpacity(0.6), fontWeight: FontWeight.w700);
+
+    Widget chip(String v, Color c) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: c.withOpacity(0.5)),
+      ),
+      child: Text(
+        v,
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+          color: c,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0.2,
+        ),
+      ),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Row(
+        children: [
+          // دائرة ذهب
+          Container(
+            width: 28,
+            height: 28,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: onBg.withOpacity(0.25)),
+            ),
+            child: Icon(Icons.workspace_premium, size: 16, color: Colors.amber[700]),
+          ),
+          const SizedBox(width: 10),
+
+          Expanded(
+            child: Text(
+              name,
+              style: nameStyle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textDirection: TextDirection.rtl,
+            ),
+          ),
+
+          const SizedBox(width: 10),
+
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text("بيع", style: labelStyle),
+              const SizedBox(height: 4),
+              chip(sell, Colors.orangeAccent),
+            ],
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text("شراء", style: labelStyle),
+              const SizedBox(height: 4),
+              chip(buy, Colors.blueAccent),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _empty(BuildContext context) {
+    final onBg = _isDark(context) ? Colors.white : Colors.black;
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.info_outline, color: brand),
+          const SizedBox(height: 8),
+          Text(
+            'لا توجد بيانات ذهب حالياً',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: onBg,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final divider = _isDark(context) ? Colors.white12 : Colors.black12;
+
+    String _name(d) => (d as dynamic).currencyName?.toString() ?? '';
+    String _sell(d) => (d as dynamic).sellPrice?.toString() ?? '';
+    String _buy(d)  => (d as dynamic).buyPrice?.toString() ?? '';
+
+    bool _isGold(dynamic d) {
+      final n = _name(d);
+      final lower = n.toLowerCase();
+      return n.contains('ذهب') || n.contains('عيار') || lower.contains('gold');
+    }
+
+    final goldRates = state.rates.where(_isGold).toList(growable: false);
+
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        SliverToBoxAdapter(child: _header(context)),
+        if (goldRates.isEmpty)
+          SliverFillRemaining(hasScrollBody: false, child: _empty(context))
+        else
+          SliverList.separated(
+            itemCount: goldRates.length,
+            itemBuilder: (ctx, i) {
+              final r = goldRates[i];
+              return _row(
+                context,
+                name: _name(r),
+                sell: _sell(r),
+                buy: _buy(r),
+              );
+            },
+            separatorBuilder: (_, __) => Divider(height: 1, color: divider),
+          ),
+      ],
+    );
+  }
+}

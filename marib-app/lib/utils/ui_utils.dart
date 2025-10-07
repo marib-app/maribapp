@@ -1,0 +1,1635 @@
+
+import 'dart:math';
+import 'dart:ui' as ui;
+import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/utils/app_icon.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:marib/app/app_localization.dart';
+import 'package:marib/app/app_theme.dart';
+import 'package:marib/app/routes.dart';
+import 'package:marib/data/cubits/system/app_theme_cubit.dart';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/constant.dart';
+import 'hive_utils.dart';
+import 'package:timeago/timeago.dart' as timeago_ar show setLocaleMessages;
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/svg.dart';
+import 'package:intl/intl.dart';
+import 'package:lottie/lottie.dart';
+import 'package:mime_type/mime_type.dart';
+import 'dart:ui' as ui;
+import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
+import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
+import 'package:marib/ui/screens/widgets/full_screen_image_view.dart';
+import 'package:marib/ui/screens/widgets/gallery_view.dart';
+import 'package:marib/data/cubits/home/fetch_home_all_items_cubit.dart';
+import 'package:marib/data/cubits/home/fetch_home_screen_cubit.dart';
+import 'package:marib/utils/app_icon.dart';
+import 'package:marib/utils/extensions/extensions.dart';
+import 'package:timeago/timeago.dart' as timeago;
+import 'package:intl/intl.dart';
+import 'helper_utils.dart';
+import 'package:marib/utils/network_to_localsvg.dart';
+import 'package:marib/utils/responsiveSize.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:marib/data/model/subscription_package_limit.dart';
+
+import 'dart:ui' show ImageFilter;          // للـ blur
+import 'package:flutter/gestures.dart';     // للروابط
+
+class UiUtils {
+
+
+  // دالة التحكم في عرض الوقت والتاريخ
+
+  static String formatSmartTime(String? dateString) {
+    if (dateString == null || dateString.isEmpty) return "";
+
+    try {
+      final date = DateTime.parse(dateString);
+      final now = DateTime.now();
+
+      final difference = now.difference(date);
+
+      if (difference.inDays >= 1) {
+        // أكثر من يوم = نعرض التاريخ الكامل
+        return DateFormat('d  MMM   yyyy  -  h:mm a', 'ar').format(date);
+      } else {
+        // أقل من يوم = نعرض "قبل دقائق" أو "الآن"
+        return timeago.format(date, locale: 'ar'); // ✅ هذا أهم شيء
+      }
+    } catch (e) {
+      return "";
+    }
+  }
+
+  static String formatDate(String? dateString, {String pattern = 'd MMM yyyy - h:mm a'}) {
+    if (dateString == null || dateString.isEmpty) return "";
+    try {
+      final date = DateTime.parse(dateString).toLocal();
+      return DateFormat(pattern, 'ar').format(date);
+    } catch (e) {
+      return "";
+    }
+  }
+
+
+
+  static String? subscriptionLimitSummary(
+      BuildContext context,
+      SubscriptionPackageLimit limit, {
+        bool includeExpiry = true,
+      }) {
+    final bool isUnlimited = limit.isUnlimited;
+    String? summary;
+
+    if (isUnlimited) {
+      summary = getTranslatedLabel(context, 'subscriptionLimitUnlimited');
+    } else {
+      final template = getTranslatedLabel(context, 'subscriptionLimitRemaining');
+      final remainingText = (limit.remaining ?? 0).toString();
+      final totalValue = limit.total;
+      final totalText = totalValue != null ? totalValue.toString() : '—';
+      summary = template
+          .replaceAll('{remaining}', remainingText)
+          .replaceAll('{total}', totalText);
+    }
+
+    if ((summary ?? '').trim().isEmpty) {
+      summary = null;
+    }
+
+    if (summary == null) {
+      return null;
+    }
+
+    if (!includeExpiry) {
+      return summary;
+    }
+
+    final expiry = subscriptionLimitExpiry(context, limit);
+    if (expiry == null || expiry.isEmpty) {
+      return summary;
+    }
+
+    return '$summary · $expiry';
+  }
+
+  static String? subscriptionLimitExpiry(
+      BuildContext context, SubscriptionPackageLimit limit) {
+    final expiresAt = limit.expiresAt;
+    if (expiresAt == null) {
+      return null;
+    }
+
+    final template = getTranslatedLabel(context, 'subscriptionLimitExpiresOn');
+    if (template.trim().isEmpty) {
+      return null;
+    }
+
+    final formatted = _formatLimitDate(context, expiresAt.toLocal());
+    if (formatted.isEmpty) {
+      return null;
+    }
+
+    return template.replaceAll('{date}', formatted);
+  }
+
+  static String _formatLimitDate(BuildContext context, DateTime date) {
+    final locale = Localizations.maybeLocaleOf(context);
+    final languageCode = locale?.languageCode;
+    final countryCode = locale?.countryCode;
+    final localeName = (languageCode == null || languageCode.isEmpty)
+        ? null
+        : countryCode == null || countryCode.isEmpty
+        ? languageCode
+        : '${languageCode}_$countryCode';
+
+    try {
+      if (localeName != null) {
+        return DateFormat('d MMM yyyy', localeName).format(date);
+      }
+      return DateFormat('d MMM yyyy').format(date);
+    } catch (_) {
+      return DateFormat('d MMM yyyy').format(date);
+    }
+  }
+
+
+
+
+
+
+
+  // ✅ إرجاع أيقونة SVG من المسار المحدد
+  static SvgPicture getSvg(String path,
+      {Color? color, BoxFit? fit, double? width, double? height}) {
+    return SvgPicture.asset(
+      path,
+      colorFilter:
+      color != null ? ColorFilter.mode(color, BlendMode.srcIn) : null,
+      fit: fit ?? BoxFit.contain,
+      width: width,
+      height: height,
+    );
+  }
+
+
+  static Future<void> launchURL(String url) async {
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } else {
+      throw 'لا يمكن فتح الرابط: $url';
+    }
+  }
+
+
+  static void showLoadingDialog(BuildContext context,
+      {String title = "جاري التحميل..."}) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) =>
+          AlertDialog(
+            content: Row(
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(width: 16),
+                Expanded(child: Text(title)),
+              ],
+            ),
+          ),
+    );
+  }
+
+
+  static void showSoftSnackBar(BuildContext context, {
+    required String message,
+    String iconPath = 'assets/image/showSoftSnackBar.png',
+    Duration duration = const Duration(seconds: 2),
+    Color? backgroundColor,
+    double backgroundOpacity = 0.9,
+    Color textColor = Colors.white,
+    double fontSize = 15,
+    FontWeight fontWeight = FontWeight.w500,
+  }) {
+    final overlay = Overlay.of(context);
+    final theme = Theme.of(context);
+
+    late OverlayEntry entry;
+
+    final widget = _SoftSnackBarWidget(
+      message: message,
+      iconPath: iconPath,
+      duration: duration,
+      backgroundColor: backgroundColor ??
+          (theme.brightness == Brightness.dark
+              ? Colors.grey[800]
+              : Colors.grey[900])!
+              .withOpacity(backgroundOpacity),
+      textColor: textColor,
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      onFinish: () => entry.remove(),
+    );
+
+    entry = OverlayEntry(builder: (_) => widget);
+
+    overlay.insert(entry);
+  }
+
+
+  static PreferredSizeWidget buildAppBar(BuildContext context,
+      {String? title,
+        bool? showBackButton,
+        List<Widget>? actions,
+        List<Widget>? bottom,
+        double? bottomHeight,
+        bool? hideTopBorder,
+        VoidCallback? onBackPress,
+        Color? backgroundColor}) {
+    return PreferredSize(
+      preferredSize: Size.fromHeight(55 + (bottomHeight ?? 0)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Expanded(
+            child: RoundedBorderOnSomeSidesWidget(
+              borderColor: context.color.borderColor,
+              borderRadius: 0,
+              borderWidth: 1.5,
+              contentBackgroundColor:
+              backgroundColor ?? context.color.secondaryColor,
+              bottomLeft: true,
+              bottomRight: true,
+              topLeft: false,
+              topRight: false,
+              child: Container(
+                alignment: AlignmentDirectional.bottomStart,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                      horizontal: (showBackButton ?? false) ? 0 : 20,
+                      vertical: (showBackButton ?? false) ? 0 : 18),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (showBackButton ?? false) ...[
+                        Material(
+                          clipBehavior: Clip.antiAlias,
+                          color: Colors.transparent,
+                          type: MaterialType.circle,
+                          child: InkWell(
+                            onTap: () {
+                              if (onBackPress != null) {
+                                onBackPress.call();
+                              } else {
+                                Navigator.pop(context);
+                              }
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(18.0),
+                              child: Directionality(
+                                textDirection: Directionality.of(context),
+                                child: RotatedBox(
+                                  quarterTurns: Directionality.of(context) ==
+                                      ui.TextDirection.rtl ? 2 : -4,
+
+                                  child: UiUtils.getSvg(AppIcons.arrowLeft,
+                                      fit: BoxFit.none,
+                                      color: context.color.textDefaultColor),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                      Expanded(
+                        child: Text(
+                          title ?? "",
+                          overflow: TextOverflow.ellipsis,
+                          softWrap: true,
+                        )
+                            .color(context.color.textDefaultColor)
+                            .bold(weight: FontWeight.w600)
+                            .size(actions != null ? 14 : 18),
+                      ),
+                      if (actions != null) ...[const Spacer(), ...actions],
+                      const SizedBox(width: 5),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          ...bottom ?? [const SizedBox.shrink()]
+        ],
+      ),
+    );
+  }
+
+
+  /// ويدجت عام لتطبيق تأثير الضغط المائي (Ripple Effect) في جميع أنحاء التطبيق.
+  ///
+  /// ✅ يستخدم `InkWell` داخل `Material` لتوفير تأثير الضغط.
+  /// ✅ مناسب للأزرار أو أي عنصر قابل للنقر.
+  ///
+  /// [child]: الودجت الداخلي.
+  /// [onTap]: الدالة التي يتم تنفيذها عند النقر.
+  /// [borderRadius]: لتحديد شكل الحواف (اختياري).
+  /// [splashColor]: لتغيير لون تأثير الضغط (اختياري).
+
+  static Widget ripple({
+    required Widget child,
+    required VoidCallback? onTap,
+    BorderRadius? borderRadius,
+    Color? splashColor,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        splashColor: splashColor,
+        borderRadius: borderRadius ?? BorderRadius.circular(12),
+        child: child,
+      ),
+    );
+  }
+
+
+  static checkUser(
+      {required Function() onNotGuest, required BuildContext context}) {
+    if (!HiveUtils.isUserAuthenticated()) {
+      _loginBox(context);
+    } else {
+      onNotGuest.call();
+    }
+  }
+
+
+
+
+  // رسالة الزائر
+  // تعرض Bottom Sheet (نافذة منبثقة من أسفل الشاشة).
+  // تخبر المستخدم أن تسجيل الدخول ضروري للوصول لبعض الميزات
+
+  static void _loginBox(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent, // لعمل خلفية شفافة مع زوايا مدورة
+      builder: (context) {
+        final theme = Theme.of(context);
+        final isDark = theme.brightness == Brightness.dark;
+
+        return Container(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery
+                .of(context)
+                .viewInsets
+                .bottom,
+            top: 24,
+            left: 24,
+            right: 24,
+          ),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 10,
+                offset: Offset(0, -4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "loginIsRequiredForAccessingThisFeatures".translate(context),
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                "tapOnLoginToAuthorize".translate(context),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 3,
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(
+                      context,
+                      Routes.login,
+                      arguments: {"popToCurrent": true},
+                    );
+                  },
+                  child: Text(
+                    "loginNow".translate(context),
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: 24),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+
+  static String getTranslatedLabel(BuildContext context, String labelKey) {
+    return (AppLocalization.of(context)!.getTranslatedValues(labelKey) ??
+        labelKey)
+        .trim();
+  }
+
+  static Map<String, double> getWidgetInfo(BuildContext context,
+      GlobalKey key) {
+    final RenderBox renderBox =
+    key.currentContext?.findRenderObject() as RenderBox;
+
+    final Size size = renderBox.size; // or _widgetKey.currentContext?.size
+
+    final Offset offset = renderBox.localToGlobal(Offset.zero);
+
+    return {
+      "x": (offset.dx),
+      "y": (offset.dy),
+      "width": size.width,
+      "height": size.height,
+      "offX": offset.dx,
+      "offY": offset.dy
+    };
+  }
+
+
+  static Locale getLocaleFromLanguageCode(String languageCode) {
+    List<String> result = languageCode.split("-");
+    return result.length == 1
+        ? Locale(result.first)
+        : Locale(result.first, result.last);
+  }
+
+  static Widget getDivider() {
+    return const Divider(
+      endIndent: 0,
+      indent: 0,
+    );
+  }
+
+
+  static Widget getSvgImage(String url,
+      {double? width,
+        double? height,
+        BoxFit? fit,
+        String? blurHash,
+        bool? showFullScreenImage,
+        Color? color}) {
+    return SvgPicture.network(
+      url,
+      colorFilter:
+      color != null ? ColorFilter.mode(color, BlendMode.srcIn) : null,
+      width: width,
+      height: height,
+      fit: fit!,
+      placeholderBuilder: (context) {
+        return Container(
+            width: width,
+            color: context.color.territoryColor.withOpacity(0.1),
+            height: height,
+            alignment: AlignmentDirectional.center,
+            child: SizedBox(
+                width: width,
+                height: height,
+                child: getSvg(
+                  AppIcons.placeHolder,
+                  width: width ?? 70,
+                  height: height ?? 70,
+                )));
+      },
+    );
+  }
+
+
+  static Widget getImage(String url,
+      {double? width,
+        double? height,
+        BoxFit? fit,
+        String? blurHash,
+        bool? showFullScreenImage}) {
+    return CachedNetworkImage(
+      imageUrl: url,
+      fit: fit,
+      width: width,
+      height: height,
+      memCacheHeight: 1000,
+      memCacheWidth: 1000,
+      placeholder: (context, url) {
+        return Container(
+            width: width,
+            color: context.color.territoryColor.withOpacity(0.1),
+            height: height,
+            alignment: AlignmentDirectional.center,
+            child: SizedBox(
+                width: width,
+                height: height,
+                child: getSvg(
+                  AppIcons.placeHolder,
+                  width: width ?? 70,
+                  height: height ?? 70,
+                )));
+      },
+      errorWidget: (context, url, error) {
+        return Container(
+          width: width,
+          color: context.color.territoryColor.withOpacity(0.1),
+          height: height,
+          alignment: AlignmentDirectional.center,
+          child: SizedBox(
+            width: width,
+            height: height,
+            child: getSvg(
+              AppIcons.placeHolder,
+              width: width ?? 70,
+              height: height ?? 70,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+
+  static Widget progress({double? width,
+    double? height,
+    Color? normalProgressColor,
+    bool? showWhite}) {
+    if (Constant.useLottieProgress) {
+      return LottieBuilder.asset(
+        "assets/lottie/${showWhite == true
+            ? Constant.progressLottieFileWhite
+            : Constant.loadingSuccessLottieFile}",
+        width: width ?? 70,
+        height: height ?? 70,
+        delegates: const LottieDelegates(values: []),
+      );
+    } else {
+      return CircularProgressIndicator(
+        color: normalProgressColor,
+      );
+    }
+  }
+
+
+  ///Divider / Container
+
+  static SystemUiOverlayStyle getSystemUiOverlayStyle(
+      {required BuildContext context, required Color statusBarColor}) {
+    return SystemUiOverlayStyle(
+        systemNavigationBarDividerColor: Colors.transparent,
+        // systemNavigationBarColor: Theme.of(context).colorScheme.secondaryColor,
+        systemNavigationBarIconBrightness:
+        context
+            .watch<AppThemeCubit>()
+            .state
+            .appTheme == AppTheme.dark
+            ? Brightness.light
+            : Brightness.dark,
+        //
+        statusBarColor: statusBarColor,
+        statusBarBrightness:
+        context
+            .watch<AppThemeCubit>()
+            .state
+            .appTheme == AppTheme.dark
+            ? Brightness.dark
+            : Brightness.light,
+        statusBarIconBrightness:
+        context
+            .watch<AppThemeCubit>()
+            .state
+            .appTheme == AppTheme.dark
+            ? Brightness.light
+            : Brightness.dark);
+  }
+
+
+  static setDefaultLocationValue({required bool isCurrent,
+    required bool isHomeUpdate,
+    required BuildContext context}) {
+    if (isCurrent) {
+      HiveUtils.setCurrentLocation(
+          area: null,
+          city: "",
+          state: "",
+          country: "Yemen",
+          latitude: 15.3694,
+          longitude: 44.1910
+      );
+    } else {
+      HiveUtils.setCurrentLocation(
+          area: null,
+          city: "",
+          state: "",
+          country: "Yemen",
+          latitude: 15.3694,
+          longitude: 44.1910
+      );
+    }
+    if (isHomeUpdate) {
+      Future.delayed(
+        Duration.zero,
+            () {
+          context.read<FetchHomeScreenCubit>().fetch(
+            city: "Bhuj",
+          );
+          context
+              .read<FetchHomeAllItemsCubit>()
+              .fetch(city: "Bhuj", radius: HiveUtils.getNearbyRadius());
+        },
+      );
+    }
+  }
+
+
+  static Color makeColorDark(Color color) {
+    Color color0 = color;
+
+    int red = color0.red - 10;
+    int green = color0.green - 10;
+    int blue = color0.blue - 10;
+
+    return Color.fromARGB(color0.alpha, red.clamp(0, 255), green.clamp(0, 255),
+        blue.clamp(0, 255));
+  }
+
+  static Color makeColorLight(Color color) {
+    Color color0 = color;
+
+    int red = color0.red + 10;
+    int green = color0.green + 10;
+    int blue = color0.blue + 10;
+
+    return Color.fromARGB(color0.alpha, red.clamp(0, 255), green.clamp(0, 255),
+        blue.clamp(0, 255));
+  }
+
+
+
+  static Widget buildButton(
+      BuildContext context, {
+        double? height,
+        double? width,
+        BorderSide? border,
+        String? titleWhenProgress,
+        bool? isInProgress,
+        bool? isSuccess,
+        bool? isError,
+        double? fontSize,
+        double? radius,
+        bool? autoWidth,
+        Widget? prefixWidget,
+        EdgeInsetsGeometry? padding,
+        required VoidCallback onPressed,
+        required String buttonTitle,
+        bool? showProgressTitle,
+        double? progressWidth,
+        double? progressHeight,
+        bool? showElevation,
+        Color? textColor,
+        Color? buttonColor,
+        EdgeInsets? outerPadding,
+        Color? disabledColor,
+        VoidCallback? onTapDisabledButton,
+        bool? disabled,
+      }) {
+    assert(() {
+      debugPrint('UiUtils.buildButton v3 ✔️');
+      return true;
+    }());
+
+    final scheme = Theme.of(context).colorScheme;
+
+    final bool isDisabled = (disabled ?? false) || (isInProgress == true);
+    final Color bg = isDisabled
+        ? (disabledColor ?? context.color.territoryColor)
+        : (buttonColor ?? context.color.territoryColor);
+
+    // لون النص/الأيقونات/السبينر
+    final Color fg = textColor ?? scheme.onPrimary;
+
+    final String title =
+    (isInProgress == true) ? (titleWhenProgress ?? buttonTitle) : buttonTitle;
+
+    Widget buildText(String t, Color c) => Flexible(
+      child: Text(
+        t,
+        overflow: TextOverflow.ellipsis,
+        softWrap: true,
+        textAlign: TextAlign.center,
+      ).color(c).size(fontSize ?? context.font.larger),
+    );
+
+    return Padding(
+      padding: outerPadding ?? EdgeInsets.zero,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          elevation: (showElevation ?? true) ? 1 : 0,
+          backgroundColor: bg,
+          foregroundColor: fg,
+          disabledBackgroundColor:
+          disabledColor ?? context.color.territoryColor,
+          minimumSize: Size(
+            autoWidth == true ? 0 : (width ?? double.infinity),
+            height ?? 56.rh(context),
+          ),
+          padding:
+          padding ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radius ?? 16),
+            side: border ?? BorderSide.none,
+          ),
+        ),
+        onPressed: isDisabled
+            ? () {
+          if (disabled == true) onTapDisabledButton?.call();
+        }
+            : () {
+          HelperUtils.unfocus();
+          onPressed.call();
+        },
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 250),
+          transitionBuilder: (child, anim) =>
+              FadeTransition(opacity: anim, child: child),
+          child: Row(
+            key: ValueKey("$isInProgress-$isSuccess-$isError-$title"),
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isInProgress == true)
+                UiUtils.progress(
+                  width: progressWidth ?? 18,
+                  height: progressHeight ?? 18,
+                  showWhite: fg.computeLuminance() < 0.5,
+                ),
+
+              if (isSuccess == true)
+                Icon(Icons.check_circle, color: fg, size: 22),
+
+              if (isError == true)
+                Icon(Icons.error_outline, color: fg, size: 22),
+
+              if ((isInProgress == true || isSuccess == true || isError == true))
+                const SizedBox(width: 8),
+
+              if (isInProgress == true && (showProgressTitle ?? false))
+                buildText(title, fg),
+
+              if (isInProgress != true && isSuccess != true && isError != true) ...[
+                if (prefixWidget != null) ...[
+                  IconTheme.merge(
+                      data: IconThemeData(color: fg), child: prefixWidget),
+                  const SizedBox(width: 8),
+                ],
+                buildText(title, fg),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+  static NetworkToLocalSvg networkToLocalSvg = NetworkToLocalSvg();
+
+  static Widget imageType(String url,
+      {double? width, double? height, BoxFit? fit, Color? color}) {
+    String? extension = mime(url);
+
+    if (extension == "image/svg+xml") {
+      return getSvgImage(
+        url,
+        fit: fit,
+        height: height,
+        width: width,
+        color: color,
+      );
+    } else {
+      return getImage(
+        url,
+        fit: fit,
+        height: height,
+        width: width,
+      );
+    }
+  }
+
+
+  static void showFullScreenImage(BuildContext context,
+      {required ImageProvider provider, VoidCallback? then}) {
+    Navigator.of(context)
+        .push(BlurredRouter(
+        sigmaX: 10,
+        sigmaY: 10,
+        barrierDismiss: true,
+        builder: (BuildContext context) =>
+            FullScreenImageView(
+              provider: provider,
+            )))
+        .then((value) {
+      then?.call();
+    });
+  }
+
+
+  static Future<void> openBottomSheet({
+    required BuildContext context,
+    required Widget child,
+  }) {
+    return showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent, // يجعل الخلفية شفافة
+      builder: (_) {
+        return ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Theme
+                  .of(context)
+                  .scaffoldBackgroundColor,
+              borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20)),
+            ),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
+
+  // عرض نافذة حوار (Dialog) منبثقة للمستخدم في حال عدم وجود باقة متاحة (مثل اشتراك أو خطة).
+
+  static void noPackageAvailableDialog(
+      BuildContext context, {
+        SubscriptionPackageLimit? limit,
+      }) async {
+
+    UiUtils.showBlurredDialoge(
+      context,
+      dialoge: BlurredDialogBox(
+        title: 'noPackage'.translate(context),
+        acceptButtonName: 'subscribe'.translate(context),
+        cancelButtonName: 'cancelLbl'.translate(context),
+        acceptButtonColor: context.color.territoryColor,
+        acceptTextColor: context.color.secondaryColor,
+        content: StatefulBuilder(builder: (context, update) {
+
+          final theme = Theme.of(context);
+          final textTheme = theme.textTheme;
+          final children = <Widget>[
+            Text('plsSubscribe'.translate(context)),
+          ];
+
+          if (limit != null) {
+            final blockedLabel =
+            getTranslatedLabel(context, 'subscriptionLimitActionBlocked');
+            if (blockedLabel.trim().isNotEmpty) {
+              children.add(const SizedBox(height: 12));
+              children.add(
+                Text(
+                  blockedLabel,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              );
+            }
+
+            final summary =
+            subscriptionLimitSummary(context, limit, includeExpiry: false);
+            if (summary != null && summary.isNotEmpty) {
+              children.add(const SizedBox(height: 8));
+              children.add(
+                Text(
+                  summary,
+                  style: textTheme.bodyMedium,
+                ),
+              );
+            }
+
+            final expiry = subscriptionLimitExpiry(context, limit);
+            if (expiry != null && expiry.isNotEmpty) {
+              children.add(const SizedBox(height: 4));
+              children.add(
+                Text(
+                  expiry,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                ),
+              );
+            }
+          }
+
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: children,
+          );
+
+
+        }),
+        isAcceptContainesPush: false,
+        onAccept: () async {
+          Future.delayed(Duration(seconds: 1), () {
+            Navigator.pushNamed(context, Routes.subscriptionPackageListRoute);
+          });
+        },
+      ),
+    );
+  }
+
+
+
+
+  static void imageGallaryView(BuildContext context,
+      {required List images, VoidCallback? then, required int initalIndex}) {
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) =>
+                GalleryView(
+                  images: images.cast<String>(), // ✅ تحويل القائمة لنوع String
+                  initialIndex: initalIndex,
+                )
+        ));
+  }
+
+
+// وظيفتها عرض نافذة حوار (Dialog) مع تأثير ضبابي (Blur) خلفها،
+  
+  static Future showBlurredDialoge(
+      BuildContext context, {
+        required BlurDialoge dialoge,
+        double? sigmaX,
+        double? sigmaY,
+      }) async {
+    return await Navigator.push(
+      context,
+      BlurredRouter(
+        barrierDismiss: true,
+        builder: (context) {
+          // يكفي نتأكد إنه Widget ونرجعه
+          if (dialoge is Widget) return dialoge as Widget;
+          return const SizedBox.shrink();
+        },
+        sigmaX: sigmaX,
+        sigmaY: sigmaY,
+      ),
+    );
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+//AAA is color theory's point it means if color is AAA then it will be perfect for your app
+  static bool isColorMatchAAA(Color textColor, Color background) {
+    double contrastRatio = (textColor.computeLuminance() + 0.05) /
+        (background.computeLuminance() + 0.05);
+    if (contrastRatio < 4.5) {
+      return false;
+    } else {
+      return true;
+    }
+  }
+
+  static double getRadiansFromDegree(double radians) {
+    return radians * 180 / pi;
+  }
+
+  static Color getAdaptiveTextColor(Color color) {
+    int d = 0;
+
+// Counting the perceptive luminance - human eye favors green color...
+    double luminance =
+        (0.299 * color.red + 0.587 * color.green + 0.114 * color.blue) / 255;
+
+    if (luminance > 0.5) {
+      d = 0;
+    } else {
+      d = 255;
+    } // dark colors - white font
+
+    return Color.fromARGB(color.alpha, d, d, d);
+  }
+
+
+
+
+  static String formatTimeWithDateTime(DateTime dateTime, {bool is24 = true}) {
+    if (is24) {
+      return DateFormat("kk:mm").format(dateTime);
+    } else {
+      return DateFormat("hh:mm a").format(dateTime);
+    }
+  }
+
+
+
+  static String time24to12hour(String time24) {
+    DateTime tempDate = DateFormat("hh:mm").parse(time24);
+    var dateFormat = DateFormat("h:mm a");
+    return dateFormat.format(tempDate);
+  }
+
+  static String monthYearDate(String date) {
+    DateTime dateTime = DateTime.parse(date);
+
+    // Format the date into "MMMM yyyy" (i.e., April 2024)
+    return DateFormat('MMMM yyyy').format(dateTime);
+  }
+}
+
+
+
+
+
+///Format string
+extension FormatAmount on String {
+  String formatAmount({bool prefix = false}) {
+    return (prefix)
+        ? "${Constant.currencySymbol}${toString()}"
+        : "${toString()}${Constant.currencySymbol}"; // \u{20B9}"; //currencySymbol
+  }
+
+
+  String formatPercentage() {
+    return "${toString()} %";
+  }
+
+  String formatId() {
+    return " # ${toString()} "; // \u{20B9}"; //currencySymbol
+  }
+
+  String firstUpperCase() {
+    String upperCase = "";
+    var suffix = "";
+    if (isNotEmpty) {
+      upperCase = this[0].toUpperCase();
+      suffix = substring(1, length);
+    }
+    return (upperCase + suffix);
+  }
+}
+
+
+
+
+// دالة اخرى للتحكم في الوقت والتاريخ
+
+// دالة موحّدة: إن مرّرت format تستخدمه، وإلا ترجع صيغة عربية ذكية "قبل X ..."
+extension FormatDate on String {
+  String formatDate({String? format, String locale = 'ar'}) {
+    try {
+      final date = DateTime.parse(this);
+      // لو حدّدت فورمات صريح، نستخدمه (توافق مع الاستدعاءات القديمة)
+      if (format != null && format.isNotEmpty) {
+        return DateFormat(format, locale).format(date);
+      }
+
+      // سلوك عربي ذكي عند عدم تحديد format
+      final now = DateTime.now();
+      final difference = now.difference(date);
+
+      if (difference.inDays < 0) {
+        // التاريخ في المستقبل
+        return _formatFullDate(date, locale);
+      }
+
+      if (difference.inDays == 0) {
+        if (difference.inMinutes < 1) {
+          return "الآن";
+        } else if (difference.inHours < 1) {
+          return "قبل ${_convertToArabicNumbers(difference.inMinutes)} دقيقة";
+        } else {
+          return "قبل ${_convertToArabicNumbers(difference.inHours)} ساعة";
+        }
+      }
+
+      if (difference.inDays == 1) return "قبل يوم";
+      if (difference.inDays == 2) return "قبل يومين";
+      if (difference.inDays <= 30) {
+        return "قبل ${_convertToArabicNumbers(difference.inDays)} يوم";
+      }
+
+      // أكثر من 30 يوم → صيغة كاملة
+      return _formatFullDate(date, locale);
+    } catch (_) {
+      return "";
+    }
+  }
+
+  String _formatFullDate(DateTime date, String locale) {
+    return DateFormat("d  MMMM،  y", locale).format(date);
+  }
+
+  String _convertToArabicNumbers(int number) {
+    final arabicNumbers = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+    return number
+        .toString()
+        .split('')
+        .map((c) => arabicNumbers[int.parse(c)])
+        .join();
+  }
+}
+
+
+
+
+
+//scroll controller extenstion
+
+extension ScrollEndListen on ScrollController {
+  ///It will check if scroll is at the bottom or not
+  bool isEndReached() {
+    if (offset >= position.maxScrollExtent) {
+      return true;
+    }
+    return false;
+  }
+}
+
+
+
+
+
+
+class RemoveGlow extends ScrollBehavior {
+  @override
+  Widget buildOverscrollIndicator(
+      BuildContext context, Widget child, ScrollableDetails details) {
+    return child;
+  }
+}
+
+
+
+
+
+class RoundedBorderOnSomeSidesWidget extends StatelessWidget {
+  /// Color of the content behind this widget
+  final Color contentBackgroundColor;
+  final Color borderColor;
+  final Widget child;
+
+  final double borderRadius;
+  final double borderWidth;
+
+  /// The sides where we want the rounded border to be
+  final bool topLeft;
+  final bool topRight;
+  final bool bottomLeft;
+  final bool bottomRight;
+
+  const RoundedBorderOnSomeSidesWidget({
+    super.key,
+    required this.borderColor,
+    required this.contentBackgroundColor,
+    required this.child,
+    required this.borderRadius,
+    required this.borderWidth,
+    this.topLeft = false,
+    this.topRight = false,
+    this.bottomLeft = false,
+    this.bottomRight = false,
+  });
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: borderColor,
+        borderRadius: BorderRadius.only(
+          topLeft: topLeft ? Radius.circular(borderRadius) : Radius.zero,
+          topRight: topRight ? Radius.circular(borderRadius) : Radius.zero,
+          bottomLeft: bottomLeft ? Radius.circular(borderRadius) : Radius.zero,
+          bottomRight:
+          bottomRight ? Radius.circular(borderRadius) : Radius.zero,
+        ),
+      ),
+      child: Container(
+        margin: EdgeInsetsDirectional.only(
+          top: topLeft || topRight ? borderWidth : 0,
+          start: topLeft || bottomLeft ? borderWidth : 0,
+          bottom: bottomLeft || bottomRight ? borderWidth : 0,
+          end: topRight || bottomRight ? borderWidth : 0,
+        ),
+        decoration: BoxDecoration(
+          color: contentBackgroundColor,
+          borderRadius: BorderRadius.only(
+            topLeft: topLeft
+                ? Radius.circular(borderRadius - borderWidth)
+                : Radius.zero,
+            topRight: topRight
+                ? Radius.circular(borderRadius - borderWidth)
+                : Radius.zero,
+            bottomLeft: bottomLeft
+                ? Radius.circular(borderRadius - borderWidth)
+                : Radius.zero,
+            bottomRight: bottomRight
+                ? Radius.circular(borderRadius - borderWidth)
+                : Radius.zero,
+          ),
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
+
+
+class _SoftSnackBarWidget extends StatefulWidget {
+  final String message;
+  final String iconPath;
+  final Duration duration;
+  final Color backgroundColor;
+  final Color textColor;
+  final double fontSize;
+  final FontWeight fontWeight;
+  final VoidCallback onFinish;
+
+  const _SoftSnackBarWidget({
+    required this.message,
+    required this.iconPath,
+    required this.duration,
+    required this.backgroundColor,
+    required this.textColor,
+    required this.fontSize,
+    required this.fontWeight,
+    required this.onFinish,
+  });
+
+  @override
+  State<_SoftSnackBarWidget> createState() => _SoftSnackBarWidgetState();
+}
+
+class _SoftSnackBarWidgetState extends State<_SoftSnackBarWidget>
+    with SingleTickerProviderStateMixin {
+  double opacity = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(milliseconds: 50), () {
+      if (mounted) setState(() => opacity = 1);
+    });
+    Future.delayed(widget.duration, () {
+      if (mounted) {
+        setState(() => opacity = 0);
+        Future.delayed(const Duration(milliseconds: 300), widget.onFinish);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      bottom: 80,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 300),
+          opacity: opacity,
+          child: Material(
+            color: Colors.transparent,
+            child: IntrinsicWidth(
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: widget.backgroundColor,
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // ✅ الأيقونة على اليمين
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(100),
+                      child: Image.asset(
+                        widget.iconPath,
+                        width: 30,
+                        height: 30,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+
+                    const SizedBox(width: 10),
+
+                    // ✅ النص يتمدد ولكن يظل ضمن الحجم الطبيعي
+                    Flexible(
+                      child: Text(
+                        widget.message,
+                        style: TextStyle(
+                          color: widget.textColor,
+                          fontSize: widget.fontSize,
+                          fontWeight: widget.fontWeight,
+                        ),
+                        textAlign: TextAlign.start,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+
+
+
+
+
+
+
+// لو BlurDialoge معرفة عندك في ملف ثاني، تأكد من import لها
+// import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
+
+class BlurredRichDialog extends StatelessWidget implements BlurDialoge {
+  const BlurredRichDialog({
+    super.key,
+    this.title,
+    required this.body,
+    this.actions = const [],
+    this.icon,
+    this.maxWidth = 560,
+    this.maxHeightFraction = .6,
+    this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+  });
+
+  final String? title;
+  final String body;
+  final List<BlurredAction> actions;
+  final IconData? icon;
+  final double maxWidth;
+  final double maxHeightFraction;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final maxH = MediaQuery.of(context).size.height * maxHeightFraction;
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: Material(
+          color: Colors.transparent,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: scheme.surface.withOpacity(theme.brightness == Brightness.dark ? 0.25 : 0.35),
+                  border: Border.all(color: scheme.onSurface.withOpacity(0.06)),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 18, offset: const Offset(0, 10))],
+                ),
+                child: SafeArea(
+                  minimum: const EdgeInsets.all(12),
+                  child: Padding(
+                    padding: padding,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            if (icon != null)
+                              Container(
+                                width: 40, height: 40,
+                                decoration: BoxDecoration(color: scheme.primary.withOpacity(0.12), shape: BoxShape.circle),
+                                child: Icon(icon, color: scheme.primary),
+                              ),
+                            if (icon != null) const SizedBox(width: 12),
+                            if (title != null)
+                              Expanded(
+                                child: Text(
+                                  title!,
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                      color: scheme.onSurface, fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                            IconButton(
+                              tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                              onPressed: () => Navigator.of(context).maybePop(),
+                              icon: Icon(Icons.close_rounded, color: scheme.onSurface.withOpacity(0.65)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ConstrainedBox(
+                          constraints: BoxConstraints(maxHeight: maxH),
+                          child: SingleChildScrollView(
+                            physics: const BouncingScrollPhysics(),
+                            child: SelectableText.rich(
+                              _linkify(
+                                body,
+                                normal: theme.textTheme.bodyMedium?.copyWith(
+                                    color: scheme.onSurface.withOpacity(0.9), height: 1.5),
+                                link: theme.textTheme.bodyMedium?.copyWith(
+                                    color: scheme.primary, decoration: TextDecoration.underline, height: 1.5),
+                                onOpenLink: (url) async {
+                                  // افتح الرابط بالطريقة المناسبة لمشروعك
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        if (actions.isNotEmpty)
+                          Wrap(
+                            spacing: 10,
+                            children: actions.map((a) {
+                              return ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  elevation: 0,
+                                  backgroundColor: a.isPrimary ? scheme.primary : scheme.surface,
+                                  foregroundColor: a.isPrimary ? scheme.onPrimary : scheme.onSurface,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                onPressed: a.onPressed,
+                                child: Text(a.label),
+                              );
+                            }).toList(),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  TextSpan _linkify(
+      String input, {
+        TextStyle? normal,
+        TextStyle? link,
+        required void Function(String url) onOpenLink,
+      }) {
+    final reg = RegExp(r'((?:https?:\/\/)?(?:www\.)?[^\s]+\.[^\s]{2,}(?:\/[^\s]*)*)', caseSensitive: false);
+    final spans = <TextSpan>[];
+    int start = 0;
+
+    for (final m in reg.allMatches(input)) {
+      if (m.start > start) spans.add(TextSpan(text: input.substring(start, m.start), style: normal));
+      final urlRaw = m.group(0)!;
+      final url = urlRaw.startsWith('http') ? urlRaw : 'https://$urlRaw';
+      spans.add(TextSpan(
+        text: urlRaw,
+        style: link,
+        recognizer: (TapGestureRecognizer()..onTap = () => onOpenLink(url)),
+      ));
+      start = m.end;
+    }
+    if (start < input.length) spans.add(TextSpan(text: input.substring(start), style: normal));
+    return TextSpan(children: spans);
+  }
+}
+
+// زر أكشن
+class BlurredAction {
+  final String label;
+  final VoidCallback onPressed;
+  final bool isPrimary;
+  const BlurredAction({required this.label, required this.onPressed, this.isPrimary = true});
+}
+
+
+class GalleryView extends StatefulWidget {
+  final List<String> images;
+  final int initialIndex;
+
+  const GalleryView({
+    Key? key,
+    required this.images,
+    required this.initialIndex,
+  }) : super(key: key);
+
+  @override
+  State<GalleryView> createState() => _GalleryViewState();
+}
+
+class _GalleryViewState extends State<GalleryView> {
+  late PageController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          PageView.builder(
+            controller: _controller,
+            itemCount: widget.images.length,
+            itemBuilder: (context, index) {
+              return InteractiveViewer(
+                child: Image.network(
+                  widget.images[index],
+                  fit: BoxFit.contain,
+                ),
+              );
+            },
+          ),
+          Positioned(
+            top: 40,
+            left: 16,
+            child: IconButton(
+              icon: const Icon(Icons.close, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

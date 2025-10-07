@@ -1,0 +1,176 @@
+.manual-payment-status-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.manual-payment-timeline-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.manual-payment-timeline-current {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.manual-payment-timeline-current .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+    padding: 0.4rem 0.75rem;
+}
+
+.manual-payment-timeline-current .badge i {
+    font-size: 1rem;
+}
+
+.manual-payment-timeline-updated {
+    color: var(--bs-secondary-color, #6c757d);
+    font-size: 0.85rem;
+}
+
+.manual-payment-timeline-caption {
+    color: var(--bs-secondary-color, #6c757d);
+    font-size: 0.85rem;
+}
+
+.manual-payment-timeline-items {
+    position: relative;
+    padding-left: 1.75rem;
+    margin-left: 0.5rem;
+    border-left: 2px solid var(--bs-border-color, rgba(0, 0, 0, 0.1));
+}
+
+.manual-payment-timeline-entry {
+    position: relative;
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.manual-payment-timeline-entry:last-child {
+    margin-bottom: 0;
+}
+
+.manual-payment-timeline-entry::before {
+    content: "";
+    position: absolute;
+    left: -1.75rem;
+    top: 0.75rem;
+    width: 2px;
+    height: calc(100% + 1.5rem);
+    background-color: var(--bs-border-color, rgba(0, 0, 0, 0.08));
+}
+
+.manual-payment-timeline-entry:last-child::before {
+    height: 0;
+}
+
+.manual-payment-timeline-marker {
+    position: absolute;
+    left: -2.5rem;
+    top: 0.15rem;
+    width: 2.1rem;
+    height: 2.1rem;
+    border-radius: 50%;
+    background-color: var(--bs-body-bg, #fff);
+    border: 2px solid var(--bs-primary, #0d6efd);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.manual-payment-timeline-marker i {
+    font-size: 1rem;
+}
+
+.manual-payment-timeline-entry.is-current .manual-payment-timeline-marker {
+    border-color: var(--bs-primary, #0d6efd);
+    box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.1);
+}
+
+.manual-payment-timeline-entry .manual-payment-timeline-marker {
+    border-color: var(--bs-border-color, rgba(0, 0, 0, 0.08));
+}
+
+.manual-payment-timeline-entry.is-current .manual-payment-timeline-title {
+    color: var(--bs-primary, #0d6efd);
+}
+
+.manual-payment-timeline-entry .manual-payment-timeline-content {
+    flex: 1;
+    background-color: var(--bs-light, #f8f9fa);
+    border-radius: 0.75rem;
+    padding: 1rem;
+}
+
+.manual-payment-timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 0.35rem;
+}
+
+.manual-payment-timeline-title {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.manual-payment-timeline-meta {
+    color: var(--bs-secondary-color, #6c757d);
+    font-size: 0.85rem;
+}
+
+.manual-payment-timeline-note {
+    margin: 0.5rem 0 0;
+    font-size: 0.95rem;
+}
+
+.manual-payment-timeline-attachment .btn {
+    font-size: 0.85rem;
+    padding: 0.35rem 0.8rem;
+}
+
+.manual-payment-timeline-notification {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.manual-payment-timeline-document {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.75rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 999px;
+    background-color: rgba(13, 110, 253, 0.08);
+    color: var(--bs-primary, #0d6efd);
+    font-size: 0.85rem;
+}
+
+.manual-payment-timeline-feedback {
+    font-size: 0.85rem;
+    color: var(--bs-danger, #dc3545);
+}
+
+@media (max-width: 576px) {
+    .manual-payment-timeline-items {
+        padding-left: 1.25rem;
+    }
+
+    .manual-payment-timeline-entry::before {
+        left: -1.25rem;
+    }
+
+    .manual-payment-timeline-marker {
+        left: -2rem;
+    }
+}

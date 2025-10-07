@@ -1,0 +1,54 @@
+// ignore_for_file: file_names
+
+import 'package:flutter/cupertino.dart';
+
+class ErrorFilter {
+  final dynamic error;
+  // static BuildContext? _context;
+  ErrorFilter(this.error);
+  static void setContext(BuildContext context) {
+    // _context = context;
+  }
+
+  /// set this in errror filters so you can get translated errors
+  factory ErrorFilter.check(errorCode) {
+    if (errorCode is String && errorCode.contains('validation.required')) {
+      return ErrorFilter("يرجى تحديد موقع الإعلان على الخريطة قبل المتابعة.");
+    }
+
+    switch (errorCode) {
+      case "network-request-failed":
+        return ErrorFilter("Please check internet connection");
+      case "app-not-authorized":
+        return ErrorFilter("Add SHA keys in Firebase and Playstore");
+      case "no-internet":
+        return ErrorFilter("Please check internet connection");
+      case "email-already-in-use":
+        return ErrorFilter("This email is already registerd.");
+      case "wrong-password":
+        return ErrorFilter("The password is wrong.");
+      case "user-not-found":
+        return ErrorFilter("This email is not registerd. Please try signup.");
+      case "invalid-email":
+        return ErrorFilter("This email is not valid.");
+      case "invalid-phone-number":
+        return ErrorFilter("Phone number is invalid.");
+      case "invalid-verification-code":
+        return ErrorFilter("OTP is incorrect.");
+      case "too-many-requests":
+        return ErrorFilter("Unusual activity detected. Please try again later");
+      case "session-expired":
+        return ErrorFilter(
+            "The otp code has expired. Please re-send the verification code to try again");
+      case "insufficient-balance":
+        return ErrorFilter(
+            "Your featured balance is not enough to complete this action.");
+      case "already-featured":
+        return ErrorFilter("This advertisement is already featured.");
+      case "not-featured":
+        return ErrorFilter("This advertisement is not currently featured.");
+      default:
+        return ErrorFilter(errorCode);
+    }
+  }
+}

@@ -1088,13 +1088,30 @@ class ManualPaymentService {
           for (final key in keys) {
             if (!source.containsKey(key)) continue;
             final dynamic value = source[key];
+            if (value is Map || value is Map<String, dynamic>) {
+              final nested = _mapify(value);
+              if (nested != null) {
+                final nestedId = _stringify(nested['id']);
+                if (nestedId != null) return nestedId;
+              }
+              continue;
+            }
+            if (value is Iterable) {
+              for (final element in value) {
+                if (element is Map || element is Map<String, dynamic>) {
+                  final nested = _mapify(element);
+                  if (nested != null) {
+                    final nestedId = _stringify(nested['id']);
+                    if (nestedId != null) return nestedId;
+                  }
+                }
+              }
+              continue;
+            }
+
             final parsed = _stringify(value);
             if (parsed != null) return parsed;
-            final nested = _mapify(value);
-            if (nested != null) {
-              final nestedId = _stringify(nested['id']);
-              if (nestedId != null) return nestedId;
-            }
+
           }
         }
         return null;
@@ -1133,6 +1150,9 @@ class ManualPaymentService {
       } else if (hasIntent && !hasTransaction) {
         paymentTransactionId = paymentIntentId;
       }
+
+      paymentIntentId = paymentIntentId?.trim();
+      paymentTransactionId = paymentTransactionId?.trim();
 
 
 

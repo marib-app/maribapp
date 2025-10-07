@@ -254,8 +254,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       setState(() {
         _banks = settings.banks;
         _eastYemenBank = settings.eastYemenBank;
-        _paymentIntentId = settings.paymentIntentId;
-        _paymentTransactionId = settings.paymentTransactionId;
+        _paymentIntentId = settings.paymentIntentId?.trim();
+        _paymentTransactionId = settings.paymentTransactionId?.trim();
         _settingsCurrencyInfo = settingsCurrency;
 
         final normalizedGateway = widget.args.normalizedGateway;
@@ -294,6 +294,65 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       });
     } finally {
       if (mounted) setState(() => _loadingBanks = false);
+    }
+  }
+
+  Future<bool> _ensurePaymentIntent() async {
+    final currentIntent = _paymentIntentId?.trim();
+    if (currentIntent != null && currentIntent.isNotEmpty) {
+      if (currentIntent != _paymentIntentId) {
+        if (mounted) {
+          setState(() => _paymentIntentId = currentIntent);
+        } else {
+          _paymentIntentId = currentIntent;
+        }
+      }
+      return true;
+    }
+
+    final purpose = _resolvedPurpose();
+    final purposeParam =
+    (purpose == 'order' || purpose == 'package') ? purpose : null;
+    final currency = widget.args.normalizedCurrency;
+    final selectedMethod = _selectedMethod ?? _manualBankMethod;
+
+    try {
+      final settings = await _service.fetchManualPaymentSettings(
+        token: widget.args.token,
+        purpose: purposeParam,
+        currency: currency,
+        orderId: widget.args.packageId,
+        paymentMethod:
+        ManualPaymentService.paymentMethodForApi(selectedMethod),
+      );
+
+      final updatedIntent = settings.paymentIntentId?.trim();
+      final updatedTransaction = settings.paymentTransactionId?.trim();
+
+      void assignUpdates() {
+        if (updatedIntent != null && updatedIntent.isNotEmpty) {
+          _paymentIntentId = updatedIntent;
+        }
+        if (updatedTransaction != null && updatedTransaction.isNotEmpty) {
+          _paymentTransactionId = updatedTransaction;
+        }
+        if (_banks.isEmpty && settings.banks.isNotEmpty) {
+          _banks = settings.banks;
+        }
+        if (_eastYemenBank == null && settings.eastYemenBank != null) {
+          _eastYemenBank = settings.eastYemenBank;
+        }
+      }
+
+      if (mounted) {
+        setState(assignUpdates);
+      } else {
+        assignUpdates();
+      }
+
+      return updatedIntent != null && updatedIntent.isNotEmpty;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -466,6 +525,20 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
     if (!_readyToSubmit) return;
 
+
+
+    final ensured = await _ensurePaymentIntent();
+    final resolvedIntentId = _paymentIntentId?.trim();
+    if (!ensured || resolvedIntentId == null || resolvedIntentId.isEmpty) {
+      _showOverlayMessage(
+        'تعذّر تهيئة عملية الدفع. يرجى إعادة تحميل شاشة التحويل والمحاولة مجددًا.',
+        type: MessageType.error,
+      );
+      return;
+    }
+
+
+
     setState(() => _submitting = true);
     try {
       final normalizedPurpose = widget.args.normalizedPurpose;
@@ -520,15 +593,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         return false;
       });
 
-      final intentId = _paymentIntentId;
-      if (intentId == null || intentId.isEmpty) {
-        _showOverlayMessage(
-          'تعذّر تهيئة عملية الدفع. يرجى إعادة تحميل شاشة التحويل والمحاولة مجددًا.',
-          type: MessageType.error,
-        );
-        return;
-      }
-      final transactionId = _paymentTransactionId;
+      final intentId = resolvedIntentId;
+      final transactionId = _paymentTransactionId?.trim();
 
 
       final ManualPaymentSubmissionResult result;

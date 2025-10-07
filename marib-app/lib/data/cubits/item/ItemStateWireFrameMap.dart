@@ -62,7 +62,7 @@ class StateMap<INITIAL, PROGRESS, SUCCESS extends ItemSuccessStateWireframe,
                         );
                       },
                       child: Container() */
-/*ItemHorizontalCard(item: model)*//*
+/*ItemHorizontalCard(item: model)*/ /*
 );
                 },
                 itemCount: state.items.length,

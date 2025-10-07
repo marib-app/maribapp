@@ -8,12 +8,6 @@ import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/api.dart';
 import 'package:meta/meta.dart';
 
-
-
-
-
-
-
 const Set<String> _zeroDecimalCurrencies = {
   'BIF',
   'CLP',
@@ -72,7 +66,6 @@ String formatManualPaymentAmount(double amount, String currencyCode) {
   return amount.toStringAsFixed(decimals);
 }
 
-
 String _apiPaymentMethod(String uiValue) {
   final trimmed = uiValue.trim();
   if (trimmed.isEmpty) {
@@ -80,8 +73,6 @@ String _apiPaymentMethod(String uiValue) {
   }
   final lowercase = trimmed.toLowerCase();
   if (lowercase == 'manual_bank') {
-
-
     return 'manual';
   }
   if (lowercase == 'east_yemen_bank') {
@@ -101,9 +92,6 @@ String? _apiPaymentMethodOrNull(String? uiValue) {
   return _apiPaymentMethod(trimmed);
 }
 
-
-
-
 class EastYemenBankConfig {
   EastYemenBankConfig({
     required this.enabled,
@@ -117,8 +105,8 @@ class EastYemenBankConfig {
     this.branch,
     Map<String, dynamic>? raw,
   }) : raw = raw == null
-      ? const <String, dynamic>{}
-      : Map<String, dynamic>.unmodifiable(Map<String, dynamic>.from(raw));
+            ? const <String, dynamic>{}
+            : Map<String, dynamic>.unmodifiable(Map<String, dynamic>.from(raw));
 
   final bool enabled;
   final String displayName;
@@ -157,14 +145,11 @@ class EastYemenBankConfig {
   }
 
   factory EastYemenBankConfig.fromMap(Map<String, dynamic> map) {
-    final String? name = _asString(map['display_name'] ??
-        map['name'] ??
-        map['title'] ??
-        map['label']);
+    final String? name = _asString(
+        map['display_name'] ?? map['name'] ?? map['title'] ?? map['label']);
 
-    final String resolvedName = (name ?? '').trim().isEmpty
-        ? 'بنك الشرق اليمني'
-        : name!.trim();
+    final String resolvedName =
+        (name ?? '').trim().isEmpty ? 'بنك الشرق اليمني' : name!.trim();
 
     String? stringFromKeys(List<String> keys) {
       for (final key in keys) {
@@ -190,12 +175,12 @@ class EastYemenBankConfig {
       displayName: resolvedName,
       note: stringFromKeys(const ['note', 'notes', 'description', 'help_text']),
       logoUrl: stringFromKeys(const ['logo_url', 'logo', 'image']),
-      currencyCode: stringFromKeys(
-          const ['currency', 'currency_code', 'currencyCode']),
+      currencyCode:
+          stringFromKeys(const ['currency', 'currency_code', 'currencyCode']),
       accountName: stringFromKeys(
           const ['account_name', 'beneficiary_name', 'recipient_name']),
       accountNumber:
-      stringFromKeys(const ['account_number', 'number', 'accountNumber']),
+          stringFromKeys(const ['account_number', 'number', 'accountNumber']),
       iban: stringFromKeys(const ['iban', 'iban_number']),
       branch: stringFromKeys(const ['branch', 'branch_name']),
       raw: raw,
@@ -213,11 +198,10 @@ class ManualPaymentSettingsResult {
     this.paymentTransactionId,
     Map<String, dynamic>? raw,
   }) : raw = raw == null
-      ? const <String, dynamic>{}
-      : Map<String, dynamic>.unmodifiable(
-    Map<String, dynamic>.from(raw),
-  );
-
+            ? const <String, dynamic>{}
+            : Map<String, dynamic>.unmodifiable(
+                Map<String, dynamic>.from(raw),
+              );
 
   final List<BankAccount> banks;
   final EastYemenBankConfig? eastYemenBank;
@@ -228,15 +212,11 @@ class ManualPaymentSettingsResult {
   final Map<String, dynamic> raw;
 }
 
-
-
-
 class ManualPaymentSubmissionResult {
   ManualPaymentSubmissionResult({
     required this.success,
     this.manualPaymentId,
     this.paymentIntentId,
-
     this.paymentTransactionId,
     this.status,
     this.message,
@@ -259,9 +239,6 @@ class ManualPaymentSubmissionResult {
   final Map<String, dynamic>? paymentIntent;
   final bool requiresConfirmation;
 
-
-
-
   Map<String, dynamic> toJson() => raw;
 
   static String? _parseIdentifier(dynamic value) {
@@ -279,16 +256,15 @@ class ManualPaymentSubmissionResult {
   static Map<String, dynamic> _asMap(dynamic raw) {
     if (raw is Map<String, dynamic>) return Map<String, dynamic>.from(raw);
     if (raw is Map) {
-      return Map<String, dynamic>.from(raw as Map);
+      return Map<String, dynamic>.from(raw);
     }
     return {'data': raw};
   }
 
-
   static Map<String, dynamic>? _mapify(dynamic value) {
     if (value is Map<String, dynamic>) return value;
     if (value is Map) {
-      return (value as Map).map((key, value) => MapEntry('$key', value));
+      return (value).map((key, value) => MapEntry('$key', value));
     }
     return null;
   }
@@ -311,7 +287,6 @@ class ManualPaymentSubmissionResult {
     return acceptedSignals.contains(normalized);
   }
 
-
   factory ManualPaymentSubmissionResult.fromResponse(dynamic response) {
     // Helpers
     bool _truthy(dynamic v) {
@@ -319,8 +294,12 @@ class ManualPaymentSubmissionResult {
       if (v is num) return v != 0;
       if (v is String) {
         final s = v.trim().toLowerCase();
-        return s == 'true' || s == '1' || s == 'ok' || s == 'success' ||
-            s == 'succeeded' || s == 'accepted';
+        return s == 'true' ||
+            s == '1' ||
+            s == 'ok' ||
+            s == 'success' ||
+            s == 'succeeded' ||
+            s == 'accepted';
       }
       return false;
     }
@@ -345,14 +324,13 @@ class ManualPaymentSubmissionResult {
       return null;
     }
 
-    final manualPaymentRequest =
-        _firstNested(
+    final manualPaymentRequest = _firstNested(
             map, const ['manual_payment_request', 'manualPaymentRequest']) ??
-            _firstNested(dataMap,
-                const ['manual_payment_request', 'manualPaymentRequest']) ??
-            _firstNested(map, const ['manual_payment', 'manualPayment']) ??
-            _firstNested(dataMap, const ['manual_payment', 'manualPayment']) ??
-            (dataMap != null &&
+        _firstNested(dataMap,
+            const ['manual_payment_request', 'manualPaymentRequest']) ??
+        _firstNested(map, const ['manual_payment', 'manualPayment']) ??
+        _firstNested(dataMap, const ['manual_payment', 'manualPayment']) ??
+        (dataMap != null &&
                 (dataMap.containsKey('id') ||
                     dataMap.containsKey('manual_payment_id') ||
                     dataMap.containsKey('manualPaymentId') ||
@@ -362,37 +340,34 @@ class ManualPaymentSubmissionResult {
                     dataMap.containsKey('manualPaymentRequest') ||
                     dataMap.containsKey('payment_transaction') ||
                     dataMap.containsKey('paymentTransaction'))
-                ? dataMap
-                : null);
+            ? dataMap
+            : null);
 
-    final paymentTransaction =
-        _firstNested(
+    final paymentTransaction = _firstNested(
             map, const ['payment_transaction', 'paymentTransaction']) ??
-            _firstNested(
-                dataMap, const ['payment_transaction', 'paymentTransaction']) ??
-            _firstNested(manualPaymentRequest,
-                const ['payment_transaction', 'paymentTransaction']);
+        _firstNested(
+            dataMap, const ['payment_transaction', 'paymentTransaction']) ??
+        _firstNested(manualPaymentRequest,
+            const ['payment_transaction', 'paymentTransaction']);
 
-    final paymentIntent =
-        _firstNested(map, const ['payment_intent', 'paymentIntent', 'intent']) ??
-            _firstNested(dataMap,
-                const ['payment_intent', 'paymentIntent', 'intent']) ??
-            _firstNested(paymentTransaction,
-                const ['payment_intent', 'paymentIntent', 'intent']) ??
-            _firstNested(manualPaymentRequest,
-                const ['payment_intent', 'paymentIntent', 'intent']);
+    final paymentIntent = _firstNested(
+            map, const ['payment_intent', 'paymentIntent', 'intent']) ??
+        _firstNested(
+            dataMap, const ['payment_intent', 'paymentIntent', 'intent']) ??
+        _firstNested(paymentTransaction,
+            const ['payment_intent', 'paymentIntent', 'intent']) ??
+        _firstNested(manualPaymentRequest,
+            const ['payment_intent', 'paymentIntent', 'intent']);
 
     String? lookupId(List<String> keys,
         {bool includeTransaction = false, bool includeIntent = false}) {
-
       final sources = <Map<String, dynamic>>[
         map,
         if (dataMap != null) dataMap,
         if (manualPaymentRequest != null) manualPaymentRequest,
-        if (includeTransaction &&
-            paymentTransaction != null) paymentTransaction!,
-        if (includeIntent && paymentIntent != null) paymentIntent!,
-
+        if (includeTransaction && paymentTransaction != null)
+          paymentTransaction,
+        if (includeIntent && paymentIntent != null) paymentIntent,
       ];
       for (final source in sources) {
         for (final key in keys) {
@@ -421,32 +396,32 @@ class ManualPaymentSubmissionResult {
     ]);
 
     final paymentTransactionId = lookupId(
-      const [
-        'payment_transaction_id',
-        'paymentTransactionId',
-        'payment_transaction',
-        'paymentTransaction',
-        'transaction_id',
-        'transactionId',
-        'transaction',
-      ],
-      includeTransaction: true,
-    ) ??
+          const [
+            'payment_transaction_id',
+            'paymentTransactionId',
+            'payment_transaction',
+            'paymentTransaction',
+            'transaction_id',
+            'transactionId',
+            'transaction',
+          ],
+          includeTransaction: true,
+        ) ??
         _parseIdentifier(paymentTransaction?['id']);
 
     final paymentIntentId = lookupId(
-      const [
-        'payment_intent_id',
-        'paymentIntentId',
-        'intent_id',
-        'intentId',
-        'payment_intent',
-        'paymentIntent',
-        'intent',
-      ],
-      includeTransaction: true,
-      includeIntent: true,
-    ) ??
+          const [
+            'payment_intent_id',
+            'paymentIntentId',
+            'intent_id',
+            'intentId',
+            'payment_intent',
+            'paymentIntent',
+            'intent',
+          ],
+          includeTransaction: true,
+          includeIntent: true,
+        ) ??
         _parseIdentifier(paymentIntent?['id']) ??
         _parseIdentifier(paymentIntent?['intent_id']);
 
@@ -462,10 +437,10 @@ class ManualPaymentSubmissionResult {
     final status = rawStatus?.toString();
 
     final message = (map['message'] ??
-        dataMap?['message'] ??
-        manualPaymentRequest?['message'] ??
-        paymentTransaction?['message'] ??
-        paymentIntent?['message'])
+            dataMap?['message'] ??
+            manualPaymentRequest?['message'] ??
+            paymentTransaction?['message'] ??
+            paymentIntent?['message'])
         ?.toString();
 
     final hasManualPaymentId = manualPaymentId?.isNotEmpty == true;
@@ -487,17 +462,17 @@ class ManualPaymentSubmissionResult {
         (paymentIntentId?.isNotEmpty == true);
 
     bool requiresConfirmation = _truthy(
-      map['requires_confirmation'] ??
-          map['requiresConfirmation'] ??
-          dataMap?['requires_confirmation'] ??
-          dataMap?['requiresConfirmation'] ??
-          manualPaymentRequest?['requires_confirmation'] ??
-          manualPaymentRequest?['requiresConfirmation'] ??
-          paymentTransaction?['requires_confirmation'] ??
-          paymentTransaction?['requiresConfirmation'] ??
-          paymentIntent?['requires_confirmation'] ??
-          paymentIntent?['requiresConfirmation'],
-    ) ||
+          map['requires_confirmation'] ??
+              map['requiresConfirmation'] ??
+              dataMap?['requires_confirmation'] ??
+              dataMap?['requiresConfirmation'] ??
+              manualPaymentRequest?['requires_confirmation'] ??
+              manualPaymentRequest?['requiresConfirmation'] ??
+              paymentTransaction?['requires_confirmation'] ??
+              paymentTransaction?['requiresConfirmation'] ??
+              paymentIntent?['requires_confirmation'] ??
+              paymentIntent?['requiresConfirmation'],
+        ) ||
         (() {
           final dynamic nextAction = paymentIntent?['next_action'] ??
               paymentIntent?['nextAction'] ??
@@ -509,7 +484,8 @@ class ManualPaymentSubmissionResult {
               return true;
             }
           }
-          final intentStatus = paymentIntent?['status']?.toString().trim().toLowerCase();
+          final intentStatus =
+              paymentIntent?['status']?.toString().trim().toLowerCase();
           if (intentStatus != null &&
               intentStatus.isNotEmpty &&
               const {
@@ -523,13 +499,11 @@ class ManualPaymentSubmissionResult {
           return false;
         })();
 
-
     return ManualPaymentSubmissionResult(
       success: success,
       manualPaymentId: hasManualPaymentId ? manualPaymentId : null,
       paymentTransactionId: paymentTransactionId,
       paymentIntentId: paymentIntentId,
-
       status: status,
       message: message,
       manualPaymentRequest: manualPaymentRequest != null
@@ -542,26 +516,21 @@ class ManualPaymentSubmissionResult {
           ? Map<String, dynamic>.unmodifiable(paymentIntent)
           : null,
       requiresConfirmation: requiresConfirmation,
-
       raw: Map<String, dynamic>.unmodifiable(map),
     );
   }
 }
 
-
-
-
-
 class ManualPaymentService {
   ManualPaymentService({Dio? dio})
       : _dio = dio ??
-      Dio(
-        BaseOptions(
-          baseUrl: _normalizeBase(AppSettings.baseUrl),
-          connectTimeout: const Duration(seconds: 15),
-          receiveTimeout: const Duration(seconds: 20),
-        ),
-      );
+            Dio(
+              BaseOptions(
+                baseUrl: _normalizeBase(AppSettings.baseUrl),
+                connectTimeout: const Duration(seconds: 15),
+                receiveTimeout: const Duration(seconds: 20),
+              ),
+            );
 
   final Dio _dio;
   static String paymentMethodForApi(String value) => _apiPaymentMethod(value);
@@ -575,17 +544,13 @@ class ManualPaymentService {
     return '$u/api/';
   }
 
-
-
   static Map<String, dynamic>? _mapify(dynamic value) {
     if (value is Map<String, dynamic>) return value;
     if (value is Map) {
-      return Map<String, dynamic>.from(value as Map);
+      return Map<String, dynamic>.from(value);
     }
     return null;
   }
-
-
 
   static String? _stringify(dynamic value) {
     if (value == null) return null;
@@ -704,19 +669,15 @@ class ManualPaymentService {
       final id = _stringify(map['id']) ??
           _stringify(map['bank_id']) ??
           _stringify(map['bankId']);
-      final account = _stringify(map['account_number']) ??
-          _stringify(map['accountNumber']);
-      final bankName = _stringify(map['bank_name']) ??
-          _stringify(map['name']);
+      final account =
+          _stringify(map['account_number']) ?? _stringify(map['accountNumber']);
+      final bankName = _stringify(map['bank_name']) ?? _stringify(map['name']);
       final key = '${id ?? ''}|${account ?? ''}|${bankName ?? ''}';
       deduped.putIfAbsent(key, () => map);
     }
 
     return deduped.values.toList();
   }
-
-
-
 
   @visibleForTesting
   static List<BankAccount> combineManualPaymentBanks({
@@ -755,7 +716,8 @@ class ManualPaymentService {
             ? base.bankName
             : addition.bankName,
         accountName: _preferString(base.accountName, addition.accountName),
-        accountNumber: _preferString(base.accountNumber, addition.accountNumber),
+        accountNumber:
+            _preferString(base.accountNumber, addition.accountNumber),
         iban: _preferString(base.iban, addition.iban),
         swift: _preferString(base.swift, addition.swift),
         branch: _preferString(base.branch, addition.branch),
@@ -791,20 +753,12 @@ class ManualPaymentService {
         return orderComparison;
       }
       return _trimOrEmpty(a.bankName).toLowerCase().compareTo(
-        _trimOrEmpty(b.bankName).toLowerCase(),
-      );
+            _trimOrEmpty(b.bankName).toLowerCase(),
+          );
     });
 
     return result;
   }
-
-
-
-
-
-
-
-
 
   static EastYemenBankConfig? _parseEastYemenConfig(dynamic payload) {
     final visited = <int>{};
@@ -862,8 +816,7 @@ class ManualPaymentService {
           final Map<String, dynamic>? candidateMap = _mapify(candidate);
           if (candidateMap != null && candidateMap.isNotEmpty) {
             final Map<String, dynamic>? nested = _mapify(
-              candidateMap['east_yemen_bank'] ??
-                  candidateMap['eastYemenBank'],
+              candidateMap['east_yemen_bank'] ?? candidateMap['eastYemenBank'],
             );
             if (nested != null && nested.isNotEmpty) {
               return nested;
@@ -879,8 +832,8 @@ class ManualPaymentService {
         return null;
       }
 
-      final List<Map<String, dynamic>?> extrasCandidates = <
-          Map<String, dynamic>?>[
+      final List<Map<String, dynamic>?> extrasCandidates =
+          <Map<String, dynamic>?>[
         resolveContainer(_mapify(map['extras'])),
         resolveContainer(_mapify(map['extra'])),
         resolveContainer(_mapify(map['additional'])),
@@ -921,13 +874,12 @@ class ManualPaymentService {
     }
   }
 
-  static void _writeMetadataFields(Map<String, dynamic> target,
-      Map<String, dynamic>? metadata) {
+  static void _writeMetadataFields(
+      Map<String, dynamic> target, Map<String, dynamic>? metadata) {
     if (metadata == null || metadata.isEmpty) return;
 
     void writeEntries(Map<String, dynamic> map, String prefix) {
       map.forEach((key, value) {
-        if (key == null) return;
         final keyStr = '$key'.trim();
         if (keyStr.isEmpty || value == null) return;
         final fieldKey = prefix.isEmpty ? keyStr : '$prefix[$keyStr]';
@@ -936,7 +888,7 @@ class ManualPaymentService {
           return;
         }
         if (value is Map) {
-          writeEntries(Map<String, dynamic>.from(value as Map), fieldKey);
+          writeEntries(Map<String, dynamic>.from(value), fieldKey);
           return;
         }
         if (value is Iterable) {
@@ -952,9 +904,8 @@ class ManualPaymentService {
           }
           return;
         }
-        target[fieldKey] = value is DateTime
-            ? value.toIso8601String()
-            : value.toString();
+        target[fieldKey] =
+            value is DateTime ? value.toIso8601String() : value.toString();
       });
     }
 
@@ -971,7 +922,7 @@ class ManualPaymentService {
   }) async {
     try {
       final ManualPaymentSettingsResult result =
-      await fetchManualPaymentSettings(
+          await fetchManualPaymentSettings(
         token: token,
         purpose: purpose,
         currency: currency,
@@ -999,27 +950,19 @@ class ManualPaymentService {
     String? paymentTransactionId;
     Map<String, dynamic> raw = const <String, dynamic>{};
 
-
-
     try {
       final normalizedPurpose = purpose?.trim();
       final normalizedCurrency = currency?.trim();
       final normalizedPaymentMethod = paymentMethod?.trim();
-      final apiPaymentMethod =
-      ManualPaymentService.paymentMethodForApiOrNull(normalizedPaymentMethod);
-
+      final apiPaymentMethod = ManualPaymentService.paymentMethodForApiOrNull(
+          normalizedPaymentMethod);
 
       final body = <String, dynamic>{
         if (normalizedPurpose != null && normalizedPurpose.isNotEmpty)
-
-
           'purpose': normalizedPurpose,
-
-
         if (normalizedCurrency != null && normalizedCurrency.isNotEmpty)
           'currency': normalizedCurrency.toUpperCase(),
-        if (orderId != null)
-          'order_id': orderId,
+        if (orderId != null) 'order_id': orderId,
         if (apiPaymentMethod != null && apiPaymentMethod.isNotEmpty)
           'payment_method': apiPaymentMethod,
       };
@@ -1029,28 +972,21 @@ class ManualPaymentService {
         extraHeaders: {
           'Authorization': 'Bearer $token',
           'Idempotency-Key': Api.generateIdempotencyKey(),
-
         },
       );
 
-
-
       final Map<String, dynamic> top =
           _mapify(response) ?? <String, dynamic>{'data': response};
-      final Map<String, dynamic> root =
-          _mapify(top['data']) ?? top;
+      final Map<String, dynamic> root = _mapify(top['data']) ?? top;
 
       raw = Map<String, dynamic>.from(root);
 
       final bankMaps = _collectBankMaps(root);
       if (bankMaps.isNotEmpty) {
         banks = bankMaps.map(BankAccount.fromJson).toList();
-
       }
 
-      eastYemenBank = _parseEastYemenConfig(root) ??
-          _parseEastYemenConfig(top);
-
+      eastYemenBank = _parseEastYemenConfig(root) ?? _parseEastYemenConfig(top);
 
       Map<String, dynamic>? firstNested(
           Map<String, dynamic>? source, List<String> keys) {
@@ -1064,25 +1000,27 @@ class ManualPaymentService {
       }
 
       paymentIntent = firstNested(
-        root, const ['payment_intent', 'paymentIntent', 'intent'],
-      ) ??
-          firstNested(
-              top, const ['payment_intent', 'paymentIntent', 'intent']);
+            root,
+            const ['payment_intent', 'paymentIntent', 'intent'],
+          ) ??
+          firstNested(top, const ['payment_intent', 'paymentIntent', 'intent']);
 
       paymentTransaction = firstNested(
-        root,
-        const ['payment_transaction', 'paymentTransaction', 'transaction'],
-      ) ??
-          firstNested(
-              top,
-              const ['payment_transaction', 'paymentTransaction', 'transaction']);
+            root,
+            const ['payment_transaction', 'paymentTransaction', 'transaction'],
+          ) ??
+          firstNested(top, const [
+            'payment_transaction',
+            'paymentTransaction',
+            'transaction'
+          ]);
 
       String? lookupIdentifier(List<String> keys) {
         final sources = <Map<String, dynamic>>[
           root,
           top,
-          if (paymentIntent != null) paymentIntent!,
-          if (paymentTransaction != null) paymentTransaction!,
+          if (paymentIntent != null) paymentIntent,
+          if (paymentTransaction != null) paymentTransaction,
         ];
         for (final source in sources) {
           for (final key in keys) {
@@ -1101,29 +1039,27 @@ class ManualPaymentService {
       }
 
       paymentIntentId = lookupIdentifier(const [
-        'payment_intent_id',
-        'paymentIntentId',
-        'intent_id',
-        'intentId',
-        'payment_intent',
-        'paymentIntent',
-        'intent',
-      ]) ??
+            'payment_intent_id',
+            'paymentIntentId',
+            'intent_id',
+            'intentId',
+            'payment_intent',
+            'paymentIntent',
+            'intent',
+          ]) ??
           _stringify(paymentIntent?['id']) ??
           _stringify(paymentIntent?['intent_id']);
 
       paymentTransactionId = lookupIdentifier(const [
-        'payment_transaction_id',
-        'paymentTransactionId',
-        'payment_transaction',
-        'paymentTransaction',
-        'transaction_id',
-        'transactionId',
-        'transaction',
-      ]) ??
+            'payment_transaction_id',
+            'paymentTransactionId',
+            'payment_transaction',
+            'paymentTransaction',
+            'transaction_id',
+            'transactionId',
+            'transaction',
+          ]) ??
           _stringify(paymentTransaction?['id']);
-
-
     } catch (_) {
       banks = const <BankAccount>[];
     }
@@ -1132,13 +1068,13 @@ class ManualPaymentService {
     Iterable<BankAccount> fallbackBanks = const <BankAccount>[];
 
     if (banks.isEmpty || eastYemenBank == null || !eastYemenBank.isEnabled) {
-
       try {
         final res = await _dio.get(
           Api.getPaymentSettingsApi,
           options: Options(headers: {'Authorization': 'Bearer $token'}),
         );
-        fallbackPayload = _mapify(res.data) ?? <String, dynamic>{'data': res.data};
+        fallbackPayload =
+            _mapify(res.data) ?? <String, dynamic>{'data': res.data};
         final Map<String, dynamic> fallbackRoot =
             _mapify(fallbackPayload['data']) ?? fallbackPayload;
 
@@ -1155,38 +1091,34 @@ class ManualPaymentService {
             eastYemenBank = fallbackEastYemen;
           }
         }
-
       } catch (_) {}
     }
-
 
     banks = combineManualPaymentBanks(
       primaryBanks: banks,
       fallbackBanks: fallbackBanks,
     );
 
-
     return ManualPaymentSettingsResult(
       banks: banks,
-      eastYemenBank:
-      eastYemenBank != null && eastYemenBank.isEnabled ? eastYemenBank : null,
+      eastYemenBank: eastYemenBank != null && eastYemenBank.isEnabled
+          ? eastYemenBank
+          : null,
       paymentIntent: paymentIntent != null
-          ? Map<String, dynamic>.unmodifiable(paymentIntent!)
+          ? Map<String, dynamic>.unmodifiable(paymentIntent)
           : null,
       paymentIntentId: paymentIntentId,
       paymentTransaction: paymentTransaction != null
-          ? Map<String, dynamic>.unmodifiable(paymentTransaction!)
+          ? Map<String, dynamic>.unmodifiable(paymentTransaction)
           : null,
       paymentTransactionId: paymentTransactionId,
       raw: raw,
-
     );
   }
 
   // POST /api/manual-payment-requests  (مع إيصال)
 
   Future<ManualPaymentSubmissionResult> submitManualPayment({
-
     required String token,
     required int bankId,
     required String intentId,
@@ -1200,8 +1132,6 @@ class ManualPaymentService {
     required DateTime transferredAt,
     Map<String, dynamic>? metadata,
     required String receiptImagePath,
-
-
   }) async {
     return _submitManualPayment(
       token: token,
@@ -1217,12 +1147,10 @@ class ManualPaymentService {
       transferredAt: transferredAt,
       metadata: metadata,
       receiptImagePath: receiptImagePath,
-
     );
   }
 
   Future<ManualPaymentSubmissionResult> _submitManualPayment({
-
     required String token,
     required int bankId,
     required String intentId,
@@ -1242,15 +1170,12 @@ class ManualPaymentService {
     final payableTypeValue = payableType?.trim();
     final normalizedCurrency = _normalizeCurrencyCode(currency);
     final formattedAmount =
-    formatManualPaymentAmount(amount, normalizedCurrency);
-
+        formatManualPaymentAmount(amount, normalizedCurrency);
 
     final Map<String, dynamic> formMap = {
       'payment_method': ManualPaymentService.paymentMethodForApi('manual_bank'),
-
       'bank_id': bankId,
       'bank_account_id': bankId,
-
       'amount': formattedAmount,
       'currency': normalizedCurrency,
       'intent_id': intentId,
@@ -1261,23 +1186,17 @@ class ManualPaymentService {
         'payment_transaction_id': transactionId,
       'transferred_at': transferredAt.toIso8601String(),
       if (referenceValue != null && referenceValue.isNotEmpty)
-
-
         'reference_number': referenceValue,
       if (referenceValue != null && referenceValue.isNotEmpty)
         'reference': referenceValue,
       if (userNoteValue != null && userNoteValue.isNotEmpty)
-
-
         'notes': userNoteValue,
       if (payableTypeValue != null && payableTypeValue.isNotEmpty)
         'payable_type': payableTypeValue,
       if (payableId != null) 'payable_id': payableId,
     };
 
-
     _writeMetadataFields(formMap, metadata);
-
 
     if (receiptImagePath.isEmpty) {
       throw ArgumentError('receiptImagePath cannot be empty');
@@ -1295,16 +1214,15 @@ class ManualPaymentService {
       },
     );
 
-
     var result = ManualPaymentSubmissionResult.fromResponse(response);
 
-    final String? resolvedIntentId =
-        result.paymentIntentId ?? intentId;
+    final String? resolvedIntentId = result.paymentIntentId ?? intentId;
     final String? resolvedTransactionId =
         result.paymentTransactionId ?? transactionId;
 
     if (result.requiresConfirmation &&
-        resolvedIntentId != null && resolvedIntentId.isNotEmpty) {
+        resolvedIntentId != null &&
+        resolvedIntentId.isNotEmpty) {
       result = await _confirmPayment(
         token: token,
         paymentMethod: 'manual_bank',
@@ -1323,9 +1241,8 @@ class ManualPaymentService {
     String? transactionId,
     Map<String, dynamic>? additionalData,
   }) async {
-
     final String normalizedMethod =
-    ManualPaymentService.paymentMethodForApi(paymentMethod);
+        ManualPaymentService.paymentMethodForApi(paymentMethod);
 
     final Map<String, dynamic> body = {
       'payment_method': normalizedMethod,
@@ -1338,16 +1255,13 @@ class ManualPaymentService {
       if (additionalData != null) ...additionalData,
     };
 
-
     final response = await Api.postJson(
         url: Api.paymentsConfirmApi,
         data: body,
         extraHeaders: {
-        'Authorization': 'Bearer $token',
-        'Idempotency-Key': Api.generateIdempotencyKey(),
-      }
-    );
-
+          'Authorization': 'Bearer $token',
+          'Idempotency-Key': Api.generateIdempotencyKey(),
+        });
 
     return ManualPaymentSubmissionResult.fromResponse(response);
   }
@@ -1369,10 +1283,9 @@ class ManualPaymentService {
     final payableTypeValue = payableType?.trim();
     final normalizedCurrency = _normalizeCurrencyCode(currency);
     final formattedAmount =
-    formatManualPaymentAmount(amount, normalizedCurrency);
+        formatManualPaymentAmount(amount, normalizedCurrency);
     final String normalizedMethod =
-
-    ManualPaymentService.paymentMethodForApi('east_yemen_bank');
+        ManualPaymentService.paymentMethodForApi('east_yemen_bank');
     final Map<String, dynamic> formMap = {
       'payment_method': normalizedMethod,
       'amount': formattedAmount,
@@ -1398,20 +1311,19 @@ class ManualPaymentService {
         url: Api.submitManualPaymentApi,
         parameter: formMap,
         extraHeaders: {
-        'Authorization': 'Bearer $token',
-        'Idempotency-Key': Api.generateIdempotencyKey(),
-      }
-    );
+          'Authorization': 'Bearer $token',
+          'Idempotency-Key': Api.generateIdempotencyKey(),
+        });
 
     var result = ManualPaymentSubmissionResult.fromResponse(response);
 
-    final String? resolvedIntentId =
-        result.paymentIntentId ?? intentId;
+    final String? resolvedIntentId = result.paymentIntentId ?? intentId;
     final String? resolvedTransactionId =
         result.paymentTransactionId ?? transactionId;
 
     if (result.requiresConfirmation &&
-        resolvedIntentId != null && resolvedIntentId.isNotEmpty) {
+        resolvedIntentId != null &&
+        resolvedIntentId.isNotEmpty) {
       result = await _confirmPayment(
         token: token,
         paymentMethod: normalizedMethod,
@@ -1426,7 +1338,6 @@ class ManualPaymentService {
 
     return result;
   }
-
 
   Future<ManualPaymentSubmissionResult> submitWalletPayment({
     required String token,
@@ -1443,7 +1354,7 @@ class ManualPaymentService {
     final payableTypeValue = payableType?.trim();
     final normalizedCurrency = _normalizeCurrencyCode(currency);
     final formattedAmount =
-    formatManualPaymentAmount(amount, normalizedCurrency);
+        formatManualPaymentAmount(amount, normalizedCurrency);
 
     final Map<String, dynamic> formMap = {
       'payment_method': 'wallet',
@@ -1468,20 +1379,19 @@ class ManualPaymentService {
         url: Api.submitManualPaymentApi,
         parameter: formMap,
         extraHeaders: {
-        'Authorization': 'Bearer $token',
-        'Idempotency-Key': Api.generateIdempotencyKey(),
-      }
-    );
+          'Authorization': 'Bearer $token',
+          'Idempotency-Key': Api.generateIdempotencyKey(),
+        });
 
     var result = ManualPaymentSubmissionResult.fromResponse(response);
 
-    final String? resolvedIntentId =
-        result.paymentIntentId ?? intentId;
+    final String? resolvedIntentId = result.paymentIntentId ?? intentId;
     final String? resolvedTransactionId =
         result.paymentTransactionId ?? transactionId;
 
     if (result.requiresConfirmation &&
-        resolvedIntentId != null && resolvedIntentId.isNotEmpty) {
+        resolvedIntentId != null &&
+        resolvedIntentId.isNotEmpty) {
       result = await _confirmPayment(
         token: token,
         paymentMethod: 'wallet',
@@ -1493,7 +1403,6 @@ class ManualPaymentService {
     return result;
   }
 
-
   final seen = <String>{};
 
   /// GET /api/manual-payment-requests
@@ -1503,7 +1412,7 @@ class ManualPaymentService {
   }) async {
     try {
       final token = HiveUtils.getJWT();
-      if (token == null || token.isEmpty) return [];
+      if (token.isEmpty) return [];
 
       final normalizedGateways = paymentGateways
           .map((e) => e.trim().toLowerCase())
@@ -1523,12 +1432,13 @@ class ManualPaymentService {
             return v
                 .whereType<Map>()
                 .map((e) => e is Map<String, dynamic>
-                ? e
-                : Map<String, dynamic>.from(e as Map))
+                    ? e
+                    : Map<String, dynamic>.from(e))
                 .toList();
           }
           return const [];
         }
+
         if (payload is List) return toList(payload);
         if (payload is Map) {
           for (final k in const [
@@ -1555,7 +1465,7 @@ class ManualPaymentService {
         }
         // تطبيع أسماء الحقول
         m.putIfAbsent('payment_gateway',
-                () => m['payment_method'] ?? m['gateway'] ?? 'manual_bank');
+            () => m['payment_method'] ?? m['gateway'] ?? 'manual_bank');
         if (!m.containsKey('receipt_url') && m['receipt'] is String) {
           m['receipt_url'] = m['receipt'];
         }
@@ -1572,8 +1482,7 @@ class ManualPaymentService {
       final out = <ManualPayment>[];
       for (final row in rows) {
         try {
-          final mp = ManualPayment.fromJson(_normalize(
-              row is Map<String, dynamic> ? row : Map<String, dynamic>.from(row)));
+          final mp = ManualPayment.fromJson(_normalize(row));
           if (normalizedGateways.isEmpty ||
               normalizedGateways.contains(mp.paymentGateway.toLowerCase())) {
             out.add(mp);
@@ -1598,6 +1507,4 @@ class ManualPaymentService {
       return [];
     }
   }
-
-
 }

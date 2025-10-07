@@ -133,11 +133,9 @@ class AppIcons {
   static String Instagram = _svgPath("Instagram");
   static String support = _svgPath("customer-service");
 
-
-static String us = _svgPath("currency/usa");
+  static String us = _svgPath("currency/usa");
   static String sa = _svgPath("currency/sa");
   static String ye = _svgPath("currency/ye");
- 
 
   static String money = _svgPath("money");
 

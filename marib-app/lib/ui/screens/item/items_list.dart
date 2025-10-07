@@ -6,7 +6,6 @@ import 'package:marib/data/cubits/item/fetch_item_from_category_cubit.dart';
 import 'package:marib/ui/screens/sliders/slider_widget.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/constant.dart';
-import 'package:marib/utils/hive_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -36,10 +35,10 @@ class ItemsList extends StatefulWidget {
 
   const ItemsList(
       {super.key,
-        required this.categoryId,
-        required this.categoryName,
-        required this.categoryIds,
-        required this.interfaceType});
+      required this.categoryId,
+      required this.categoryName,
+      required this.categoryIds,
+      required this.interfaceType});
 
   @override
   ItemsListState createState() => ItemsListState();
@@ -171,7 +170,7 @@ class ItemsListState extends State<ItemsList> {
               fit: BoxFit.none,
               child: Padding(
                 padding:
-                const EdgeInsets.symmetric(vertical: 14, horizontal: 18.0),
+                    const EdgeInsets.symmetric(vertical: 14, horizontal: 18.0),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -184,7 +183,7 @@ class ItemsListState extends State<ItemsList> {
                                 width: 1,
                                 color: context.color.borderColor.darken(30)),
                             borderRadius:
-                            const BorderRadius.all(Radius.circular(10)),
+                                const BorderRadius.all(Radius.circular(10)),
                             color: context.color.primaryColor),
                         child: TextFormField(
                             controller: searchController,
@@ -194,7 +193,7 @@ class ItemsListState extends State<ItemsList> {
                                   vertical: 10, horizontal: 8),
                               //OutlineInputBorder()
                               fillColor:
-                              Theme.of(context).colorScheme.primaryColor,
+                                  Theme.of(context).colorScheme.primaryColor,
                               hintText: "searchHintLbl".translate(context),
                               prefixIcon: setSearchIcon(),
                               prefixIconConstraints: const BoxConstraints(
@@ -203,7 +202,7 @@ class ItemsListState extends State<ItemsList> {
                             enableSuggestions: true,
                             onEditingComplete: () {
                               setState(
-                                    () {
+                                () {
                                   isFocused = false;
                                   FocusScope.of(context).unfocus();
                                 },
@@ -240,7 +239,7 @@ class ItemsListState extends State<ItemsList> {
                               color: !isList
                                   ? context.color.textDefaultColor
                                   : context.color.textDefaultColor
-                                  .withOpacity(0.2)),
+                                      .withOpacity(0.2)),
                         ),
                       ),
                     ),
@@ -268,7 +267,7 @@ class ItemsListState extends State<ItemsList> {
                               color: isList
                                   ? context.color.textDefaultColor
                                   : context.color.textDefaultColor
-                                  .withOpacity(0.2)),
+                                      .withOpacity(0.2)),
                         ),
                       ),
                     ),
@@ -335,9 +334,9 @@ class ItemsListState extends State<ItemsList> {
               Constant.itemFilter = null;
 
               context.read<FetchItemFromCategoryCubit>().fetchItemFromCategory(
-                categoryId: int.parse(widget.categoryId),
-                search: "",
-              );
+                    categoryId: int.parse(widget.categoryId),
+                    search: "",
+                  );
             },
             color: context.color.territoryColor,
             child: Column(
@@ -395,7 +394,7 @@ class ItemsListState extends State<ItemsList> {
         }).then((value) {
           if (value == true) {
             ItemFilterModel updatedFilter =
-            filter!.copyWith(categoryId: widget.categoryId);
+                filter!.copyWith(categoryId: widget.categoryId);
             context.read<FetchItemFromCategoryCubit>().fetchItemFromCategory(
                 categoryId: int.parse(
                   widget.categoryId,
@@ -409,7 +408,7 @@ class ItemsListState extends State<ItemsList> {
     );
   }
 
-  getFilterValue(ItemFilterModel model) {
+  void getFilterValue(ItemFilterModel model) {
     filter = model;
     setState(() {});
   }
@@ -432,7 +431,7 @@ class ItemsListState extends State<ItemsList> {
     );
   }
 
-  showSortByBottomSheet() {
+  void showSortByBottomSheet() {
     showModalBottomSheet(
       context: context,
       shape: RoundedRectangleBorder(
@@ -485,11 +484,11 @@ class ItemsListState extends State<ItemsList> {
                   context
                       .read<FetchItemFromCategoryCubit>()
                       .fetchItemFromCategory(
-                      categoryId: int.parse(
-                        widget.categoryId,
-                      ),
-                      search: searchController.text.toString(),
-                      sortBy: null);
+                          categoryId: int.parse(
+                            widget.categoryId,
+                          ),
+                          search: searchController.text.toString(),
+                          sortBy: null);
 
                   setState(() {
                     sortBy = null;
@@ -510,11 +509,11 @@ class ItemsListState extends State<ItemsList> {
                   context
                       .read<FetchItemFromCategoryCubit>()
                       .fetchItemFromCategory(
-                      categoryId: int.parse(
-                        widget.categoryId,
-                      ),
-                      search: searchController.text.toString(),
-                      sortBy: "new-to-old");
+                          categoryId: int.parse(
+                            widget.categoryId,
+                          ),
+                          search: searchController.text.toString(),
+                          sortBy: "new-to-old");
                   setState(() {
                     sortBy = "new-to-old";
                     FocusManager.instance.primaryFocus?.unfocus();
@@ -530,11 +529,11 @@ class ItemsListState extends State<ItemsList> {
                   context
                       .read<FetchItemFromCategoryCubit>()
                       .fetchItemFromCategory(
-                      categoryId: int.parse(
-                        widget.categoryId,
-                      ),
-                      search: searchController.text.toString(),
-                      sortBy: "old-to-new");
+                          categoryId: int.parse(
+                            widget.categoryId,
+                          ),
+                          search: searchController.text.toString(),
+                          sortBy: "old-to-new");
                   setState(() {
                     sortBy = "old-to-new";
                     FocusManager.instance.primaryFocus?.unfocus();
@@ -550,11 +549,11 @@ class ItemsListState extends State<ItemsList> {
                   context
                       .read<FetchItemFromCategoryCubit>()
                       .fetchItemFromCategory(
-                      categoryId: int.parse(
-                        widget.categoryId,
-                      ),
-                      search: searchController.text.toString(),
-                      sortBy: "price-high-to-low");
+                          categoryId: int.parse(
+                            widget.categoryId,
+                          ),
+                          search: searchController.text.toString(),
+                          sortBy: "price-high-to-low");
                   setState(() {
                     sortBy = "price-high-to-low";
                     FocusManager.instance.primaryFocus?.unfocus();
@@ -570,11 +569,11 @@ class ItemsListState extends State<ItemsList> {
                   context
                       .read<FetchItemFromCategoryCubit>()
                       .fetchItemFromCategory(
-                      categoryId: int.parse(
-                        widget.categoryId,
-                      ),
-                      search: searchController.text.toString(),
-                      sortBy: "price-low-to-high");
+                          categoryId: int.parse(
+                            widget.categoryId,
+                          ),
+                          search: searchController.text.toString(),
+                          sortBy: "price-low-to-high");
                   setState(() {
                     sortBy = "price-low-to-high";
                     FocusManager.instance.primaryFocus?.unfocus();
@@ -591,48 +590,46 @@ class ItemsListState extends State<ItemsList> {
   Widget fetchItems() {
     return BlocBuilder<FetchItemFromCategoryCubit, FetchItemFromCategoryState>(
         builder: (context, state) {
-          if (state is FetchItemFromCategoryInProgress) {
-            return ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
-              itemCount: 10,
-              itemBuilder: (context, index) {
-                return buildItemsShimmer(context);
-              },
-            );
-          }
+      if (state is FetchItemFromCategoryInProgress) {
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+          itemCount: 10,
+          itemBuilder: (context, index) {
+            return buildItemsShimmer(context);
+          },
+        );
+      }
 
-          if (state is FetchItemFromCategoryFailure) {
-            return Center(
-              child: Text(state.errorMessage),
-            );
-          }
-          if (state is FetchItemFromCategorySuccess) {
-            if (state.itemModel.isEmpty) {
-              return Center(
-                child: NoDataFound(
-                  onTap: () {
-                    context
-                        .read<FetchItemFromCategoryCubit>()
-                        .fetchItemFromCategory(
+      if (state is FetchItemFromCategoryFailure) {
+        return Center(
+          child: Text(state.errorMessage),
+        );
+      }
+      if (state is FetchItemFromCategorySuccess) {
+        if (state.itemModel.isEmpty) {
+          return Center(
+            child: NoDataFound(
+              onTap: () {
+                context
+                    .read<FetchItemFromCategoryCubit>()
+                    .fetchItemFromCategory(
                         categoryId: int.parse(
                           widget.categoryId,
                         ),
                         search: searchController.text.toString());
-                  },
-                ),
-              );
-            }
-            return Column(
-              children: [
-                Expanded(child: mainChildren(state.itemModel)
-
-                ),
-                if (state.isLoadingMore) UiUtils.progress()
-              ],
-            );
-          }
-          return Container();
-        });
+              },
+            ),
+          );
+        }
+        return Column(
+          children: [
+            Expanded(child: mainChildren(state.itemModel)),
+            if (state.isLoadingMore) UiUtils.progress()
+          ],
+        );
+      }
+      return Container();
+    });
   }
 
   void _navigateToDetails(BuildContext context, ItemModel item) {

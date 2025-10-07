@@ -1,4 +1,4 @@
-import 'wallet_filter.dart';
+import 'package:marib/data/model/wallet/wallet_filter.dart';
 
 class WalletTransaction {
   const WalletTransaction({
@@ -74,32 +74,39 @@ class WalletTransaction {
   }
 
   factory WalletTransaction.fromJson(Map<String, dynamic> json) {
-    final id = _parseString(json['id'] ?? json['uuid'] ?? json['hash'] ?? json['reference']);
+    final id = _parseString(
+        json['id'] ?? json['uuid'] ?? json['hash'] ?? json['reference']);
     final amountSource = json['amount'] ?? json['value'] ?? json['delta'];
     final amountDetails = _extractAmountDetails(amountSource);
     final amount = amountDetails.amount ?? 0.0;
-    final appliedFilters = WalletFilter.fromResponse(json['filters'] ?? json['applied_filters']);
+    final appliedFilters =
+        WalletFilter.fromResponse(json['filters'] ?? json['applied_filters']);
 
     final references = _parseReferences(json);
 
     final metadataSource = json['meta'] ?? json['metadata'];
     final metadata = metadataSource is Map
-        ? Map<String, dynamic>.from(metadataSource as Map)
+        ? Map<String, dynamic>.from(metadataSource)
         : const <String, dynamic>{};
 
     return WalletTransaction(
       id: id ?? DateTime.now().microsecondsSinceEpoch.toString(),
       amount: amount,
-      currency:
-      _parseString(json['currency'] ?? json['amount_currency']) ?? amountDetails.currency,
-
-      beforeBalance: _parseNullableDouble(json['before_balance'] ?? json['balance_before']),
-      afterBalance: _parseNullableDouble(json['after_balance'] ?? json['balance_after']),
-      classification: _parseString(json['classification'] ?? json['type'] ?? json['category']),
-      description: _parseString(json['description'] ?? json['title'] ?? json['message']),
+      currency: _parseString(json['currency'] ?? json['amount_currency']) ??
+          amountDetails.currency,
+      beforeBalance: _parseNullableDouble(
+          json['before_balance'] ?? json['balance_before']),
+      afterBalance:
+          _parseNullableDouble(json['after_balance'] ?? json['balance_after']),
+      classification: _parseString(
+          json['classification'] ?? json['type'] ?? json['category']),
+      description:
+          _parseString(json['description'] ?? json['title'] ?? json['message']),
       references: references,
-      referenceCode: _parseString(json['reference'] ?? json['reference_code'] ?? json['receipt']),
-      createdAt: _parseDate(json['created_at'] ?? json['date'] ?? json['timestamp']),
+      referenceCode: _parseString(
+          json['reference'] ?? json['reference_code'] ?? json['receipt']),
+      createdAt:
+          _parseDate(json['created_at'] ?? json['date'] ?? json['timestamp']),
       deeplink: _parseString(json['deeplink']),
       idempotencyKey: _parseString(json['idempotency_key'] ?? json['event_id']),
       metadata: metadata,
@@ -132,12 +139,12 @@ class WalletTransaction {
         if (parsed != null) return parsed;
       }
       return null;
-
     }
 
     if (value is Map) {
       final map = value;
-      currency = _parseString(map['currency']) ?? _parseString(map['amount_currency']);
+      currency =
+          _parseString(map['currency']) ?? _parseString(map['amount_currency']);
 
       for (final key in const ['value', 'amount']) {
         if (map.containsKey(key)) {
@@ -176,8 +183,6 @@ class WalletTransaction {
     }
 
     return _AmountDetails(amount: amount, currency: currency);
-
-
   }
 
   static String? _parseString(dynamic value) {
@@ -194,7 +199,8 @@ class WalletTransaction {
       if (value > 10000000000) {
         return DateTime.fromMillisecondsSinceEpoch(value.toInt(), isUtc: true);
       }
-      return DateTime.fromMillisecondsSinceEpoch(value.toInt() * 1000, isUtc: true);
+      return DateTime.fromMillisecondsSinceEpoch(value.toInt() * 1000,
+          isUtc: true);
     }
     if (value is String && value.isNotEmpty) {
       return DateTime.tryParse(value);
@@ -230,7 +236,6 @@ class WalletTransaction {
   }
 }
 
-
 class _AmountDetails {
   const _AmountDetails({
     this.amount,
@@ -240,7 +245,6 @@ class _AmountDetails {
   final double? amount;
   final String? currency;
 }
-
 
 class WalletTransactionsMeta {
   const WalletTransactionsMeta({

@@ -8,13 +8,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 
-
-
 class StripeService {
   // static BuildContext? currContext;
   static String paymentIntentSuccessResponse = "succeeded";
 
-  static initStripe(String? stripeId, String? stripeMode) async {
+  static Future<void> initStripe(String? stripeId, String? stripeMode) async {
     if (AppSettings.stripeStatus == 1) {
       Stripe.publishableKey = stripeId ?? '';
       Stripe.merchantIdentifier = 'merchant.flutter.stripe.test';
@@ -23,7 +21,7 @@ class StripeService {
     }
   }
 
-  static payWithPaymentSheet({
+  static Future<void> payWithPaymentSheet({
     required BuildContext context,
     String amount = "0",
     String currency = 'INR',

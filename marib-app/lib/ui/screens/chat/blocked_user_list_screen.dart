@@ -17,8 +17,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 part 'blocked_user_list_screen_ui.dart';
 
-
-
 class BlockedUserListScreen extends StatefulWidget {
   const BlockedUserListScreen({super.key});
 
@@ -49,8 +47,7 @@ class _BlockedUserListScreenState extends State<BlockedUserListScreen> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      buildBlockedUserListScreen(context);
+  Widget build(BuildContext context) => buildBlockedUserListScreen(context);
 
   Widget userList(BuildContext context, BlockedUserModel user) =>
       buildUserList(context, user);

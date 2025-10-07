@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-
-
 class CurvedShapePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {

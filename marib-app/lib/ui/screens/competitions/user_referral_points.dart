@@ -8,7 +8,6 @@ class UserReferralPoints {
   final String referralCode;
   final int referredUsersCount;
 
-
   const UserReferralPoints({
     required this.totalPoints,
     required this.nextRewardMessage,
@@ -22,7 +21,6 @@ class UserReferralPoints {
 
   factory UserReferralPoints.fromJson(Map<String, dynamic> json) {
     return UserReferralPoints(
-
       totalPoints: json['total_points'] ?? 0,
       nextRewardMessage: json['next_reward_message'] ?? '',
       inviteFriendMessage: json['invite_friend_message'] ?? '',
@@ -34,20 +32,19 @@ class UserReferralPoints {
     );
   }
 
-
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-          other is UserReferralPoints &&
-              runtimeType == other.runtimeType &&
-              totalPoints == other.totalPoints &&
-              nextRewardMessage == other.nextRewardMessage &&
-              inviteFriendMessage == other.inviteFriendMessage &&
-              qrCodeData == other.qrCodeData &&
-              currentPoints == other.currentPoints &&
-              maxPoints == other.maxPoints &&
-              referralCode == other.referralCode &&
-              referredUsersCount == other.referredUsersCount;
+      other is UserReferralPoints &&
+          runtimeType == other.runtimeType &&
+          totalPoints == other.totalPoints &&
+          nextRewardMessage == other.nextRewardMessage &&
+          inviteFriendMessage == other.inviteFriendMessage &&
+          qrCodeData == other.qrCodeData &&
+          currentPoints == other.currentPoints &&
+          maxPoints == other.maxPoints &&
+          referralCode == other.referralCode &&
+          referredUsersCount == other.referredUsersCount;
 
   @override
   int get hashCode =>
@@ -59,7 +56,6 @@ class UserReferralPoints {
       maxPoints.hashCode ^
       referralCode.hashCode ^
       referredUsersCount.hashCode;
-
 
   bool get hasMaxedOut => currentPoints >= maxPoints;
 }

@@ -27,7 +27,9 @@ final appThemeData = {
       }),
     ),
     colorScheme: ColorScheme.fromSeed(
-        error: errorMessageColor, seedColor: territoryColor_,brightness:Brightness.light),
+        error: errorMessageColor,
+        seedColor: territoryColor_,
+        brightness: Brightness.light),
   ),
   AppTheme.dark: ThemeData(
     brightness: Brightness.dark,
@@ -40,7 +42,8 @@ final appThemeData = {
     ),
     colorScheme: ColorScheme.fromSeed(
         error: errorMessageColor.withOpacity(0.7),
-        seedColor: territoryColorDark,brightness:Brightness.dark),
+        seedColor: territoryColorDark,
+        brightness: Brightness.dark),
     switchTheme: SwitchThemeData(
         thumbColor: const MaterialStatePropertyAll(territoryColor_),
         trackColor: MaterialStateProperty.resolveWith((states) {

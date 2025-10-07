@@ -7,7 +7,7 @@ class FlowShader extends StatefulWidget {
     this.duration = const Duration(seconds: 2),
     this.direction = Axis.horizontal,
     this.flowColors = const <Color>[Colors.white, Colors.black],
-  })  : assert(flowColors.length == 2);
+  }) : assert(flowColors.length == 2);
 
   final Widget child;
   final Axis direction;

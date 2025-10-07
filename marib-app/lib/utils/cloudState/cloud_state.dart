@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 abstract class CloudState<T extends StatefulWidget> extends State<T> {
@@ -11,7 +10,7 @@ abstract class CloudState<T extends StatefulWidget> extends State<T> {
   static void Function(String key, dynamic value)? onItemAdd;
   static final List<void Function(String key, dynamic value)> _listeners = [];
 
-  listenOn(String key, Function(dynamic value) callBack) {
+  void listenOn(String key, Function(dynamic value) callBack) {
     // _listeners?[_listeners?.length ?? 0] =
     //     (String addedKey, dynamic addedValue) {
     //   if (key == addedKey) {
@@ -75,8 +74,6 @@ abstract class CloudState<T extends StatefulWidget> extends State<T> {
   }
 
   void screenData(String key, dynamic value) {
-
-
     if (cloudData.containsKey(runtimeType)) {
       (cloudData[runtimeType] as Map).addAll({key: value});
     } else {

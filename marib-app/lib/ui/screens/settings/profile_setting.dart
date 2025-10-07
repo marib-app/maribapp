@@ -76,10 +76,10 @@ class ProfileSettingsState extends State<ProfileSettings> {
 }
 
 Widget contentWidget(
-    ProfileSettingFetchSuccess state,
-    BuildContext context,
-    String param,
-    ) {
+  ProfileSettingFetchSuccess state,
+  BuildContext context,
+  String param,
+) {
   return RefreshIndicator(
     onRefresh: () async {
       // الدالة ترجع void، فقط استدعِها بدون await
@@ -90,7 +90,7 @@ Widget contentWidget(
     },
     child: SingleChildScrollView(
       physics:
-      const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+          const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: AppHtml(
         data: state.data.toString(),

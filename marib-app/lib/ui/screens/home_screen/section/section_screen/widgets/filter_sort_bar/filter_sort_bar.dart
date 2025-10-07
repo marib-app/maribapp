@@ -1,13 +1,12 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/data/model/item_filter_model.dart';
 import 'package:marib/data/model/category_model.dart';
 
 // الأزرار المنفصلة
-import 'filter_button.dart';
-import 'sort_by_action.dart';
+import 'package:marib/ui/screens/home_screen/section/section_screen/widgets/filter_sort_bar/filter_button.dart';
+import 'package:marib/ui/screens/home_screen/section/section_screen/widgets/filter_sort_bar/sort_by_action.dart';
 
 class FilterSortBar extends StatelessWidget {
   final List<String> categoryIds;
@@ -24,7 +23,8 @@ class FilterSortBar extends StatelessWidget {
 
   // دعم الفئات الفرعية (اختياري)
   final String? parentCategoryId;
-  final Future<List<CategoryModel>> Function(String parentId)? loadSubcategories;
+  final Future<List<CategoryModel>> Function(String parentId)?
+      loadSubcategories;
 
   // (اختياري غير مستخدم هنا، لو ودّك تستخدمه لاحقًا)
   final List<CategoryModel>? subcategories;
@@ -52,7 +52,8 @@ class FilterSortBar extends StatelessWidget {
 
     // ألوان زجاجية خفيفة متناسقة مع الثيم
     final glassColor = (isDark ? Colors.white : Colors.black).withOpacity(0.06);
-    final borderColor = (isDark ? Colors.white : Colors.black).withOpacity(0.12);
+    final borderColor =
+        (isDark ? Colors.white : Colors.black).withOpacity(0.12);
 
     final size = MediaQuery.of(context).size;
 
@@ -98,11 +99,13 @@ class FilterSortBar extends StatelessWidget {
                       flex: 1,
                       child: FilterButton(
                         categoryIds: categoryIds,
-                        onFilterChanged: onFilterChanged,             // ✅ مهم: نمرر الكولباك الحقيقي
-                        currentFilter: currentFilter,                 // إبراز القيم الحالية
-                        categoryListInitial: currentCategoryList,     // عرض أسماء/أيقونات الفئات
-                        parentCategoryId: parentCategoryId,           // تحميل الفرعيات
-                        loadSubcategories: loadSubcategories,         // لودر الفرعيات
+                        onFilterChanged:
+                            onFilterChanged, // ✅ مهم: نمرر الكولباك الحقيقي
+                        currentFilter: currentFilter, // إبراز القيم الحالية
+                        categoryListInitial:
+                            currentCategoryList, // عرض أسماء/أيقونات الفئات
+                        parentCategoryId: parentCategoryId, // تحميل الفرعيات
+                        loadSubcategories: loadSubcategories, // لودر الفرعيات
                       ),
                     ),
                     SizedBox(width: size.width * 0.012),
@@ -146,7 +149,8 @@ class _MapButton extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final chipColor = (isDark ? Colors.white : Colors.black).withOpacity(0.06);
     final textColor = theme.textTheme.bodyMedium?.color;
-    final borderColor = (isDark ? Colors.white : Colors.black).withOpacity(0.12);
+    final borderColor =
+        (isDark ? Colors.white : Colors.black).withOpacity(0.12);
 
     return InkWell(
       onTap: onTap,

@@ -74,7 +74,7 @@ class _CategoriesBarState extends State<CategoriesBar> {
 
         // إيجاد تصنيف الأب؛ إن لم يوجد (نادر) ننشئ كائن مؤقت
         final CategoryModel parentCategory = catState.categories.firstWhere(
-              (c) => c.id == widget.parentId,
+          (c) => c.id == widget.parentId,
           orElse: () => CategoryModel(
             id: widget.parentId,
             name: "?",
@@ -143,27 +143,27 @@ class _CategoryChip extends StatelessWidget {
     // ديكور الشيب: تأثير محسّن عند التحديد إن كانت fancy=true
     final BoxDecoration decoration = fancy && isSelected
         ? BoxDecoration(
-      color: primary.withOpacity(.08),
-      borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: primary.withOpacity(.65), width: 1),
-      boxShadow: [
-        BoxShadow(
-          color: primary.withOpacity(.12),
-          blurRadius: 6,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    )
+            color: primary.withOpacity(.08),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: primary.withOpacity(.65), width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: primary.withOpacity(.12),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          )
         : BoxDecoration(
-      color: bg,
-      borderRadius: BorderRadius.circular(18),
-      border: Border.all(
-        color: isSelected
-            ? primary.withOpacity(.40)
-            : theme.dividerColor.withOpacity(.15),
-        width: 1,
-      ),
-    );
+            color: bg,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: isSelected
+                  ? primary.withOpacity(.40)
+                  : theme.dividerColor.withOpacity(.15),
+              width: 1,
+            ),
+          );
 
     return InkWell(
       onTap: onTap,

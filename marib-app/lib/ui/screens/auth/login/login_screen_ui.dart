@@ -4,13 +4,10 @@
 //          Uses SliverAppBar header + elegant form card. No business logic here.
 // ================================
 
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 
 import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/app_icon.dart';
@@ -20,23 +17,10 @@ import 'package:marib/utils/login/lib/payloads.dart';
 
 // ============= ViewModel & Callbacks =============
 
-
 // lib/ui/screens/auth/login/login_screen_ui.dart
 
 import 'dart:ui' as ui;
-import 'dart:io';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/svg.dart';
-import 'package:sms_autofill/sms_autofill.dart';
-
-import 'package:marib/ui/screens/widgets/custom_text_form_field.dart';
-import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/ui_utils.dart';
-import 'package:marib/utils/login/lib/payloads.dart';
-import 'package:marib/utils/app_icon.dart';
-import 'package:marib/utils/constant.dart';
 
 // =================== ثوابت ===================
 const double kSidePadding = 20.0;
@@ -122,7 +106,6 @@ class LoginScreenFrame extends StatelessWidget {
     this.randomFits = const [BoxFit.contain, BoxFit.cover, BoxFit.scaleDown],
   });
 
-
   @override
   Widget build(BuildContext context) {
     // لو فيه Scroll فوقنا → لا نضيف Scroll هنا
@@ -130,9 +113,9 @@ class LoginScreenFrame extends StatelessWidget {
     final Widget scrollableChild = hasAncestorScroll
         ? child
         : SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      child: child,
-    );
+            physics: const BouncingScrollPhysics(),
+            child: child,
+          );
 
     // ملاحظة: لن نعرض الهيدر إلا إذا كان له ارتفاع صريح > 0
     final double h = (headerHeight ?? 0) > 0 ? headerHeight! : 0;
@@ -193,8 +176,6 @@ class LoginScreenFrame extends StatelessWidget {
   }
 }
 
-
-
 // =====================================================
 // Frost & EdgeFade (باقية للتوافق واستخدامات إضافية)
 // =====================================================
@@ -208,19 +189,18 @@ class _FrostPanel extends StatelessWidget {
   const _FrostPanel({
     required this.child,
     this.padding = const EdgeInsets.all(300),
-    this.blurSigma = 0,
-    this.tintOpacity = 0.0,
-    this.depthOpacity = 0,
-    super.key,
   });
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final c1 = scheme.primary.withOpacity(isDark ? tintOpacity : tintOpacity * 0.0);
-    final c2 = scheme.secondary.withOpacity(isDark ? tintOpacity * 0.8 : tintOpacity * 0.0);
-    final c3 = scheme.surface.withOpacity(isDark ? depthOpacity : depthOpacity * 0.0);
+    final c1 =
+        scheme.primary.withOpacity(isDark ? tintOpacity : tintOpacity * 0.0);
+    final c2 = scheme.secondary
+        .withOpacity(isDark ? tintOpacity * 0.8 : tintOpacity * 0.0);
+    final c3 =
+        scheme.surface.withOpacity(isDark ? depthOpacity : depthOpacity * 0.0);
 
     return ClipRect(
       child: BackdropFilter(
@@ -252,7 +232,6 @@ class _EdgeFade extends StatelessWidget {
   const _EdgeFade({
     required this.child,
     this.vSoft = 0.0,
-    this.hSoft = 0.0,
   });
 
   @override
@@ -267,7 +246,12 @@ class _EdgeFade extends StatelessWidget {
       shaderCallback: (rect) => LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: const [Colors.transparent, Colors.white, Colors.white, Colors.transparent],
+        colors: const [
+          Colors.transparent,
+          Colors.white,
+          Colors.white,
+          Colors.transparent
+        ],
         stops: [0.0, v, 1 - v, 0.0],
       ).createShader(rect),
       child: ShaderMask(
@@ -275,7 +259,12 @@ class _EdgeFade extends StatelessWidget {
         shaderCallback: (rect) => LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
-          colors: const [Colors.transparent, Colors.white, Colors.white, Colors.transparent],
+          colors: const [
+            Colors.transparent,
+            Colors.white,
+            Colors.white,
+            Colors.transparent
+          ],
           stops: [0.0, h, 1 - h, 0.0],
         ).createShader(rect),
         child: child,
@@ -284,13 +273,10 @@ class _EdgeFade extends StatelessWidget {
   }
 }
 
-
-
 // =====================================================
 // LoginHeaderSection — نفس الاسم والـ API
 // تم تحويله لاستخدام SliverAppBar ويحتوي child داخل SliverToBoxAdapter
 // =====================================================
-
 
 class LoginHeaderSection extends StatelessWidget {
   final bool isBack;
@@ -314,9 +300,6 @@ class LoginHeaderSection extends StatelessWidget {
     required this.child,
   });
 
-
-
-
   @override
   Widget build(BuildContext context) {
     // ارتفاع الكيبورد السفلي للحشو أسفل المحتوى
@@ -324,21 +307,26 @@ class LoginHeaderSection extends StatelessWidget {
 
     // [محايد لشريط الحالة] نختار لون ثابت من الثيم (لا يتبع لون الصفحة/الهيدر)
     final theme = Theme.of(context);
-    final Color statusBarBase = theme.colorScheme.surface; // بديل مناسب: theme.scaffoldBackgroundColor
+    final Color statusBarBase =
+        theme.colorScheme.surface; // بديل مناسب: theme.scaffoldBackgroundColor
 
     // نحدد سطوع الأيقونات بناءً على سطوع اللون المحايد
     final bool useDarkIcons = statusBarBase.computeLuminance() > 0.5;
 
     // [ستايل شريط الحالة] لون محايد + أيقونات داكنة/فاتحة تلقائيًا
     final SystemUiOverlayStyle overlay =
-    (useDarkIcons ? SystemUiOverlayStyle.dark : SystemUiOverlayStyle.light).copyWith(
-      statusBarColor: statusBarBase,                            // Android: لون صلب محايد
-      statusBarIconBrightness: useDarkIcons ? Brightness.dark : Brightness.light, // Android
-      statusBarBrightness: useDarkIcons ? Brightness.light : Brightness.dark,     // iOS (معكوس)
+        (useDarkIcons ? SystemUiOverlayStyle.dark : SystemUiOverlayStyle.light)
+            .copyWith(
+      statusBarColor: statusBarBase, // Android: لون صلب محايد
+      statusBarIconBrightness:
+          useDarkIcons ? Brightness.dark : Brightness.light, // Android
+      statusBarBrightness:
+          useDarkIcons ? Brightness.light : Brightness.dark, // iOS (معكوس)
     );
 
     return SafeArea(
-      top: false, // [مهم] نرسم نحن منطقة شريط الحالة، ثم نلوّنها يدويًا بالسليفِر الأول
+      top:
+          false, // [مهم] نرسم نحن منطقة شريط الحالة، ثم نلوّنها يدويًا بالسليفِر الأول
       child: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: PopScope(
@@ -376,12 +364,15 @@ class LoginHeaderSection extends StatelessWidget {
                   ),
                 ),
                 child: CustomScrollView(
-                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   slivers: [
                     // [جديد] نلوّن مساحة شريط الحالة فقط بلون محايد مستقل عن الهيدر
                     SliverToBoxAdapter(
                       child: Container(
-                        height: MediaQuery.of(context).padding.top, // ارتفاع شريط الحالة
+                        height: MediaQuery.of(context)
+                            .padding
+                            .top, // ارتفاع شريط الحالة
                         color: statusBarBase, // اللون المحايد الذي اخترناه
                       ),
                     ),
@@ -394,7 +385,8 @@ class LoginHeaderSection extends StatelessWidget {
                       backgroundColor: Colors.transparent,
                       elevation: 0,
                       automaticallyImplyLeading: false,
-                      systemOverlayStyle: null, // [مهم] نتركه null لأننا ضبطنا الـ overlay أعلاه
+                      systemOverlayStyle:
+                          null, // [مهم] نتركه null لأننا ضبطنا الـ overlay أعلاه
                       flexibleSpace: FlexibleSpaceBar(
                         background: Container(
                           alignment: Alignment.center,
@@ -439,7 +431,8 @@ class LoginHeaderSection extends StatelessWidget {
                     // محتوى الصفحة
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: EdgeInsets.fromLTRB(2, 12, 2, 16 + bottomInset),
+                        padding:
+                            EdgeInsets.fromLTRB(2, 12, 2, 16 + bottomInset),
                         child: child,
                       ),
                     ),
@@ -452,8 +445,6 @@ class LoginHeaderSection extends StatelessWidget {
       ),
     );
   }
-
-
 }
 
 // =====================================================
@@ -491,7 +482,8 @@ class LoginScreenUI extends StatelessWidget {
   final VoidCallback onChangeLoginMode;
   final VoidCallback onResendOtp;
   final VoidCallback onVerifyOtp;
-  final void Function(String input, String pass, bool asPhone) onSubmitCredentials;
+  final void Function(String input, String pass, bool asPhone)
+      onSubmitCredentials;
   final VoidCallback onGoogleLogin;
   final VoidCallback onAppleLogin;
   final VoidCallback onTapContinue;
@@ -562,57 +554,57 @@ class LoginScreenUI extends StatelessWidget {
       child: Form(
         child: isOtpSent && phoneLoginPayload != null
             ? _VerifyOtpView(
-          phoneLoginPayload: phoneLoginPayload!,
-          currentOtp: currentOtp,
-          onOtpChanged: onOtpChanged,
-          onResendOtp: onResendOtp,
-          onVerifyOtp: onVerifyOtp,
-          onSkip: onSkip,
-          onChangeLoginMode: onChangeLoginMode,
-        )
+                phoneLoginPayload: phoneLoginPayload!,
+                currentOtp: currentOtp,
+                onOtpChanged: onOtpChanged,
+                onResendOtp: onResendOtp,
+                onVerifyOtp: onVerifyOtp,
+                onSkip: onSkip,
+                onChangeLoginMode: onChangeLoginMode,
+              )
             : sendMailClicked
-            ? _EnterPasswordEmailView(
-          emailValue: emailController.text,
-          passwordController: passwordController,
-          isObscure: isObscure,
-          onToggleObscure: onToggleObscure,
-          onSubmitEmailPassword: () => onSubmitCredentials(
-            emailController.text,
-            passwordController.text,
-            false,
-          ),
-          onSkip: onSkip,
-          onChangeLoginMode: onChangeLoginMode,
-        )
-            : _LoginOptionsView(
-          isMobileNumberField: isMobileNumberField,
-          isLoading: isLoading,
-          isObscure: isObscure,
-          phoneEmailError: phoneEmailError,
-          passwordError: passwordError,
-          emailController: emailController,
-          passwordController: passwordController,
-          countryCode: countryCode,
-          flagEmoji: flagEmoji,
-          onChangedNumberOrEmail: onChangedNumberOrEmail,
-          onShowCountryPicker: onShowCountryPicker,
-          onToggleObscure: onToggleObscure,
-          onForgotPassword: onForgotPassword,
-          onSubmit: () => onSubmitCredentials(
-            emailController.text,
-            passwordController.text,
-            isMobileNumberField,
-          ),
-          showMobileAuth: showMobileAuth,
-          showEmailAuth: showEmailAuth,
-          showGoogle: showGoogle,
-          showApple: showApple,
-          onGoogleLogin: onGoogleLogin,
-          onAppleLogin: onAppleLogin,
-          onTapContinue: onTapContinue,
-          onGoToSignup: onGoToSignup,
-          onSkip: onSkip,
-        ),
+                ? _EnterPasswordEmailView(
+                    emailValue: emailController.text,
+                    passwordController: passwordController,
+                    isObscure: isObscure,
+                    onToggleObscure: onToggleObscure,
+                    onSubmitEmailPassword: () => onSubmitCredentials(
+                      emailController.text,
+                      passwordController.text,
+                      false,
+                    ),
+                    onSkip: onSkip,
+                    onChangeLoginMode: onChangeLoginMode,
+                  )
+                : _LoginOptionsView(
+                    isMobileNumberField: isMobileNumberField,
+                    isLoading: isLoading,
+                    isObscure: isObscure,
+                    phoneEmailError: phoneEmailError,
+                    passwordError: passwordError,
+                    emailController: emailController,
+                    passwordController: passwordController,
+                    countryCode: countryCode,
+                    flagEmoji: flagEmoji,
+                    onChangedNumberOrEmail: onChangedNumberOrEmail,
+                    onShowCountryPicker: onShowCountryPicker,
+                    onToggleObscure: onToggleObscure,
+                    onForgotPassword: onForgotPassword,
+                    onSubmit: () => onSubmitCredentials(
+                      emailController.text,
+                      passwordController.text,
+                      isMobileNumberField,
+                    ),
+                    showMobileAuth: showMobileAuth,
+                    showEmailAuth: showEmailAuth,
+                    showGoogle: showGoogle,
+                    showApple: showApple,
+                    onGoogleLogin: onGoogleLogin,
+                    onAppleLogin: onAppleLogin,
+                    onTapContinue: onTapContinue,
+                    onGoToSignup: onGoToSignup,
+                    onSkip: onSkip,
+                  ),
       ),
     );
   }
@@ -674,7 +666,6 @@ class _LoginOptionsView extends StatefulWidget {
     required this.onTapContinue,
     required this.onGoToSignup,
     required this.onSkip,
-    super.key,
   });
 
   @override
@@ -711,18 +702,21 @@ class _LoginOptionsViewState extends State<_LoginOptionsView> {
               children: [
                 Icon(Icons.error_outline, color: scheme.onError),
                 const SizedBox(width: 10),
-                Expanded(child: Text(msg, style: TextStyle(color: scheme.onError))),
+                Expanded(
+                    child: Text(msg, style: TextStyle(color: scheme.onError))),
               ],
             ),
             backgroundColor: scheme.error,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             margin: const EdgeInsets.fromLTRB(12, 0, 12, 80),
             duration: const Duration(seconds: 3),
           ),
         );
     });
   }
+
   @override
   Widget build(BuildContext context) {
     return AbsorbPointer(
@@ -735,7 +729,6 @@ class _LoginOptionsViewState extends State<_LoginOptionsView> {
               .size(context.font.extraLarge)
               .color(context.color.textDefaultColor),
           const SizedBox(height: 8),
-
           _MobileOrEmailForm(
             isMobileNumberField: widget.isMobileNumberField,
             isLoading: widget.isLoading,
@@ -752,11 +745,9 @@ class _LoginOptionsViewState extends State<_LoginOptionsView> {
             onForgotPassword: widget.onForgotPassword,
             onSubmit: widget.onSubmit,
           ),
-
           if ((widget.showMobileAuth || widget.showEmailAuth) &&
               (widget.showGoogle || widget.showApple))
             const SizedBox(height: 20),
-
           if (widget.showGoogle)
             SizedBox(
               width: double.infinity,
@@ -764,12 +755,14 @@ class _LoginOptionsViewState extends State<_LoginOptionsView> {
                 context,
                 prefixWidget: Padding(
                   padding: const EdgeInsetsDirectional.only(end: 10.0),
-                  child: UiUtils.getSvg(AppIcons.googleIcon, width: 22, height: 22),
+                  child: UiUtils.getSvg(AppIcons.googleIcon,
+                      width: 22, height: 22),
                 ),
                 showElevation: false,
                 buttonColor: secondaryColor_,
                 border: Theme.of(context).brightness != Brightness.dark
-                    ? BorderSide(color: context.color.onBackground.withOpacity(0.5))
+                    ? BorderSide(
+                        color: context.color.onSurface.withOpacity(0.5))
                     : null,
                 textColor: textDarkColor,
                 onPressed: widget.onGoogleLogin,
@@ -778,9 +771,7 @@ class _LoginOptionsViewState extends State<_LoginOptionsView> {
                 buttonTitle: "continueWithGoogle".translate(context),
               ),
             ),
-
           if (widget.showGoogle) const SizedBox(height: 8),
-
           if (widget.showApple)
             SizedBox(
               width: double.infinity,
@@ -788,12 +779,14 @@ class _LoginOptionsViewState extends State<_LoginOptionsView> {
                 context,
                 prefixWidget: Padding(
                   padding: const EdgeInsetsDirectional.only(end: 10.0),
-                  child: UiUtils.getSvg(AppIcons.appleIcon, width: 22, height: 22),
+                  child:
+                      UiUtils.getSvg(AppIcons.appleIcon, width: 22, height: 22),
                 ),
                 showElevation: false,
                 buttonColor: secondaryColor_,
                 border: Theme.of(context).brightness != Brightness.dark
-                    ? BorderSide(color: context.color.onBackground.withOpacity(0.5))
+                    ? BorderSide(
+                        color: context.color.onSurface.withOpacity(0.5))
                     : null,
                 textColor: textDarkColor,
                 onPressed: widget.onAppleLogin,
@@ -802,9 +795,7 @@ class _LoginOptionsViewState extends State<_LoginOptionsView> {
                 buttonTitle: "continueWithApple".translate(context),
               ),
             ),
-
           const SizedBox(height: 10),
-
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -813,7 +804,8 @@ class _LoginOptionsViewState extends State<_LoginOptionsView> {
               const SizedBox(width: 30),
 
               // تأثير ضغط + رِبل (Ripple)
-              Material( // مهم لو ما عندك Material مباشر في الأب
+              Material(
+                // مهم لو ما عندك Material مباشر في الأب
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: widget.onGoToSignup,
@@ -821,7 +813,8 @@ class _LoginOptionsViewState extends State<_LoginOptionsView> {
                   splashColor: context.color.territoryColor.withOpacity(.20),
                   highlightColor: context.color.territoryColor.withOpacity(.10),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                     child: Text("signUp".translate(context))
                         .underline()
                         .color(context.color.territoryColor),
@@ -830,18 +823,17 @@ class _LoginOptionsViewState extends State<_LoginOptionsView> {
               ),
             ],
           ),
-
-
           const SizedBox(height: 130),
-
           SizedBox(
             width: double.infinity,
             child: MaterialButton(
               onPressed: widget.onSkip,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
               elevation: 0,
               height: 50,
-              child: Text("skip".translate(context)).color(context.color.buttonColor),
+              child: Text("skip".translate(context))
+                  .color(context.color.buttonColor),
               color: const Color.fromARGB(255, 104, 102, 106),
             ),
           ),
@@ -850,14 +842,6 @@ class _LoginOptionsViewState extends State<_LoginOptionsView> {
     );
   }
 }
-
-
-
-
-
-
-
-
 
 class _MobileOrEmailForm extends StatelessWidget {
   final bool isMobileNumberField;
@@ -917,22 +901,23 @@ class _MobileOrEmailForm extends StatelessWidget {
           keyboard: TextInputType.phone,
           fixedPrefix: isMobileNumberField
               ? SizedBox(
-            width: 55,
-            child: Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: GestureDetector(
-                onTap: onShowCountryPicker,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8),
-                  child: Center(
-                    child: Text("+${countryCode ?? ''}")
-                        .size(context.font.large)
-                        .centerAlign(),
+                  width: 55,
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: GestureDetector(
+                      onTap: onShowCountryPicker,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8.0, vertical: 8),
+                        child: Center(
+                          child: Text("+${countryCode ?? ''}")
+                              .size(context.font.large)
+                              .centerAlign(),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ),
-          )
+                )
               : null,
           hintText: "mobileNumberLbl".translate(context),
         ),
@@ -951,8 +936,9 @@ class _MobileOrEmailForm extends StatelessWidget {
           controller: passwordController,
           validator: CustomTextFieldValidator.nullCheck,
           fillColor: context.color.secondaryColor,
-          borderColor:
-          passwordError != null ? Colors.red : context.color.borderColor.darken(30),
+          borderColor: passwordError != null
+              ? Colors.red
+              : context.color.borderColor.darken(30),
           onChange: (_) {},
           obscureText: isObscure,
           suffix: IconButton(
@@ -986,7 +972,9 @@ class _MobileOrEmailForm extends StatelessWidget {
           onPressed: isLoading ? () {} : onSubmit,
           prefixWidget: isLoading
               ? const SizedBox(
-              width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2))
               : null,
           buttonTitle: isLoading ? "" : "signIn".translate(context),
           radius: 8,
@@ -996,13 +984,6 @@ class _MobileOrEmailForm extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-
 
 class _VerifyOtpView extends StatelessWidget {
   final PhoneLoginPayload phoneLoginPayload;
@@ -1036,16 +1017,19 @@ class _VerifyOtpView extends StatelessWidget {
               fit: BoxFit.none,
               child: MaterialButton(
                 onPressed: onSkip,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
                 color: context.color.forthColor.withOpacity(0.102),
                 elevation: 0,
                 height: 28,
                 minWidth: 64,
-                child: Text("skip".translate(context)).color(context.color.forthColor),
+                child: Text("skip".translate(context))
+                    .color(context.color.forthColor),
               ),
             ),
           ),
-          Text("signInWithMob".translate(context)).size(context.font.extraLarge),
+          Text("signInWithMob".translate(context))
+              .size(context.font.extraLarge),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -1064,7 +1048,8 @@ class _VerifyOtpView extends StatelessWidget {
           Center(
             child: PinFieldAutoFill(
               decoration: UnderlineDecoration(
-                textStyle: TextStyle(fontSize: 20, color: context.color.textColorDark),
+                textStyle:
+                    TextStyle(fontSize: 20, color: context.color.textColorDark),
                 colorBuilder: FixedColorBuilder(context.color.territoryColor),
               ),
               currentCode: currentOtp,
@@ -1092,10 +1077,6 @@ class _VerifyOtpView extends StatelessWidget {
     );
   }
 }
-
-
-
-
 
 class _EnterPasswordEmailView extends StatelessWidget {
   final String emailValue;
@@ -1129,16 +1110,19 @@ class _EnterPasswordEmailView extends StatelessWidget {
               fit: BoxFit.none,
               child: MaterialButton(
                 onPressed: onSkip,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
                 color: context.color.forthColor.withOpacity(0.102),
                 elevation: 0,
                 height: 28,
                 minWidth: 64,
-                child: Text("skip".translate(context)).color(context.color.forthColor),
+                child: Text("skip".translate(context))
+                    .color(context.color.forthColor),
               ),
             ),
           ),
-          Text("signInWithEmail".translate(context)).size(context.font.extraLarge),
+          Text("signInWithEmail".translate(context))
+              .size(context.font.extraLarge),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -1185,4 +1169,3 @@ class _EnterPasswordEmailView extends StatelessWidget {
     );
   }
 }
-

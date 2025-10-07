@@ -4,12 +4,9 @@ import 'dart:async';
 import 'dart:io';
 import 'package:country_picker/country_picker.dart';
 import 'package:device_region/device_region.dart';
-import 'package:flutter_svg/svg.dart';
-import 'package:marib/app/app_theme.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/auth/authentication_cubit.dart';
 import 'package:marib/data/cubits/auth/login_cubit.dart';
-import 'package:marib/data/cubits/system/app_theme_cubit.dart';
 import 'package:marib/data/cubits/system/user_details.dart';
 import 'package:marib/data/helper/widgets.dart';
 import 'package:marib/utils/api.dart';
@@ -19,17 +16,14 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/login/lib/login_status.dart';
 import 'package:marib/utils/login/lib/payloads.dart';
-import 'package:marib/utils/ui_utils.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sms_autofill/sms_autofill.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 
-
 // واجهة منفصلة بالكامل
-import 'login_screen_ui.dart';
+import 'package:marib/ui/screens/auth/login/login_screen_ui.dart';
 
 class LoginScreen extends StatefulWidget {
   final bool? isDeleteAccount;
@@ -39,8 +33,6 @@ class LoginScreen extends StatefulWidget {
 
   @override
   State<LoginScreen> createState() => LoginScreenState();
-
-
 
   static BlurredRouter route(RouteSettings routeSettings) {
     Map? args = routeSettings.arguments as Map?;
@@ -52,8 +44,6 @@ class LoginScreen extends StatefulWidget {
     );
   }
 }
-
-
 
 class LoginScreenState extends State<LoginScreen> {
   final TextEditingController emailMobileTextController = TextEditingController(
@@ -84,7 +74,7 @@ class LoginScreenState extends State<LoginScreen> {
 
   // ملاحظة: لا تُستخدم إلا بعد تحديد countryCode فعليًا
   late PhoneLoginPayload phoneLoginPayload =
-  PhoneLoginPayload(emailMobileTextController.text, countryCode ?? "");
+      PhoneLoginPayload(emailMobileTextController.text, countryCode ?? "");
 
   @override
   void initState() {
@@ -97,7 +87,6 @@ class LoginScreenState extends State<LoginScreen> {
 
     _initPlatform();
     _listenAuth();
-
   }
 
   Future<void> _initPlatform() async {
@@ -136,17 +125,14 @@ class LoginScreenState extends State<LoginScreen> {
       }
 
       if (state is MFail) {
-      if (!mounted) return;
+        if (!mounted) return;
         if (!isOtpSent && isMobileNumberField) {
           Widgets.hideLoder(context);
         }
-        if (isOtpSent && (otp
-            ?.trim()
-            .isEmpty ?? true)) {
+        if (isOtpSent && (otp?.trim().isEmpty ?? true)) {
           HelperUtils.showSnackBarMessage(
             context,
-            "${"weSentCodeOnNumber".translate(
-                context)}\t${emailMobileTextController.text}",
+            "${"weSentCodeOnNumber".translate(context)}\t${emailMobileTextController.text}",
             type: MessageType.error,
           );
         } else {
@@ -180,21 +166,16 @@ class LoginScreenState extends State<LoginScreen> {
     } catch (_) {}
 
     Country simCountry = list.firstWhere(
-          (e) =>
-      Constant.isDemoModeOn
+      (e) => Constant.isDemoModeOn
           ? list.any((x) => x.phoneCode == Constant.defaultCountryCode)
           : e.phoneCode == simCode,
       orElse: () =>
-      list
-          .where((e) => e.phoneCode == Constant.defaultCountryCode)
-          .first,
+          list.where((e) => e.phoneCode == Constant.defaultCountryCode).first,
     );
 
     if (Constant.isDemoModeOn) {
       simCountry =
-          list
-              .where((e) => e.phoneCode == Constant.demoCountryCode)
-              .first;
+          list.where((e) => e.phoneCode == Constant.demoCountryCode).first;
     }
     return simCountry;
   }
@@ -222,7 +203,7 @@ class LoginScreenState extends State<LoginScreen> {
       showWorldWide: false,
       showPhoneCode: true,
       countryListTheme:
-      CountryListThemeData(borderRadius: BorderRadius.circular(11)),
+          CountryListThemeData(borderRadius: BorderRadius.circular(11)),
       onSelect: (Country value) {
         flagEmoji = value.flagEmoji;
         countryCode = value.phoneCode;
@@ -234,7 +215,7 @@ class LoginScreenState extends State<LoginScreen> {
   void _onChangedInput(String v) {
     final isNumber = v.contains(RegExp(r'^[0-9]+$'));
     isMobileNumberField =
-    Constant.mobileAuthentication == "1" ? isNumber : false;
+        Constant.mobileAuthentication == "1" ? isNumber : false;
     numberOrEmail = v;
 
     // إزالة أخطاء فورية
@@ -244,17 +225,17 @@ class LoginScreenState extends State<LoginScreen> {
 
   void _onGoogleLogin() {
     context.read<AuthenticationCubit>().setData(
-      payload: GoogleLoginPayload(),
-      type: AuthenticationType.google,
-    );
+          payload: GoogleLoginPayload(),
+          type: AuthenticationType.google,
+        );
     context.read<AuthenticationCubit>().authenticate();
   }
 
   void _onAppleLogin() {
     context.read<AuthenticationCubit>().setData(
-      payload: AppleLoginPayload(),
-      type: AuthenticationType.apple,
-    );
+          payload: AppleLoginPayload(),
+          type: AuthenticationType.apple,
+        );
     context.read<AuthenticationCubit>().authenticate();
   }
 
@@ -280,16 +261,14 @@ class LoginScreenState extends State<LoginScreen> {
 
   void _onResendOtp() {
     context.read<AuthenticationCubit>().setData(
-      payload: phoneLoginPayload,
-      type: AuthenticationType.phone,
-    );
+          payload: phoneLoginPayload,
+          type: AuthenticationType.phone,
+        );
     context.read<AuthenticationCubit>().verify();
   }
 
   void _onVerifyOtp() {
-    if ((otp ?? "")
-        .trim()
-        .length < 6) {
+    if ((otp ?? "").trim().length < 6) {
       HelperUtils.showSnackBarMessage(
         context,
         "pleaseEnterSixDigits".translate(context),
@@ -336,23 +315,22 @@ class LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-
     if (asPhone) {
       // تسجيل مباشر من الـ backend (هاتف + كلمة مرور)
       context.read<LoginCubit>().phonePasswordLogin(
-        phoneNumber: input,
-        password: password,
-      );
+            phoneNumber: input,
+            password: password,
+          );
     } else {
       // تسجيل بالإيميل والباسوورد عبر AuthenticationCubit
       context.read<AuthenticationCubit>().setData(
-        payload: PhoneAndPasswordPayload(
-          phoneNumber: input,
-          password: password,
-          type: EmailLoginType.login,
-        ),
-        type: AuthenticationType.email,
-      );
+            payload: PhoneAndPasswordPayload(
+              phoneNumber: input,
+              password: password,
+              type: EmailLoginType.login,
+            ),
+            type: AuthenticationType.email,
+          );
       context.read<AuthenticationCubit>().authenticate();
     }
   }
@@ -364,9 +342,9 @@ class LoginScreenState extends State<LoginScreen> {
         PhoneLoginPayload(emailMobileTextController.text, countryCode ?? "");
 
     context.read<AuthenticationCubit>().setData(
-      payload: phoneLoginPayload,
-      type: AuthenticationType.phone,
-    );
+          payload: phoneLoginPayload,
+          type: AuthenticationType.phone,
+        );
     context.read<AuthenticationCubit>().verify();
 
     setState(() {});
@@ -403,7 +381,7 @@ class LoginScreenState extends State<LoginScreen> {
           } else {
             Navigator.of(context).pushNamedAndRemoveUntil(
               Routes.locationPermissionScreen,
-                  (route) => false,
+              (route) => false,
             );
           }
         } else {
@@ -442,11 +420,10 @@ class LoginScreenState extends State<LoginScreen> {
           final isEmailVerified = userData['email_verified_at'] != null;
           final isVerified = userData['is_verified'] == 1;
           final hasCompleteName =
-              (userData['name'] ?? "")
-                  .toString()
-                  .isNotEmpty;
+              (userData['name'] ?? "").toString().isNotEmpty;
 
-          if (hasAccountType && (isEmailVerified || isVerified) &&
+          if (hasAccountType &&
+              (isEmailVerified || isVerified) &&
               hasCompleteName) {
             if ((HiveUtils.getCityName() ?? "").isNotEmpty &&
                 HiveUtils.getCityName() != "null") {
@@ -455,7 +432,7 @@ class LoginScreenState extends State<LoginScreen> {
             } else {
               Navigator.of(context).pushNamedAndRemoveUntil(
                 Routes.locationPermissionScreen,
-                    (route) => false,
+                (route) => false,
               );
             }
           } else {
@@ -496,9 +473,7 @@ class LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    size = MediaQuery
-        .of(context)
-        .size;
+    size = MediaQuery.of(context).size;
     _setDemoOTP();
 
     return LoginHeaderSection(
@@ -525,7 +500,6 @@ class LoginScreenState extends State<LoginScreen> {
           listener: (context, state) {
             // إيقاف التحميل عند انتهاء أي عملية
 
-
             // نجاح تسجيل الدخول (OAuth / Phone-Email)
             if (state is LoginSuccess ||
                 state is LoginSuccessWithoutCredential) {
@@ -538,8 +512,9 @@ class LoginScreenState extends State<LoginScreen> {
               if ((isEmailVerified || isVerified) && hasAccountType) {
                 HiveUtils.setUserIsAuthenticated(true);
                 HiveUtils.setUserData(api);
-                context.read<UserDetailsCubit>().fill(
-                    HiveUtils.getUserDetails());
+                context
+                    .read<UserDetailsCubit>()
+                    .fill(HiveUtils.getUserDetails());
 
                 final city = HiveUtils.getCityName();
                 if ((city ?? "").isNotEmpty && city != "null") {
@@ -548,7 +523,7 @@ class LoginScreenState extends State<LoginScreen> {
                 } else {
                   Navigator.of(context).pushNamedAndRemoveUntil(
                     Routes.locationPermissionScreen,
-                        (route) => false,
+                    (route) => false,
                   );
                 }
                 return;
@@ -560,11 +535,11 @@ class LoginScreenState extends State<LoginScreen> {
                   context,
                   Routes.otp,
                   arguments: {
-                    'phoneNumber': api['mobile']?.replaceFirst(
-                        '+$countryCode', '') ?? '',
+                    'phoneNumber':
+                        api['mobile']?.replaceFirst('+$countryCode', '') ?? '',
                     'countryCode': countryCode,
-                    'selectedAccountType': api['account_type']?.toString() ??
-                        "1",
+                    'selectedAccountType':
+                        api['account_type']?.toString() ?? "1",
                   },
                 );
                 return;
@@ -581,11 +556,9 @@ class LoginScreenState extends State<LoginScreen> {
           },
           child: BlocConsumer<AuthenticationCubit, AuthenticationState>(
             buildWhen: (previous, current) =>
-            current is! AuthenticationInProcess &&
+                current is! AuthenticationInProcess &&
                 current is! AuthenticationFail,
             listener: (context, state) async {
-
-
               if (state is AuthenticationSuccess) {
                 Widgets.hideLoder(context);
 
@@ -600,35 +573,35 @@ class LoginScreenState extends State<LoginScreen> {
                 if (state.type == AuthenticationType.email) {
                   if (state.credential.user?.emailVerified == true) {
                     context.read<LoginCubit>().login(
-                      phoneNumber: state.credential.user!.phoneNumber,
-                      firebaseUserId: state.credential.user!.uid,
-                      type: state.type.name,
-                      credential: state.credential,
-                      countryCode: null,
-                    );
+                          phoneNumber: state.credential.user!.phoneNumber,
+                          firebaseUserId: state.credential.user!.uid,
+                          type: state.type.name,
+                          credential: state.credential,
+                          countryCode: null,
+                        );
                   }
                 }
                 // هاتف
                 else if (state.type == AuthenticationType.phone) {
                   context.read<LoginCubit>().login(
-                    phoneNumber: (state.payload as PhoneLoginPayload)
-                        .phoneNumber,
-                    firebaseUserId: state.credential.user!.uid,
-                    type: state.type.name,
-                    credential: state.credential,
-                    countryCode:
-                    "+${(state.payload as PhoneLoginPayload).countryCode}",
-                  );
+                        phoneNumber:
+                            (state.payload as PhoneLoginPayload).phoneNumber,
+                        firebaseUserId: state.credential.user!.uid,
+                        type: state.type.name,
+                        credential: state.credential,
+                        countryCode:
+                            "+${(state.payload as PhoneLoginPayload).countryCode}",
+                      );
                 }
                 // أنواع أخرى
                 else {
                   context.read<LoginCubit>().login(
-                    phoneNumber: state.credential.user!.phoneNumber,
-                    firebaseUserId: state.credential.user!.uid,
-                    type: state.type.name,
-                    credential: state.credential,
-                    countryCode: null,
-                  );
+                        phoneNumber: state.credential.user!.phoneNumber,
+                        firebaseUserId: state.credential.user!.uid,
+                        type: state.type.name,
+                        credential: state.credential,
+                        countryCode: null,
+                      );
                 }
               }
 
@@ -651,67 +624,67 @@ class LoginScreenState extends State<LoginScreen> {
                   return Form(
                     key: _formKey,
                     child: LoginScreenUI(
-                  // حالة العرض
-                  isOtpSent: isOtpSent,
-                  sendMailClicked: sendMailClicked,
-                  isMobileNumberField: isMobileNumberField,
-                  isLoading: isLoading,
-                  isObscure: isObscure,
+                      // حالة العرض
+                      isOtpSent: isOtpSent,
+                      sendMailClicked: sendMailClicked,
+                      isMobileNumberField: isMobileNumberField,
+                      isLoading: isLoading,
+                      isObscure: isObscure,
 
-                  // نصوص وأخطاء
-                  phoneEmailError: phoneEmailError,
-                  passwordError: passwordError,
+                      // نصوص وأخطاء
+                      phoneEmailError: phoneEmailError,
+                      passwordError: passwordError,
 
-                  // الكونترولرز
-                  emailController: emailMobileTextController,
-                  passwordController: _passwordController,
+                      // الكونترولرز
+                      emailController: emailMobileTextController,
+                      passwordController: _passwordController,
 
-                  // بلد/رمز
-                  countryCode: countryCode,
-                  flagEmoji: flagEmoji,
+                      // بلد/رمز
+                      countryCode: countryCode,
+                      flagEmoji: flagEmoji,
 
-                  // OTP
-                  phoneLoginPayload: phoneLoginPayload,
-                  currentOtp: otp,
-                  onOtpChanged: _onOtpChanged,
+                      // OTP
+                      phoneLoginPayload: phoneLoginPayload,
+                      currentOtp: otp,
+                      onOtpChanged: _onOtpChanged,
 
-                  // أزرار وإجراءات
-                  onSkip: _onSkip,
-                  onShowCountryPicker: _onShowCountryCode,
-                  onToggleObscure: _onToggleObscure,
-                  onForgotPassword: _onForgotPassword,
-                  onChangeLoginMode: _onChangeLoginMode,
-                  onResendOtp: _onResendOtp,
-                  onVerifyOtp: _onVerifyOtp,
-                  onSubmitCredentials: _onSubmitCredentials,
-                  onGoogleLogin: _onGoogleLogin,
-                  onAppleLogin: _onAppleLogin,
+                      // أزرار وإجراءات
+                      onSkip: _onSkip,
+                      onShowCountryPicker: _onShowCountryCode,
+                      onToggleObscure: _onToggleObscure,
+                      onForgotPassword: _onForgotPassword,
+                      onChangeLoginMode: _onChangeLoginMode,
+                      onResendOtp: _onResendOtp,
+                      onVerifyOtp: _onVerifyOtp,
+                      onSubmitCredentials: _onSubmitCredentials,
+                      onGoogleLogin: _onGoogleLogin,
+                      onAppleLogin: _onAppleLogin,
 
-                  // تغيّر الإدخال
-                  onChangedNumberOrEmail: _onChangedInput,
+                      // تغيّر الإدخال
+                      onChangedNumberOrEmail: _onChangedInput,
 
-                  // المتطلبات/التفعيل
-                  showMobileAuth: Constant.mobileAuthentication == "1",
-                  showEmailAuth: Constant.emailAuthentication == "1",
-                  showGoogle: Constant.googleAuthentication == "1",
-                  showApple: Constant.appleAuthentication == "1" &&
-                      Platform.isIOS,
+                      // المتطلبات/التفعيل
+                      showMobileAuth: Constant.mobileAuthentication == "1",
+                      showEmailAuth: Constant.emailAuthentication == "1",
+                      showGoogle: Constant.googleAuthentication == "1",
+                      showApple:
+                          Constant.appleAuthentication == "1" && Platform.isIOS,
 
-                  // متابعة (تحويل إلى كلمة مرور الإيميل أو إرسال OTP للهاتف)
-                  onTapContinue: () {
-                    sendMailClicked = true;
-                    if (isMobileNumberField) {
-                      sendMailClicked = false;
-                      _onContinueTap();
-                    } else {
-                      setState(() {}); // إظهار نموذج كلمة المرور للإيميل
-                    }
-                  },
+                      // متابعة (تحويل إلى كلمة مرور الإيميل أو إرسال OTP للهاتف)
+                      onTapContinue: () {
+                        sendMailClicked = true;
+                        if (isMobileNumberField) {
+                          sendMailClicked = false;
+                          _onContinueTap();
+                        } else {
+                          setState(() {}); // إظهار نموذج كلمة المرور للإيميل
+                        }
+                      },
 
-                  // إنشاء حساب (تنقّل فعلي)
-                  onGoToSignup: () {
-                    Navigator.pushNamed(context, Routes.signupMainScreen);
-                  },
+                      // إنشاء حساب (تنقّل فعلي)
+                      onGoToSignup: () {
+                        Navigator.pushNamed(context, Routes.signupMainScreen);
+                      },
                     ),
                   );
                 },

@@ -8,13 +8,13 @@ import 'package:marib/data/model/item/item_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../Utils/constant.dart';
-import '../../../Utils/validator.dart';
+import 'package:marib/Utils/constant.dart';
+import 'package:marib/Utils/validator.dart';
 import 'package:marib/data/cubits/chat/delete_message_cubit.dart';
 import 'package:marib/data/cubits/chat/load_chat_messages.dart';
 import 'package:marib/data/cubits/chat/send_message.dart';
-import '../../../data/model/chat/chated_user_model.dart';
-import '../Chat/chat_screen.dart';
+import 'package:marib/data/model/chat/chated_user_model.dart';
+import 'package:marib/ui/screens/Chat/chat_screen.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 
 import 'package:marib/utils/notification/notification_service.dart';

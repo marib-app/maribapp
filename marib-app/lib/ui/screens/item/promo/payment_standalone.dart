@@ -1,40 +1,19 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/responsiveSize.dart';
 
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
-import 'dart:ui' as ui;
-
-
-
-
-
-
-
-import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:image_picker/image_picker.dart';
 
 // أدوات وامتدادات مشروعك (نفس المستخدمة في صفحاتك)
-import 'package:marib/utils/ui_utils.dart'; // UiUtils + HelperUtils
-import 'package:marib/utils/extensions/extensions.dart';    // ألوان وخطوط
-import 'package:marib/utils/responsiveSize.dart';           // .rh و .rw للأحجام المتجاوبة
-
-
-
-
-
-
+// UiUtils + HelperUtils
+// ألوان وخطوط
+// .rh و .rw للأحجام المتجاوبة
 
 class PaymentStandalonePage extends StatefulWidget {
   // إجمالي المبلغ (اختياري للعرض فقط في الشريط السفلي)
@@ -122,7 +101,8 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
         statusBarColor: context.color.secondaryColor,
       ),
       child: Scaffold(
-        backgroundColor: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF0F2F4),
+        backgroundColor:
+            isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF0F2F4),
         appBar: UiUtils.buildAppBar(
           context,
           title: "بيانات التوصيل والدفع",
@@ -133,10 +113,10 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
         bottomNavigationBar: buildBottomCheckoutBar(
           context,
           (widget.amount ?? 0),
-          "—",                   // رسوم التوصيل كنص (مطابق لحالة عدم التحديد)
-          _onConfirmPayment,      // متابعة الإكمال
-          isButtonEnabled,        // تفعيل/تعطيل الزر
-          _loading,               // shimmer
+          "—", // رسوم التوصيل كنص (مطابق لحالة عدم التحديد)
+          _onConfirmPayment, // متابعة الإكمال
+          isButtonEnabled, // تفعيل/تعطيل الزر
+          _loading, // shimmer
           radius: radius,
           horizontal: horizontal,
           vertical: vertical,
@@ -144,14 +124,16 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
         body: SafeArea(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            padding: EdgeInsets.fromLTRB(horizontal, vertical, horizontal, (media.viewPadding.bottom + 1).clamp(8.0, 24.0)),
+            padding: EdgeInsets.fromLTRB(horizontal, vertical, horizontal,
+                (media.viewPadding.bottom + 1).clamp(8.0, 24.0)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildSection(
                   context,
                   title: "الدفع",
-                  leading: const Icon(Icons.payment), // مرن: يمكن استبداله بـ SvgPicture.asset
+                  leading: const Icon(
+                      Icons.payment), // مرن: يمكن استبداله بـ SvgPicture.asset
                   initiallyExpanded: true,
                   child: buildBank(context, radius: radius),
                   radius: radius,
@@ -170,8 +152,9 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final Color secondaryColor = const Color(0xFFFF8000); // برتقالي
-    final Color accentColor = const Color(0xFFE0E0E0);     // رمادي فاتح
-    final Color lightBackground = isDark ? Colors.grey.shade800 : const Color(0xFFF9F9F9);
+    final Color accentColor = const Color(0xFFE0E0E0); // رمادي فاتح
+    final Color lightBackground =
+        isDark ? Colors.grey.shade800 : const Color(0xFFF9F9F9);
     final Color textColor = isDark ? Colors.white : const Color(0xFF222222);
     final Color backgroundColor = Theme.of(context).scaffoldBackgroundColor;
     final Color borderColor = isDark ? Colors.grey.shade600 : accentColor;
@@ -215,7 +198,8 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
                         width: (45.0).rw(context).clamp(34.0, 52.0),
                         height: (45.0).rw(context).clamp(34.0, 52.0),
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(Icons.account_balance_wallet),
+                        errorBuilder: (_, __, ___) =>
+                            const Icon(Icons.account_balance_wallet),
                       ),
                     ),
                     SizedBox(width: (12.0).rw(context)),
@@ -229,25 +213,34 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
                             bank["name"]!,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: Theme.of(context).textTheme.titleSmall?.fontSize ?? 15,
+                              fontSize: Theme.of(context)
+                                      .textTheme
+                                      .titleSmall
+                                      ?.fontSize ??
+                                  15,
                               color: textColor,
                             ),
                           ),
                           SizedBox(height: (8.0).rh(context)),
                           if ((bank["accountName"] ?? "").isNotEmpty)
                             Material(
-                              color: accentColor.withOpacity(isDark ? 0.1 : 0.5),
-                              borderRadius: BorderRadius.circular((8.0).rw(context)),
+                              color:
+                                  accentColor.withOpacity(isDark ? 0.1 : 0.5),
+                              borderRadius:
+                                  BorderRadius.circular((8.0).rw(context)),
                               child: InkWell(
-                                borderRadius: BorderRadius.circular((8.0).rw(context)),
+                                borderRadius:
+                                    BorderRadius.circular((8.0).rw(context)),
                                 onTap: () {
                                   setState(() {
                                     selectedBankIndex = index;
                                     selectedPaymentMethod = bank["name"];
                                   });
                                   // نسخ رقم/اسم الحساب + تنبيه مخصص
-                                  Clipboard.setData(ClipboardData(text: bank["accountName"]!));
-                                  HelperUtils.showSnackBarMessage(context, "تم نسخ رقم الحساب");
+                                  Clipboard.setData(ClipboardData(
+                                      text: bank["accountName"]!));
+                                  HelperUtils.showSnackBarMessage(
+                                      context, "تم نسخ رقم الحساب");
                                 },
                                 child: Padding(
                                   padding: EdgeInsets.symmetric(
@@ -257,7 +250,11 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
                                   child: Text(
                                     bank["accountName"]!,
                                     style: TextStyle(
-                                      fontSize: Theme.of(context).textTheme.bodyMedium?.fontSize ?? 14,
+                                      fontSize: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.fontSize ??
+                                          14,
                                       color: textColor,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -270,7 +267,9 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
                     ),
 
                     if (isSelected)
-                      Icon(Icons.check_circle, color: const Color(0xFFFF8000), size: (20.0).rw(context).clamp(18.0, 22.0)),
+                      Icon(Icons.check_circle,
+                          color: const Color(0xFFFF8000),
+                          size: (20.0).rw(context).clamp(18.0, 22.0)),
                   ],
                 ),
               ),
@@ -282,7 +281,8 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
   }
 
   // ====== حوار كود الشراء (مطابق بصريًا + تنبيهات مخصصة) ======
-  Future<void> _showPurchaseCodeDialog({required VoidCallback onConfirm}) async {
+  Future<void> _showPurchaseCodeDialog(
+      {required VoidCallback onConfirm}) async {
     final TextEditingController codeController = TextEditingController();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -290,9 +290,11 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
-        final fieldColor = isDark ? Colors.grey.shade800 : const Color(0xFFF5F5F5);
+        final fieldColor =
+            isDark ? Colors.grey.shade800 : const Color(0xFFF5F5F5);
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular((16.0).rw(context))),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular((16.0).rw(context))),
           backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
           title: const Text("🧾 كود الشراء"),
           content: Column(
@@ -306,19 +308,24 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
                   labelText: "رمز الشراء *",
                   filled: true,
                   fillColor: fieldColor,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular((10.0).rw(context))),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular((10.0).rw(context))),
                 ),
               ),
               SizedBox(height: (8.0).rh(context)),
-              const Text("أدخل رمز الشراء الذي حصلت عليه لإتمام العملية", style: TextStyle(fontSize: 12)),
+              const Text("أدخل رمز الشراء الذي حصلت عليه لإتمام العملية",
+                  style: TextStyle(fontSize: 12)),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("إلغاء")),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text("إلغاء")),
             FilledButton(
               onPressed: () {
                 if (codeController.text.trim().isEmpty) {
-                  HelperUtils.showSnackBarMessage(context, "يرجى إدخال كود الشراء");
+                  HelperUtils.showSnackBarMessage(
+                      context, "يرجى إدخال كود الشراء");
                   return;
                 }
                 Navigator.pop(ctx);
@@ -340,12 +347,14 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
     required VoidCallback onConfirm,
   }) async {
     final TextEditingController nameController = TextEditingController();
-    final TextEditingController transferCodeController = TextEditingController();
+    final TextEditingController transferCodeController =
+        TextEditingController();
     final ValueNotifier<bool> isUploading = ValueNotifier(false);
     final ValueNotifier<File?> receiptImage = ValueNotifier(null);
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color fieldColor = isDark ? Colors.grey.shade800 : const Color(0xFFF5F5F5);
+    final Color fieldColor =
+        isDark ? Colors.grey.shade800 : const Color(0xFFF5F5F5);
     final Color mainColor = const Color(0xFFFF8000);
 
     return showDialog(
@@ -353,7 +362,8 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
       barrierDismissible: false,
       builder: (ctx) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular((16.0).rw(context))),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular((16.0).rw(context))),
           backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
           title: const Text("💳 الدفع عن طريق حوالة مصرفية"),
           content: SingleChildScrollView(
@@ -363,21 +373,30 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // اسم الوسيلة
-                Text(paymentMethodName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: mainColor)),
+                Text(paymentMethodName,
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: mainColor)),
                 SizedBox(height: (6.0).rh(context)),
 
                 // رقم الحساب مع النسخ
                 InkWell(
                   onTap: () {
                     Clipboard.setData(ClipboardData(text: accountNumber));
-                    HelperUtils.showSnackBarMessage(context, "✅ تم نسخ رقم الحساب");
+                    HelperUtils.showSnackBarMessage(
+                        context, "✅ تم نسخ رقم الحساب");
                   },
                   borderRadius: BorderRadius.circular((10.0).rw(context)),
                   child: Container(
                     padding: EdgeInsets.all((10.0).rw(context)),
                     margin: EdgeInsets.only(bottom: (16.0).rh(context)),
-                    decoration: BoxDecoration(color: fieldColor, borderRadius: BorderRadius.circular((10.0).rw(context))),
-                    child: Text(accountNumber, style: const TextStyle(fontSize: 14)),
+                    decoration: BoxDecoration(
+                        color: fieldColor,
+                        borderRadius:
+                            BorderRadius.circular((10.0).rw(context))),
+                    child: Text(accountNumber,
+                        style: const TextStyle(fontSize: 14)),
                   ),
                 ),
 
@@ -388,7 +407,9 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
                     labelText: "الاسم *",
                     filled: true,
                     fillColor: fieldColor,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular((10.0).rw(context))),
+                    border: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular((10.0).rw(context))),
                   ),
                 ),
                 SizedBox(height: (12.0).rh(context)),
@@ -400,7 +421,9 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
                     labelText: "رقم الحوالة *",
                     filled: true,
                     fillColor: fieldColor,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular((10.0).rw(context))),
+                    border: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular((10.0).rw(context))),
                   ),
                 ),
                 SizedBox(height: (16.0).rh(context)),
@@ -416,19 +439,23 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: mainColor,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular((10.0).rw(context)),
+                                borderRadius:
+                                    BorderRadius.circular((10.0).rw(context)),
                               ),
                             ),
                             onPressed: () async {
                               final picker = ImagePicker();
-                              final XFile? picked = await picker.pickImage(source: ImageSource.gallery);
+                              final XFile? picked = await picker.pickImage(
+                                  source: ImageSource.gallery);
                               if (picked != null) {
                                 isUploading.value = true;
                                 // هنا يمكن رفع الصورة لسيرفرك، ثم:
-                                await Future.delayed(const Duration(milliseconds: 750));
+                                await Future.delayed(
+                                    const Duration(milliseconds: 750));
                                 receiptImage.value = File(picked.path);
                                 isUploading.value = false;
-                                HelperUtils.showSnackBarMessage(context, "تم إرفاق صورة الإيصال");
+                                HelperUtils.showSnackBarMessage(
+                                    context, "تم إرفاق صورة الإيصال");
                               }
                             },
                             icon: const Icon(Icons.attachment),
@@ -440,15 +467,27 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
                           valueListenable: isUploading,
                           builder: (_, uploading, __) {
                             if (uploading) {
-                              return const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2));
+                              return const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2));
                             }
                             if (file != null) {
                               return const Row(
                                 mainAxisSize: MainAxisSize.min,
-                                children: [Icon(Icons.check_circle, color: Colors.green, size: 20), SizedBox(width: 4), Text("مرفق", style: TextStyle(fontSize: 12, color: Colors.green))],
+                                children: [
+                                  Icon(Icons.check_circle,
+                                      color: Colors.green, size: 20),
+                                  SizedBox(width: 4),
+                                  Text("مرفق",
+                                      style: TextStyle(
+                                          fontSize: 12, color: Colors.green))
+                                ],
                               );
                             }
-                            return const Text("لم يتم الإرفاق", style: TextStyle(color: Colors.grey));
+                            return const Text("لم يتم الإرفاق",
+                                style: TextStyle(color: Colors.grey));
                           },
                         ),
                       ],
@@ -459,7 +498,9 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("إلغاء")),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text("إلغاء")),
             FilledButton(
               onPressed: () {
                 if (nameController.text.trim().isEmpty) {
@@ -467,7 +508,8 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
                   return;
                 }
                 if (transferCodeController.text.trim().isEmpty) {
-                  HelperUtils.showSnackBarMessage(context, "يرجى إدخال رقم الحوالة");
+                  HelperUtils.showSnackBarMessage(
+                      context, "يرجى إدخال رقم الحوالة");
                   return;
                 }
                 Navigator.pop(ctx);
@@ -483,16 +525,16 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
 
   // ====== شريط أسفل الشاشة (ملخص + زر) — مطابق بصريًا ومتجاوب ======
   Widget buildBottomCheckoutBar(
-      BuildContext context,
-      double subtotal,
-      String deliveryFee,
-      VoidCallback? onConfirm,
-      bool isButtonEnabled,
-      bool loading, {
-        required double radius,
-        required double horizontal,
-        required double vertical,
-      }) {
+    BuildContext context,
+    double subtotal,
+    String deliveryFee,
+    VoidCallback? onConfirm,
+    bool isButtonEnabled,
+    bool loading, {
+    required double radius,
+    required double horizontal,
+    required double vertical,
+  }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final baseColor = isDark ? Colors.grey.shade800 : Colors.grey.shade300;
     final highlightColor = isDark ? Colors.grey.shade600 : Colors.grey.shade100;
@@ -507,49 +549,57 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
       ),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface.withOpacity(0.4),
-        borderRadius: BorderRadius.vertical(top: Radius.circular((18.0).rw(context))),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular((18.0).rw(context))),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           loading
               ? Shimmer.fromColors(
-            baseColor: baseColor,
-            highlightColor: highlightColor,
-            child: Container(
-              width: double.infinity,
-              height: (90.0).rh(context).clamp(70.0, 110.0),
-              decoration: BoxDecoration(
-                color: isDark ? Colors.grey.shade900 : Colors.white,
-                borderRadius: BorderRadius.circular((10.0).rw(context)),
-              ),
-            ),
-          )
+                  baseColor: baseColor,
+                  highlightColor: highlightColor,
+                  child: Container(
+                    width: double.infinity,
+                    height: (90.0).rh(context).clamp(70.0, 110.0),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.grey.shade900 : Colors.white,
+                      borderRadius: BorderRadius.circular((10.0).rw(context)),
+                    ),
+                  ),
+                )
               : Container(
-            padding: EdgeInsets.symmetric(horizontal: (12.0).rw(context), vertical: (10.0).rh(context)),
-            decoration: BoxDecoration(
-              color: isDark ? Colors.grey.shade900 : Colors.white,
-              borderRadius: BorderRadius.circular((10.0).rw(context)),
-              border: Border.all(
-                color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-                width: (1.0).rw(context),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: isDark ? Colors.black.withOpacity(0.2) : Colors.grey.withOpacity(0.1),
-                  blurRadius: (6.0).rw(context),
-                  offset: const Offset(0, 3),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: (12.0).rw(context),
+                      vertical: (10.0).rh(context)),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.grey.shade900 : Colors.white,
+                    borderRadius: BorderRadius.circular((10.0).rw(context)),
+                    border: Border.all(
+                      color:
+                          isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                      width: (1.0).rw(context),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isDark
+                            ? Colors.black.withOpacity(0.2)
+                            : Colors.grey.withOpacity(0.1),
+                        blurRadius: (6.0).rw(context),
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      _buildPriceRow("💰 المبلغ الإجمالي", "للتاجر",
+                          "${subtotal.toStringAsFixed(0)}", context, loading),
+                      SizedBox(height: (8.0).rh(context)),
+                      _buildPriceRow("🚚 رسوم التوصيل", "للسائق عند الاستلام",
+                          deliveryFee, context, loading),
+                    ],
+                  ),
                 ),
-              ],
-            ),
-            child: Column(
-              children: [
-                _buildPriceRow("💰 المبلغ الإجمالي", "للتاجر", "${subtotal.toStringAsFixed(0)}", context, loading),
-                SizedBox(height: (8.0).rh(context)),
-                _buildPriceRow("🚚 رسوم التوصيل", "للسائق عند الاستلام", deliveryFee, context, loading),
-              ],
-            ),
-          ),
           SizedBox(height: (16.0).rh(context)),
           Center(
             child: UiUtils.buildButton(
@@ -562,7 +612,7 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
                 } else {
                   // استخراج بيانات الوسيلة المختارة لتمريرها للحوار
                   final selectedBank = banks.firstWhere(
-                        (b) => b['name'] == selectedPaymentMethod,
+                    (b) => b['name'] == selectedPaymentMethod,
                     orElse: () => const {},
                   );
 
@@ -591,13 +641,13 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
 
   // ====== عناصر مساعدة "مطابقة" ======
   Widget _buildSection(
-      BuildContext context, {
-        required String title,
-        required Widget leading, // مرونة (Icon أو Svg)
-        required Widget child,
-        bool initiallyExpanded = false,
-        required double radius,
-      }) {
+    BuildContext context, {
+    required String title,
+    required Widget leading, // مرونة (Icon أو Svg)
+    required Widget child,
+    bool initiallyExpanded = false,
+    required double radius,
+  }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -605,7 +655,8 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF2F4F6),
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: isDark ? Colors.grey.shade700 : Colors.grey.shade300),
+        border: Border.all(
+            color: isDark ? Colors.grey.shade700 : Colors.grey.shade300),
         boxShadow: [
           if (!isDark)
             BoxShadow(
@@ -620,19 +671,32 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
         child: ExpansionTile(
           initiallyExpanded: initiallyExpanded,
           tilePadding: EdgeInsets.symmetric(horizontal: (16.0).rw(context)),
-          title: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          title: Text(title,
+              style:
+                  const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
           leading: leading,
-          childrenPadding: EdgeInsets.symmetric(horizontal: (16.0).rw(context), vertical: (10.0).rh(context)),
+          childrenPadding: EdgeInsets.symmetric(
+              horizontal: (16.0).rw(context), vertical: (10.0).rh(context)),
           children: [child],
         ),
       ),
     );
   }
 
-  Widget _buildPriceRow(String title, String note, String value, BuildContext context, bool loading) {
-    final titleStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold);
-    final noteStyle = Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600);
-    final valueStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold);
+  Widget _buildPriceRow(String title, String note, String value,
+      BuildContext context, bool loading) {
+    final titleStyle = Theme.of(context)
+        .textTheme
+        .bodyMedium
+        ?.copyWith(fontWeight: FontWeight.bold);
+    final noteStyle = Theme.of(context)
+        .textTheme
+        .bodySmall
+        ?.copyWith(color: Colors.grey.shade600);
+    final valueStyle = Theme.of(context)
+        .textTheme
+        .bodyMedium
+        ?.copyWith(fontWeight: FontWeight.bold);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -647,13 +711,15 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
           ),
         ),
         loading
-            ? _buildShimmerLine(context, width: (60.0).rw(context), height: (14.0).rh(context))
+            ? _buildShimmerLine(context,
+                width: (60.0).rw(context), height: (14.0).rh(context))
             : Text(value, style: valueStyle),
       ],
     );
   }
 
-  Widget _buildShimmerLine(BuildContext context, {double height = 12, double width = 120}) {
+  Widget _buildShimmerLine(BuildContext context,
+      {double height = 12, double width = 120}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Shimmer.fromColors(
       baseColor: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
@@ -683,7 +749,7 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
       _showPurchaseCodeDialog(onConfirm: _finishPayment);
     } else {
       final selectedBank = banks.firstWhere(
-            (bank) => bank['name'] == selectedPaymentMethod,
+        (bank) => bank['name'] == selectedPaymentMethod,
         orElse: () => const {},
       );
 
@@ -700,8 +766,6 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
     }
   }
 }
-
-
 
 //          child: Padding(
 //           padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),

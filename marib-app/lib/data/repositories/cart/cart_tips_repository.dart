@@ -22,7 +22,7 @@ class CartTipsRepository {
     }
 
     final CartSafetyTipsPayload tipsPayload =
-    CartSafetyTipsPayload.fromJson(payload).copyWith(raw: payload);
+        CartSafetyTipsPayload.fromJson(payload).copyWith(raw: payload);
     if (!tipsPayload.hasTips) {
       return null;
     }
@@ -38,7 +38,7 @@ class CartTipsRepository {
       if (value is Map<String, dynamic>) return value;
       if (value is Map) {
         return value.map(
-              (dynamic key, dynamic value) => MapEntry(key.toString(), value),
+          (dynamic key, dynamic value) => MapEntry(key.toString(), value),
         );
       }
       return null;
@@ -85,7 +85,7 @@ class CartTipsRepository {
       }
       if (value is Map) {
         final Map<String, dynamic>? inner = value.map(
-              (dynamic key, dynamic value) => MapEntry(key.toString(), value),
+          (dynamic key, dynamic value) => MapEntry(key.toString(), value),
         );
         if (inner == null) continue;
         final List<dynamic>? nested = _extractTipsList(inner);

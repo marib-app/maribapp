@@ -18,7 +18,6 @@ class HiveKeys {
   static const String lastDelegateCategoryId = "lastDelegateCategoryId";
   static const String delegateHistoryFlag = "delegateHistoryFlag";
 
-
   static const String jwtToken = "token";
   static const String svgBox = "svgBox";
   static const String historyBox = "historyBox";

@@ -6,11 +6,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/fetch_services_cubit.dart';
-import 'package:marib/data/cubits/slider_cubit.dart';
 import 'package:marib/data/model/category_model.dart';
 import 'package:marib/data/model/classified_model.dart' show ClassifiedSummary;
 import 'package:marib/ui/screens/sliders/slider_widget.dart';
-import 'package:marib/ui/screens/home/widgets/home_shimmers.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/ui/screens/widgets/errors/no_data_found.dart';
 import 'package:marib/ui/screens/widgets/errors/no_internet.dart';
@@ -20,11 +18,8 @@ import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/api.dart';
 import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/screen_scaler.dart';
 import 'package:marib/utils/ui_utils.dart';
-
-
 
 import 'dart:ui' show ImageFilter;
 import 'package:marib/utils/slider_interface_mapper.dart';
@@ -91,7 +86,8 @@ class _ClassifiedScreen3State extends State<ClassifiedScreen3> {
 
     _isPaging = true;
     try {
-      await cubit.fetchMoreServices(categoryId: int.tryParse(widget.categoryId));
+      await cubit.fetchMoreServices(
+          categoryId: int.tryParse(widget.categoryId));
     } finally {
       _isPaging = false;
     }
@@ -109,7 +105,6 @@ class _ClassifiedScreen3State extends State<ClassifiedScreen3> {
     final String normalizedType =
         SliderInterfaceMapper.normalize(widget.interfaceType) ??
             widget.interfaceType.toLowerCase().trim();
-
 
     // لا زر في واجهة "اطلب إعلانك"
     if (normalizedType == 'request_ad') return null;
@@ -144,9 +139,9 @@ class _ClassifiedScreen3State extends State<ClassifiedScreen3> {
     }
 
     TextButton _btn(IconData icon, String label, VoidCallback onTap) {
-      final fg = Theme.of(context).appBarTheme.foregroundColor
-          ?? Theme.of(context).colorScheme.onSurface
-          ?? context.color.textColorDark;
+      final fg = Theme.of(context).appBarTheme.foregroundColor ??
+          Theme.of(context).colorScheme.onSurface ??
+          context.color.textColorDark;
       return TextButton.icon(
         onPressed: onTap,
         icon: Icon(icon, size: 20),
@@ -160,46 +155,48 @@ class _ClassifiedScreen3State extends State<ClassifiedScreen3> {
     }
 
     return _btn(
-        _iconForType(normalizedType),
-        _labelForType(normalizedType),
-            () {
-          final state = context.read<FetchServicesCubit>().state;
+      _iconForType(normalizedType),
+      _labelForType(normalizedType),
+      () {
+        final state = context.read<FetchServicesCubit>().state;
 
-          if (state is! FetchServicesSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("loadingDataPleaseTryAgain".translate(context))),
-            );
-            return;
-          }
-
-          // نلتقط الخدمة الرئيسية (ملخص)
-          final main = state.servicesList.firstWhere(
-                (s) => s.isMain == true,
-            orElse: () => const ClassifiedSummary(
-                id: 0, title: null, image: null, isMain: true, status: true),
-        );
-          if (main.id == null || main.id == 0) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('تعذّر تحديد الصفحة الرئيسية لهذه الخدمة')),
-            );
-            return;
-          }
-
-          final category = CategoryModel(
-            id: int.tryParse(widget.categoryId) ?? 0,
-            name: widget.categoryName,
-        );
-          // نمرّر id + title + category — والجلب يتم داخل MainServiceDetails
-          Navigator.pushNamed(
-            context,
-            Routes.mainServiceDetailsRoute,
-            arguments: {
-              "id": main.id,
-              "title": main.title,
-              "category": category,
-            },
+        if (state is! FetchServicesSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text("loadingDataPleaseTryAgain".translate(context))),
           );
-            },
+          return;
+        }
+
+        // نلتقط الخدمة الرئيسية (ملخص)
+        final main = state.servicesList.firstWhere(
+          (s) => s.isMain == true,
+          orElse: () => const ClassifiedSummary(
+              id: 0, title: null, image: null, isMain: true, status: true),
+        );
+        if (main.id == 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('تعذّر تحديد الصفحة الرئيسية لهذه الخدمة')),
+          );
+          return;
+        }
+
+        final category = CategoryModel(
+          id: int.tryParse(widget.categoryId) ?? 0,
+          name: widget.categoryName,
+        );
+        // نمرّر id + title + category — والجلب يتم داخل MainServiceDetails
+        Navigator.pushNamed(
+          context,
+          Routes.mainServiceDetailsRoute,
+          arguments: {
+            "id": main.id,
+            "title": main.title,
+            "category": category,
+          },
+        );
+      },
     );
   }
 
@@ -245,8 +242,8 @@ class _ClassifiedScreen3State extends State<ClassifiedScreen3> {
                 return NoInternet(
                   onRetry: () {
                     context.read<FetchServicesCubit>().fetchServices(
-                      categoryId: int.tryParse(widget.categoryId),
-                    );
+                          categoryId: int.tryParse(widget.categoryId),
+                        );
                   },
                 );
               }
@@ -270,13 +267,13 @@ class _ClassifiedScreen3State extends State<ClassifiedScreen3> {
                       curve: Curves.easeOut,
                       child: _showSlider
                           ? Padding(
-                        padding: EdgeInsets.symmetric(
-                          vertical: ScreenScaler.s(6),
-                        ),
-                        child: SliderWidget(
-                          interfaceType: widget.interfaceType,
-                        ),
-                      )
+                              padding: EdgeInsets.symmetric(
+                                vertical: ScreenScaler.s(6),
+                              ),
+                              child: SliderWidget(
+                                interfaceType: widget.interfaceType,
+                              ),
+                            )
                           : const SizedBox.shrink(),
                     ),
                   ),
@@ -285,9 +282,11 @@ class _ClassifiedScreen3State extends State<ClassifiedScreen3> {
                   Expanded(
                     child: NotificationListener<UserScrollNotification>(
                       onNotification: (n) {
-                        if (n.direction == ScrollDirection.reverse && _showSlider) {
+                        if (n.direction == ScrollDirection.reverse &&
+                            _showSlider) {
                           setState(() => _showSlider = false);
-                        } else if (n.direction == ScrollDirection.forward && !_showSlider) {
+                        } else if (n.direction == ScrollDirection.forward &&
+                            !_showSlider) {
                           setState(() => _showSlider = true);
                         }
                         return false;
@@ -311,7 +310,8 @@ class _ClassifiedScreen3State extends State<ClassifiedScreen3> {
                               index == items.length) {
                             return Padding(
                               padding: EdgeInsets.all(ScreenScaler.s(12)),
-                              child: const Center(child: CircularProgressIndicator()),
+                              child: const Center(
+                                  child: CircularProgressIndicator()),
                             );
                           }
 
@@ -319,7 +319,9 @@ class _ClassifiedScreen3State extends State<ClassifiedScreen3> {
                           if (state.loadingMoreError &&
                               index ==
                                   items.length +
-                                      (state.hasMore && state.isLoadingMore ? 1 : 0)) {
+                                      (state.hasMore && state.isLoadingMore
+                                          ? 1
+                                          : 0)) {
                             return Padding(
                               padding: EdgeInsets.all(ScreenScaler.s(12)),
                               child: Center(
@@ -371,7 +373,8 @@ class _ClassifiedScreen3State extends State<ClassifiedScreen3> {
             borderRadius: BorderRadius.circular(ScreenScaler.s(12)),
             child: SizedBox(
               width: ScreenScaler.s(260),
-              child: const CustomShimmer(width: double.infinity, height: double.infinity),
+              child: const CustomShimmer(
+                  width: double.infinity, height: double.infinity),
             ),
           ),
         ),
@@ -405,7 +408,8 @@ class _ClassifiedScreen3State extends State<ClassifiedScreen3> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  const CustomShimmer(width: double.infinity, height: double.infinity),
+                  const CustomShimmer(
+                      width: double.infinity, height: double.infinity),
                   Positioned.fill(
                     child: Container(color: Colors.black.withOpacity(.08)),
                   ),
@@ -458,16 +462,18 @@ class _BlurCardListItemState extends State<_BlurCardListItem> {
         arguments: {
           "id": m.id,
           "title": m.title,
-          "category": CategoryModel(id: widget.categoryId, name: widget.categoryName),
+          "category":
+              CategoryModel(id: widget.categoryId, name: widget.categoryName),
         },
       );
       return;
     }
 
     final id = m.id;
-    if (id == null || id == 0) {
+    if (id == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('لا يمكن فتح التفاصيل: مُعرّف الخدمة غير صالح')),
+        const SnackBar(
+            content: Text('لا يمكن فتح التفاصيل: مُعرّف الخدمة غير صالح')),
       );
       return;
     }
@@ -508,7 +514,8 @@ class _BlurCardListItemState extends State<_BlurCardListItem> {
                 height: ScreenScaler.s(140),
                 decoration: BoxDecoration(
                   color: context.color.secondaryColor,
-                  border: Border.all(color: context.color.borderColor.darken(90)),
+                  border:
+                      Border.all(color: context.color.borderColor.darken(90)),
                 ),
                 child: Stack(
                   fit: StackFit.expand,
@@ -553,7 +560,9 @@ class _BlurCardListItemState extends State<_BlurCardListItem> {
                         children: [
                           Expanded(
                             child: Text(
-                              (widget.model.title ?? "").firstUpperCase()._safeTruncate(60),
+                              (widget.model.title ?? "")
+                                  .firstUpperCase()
+                                  ._safeTruncate(60),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -561,7 +570,10 @@ class _BlurCardListItemState extends State<_BlurCardListItem> {
                                 fontSize: ScreenScaler.s(16),
                                 fontWeight: FontWeight.w700,
                                 shadows: const [
-                                  Shadow(color: Colors.black54, offset: Offset(0, 1), blurRadius: 2),
+                                  Shadow(
+                                      color: Colors.black54,
+                                      offset: Offset(0, 1),
+                                      blurRadius: 2),
                                 ],
                               ),
                             ),
@@ -572,9 +584,11 @@ class _BlurCardListItemState extends State<_BlurCardListItem> {
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(.2),
                               shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white.withOpacity(.35)),
+                              border: Border.all(
+                                  color: Colors.white.withOpacity(.35)),
                             ),
-                            child: const Icon(Icons.chevron_left, color: Colors.white, size: 22),
+                            child: const Icon(Icons.chevron_left,
+                                color: Colors.white, size: 22),
                           ),
                         ],
                       ),

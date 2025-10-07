@@ -72,7 +72,8 @@ class WalletWithdrawalsCubit extends Cubit<WalletWithdrawalsState> {
   Future<void> loadInitial({bool includeOptions = true}) async {
     emit(WalletWithdrawalsLoading());
     try {
-      final result = await _repository.fetchWithdrawals(includeOptions: includeOptions);
+      final result =
+          await _repository.fetchWithdrawals(includeOptions: includeOptions);
       _emitSuccess(result);
     } catch (e) {
       emit(WalletWithdrawalsFailure(e));
@@ -89,7 +90,8 @@ class WalletWithdrawalsCubit extends Cubit<WalletWithdrawalsState> {
 
     try {
       final result = await _repository.fetchWithdrawals(
-        includeOptions: includeOptions || currentState is! WalletWithdrawalsSuccess,
+        includeOptions:
+            includeOptions || currentState is! WalletWithdrawalsSuccess,
       );
       _emitSuccess(result);
     } catch (e) {
@@ -136,7 +138,8 @@ class WalletWithdrawalsCubit extends Cubit<WalletWithdrawalsState> {
     }
   }
 
-  Future<WalletWithdrawal?> submitWithdrawal(Map<String, dynamic> payload) async {
+  Future<WalletWithdrawal?> submitWithdrawal(
+      Map<String, dynamic> payload) async {
     final currentState = state;
     if (currentState is WalletWithdrawalsSuccess) {
       emit(currentState.copyWith(isSubmitting: true, lastError: null));
@@ -168,9 +171,11 @@ class WalletWithdrawalsCubit extends Cubit<WalletWithdrawalsState> {
     }
   }
 
-  Future<WalletOperationOptions?> loadOptions({String? clientTag, bool force = false}) async {
+  Future<WalletOperationOptions?> loadOptions(
+      {String? clientTag, bool force = false}) async {
     final currentState = state;
-    final normalizedTag = clientTag?.trim().isEmpty == true ? null : clientTag?.trim();
+    final normalizedTag =
+        clientTag?.trim().isEmpty == true ? null : clientTag?.trim();
     if (!force &&
         currentState is WalletWithdrawalsSuccess &&
         currentState.options != null &&
@@ -178,7 +183,8 @@ class WalletWithdrawalsCubit extends Cubit<WalletWithdrawalsState> {
       return currentState.options;
     }
 
-    final options = await _repository.fetchWithdrawalOptions(clientTag: normalizedTag ?? _clientTag);
+    final options = await _repository.fetchWithdrawalOptions(
+        clientTag: normalizedTag ?? _clientTag);
     _clientTag = options?.clientTag ?? normalizedTag ?? _clientTag;
 
     if (currentState is WalletWithdrawalsSuccess) {

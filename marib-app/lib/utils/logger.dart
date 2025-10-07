@@ -1,22 +1,16 @@
-
 import 'package:flutter/foundation.dart';
 
 /// For development only
 /// visibleForTesting
 class Logger {
-
-
-  static error(dynamic error, {String? name = "LOG"}) {
-    if (kDebugMode) {
-
-
-
-    }
+  static void error(dynamic error, {String? name = "LOG"}) {
+    if (kDebugMode) {}
   }
+
   static void debug(
-      dynamic value, {
-        String? name = 'LOG',
-      }) {
+    dynamic value, {
+    String? name = 'LOG',
+  }) {
     if (!kDebugMode) {
       return;
     }
@@ -29,17 +23,12 @@ class Logger {
     }
   }
 
-  static impornant(dynamic value, {String? name}) {
+  static void impornant(dynamic value, {String? name}) {}
 
-  }
-
-  static throwTestError() {
+  static void throwTestError() {
     throw "Test Exeption";
   }
 }
-
-
-
 
 class Log {
   void printLongString(String text) {

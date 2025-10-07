@@ -25,7 +25,7 @@ import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/ui_utils.dart';
 
-import 'shein_grabber_page.dart';
+import 'package:marib/ui/screens/item/add_item_screen/shein_grabber_page.dart';
 import 'dart:math' as math;
 
 

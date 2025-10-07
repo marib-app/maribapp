@@ -283,9 +283,7 @@ class _RecordButtonState extends State<RecordButton> {
 
         if (isCancelled(details.localPosition, context)) {
           // if (await Vibrate.canVibrate) Vibrate.feedback(FeedbackType.heavy);
-          if (await Vibration.hasVibrator() != null) {
-            Vibration.vibrate();
-          }
+          Vibration.vibrate();
           timer?.cancel();
           timer = null;
           //startTime = null;
@@ -307,9 +305,7 @@ class _RecordButtonState extends State<RecordButton> {
           widget.controller.reverse();
 
           //if (await Vibrate.canVibrate) Vibrate.feedback(FeedbackType.heavy);
-          if (await Vibration.hasVibrator() != null) {
-            Vibration.vibrate();
-          }
+          Vibration.vibrate();
           debugPrint(details.localPosition.dy.toString());
           setState(() {
             isLocked = true;
@@ -326,9 +322,7 @@ class _RecordButtonState extends State<RecordButton> {
       },
       onLongPress: () async {
         if (widget.isSending) return;
-        if (await Vibration.hasVibrator() != null) {
-          Vibration.vibrate();
-        }
+        Vibration.vibrate();
         await startRecording();
       },
     );
@@ -338,7 +332,8 @@ class _RecordButtonState extends State<RecordButton> {
     if (await record.hasPermission()) {
       // Start recording to file
 
-      String documentPath = "${(await getApplicationDocumentsDirectory()).path}/";
+      String documentPath =
+          "${(await getApplicationDocumentsDirectory()).path}/";
       await record.start(
         const RecordConfig(
           encoder: AudioEncoder.aacLc,
@@ -365,9 +360,7 @@ class _RecordButtonState extends State<RecordButton> {
 
   Future<void> saveFile() async {
     //if (await Vibrate.canVibrate) Vibrate.feedback(FeedbackType.success);
-    if (await Vibration.hasVibrator() != null) {
-      Vibration.vibrate();
-    }
+    Vibration.vibrate();
     timer?.cancel();
     timer = null;
     startTime = null;

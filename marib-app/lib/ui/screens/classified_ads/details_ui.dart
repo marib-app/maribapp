@@ -6,12 +6,11 @@ import 'package:flutter/rendering.dart' show ScrollDirection;
 
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 import 'package:marib/utils/app_icon.dart';
 
-import 'app_html.dart';
+import 'package:marib/ui/screens/classified_ads/app_html.dart';
 
 class ClassifiedDetailsUI extends StatelessWidget {
   // ===== الحالة والبيانات المعروضة =====
@@ -68,8 +67,6 @@ class ClassifiedDetailsUI extends StatelessWidget {
     required this.onContinueTap,
     this.onFabVisibilityChange,
     this.ownerPanel,
-
-
   });
 
   @override
@@ -93,7 +90,7 @@ class ClassifiedDetailsUI extends StatelessWidget {
                 textDirection: Directionality.of(context),
                 child: RotatedBox(
                   quarterTurns:
-                  Directionality.of(context) == TextDirection.rtl ? 2 : -4,
+                      Directionality.of(context) == TextDirection.rtl ? 2 : -4,
                   child: UiUtils.getSvg(
                     AppIcons.arrowLeft,
                     fit: BoxFit.none,
@@ -115,55 +112,54 @@ class ClassifiedDetailsUI extends StatelessWidget {
       // BottomNavigationBar — شيمر أثناء التحميل، أو زر "متابعة" حسب directive
       bottomNavigationBar: loading
           ? SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: const SizedBox(
-              height: 54,
-              child: CustomShimmer(
-                width: double.infinity,
-                height: double.infinity,
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: const SizedBox(
+                    height: 54,
+                    child: CustomShimmer(
+                      width: double.infinity,
+                      height: double.infinity,
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-        ),
-      )
+            )
           : (directiveHidden
-          ? const SizedBox.shrink()
-          : SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-          child: UiUtils.buildButton(
-            context,
-            buttonTitle: buttonTitle,
-            radius: 12,
-            height: 54,
-            onPressed: onContinueTap, // غير قابلة لـ null الآن
-          ),
-        ),
-      )),
+              ? const SizedBox.shrink()
+              : SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                    child: UiUtils.buildButton(
+                      context,
+                      buttonTitle: buttonTitle,
+                      radius: 12,
+                      height: 54,
+                      onPressed: onContinueTap, // غير قابلة لـ null الآن
+                    ),
+                  ),
+                )),
 
       // Body
       body: loading
           ? _LoadingBody()
           : _LoadedBody(
-        hasImage: hasImage,
-        imageUrl: imageUrl,
-        html: html,
-        dateLine: dateLine,
-        ratingText: ratingText,
-        isReporting: isReporting,
-        onReportTap: onReportTap,
-        onRateTap: onRateTap,
-        onShare: onShare,
-        fabVisible: fabVisible,
-        onFabVisibilityChange: onFabVisibilityChange,
-        ownerPanel: ownerPanel,
-
-      ),
+              hasImage: hasImage,
+              imageUrl: imageUrl,
+              html: html,
+              dateLine: dateLine,
+              ratingText: ratingText,
+              isReporting: isReporting,
+              onReportTap: onReportTap,
+              onRateTap: onRateTap,
+              onShare: onShare,
+              fabVisible: fabVisible,
+              onFabVisibilityChange: onFabVisibilityChange,
+              ownerPanel: ownerPanel,
+            ),
     );
   }
 }
@@ -294,7 +290,6 @@ class _LoadedBody extends StatelessWidget {
     required this.fabVisible,
     required this.onFabVisibilityChange,
     required this.ownerPanel,
-
   });
 
   @override
@@ -313,7 +308,8 @@ class _LoadedBody extends StatelessWidget {
           },
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 100), // مساحة للـ FAB
+            padding:
+                const EdgeInsets.fromLTRB(12, 12, 12, 100), // مساحة للـ FAB
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -354,7 +350,6 @@ class _LoadedBody extends StatelessWidget {
                     ),
                   ],
                 ),
-
 
                 if (ownerPanel != null) ...[
                   const SizedBox(height: 12),
@@ -473,9 +468,11 @@ class _PillButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final br = BorderRadius.circular(12);
-    final bg = context.color.secondaryColor.withOpacity(emphasize ? 0.20 : 0.14);
-    final borderColor =
-    emphasize ? context.color.textColorDark.withOpacity(0.20) : Colors.transparent;
+    final bg =
+        context.color.secondaryColor.withOpacity(emphasize ? 0.20 : 0.14);
+    final borderColor = emphasize
+        ? context.color.textColorDark.withOpacity(0.20)
+        : Colors.transparent;
 
     final child = Container(
       height: 42,

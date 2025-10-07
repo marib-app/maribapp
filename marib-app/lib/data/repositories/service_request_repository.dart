@@ -25,8 +25,8 @@ class ServiceRequestRepository {
       final List list = data is List
           ? data
           : data is Map
-          ? data.values.whereType<List>().expand((e) => e).toList()
-          : const [];
+              ? data.values.whereType<List>().expand((e) => e).toList()
+              : const [];
 
       return list
           .whereType<Map>()
@@ -46,11 +46,9 @@ class ServiceRequestRepository {
     required int serviceId,
     String? serviceUid,
     String? note,
-
     Map<String, dynamic>? customFields,
     Map<String, dynamic>? attachments,
   }) async {
-
     String? _encodeCustomFields(Map<String, dynamic>? fields) {
       if (fields == null || fields.isEmpty) {
         return null;
@@ -63,9 +61,11 @@ class ServiceRequestRepository {
     }
 
     final String? normalizedUid =
-    serviceUid != null && serviceUid.trim().isNotEmpty ? serviceUid.trim() : null;
+        serviceUid != null && serviceUid.trim().isNotEmpty
+            ? serviceUid.trim()
+            : null;
     final String? normalizedNote =
-    note != null && note.trim().isNotEmpty ? note.trim() : null;
+        note != null && note.trim().isNotEmpty ? note.trim() : null;
     final String? encodedCustomFields = _encodeCustomFields(customFields);
 
     Map<String, dynamic> _buildPayload() {
@@ -74,7 +74,6 @@ class ServiceRequestRepository {
       };
 
       if (normalizedUid != null) {
-
         map['service_uid'] = normalizedUid;
       }
       if (normalizedNote != null) {
@@ -84,8 +83,8 @@ class ServiceRequestRepository {
       if (encodedCustomFields != null) {
         map['custom_fields'] = encodedCustomFields;
       }
-      if (attachments != null && attachments!.isNotEmpty) {
-        map.addAll(attachments!);
+      if (attachments != null && attachments.isNotEmpty) {
+        map.addAll(attachments);
       }
 
       return map;
@@ -98,7 +97,6 @@ class ServiceRequestRepository {
 
     ApiHttpException? lastHttpError;
 
-
     for (final endpoint in endpoints) {
       try {
         final response = await Api.post(
@@ -106,7 +104,6 @@ class ServiceRequestRepository {
           parameter: _buildPayload(),
         );
         return _parseResponse(response);
-
       } on ApiHttpException catch (e) {
         if (e.statusCode == 404 || e.statusCode == 405) {
           lastHttpError = e;
@@ -121,13 +118,10 @@ class ServiceRequestRepository {
       throw lastHttpError;
     }
 
-
     throw ApiException('invalid-response');
   }
 
-
   ServiceRequestModel _parseResponse(dynamic response) {
-
     dynamic data = response;
     const possibleKeys = [
       'data',
@@ -185,8 +179,6 @@ class ServiceRequestRepository {
       return ServiceRequestModel.fromJson(
         data.map((key, value) => MapEntry(key.toString(), value)),
       );
-
-
     }
 
     throw ApiException('invalid-response');

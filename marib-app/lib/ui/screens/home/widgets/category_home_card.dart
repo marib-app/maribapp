@@ -1,4 +1,3 @@
-
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:flutter/material.dart';
@@ -20,7 +19,6 @@ class CategoryHomeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     String extension = url.split(".").last.toLowerCase();
     bool isFullImage = false;
-
 
     if (extension == "png" || extension == "svg") {
       isFullImage = false;
@@ -53,7 +51,8 @@ class CategoryHomeCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(
-                          color: context.color.borderColor.darken(60), width: 1),
+                          color: context.color.borderColor.darken(60),
+                          width: 1),
                       color: context.color.secondaryColor,
                     ),
                     child: Center(

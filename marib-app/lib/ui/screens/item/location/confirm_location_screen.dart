@@ -39,15 +39,10 @@ import 'package:marib/ui/screens/user_profile/my_item_tab.dart';
 
 import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:flutter/services.dart';
-import 'dart:async';
-import 'package:flutter/services.dart';
-import 'package:geolocator/geolocator.dart';
-import 'smart_hint.dart';
+import 'package:marib/ui/screens/item/location/smart_hint.dart';
 import 'package:marib/utils/errorFilter.dart';
 
 part 'confirm_location_screen_ui.dart';
-
-
 
 class ConfirmLocationScreen extends StatefulWidget {
   final bool? isEdit;
@@ -82,7 +77,6 @@ class ConfirmLocationScreen extends StatefulWidget {
   _ConfirmLocationScreenState createState() => _ConfirmLocationScreenState();
 }
 
-
 CameraPosition buildCamera(LatLng target, {double zoom = 14.47}) {
   return CameraPosition(
     target: target,
@@ -97,14 +91,6 @@ Marker createMarker(String id, LatLng position) {
     position: position,
   );
 }
-
-
-
-
-
-
-
-
 
 class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
     with WidgetsBindingObserver {
@@ -136,7 +122,9 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
   Timer? _idleDebounce;
   Set<Circle> _accuracyCircle = {};
   bool _reverseLoading = false; // لو تبغى تعرض حالة تحميل العنوان
-  Future<void> _applyMapStyle() async { /* حمّل JSON حسب الثيم واستدع setMapStyle */ }
+  Future<void> _applyMapStyle() async {
+    /* حمّل JSON حسب الثيم واستدع setMapStyle */
+  }
   bool _showSelectedMarker = false;
   bool _isMoving = false;
   bool _locating = false;
@@ -144,12 +132,6 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
   Timer? _hintTimer;
   bool _showHint = true; // متغير للتحكم في عرض التلميح
   late final SmartHintController _hint;
-
-
-
-
-
-
 
   void _scheduleHintReturn() {
     _hintTimer?.cancel();
@@ -159,15 +141,10 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
     });
   }
 
-
-
-
-
   String _short(String? s, {int max = 42}) {
     if (s == null || s.isEmpty) return '';
     return s.length <= max ? s : '${s.substring(0, max)}…';
   }
-
 
   // كاش للتفاصيل حتى ما نعمل طلب ثاني
   final Map<String, _PlaceDetails> _placeCache = {};
@@ -176,7 +153,7 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
   Future<List<_PlaceSuggestion>> _placesAutocomplete(String q) async {
     final uri = Uri.parse(
       'https://nominatim.openstreetmap.org/search'
-          '?q=${Uri.encodeComponent(q)}&format=jsonv2&addressdetails=1&limit=8',
+      '?q=${Uri.encodeComponent(q)}&format=jsonv2&addressdetails=1&limit=8',
     );
 
     try {
@@ -202,12 +179,14 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
             addr['quarter'] ??
             addr['village'] ??
             addr['town'];
-        final String? city    = addr['city'] ?? addr['town'] ?? addr['village'];
-        final String? state   = addr['state'];
+        final String? city = addr['city'] ?? addr['town'] ?? addr['village'];
+        final String? state = addr['state'];
         final String? country = addr['country'];
 
-        final double? lat = (item['lat'] != null) ? double.tryParse(item['lat']) : null;
-        final double? lng = (item['lon'] != null) ? double.tryParse(item['lon']) : null;
+        final double? lat =
+            (item['lat'] != null) ? double.tryParse(item['lat']) : null;
+        final double? lng =
+            (item['lon'] != null) ? double.tryParse(item['lon']) : null;
 
         // كوّن العنوان العربي المختصر
         final title = [
@@ -215,7 +194,7 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
           city?.trim(),
           state?.trim(),
           country?.trim(),
-        ].where((e) => e != null && e!.isNotEmpty).map((e) => e!).join('، ');
+        ].where((e) => e != null && e.isNotEmpty).map((e) => e!).join('، ');
 
         // لو فاضي، استخدم display_name
         final fallbackTitle = (item['display_name'] ?? '').toString();
@@ -250,8 +229,6 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
     return _placeCache[placeId];
   }
 
-
-
   // قياس عرض/ارتفاع حقل البحث لمطابقة لوحة الاقتراحات
   void _updateSearchBoxSize() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -262,11 +239,9 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
     });
   }
 
-
-
-
   // تمييز الجزء المطابق من النص
-  InlineSpan _highlight(String text, String query, TextStyle base, TextStyle hi) {
+  InlineSpan _highlight(
+      String text, String query, TextStyle base, TextStyle hi) {
     final q = query.trim();
     if (q.isEmpty) return TextSpan(text: text, style: base);
     final i = text.toLowerCase().indexOf(q.toLowerCase());
@@ -277,12 +252,6 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
       TextSpan(text: text.substring(i + q.length), style: base),
     ]);
   }
-
-
-
-
-
-
 
   double _suggestionsTop = 100; // قيمة افتراضية
 
@@ -298,46 +267,43 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
     });
   }
 
-
   void showGPSPermissionError() {
     showDialog(
       context: context,
-      builder: (_) =>
-          AlertDialog(
-            title: Text("فشل تحديد الموقع"),
-            content: Text(
-                "لم نتمكن من الوصول لموقعك. تأكد من تفعيل GPS ومنح الإذن."),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _getCurrentLocation(); // إعادة المحاولة
-                },
-                child: Text("🔁 إعادة المحاولة"),
-              ),
-              TextButton(
-                onPressed: () {
-                  openAppSettings(); // فتح الإعدادات
-                },
-                child: Text("⚙️ الإعدادات"),
-              ),
-            ],
+      builder: (_) => AlertDialog(
+        title: Text("فشل تحديد الموقع"),
+        content:
+            Text("لم نتمكن من الوصول لموقعك. تأكد من تفعيل GPS ومنح الإذن."),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _getCurrentLocation(); // إعادة المحاولة
+            },
+            child: Text("🔁 إعادة المحاولة"),
           ),
+          TextButton(
+            onPressed: () {
+              openAppSettings(); // فتح الإعدادات
+            },
+            child: Text("⚙️ الإعدادات"),
+          ),
+        ],
+      ),
     );
   }
 
-
-
   Future<void> _onPostNowPressed() async {
     if (latitude == null || longitude == null) {
-      HelperUtils.showSnackBarMessage(context, "يرجى تحديد موقع صالح على الخريطة");
+      HelperUtils.showSnackBarMessage(
+          context, "يرجى تحديد موقع صالح على الخريطة");
       return;
     }
 
-
     try {
-      final cloudData = (getCloudData("with_more_details") as Map<String, dynamic>?) ??
-          <String, dynamic>{};
+      final cloudData =
+          (getCloudData("with_more_details") as Map<String, dynamic>?) ??
+              <String, dynamic>{};
 
       final AddressComponent? selectedAddress = formatedAddress;
       final cleanedArea = AddressComponent._clean(selectedAddress?.area);
@@ -346,8 +312,6 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
       final cleanedCountry = AddressComponent._clean(selectedAddress?.country);
       final String fallbackAddress =
           'الموقع المحدد (${latitude!.toStringAsFixed(5)}, ${longitude!.toStringAsFixed(5)})';
-
-
 
       final String resolvedAddress =
           AddressComponent._clean(selectedAddress?.mixed) ?? fallbackAddress;
@@ -359,7 +323,6 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
         cloudData.remove('area');
       }
 
-
       cloudData['latitude'] = latitude;
       cloudData['longitude'] = longitude;
       cloudData['location_latitude'] = latitude;
@@ -367,7 +330,6 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
 
       if (cleanedCountry != null) {
         cloudData['country'] = cleanedCountry;
-
       } else {
         cloudData.remove('country');
       }
@@ -379,8 +341,6 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
         cloudData['state'] = cleanedState;
       } else {
         cloudData.remove('state');
-
-
       }
       if (selectedAddress?.areaId != null) {
         cloudData['area_id'] = selectedAddress!.areaId;
@@ -388,30 +348,26 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
         cloudData.remove('area_id');
       }
 
-      cloudData.removeWhere((key, value) => value == null || (value is String && value.isEmpty));
-
-
+      cloudData.removeWhere(
+          (key, value) => value == null || (value is String && value.isEmpty));
 
       final cubit = context.read<ManageItemCubit>();
       if (widget.isEdit == true) {
-         cubit.manage(ManageItemType.edit, cloudData, widget.mainImage, widget.otherImage ?? []);
+        cubit.manage(ManageItemType.edit, cloudData, widget.mainImage,
+            widget.otherImage ?? []);
       } else {
         if (widget.mainImage == null) {
-          HelperUtils.showSnackBarMessage(context, "يرجى اختيار صورة رئيسية للإعلان");
+          HelperUtils.showSnackBarMessage(
+              context, "يرجى اختيار صورة رئيسية للإعلان");
           return;
         }
-         cubit.manage(ManageItemType.add, cloudData, widget.mainImage!, widget.otherImage ?? []);
+        cubit.manage(ManageItemType.add, cloudData, widget.mainImage!,
+            widget.otherImage ?? []);
       }
     } catch (e) {
       HelperUtils.showSnackBarMessage(context, "حدث خطأ غير متوقع");
     }
   }
-
-
-
-
-
-
 
   Future<void> _goToUserLocation() async {
     try {
@@ -428,11 +384,9 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
       });
 
       // حرّك الكاميرا إذا الكنترولر جاهز
-      if (_mapController != null) {
-        _mapController!.animateCamera(
-          CameraUpdate.newCameraPosition(_cameraPosition!),
-        );
-      }
+      _mapController.animateCamera(
+        CameraUpdate.newCameraPosition(_cameraPosition!),
+      );
     } on PermissionDeniedException catch (e) {
       log('GPS permission denied: $e');
       this.showGPSPermissionError();
@@ -445,18 +399,10 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
     }
   }
 
-
-
-
-
-
-
   @override
   void initState() {
-
-
     _searchFocus = FocusNode();
-    _searchCtrl  = TextEditingController();
+    _searchCtrl = TextEditingController();
     _hint = SmartHintController();
     _debounce?.cancel();
 
@@ -469,11 +415,7 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
 
     WidgetsBinding.instance.addObserver(this);
     super.initState();
-
-
   }
-
-
 
   @override
   void dispose() {
@@ -487,7 +429,7 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
     WidgetsBinding.instance.removeObserver(this);
 
     // كنترولرات
-    _mapController?.dispose(); // لو معرف كـ GoogleMapController?
+    _mapController.dispose(); // لو معرف كـ GoogleMapController?
     cityTextController.dispose();
     countryTextController.dispose();
 
@@ -497,8 +439,6 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
 
     super.dispose();
   }
-
-
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -513,7 +453,7 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
     }
   }
 
-  preFillLocationWhileEdit() async {
+  Future<void> preFillLocationWhileEdit() async {
     if (widget.isEdit!) {
       ItemModel itemModel = getCloudData('edit_request') as ItemModel;
 
@@ -532,7 +472,6 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
       latitude = itemModel.latitude;
       longitude = itemModel.longitude;
       _cameraPosition = buildCamera(LatLng(latitude!, longitude!));
-
 
       _markers.add(Marker(
         markerId: const MarkerId('currentLocation'),
@@ -556,13 +495,10 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
 
         getLocationFromLatitudeLongitude(latLng: currentLatLng);
 
-
         _markers.add(Marker(
           markerId: const MarkerId('currentLocation'),
           position: currentLatLng,
-
         ));
-
       } else {
         formatedAddress = AddressComponent(
             area: HiveUtils.getCurrentAreaName(),
@@ -585,12 +521,12 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
     setState(() {});
   }
 
-  getLocationFromLatitudeLongitude({LatLng? latLng}) async {
+  Future<void> getLocationFromLatitudeLongitude({LatLng? latLng}) async {
     try {
       await setLocaleIdentifier("en_US");
       Placemark? placeMark = (await placemarkFromCoordinates(
-          latLng?.latitude ?? _cameraPosition!.target.latitude,
-          latLng?.longitude ?? _cameraPosition!.target.longitude))
+              latLng?.latitude ?? _cameraPosition!.target.latitude,
+              latLng?.longitude ?? _cameraPosition!.target.longitude))
           .first;
 
       formatedAddress = AddressComponent(
@@ -607,7 +543,6 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
       setState(() {});
     }
   }
-
 
   Future<void> _getCurrentLocation() async {
     try {
@@ -639,7 +574,6 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
             await _goToUserLocation();
           }
         } else {
-
           await _goToUserLocation();
         }
       } on PermissionDeniedException catch (e) {
@@ -656,52 +590,36 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
     }
   }
 
-
   @override
   Widget build(BuildContext context) => _buildUI(context);
 
-
-
-
-
-
   Set<Factory<OneSequenceGestureRecognizer>> getMapGestureRecognizers() {
-    return <Factory<OneSequenceGestureRecognizer>>{}..add(
-        Factory<PanGestureRecognizer>(
-                () =>
-            PanGestureRecognizer()
-              ..onUpdate = (dragUpdateDetails) {}))..add(
-        Factory<ScaleGestureRecognizer>(
-                () =>
-            ScaleGestureRecognizer()
-              ..onStart = (dragUpdateDetails) {}))..add(
-        Factory<TapGestureRecognizer>(() => TapGestureRecognizer()))..add(
-        Factory<VerticalDragGestureRecognizer>(
-                () =>
-            VerticalDragGestureRecognizer()
-              ..onDown = (dragUpdateDetails) {
-                if (markerMove == false) {} else {
-                  setState(() {
-                    markerMove = false;
-                  });
-                }
-              }));
+    return <Factory<OneSequenceGestureRecognizer>>{}
+      ..add(Factory<PanGestureRecognizer>(
+          () => PanGestureRecognizer()..onUpdate = (dragUpdateDetails) {}))
+      ..add(Factory<ScaleGestureRecognizer>(
+          () => ScaleGestureRecognizer()..onStart = (dragUpdateDetails) {}))
+      ..add(Factory<TapGestureRecognizer>(() => TapGestureRecognizer()))
+      ..add(Factory<VerticalDragGestureRecognizer>(
+          () => VerticalDragGestureRecognizer()
+            ..onDown = (dragUpdateDetails) {
+              if (markerMove == false) {
+              } else {
+                setState(() {
+                  markerMove = false;
+                });
+              }
+            }));
   }
-
 }
-
-
-
-
-
 
 /// كلاس يمثل مكوّنات العنوان للجمهور العربي
 class AddressComponent {
-  final String? area;     // الحي/المنطقة
-  final int? areaId;      // معرّف المنطقة (اختياري)
-  final String? city;     // المدينة
-  final String? state;    // المحافظة/المنطقة
-  final String? country;  // الدولة
+  final String? area; // الحي/المنطقة
+  final int? areaId; // معرّف المنطقة (اختياري)
+  final String? city; // المدينة
+  final String? state; // المحافظة/المنطقة
+  final String? country; // الدولة
 
   const AddressComponent({
     this.area,
@@ -733,13 +651,13 @@ class AddressComponent {
 
   /// ✅ توافق رجعي مع الاستدعاءات القديمة AddressComponent.copyWithFields(...)
   factory AddressComponent.copyWithFields(
-      AddressComponent original, {
-        String? newArea,
-        int? newAreaId,
-        String? newCity,
-        String? newState,
-        String? newCountry,
-      }) {
+    AddressComponent original, {
+    String? newArea,
+    int? newAreaId,
+    String? newCity,
+    String? newState,
+    String? newCountry,
+  }) {
     return original.copyWith(
       area: newArea,
       areaId: newAreaId,
@@ -757,14 +675,14 @@ class AddressComponent {
 
   /// دمج العنوان بالفاصل العربي
   static String _generateMixedString(
-      String? area,
-      String? city,
-      String? state,
-      String? country, {
-        String separator = '، ',
-      }) {
+    String? area,
+    String? city,
+    String? state,
+    String? country, {
+    String separator = '، ',
+  }) {
     return [area, city, state, country]
-        .where((e) => e != null && e!.trim().isNotEmpty)
+        .where((e) => e != null && e.trim().isNotEmpty)
         .map((e) => e!.trim())
         .join(separator);
   }
@@ -806,10 +724,10 @@ class AddressComponent {
   /// حالات ملائمة
   bool get isEmpty =>
       _clean(area) == null &&
-          areaId == null &&
-          _clean(city) == null &&
-          _clean(state) == null &&
-          _clean(country) == null;
+      areaId == null &&
+      _clean(city) == null &&
+      _clean(state) == null &&
+      _clean(country) == null;
 
   bool get isNotEmpty => !isEmpty;
 
@@ -820,13 +738,13 @@ class AddressComponent {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-          other is AddressComponent &&
-              runtimeType == other.runtimeType &&
-              area == other.area &&
-              areaId == other.areaId &&
-              city == other.city &&
-              state == other.state &&
-              country == other.country;
+      other is AddressComponent &&
+          runtimeType == other.runtimeType &&
+          area == other.area &&
+          areaId == other.areaId &&
+          city == other.city &&
+          state == other.state &&
+          country == other.country;
 
   @override
   int get hashCode =>

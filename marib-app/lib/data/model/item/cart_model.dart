@@ -2,11 +2,7 @@ import 'dart:convert';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/utils/delivery_department.dart';
 
-
-
 class Cart extends ItemModel {
-
-
   Cart({
     required int id,
     required String name,
@@ -15,7 +11,6 @@ class Cart extends ItemModel {
     required int categoryId,
     required User? user,
     required this.section,
-
     this.quantity = 0,
     this.selectedCustomFields,
     this.weight,
@@ -29,25 +24,15 @@ class Cart extends ItemModel {
     this.stockSnapshot,
     this.unitPriceLocked,
     String? currency,
-
-
-
   }) : super(
-
-
-
-
-    id: id,
-    name: name,
-    image: image,
-    price: price,
-    user: user,
-    categoryId: categoryId,
-    currency: currency,
-
-  );
-
-
+          id: id,
+          name: name,
+          image: image,
+          price: price,
+          user: user,
+          categoryId: categoryId,
+          currency: currency,
+        );
 
   /// القسم/الإدارة التي ينتمي لها المنتج داخل السلة (تُستخدم للحماية من دمج الأقسام).
   final String section;
@@ -61,8 +46,6 @@ class Cart extends ItemModel {
   /// إحداثيات مزوّد/البائع (اختياري)
   final double? vendorLat;
   final double? vendorLng;
-
-
 
   /// المعرف الفعلي لسطر السلة داخل جدول cart_items.
   final int? cartItemId;
@@ -85,36 +68,30 @@ class Cart extends ItemModel {
   /// يحدد ما إذا كان سعر الوحدة مقفلًا بواسطة الخادم.
   final bool? unitPriceLocked;
 
-
   /// السعر المعتمد للوحدة عند العرض (يراعي pivot أو سعر السلعة).
   double get unitPriceValue => unitPrice ?? price ?? 0.0;
 
   /// المجموع الفرعي النهائي للعنصر.
   double get subtotalAmount => subtotalOverride ?? unitPriceValue * quantity;
 
-
-
-
-
-
-
   /// إنشاء عنصر سلة مباشرة من [ItemModel] مع الحرص على التقاط القسم المناسب.
   factory Cart.fromItemModel(
-      ItemModel item, {
-        int quantity = 1,
-        List<Map<String, dynamic>>? selectedCustomFields,
-        double? weight,
-        double? vendorLat,
-        double? vendorLng,
-        String? variantId,
-        Map<String, dynamic>? variantAttributes,
-        Map<String, dynamic>? stockSnapshot,
-        double? unitPrice,
-        bool? unitPriceLocked,
-        String? currency,
-      }) {
+    ItemModel item, {
+    int quantity = 1,
+    List<Map<String, dynamic>>? selectedCustomFields,
+    double? weight,
+    double? vendorLat,
+    double? vendorLng,
+    String? variantId,
+    Map<String, dynamic>? variantAttributes,
+    Map<String, dynamic>? stockSnapshot,
+    double? unitPrice,
+    bool? unitPriceLocked,
+    String? currency,
+  }) {
     if (item.id == null) {
-      throw ArgumentError('ItemModel.id cannot be null when creating a cart item');
+      throw ArgumentError(
+          'ItemModel.id cannot be null when creating a cart item');
     }
 
     final resolvedSection = _resolveSectionSlug(
@@ -142,38 +119,40 @@ class Cart extends ItemModel {
       unitPrice: resolvedUnitPrice,
       subtotalOverride: resolvedUnitPrice * quantity,
       variantId: variantId,
-      variantAttributes:
-      variantAttributes != null ? Map<String, dynamic>.from(variantAttributes) : null,
-      stockSnapshot:
-      stockSnapshot != null ? Map<String, dynamic>.from(stockSnapshot) : null,
+      variantAttributes: variantAttributes != null
+          ? Map<String, dynamic>.from(variantAttributes)
+          : null,
+      stockSnapshot: stockSnapshot != null
+          ? Map<String, dynamic>.from(stockSnapshot)
+          : null,
       unitPriceLocked: unitPriceLocked,
       currency: resolvedCurrency,
     );
   }
 
-
   /// إعادة بناء عنصر السلة من الـJSON الذي يعيده الخادم أو التخزين المحلي.
   factory Cart.fromJson(Map<String, dynamic> json) {
     final dynamic pivot = json['pivot'];
     final Map<String, dynamic>? pivotMap =
-    pivot is Map<String, dynamic> ? Map<String, dynamic>.from(pivot) : null;
+        pivot is Map<String, dynamic> ? Map<String, dynamic>.from(pivot) : null;
 
     final dynamic item = json['item'];
     final Map<String, dynamic>? itemMap =
-    item is Map<String, dynamic> ? Map<String, dynamic>.from(item) : null;
+        item is Map<String, dynamic> ? Map<String, dynamic>.from(item) : null;
 
-    final Map<String, dynamic> baseSource =
-    itemMap != null ? Map<String, dynamic>.from(itemMap) : <String, dynamic>{};
+    final Map<String, dynamic> baseSource = itemMap != null
+        ? Map<String, dynamic>.from(itemMap)
+        : <String, dynamic>{};
 
     void fillIfAbsent(String key, dynamic value) {
       if (value == null) return;
       if (key == 'pivot') return;
-      if (key == 'id' && baseSource.containsKey('id') && baseSource['id'] != null) {
+      if (key == 'id' &&
+          baseSource.containsKey('id') &&
+          baseSource['id'] != null) {
         return;
       }
       baseSource.putIfAbsent(key, () => value);
-
-
     }
 
     // تأكد من وجود المعرف الصحيح للعنصر.
@@ -190,12 +169,14 @@ class Cart extends ItemModel {
     pivotMap?.forEach(fillIfAbsent);
 
     // عالج غياب السعر في العنصر الأساسي.
-    baseSource.putIfAbsent('price', () =>
-    pivotMap?['unit_price'] ?? json['unit_price'] ?? baseSource['unit_price']);
+    baseSource.putIfAbsent(
+        'price',
+        () =>
+            pivotMap?['unit_price'] ??
+            json['unit_price'] ??
+            baseSource['unit_price']);
 
     final ItemModel base = ItemModel.fromJson(baseSource);
-
-
 
     User? resolvedUser = base.user;
 
@@ -237,17 +218,13 @@ class Cart extends ItemModel {
     mergeUser(itemMap?['seller']);
     mergeUser(itemMap?['vendor']);
 
-
-
     final int? itemId = _parseInt(json['item_id']) ??
         _parseInt(pivotMap?['item_id']) ??
         _parseInt(baseSource['item_id']) ??
         _parseInt(base.id);
     if (itemId == null) {
-
-
-
-      throw ArgumentError('Cart JSON is missing the required `item_id`/`id` field.');
+      throw ArgumentError(
+          'Cart JSON is missing the required `item_id`/`id` field.');
     }
 
     final int quantity = _parseInt(json['quantity']) ??
@@ -255,54 +232,47 @@ class Cart extends ItemModel {
         _parseInt(pivotMap?['quantity']) ??
         0;
 
-    final selectedFieldsRaw = json['selected_custom_fields'] ??
-        pivotMap?['selected_custom_fields'];
+    final selectedFieldsRaw =
+        json['selected_custom_fields'] ?? pivotMap?['selected_custom_fields'];
 
     final double? weight =
         _parseDouble(json['weight']) ?? _parseDouble(pivotMap?['weight']);
 
-    final double? vendorLat = _parseDouble(json['vendor_lat'] ?? json['vendor_latitude']) ??
+    final double? vendorLat = _parseDouble(
+            json['vendor_lat'] ?? json['vendor_latitude']) ??
         _parseDouble(pivotMap?['vendor_lat'] ?? pivotMap?['vendor_latitude']);
 
-
-
-
-    final double? vendorLng = _parseDouble(json['vendor_lng'] ?? json['vendor_longitude']) ??
+    final double? vendorLng = _parseDouble(
+            json['vendor_lng'] ?? json['vendor_longitude']) ??
         _parseDouble(pivotMap?['vendor_lng'] ?? pivotMap?['vendor_longitude']);
-
-
-
 
     final sectionRaw = json['section'] ??
         json['department'] ??
         pivotMap?['section'] ??
         pivotMap?['department'];
 
-
-
     final resolvedSection = _resolveSectionSlug(
       base,
       explicitSection: sectionRaw is String ? sectionRaw : null,
     );
 
-    final double unitPrice =
-        _parseDouble(json['unit_price']) ?? _parseDouble(pivotMap?['unit_price']) ??
-            (base.price ?? 0.0);
+    final double unitPrice = _parseDouble(json['unit_price']) ??
+        _parseDouble(pivotMap?['unit_price']) ??
+        (base.price ?? 0.0);
     final double? subtotal =
         _parseDouble(json['subtotal']) ?? _parseDouble(pivotMap?['subtotal']);
 
     final String? variantId =
-    _stringOrNull(json['variant_id'] ?? pivotMap?['variant_id']);
-    final Map<String, dynamic>? variantAttributes =
-    _parseJsonMap(json['variant_attributes'] ?? pivotMap?['variant_attributes']);
+        _stringOrNull(json['variant_id'] ?? pivotMap?['variant_id']);
+    final Map<String, dynamic>? variantAttributes = _parseJsonMap(
+        json['variant_attributes'] ?? pivotMap?['variant_attributes']);
     final Map<String, dynamic>? stockSnapshot =
-    _parseJsonMap(json['stock_snapshot'] ?? pivotMap?['stock_snapshot']);
+        _parseJsonMap(json['stock_snapshot'] ?? pivotMap?['stock_snapshot']);
     final bool? unitPriceLocked =
-    _parseBool(json['unit_price_locked'] ?? pivotMap?['unit_price_locked']);
-    final String? currency =
-        _stringOrNull(json['currency']) ??
-            _stringOrNull(pivotMap?['currency']) ??
-            base.currency;
+        _parseBool(json['unit_price_locked'] ?? pivotMap?['unit_price_locked']);
+    final String? currency = _stringOrNull(json['currency']) ??
+        _stringOrNull(pivotMap?['currency']) ??
+        base.currency;
 
     return Cart(
       id: itemId,
@@ -311,16 +281,15 @@ class Cart extends ItemModel {
       price: unitPrice,
       categoryId: base.categoryId ?? _parseInt(json['category_id']) ?? 0,
       user: resolvedUser,
-
-
       quantity: quantity,
       selectedCustomFields: _parseSelectedCustomFields(selectedFieldsRaw),
       weight: weight,
       vendorLat: vendorLat ?? base.latitude,
       vendorLng: vendorLng ?? base.longitude,
       section: resolvedSection,
-      cartItemId:
-      _parseInt(json['cart_item_id']) ?? _parseInt(pivotMap?['id']) ?? _parseInt(json['id']),
+      cartItemId: _parseInt(json['cart_item_id']) ??
+          _parseInt(pivotMap?['id']) ??
+          _parseInt(json['id']),
       unitPrice: unitPrice,
       subtotalOverride: subtotal ?? unitPrice * quantity,
       variantId: variantId,
@@ -359,7 +328,8 @@ class Cart extends ItemModel {
       data['variant_id'] = variantId;
     }
     if (variantAttributes != null && variantAttributes!.isNotEmpty) {
-      data['variant_attributes'] = Map<String, dynamic>.from(variantAttributes!);
+      data['variant_attributes'] =
+          Map<String, dynamic>.from(variantAttributes!);
     }
     if (stockSnapshot != null && stockSnapshot!.isNotEmpty) {
       data['stock_snapshot'] = Map<String, dynamic>.from(stockSnapshot!);
@@ -373,11 +343,6 @@ class Cart extends ItemModel {
 
     return data;
   }
-
-
-
-
-
 
   static String _resolveSectionSlug(ItemModel item, {String? explicitSection}) {
     final List<String?> rawCandidates = <String?>[
@@ -395,15 +360,13 @@ class Cart extends ItemModel {
       }
     }
 
-
-
     final Set<int> categoryIds = _collectCategoryIds(
       item,
       additionalSources: rawCandidates,
     );
 
     final String? departmentFromIds =
-    resolveDeliveryDepartmentFromCategoryIds(categoryIds);
+        resolveDeliveryDepartmentFromCategoryIds(categoryIds);
     if (departmentFromIds != null) {
       return departmentFromIds;
     }
@@ -419,12 +382,11 @@ class Cart extends ItemModel {
     if (categoryIds.isNotEmpty) {
       final int fallbackId = categoryIds.first;
       final String? normalized =
-      resolveDeliveryDepartmentFromCategoryIds(<int>[fallbackId]);
+          resolveDeliveryDepartmentFromCategoryIds(<int>[fallbackId]);
       if (normalized != null) {
         return normalized;
       }
       return 'category-$fallbackId';
-
     }
 
     return 'general';
@@ -470,7 +432,6 @@ class Cart extends ItemModel {
     }
   }
 
-
   static String? _normalizeSection(String? raw) {
     if (raw == null) return null;
     final String trimmed = raw.trim();
@@ -479,12 +440,10 @@ class Cart extends ItemModel {
     final String lower = trimmed.toLowerCase();
     final String collapsedWhitespace = lower.replaceAll(RegExp(r'\s+'), '-');
     final String sanitized =
-    collapsedWhitespace.replaceAll(RegExp(r'[^a-z0-9_\-]'), '');
-
+        collapsedWhitespace.replaceAll(RegExp(r'[^a-z0-9_\-]'), '');
 
     return sanitized.isEmpty ? lower : sanitized;
   }
-
 
   static int? _parseInt(dynamic value) {
     if (value == null) return null;
@@ -502,7 +461,6 @@ class Cart extends ItemModel {
     }
     return null;
   }
-
 
   static bool? _parseBool(dynamic value) {
     if (value == null) return null;
@@ -537,7 +495,6 @@ class Cart extends ItemModel {
     return null;
   }
 
-
   static Map<String, dynamic> _normaliseUserMap(Map<dynamic, dynamic> raw) {
     final Map<String, dynamic> result = <String, dynamic>{};
 
@@ -546,8 +503,8 @@ class Cart extends ItemModel {
       result[key is String ? key : key.toString()] = value;
     });
 
-    void assignIfMissing(
-        String canonical, List<String> aliases, String? Function(dynamic) pick) {
+    void assignIfMissing(String canonical, List<String> aliases,
+        String? Function(dynamic) pick) {
       if (_hasMeaningfulUserValue(result[canonical])) return;
       for (final String alias in aliases) {
         if (!_hasMeaningfulUserValue(result[alias])) continue;
@@ -559,8 +516,8 @@ class Cart extends ItemModel {
       }
     }
 
-    void assignDynamicIfMissing(
-        String canonical, List<String> aliases, dynamic Function(dynamic) pick) {
+    void assignDynamicIfMissing(String canonical, List<String> aliases,
+        dynamic Function(dynamic) pick) {
       if (_hasMeaningfulUserValue(result[canonical])) return;
       for (final String alias in aliases) {
         if (!_hasMeaningfulUserValue(result[alias])) continue;
@@ -572,97 +529,107 @@ class Cart extends ItemModel {
       }
     }
 
-    assignIfMissing('name', <String>[
-      'seller_name',
-      'sellerName',
-      'vendor_name',
-      'vendorName',
-      'store_name',
-      'shop_name',
-      'business_name',
-      'company_name',
-      'full_name',
-      'fullName',
-      'display_name',
-      'displayName',
-      'contact_name',
-      'contactName',
-      'representative_name',
-      'representativeName',
+    assignIfMissing(
+        'name',
+        <String>[
+          'seller_name',
+          'sellerName',
+          'vendor_name',
+          'vendorName',
+          'store_name',
+          'shop_name',
+          'business_name',
+          'company_name',
+          'full_name',
+          'fullName',
+          'display_name',
+          'displayName',
+          'contact_name',
+          'contactName',
+          'representative_name',
+          'representativeName',
+          'username',
+          'seller',
+          'vendor',
+        ],
+        _stringOrNull);
 
-      'username',
-      'seller',
-      'vendor',
-    ], _stringOrNull);
+    assignIfMissing(
+        'mobile',
+        <String>[
+          'seller_mobile',
+          'sellerMobile',
+          'seller_phone',
+          'sellerPhone',
+          'vendor_phone',
+          'vendor_mobile',
+          'phone',
+          'phone_number',
+          'phoneNumber',
+          'mobile_number',
+          'mobileNumber',
+          'phone_primary',
+          'phonePrimary',
+          'primary_phone',
+          'primaryPhone',
+          'mobile_phone',
+          'mobilePhone',
+          'contact',
+          'contact_number',
+          'contactNumber',
+          'contact_phone',
+          'contactPhone',
+          'whatsapp',
+          'whatsapp_number',
+          'whatsappNumber',
+          'telephone',
+          'tel',
+        ],
+        _stringOrNull);
 
-    assignIfMissing('mobile', <String>[
-      'seller_mobile',
-      'sellerMobile',
-      'seller_phone',
-      'sellerPhone',
-      'vendor_phone',
-      'vendor_mobile',
-      'phone',
-      'phone_number',
-      'phoneNumber',
-      'mobile_number',
-      'mobileNumber',
-      'phone_primary',
-      'phonePrimary',
-      'primary_phone',
-      'primaryPhone',
-      'mobile_phone',
-      'mobilePhone',
-      'contact',
-      'contact_number',
-      'contactNumber',
-      'contact_phone',
-      'contactPhone',
-      'whatsapp',
-      'whatsapp_number',
-      'whatsappNumber',
-      'telephone',
-      'tel',
-    ], _stringOrNull);
+    assignIfMissing(
+        'email',
+        <String>[
+          'seller_email',
+          'sellerEmail',
+          'contact_email',
+          'contactEmail',
+          'vendor_email',
+          'vendorEmail',
+          'email_address',
+          'emailAddress',
+        ],
+        _stringOrNull);
 
-    assignIfMissing('email', <String>[
-      'seller_email',
-      'sellerEmail',
-      'contact_email',
-      'contactEmail',
-      'vendor_email',
-      'vendorEmail',
-      'email_address',
-      'emailAddress',
-    ], _stringOrNull);
-
-    assignDynamicIfMissing('address', <String>[
-      'seller_address',
-      'sellerAddress',
-      'vendor_address',
-      'vendorAddress',
-      'location',
-      'address',
-      'address_line',
-      'addressLine',
-      'address1',
-      'address_1',
-      'address_line_1',
-      'addressLine1',
-      'address_line1',
-      'address_line_2',
-      'addressLine2',
-      'address2',
-      'street',
-      'street_address',
-      'streetAddress',
-      'full_address',
-      'fullAddress',
-      'city',
-      'area',
-      'neighbourhood',
-
-    ], _normaliseAddressValue);
+    assignDynamicIfMissing(
+        'address',
+        <String>[
+          'seller_address',
+          'sellerAddress',
+          'vendor_address',
+          'vendorAddress',
+          'location',
+          'address',
+          'address_line',
+          'addressLine',
+          'address1',
+          'address_1',
+          'address_line_1',
+          'addressLine1',
+          'address_line1',
+          'address_line_2',
+          'addressLine2',
+          'address2',
+          'street',
+          'street_address',
+          'streetAddress',
+          'full_address',
+          'fullAddress',
+          'city',
+          'area',
+          'neighbourhood',
+        ],
+        _normaliseAddressValue);
 
     if (!_hasMeaningfulUserValue(result['id'])) {
       for (final String alias in <String>[
@@ -720,7 +687,6 @@ class Cart extends ItemModel {
     return true;
   }
 
-
   static List<Map<String, dynamic>>? _parseSelectedCustomFields(dynamic raw) {
     if (raw == null) return null;
 
@@ -746,6 +712,7 @@ class Cart extends ItemModel {
 
     return null;
   }
+
   static Map<String, dynamic>? _parseJsonMap(dynamic raw) {
     if (raw == null) return null;
 
@@ -777,5 +744,4 @@ class Cart extends ItemModel {
 
     return null;
   }
-
 }

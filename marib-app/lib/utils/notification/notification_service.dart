@@ -28,7 +28,6 @@ import 'package:marib/data/cubits/chat/send_message.dart';
 import 'package:marib/data/model/chat/chated_user_model.dart';
 import 'package:marib/data/model/data_output.dart';
 import 'package:marib/utils/api.dart';
-import 'dart:io';
 import 'package:marib/data/cubits/wallet/manual_payment_requests_cubit.dart';
 import 'package:marib/data/cubits/wallet/wallet_transfers_cubit.dart';
 import 'package:marib/data/cubits/wallet/wallet_withdrawals_cubit.dart';
@@ -55,8 +54,6 @@ class ChatMessageStatusUpdate {
   });
 }
 
-
-
 class UserPresenceEvent {
   final UserPresenceEventType type;
   final ParticipantStatus status;
@@ -79,22 +76,19 @@ class NotificationService {
       ChatMessageHandler.participantStatusNotifier;
 
   static final ValueNotifier<UserPresenceEvent?> userPresenceEventNotifier =
-  ValueNotifier<UserPresenceEvent?>(null);
-
+      ValueNotifier<UserPresenceEvent?>(null);
 
   static final StreamController<ParticipantStatus?>
-  _participantStatusController =
-  StreamController<ParticipantStatus?>.broadcast();
+      _participantStatusController =
+      StreamController<ParticipantStatus?>.broadcast();
 
   static final StreamController<UserPresenceEvent>
-  _userPresenceEventController =
-  StreamController<UserPresenceEvent>.broadcast();
-
+      _userPresenceEventController =
+      StreamController<UserPresenceEvent>.broadcast();
 
   static final StreamController<ChatMessageStatusUpdate>
-  _messageStatusController =
-  StreamController<ChatMessageStatusUpdate>.broadcast();
-
+      _messageStatusController =
+      StreamController<ChatMessageStatusUpdate>.broadcast();
 
   static Stream<ParticipantStatus?> get participantStatusStream =>
       _participantStatusController.stream;
@@ -102,27 +96,22 @@ class NotificationService {
   static Stream<ChatMessageStatusUpdate> get messageStatusStream =>
       _messageStatusController.stream;
 
-
   static Stream<UserPresenceEvent> get userPresenceEvents =>
       _userPresenceEventController.stream;
 
-
   static final Map<String, List<ChatParticipant>>
-  _conversationParticipantsCache =
-  <String, List<ChatParticipant>>{};
-
+      _conversationParticipantsCache = <String, List<ChatParticipant>>{};
 
   static late StreamSubscription<RemoteMessage> foregroundStream;
   static late StreamSubscription<RemoteMessage> onMessageOpen;
   static StreamSubscription<String>? _tokenRefreshSubscription;
   static final StreamController<String> _walletNotificationController =
-  StreamController<String>.broadcast();
+      StreamController<String>.broadcast();
 
   static Stream<String> get walletNotifications =>
       _walletNotificationController.stream;
 
-
-  static requestPermission() async {}
+  static Future<void> requestPermission() async {}
 
 /*  static int? getPrice(dynamic price) {
     if (price == null || price.toString().trim().isEmpty) {
@@ -138,9 +127,7 @@ class NotificationService {
   }*/
 
   static double? getPrice(dynamic price) {
-    if (price == null || price
-        .toString()
-        .isEmpty) {
+    if (price == null || price.toString().isEmpty) {
       return null;
     }
     if (price is String) {
@@ -154,7 +141,6 @@ class NotificationService {
     }
     return null; // In case of unexpected types
   }
-
 
   static int? _tryParseInt(dynamic value) {
     if (value == null) {
@@ -225,7 +211,6 @@ class NotificationService {
     return _pickFirstString(source, symbolKeys) ?? extractCurrency(source);
   }
 
-
   /* void updateFCM() async {
     await FirebaseMessaging.instance.getToken();
     // await Api.post(
@@ -237,8 +222,8 @@ class NotificationService {
   static Future<void> handleNotification(RemoteMessage? message,
       [BuildContext? context]) async {
     final String notificationType =
-    (message?.data['type'] ?? message?.data['notification_type'] ?? '')
-        .toString();
+        (message?.data['type'] ?? message?.data['notification_type'] ?? '')
+            .toString();
 
     final String eventType = message?.data['event']?.toString() ?? '';
     final String actionType = message?.data['action']?.toString() ?? '';
@@ -256,9 +241,9 @@ class NotificationService {
     final String normalizedEventType = eventType.toLowerCase();
     final String normalizedActionType = actionType.toLowerCase();
     final Set<String> normalizedPresenceEvents =
-    presenceEvents.map((event) => event.toLowerCase()).toSet();
+        presenceEvents.map((event) => event.toLowerCase()).toSet();
     final Set<String> normalizedMessageStatusEvents =
-    messageStatusEvents.map((event) => event.toLowerCase()).toSet();
+        messageStatusEvents.map((event) => event.toLowerCase()).toSet();
 
     final bool isPresenceEvent =
         normalizedPresenceEvents.contains(normalizedNotificationType) ||
@@ -269,9 +254,7 @@ class NotificationService {
             normalizedMessageStatusEvents.contains(normalizedEventType) ||
             normalizedMessageStatusEvents.contains(normalizedActionType);
 
-
     print("@notificaiton data is ${message?.data}****${notificationType}");
-
 
     if (isPresenceEvent) {
       final Map<String, dynamic> data = Map<String, dynamic>.from(
@@ -291,23 +274,17 @@ class NotificationService {
 
     if (notificationType == 'wallet') {
       final ctx = context ?? Constant.navigatorKey.currentContext;
-      final summaryCubit = ctx != null
-          ? _maybeReadCubit<WalletSummaryCubit>(ctx)
-          : null;
-      final transactionsCubit = ctx != null
-          ? _maybeReadCubit<WalletTransactionsCubit>(ctx)
-          : null;
+      final summaryCubit =
+          ctx != null ? _maybeReadCubit<WalletSummaryCubit>(ctx) : null;
+      final transactionsCubit =
+          ctx != null ? _maybeReadCubit<WalletTransactionsCubit>(ctx) : null;
 
-      final withdrawalsCubit = ctx != null
-          ? _maybeReadCubit<WalletWithdrawalsCubit>(ctx)
-          : null;
-      final manualPaymentsCubit = ctx != null
-          ? _maybeReadCubit<ManualPaymentRequestsCubit>(ctx)
-          : null;
-      final transfersCubit = ctx != null
-          ? _maybeReadCubit<WalletTransfersCubit>(ctx)
-          : null;
-
+      final withdrawalsCubit =
+          ctx != null ? _maybeReadCubit<WalletWithdrawalsCubit>(ctx) : null;
+      final manualPaymentsCubit =
+          ctx != null ? _maybeReadCubit<ManualPaymentRequestsCubit>(ctx) : null;
+      final transfersCubit =
+          ctx != null ? _maybeReadCubit<WalletTransfersCubit>(ctx) : null;
 
       final idempotencyKey = message?.data['idempotency_key']?.toString();
       final deeplink = message?.data['deeplink']?.toString();
@@ -318,7 +295,6 @@ class NotificationService {
       }
 
       Future<void>? transactionsFuture;
-
 
       if (transactionsCubit != null) {
         transactionsFuture = transactionsCubit.refresh();
@@ -361,7 +337,6 @@ class NotificationService {
       return;
     }
 
-
     if (notificationType == "chat") {
       var username = message?.data['user_name'];
       var itemImage = message?.data['item_image'];
@@ -385,75 +360,68 @@ class NotificationService {
         (context as BuildContext)
             .read<GetSellerChatListCubit>()
             .addNewChat(ChatedUser(
-          itemId: itemIdInt,
-          itemOfferId: itemOfferIdInt,
-          conversationId: conversationIdStr.isEmpty
-              ? null
-              : conversationIdStr,
-
-          amount: getPrice(itemOfferPrice),
-          createdAt: date,
-          userBlocked: false,
-          id: itemOfferIdInt,
-          /* sellerId: senderId,*/
-          updatedAt: date,
-          item: Item(
-              id: itemIdInt,
-              price: getPrice((itemPrice)),
-              name: itemName,
-              image: itemImage),
-          /*seller: Seller(name: username, profile: userProfile),*/
-          buyerId: senderIdInt,
-          buyer: Buyer(
-              name: username,
-              profile: userProfile,
-              id: senderIdInt),
-        ));
+              itemId: itemIdInt,
+              itemOfferId: itemOfferIdInt,
+              conversationId:
+                  conversationIdStr.isEmpty ? null : conversationIdStr,
+              amount: getPrice(itemOfferPrice),
+              createdAt: date,
+              userBlocked: false,
+              id: itemOfferIdInt,
+              /* sellerId: senderId,*/
+              updatedAt: date,
+              item: Item(
+                  id: itemIdInt,
+                  price: getPrice((itemPrice)),
+                  name: itemName,
+                  image: itemImage),
+              /*seller: Seller(name: username, profile: userProfile),*/
+              buyerId: senderIdInt,
+              buyer:
+                  Buyer(name: username, profile: userProfile, id: senderIdInt),
+            ));
       } else {
         final int? currentUserId = _tryParseInt(HiveUtils.getUserId());
 
         (context as BuildContext)
             .read<GetBuyerChatListCubit>()
             .addNewChat(ChatedUser(
-          itemId: itemIdInt,
-          userBlocked: false,
-          amount: getPrice(itemOfferPrice),
-          createdAt: date,
-          id: itemOfferIdInt,
-          itemOfferId: itemOfferIdInt,
-          conversationId: conversationIdStr.isEmpty
-              ? null
-              : conversationIdStr,
-          sellerId: currentUserId,
-          buyerId: senderIdInt,
-          updatedAt: date,
-          item: Item(
-              id: itemIdInt,
-              price: getPrice((itemPrice)),
-              name: itemName,
-              image: itemImage),
-          buyer: Buyer(
-              name: username,
-              profile: userProfile,
-              id: senderIdInt),
-        ));
+              itemId: itemIdInt,
+              userBlocked: false,
+              amount: getPrice(itemOfferPrice),
+              createdAt: date,
+              id: itemOfferIdInt,
+              itemOfferId: itemOfferIdInt,
+              conversationId:
+                  conversationIdStr.isEmpty ? null : conversationIdStr,
+              sellerId: currentUserId,
+              buyerId: senderIdInt,
+              updatedAt: date,
+              item: Item(
+                  id: itemIdInt,
+                  price: getPrice((itemPrice)),
+                  name: itemName,
+                  image: itemImage),
+              buyer:
+                  Buyer(name: username, profile: userProfile, id: senderIdInt),
+            ));
       }
 
       ///Checking if this is user we are chatiing with
 
       final String itemOfferIdStr = itemOfferIdInt?.toString() ?? '';
       final Map<String, dynamic> chatData =
-      Map<String, dynamic>.from(message?.data ?? const {});
+          Map<String, dynamic>.from(message?.data ?? const {});
       _cacheParticipantsFromData(chatData);
       final bool isConversationMatch = conversationIdStr.isNotEmpty
           ? (conversationIdStr == currentlyChatingWith &&
-          itemOfferIdStr == currentlyChatItemId)
+              itemOfferIdStr == currentlyChatItemId)
           : (senderId?.toString() == currentlyChatingWith &&
-          itemId?.toString() == currentlyChatItemId);
+              itemId?.toString() == currentlyChatItemId);
 
       if (isConversationMatch) {
         final ParticipantStatus? participantStatus =
-        _parseParticipantStatusFromData(chatData);
+            _parseParticipantStatusFromData(chatData);
         if (participantStatus != null) {
           _notifyParticipantStatus(participantStatus);
         }
@@ -464,22 +432,18 @@ class NotificationService {
         final int? receiverIdParsed = _tryParseInt(HiveUtils.getUserId());
 
         final String? status =
-        _normalizeNotificationValue(message?.data['status']);
+            _normalizeNotificationValue(message?.data['status']);
         final String? deliveredAt =
-        _normalizeNotificationValue(message?.data['delivered_at']);
+            _normalizeNotificationValue(message?.data['delivered_at']);
         final String? readAt =
-        _normalizeNotificationValue(message?.data['read_at']);
-
-
+            _normalizeNotificationValue(message?.data['read_at']);
 
         ChatMessageModal chatMessageModel = ChatMessageModal(
             id: messageId,
-
             updatedAt: message?.data['updated_at'],
             createdAt: message?.data['created_at'],
             itemId: messageItemId,
             itemOfferId: itemOfferIdInt,
-
             audio: message?.data['audio'],
             file: message?.data['file'],
             message: message?.data['message'],
@@ -487,7 +451,6 @@ class NotificationService {
             deliveredAt: deliveredAt,
             readAt: readAt,
             messageType: message?.data['message_type'],
-
             receiverId: receiverIdParsed,
             senderId: senderIdParsed);
 
@@ -507,7 +470,6 @@ class NotificationService {
             deliveredAt: chatMessageModel.deliveredAt,
             readAt: chatMessageModel.readAt,
             messageType: chatMessageModel.messageType,
-
           ),
         ));
 
@@ -519,16 +481,17 @@ class NotificationService {
         );
 
         final BuildContext? ctx = context as BuildContext?;
-        final String fallbackConversationId = conversationIdStr.isNotEmpty
-            ? conversationIdStr
-            : itemOfferIdStr;
+        final String fallbackConversationId =
+            conversationIdStr.isNotEmpty ? conversationIdStr : itemOfferIdStr;
         if (ctx != null) {
           try {
-            ctx.read<GetBuyerChatListCubit>()
+            ctx
+                .read<GetBuyerChatListCubit>()
                 .incrementUnread(fallbackConversationId);
           } catch (_) {}
           try {
-            ctx.read<GetSellerChatListCubit>()
+            ctx
+                .read<GetSellerChatListCubit>()
                 .incrementUnread(fallbackConversationId);
           } catch (_) {}
         } else {
@@ -551,7 +514,7 @@ class NotificationService {
     _handleMessageStatusNotification(Map<String, dynamic>.from(data));
   }
 
-  static init(context) {
+  static void init(context) {
     requestPermission();
     registerListeners(context);
     _registerTokenRefreshListener();
@@ -563,17 +526,17 @@ class NotificationService {
     await handleNotification(message);
   }
 
-  static forgroundNotificationHandler(BuildContext context) async {
+  static Future<void> forgroundNotificationHandler(BuildContext context) async {
     foregroundStream =
         FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-          print("foreground notification***${message.toString()}");
-          handleNotification(message, context);
-        });
+      print("foreground notification***${message.toString()}");
+      handleNotification(message, context);
+    });
   }
 
-  static terminatedStateNotificationHandler(BuildContext context) {
+  static void terminatedStateNotificationHandler(BuildContext context) {
     FirebaseMessaging.instance.getInitialMessage().then(
-          (RemoteMessage? message) {
+      (RemoteMessage? message) {
         if (message == null) {
           return;
         }
@@ -601,77 +564,74 @@ class NotificationService {
 
         var itemPrice = message.data['item_price'];
         var itemOfferPrice = message.data['item_offer_amount'] ?? null;
-        final int itemOfferIdParsed =
-            _tryParseInt(itemOfferId) ?? 0;
+        final int itemOfferIdParsed = _tryParseInt(itemOfferId) ?? 0;
         Future.delayed(
           Duration.zero,
-              () {
+          () {
             Navigator.push(Constant.navigatorKey.currentContext!,
                 MaterialPageRoute(
-                  builder: (context) {
-                    return MultiBlocProvider(
-                      providers: [
-                        BlocProvider(
-                          create: (context) => SendMessageCubit(),
-                        ),
-                        BlocProvider(
-                          create: (context) => LoadChatMessagesCubit(),
-                        ),
-                      ],
-                      child: Builder(builder: (context) {
-                        final Map<String, dynamic> normalizedData =
+              builder: (context) {
+                return MultiBlocProvider(
+                  providers: [
+                    BlocProvider(
+                      create: (context) => SendMessageCubit(),
+                    ),
+                    BlocProvider(
+                      create: (context) => LoadChatMessagesCubit(),
+                    ),
+                  ],
+                  child: Builder(builder: (context) {
+                    final Map<String, dynamic> normalizedData =
                         Map<String, dynamic>.from(message.data);
-                        final List<ChatParticipant>? participants =
-                            NotificationService.getCachedParticipants(
+                    final List<ChatParticipant>? participants =
+                        NotificationService.getCachedParticipants(
                               (conversationId ?? '').toString(),
                               itemOfferId: itemOfferIdParsed,
                             ) ??
-                                NotificationService
-                                    .buildParticipantsFromNotification(
-                                  data: normalizedData,
-
-                                );
-                        if (participants != null && participants.isNotEmpty) {
-                          NotificationService.cacheParticipants(
-                            participants: participants,
-                            conversationId: (conversationId ?? '').toString(),
-                            itemOfferId:
+                            NotificationService
+                                .buildParticipantsFromNotification(
+                              data: normalizedData,
+                            );
+                    if (participants != null && participants.isNotEmpty) {
+                      NotificationService.cacheParticipants(
+                        participants: participants,
+                        conversationId: (conversationId ?? '').toString(),
+                        itemOfferId:
                             itemOfferIdParsed > 0 ? itemOfferIdParsed : null,
-                            senderId: senderId?.toString(),
-                            itemId: itemId?.toString(),
-                          );
-                        }
+                        senderId: senderId?.toString(),
+                        itemId: itemId?.toString(),
+                      );
+                    }
 
-                        final String? currency =
+                    final String? currency =
                         NotificationService.extractCurrency(normalizedData);
-                        final String? currencySymbol =
+                    final String? currencySymbol =
                         NotificationService.extractCurrencySymbol(
                             normalizedData);
 
-                        return ChatScreen(
-                          profilePicture: userProfile ?? "",
-                          userName: username ?? "",
-                          itemImage: itemTitleImage ?? "",
-                          itemTitle: itemTitle ?? "",
-                          userId: senderId ?? "",
-                          itemId: itemId ?? "",
-                          date: date ?? "",
-                          itemOfferId: itemOfferIdParsed,
-                          conversationId: (conversationId ?? '').toString(),
-                          itemPrice: getPrice(itemPrice)!,
-                          itemOfferPrice: getPrice(itemOfferPrice),
-                          buyerId: HiveUtils.getUserId(),
-                          alreadyReview: false,
-                          isPurchased: 0,
-                          participants: participants,
-                          currency: currency,
-                          currencySymbol: currencySymbol,
-
-                        );
-                      }),
+                    return ChatScreen(
+                      profilePicture: userProfile ?? "",
+                      userName: username ?? "",
+                      itemImage: itemTitleImage ?? "",
+                      itemTitle: itemTitle ?? "",
+                      userId: senderId ?? "",
+                      itemId: itemId ?? "",
+                      date: date ?? "",
+                      itemOfferId: itemOfferIdParsed,
+                      conversationId: (conversationId ?? '').toString(),
+                      itemPrice: getPrice(itemPrice)!,
+                      itemOfferPrice: getPrice(itemOfferPrice),
+                      buyerId: HiveUtils.getUserId(),
+                      alreadyReview: false,
+                      isPurchased: 0,
+                      participants: participants,
+                      currency: currency,
+                      currencySymbol: currencySymbol,
                     );
-                  },
-                ));
+                  }),
+                );
+              },
+            ));
           },
         );
       } else if (message.data['type'] == "offer") {
@@ -688,9 +648,7 @@ class NotificationService {
 
           var itemPrice = message.data['item_price'];
           var itemOfferPrice = message.data['item_offer_amount'] ?? null;
-          final int itemOfferIdParsed =
-              _tryParseInt(itemOfferId) ?? 0;
-
+          final int itemOfferIdParsed = _tryParseInt(itemOfferId) ?? 0;
 
           /* var username = message.data['user_name'];
           var itemTitleImage = message.data['image'];
@@ -704,76 +662,71 @@ class NotificationService {
           var itemOfferPrice = message.data['item_offer_amount'] ?? null;*/
           Future.delayed(
             Duration.zero,
-                () {
+            () {
               Navigator.push(Constant.navigatorKey.currentContext!,
                   MaterialPageRoute(
-                    builder: (context) {
-                      return MultiBlocProvider(
-                        providers: [
-                          BlocProvider(
-                            create: (context) => SendMessageCubit(),
-                          ),
-                          BlocProvider(
-                            create: (context) => LoadChatMessagesCubit(),
-                          ),
-                        ],
-                        child: Builder(builder: (context) {
-
-                          final Map<String, dynamic> normalizedData =
+                builder: (context) {
+                  return MultiBlocProvider(
+                    providers: [
+                      BlocProvider(
+                        create: (context) => SendMessageCubit(),
+                      ),
+                      BlocProvider(
+                        create: (context) => LoadChatMessagesCubit(),
+                      ),
+                    ],
+                    child: Builder(builder: (context) {
+                      final Map<String, dynamic> normalizedData =
                           Map<String, dynamic>.from(message.data);
 
-
-                          final List<ChatParticipant>? participants =
-                              NotificationService.getCachedParticipants(
+                      final List<ChatParticipant>? participants =
+                          NotificationService.getCachedParticipants(
                                 (conversationId ?? '').toString(),
                                 itemOfferId: itemOfferIdParsed,
                               ) ??
-                                  NotificationService
-                                      .buildParticipantsFromNotification(
-                                    data: normalizedData,
-
-                                  );
-                          if (participants != null && participants.isNotEmpty) {
-                            NotificationService.cacheParticipants(
-                              participants: participants,
-                              conversationId: (conversationId ?? '').toString(),
-                              itemOfferId:
+                              NotificationService
+                                  .buildParticipantsFromNotification(
+                                data: normalizedData,
+                              );
+                      if (participants != null && participants.isNotEmpty) {
+                        NotificationService.cacheParticipants(
+                          participants: participants,
+                          conversationId: (conversationId ?? '').toString(),
+                          itemOfferId:
                               itemOfferIdParsed > 0 ? itemOfferIdParsed : null,
-                              senderId: senderId?.toString(),
-                              itemId: itemId?.toString(),
+                          senderId: senderId?.toString(),
+                          itemId: itemId?.toString(),
+                        );
+                      }
 
-                            );
-                          }
-
-                          final String? currency =
-                          NotificationService.extractCurrency(
-                              normalizedData);
-                          final String? currencySymbol =
+                      final String? currency =
+                          NotificationService.extractCurrency(normalizedData);
+                      final String? currencySymbol =
                           NotificationService.extractCurrencySymbol(
                               normalizedData);
 
-                          return ChatScreen(
-                            profilePicture: userProfile ?? "",
-                            userName: username ?? "",
-                            itemImage: itemTitleImage ?? "",
-                            itemTitle: itemTitle ?? "",
-                            userId: senderId ?? "",
-                            itemId: itemId ?? "",
-                            date: date ?? "",
-                            itemOfferId: itemOfferIdParsed,
-                            conversationId: (conversationId ?? '').toString(),
-                            itemPrice: getPrice(itemPrice)!,
-                            itemOfferPrice: getPrice(itemOfferPrice),
-                            buyerId: HiveUtils.getUserId(),
-                            alreadyReview: false,
-                            isPurchased: 0,
-                            currency: currency,
-                            currencySymbol: currencySymbol,
-                          );
-                        }),
+                      return ChatScreen(
+                        profilePicture: userProfile ?? "",
+                        userName: username ?? "",
+                        itemImage: itemTitleImage ?? "",
+                        itemTitle: itemTitle ?? "",
+                        userId: senderId ?? "",
+                        itemId: itemId ?? "",
+                        date: date ?? "",
+                        itemOfferId: itemOfferIdParsed,
+                        conversationId: (conversationId ?? '').toString(),
+                        itemPrice: getPrice(itemPrice)!,
+                        itemOfferPrice: getPrice(itemOfferPrice),
+                        buyerId: HiveUtils.getUserId(),
+                        alreadyReview: false,
+                        isPurchased: 0,
+                        currency: currency,
+                        currencySymbol: currencySymbol,
                       );
-                    },
-                  ));
+                    }),
+                  );
+                },
+              ));
             },
           );
           /*Future.delayed(Duration.zero, () {
@@ -803,7 +756,7 @@ class NotificationService {
           message.data["item_id"] != '') {
         String id = message.data["item_id"] ?? "";
         DataOutput<ItemModel> item =
-        await ItemRepository().fetchItemFromItemId(int.parse(id));
+            await ItemRepository().fetchItemFromItemId(int.parse(id));
         Future.delayed(Duration.zero, () {
           Navigator.pushNamed(
               Constant.navigatorKey.currentContext!, Routes.adDetailsScreen,
@@ -839,7 +792,7 @@ class NotificationService {
 //   Navigator.pushNamed(context, profileRoute);
 // }
 
-    );
+            );
   }
 
   static Future<void> registerListeners(context) async {
@@ -856,13 +809,12 @@ class NotificationService {
     _tokenRefreshSubscription?.cancel();
   }
 
-
   static void _registerTokenRefreshListener() {
     _tokenRefreshSubscription?.cancel();
     _tokenRefreshSubscription =
         FirebaseMessaging.instance.onTokenRefresh.listen((String token) async {
-          await _handleTokenRefresh(token);
-        });
+      await _handleTokenRefresh(token);
+    });
   }
 
   static Future<void> _handleTokenRefresh(String? token) async {
@@ -896,7 +848,6 @@ class NotificationService {
     }
   }
 
-
   static T? _maybeReadCubit<T extends StateStreamableSource<Object?>>(
       BuildContext context) {
     try {
@@ -905,7 +856,6 @@ class NotificationService {
       return null;
     }
   }
-
 
   static ParticipantStatus? _parseParticipantStatusFromData(
       Map<String, dynamic> data) {
@@ -965,12 +915,10 @@ class NotificationService {
     }
   }
 
-
   static bool _isMessageForCurrentChat(Map<String, dynamic> data) {
-    final String conversationId =
-        data['conversation_id']?.toString() ??
-            data['conversationId']?.toString() ??
-            '';
+    final String conversationId = data['conversation_id']?.toString() ??
+        data['conversationId']?.toString() ??
+        '';
     final String itemOfferId = data['item_offer_id']?.toString() ??
         data['itemOfferId']?.toString() ??
         '';
@@ -988,21 +936,17 @@ class NotificationService {
         data['sender_id']?.toString() ??
         data['from_user_id']?.toString() ??
         '';
-    final String itemId = data['item_id']?.toString() ??
-        data['itemId']?.toString() ??
-        '';
+    final String itemId =
+        data['item_id']?.toString() ?? data['itemId']?.toString() ?? '';
     if (senderId.isEmpty && itemId.isEmpty) {
       return false;
     }
-    final bool senderMatches = senderId.isEmpty
-        ? true
-        : senderId == currentlyChatingWith;
-    final bool itemMatches = itemId.isEmpty
-        ? true
-        : itemId == currentlyChatItemId;
+    final bool senderMatches =
+        senderId.isEmpty ? true : senderId == currentlyChatingWith;
+    final bool itemMatches =
+        itemId.isEmpty ? true : itemId == currentlyChatItemId;
     return senderMatches && itemMatches;
   }
-
 
   static void _handlePresenceNotification(Map<String, dynamic> data) {
     _cacheParticipantsFromData(data);
@@ -1010,7 +954,7 @@ class NotificationService {
       return;
     }
     final ParticipantStatus? participantStatus =
-    _parseParticipantStatusFromData(Map<String, dynamic>.from(data));
+        _parseParticipantStatusFromData(Map<String, dynamic>.from(data));
     if (participantStatus != null) {
       _notifyParticipantStatus(participantStatus);
       _emitUserPresenceEvent(
@@ -1019,7 +963,6 @@ class NotificationService {
       );
     }
   }
-
 
   static void _handleMessageStatusNotification(Map<String, dynamic> data) {
     if (!_isMessageForCurrentChat(data)) {
@@ -1032,10 +975,10 @@ class NotificationService {
     }
 
     final String? status = _normalizeNotificationValue(data['status']);
-    final String? deliveredAt =
-    _normalizeNotificationValue(data['delivered_at'] ?? data['deliveredAt']);
+    final String? deliveredAt = _normalizeNotificationValue(
+        data['delivered_at'] ?? data['deliveredAt']);
     final String? readAt =
-    _normalizeNotificationValue(data['read_at'] ?? data['readAt']);
+        _normalizeNotificationValue(data['read_at'] ?? data['readAt']);
 
     for (final int messageId in messageIds) {
       ChatMessageHandler.updateMessageStatus(
@@ -1056,8 +999,6 @@ class NotificationService {
       ));
     }
   }
-
-
 
   static void _notifyParticipantStatus(ParticipantStatus? participantStatus) {
     participantStatusNotifier.value = participantStatus;
@@ -1122,13 +1063,11 @@ class NotificationService {
     return ids.toList(growable: false);
   }
 
-
   static void _emitUserPresenceEvent({
     required ParticipantStatus participantStatus,
     required Map<String, dynamic> data,
   }) {
     if (_userPresenceEventController.isClosed) {
-
       userPresenceEventNotifier.value = UserPresenceEvent(
         type: _resolvePresenceEventType(data, participantStatus),
         status: participantStatus,
@@ -1143,16 +1082,16 @@ class NotificationService {
 
     _userPresenceEventController.add(event);
     userPresenceEventNotifier.value = event;
-
   }
 
   static UserPresenceEventType _resolvePresenceEventType(
-      Map<String, dynamic> data,
-      ParticipantStatus participantStatus,
-      ) {
-    final String rawEvent = (data['event'] ?? data['action'] ?? data['type'] ?? '')
-        .toString()
-        .trim();
+    Map<String, dynamic> data,
+    ParticipantStatus participantStatus,
+  ) {
+    final String rawEvent =
+        (data['event'] ?? data['action'] ?? data['type'] ?? '')
+            .toString()
+            .trim();
     if (rawEvent == 'UserTyping') {
       return UserPresenceEventType.userTyping;
     }
@@ -1199,7 +1138,6 @@ class NotificationService {
     return false;
   }
 
-
   static void clearParticipantStatus() {
     participantStatusNotifier.value = null;
     if (!_participantStatusController.isClosed) {
@@ -1212,17 +1150,15 @@ class NotificationService {
 
   static void _cacheParticipantsFromData(Map<String, dynamic> data) {
     final List<ChatParticipant>? participants =
-    buildParticipantsFromNotification(data: data);
+        buildParticipantsFromNotification(data: data);
     if (participants == null || participants.isEmpty) {
       return;
     }
-    final String conversationId =
-        data['conversation_id']?.toString() ??
-            data['conversationId']?.toString() ??
-            '';
+    final String conversationId = data['conversation_id']?.toString() ??
+        data['conversationId']?.toString() ??
+        '';
     final int? itemOfferId =
-    _tryParseInt(data['item_offer_id'] ?? data['itemOfferId']);
-
+        _tryParseInt(data['item_offer_id'] ?? data['itemOfferId']);
 
     final String key = _buildConversationCacheKey(
       conversationId: conversationId,
@@ -1231,8 +1167,6 @@ class NotificationService {
           data['user_id']?.toString() ??
           data['from_user_id']?.toString(),
       itemId: data['item_id']?.toString() ?? data['itemId']?.toString(),
-
-
     );
     if (key.isEmpty) {
       return;
@@ -1264,7 +1198,6 @@ class NotificationService {
         .toList();
   }
 
-
   static List<ChatParticipant>? getCachedParticipants(String conversationId,
       {int? itemOfferId, String? senderId, String? itemId}) {
     final String key = _buildConversationCacheKey(
@@ -1288,8 +1221,8 @@ class NotificationService {
   static List<ChatParticipant>? buildParticipantsFromNotification(
       {required Map<String, dynamic> data}) {
     final int? otherUserId = _tryParseInt(
-      data['user_id'] ?? data['sender_id'] ?? data['from_user_id'],
-    ) ??
+          data['user_id'] ?? data['sender_id'] ?? data['from_user_id'],
+        ) ??
         _tryParseInt(data['buyer_id'] ?? data['seller_id']);
 
     final String? otherName = data['user_name']?.toString() ??
@@ -1301,7 +1234,7 @@ class NotificationService {
         data['buyer_profile']?.toString() ??
         data['seller_profile']?.toString();
     final ParticipantStatus? participantStatus =
-    _parseParticipantStatusFromData(Map<String, dynamic>.from(data));
+        _parseParticipantStatusFromData(Map<String, dynamic>.from(data));
 
     final List<ChatParticipant> participants = <ChatParticipant>[];
     if (otherUserId != null) {
@@ -1319,9 +1252,7 @@ class NotificationService {
     if (currentUserId != null) {
       String? currentUserName;
       try {
-        currentUserName = HiveUtils
-            .getUserDetails()
-            .name;
+        currentUserName = HiveUtils.getUserDetails().name;
       } catch (_) {}
       participants.add(ChatParticipant(
         userId: currentUserId,
@@ -1358,5 +1289,4 @@ class NotificationService {
     }
     return 's:${resolvedSenderId ?? ''}#item:${resolvedItemId ?? ''}';
   }
-
 }

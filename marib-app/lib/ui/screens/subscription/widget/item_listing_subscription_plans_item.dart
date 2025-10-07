@@ -26,8 +26,6 @@ import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/ui/screens/Transaction_screen.dart'; // مسار شاشة المعاملات
 import 'package:marib/utils/payment/manual_payment_service.dart';
 
-
-
 class ItemListingSubscriptionPlansItem extends StatefulWidget {
   final int itemIndex, index;
   final SubscriptionPackageModel model;
@@ -97,8 +95,11 @@ class _ItemListingSubscriptionPlansItemState
                 } else if (g == "paystack") {
                   Navigator.of(context).push(MaterialPageRoute(
                     builder: (context) => PaymentWebView(
-                      authorizationUrl: state.paymentIntent["payment_gateway_response"]["data"]["authorization_url"],
-                      reference: state.paymentIntent["payment_gateway_response"]["data"]["reference"],
+                      authorizationUrl:
+                          state.paymentIntent["payment_gateway_response"]
+                              ["data"]["authorization_url"],
+                      reference: state.paymentIntent["payment_gateway_response"]
+                          ["data"]["reference"],
                       onSuccess: (reference) {
                         HelperUtils.showSnackBarMessage(
                           context,
@@ -122,7 +123,8 @@ class _ItemListingSubscriptionPlansItemState
                 } else if (g == "phonepe") {
                   Navigator.of(context).push(MaterialPageRoute(
                     builder: (context) => PaymentWebView(
-                      authorizationUrl: state.paymentIntent["payment_gateway_response"],
+                      authorizationUrl:
+                          state.paymentIntent["payment_gateway_response"],
                       onSuccess: (reference) {
                         HelperUtils.showSnackBarMessage(
                           context,
@@ -253,7 +255,8 @@ class _ItemListingSubscriptionPlansItemState
                           ).size(context.font.xxLarge).bold(),
                           if (widget.model.discount! > 0)
                             Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8.0),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 8.0),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -282,22 +285,24 @@ class _ItemListingSubscriptionPlansItemState
 
                                   // مجاني
                                   if (widget.model.finalPrice! <= 0) {
-                                    context.read<AssignFreePackageCubit>().assignFreePackage(
-                                      packageId: widget.model.id!,
-                                    );
+                                    context
+                                        .read<AssignFreePackageCubit>()
+                                        .assignFreePackage(
+                                          packageId: widget.model.id!,
+                                        );
                                     return;
                                   }
 
                                   // مدفوع: افتح شاشة التحويل البنكي
                                   final token = HiveUtils.getJWT();
-                                  if (token == null || token.isEmpty) {
-                                    HelperUtils.showSnackBarMessage(context, "سجّل الدخول أولاً");
+                                  if (token.isEmpty) {
+                                    HelperUtils.showSnackBarMessage(
+                                        context, "سجّل الدخول أولاً");
                                     return;
                                   }
 
-
                                   final packageCurrency =
-                                  widget.model.currency?.trim();
+                                      widget.model.currency?.trim();
 
                                   final ok = await Navigator.of(context).push(
                                     BankTransferScreen.route(
@@ -306,11 +311,13 @@ class _ItemListingSubscriptionPlansItemState
                                         arguments: BankTransferArgs(
                                           token: token,
                                           packageId: widget.model.id!,
-                                          amount: widget.model.finalPrice!.toDouble(),
+                                          amount: widget.model.finalPrice!
+                                              .toDouble(),
                                           currency:
-                                          (packageCurrency?.isNotEmpty ?? false)
-                                              ? packageCurrency
-                                              : null,
+                                              (packageCurrency?.isNotEmpty ??
+                                                      false)
+                                                  ? packageCurrency
+                                                  : null,
                                           packageType: 'item_listing',
                                           purpose: 'package',
                                           itemId: null,
@@ -322,7 +329,8 @@ class _ItemListingSubscriptionPlansItemState
                                   if (!mounted) return;
 
                                   final bool success;
-                                  ManualPaymentSubmissionResult? submissionResult;
+                                  ManualPaymentSubmissionResult?
+                                      submissionResult;
                                   if (ok is ManualPaymentSubmissionResult) {
                                     submissionResult = ok;
                                     success = ok.success;
@@ -331,9 +339,6 @@ class _ItemListingSubscriptionPlansItemState
                                   }
 
                                   if (success) {
-
-
-
                                     // انتقل لواجهة المعاملات
 
                                     final routeArgs =
@@ -362,12 +367,13 @@ class _ItemListingSubscriptionPlansItemState
                                 ? context.color.textLightColor.brighten(300)
                                 : context.color.territoryColor,
                             textColor: widget.model.isActive!
-                                ? context.color.textDefaultColor.withOpacity(0.5)
+                                ? context.color.textDefaultColor
+                                    .withOpacity(0.5)
                                 : context.color.secondaryColor,
-                            buttonTitle: "purchaseThisPackage".translate(context),
+                            buttonTitle:
+                                "purchaseThisPackage".translate(context),
                             outerPadding: const EdgeInsets.all(20),
-                          )
-,
+                          ),
                         ],
                       ),
                     ),
@@ -380,9 +386,6 @@ class _ItemListingSubscriptionPlansItemState
       ),
     );
   }
-
-
-
 
   // خرائط القيم من واجهة المستخدم إلى القيمة المطلوبة من الخادم
   // TODO: لو الخادم يتوقع lowercase بدّل القيم هنا (e.g. 'stripe', 'paystack' ...)
@@ -412,11 +415,11 @@ class _ItemListingSubscriptionPlansItemState
               .firstUpperCaseWidget()
               .centerAlign()
               .copyWith(
-            style: TextStyle(
-              color: context.color.textDefaultColor,
-              fontWeight: FontWeight.w600,
-            ),
-          )
+                style: TextStyle(
+                  color: context.color.textDefaultColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              )
               .size(context.font.larger),
           const SizedBox(height: 15),
           if (widget.model.type == "item_listing")
@@ -462,11 +465,11 @@ class _ItemListingSubscriptionPlansItemState
           Text(widget.model.name!)
               .firstUpperCaseWidget()
               .copyWith(
-            style: TextStyle(
-              color: context.color.textDefaultColor,
-              fontWeight: FontWeight.w600,
-            ),
-          )
+                style: TextStyle(
+                  color: context.color.textDefaultColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              )
               .size(context.font.larger)
               .centerAlign(),
           const SizedBox(height: 15),
@@ -507,10 +510,11 @@ class _ItemListingSubscriptionPlansItemState
         widget.model.userPurchasedPackages != null &&
         widget.model.userPurchasedPackages![0].endDate != null) {
       DateTime dateTime =
-      DateTime.parse(widget.model.userPurchasedPackages![0].endDate!);
+          DateTime.parse(widget.model.userPurchasedPackages![0].endDate!);
       String formattedDate = intl.DateFormat.yMMMMd().format(dateTime);
       return Padding(
-        padding: const EdgeInsetsDirectional.only(bottom: 15.0, start: 15, end: 15),
+        padding:
+            const EdgeInsetsDirectional.only(bottom: 15.0, start: 15, end: 15),
         child: Text(
           "${"yourSubscriptionWillExpireOn".translate(context)} $formattedDate",
         ),
@@ -561,7 +565,8 @@ class _ItemListingSubscriptionPlansItemState
 
   Future<void> paymentGatewayBottomSheet() async {
     // إن لم توجد بوابات مفعّلة، نخبر المستخدم ونتوقف مبكرًا
-    List<PaymentGateway> enabledGateways = AppSettings.getEnabledPaymentGateways();
+    List<PaymentGateway> enabledGateways =
+        AppSettings.getEnabledPaymentGateways();
     if (enabledGateways.isEmpty) {
       HelperUtils.showSnackBarMessage(context, "لا توجد بوابات دفع مفعّلة");
       return;
@@ -600,7 +605,8 @@ class _ItemListingSubscriptionPlansItemState
                       child: Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(3),
-                          color: context.color.textDefaultColor.withOpacity(0.1),
+                          color:
+                              context.color.textDefaultColor.withOpacity(0.1),
                         ),
                         height: 6,
                         width: 60,
@@ -622,12 +628,14 @@ class _ItemListingSubscriptionPlansItemState
                     itemBuilder: (context, index) {
                       return PaymentMethodTile(
                         gateway: enabledGateways[index],
-                        isSelected: _localSelectedGateway == enabledGateways[index].type,
+                        isSelected: _localSelectedGateway ==
+                            enabledGateways[index].type,
                         onSelect: (String? value) {
                           setState(() {
                             _localSelectedGateway = value;
                           });
-                          Navigator.pop(context, value); // إعادة القيمة المختارة
+                          Navigator.pop(
+                              context, value); // إعادة القيمة المختارة
                         },
                       );
                     },
@@ -673,9 +681,9 @@ class PaymentMethodTile extends StatelessWidget {
       trailing: isSelected
           ? Icon(Icons.check_circle, color: context.color.territoryColor)
           : Icon(
-        Icons.radio_button_unchecked,
-        color: context.color.textDefaultColor.withOpacity(0.5),
-      ),
+              Icons.radio_button_unchecked,
+              color: context.color.textDefaultColor.withOpacity(0.5),
+            ),
       onTap: () => onSelect(gateway.type),
     );
   }

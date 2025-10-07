@@ -3,16 +3,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
-
-
 enum SmartHintKind {
-  initial,         // أول مرة
-  moveMap,         // أثناء التحريك
-  zoomIn,          // قرّب الخريطة
-  reverseLoading,  // جارِ تحديد العنوان
+  initial, // أول مرة
+  moveMap, // أثناء التحريك
+  zoomIn, // قرّب الخريطة
+  reverseLoading, // جارِ تحديد العنوان
   reverseNoResult, // لم يُعثر على عنوان
-  myLocationTip,   // جرّب زر موقعي
-  confirmed,       // تم التحديد
+  myLocationTip, // جرّب زر موقعي
+  confirmed, // تم التحديد
 }
 
 class SmartHintState {
@@ -151,7 +149,8 @@ class SmartHintOverlay extends StatelessWidget {
                 child: Container(
                   key: ValueKey(state.kind),
                   constraints: const BoxConstraints(maxWidth: 320),
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
                   decoration: BoxDecoration(
                     color: color.surface.withOpacity(.95),
                     borderRadius: BorderRadius.circular(10),

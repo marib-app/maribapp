@@ -56,16 +56,16 @@ class ChatMessage extends StatefulWidget {
       this.id,
       required this.senderId,
       required this.itemOfferId,
-        String? message,
-        String? file,
-        String? audio,
+      String? message,
+      String? file,
+      String? audio,
       required this.createdAt,
       required this.updatedAt,
       this.messageType,
-        this.isSentNow,
-        this.status,
-        this.deliveredAt,
-        this.readAt})
+      this.isSentNow,
+      this.status,
+      this.deliveredAt,
+      this.readAt})
       : message = message ?? '',
         file = file ?? '',
         audio = audio ?? '';
@@ -126,10 +126,8 @@ class ChatMessageState extends State<ChatMessage>
   String? _currentReadAt;
   StreamSubscription<ChatMessageStatusUpdate>? _statusSubscription;
 
-
   @override
   void initState() {
-
     _currentStatus = widget.status;
     _currentDeliveredAt = widget.deliveredAt;
     _currentReadAt = widget.readAt;
@@ -140,7 +138,6 @@ class ChatMessageState extends State<ChatMessage>
         isChatSent == false) {
       final tracker = ChatMessageTracker.instance;
       if (!tracker.contains(widget.key)) {
-
         context.read<SendMessageCubit>().send(
               attachment: widget.file,
               message: widget.message,
@@ -172,23 +169,21 @@ class ChatMessageState extends State<ChatMessage>
     }
     _statusSubscription =
         NotificationService.messageStatusStream.listen((update) {
-          if (update.messageId != messageId) {
-            return;
-          }
-          if (!mounted) {
-            _currentStatus = update.status ?? _currentStatus;
-            _currentDeliveredAt =
-                update.deliveredAt ?? _currentDeliveredAt;
-            _currentReadAt = update.readAt ?? _currentReadAt;
-            return;
-          }
-          setState(() {
-            _currentStatus = update.status ?? _currentStatus;
-            _currentDeliveredAt =
-                update.deliveredAt ?? _currentDeliveredAt;
-            _currentReadAt = update.readAt ?? _currentReadAt;
-          });
-        });
+      if (update.messageId != messageId) {
+        return;
+      }
+      if (!mounted) {
+        _currentStatus = update.status ?? _currentStatus;
+        _currentDeliveredAt = update.deliveredAt ?? _currentDeliveredAt;
+        _currentReadAt = update.readAt ?? _currentReadAt;
+        return;
+      }
+      setState(() {
+        _currentStatus = update.status ?? _currentStatus;
+        _currentDeliveredAt = update.deliveredAt ?? _currentDeliveredAt;
+        _currentReadAt = update.readAt ?? _currentReadAt;
+      });
+    });
   }
 
   @override
@@ -214,20 +209,19 @@ class ChatMessageState extends State<ChatMessage>
     }
   }
 
-
-
-  bool get _isSentByMe =>
-      widget.senderId.toString() == HiveUtils.getUserId();
+  bool get _isSentByMe => widget.senderId.toString() == HiveUtils.getUserId();
 
   bool get _isRead =>
       (_currentReadAt?.isNotEmpty ?? false) ||
-          (_currentStatus?.toLowerCase() == 'read');
+      (_currentStatus?.toLowerCase() == 'read');
 
-  bool get _isDelivered => _isRead ||
+  bool get _isDelivered =>
+      _isRead ||
       (_currentDeliveredAt?.isNotEmpty ?? false) ||
       (_currentStatus?.toLowerCase() == 'delivered');
 
-  bool get _isSent => _isDelivered ||
+  bool get _isSent =>
+      _isDelivered ||
       (_currentStatus?.toLowerCase() == 'sent') ||
       (widget.id != null && widget.id! > 0);
 
@@ -267,23 +261,19 @@ class ChatMessageState extends State<ChatMessage>
     return null;
   }
 
-
   String _emptyTextIfAttachmentHasNoText() {
     if (widget.file.isNotEmpty) {
       if (widget.message == "[File]") {
         return "";
-
       }
 
       return widget.message;
     }
 
     if (widget.message.isEmpty) {
-
       return "";
     }
     return widget.message;
-
   }
 
   bool _isLink(String input) {
@@ -307,9 +297,7 @@ class ChatMessageState extends State<ChatMessage>
       onMatch: (match) {
         final String matchedText = match.group(0) ?? '';
         return substringIdentifier + matchedText + substringIdentifier;
-
-
-        },
+      },
       onNonMatch: (match) {
         return match;
       },
@@ -335,7 +323,6 @@ class ChatMessageState extends State<ChatMessage>
     return mapJoin.split("‎");
   }
 
-
   String _formattedTimestamp() {
     final DateTime? parsedDate = DateTime.tryParse(widget.createdAt);
     if (parsedDate == null) {
@@ -347,8 +334,6 @@ class ChatMessageState extends State<ChatMessage>
         .toIso8601String()
         .formatDate(format: "hh:mm aa");
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -418,7 +403,7 @@ class ChatMessageState extends State<ChatMessage>
                       child: Container(
                         child: widget.audio.isNotEmpty
                             ? RecordMessage(
-                          url: widget.audio,
+                                url: widget.audio,
                                 isSentByMe: widget.senderId.toString() ==
                                     HiveUtils.getUserId(),
                               )
@@ -547,11 +532,8 @@ class ChatMessageState extends State<ChatMessage>
                         (widget.isSentNow ??
                             (widget.createdAt ==
                                 DateTime.now().toString()))) ...[
-
                       BlocConsumer<SendMessageCubit, SendMessageState>(
                         listener: (context, state) {
-
-
                           if (state is SendMessageSuccess) {
                             isChatSent = true;
 

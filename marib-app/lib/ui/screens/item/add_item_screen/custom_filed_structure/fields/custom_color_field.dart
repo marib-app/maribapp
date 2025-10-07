@@ -9,7 +9,6 @@ import 'package:marib/data/constants/color_catalog.dart';
 
 //import 'package:marib/utils/helper_utils.dart';
 
-
 /// ===============================================================
 /// CustomColorField
 /// - واجهة الحقل (العنوان + الأيقونة + الوصف + زر فتح الورقة)
@@ -20,12 +19,11 @@ class CustomColorField extends CustomField {
   String type = 'color';
 
   // لوحة أساسية كبيرة — أسماء فقط للمستخدم (لا نعرض الأكواد)
-  static final List<Map<String, String>> basePalette =
-      ColorCatalog.basePalette;
+  static final List<Map<String, String>> basePalette = ColorCatalog.basePalette;
 
   // المختارات (HEX6 بدون #). نحتفظ أيضًا بالمخصّص الذي يضيفه المستخدم
   final Set<String> _selected = <String>{};
-  final Set<String> _custom   = <String>{};
+  final Set<String> _custom = <String>{};
 
   // مفاتيح وخصائص من السكيما
   String get _key {
@@ -39,7 +37,8 @@ class CustomColorField extends CustomField {
   String? get _description {
     for (final k in ['description', 'note', 'notes', 'hint']) {
       final v = parameters[k];
-      if (v != null && v.toString().trim().isNotEmpty) return v.toString().trim();
+      if (v != null && v.toString().trim().isNotEmpty)
+        return v.toString().trim();
     }
     return null;
   }
@@ -48,7 +47,8 @@ class CustomColorField extends CustomField {
   String? get _iconPath {
     for (final k in ['icon', 'image', 'iconPath', 'img']) {
       final v = parameters[k];
-      if (v != null && v.toString().trim().isNotEmpty) return v.toString().trim();
+      if (v != null && v.toString().trim().isNotEmpty)
+        return v.toString().trim();
     }
     return null;
   }
@@ -71,7 +71,6 @@ class CustomColorField extends CustomField {
         _selected.addAll(v
             .map((e) => ColorCatalog.sanitizeHex(e.toString()))
             .where(_isHex6));
-
       } else if (v is String) {
         final raw = v.trim();
         try {
@@ -80,11 +79,9 @@ class CustomColorField extends CustomField {
             _selected.addAll(d
                 .map((e) => ColorCatalog.sanitizeHex(e.toString()))
                 .where(_isHex6));
-
           } else if (raw.isNotEmpty) {
             final hex = ColorCatalog.sanitizeHex(raw);
             if (_isHex6(hex)) _selected.add(hex);
-
           }
         } catch (_) {
           if (raw.isNotEmpty) {
@@ -102,21 +99,23 @@ class CustomColorField extends CustomField {
   bool _isHex6(String h) => RegExp(r'^[0-9A-F]{6}$').hasMatch(h);
   Color _c(String hex6) => Color(int.parse('0xFF$hex6'));
 
-
   void _sync() {
-    CustomField.fieldsData[_key] = _selected
-        .map(ColorCatalog.sanitizeHex)
-        .where(_isHex6)
-        .toSet()
-        .toList();
+    CustomField.fieldsData[_key] =
+        _selected.map(ColorCatalog.sanitizeHex).where(_isHex6).toSet().toList();
   }
 
   void _toggle(String hex) {
     final h = ColorCatalog.sanitizeHex(hex);
     if (!_isHex6(h)) return;
-    if (!_selected.contains(h) && _maxCount != null && _selected.length >= _maxCount!) return;
-    if (_selected.contains(h)) _selected.remove(h); else _selected.add(h);
-    _sync(); update(() {});
+    if (!_selected.contains(h) &&
+        _maxCount != null &&
+        _selected.length >= _maxCount!) return;
+    if (_selected.contains(h))
+      _selected.remove(h);
+    else
+      _selected.add(h);
+    _sync();
+    update(() {});
   }
 
   void _addCustom(String hex) {
@@ -126,7 +125,8 @@ class CustomColorField extends CustomField {
     if (!_selected.contains(h)) {
       if (_maxCount == null || _selected.length < _maxCount!) _selected.add(h);
     }
-    _sync(); update(() {});
+    _sync();
+    update(() {});
   }
 
   void _openSheet() {
@@ -138,20 +138,16 @@ class CustomColorField extends CustomField {
         title: 'اختر الألوان المتوفّرة لمنتجك',
         initiallySelected: _selected,
         initiallyCustom: _custom,
-        onPickFromBase: _toggle,                 // يبدّل من قائمة الأساس
-        onAddCustomHex: _addCustom,              // عند إضافة لون مخصّص
+        onPickFromBase: _toggle, // يبدّل من قائمة الأساس
+        onAddCustomHex: _addCustom, // عند إضافة لون مخصّص
         basePalette: basePalette,
         onSave: (sel, cus) {
           _selected
             ..clear()
-            ..addAll(sel
-                .map(ColorCatalog.sanitizeHex)
-                .where(_isHex6));
+            ..addAll(sel.map(ColorCatalog.sanitizeHex).where(_isHex6));
           _custom
             ..clear()
-            ..addAll(cus
-                .map(ColorCatalog.sanitizeHex)
-                .where(_isHex6));
+            ..addAll(cus.map(ColorCatalog.sanitizeHex).where(_isHex6));
           _sync();
           update(() {});
         },
@@ -168,32 +164,31 @@ class CustomColorField extends CustomField {
 
     final chosen = _selected.length;
 
-
-    final t   = Theme.of(context);
-    final on  = t.colorScheme.onSurface;
-    final ico = on.withOpacity(.7);           // أيقونة رمادية أدكن
-
+    final t = Theme.of(context);
+    final on = t.colorScheme.onSurface;
+    final ico = on.withOpacity(.7); // أيقونة رمادية أدكن
 
     // بطاقة الأيقونة من السيرفر — على اليمين دائمًا
     Widget iconBadge() => Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: br, width: 1),
-      ),
-      alignment: Alignment.center,
-      child: _iconPath != null
-          ? (_iconPath!.toLowerCase().endsWith('.svg')
-          ? UiUtils.getSvg(_iconPath!, height: 24, width: 24)
-          : UiUtils.getImage(_iconPath!, height: 24, width: 24))
-          : Icon(Icons.palette_outlined, size: 22, color: fg),
-    );
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: br, width: 1),
+          ),
+          alignment: Alignment.center,
+          child: _iconPath != null
+              ? (_iconPath!.toLowerCase().endsWith('.svg')
+                  ? UiUtils.getSvg(_iconPath!, height: 24, width: 24)
+                  : UiUtils.getImage(_iconPath!, height: 24, width: 24))
+              : Icon(Icons.palette_outlined, size: 22, color: fg),
+        );
 
     return FormField<List<String>>(
-      validator: (_) =>
-      (_isRequired && _selected.isEmpty) ? 'يرجى اختيار لون واحد على الأقل' : null,
+      validator: (_) => (_isRequired && _selected.isEmpty)
+          ? 'يرجى اختيار لون واحد على الأقل'
+          : null,
       builder: (state) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -236,28 +231,34 @@ class CustomColorField extends CustomField {
 
             // زر فتح الورقة — يتغيّر نصه بعد الحفظ
             SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: _openSheet,
-                  icon: Icon(Icons.color_lens_rounded, color: ico),
-                  label: Text(chosen > 0 ? 'الألوان المختارة :  $chosen' : 'اختيار الألوان'),
-                  style: OutlinedButton.styleFrom(
-                    backgroundColor: bg,                               // خلفية رمادية
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    side: BorderSide(color: br),                       // حدّ رمادي
-                    foregroundColor: fg,                               // نص رمادي
-                  ).copyWith(
-                    overlayColor: MaterialStatePropertyAll(on.withOpacity(.06)), // ضغط خفيف رمادي
-                  ),
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _openSheet,
+                icon: Icon(Icons.color_lens_rounded, color: ico),
+                label: Text(chosen > 0
+                    ? 'الألوان المختارة :  $chosen'
+                    : 'اختيار الألوان'),
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: bg, // خلفية رمادية
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  side: BorderSide(color: br), // حدّ رمادي
+                  foregroundColor: fg, // نص رمادي
+                ).copyWith(
+                  overlayColor: WidgetStatePropertyAll(
+                      on.withOpacity(.06)), // ضغط خفيف رمادي
                 ),
+              ),
             ),
 
             if (state.hasError) ...[
               const SizedBox(height: 6),
               Text(state.errorText!,
                   style: TextStyle(
-                      color: Theme.of(context).colorScheme.error, fontSize: 12)),
+                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 12)),
             ],
           ],
         );
@@ -266,16 +267,12 @@ class CustomColorField extends CustomField {
   }
 }
 
-
-
 // ===============================================================
 // ColorSheet
 // - يظهر قائمة الألوان الأساسية + زر لاختيار لون مخصّص
 // - عند حفظ بدون اختيار: يعرض SnackBar يطلب اختيار لون أو إلغاء
 // - عند حفظ مع اختيار: يحفظ ثم يغلق الشيت ثم يظهر SnackBar "تم الحفظ"
 // ===============================================================
-
-
 
 class ColorSheet extends StatefulWidget {
   final String title;
@@ -306,16 +303,16 @@ class ColorSheet extends StatefulWidget {
   });
 
   static Future<void> show(
-      BuildContext context, {
-        required String title,
-        required List<Map<String, String>> basePalette,
-        required Set<String> initiallySelected,
-        required Set<String> initiallyCustom,
-        required void Function(String hex) onPickFromBase,
-        required void Function(String hex) onAddCustomHex,
-        required void Function(Set<String> selected, Set<String> custom) onSave,
-        bool commonOnly = true,
-      }) {
+    BuildContext context, {
+    required String title,
+    required List<Map<String, String>> basePalette,
+    required Set<String> initiallySelected,
+    required Set<String> initiallyCustom,
+    required void Function(String hex) onPickFromBase,
+    required void Function(String hex) onAddCustomHex,
+    required void Function(Set<String> selected, Set<String> custom) onSave,
+    bool commonOnly = true,
+  }) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -340,19 +337,31 @@ class ColorSheet extends StatefulWidget {
 
 class _ColorSheetState extends State<ColorSheet> {
   late Set<String> _selected; // حالة مؤقتة داخل الشيت
-  late Set<String> _custom;   // حالة مؤقتة داخل الشيت
+  late Set<String> _custom; // حالة مؤقتة داخل الشيت
 
   /// الأكثر شيوعًا
   static const Set<String> _commonHex = {
-    'FFFFFF','000000','808080','C0C0C0','D4AF37',
-    'FF0000','0000FF','00A651','FFFF00','FFA500',
-    '8B4513','F5F5DC','000080','FFC0CB','40E0D0',
+    'FFFFFF',
+    '000000',
+    '808080',
+    'C0C0C0',
+    'D4AF37',
+    'FF0000',
+    '0000FF',
+    '00A651',
+    'FFFF00',
+    'FFA500',
+    '8B4513',
+    'F5F5DC',
+    '000080',
+    'FFC0CB',
+    '40E0D0',
   };
 
   @override
   void initState() {
     _selected = {...widget.initiallySelected};
-    _custom   = {...widget.initiallyCustom};
+    _custom = {...widget.initiallyCustom};
     super.initState();
   }
 
@@ -395,53 +404,56 @@ class _ColorSheetState extends State<ColorSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final t   = Theme.of(context);
-    final bg  = context.color.secondaryColor;
-    final br  = context.color.borderColor;
-    final on  = context.color.textDefaultColor;
+    final t = Theme.of(context);
+    final bg = context.color.secondaryColor;
+    final br = context.color.borderColor;
+    final on = context.color.textDefaultColor;
     final acc = context.color.territoryColor;
 
     // فلترة الشائعة إن لزم
-    final List<Map<String,String>> palette = widget.commonOnly
+    final List<Map<String, String>> palette = widget.commonOnly
         ? widget.basePalette
-        .where((e) => _commonHex.contains((e['hex'] ?? '').toUpperCase()))
-        .toList()
+            .where((e) => _commonHex.contains((e['hex'] ?? '').toUpperCase()))
+            .toList()
         : widget.basePalette;
 
     Widget sectionLabel(String text) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        children: [
-          Expanded(child: Divider(color: t.dividerColor)),
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: t.colorScheme.surface.withOpacity(.6),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: t.dividerColor),
-            ),
-            child: Text(
-              text,
-              style: t.textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: t.colorScheme.onSurface.withOpacity(.8),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Row(
+            children: [
+              Expanded(child: Divider(color: t.dividerColor)),
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: t.colorScheme.surface.withOpacity(.6),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: t.dividerColor),
+                ),
+                child: Text(
+                  text,
+                  style: t.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: t.colorScheme.onSurface.withOpacity(.8),
+                  ),
+                ),
               ),
-            ),
+              Expanded(child: Divider(color: t.dividerColor)),
+            ],
           ),
-          Expanded(child: Divider(color: t.dividerColor)),
-        ],
-      ),
-    );
+        );
 
     return AnimatedPadding(
       duration: const Duration(milliseconds: 150),
       curve: Curves.easeOutCubic,
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Align(
         alignment: Alignment.bottomCenter,
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * .92),
+          constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * .92),
           child: Material(
             color: bg,
             elevation: 8,
@@ -449,8 +461,11 @@ class _ColorSheetState extends State<ColorSheet> {
             child: Column(
               children: [
                 const SizedBox(height: 10),
-                Container(height: 5, width: 48,
-                    decoration: BoxDecoration(color: br, borderRadius: BorderRadius.circular(3))),
+                Container(
+                    height: 5,
+                    width: 48,
+                    decoration: BoxDecoration(
+                        color: br, borderRadius: BorderRadius.circular(3))),
                 // رأس
                 Container(
                   height: 56,
@@ -466,11 +481,14 @@ class _ColorSheetState extends State<ColorSheet> {
                         child: Text(
                           widget.title,
                           style: t.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800, letterSpacing: .2, color: on),
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: .2,
+                              color: on),
                         ),
                       ),
                       IconButton(
-                        tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                        tooltip: MaterialLocalizations.of(context)
+                            .closeButtonTooltip,
                         onPressed: () => Navigator.pop(context),
                         icon: Icon(Icons.close_rounded, color: on),
                       ),
@@ -493,7 +511,8 @@ class _ColorSheetState extends State<ColorSheet> {
                             child: Text(
                               'اختر الألوان المتوفّرة لمنتجك',
                               style: t.textTheme.bodySmall?.copyWith(
-                                color: t.textTheme.bodySmall?.color?.withOpacity(.7),
+                                color: t.textTheme.bodySmall?.color
+                                    ?.withOpacity(.7),
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -507,32 +526,41 @@ class _ColorSheetState extends State<ColorSheet> {
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: palette.length,
-                          separatorBuilder: (_, __) =>
-                              Divider(height: 1, thickness: .6, color: t.dividerColor.withOpacity(.3)),
+                          separatorBuilder: (_, __) => Divider(
+                              height: 1,
+                              thickness: .6,
+                              color: t.dividerColor.withOpacity(.3)),
                           itemBuilder: (_, i) {
                             final e = palette[i];
                             final name = e['name'] ?? '';
-                            final hex  = e['hex'] ?? '';
+                            final hex = e['hex'] ?? '';
                             final selected = _selected.contains(hex);
                             return Material(
                               color: Colors.transparent,
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(8),
-                                splashColor: t.colorScheme.primary.withOpacity(.14),
-                                highlightColor: t.colorScheme.primary.withOpacity(.06),
+                                splashColor:
+                                    t.colorScheme.primary.withOpacity(.14),
+                                highlightColor:
+                                    t.colorScheme.primary.withOpacity(.06),
                                 onTap: () => _toggleLocal(hex),
                                 child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 2),
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 10),
                                     child: Row(
                                       children: [
                                         Container(
-                                          width: 22, height: 22,
+                                          width: 22,
+                                          height: 22,
                                           decoration: BoxDecoration(
                                             color: _c(hex),
                                             shape: BoxShape.circle,
-                                            border: Border.all(color: Colors.black.withOpacity(.15)),
+                                            border: Border.all(
+                                                color: Colors.black
+                                                    .withOpacity(.15)),
                                           ),
                                         ),
                                         const SizedBox(width: 10),
@@ -540,17 +568,27 @@ class _ColorSheetState extends State<ColorSheet> {
                                           child: Text(
                                             name,
                                             overflow: TextOverflow.ellipsis,
-                                            style: t.textTheme.bodyLarge?.copyWith(
-                                                fontWeight: FontWeight.w600, color: on),
+                                            style: t.textTheme.bodyLarge
+                                                ?.copyWith(
+                                                    fontWeight: FontWeight.w600,
+                                                    color: on),
                                           ),
                                         ),
                                         AnimatedSwitcher(
-                                          duration: const Duration(milliseconds: 140),
-                                          transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
+                                          duration:
+                                              const Duration(milliseconds: 140),
+                                          transitionBuilder: (c, a) =>
+                                              ScaleTransition(
+                                                  scale: a, child: c),
                                           child: selected
-                                              ? const Icon(Icons.check_circle_rounded,
-                                              key: ValueKey('on'), color: Colors.green)
-                                              : const SizedBox(key: ValueKey('off'), width: 0, height: 0),
+                                              ? const Icon(
+                                                  Icons.check_circle_rounded,
+                                                  key: ValueKey('on'),
+                                                  color: Colors.green)
+                                              : const SizedBox(
+                                                  key: ValueKey('off'),
+                                                  width: 0,
+                                                  height: 0),
                                         ),
                                       ],
                                     ),
@@ -572,7 +610,8 @@ class _ColorSheetState extends State<ColorSheet> {
                             label: const Text('اختيار لون مخصّص'),
                             style: OutlinedButton.styleFrom(
                               minimumSize: const Size(220, 44),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
                             ),
                           ),
                         ),
@@ -601,7 +640,12 @@ class _ColorSheetState extends State<ColorSheet> {
                   decoration: BoxDecoration(
                     color: bg,
                     border: Border(top: BorderSide(color: t.dividerColor)),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(.06), blurRadius: 8, offset: const Offset(0, -2))],
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withOpacity(.06),
+                          blurRadius: 8,
+                          offset: const Offset(0, -2))
+                    ],
                   ),
                   padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
                   child: SafeArea(
@@ -615,8 +659,10 @@ class _ColorSheetState extends State<ColorSheet> {
                             label: const Text('إلغاء'),
                             style: OutlinedButton.styleFrom(
                               minimumSize: const Size.fromHeight(48),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              side: BorderSide(color: t.colorScheme.outline.withOpacity(.5)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                              side: BorderSide(
+                                  color: t.colorScheme.outline.withOpacity(.5)),
                               foregroundColor: t.colorScheme.onSurface,
                             ),
                           ),
@@ -627,17 +673,21 @@ class _ColorSheetState extends State<ColorSheet> {
                             onPressed: () {
                               // ✅ نطبّق التغييرات (حتى لو فارغة) ثم نغلق
                               final rootCtx =
-                                  Navigator.of(context, rootNavigator: true).overlay?.context ?? context;
+                                  Navigator.of(context, rootNavigator: true)
+                                          .overlay
+                                          ?.context ??
+                                      context;
 
                               widget.onSave(_selected, _custom);
                               Navigator.pop(context);
 
                               // أظهر التنبيه بعد الإغلاق ليكون فوق الشيت
-                              Future.delayed(const Duration(milliseconds: 120), () {
+                              Future.delayed(const Duration(milliseconds: 120),
+                                  () {
                                 final msg = _selected.isEmpty
                                     ? 'تم حفظ التعديلات (لا ألوان محددة)'
                                     : 'تم حفظ الألوان';
-                         //       HelperUtils.showSnackBarMessage(rootCtx, msg);
+                                //       HelperUtils.showSnackBarMessage(rootCtx, msg);
                               });
                             },
                             icon: const Icon(Icons.check_rounded),
@@ -647,7 +697,8 @@ class _ColorSheetState extends State<ColorSheet> {
                               elevation: 2,
                               backgroundColor: acc,
                               foregroundColor: t.colorScheme.onPrimary,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
                             ),
                           ),
                         ),
@@ -663,13 +714,6 @@ class _ColorSheetState extends State<ColorSheet> {
     );
   }
 }
-
-
-
-
-
-
-
 
 class _DeletableColorDot extends StatelessWidget {
   final Color color;
@@ -693,7 +737,8 @@ class _DeletableColorDot extends StatelessWidget {
         onTap: onDelete,
         customBorder: const CircleBorder(),
         child: Container(
-          width: 20, height: 20,
+          width: 20,
+          height: 20,
           decoration: BoxDecoration(
             color: closeBg,
             shape: BoxShape.circle,
@@ -709,14 +754,16 @@ class _DeletableColorDot extends StatelessWidget {
     }
 
     return SizedBox(
-      width: 36, height: 36,
+      width: 36,
+      height: 36,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           // دائرة اللون
           Positioned.fill(
             child: DecoratedBox(
-              decoration: BoxDecoration(shape: BoxShape.circle, color: color, border: border),
+              decoration: BoxDecoration(
+                  shape: BoxShape.circle, color: color, border: border),
             ),
           ),
           // زر الحذف (يحترم RTL/LTR)
@@ -735,7 +782,6 @@ class _DeletableColorDot extends StatelessWidget {
     );
   }
 }
-
 
 /// ===============================================================
 /// BaseColorList
@@ -770,7 +816,7 @@ class BaseColorList extends StatelessWidget {
       itemBuilder: (_, i) {
         final e = palette[i];
         final name = e['name'] ?? '';
-        final hex  = e['hex'] ?? '';
+        final hex = e['hex'] ?? '';
         final selected = isSelected(hex);
 
         return Material(
@@ -783,15 +829,18 @@ class BaseColorList extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 child: Row(
                   children: [
                     Container(
-                      width: 22, height: 22,
+                      width: 22,
+                      height: 22,
                       decoration: BoxDecoration(
                         color: colorOf(hex),
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.black.withOpacity(.15)),
+                        border:
+                            Border.all(color: Colors.black.withOpacity(.15)),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -799,17 +848,19 @@ class BaseColorList extends StatelessWidget {
                       child: Text(
                         name,
                         overflow: TextOverflow.ellipsis,
-                        style: t.textTheme.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.w600, color: on),
+                        style: t.textTheme.bodyLarge
+                            ?.copyWith(fontWeight: FontWeight.w600, color: on),
                       ),
                     ),
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 140),
-                      transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
+                      transitionBuilder: (c, a) =>
+                          ScaleTransition(scale: a, child: c),
                       child: selected
                           ? const Icon(Icons.check_circle_rounded,
-                          key: ValueKey('on'), color: Colors.green)
-                          : const SizedBox(key: ValueKey('off'), width: 0, height: 0),
+                              key: ValueKey('on'), color: Colors.green)
+                          : const SizedBox(
+                              key: ValueKey('off'), width: 0, height: 0),
                     ),
                   ],
                 ),
@@ -822,14 +873,11 @@ class BaseColorList extends StatelessWidget {
   }
 }
 
-
 /// ===============================================================
 /// ColorWheelPickerSheet
 /// - ورقة فرعية تعرض منتقي ألوان دائري + منزلق السطوع
 /// - تعيد HEX6 عند الضغط "إضافة اللون"
 /// ===============================================================
-
-
 
 class ColorWheelPickerSheet extends StatefulWidget {
   const ColorWheelPickerSheet({super.key});
@@ -839,36 +887,41 @@ class ColorWheelPickerSheet extends StatefulWidget {
 }
 
 class _ColorWheelPickerSheetState extends State<ColorWheelPickerSheet> {
-  double _hue = 210;   // 0..360
-  double _sat = .8;    // 0..1  (من المركز للحافة)
-  double _val = .9;    // 0..1  (السطوع)
+  double _hue = 210; // 0..360
+  double _sat = .8; // 0..1  (من المركز للحافة)
+  double _val = .9; // 0..1  (السطوع)
 
   Color get _color => HSVColor.fromAHSV(1, _hue, _sat, _val).toColor();
 
-  String get _hex =>
-      '${_color.red.toRadixString(16).padLeft(2, "0")}'
+  String get _hex => '${_color.red.toRadixString(16).padLeft(2, "0")}'
           '${_color.green.toRadixString(16).padLeft(2, "0")}'
           '${_color.blue.toRadixString(16).padLeft(2, "0")}'
-          .toUpperCase();
+      .toUpperCase();
 
-  void _reset() => setState(() { _hue = 210; _sat = .8; _val = .9; });
+  void _reset() => setState(() {
+        _hue = 210;
+        _sat = .8;
+        _val = .9;
+      });
 
   @override
   Widget build(BuildContext context) {
-    final t   = Theme.of(context);
-    final bg  = context.color.secondaryColor;
-    final br  = context.color.borderColor;
-    final on  = context.color.textDefaultColor;
+    final t = Theme.of(context);
+    final bg = context.color.secondaryColor;
+    final br = context.color.borderColor;
+    final on = context.color.textDefaultColor;
     final acc = context.color.territoryColor;
 
     return AnimatedPadding(
       duration: const Duration(milliseconds: 150),
       curve: Curves.easeOutCubic,
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Align(
         alignment: Alignment.bottomCenter,
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * .9),
+          constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * .9),
           child: Material(
             color: bg,
             elevation: 10,
@@ -876,13 +929,17 @@ class _ColorWheelPickerSheetState extends State<ColorWheelPickerSheet> {
             child: Column(
               children: [
                 const SizedBox(height: 10),
-                Container(height: 5, width: 48,
-                    decoration: BoxDecoration(color: br, borderRadius: BorderRadius.circular(3))),
+                Container(
+                    height: 5,
+                    width: 48,
+                    decoration: BoxDecoration(
+                        color: br, borderRadius: BorderRadius.circular(3))),
                 // رأس
                 Container(
                   height: 56,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(border: Border(bottom: BorderSide(color: br, width: 1))),
+                  decoration: BoxDecoration(
+                      border: Border(bottom: BorderSide(color: br, width: 1))),
                   child: Row(
                     children: [
                       const Icon(Icons.colorize_rounded, size: 20),
@@ -891,7 +948,9 @@ class _ColorWheelPickerSheetState extends State<ColorWheelPickerSheet> {
                         child: Text(
                           'اختر لونًا مخصّصًا',
                           style: t.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800, letterSpacing: .2, color: on),
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: .2,
+                              color: on),
                         ),
                       ),
                       IconButton(
@@ -908,7 +967,8 @@ class _ColorWheelPickerSheetState extends State<ColorWheelPickerSheet> {
                     builder: (ctx, cons) {
                       // حجم متجاوب: لا يغطي العنوان/التعليمات
                       final maxWheel = 200.0;
-                      final wheelSize = math.max(140.0, math.min(maxWheel, cons.maxWidth - 96));
+                      final wheelSize = math.max(
+                          140.0, math.min(maxWheel, cons.maxWidth - 96));
 
                       return SingleChildScrollView(
                         physics: const BouncingScrollPhysics(),
@@ -918,15 +978,18 @@ class _ColorWheelPickerSheetState extends State<ColorWheelPickerSheet> {
                           children: [
                             // تعليمات مختصرة
                             Padding(
-                              padding: const EdgeInsets.only(top: 10, bottom: 8),
+                              padding:
+                                  const EdgeInsets.only(top: 10, bottom: 8),
                               child: Row(
                                 children: [
-                                  Icon(Icons.info_outline, size: 16, color: on.withOpacity(.7)),
+                                  Icon(Icons.info_outline,
+                                      size: 16, color: on.withOpacity(.7)),
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
                                       'انقر/اسحب داخل الدائرة لاختيار اللون. استخدم شريط السطوع لتفتيح أو تغميق.',
-                                      style: t.textTheme.bodySmall?.copyWith(color: on.withOpacity(.75)),
+                                      style: t.textTheme.bodySmall?.copyWith(
+                                          color: on.withOpacity(.75)),
                                     ),
                                   ),
                                 ],
@@ -939,7 +1002,10 @@ class _ColorWheelPickerSheetState extends State<ColorWheelPickerSheet> {
                                 size: wheelSize,
                                 hue: _hue,
                                 sat: _sat,
-                                onChanged: (h, s) => setState(() { _hue = h; _sat = s; }),
+                                onChanged: (h, s) => setState(() {
+                                  _hue = h;
+                                  _sat = s;
+                                }),
                               ),
                             ),
 
@@ -949,17 +1015,20 @@ class _ColorWheelPickerSheetState extends State<ColorWheelPickerSheet> {
                             Row(
                               children: [
                                 Container(
-                                  width: 36, height: 36,
+                                  width: 36,
+                                  height: 36,
                                   decoration: BoxDecoration(
                                     color: _color,
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.black.withOpacity(.15)),
+                                    border: Border.all(
+                                        color: Colors.black.withOpacity(.15)),
                                   ),
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Text('المعاينة',
-                                      style: t.textTheme.labelLarge?.copyWith(color: on)),
+                                      style: t.textTheme.labelLarge
+                                          ?.copyWith(color: on)),
                                 ),
                                 IconButton(
                                   tooltip: 'مسح اللون',
@@ -979,7 +1048,9 @@ class _ColorWheelPickerSheetState extends State<ColorWheelPickerSheet> {
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Slider(
-                                    value: _val, min: .05, max: 1,
+                                    value: _val,
+                                    min: .05,
+                                    max: 1,
                                     onChanged: (v) => setState(() => _val = v),
                                   ),
                                 ),
@@ -1010,7 +1081,8 @@ class _ColorWheelPickerSheetState extends State<ColorWheelPickerSheet> {
                             label: const Text('رجوع'),
                             style: OutlinedButton.styleFrom(
                               minimumSize: const Size.fromHeight(48),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
                             ),
                           ),
                         ),
@@ -1024,7 +1096,8 @@ class _ColorWheelPickerSheetState extends State<ColorWheelPickerSheet> {
                               minimumSize: const Size.fromHeight(48),
                               backgroundColor: acc,
                               foregroundColor: t.colorScheme.onPrimary,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
                             ),
                           ),
                         ),
@@ -1088,7 +1161,10 @@ class _HSVWheelState extends State<_HSVWheel> {
     // قصّ نصف القطر داخل القرص
     final sat = (r.clamp(0.0, radius) / radius).clamp(0.0, 1.0);
 
-    setState(() { _hue = angle; _sat = sat; });
+    setState(() {
+      _hue = angle;
+      _sat = sat;
+    });
     widget.onChanged(_hue, _sat);
   }
 
@@ -1098,7 +1174,7 @@ class _HSVWheelState extends State<_HSVWheel> {
     return GestureDetector(
       onPanStart: (d) => _handle(d.localPosition, Size(s, s)),
       onPanUpdate: (d) => _handle(d.localPosition, Size(s, s)),
-      onTapDown:  (d) => _handle(d.localPosition, Size(s, s)),
+      onTapDown: (d) => _handle(d.localPosition, Size(s, s)),
       child: CustomPaint(
         size: Size.square(s),
         painter: _HSVWheelPainter(hue: _hue, sat: _sat),
@@ -1115,34 +1191,35 @@ class _HSVWheelPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width/2, size.height/2);
-    final radius = size.width/2;
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
 
     // نرسم قرص HSV عبر حلقات كثيرة (سلسة) — لا أسود/قطع.
-    const int rings = 100;                     // عدد الحلقات (الدقة)
+    const int rings = 100; // عدد الحلقات (الدقة)
     final ringW = radius / rings;
 
     for (int i = 0; i < rings; i++) {
-      final s = (i + .5) / rings;             // التشبّع لهذه الحلقة
+      final s = (i + .5) / rings; // التشبّع لهذه الحلقة
       // ألوان الهيو مع اتجاه عقارب الساعة (0→360)
-      final colors = List<Color>.generate(361, (d) =>
-          HSVColor.fromAHSV(1, d.toDouble(), s, 1).toColor());
-      colors.add(colors.first);                // غلق التدرّج لمنع الشرخ
+      final colors = List<Color>.generate(
+          361, (d) => HSVColor.fromAHSV(1, d.toDouble(), s, 1).toColor());
+      colors.add(colors.first); // غلق التدرّج لمنع الشرخ
 
       final paint = Paint()
         ..isAntiAlias = true
         ..style = PaintingStyle.stroke
         ..strokeWidth = ringW + 1
-        ..shader = SweepGradient(colors: colors).createShader(Offset.zero & size);
+        ..shader =
+            SweepGradient(colors: colors).createShader(Offset.zero & size);
 
       canvas.drawCircle(center, ringW * (i + 1), paint);
     }
 
     // مؤشر الموضع الحالي (محاذاة نفس الاتجاه المستخدم أعلاه)
-    final angleRad = hue * math.pi / 180.0;   // مع عقارب الساعة
+    final angleRad = hue * math.pi / 180.0; // مع عقارب الساعة
     final r = sat * radius;
-    final p = Offset(center.dx + r * math.cos(angleRad),
-        center.dy + r * math.sin(angleRad));
+    final p = Offset(
+        center.dx + r * math.cos(angleRad), center.dy + r * math.sin(angleRad));
 
     final markerWhite = Paint()
       ..isAntiAlias = true
@@ -1164,9 +1241,6 @@ class _HSVWheelPainter extends CustomPainter {
       old.hue != hue || old.sat != sat;
 }
 
-
-
-
 /// ===============================================================
 /// _ColorWheel
 /// - رسم دائرة تدرّج لوني (Hue + Saturation) مع مؤشر
@@ -1174,8 +1248,8 @@ class _HSVWheelPainter extends CustomPainter {
 /// ===============================================================
 class _ColorWheel extends StatefulWidget {
   final double size;
-  final double hue;        // 0..360
-  final double sat;        // 0..1
+  final double hue; // 0..360
+  final double sat; // 0..1
   final void Function(double hue, double sat) onChanged;
 
   const _ColorWheel({
@@ -1245,13 +1319,13 @@ class _ColorWheelPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
-    final center = Offset(size.width/2, size.height/2);
-    final radius = size.width/2;
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
 
     // تدرّج لوني دائري (Hue)
     final sweep = SweepGradient(
-      colors: List.generate(361, (i) =>
-          HSVColor.fromAHSV(1, i.toDouble(), 1, 1).toColor()),
+      colors: List.generate(
+          361, (i) => HSVColor.fromAHSV(1, i.toDouble(), 1, 1).toColor()),
     ).createShader(rect);
 
     // طبقة التشبّع: من الأبيض (المركز) إلى شفاف (الحافة)
@@ -1273,18 +1347,21 @@ class _ColorWheelPainter extends CustomPainter {
     // مؤشر الموقع الحالي
     final angleRad = (math.pi * hue) / 180.0;
     final r = sat * radius;
-    final p = Offset(center.dx + r * math.cos(angleRad),
-        center.dy - r * math.sin(angleRad));
+    final p = Offset(
+        center.dx + r * math.cos(angleRad), center.dy - r * math.sin(angleRad));
 
     final marker = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
       ..color = Colors.white;
     canvas.drawCircle(p, 8, marker);
-    canvas.drawCircle(p, 8, Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1
-      ..color = Colors.black.withOpacity(.35));
+    canvas.drawCircle(
+        p,
+        8,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1
+          ..color = Colors.black.withOpacity(.35));
   }
 
   @override

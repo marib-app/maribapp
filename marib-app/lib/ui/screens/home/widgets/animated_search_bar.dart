@@ -10,7 +10,8 @@ class AnimatedSearchBar extends StatefulWidget {
   State<AnimatedSearchBar> createState() => _AnimatedSearchBarState();
 }
 
-class _AnimatedSearchBarState extends State<AnimatedSearchBar> with TickerProviderStateMixin {
+class _AnimatedSearchBarState extends State<AnimatedSearchBar>
+    with TickerProviderStateMixin {
   final List<String> hints = [
     "ابحث عن منتج يهمك 🔍",
     "وش تحتاج اليوم؟ 🛒",
@@ -85,7 +86,8 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar> with TickerProvid
               const SizedBox(width: 12),
               Expanded(
                 child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 800), // ← أبطأ وأكثر سلاسة
+                  duration:
+                      const Duration(milliseconds: 800), // ← أبطأ وأكثر سلاسة
                   switchInCurve: Curves.easeOutQuad,
                   switchOutCurve: Curves.easeInQuad,
                   transitionBuilder: (child, animation) {

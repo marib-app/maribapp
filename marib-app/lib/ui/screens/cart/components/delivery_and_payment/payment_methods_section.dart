@@ -5,11 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:marib/data/model/cart/checkout_models.dart';
 
-import 'shared_widgets.dart';
+import 'package:marib/ui/screens/cart/components/delivery_and_payment/shared_widgets.dart';
 import 'package:marib/data/model/wallet/wallet_summary.dart';
 import 'package:marib/utils/helper_utils.dart';
-
-
 
 /// ويدجت يعرض طرق الدفع المتاحة ويتعامل مع الحوارات الخاصة بالحوالة أو الكود.
 class PaymentMethodsSection extends StatelessWidget {
@@ -51,7 +49,6 @@ class PaymentMethodsSection extends StatelessWidget {
     required this.allowPayNow,
     required this.allowPayOnDelivery,
     required this.payOnDeliverySelected,
-
   });
 
   @override
@@ -59,7 +56,6 @@ class PaymentMethodsSection extends StatelessWidget {
     if (loading) {
       return buildShimmerLine(context, width: double.infinity, height: 50);
     }
-
 
     if (!addressReady) {
       final bool isDark = Theme.of(context).brightness == Brightness.dark;
@@ -88,17 +84,14 @@ class PaymentMethodsSection extends StatelessWidget {
       );
     }
 
-
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final Color secondaryColor = const Color(0xFFFF8000);
     final Color accentColor = const Color(0xFFE0E0E0);
     final Color lightBackground =
-    isDark ? Colors.grey.shade800 : const Color(0xFFF9F9F9);
+        isDark ? Colors.grey.shade800 : const Color(0xFFF9F9F9);
     final Color textColor = isDark ? Colors.white : const Color(0xFF222222);
     final Color backgroundColor = Theme.of(context).scaffoldBackgroundColor;
     final Color borderColor = isDark ? Colors.grey.shade600 : accentColor;
-
-
 
     final List<Widget> paymentOptions = [];
 
@@ -137,12 +130,10 @@ class PaymentMethodsSection extends StatelessWidget {
             borderColor: borderColor,
             secondaryColor: secondaryColor,
             isEnabled: allowPayNow,
-
           ),
         ),
       );
     }
-
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,17 +142,16 @@ class PaymentMethodsSection extends StatelessWidget {
   }
 
   Widget _buildWalletCard(
-      BuildContext context, {
-        required bool isDark,
-        required Color textColor,
-        required Color backgroundColor,
-        required Color lightBackground,
-        required Color borderColor,
-        required Color secondaryColor,
-        required bool allowPayNow,
-        required bool payOnDeliverySelected,
-
-      }) {
+    BuildContext context, {
+    required bool isDark,
+    required Color textColor,
+    required Color backgroundColor,
+    required Color lightBackground,
+    required Color borderColor,
+    required Color secondaryColor,
+    required bool allowPayNow,
+    required bool payOnDeliverySelected,
+  }) {
     final WalletSummary? summary = walletSummary;
     final double balance = summary?.balance ?? 0;
     final String currency = (summary?.currency?.trim().isNotEmpty ?? false)
@@ -169,9 +159,8 @@ class PaymentMethodsSection extends StatelessWidget {
         : 'ر.س';
     final String? normalizedWalletCurrency = walletCurrency;
     final String? normalizedOrderCurrency = orderCurrency;
-    final String balanceText = summary == null
-        ? '—'
-        : '${balance.toStringAsFixed(2)} $currency';
+    final String balanceText =
+        summary == null ? '—' : '${balance.toStringAsFixed(2)} $currency';
     final String orderCurrencyLabel =
         normalizedOrderCurrency ?? normalizedWalletCurrency ?? currency;
     String statusText;
@@ -190,23 +179,20 @@ class PaymentMethodsSection extends StatelessWidget {
       statusText = 'تعذر تحميل رصيد المحفظة';
       statusColor = Colors.orange;
     } else if (!walletCurrencyMatchesOrder) {
-      final String walletCurrencyLabel =
-          normalizedWalletCurrency ?? currency;
+      final String walletCurrencyLabel = normalizedWalletCurrency ?? currency;
       statusText =
-      'لا يمكن استخدام المحفظة بعملة $walletCurrencyLabel لطلب عملته $orderCurrencyLabel.';
+          'لا يمكن استخدام المحفظة بعملة $walletCurrencyLabel لطلب عملته $orderCurrencyLabel.';
       statusColor = Colors.orange;
     } else if (!walletEnabled) {
-      final String requiredAmountText =
-      requiredAmount.toStringAsFixed(2);
+      final String requiredAmountText = requiredAmount.toStringAsFixed(2);
       statusText =
-      'الرصيد غير كافٍ لإجمالي $requiredAmountText $orderCurrencyLabel';
+          'الرصيد غير كافٍ لإجمالي $requiredAmountText $orderCurrencyLabel';
 
       statusColor = Colors.redAccent;
     } else {
       statusText = 'الرصيد متاح للدفع';
       statusColor = Colors.green;
     }
-
 
     String? restrictionText;
     if (!payOnDeliveryAllowed) {
@@ -215,15 +201,10 @@ class PaymentMethodsSection extends StatelessWidget {
           : '🚫 الدفع عند الاستلام غير متاح لهذه الطلبية.';
     }
 
+    final Color cardBorderColor = walletSelected ? secondaryColor : borderColor;
 
-
-    final Color cardBorderColor = walletSelected
-        ? secondaryColor
-        : borderColor;
-
-    final Color cardBackgroundColor = walletSelected
-        ? lightBackground
-        : backgroundColor;
+    final Color cardBackgroundColor =
+        walletSelected ? lightBackground : backgroundColor;
 
     return Opacity(
       opacity: canInteract ? 1 : 0.65,
@@ -288,7 +269,6 @@ class PaymentMethodsSection extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-
                       if (restrictionText != null) ...[
                         const SizedBox(height: 6),
                         Text(
@@ -300,8 +280,6 @@ class PaymentMethodsSection extends StatelessWidget {
                           ),
                         ),
                       ],
-
-
                     ],
                   ),
                 ),
@@ -316,53 +294,41 @@ class PaymentMethodsSection extends StatelessWidget {
   }
 
   Widget _buildBankCard(
-      BuildContext context, {
-        required CheckoutBank bank,
-        required int index,
-        required bool isSelected,
-        required bool isDark,
-        required Color textColor,
-        required Color backgroundColor,
-        required Color lightBackground,
-        required Color borderColor,
-        required Color secondaryColor,
-        required bool isEnabled,
-
-
-      }) {
-    final String accountDisplay =
-
-
-        bank.accountNumber?.trim().isNotEmpty == true
-            ? bank.accountNumber!.trim()
-            : (bank.iban?.trim() ?? '');
+    BuildContext context, {
+    required CheckoutBank bank,
+    required int index,
+    required bool isSelected,
+    required bool isDark,
+    required Color textColor,
+    required Color backgroundColor,
+    required Color lightBackground,
+    required Color borderColor,
+    required Color secondaryColor,
+    required bool isEnabled,
+  }) {
+    final String accountDisplay = bank.accountNumber?.trim().isNotEmpty == true
+        ? bank.accountNumber!.trim()
+        : (bank.iban?.trim() ?? '');
     final String accountName = bank.accountName?.trim() ?? '';
     final String notes = bank.notes?.trim() ?? '';
     final Color cardBackgroundColor =
-    isSelected ? lightBackground : backgroundColor;
-    final Color cardBorderColor =
-    isSelected ? secondaryColor : borderColor;
-    final Color infoBackgroundColor = isDark
-        ? Colors.white.withOpacity(0.06)
-        : const Color(0xFFF5F5F5);
+        isSelected ? lightBackground : backgroundColor;
+    final Color cardBorderColor = isSelected ? secondaryColor : borderColor;
+    final Color infoBackgroundColor =
+        isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFF5F5F5);
     final Color infoBorderColor =
-    isDark ? Colors.white.withOpacity(0.14) : const Color(0xFFE0E0E0);
-    final Color iconColor =
-    isDark ? Colors.white70 : const Color(0xFF616161);
+        isDark ? Colors.white.withOpacity(0.14) : const Color(0xFFE0E0E0);
+    final Color iconColor = isDark ? Colors.white70 : const Color(0xFF616161);
 
-
-    final String? restrictionText = isEnabled
-        ? null
-        : '🚫 الدفع الآن غير متاح لهذه الطلبية.';
+    final String? restrictionText =
+        isEnabled ? null : '🚫 الدفع الآن غير متاح لهذه الطلبية.';
 
     return Opacity(
-        opacity: isEnabled ? 1 : 0.6,
-        child: Material(
-
+      opacity: isEnabled ? 1 : 0.6,
+      child: Material(
         color: cardBackgroundColor,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
-
           borderRadius: BorderRadius.circular(12),
           onTap: isEnabled ? () => onSelectBank(index) : null,
           child: Container(
@@ -372,9 +338,6 @@ class PaymentMethodsSection extends StatelessWidget {
                 color: cardBorderColor,
                 width: 1.4,
               ),
-
-
-
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -410,16 +373,16 @@ class PaymentMethodsSection extends StatelessWidget {
                           borderRadius: BorderRadius.circular(10),
                           onTap: isEnabled
                               ? () async {
-                            await Clipboard.setData(
-                              ClipboardData(text: accountDisplay),
-                            );
-                            HelperUtils.showSnackBarMessage(
-                              context,
-                              'تم نسخ رقم الحساب',
-                              messageDuration: 1,
-                            );
-                            onSelectBank(index);
-                          }
+                                  await Clipboard.setData(
+                                    ClipboardData(text: accountDisplay),
+                                  );
+                                  HelperUtils.showSnackBarMessage(
+                                    context,
+                                    'تم نسخ رقم الحساب',
+                                    messageDuration: 1,
+                                  );
+                                  onSelectBank(index);
+                                }
                               : null,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
@@ -476,10 +439,8 @@ class PaymentMethodsSection extends StatelessWidget {
                         ),
                       ],
                     ],
-
                   ),
                 ),
-
                 const SizedBox(width: 8),
                 Icon(
                   isSelected
@@ -488,11 +449,10 @@ class PaymentMethodsSection extends StatelessWidget {
                   color: isSelected ? secondaryColor : borderColor,
                 ),
               ],
-
             ),
+          ),
         ),
-        ),
-        ),
+      ),
     );
   }
 
@@ -546,9 +506,9 @@ class PaymentMethodsSection extends StatelessWidget {
   }
 
   static void showPurchaseCodeDialog(
-      BuildContext context,
-      Future<void> Function() onConfirm,
-      ) {
+    BuildContext context,
+    Future<void> Function() onConfirm,
+  ) {
     final TextEditingController codeController = TextEditingController();
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -572,7 +532,8 @@ class PaymentMethodsSection extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: 'أدخل كود الشراء هنا',
                 filled: true,
-                fillColor: isDark ? Colors.grey.shade800 : const Color(0xFFF3F3F3),
+                fillColor:
+                    isDark ? Colors.grey.shade800 : const Color(0xFFF3F3F3),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: const BorderSide(color: Colors.grey),
@@ -597,7 +558,8 @@ class PaymentMethodsSection extends StatelessWidget {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFF8000),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () async {
               if (codeController.text.trim().isEmpty) {
@@ -618,19 +580,21 @@ class PaymentMethodsSection extends StatelessWidget {
   }
 
   static void showBankTransferDialog(
-      BuildContext context, {
-        required String paymentMethodName,
-        required String accountName,
-        required String accountNumber,
-        required Future<void> Function() onConfirm,
-      }) {
+    BuildContext context, {
+    required String paymentMethodName,
+    required String accountName,
+    required String accountNumber,
+    required Future<void> Function() onConfirm,
+  }) {
     final TextEditingController nameController = TextEditingController();
-    final TextEditingController transferCodeController = TextEditingController();
+    final TextEditingController transferCodeController =
+        TextEditingController();
     final ValueNotifier<bool> isUploading = ValueNotifier(false);
     final ValueNotifier<File?> receiptImage = ValueNotifier(null);
 
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color fieldColor = isDark ? Colors.grey.shade800 : const Color(0xFFF5F5F5);
+    final Color fieldColor =
+        isDark ? Colors.grey.shade800 : const Color(0xFFF5F5F5);
     final Color mainColor = const Color(0xFFFF8000);
 
     showDialog(
@@ -647,7 +611,10 @@ class PaymentMethodsSection extends StatelessWidget {
             children: [
               Text(
                 paymentMethodName,
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: mainColor),
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: mainColor),
               ),
               const SizedBox(height: 6),
               InkWell(
@@ -667,7 +634,8 @@ class PaymentMethodsSection extends StatelessWidget {
                     color: fieldColor,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Text(accountNumber, style: const TextStyle(fontSize: 14)),
+                  child:
+                      Text(accountNumber, style: const TextStyle(fontSize: 14)),
                 ),
               ),
               TextField(
@@ -676,7 +644,8 @@ class PaymentMethodsSection extends StatelessWidget {
                   labelText: 'الاسم *',
                   filled: true,
                   fillColor: fieldColor,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
               ),
               const SizedBox(height: 12),
@@ -686,7 +655,8 @@ class PaymentMethodsSection extends StatelessWidget {
                   labelText: 'رقم الحوالة *',
                   filled: true,
                   fillColor: fieldColor,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
               ),
               const SizedBox(height: 16),
@@ -701,16 +671,18 @@ class PaymentMethodsSection extends StatelessWidget {
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: mainColor,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
                             ),
                             onPressed: () async {
                               final ImagePicker picker = ImagePicker();
-                              final XFile? picked =
-                              await picker.pickImage(source: ImageSource.gallery);
+                              final XFile? picked = await picker.pickImage(
+                                  source: ImageSource.gallery);
                               if (picked != null) {
                                 isUploading.value = true;
                                 // TODO: ارفع الصورة لخادمك هنا
-                                await Future.delayed(const Duration(seconds: 2));
+                                await Future.delayed(
+                                    const Duration(seconds: 2));
                                 receiptImage.value = File(picked.path);
                                 isUploading.value = false;
                               }
@@ -727,16 +699,19 @@ class PaymentMethodsSection extends StatelessWidget {
                           else if (file != null)
                             const Row(
                               children: [
-                                Icon(Icons.check_circle, color: Colors.green, size: 20),
+                                Icon(Icons.check_circle,
+                                    color: Colors.green, size: 20),
                                 SizedBox(width: 4),
                                 Text(
                                   'مكتمل',
-                                  style: TextStyle(fontSize: 12, color: Colors.green),
+                                  style: TextStyle(
+                                      fontSize: 12, color: Colors.green),
                                 ),
                               ],
                             )
                           else
-                            const Text('اختياري', style: TextStyle(color: Colors.grey)),
+                            const Text('اختياري',
+                                style: TextStyle(color: Colors.grey)),
                         ],
                       );
                     },
@@ -758,15 +733,17 @@ class PaymentMethodsSection extends StatelessWidget {
                   transferCodeController.text.trim().isNotEmpty;
               return ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: (uploading || !valid) ? Colors.grey : mainColor,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  backgroundColor:
+                      (uploading || !valid) ? Colors.grey : mainColor,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
                 onPressed: (uploading || !valid)
                     ? null
                     : () async {
-                  Navigator.pop(context);
-                  await onConfirm();
-                },
+                        Navigator.pop(context);
+                        await onConfirm();
+                      },
                 child: const Text('تقديم'),
               );
             },

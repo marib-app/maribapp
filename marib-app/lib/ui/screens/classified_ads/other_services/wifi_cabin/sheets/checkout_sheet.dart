@@ -24,7 +24,7 @@ class _CheckoutSheet extends StatefulWidget {
 class _CheckoutSheetState extends State<_CheckoutSheet> {
   final WifiRepository _repository = const WifiRepository();
   final Map<String, WifiPaymentGateway> _gatewayEntities =
-  <String, WifiPaymentGateway>{};
+      <String, WifiPaymentGateway>{};
 
   int _quantity = 1;
   String _gateway = 'wallet';
@@ -59,16 +59,16 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
       views = gateways
           .map(
             (gateway) => PaymentGatewayView(
-          id: gateway.id,
-          name: gateway.name,
-          description: gateway.description,
-        ),
-      )
+              id: gateway.id,
+              name: gateway.name,
+              description: gateway.description,
+            ),
+          )
           .toList();
 
       if (views.isEmpty) {
-        final WifiPaymentGateway fallback =
-        const WifiPaymentGateway(id: 'wallet', name: 'المحفظة', isWallet: true);
+        final WifiPaymentGateway fallback = const WifiPaymentGateway(
+            id: 'wallet', name: 'المحفظة', isWallet: true);
         lookup = <String, WifiPaymentGateway>{fallback.id: fallback};
         views = const <PaymentGatewayView>[
           PaymentGatewayView(id: 'wallet', name: 'المحفظة'),
@@ -81,8 +81,8 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
           ? _extractErrorMessage(error.payload) ?? error.toString()
           : error.toString();
       if (_gateways.isEmpty) {
-        final WifiPaymentGateway fallback =
-        const WifiPaymentGateway(id: 'wallet', name: 'المحفظة', isWallet: true);
+        final WifiPaymentGateway fallback = const WifiPaymentGateway(
+            id: 'wallet', name: 'المحفظة', isWallet: true);
         lookup = <String, WifiPaymentGateway>{fallback.id: fallback};
         views = const <PaymentGatewayView>[
           PaymentGatewayView(id: 'wallet', name: 'المحفظة'),
@@ -117,9 +117,9 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
   }
 
   String _pickDefaultGatewayId(
-      List<WifiPaymentGateway> gateways,
-      String fallbackId,
-      ) {
+    List<WifiPaymentGateway> gateways,
+    String fallbackId,
+  ) {
     for (final gateway in gateways) {
       if (gateway.isDefault) {
         return gateway.id;
@@ -248,7 +248,8 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
           return Container(
             decoration: BoxDecoration(
               color: color.backgroundColor,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Column(
               children: [
@@ -277,7 +278,8 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        widget.plan.description ?? 'راجع تفاصيل الخطة قبل المتابعة.',
+                        widget.plan.description ??
+                            'راجع تفاصيل الخطة قبل المتابعة.',
                         style: TextStyle(
                           color: color.textDefaultColor.withOpacity(0.7),
                         ),
@@ -303,7 +305,8 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                           const SizedBox(width: 12),
                           _QtyStepper(
                             value: _quantity,
-                            onChanged: (value) => setState(() => _quantity = value),
+                            onChanged: (value) =>
+                                setState(() => _quantity = value),
                           ),
                         ],
                       ),
@@ -398,29 +401,29 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                         duration: const Duration(milliseconds: 200),
                         child: _isSubmitting
                             ? Row(
-                          key: const ValueKey('processing'),
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Text('جارٍ معالجة الدفع'),
-                          ],
-                        )
+                                key: const ValueKey('processing'),
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Text('جارٍ معالجة الدفع'),
+                                ],
+                              )
                             : Row(
-                          key: const ValueKey('confirm'),
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.check_circle_outline),
-                            SizedBox(width: 8),
-                            Text('تأكيد الدفع'),
-                          ],
-                        ),
+                                key: const ValueKey('confirm'),
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  Icon(Icons.check_circle_outline),
+                                  SizedBox(width: 8),
+                                  Text('تأكيد الدفع'),
+                                ],
+                              ),
                       ),
                     ),
                   ),
@@ -533,28 +536,28 @@ class _GatewayPicker extends StatelessWidget {
       children: gateways
           .map(
             (gateway) => RadioListTile<String>(
-          value: gateway.id,
-          groupValue: value,
-          onChanged: enabled
-              ? (val) {
-            if (val != null) onChanged(val);
-          }
-              : null,
-          title: Text(
-            gateway.name,
-            style: TextStyle(color: color.textDefaultColor),
-          ),
-          subtitle: gateway.description != null
-              ? Text(
-            gateway.description!,
-            style: TextStyle(
-              color: color.textDefaultColor.withOpacity(0.65),
-              fontSize: 12,
+              value: gateway.id,
+              groupValue: value,
+              onChanged: enabled
+                  ? (val) {
+                      if (val != null) onChanged(val);
+                    }
+                  : null,
+              title: Text(
+                gateway.name,
+                style: TextStyle(color: color.textDefaultColor),
+              ),
+              subtitle: gateway.description != null
+                  ? Text(
+                      gateway.description!,
+                      style: TextStyle(
+                        color: color.textDefaultColor.withOpacity(0.65),
+                        fontSize: 12,
+                      ),
+                    )
+                  : null,
             ),
           )
-              : null,
-        ),
-      )
           .toList(),
     );
   }

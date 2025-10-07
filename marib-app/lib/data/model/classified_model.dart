@@ -4,7 +4,6 @@
 import 'dart:convert';
 
 // lib/data/model/classified_model.dart
-import 'dart:convert';
 
 class ClassifiedModel {
   // ===== الأساسية =====
@@ -120,12 +119,19 @@ class ClassifiedModel {
   List<String>? _asStringList(dynamic v) {
     if (v == null) return null;
     if (v is List) {
-      return v.map((e) => _asString(e) ?? '').where((s) => s.isNotEmpty).toList();
+      return v
+          .map((e) => _asString(e) ?? '')
+          .where((s) => s.isNotEmpty)
+          .toList();
     }
     if (v is String) {
       final s = v.trim();
       if (s.isEmpty) return null;
-      return s.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+      return s
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
     }
     return null;
   }
@@ -147,7 +153,7 @@ class ClassifiedModel {
   List<Map<String, dynamic>> _listToMapList(List src) {
     final out = <Map<String, dynamic>>[];
     for (final e in src) {
-      if (e is Map) out.add(Map<String, dynamic>.from(e as Map));
+      if (e is Map) out.add(Map<String, dynamic>.from(e));
     }
     return out;
   }
@@ -173,7 +179,7 @@ class ClassifiedModel {
     }
 
     if (decoded is Map) {
-      final map = Map<String, dynamic>.from(decoded as Map);
+      final map = Map<String, dynamic>.from(decoded);
 
       const keys = <String>[
         'service_fields_schema',
@@ -216,14 +222,19 @@ class ClassifiedModel {
       final m = Map<String, dynamic>.from(m0);
 
       // type ↓
-      final rawType = _asString(m['type'] ?? m['field_type'] ?? m['input_type']) ?? 'textbox';
+      final rawType =
+          _asString(m['type'] ?? m['field_type'] ?? m['input_type']) ??
+              'textbox';
       m['type'] = rawType.toLowerCase(); // نحافظ على الأنواع الـ 7 المعتمدة
 
       // label/title/name ↓
       m['label'] = _asString(m['label'] ?? m['title'] ?? m['name']) ?? '';
 
       // required ↓
-      m['required'] = _asBool(m['required'] ?? m['is_required'] ?? m['mandatory'] ?? m['req'], defaultValue: false) ?? false;
+      m['required'] = _asBool(
+              m['required'] ?? m['is_required'] ?? m['mandatory'] ?? m['req'],
+              defaultValue: false) ??
+          false;
 
       // options/values ↓ (نسمح بالنص المفصول بـ | أو List)
       if (m['options'] == null && m['values'] != null) {
@@ -241,8 +252,10 @@ class ClassifiedModel {
       }
 
       // min/max (اختياريان)
-      if (m['min'] != null && m['min'] is String) m['min'] = int.tryParse(m['min']);
-      if (m['max'] != null && m['max'] is String) m['max'] = int.tryParse(m['max']);
+      if (m['min'] != null && m['min'] is String)
+        m['min'] = int.tryParse(m['min']);
+      if (m['max'] != null && m['max'] is String)
+        m['max'] = int.tryParse(m['max']);
 
       // order/sequence ↓
       final order = m['order'] ?? m['sequence'] ?? m['sort_order'] ?? 0;
@@ -250,7 +263,8 @@ class ClassifiedModel {
 
       // notes/is_customer_option/color_values (إن وُجدت)
       if (m.containsKey('is_customer_option')) {
-        m['is_customer_option'] = _asBool(m['is_customer_option'], defaultValue: false) ?? false;
+        m['is_customer_option'] =
+            _asBool(m['is_customer_option'], defaultValue: false) ?? false;
       }
       if (m['color_values'] != null && m['color_values'] is List) {
         m['color_values'] = (m['color_values'] as List)
@@ -270,64 +284,69 @@ class ClassifiedModel {
   // ================= fromJson =================
   ClassifiedModel.fromJson(Map<String, dynamic> json) {
     // الأساسية
-    id          = _asInt(json['id']);
-    userId      = _asInt(_pick(json, ['user_id','userId']));
-    categoryId  = _asInt(_pick(json, ['category_id','categoryId']));
-    title       = _asString(_pick(json, ['title','name']));
-    slug        = _asString(json['slug']);
-    description = _asString(_pick(json, ['description','desc','details']));
+    id = _asInt(json['id']);
+    userId = _asInt(_pick(json, ['user_id', 'userId']));
+    categoryId = _asInt(_pick(json, ['category_id', 'categoryId']));
+    title = _asString(_pick(json, ['title', 'name']));
+    slug = _asString(json['slug']);
+    description = _asString(_pick(json, ['description', 'desc', 'details']));
 
-    image       = _asString(_pick(json, ['image','image_url','thumbnail','thumb']));
-    icon        = _asString(_pick(json, ['icon','icon_url']));
+    image =
+        _asString(_pick(json, ['image', 'image_url', 'thumbnail', 'thumb']));
+    icon = _asString(_pick(json, ['icon', 'icon_url']));
 
-    tags        = _asStringList(json['tags']);
+    tags = _asStringList(json['tags']);
 
-    status      = _asBool(json['status']);
-    isMain      = _asBool(_pick(json, ['is_main','isMain']));
-    serviceType = _asString(_pick(json, ['service_type','serviceType']));
+    status = _asBool(json['status']);
+    isMain = _asBool(_pick(json, ['is_main', 'isMain']));
+    serviceType = _asString(_pick(json, ['service_type', 'serviceType']));
 
-    views       = _asInt(json['views']);
-    expiryDate  = _asString(_pick(json, ['expiry_date','expiryDate']));
+    views = _asInt(json['views']);
+    expiryDate = _asString(_pick(json, ['expiry_date', 'expiryDate']));
 
-    createdAt   = _asString(_pick(json, ['created_at','createdAt']));
-    updatedAt   = _asString(_pick(json, ['updated_at','updatedAt']));
+    createdAt = _asString(_pick(json, ['created_at', 'createdAt']));
+    updatedAt = _asString(_pick(json, ['updated_at', 'updatedAt']));
 
     // تقييم
-    rating        = _asDouble(_pick(json, ['rating','avg_rating']));
-    totalRatings  = _asInt(_pick(json, ['total_ratings','totalRatings']));
+    rating = _asDouble(_pick(json, ['rating', 'avg_rating']));
+    totalRatings = _asInt(_pick(json, ['total_ratings', 'totalRatings']));
 
     // الدفع
-    isPaid    = _asBool(_pick(json, ['is_paid','paid']), defaultValue: false);
-    price     = _asDouble(_pick(json, ['price','amount']));
-    currency  = _asString(_pick(json, ['currency','currency_code']));
-    priceNote = _asString(_pick(json, ['price_note','payment_note','note']));
-    payUrl    = _asString(_pick(json, ['pay_url','payment_url','url','link']));
+    isPaid = _asBool(_pick(json, ['is_paid', 'paid']), defaultValue: false);
+    price = _asDouble(_pick(json, ['price', 'amount']));
+    currency = _asString(_pick(json, ['currency', 'currency_code']));
+    priceNote = _asString(_pick(json, ['price_note', 'payment_note', 'note']));
+    payUrl = _asString(_pick(json, ['pay_url', 'payment_url', 'url', 'link']));
 
     // منطق المتابعة
-    hasCustomFields = _asBool(_pick(json, ['has_custom_fields','hasCustomFields']), defaultValue: false);
-    directToUser    = _asBool(_pick(json, ['direct_to_user','directToUser']), defaultValue: false);
-    directUserId    = _asInt(_pick(json, ['direct_user_id','directUserId']));
+    hasCustomFields = _asBool(
+        _pick(json, ['has_custom_fields', 'hasCustomFields']),
+        defaultValue: false);
+    directToUser = _asBool(_pick(json, ['direct_to_user', 'directToUser']),
+        defaultValue: false);
+    directUserId = _asInt(_pick(json, ['direct_user_id', 'directUserId']));
 
-    serviceUid      = _asString(_pick(json, ['service_uid','uid']));
+    serviceUid = _asString(_pick(json, ['service_uid', 'uid']));
 
     // السكيمة (مرن جدًا + تطبيع)
     serviceFieldsSchema = _extractSchema(
       _pick(json, [
-        'service_fields_schema',
-        'serviceFieldsSchema',
-        'service_fields',
-        'custom_fields_schema',
-        'customFieldsSchema',
-        'custom_fields',
-        'fields_schema',
-        'fields',
-        'schema',
-        'data',
-        'item',
-        'payload',
-        'record',
-        'result',
-      ]) ?? json,
+            'service_fields_schema',
+            'serviceFieldsSchema',
+            'service_fields',
+            'custom_fields_schema',
+            'customFieldsSchema',
+            'custom_fields',
+            'fields_schema',
+            'fields',
+            'schema',
+            'data',
+            'item',
+            'payload',
+            'record',
+            'result',
+          ]) ??
+          json,
     );
   }
 
@@ -376,9 +395,6 @@ class ClassifiedModel {
     return data;
   }
 }
-
-
-
 
 /// نسخة خفيفة للقائمة (List/Grid) — تشمل الحقول اللازمة للعرض السريع.
 class ClassifiedSummary {
@@ -452,7 +468,9 @@ class ClassifiedSummary {
       if (imgs is List && imgs.isNotEmpty) {
         final first = imgs.first;
         if (first is String && first.trim().isNotEmpty) return first;
-        if (first is Map && first['url'] is String && (first['url'] as String).trim().isNotEmpty) {
+        if (first is Map &&
+            first['url'] is String &&
+            (first['url'] as String).trim().isNotEmpty) {
           return first['url'] as String;
         }
       }
@@ -472,13 +490,15 @@ class ClassifiedSummary {
           _asString(json['name']) ??
           _asString(json['service_title']) ??
           _asString(json['service_name']),
-
       image: _pickImage(json),
       isMain: _asBool(json['is_main']) || _asBool(json['isMain']),
       status: _asBool(json['status'], defaultValue: true),
       rating: _asDouble(json['rating']) ?? _asDouble(json['avg_rating']),
-      totalRatings: _asInt(json['total_ratings']) ?? _asInt(json['ratings_count']),
-      categoryId: _asInt(json['category_id']) ?? _asInt(json['cat_id']) ?? _asInt(json['categoryId']),
+      totalRatings:
+          _asInt(json['total_ratings']) ?? _asInt(json['ratings_count']),
+      categoryId: _asInt(json['category_id']) ??
+          _asInt(json['cat_id']) ??
+          _asInt(json['categoryId']),
     );
   }
 }
@@ -487,15 +507,15 @@ class ClassifiedSummary {
 extension ClassifiedMappers on ClassifiedModel {
   /// تحويل النسخة الكاملة إلى خفيفة (للقائمة)
   ClassifiedSummary toSummary() => ClassifiedSummary(
-    id: id ?? 0,
-    title: title,
-    image: image ?? icon,
-    isMain: isMain ?? false,
-    status: status ?? true,
-    rating: rating,
-    totalRatings: totalRatings,
-    categoryId: categoryId,
-  );
+        id: id ?? 0,
+        title: title,
+        image: image ?? icon,
+        isMain: isMain ?? false,
+        status: status ?? true,
+        rating: rating,
+        totalRatings: totalRatings,
+        categoryId: categoryId,
+      );
 
   /// دمج البيانات الخفيفة في نسخة كاملة موجودة (بدون فقدان تفاصيل)
   ClassifiedModel mergeSummary(ClassifiedSummary s) {
@@ -522,14 +542,14 @@ extension ClassifiedMappers on ClassifiedModel {
 extension ClassifiedSummaryX on ClassifiedSummary {
   /// تحويل النسخة الخفيفة إلى نسخة كاملة مبدئية (تُستخدم كـ placeholder)
   ClassifiedModel toFullSkeleton() => ClassifiedModel(
-    id: id,
-    title: title,
-    image: image,
-    icon: image,
-    isMain: isMain,
-    status: status,
-    rating: rating,
-    totalRatings: totalRatings,
-    categoryId: categoryId,
-  );
+        id: id,
+        title: title,
+        image: image,
+        icon: image,
+        isMain: isMain,
+        status: status,
+        rating: rating,
+        totalRatings: totalRatings,
+        categoryId: categoryId,
+      );
 }

@@ -20,8 +20,6 @@ class MFail extends MLoginState {
   MFail(this.error);
 }
 
-
-
 void resetState() {
   MProgress();
 }

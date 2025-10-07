@@ -1,11 +1,9 @@
-
 // الهدف: واجهة تسجيل "العقاري" فقط.
 // يعتمد على shared widgets (مثل RealEstateLogoPicker و PhoneFieldsRow).
 // لا يحتوي أي منطق أعمال، مجرد واجهة صافية.
-import 'dart:ui' as ui;    // Path, PathMetric
+import 'dart:ui' as ui; // Path, PathMetric
 import 'dart:math' as math; // min
 import 'dart:async';
-
 
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -13,19 +11,9 @@ import 'package:marib/ui/screens/widgets/custom_text_form_field.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 
-
 import 'package:flutter/scheduler.dart';
-import 'package:flutter/services.dart';
-
 
 import 'package:marib/utils/ui_utils.dart';
-import 'package:marib/utils/helper_utils.dart';
-
-
-
-
-
-
 
 // lib/ui/screens/auth/sign_up/widgets/real_estate_section.dart
 
@@ -39,13 +27,6 @@ import 'package:marib/utils/helper_utils.dart';
 //
 // ملاحظة: جميع هذه الكلاسات UI فقط. المنطق (مثل الرفع/الحفظ) يبقى في الشاشة الأم.
 // يجمع البطاقات ويربطها بخصائص الشاشة الأم (بدون منطق).
-
-
-
-
-
-
-
 
 class RealEstateSection extends StatelessWidget {
   // === شعار المكتب ===
@@ -67,22 +48,24 @@ class RealEstateSection extends StatelessWidget {
   final VoidCallback onGetLocation;
 
   // === أنيميشن اختيارية للشعار ===
-  final bool isLogoUploading;       // يُظهر لودر أثناء الرفع
+  final bool isLogoUploading; // يُظهر لودر أثناء الرفع
   final double? logoUploadProgress; // 0..1
-  final bool showLogoPreviewHint;   // يُظهر تلميح "هكذا سيظهر شعارك للمستخدمين"
+  final bool showLogoPreviewHint; // يُظهر تلميح "هكذا سيظهر شعارك للمستخدمين"
 
   // === إبراز الحقول الإلزامية بصريًا ===
   final bool highlightRequired;
 
   // === شريط الإرسال (اختياري) ===
-  final VoidCallback? onSubmit;  // عند الضغط على "إكمال التسجيل"
-  final bool isSubmitting;       // لعرض حالة تحميل على الزر
+  final VoidCallback? onSubmit; // عند الضغط على "إكمال التسجيل"
+  final bool isSubmitting; // لعرض حالة تحميل على الزر
 
   // === تحكم الحاوية (جديد) ===
   /// أقصى عرض للقسم. اتركه null ليكون فل-ويدث (يمتد حتى الحواف مع الـ gutter).
   final double? sectionMaxWidth;
+
   /// الفراغ الصغير عن أطراف الشاشة (dp). افتراضي 6.
   final double horizontalGutter;
+
   /// إزالة أي padding يضيفه ScrollView/MediaQuery يمين/يسار.
   final bool removeViewportPadding;
 
@@ -112,18 +95,9 @@ class RealEstateSection extends StatelessWidget {
     this.onSubmit,
     this.isSubmitting = false,
     // تحكم الحاوية (اختياري)
-    this.sectionMaxWidth,         // null => Full-bleed
-    this.horizontalGutter = - 12,    // فراغ بسيط عن الأطراف
+    this.sectionMaxWidth, // null => Full-bleed
+    this.horizontalGutter = -12, // فراغ بسيط عن الأطراف
     this.removeViewportPadding = true,
-
-
-
-
-
-
-
-
-
   });
 
   @override
@@ -132,7 +106,7 @@ class RealEstateSection extends StatelessWidget {
 
     final media = MediaQuery.of(context);
     final screenW = media.size.width;
-    final safeLeft  = media.padding.left;
+    final safeLeft = media.padding.left;
     final safeRight = media.padding.right;
 
     // أقصى عرض: إن تركته null => نفس عرض الشاشة (فل-ويدث).
@@ -211,21 +185,18 @@ class RealEstateSection extends StatelessWidget {
     // إزالة أي padding تلقائي من الـ ScrollView/MediaQuery (إن رغبت)
     return removeViewportPadding
         ? MediaQuery.removePadding(
-      context: context,
-      removeLeft: true,
-      removeRight: true,
-      child: Padding(padding: pad, child: content),
-    )
+            context: context,
+            removeLeft: true,
+            removeRight: true,
+            child: Padding(padding: pad, child: content),
+          )
         : Padding(padding: pad, child: content);
   }
 }
 
-
-
 /* ==============================
    بطاقة الشعار (مع أنيميشن)
    ============================== */
-
 
 class _LogoCard extends StatefulWidget {
   final File? image;
@@ -252,9 +223,6 @@ class _LogoCardState extends State<_LogoCard> {
   static const _r = 14.0;
   bool _localHint = false;
   Timer? _hintTimer;
-
-
-
 
   void _softToast(String msg, {int seconds = 3}) {
     SchedulerBinding.instance.addPostFrameCallback((_) {
@@ -302,9 +270,6 @@ class _LogoCardState extends State<_LogoCard> {
     }
   }
 
-
-
-
   @override
   void dispose() {
     _hintTimer?.cancel();
@@ -350,7 +315,7 @@ class _LogoCardState extends State<_LogoCard> {
               final outline = th.colorScheme.outline
                   .withOpacity(th.brightness == Brightness.dark ? .45 : .75);
               final dash = outline;
-              final bg = th.colorScheme.surfaceVariant
+              final bg = th.colorScheme.surfaceContainerHighest
                   .withOpacity(th.brightness == Brightness.dark ? .18 : .45);
 
               return Center(
@@ -364,41 +329,46 @@ class _LogoCardState extends State<_LogoCard> {
                           borderRadius: BorderRadius.circular(_r),
                           child: widget.image != null
                               ? Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(_r),
-                              border: Border.all(color: outline, width: 1.2),
-                            ),
-                            child: _AnimatedLogoBox(
-                              image: widget.image,
-                              // نمنع انيميشن التحميل الداخلي ونستبدله بمؤشر صغير بالزاوية
-                              onTap: () {
-                                if (widget.isUploading) {
-                                  _softToast("الرفع قيد التنفيذ…", seconds: 2);
-                                  return;
-                                }
-                                widget.onPick();
-                              },
-                              isUploading: false,
-                              progress: null,
-                              success: showHint,
-                            ),
-                          )
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(_r),
+                                    border:
+                                        Border.all(color: outline, width: 1.2),
+                                  ),
+                                  child: _AnimatedLogoBox(
+                                    image: widget.image,
+                                    // نمنع انيميشن التحميل الداخلي ونستبدله بمؤشر صغير بالزاوية
+                                    onTap: () {
+                                      if (widget.isUploading) {
+                                        _softToast("الرفع قيد التنفيذ…",
+                                            seconds: 2);
+                                        return;
+                                      }
+                                      widget.onPick();
+                                    },
+                                    isUploading: false,
+                                    progress: null,
+                                    success: showHint,
+                                  ),
+                                )
                               : _DashedSquarePlaceholder(
-                            background: bg,
-                            dashColor: dash,
-                            onTap: () {
-                              if (widget.isUploading) {
-                                _softToast("الرفع قيد التنفيذ…", seconds: 2);
-                                return;
-                              }
-                              widget.onPick();
-                            },
-                          ),
+                                  background: bg,
+                                  dashColor: dash,
+                                  onTap: () {
+                                    if (widget.isUploading) {
+                                      _softToast("الرفع قيد التنفيذ…",
+                                          seconds: 2);
+                                      return;
+                                    }
+                                    widget.onPick();
+                                  },
+                                ),
                         ),
                       ),
 
                       // إبراز مطلوب (إطار أحمر) عندما لا توجد صورة
-                      if (widget.highlightRequired && widget.image == null && !widget.isUploading)
+                      if (widget.highlightRequired &&
+                          widget.image == null &&
+                          !widget.isUploading)
                         Positioned.fill(
                           child: IgnorePointer(
                             child: Container(
@@ -433,8 +403,7 @@ class _LogoCardState extends State<_LogoCard> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.info_outline_rounded,
-                  size: 14,
-                  color: th.colorScheme.onSurface.withOpacity(0.72)),
+                  size: 14, color: th.colorScheme.onSurface.withOpacity(0.72)),
               const SizedBox(width: 6),
               Flexible(
                 child: Text(
@@ -461,12 +430,12 @@ class _LogoCardState extends State<_LogoCard> {
               opacity: showHint ? 1 : 0,
               child: showHint
                   ? Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: _HintBanner(
-                  icon: Icons.visibility_rounded,
-                  text: "هكذا سيظهر شعارك للمستخدمين",
-                ),
-              )
+                      padding: const EdgeInsets.only(top: 12),
+                      child: _HintBanner(
+                        icon: Icons.visibility_rounded,
+                        text: "هكذا سيظهر شعارك للمستخدمين",
+                      ),
+                    )
                   : const SizedBox.shrink(),
             ),
           ),
@@ -475,9 +444,6 @@ class _LogoCardState extends State<_LogoCard> {
     );
   }
 }
-
-
-
 
 // مؤشر تحميل صغير/احترافي يوضع في زاوية الصورة
 class _SmallCornerLoader extends StatelessWidget {
@@ -504,8 +470,6 @@ class _SmallCornerLoader extends StatelessWidget {
   }
 }
 
-
-
 // Placeholder منقّط (مربّع بحواف منحنية) وأيقونة إضافة أكبر
 class _DashedSquarePlaceholder extends StatelessWidget {
   final Color background;
@@ -527,11 +491,17 @@ class _DashedSquarePlaceholder extends StatelessWidget {
         onTap: onTap,
         child: CustomPaint(
           painter: _DashedBorderPainterRect(
-              color: dashColor, radius: 14, dashWidth: 7, dashGap: 5, strokeWidth: 1.4),
+              color: dashColor,
+              radius: 14,
+              dashWidth: 7,
+              dashGap: 5,
+              strokeWidth: 1.4),
           child: Container(
-            decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(14)),
+            decoration: BoxDecoration(
+                color: background, borderRadius: BorderRadius.circular(14)),
             child: const Center(
-              child: Icon(Icons.add_photo_alternate_rounded, size: 64), // أكبر قليلًا
+              child: Icon(Icons.add_photo_alternate_rounded,
+                  size: 64), // أكبر قليلًا
             ),
           ),
         ),
@@ -559,7 +529,8 @@ class _DashedBorderPainterRect extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (color == Colors.transparent) return;
 
-    final rrect = RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(radius));
+    final rrect =
+        RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(radius));
     final paint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
@@ -599,18 +570,9 @@ extension on Widget {
       IconTheme(data: IconThemeData(color: color), child: this);
 }
 
-
-
-
-
-
-
-
 /* ==============================
    بطاقة اسم المكتب
    ============================== */
-
-
 
 class _OfficeNameCard extends StatelessWidget {
   final TextEditingController controller;
@@ -649,7 +611,6 @@ class _OfficeNameCard extends StatelessWidget {
   }
 }
 
-
 class _TinyNote extends StatelessWidget {
   final String text;
   const _TinyNote({required this.text});
@@ -660,12 +621,11 @@ class _TinyNote extends StatelessWidget {
     final f = context.font;
     return Text(
       text,
-      style: TextStyle(fontSize: f.small, color: c.textColorDark.withOpacity(0.75)),
+      style: TextStyle(
+          fontSize: f.small, color: c.textColorDark.withOpacity(0.75)),
     );
   }
 }
-
-
 
 /* ==============================
    بطاقة الموقع الجغرافي
@@ -729,8 +689,6 @@ class _LocationCard extends StatelessWidget {
   }
 }
 
-
-
 /* ==============================
    بطاقة أرقام التواصل
    ============================== */
@@ -792,7 +750,8 @@ class _ContactCardState extends State<_ContactCard> {
 
   void _softToast(String msg) {
     final now = DateTime.now();
-    if (_lastToastAt != null && now.difference(_lastToastAt!) < const Duration(milliseconds: 900)) {
+    if (_lastToastAt != null &&
+        now.difference(_lastToastAt!) < const Duration(milliseconds: 900)) {
       return;
     }
     _lastToastAt = now;
@@ -801,8 +760,8 @@ class _ContactCardState extends State<_ContactCard> {
       try {
         UiUtils.showSoftSnackBar(context, message: msg);
       } catch (_) {
-        ScaffoldMessenger.maybeOf(context)
-            ?.showSnackBar(SnackBar(content: Text(msg), duration: const Duration(seconds: 2)));
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+            SnackBar(content: Text(msg), duration: const Duration(seconds: 2)));
       }
     });
   }
@@ -857,7 +816,6 @@ class _ContactCardState extends State<_ContactCard> {
       _validateWhats(sanitized);
     });
   }
-
 
   bool _isValidLen(String digits) => digits.length >= 6 && digits.length <= 15;
 
@@ -929,7 +887,8 @@ class _ContactCardState extends State<_ContactCard> {
           ),
           if (_notePhone != null && _notePhone!.isNotEmpty) ...[
             const SizedBox(height: 6),
-            Text(_notePhone!, maxLines: 1, overflow: TextOverflow.ellipsis, style: noteStyle),
+            Text(_notePhone!,
+                maxLines: 1, overflow: TextOverflow.ellipsis, style: noteStyle),
           ],
 
           const SizedBox(height: 16),
@@ -953,15 +912,13 @@ class _ContactCardState extends State<_ContactCard> {
           ),
           if (_noteWhats != null && _noteWhats!.isNotEmpty) ...[
             const SizedBox(height: 6),
-            Text(_noteWhats!, maxLines: 1, overflow: TextOverflow.ellipsis, style: noteStyle),
+            Text(_noteWhats!,
+                maxLines: 1, overflow: TextOverflow.ellipsis, style: noteStyle),
           ],
-
-
-
 
           const SizedBox(height: 12),
           Text(
-           "يفضل رقم واتساب مختلف عن رقم الهاتف لسهولة التواصل .",
+            "يفضل رقم واتساب مختلف عن رقم الهاتف لسهولة التواصل .",
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: noteStyle,
@@ -972,13 +929,9 @@ class _ContactCardState extends State<_ContactCard> {
   }
 }
 
-
-
-
 /* ==============================
    شريط تقديم الطلب (زر رئيسي)
    ============================== */
-
 
 class _SubmitBar extends StatelessWidget {
   final VoidCallback onSubmit;
@@ -1001,26 +954,23 @@ class _SubmitBar extends StatelessWidget {
         onPressed: isSubmitting ? null : onSubmit, // ← مباشرة
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         child: isSubmitting
             ? const SizedBox(
-          width: 20, height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-        )
-            : Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white),
+              )
+            : Text(label,
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w600)),
       ),
     );
   }
 }
-
-
-
-
-
-
-
-
 
 /* ==============================
    عناصر مساعدة داخلية (UI فقط)
@@ -1082,13 +1032,17 @@ class _LabelWithAsterisk extends StatelessWidget {
         Flexible(
           child: RichText(
             text: TextSpan(
-              style: TextStyle(fontSize: f.normal, color: c.textDefaultColor, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                  fontSize: f.normal,
+                  color: c.textDefaultColor,
+                  fontWeight: FontWeight.w600),
               children: [
                 TextSpan(text: text),
                 if (showAsterisk)
                   TextSpan(
                     text: "  *",
-                    style: TextStyle(color: Colors.redAccent, fontSize: f.normal + 1),
+                    style: TextStyle(
+                        color: Colors.redAccent, fontSize: f.normal + 1),
                   ),
               ],
             ),
@@ -1098,8 +1052,6 @@ class _LabelWithAsterisk extends StatelessWidget {
     );
   }
 }
-
-
 
 class _FieldLabel extends StatelessWidget {
   final String text;
@@ -1111,15 +1063,13 @@ class _FieldLabel extends StatelessWidget {
     final f = context.font;
     return Text(
       text,
-      style: TextStyle(fontSize: f.normal, color: c.textDefaultColor, fontWeight: FontWeight.w600),
+      style: TextStyle(
+          fontSize: f.normal,
+          color: c.textDefaultColor,
+          fontWeight: FontWeight.w600),
     );
   }
 }
-
-
-
-
-
 
 class _InfoLine extends StatelessWidget {
   final IconData icon;
@@ -1138,16 +1088,14 @@ class _InfoLine extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: TextStyle(fontSize: f.small, color: c.textColorDark.withOpacity(0.8)),
+            style: TextStyle(
+                fontSize: f.small, color: c.textColorDark.withOpacity(0.8)),
           ),
         ),
       ],
     );
   }
 }
-
-
-
 
 class _CountryPrefix extends StatelessWidget {
   final String prefixText;
@@ -1177,9 +1125,6 @@ class _CountryPrefix extends StatelessWidget {
     );
   }
 }
-
-
-
 
 /// صندوق الشعار مع أنيميشن تحميل/نجاح
 class _AnimatedLogoBox extends StatelessWidget {
@@ -1231,7 +1176,8 @@ class _AnimatedLogoBox extends StatelessWidget {
             if (image != null)
               Image.file(image!, fit: BoxFit.cover)
             else
-              Icon(Icons.add_photo_alternate_rounded, size: 56, color: c.territoryColor),
+              Icon(Icons.add_photo_alternate_rounded,
+                  size: 56, color: c.territoryColor),
 
             // طبقة تحميل
             if (isUploading) ...[
@@ -1241,8 +1187,12 @@ class _AnimatedLogoBox extends StatelessWidget {
                   height: 36,
                   width: 36,
                   child: progress != null
-                      ? CircularProgressIndicator(value: progress!.clamp(0.0, 1.0), strokeWidth: 3, color: Colors.white)
-                      : const CircularProgressIndicator(strokeWidth: 3, color: Colors.white),
+                      ? CircularProgressIndicator(
+                          value: progress!.clamp(0.0, 1.0),
+                          strokeWidth: 3,
+                          color: Colors.white)
+                      : const CircularProgressIndicator(
+                          strokeWidth: 3, color: Colors.white),
                 ),
               ),
             ],
@@ -1255,7 +1205,10 @@ class _AnimatedLogoBox extends StatelessWidget {
                 child: Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [Colors.black.withOpacity(0.0), Colors.black.withOpacity(0.25)],
+                      colors: [
+                        Colors.black.withOpacity(0.0),
+                        Colors.black.withOpacity(0.25)
+                      ],
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                     ),
@@ -1281,14 +1234,16 @@ class _SuccessCheckBadge extends StatefulWidget {
   State<_SuccessCheckBadge> createState() => _SuccessCheckBadgeState();
 }
 
-class _SuccessCheckBadgeState extends State<_SuccessCheckBadge> with SingleTickerProviderStateMixin {
+class _SuccessCheckBadgeState extends State<_SuccessCheckBadge>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _ctl;
   late final Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
-    _ctl = AnimationController(vsync: this, duration: const Duration(milliseconds: 380));
+    _ctl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 380));
     _scale = CurvedAnimation(parent: _ctl, curve: Curves.easeOutBack);
     _ctl.forward();
   }
@@ -1309,7 +1264,9 @@ class _SuccessCheckBadgeState extends State<_SuccessCheckBadge> with SingleTicke
         decoration: BoxDecoration(
           color: Colors.green,
           shape: BoxShape.circle,
-          boxShadow: [BoxShadow(color: Colors.green.withOpacity(0.35), blurRadius: 10)],
+          boxShadow: [
+            BoxShadow(color: Colors.green.withOpacity(0.35), blurRadius: 10)
+          ],
         ),
         child: Icon(Icons.check_rounded, size: 20, color: c.secondaryColor),
       ),
@@ -1377,25 +1334,26 @@ class _FullWidthActionButton extends StatelessWidget {
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: c.territoryColor,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         icon: isLoading
             ? const SizedBox(
-          width: 18, height: 18,
-          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-        )
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white),
+              )
             : Icon(icon, size: 20, color: Colors.white),
         label: Text(
           label,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          style:
+              const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
       ),
     );
   }
 }
-
-
-
 
 class _FootNote extends StatelessWidget {
   final String text;
@@ -1406,12 +1364,14 @@ class _FootNote extends StatelessWidget {
     final f = context.font;
     return Row(
       children: [
-        Icon(Icons.info_outline_rounded, size: 16, color: c.textColorDark.withOpacity(0.7)),
+        Icon(Icons.info_outline_rounded,
+            size: 16, color: c.textColorDark.withOpacity(0.7)),
         const SizedBox(width: 6),
         Expanded(
           child: Text(
             text,
-            style: TextStyle(fontSize: f.small, color: c.textColorDark.withOpacity(0.7)),
+            style: TextStyle(
+                fontSize: f.small, color: c.textColorDark.withOpacity(0.7)),
           ),
         ),
       ],

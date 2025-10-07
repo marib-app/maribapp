@@ -35,7 +35,6 @@ class AdressUI extends StatelessWidget {
     required this.onSetDefault,
     required this.onAddLocation,
     this.onBackPress,
-
   });
 
   @override
@@ -48,7 +47,6 @@ class AdressUI extends StatelessWidget {
         bottomHeight: 20,
         showBackButton: true,
         onBackPress: onBackPress,
-
       ),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.all(16),
@@ -61,7 +59,6 @@ class AdressUI extends StatelessWidget {
           disabled: onBackPress == null,
         ),
       ),
-
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.all(16),
@@ -94,12 +91,12 @@ class AdressUI extends StatelessWidget {
           ),
           style: OutlinedButton.styleFrom(
             side: BorderSide(color: context.color.territoryColor),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             padding: const EdgeInsets.symmetric(vertical: 14),
           ),
         ),
         const SizedBox(height: 16),
-
         if (isLoading)
           ListView.builder(
             shrinkWrap: true,
@@ -132,7 +129,7 @@ class AdressUI extends StatelessWidget {
             },
           )
         else
-        // TODO: أظهر عنصر "لا توجد عناوين" الخاص بك هنا إن لزم
+          // TODO: أظهر عنصر "لا توجد عناوين" الخاص بك هنا إن لزم
           const SizedBox.shrink(),
       ],
     );
@@ -141,21 +138,22 @@ class AdressUI extends StatelessWidget {
   // ====== بطاقات العناوين ======
 
   Widget _buildAddressCard(
-      BuildContext context, {
-        required Map<String, dynamic> address,
-        required bool isSelected,
-        required bool isDefault,
-        required VoidCallback onTap,
-        required VoidCallback onEdit,
-        required VoidCallback onDelete,
-        required VoidCallback onSetDefault,
-        required VoidCallback onAddLocation,
-      }) {
+    BuildContext context, {
+    required Map<String, dynamic> address,
+    required bool isSelected,
+    required bool isDefault,
+    required VoidCallback onTap,
+    required VoidCallback onEdit,
+    required VoidCallback onDelete,
+    required VoidCallback onSetDefault,
+    required VoidCallback onAddLocation,
+  }) {
     final double? lat = _parseCoordinate(address['lat'] ?? address['latitude']);
-    final double? lng = _parseCoordinate(address['lng'] ?? address['longitude']);
+    final double? lng =
+        _parseCoordinate(address['lng'] ?? address['longitude']);
     final bool hasLocation = lat != null && lng != null;
-    final String locationLabel = hasLocation ? _locationLabel(address) : 'غير محدد';
-
+    final String locationLabel =
+        hasLocation ? _locationLabel(address) : 'غير محدد';
 
     return GestureDetector(
       onTap: onTap,
@@ -177,7 +175,10 @@ class AdressUI extends StatelessWidget {
                 width: 1.8,
               ),
               borderRadius: BorderRadius.circular(14),
-              boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 2))],
+              boxShadow: const [
+                BoxShadow(
+                    color: Colors.black12, blurRadius: 8, offset: Offset(0, 2))
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -195,8 +196,8 @@ class AdressUI extends StatelessWidget {
                     ),
                     if (isDefault)
                       Container(
-                        padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: context.color.territoryColor.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(12),
@@ -212,9 +213,7 @@ class AdressUI extends StatelessWidget {
                       ),
                   ],
                 ),
-
                 const SizedBox(height: 10),
-
                 _buildAddressRow(
                   context,
                   Icons.home_outlined,
@@ -222,7 +221,6 @@ class AdressUI extends StatelessWidget {
                   address['address'] ?? address['label'] ?? '',
                 ),
                 const SizedBox(height: 10),
-
                 _buildAddressRow(
                   context,
                   Icons.location_on,
@@ -230,7 +228,8 @@ class AdressUI extends StatelessWidget {
                   locationLabel,
                 ),
                 const SizedBox(height: 10),
-                _buildAddressRow(context, Icons.phone, 'رقم التواصل', address['phone'] ?? ''),
+                _buildAddressRow(context, Icons.phone, 'رقم التواصل',
+                    address['phone'] ?? ''),
                 const SizedBox(height: 12),
                 Wrap(
                   alignment: WrapAlignment.start,
@@ -242,7 +241,8 @@ class AdressUI extends StatelessWidget {
                       icon: const Icon(Icons.verified_user_outlined, size: 20),
                       label: const Text("افتراضي"),
                       style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
                     OutlinedButton.icon(
@@ -250,7 +250,8 @@ class AdressUI extends StatelessWidget {
                       icon: const Icon(Icons.edit_outlined, size: 20),
                       label: const Text("تعديل"),
                       style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
                     OutlinedButton.icon(
@@ -258,15 +259,18 @@ class AdressUI extends StatelessWidget {
                       icon: const Icon(Icons.delete_outline, size: 20),
                       label: const Text("حذف"),
                       style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
                     OutlinedButton.icon(
                       onPressed: onAddLocation,
-                      icon: const Icon(Icons.add_location_alt_outlined, size: 20),
+                      icon:
+                          const Icon(Icons.add_location_alt_outlined, size: 20),
                       label: const Text("أضف الموقع"),
                       style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
                   ],
@@ -276,7 +280,8 @@ class AdressUI extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 10),
                     child: Text(
                       '⚠️ لم يتم تحديد الموقع الجغرافي لهذا العنوان',
-                      style: TextStyle(color: Colors.red.shade700, fontSize: 13),
+                      style:
+                          TextStyle(color: Colors.red.shade700, fontSize: 13),
                     ),
                   ),
               ],
@@ -297,7 +302,8 @@ class AdressUI extends StatelessWidget {
     );
   }
 
-  Widget _buildAddressRow(BuildContext context, IconData icon, String label, String value) {
+  Widget _buildAddressRow(
+      BuildContext context, IconData icon, String label, String value) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -328,7 +334,6 @@ class AdressUI extends StatelessWidget {
     );
   }
 
-
   double? _parseCoordinate(dynamic value) {
     if (value == null) return null;
     if (value is num) return value.toDouble();
@@ -337,7 +342,12 @@ class AdressUI extends StatelessWidget {
 
   String _locationLabel(Map<String, dynamic> address) {
     final List<String> parts = <String>[
-      for (final String key in const <String>['area', 'city', 'state', 'country'])
+      for (final String key in const <String>[
+        'area',
+        'city',
+        'state',
+        'country'
+      ])
         if ((address[key]?.toString().trim().isNotEmpty ?? false))
           address[key].toString().trim(),
     ];
@@ -346,9 +356,6 @@ class AdressUI extends StatelessWidget {
     }
     return parts.join('، ');
   }
-
-
-
 
   // ====== شيمر البطاقة ======
   Widget _buildShimmerCard(BuildContext context) {
@@ -401,7 +408,8 @@ class _CustomExpansionTileState extends State<CustomExpansionTile> {
         Container(
           height: 59,
           margin: const EdgeInsets.only(top: 1, bottom: 3),
-          decoration: BoxDecoration(color: backgroundColor, borderRadius: cornerRadius),
+          decoration:
+              BoxDecoration(color: backgroundColor, borderRadius: cornerRadius),
         ),
         Align(
           alignment: Alignment.centerRight,
@@ -410,7 +418,9 @@ class _CustomExpansionTileState extends State<CustomExpansionTile> {
             height: 60,
             decoration: BoxDecoration(
               color: context.color.territoryColor,
-              borderRadius: const BorderRadius.only(topRight: Radius.circular(8), bottomRight: Radius.circular(8)),
+              borderRadius: const BorderRadius.only(
+                  topRight: Radius.circular(8),
+                  bottomRight: Radius.circular(8)),
             ),
           ),
         ),
@@ -446,14 +456,20 @@ class _CustomExpansionTileState extends State<CustomExpansionTile> {
                   SizedBox(width: 25.rw(context)),
                   Expanded(
                     flex: 3,
-                    child: Text(widget.title).bold(weight: FontWeight.w700).color(context.color.textColorDark),
+                    child: Text(widget.title)
+                        .bold(weight: FontWeight.w700)
+                        .color(context.color.textColorDark),
                   ),
                   const Spacer(),
                 ],
               ),
-              trailing: Icon(_isExpanded ? Icons.expand_less : Icons.expand_more),
-              onExpansionChanged: (bool expanding) => setState(() => _isExpanded = expanding),
-              children: [if (widget.buildChildren != null) widget.buildChildren!(context)],
+              trailing:
+                  Icon(_isExpanded ? Icons.expand_less : Icons.expand_more),
+              onExpansionChanged: (bool expanding) =>
+                  setState(() => _isExpanded = expanding),
+              children: [
+                if (widget.buildChildren != null) widget.buildChildren!(context)
+              ],
             ),
           ),
         ),

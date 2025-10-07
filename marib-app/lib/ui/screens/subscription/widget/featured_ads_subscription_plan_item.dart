@@ -16,10 +16,8 @@ import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/hive_utils.dart';
 
-
 import 'package:marib/utils/payment/gatways/inAppPurchaseManager.dart';
 import 'package:marib/utils/ui_utils.dart';
-
 
 class FeaturedAdsSubscriptionPlansItem extends StatefulWidget {
   final List<SubscriptionPackageModel> modelList;
@@ -39,7 +37,6 @@ class FeaturedAdsSubscriptionPlansItem extends StatefulWidget {
 class _FeaturedAdsSubscriptionPlansItemState
     extends State<FeaturedAdsSubscriptionPlansItem> {
   int? selectedIndex;
-
 
   Widget mainUi(BuildContext context) {
     return Container(
@@ -73,159 +70,161 @@ class _FeaturedAdsSubscriptionPlansItemState
                   itemCount: widget.modelList.length),
             ),
             if (selectedIndex != null)
-        BlocListener<AssignFreePackageCubit, AssignFreePackageState>(
-    listener: (context, state) {
-      if (state is AssignFreePackageInSuccess) {
-        Widgets.hideLoder(context);
-        HelperUtils.showSnackBarMessage(
-          context,
-          state.responseMessage,
-          type: MessageType.success,
-        );
-        Navigator.pop(context);
-      }
-      if (state is AssignFreePackageFailure) {
-        Widgets.hideLoder(context);
-        HelperUtils.showSnackBarMessage(
-            context, state.error.toString());
-      }
-      if (state is AssignFreePackageInProgress) {
-        Widgets.showLoader(context);
-      }
-    },
-    child: Builder(
-      builder: (buttonContext) {
-        final package = widget.modelList[selectedIndex!];
-        final isActive = package.isActive ?? false;
-        final price = package.finalPrice ?? 0;
+              BlocListener<AssignFreePackageCubit, AssignFreePackageState>(
+                listener: (context, state) {
+                  if (state is AssignFreePackageInSuccess) {
+                    Widgets.hideLoder(context);
+                    HelperUtils.showSnackBarMessage(
+                      context,
+                      state.responseMessage,
+                      type: MessageType.success,
+                    );
+                    Navigator.pop(context);
+                  }
+                  if (state is AssignFreePackageFailure) {
+                    Widgets.hideLoder(context);
+                    HelperUtils.showSnackBarMessage(
+                        context, state.error.toString());
+                  }
+                  if (state is AssignFreePackageInProgress) {
+                    Widgets.showLoader(context);
+                  }
+                },
+                child: Builder(
+                  builder: (buttonContext) {
+                    final package = widget.modelList[selectedIndex!];
+                    final isActive = package.isActive ?? false;
+                    final price = package.finalPrice ?? 0;
 
-        return UiUtils.buildButton(buttonContext, onPressed: () async {
-          UiUtils.checkUser(
-            onNotGuest: () async {
-              if (isActive) {
-                return;
-              }
+                    return UiUtils.buildButton(buttonContext,
+                        onPressed: () async {
+                      UiUtils.checkUser(
+                        onNotGuest: () async {
+                          if (isActive) {
+                            return;
+                          }
 
-              final packageId = package.id;
-              if (packageId == null) {
-                HelperUtils.showSnackBarMessage(
-                  buttonContext,
-                  "somethingWentWrng".translate(buttonContext),
-                  type: MessageType.error,
-                );
-                return;
-              }
+                          final packageId = package.id;
+                          if (packageId == null) {
+                            HelperUtils.showSnackBarMessage(
+                              buttonContext,
+                              "somethingWentWrng".translate(buttonContext),
+                              type: MessageType.error,
+                            );
+                            return;
+                          }
 
-              if (price <= 0) {
-                buttonContext
-                    .read<AssignFreePackageCubit>()
-                    .assignFreePackage(packageId: packageId);
-                return;
-              }
+                          if (price <= 0) {
+                            buttonContext
+                                .read<AssignFreePackageCubit>()
+                                .assignFreePackage(packageId: packageId);
+                            return;
+                          }
 
-              final token = HiveUtils.getJWT();
-              if (token == null || token.isEmpty) {
-                HelperUtils.showSnackBarMessage(
-                  buttonContext,
-                  "loginFirst".translate(buttonContext),
-                );
-                return;
-              }
-              final packageCurrency = package.currency?.trim();
+                          final token = HiveUtils.getJWT();
+                          if (token.isEmpty) {
+                            HelperUtils.showSnackBarMessage(
+                              buttonContext,
+                              "loginFirst".translate(buttonContext),
+                            );
+                            return;
+                          }
+                          final packageCurrency = package.currency?.trim();
 
-              final args = BankTransferArgs(
-                token: token,
-                packageId: packageId,
-                amount: price.toDouble(),
-                currency: (packageCurrency?.isNotEmpty ?? false)
-                    ? packageCurrency
-                    : null,
-                packageType: 'featured_ad',
-                purpose: 'package',
-                itemId: null,
-              );
+                          final args = BankTransferArgs(
+                            token: token,
+                            packageId: packageId,
+                            amount: price.toDouble(),
+                            currency: (packageCurrency?.isNotEmpty ?? false)
+                                ? packageCurrency
+                                : null,
+                            packageType: 'featured_ad',
+                            purpose: 'package',
+                            itemId: null,
+                          );
 
-              final ok = await Navigator.of(buttonContext).push(
-                BankTransferScreen.route(
-                  RouteSettings(
-                    name: '/bank-transfer',
-                    arguments: args,
-                  ),
-                ),
-              );
+                          final ok = await Navigator.of(buttonContext).push(
+                            BankTransferScreen.route(
+                              RouteSettings(
+                                name: '/bank-transfer',
+                                arguments: args,
+                              ),
+                            ),
+                          );
 
-              if (!mounted) {
-                return;
-              }
+                          if (!mounted) {
+                            return;
+                          }
 
-              ManualPaymentSubmissionResult? submissionResult;
-              final bool success;
-              if (ok is ManualPaymentSubmissionResult) {
-                submissionResult = ok;
-                success = ok.success;
-              } else {
-                success = ok == true;
-              }
+                          ManualPaymentSubmissionResult? submissionResult;
+                          final bool success;
+                          if (ok is ManualPaymentSubmissionResult) {
+                            submissionResult = ok;
+                            success = ok.success;
+                          } else {
+                            success = ok == true;
+                          }
 
-              if (success) {
-                HelperUtils.showSnackBarMessage(
-                  buttonContext,
-                  "manualPaymentSubmitted".translate(buttonContext),
-                  type: MessageType.success,
-                );
+                          if (success) {
+                            HelperUtils.showSnackBarMessage(
+                              buttonContext,
+                              "manualPaymentSubmitted".translate(buttonContext),
+                              type: MessageType.success,
+                            );
 
+                            final routeArgs =
+                                submissionResult?.paymentTransaction ??
+                                    submissionResult?.manualPaymentRequest ??
+                                    submissionResult?.raw;
 
-                final routeArgs = submissionResult?.paymentTransaction ??
-                    submissionResult?.manualPaymentRequest ??
-                    submissionResult?.raw;
+                            Navigator.of(buttonContext).push(
+                              TransactionScreen.route(
+                                RouteSettings(
+                                  name: '/transactions',
+                                  arguments: routeArgs,
+                                ),
+                              ),
+                            );
+                          } else {
+                            final bool wasCancelled = ok == null;
+                            final String failureMessage =
+                                submissionResult?.message?.isNotEmpty == true
+                                    ? submissionResult!.message!
+                                    : wasCancelled
+                                        ? "manualPaymentSubmissionCancelled"
+                                            .translate(buttonContext)
+                                        : "somethingWentWrng"
+                                            .translate(buttonContext);
 
-                Navigator.of(buttonContext).push(
-                  TransactionScreen.route(
-                    RouteSettings(
-                      name: '/transactions',
-                      arguments: routeArgs,
-                    ),
-                  ),
-                );
-              } else {
-                final bool wasCancelled = ok == null;
-                final String failureMessage = submissionResult?.message?.isNotEmpty == true
-                    ? submissionResult!.message!
-                    : wasCancelled
-                    ? "manualPaymentSubmissionCancelled".translate(buttonContext)
-                    : "somethingWentWrng".translate(buttonContext);
+                            HelperUtils.showSnackBarMessage(
+                              buttonContext,
+                              failureMessage,
+                              type: MessageType.error,
+                            );
+                          }
+                        },
+                        context: buttonContext,
+                      );
+                    },
+                        radius: 10,
+                        height: 46,
+                        fontSize: buttonContext.font.large,
+                        buttonColor: isActive
+                            ? buttonContext.color.textLightColor.brighten(300)
+                            : buttonContext.color.territoryColor,
+                        textColor: isActive
+                            ? buttonContext.color.textDefaultColor
+                                .withOpacity(0.5)
+                            : buttonContext.color.secondaryColor,
+                        buttonTitle: price > 0
+                            ? "${"payLbl".translate(buttonContext)}\t${Constant.currencySymbol}${price.toStringAsFixed(2)}"
+                            : "purchaseThisPackage".translate(buttonContext),
 
-                HelperUtils.showSnackBarMessage(
-                  buttonContext,
-                  failureMessage,
-                  type: MessageType.error,
-                );
-              }
-            },
-            context: buttonContext,
-          );
-        },
-            radius: 10,
-            height: 46,
-            fontSize: buttonContext.font.large,
-            buttonColor: isActive
-                ? buttonContext.color.textLightColor.brighten(300)
-                : buttonContext.color.territoryColor,
-            textColor: isActive
-                ? buttonContext.color.textDefaultColor
-                .withOpacity(0.5)
-                : buttonContext.color.secondaryColor,
-            buttonTitle: price > 0
-                ? "${"payLbl".translate(buttonContext)}\t${Constant.currencySymbol}${price.toStringAsFixed(2)}"
-                : "purchaseThisPackage".translate(buttonContext),
-
-            //TODO: change title to Your Current Plan according to condition
-            outerPadding: const EdgeInsets.all(20));
-
-
+                        //TODO: change title to Your Current Plan according to condition
+                        outerPadding: const EdgeInsets.all(20));
                   },
-    ),
-        )
+                ),
+              )
           ],
         ),
       ),
@@ -456,8 +455,6 @@ class _FeaturedAdsSubscriptionPlansItemState
       ],
     );
   }
-
-
 }
 
 class HexagonClipper extends CustomClipper<Path> {

@@ -8,7 +8,6 @@ import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/validator.dart';
 
-
 import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/custom_field.dart';
 
 /// =====================
@@ -44,8 +43,9 @@ class CustomRadioField extends CustomField {
   @override
   Widget render() {
     final String title = parameters['name'] ?? '';
-    final String? notes =
-    (parameters['notes']?.toString().isNotEmpty ?? false) ? parameters['notes'].toString() : null;
+    final String? notes = (parameters['notes']?.toString().isNotEmpty ?? false)
+        ? parameters['notes'].toString()
+        : null;
     final dynamic image = parameters['image'];
     final bool requiredField = parameters['required'] == 1;
 
@@ -82,7 +82,7 @@ class CustomRadioField extends CustomField {
 
             // خزّن في مخزن الحقول
             CustomField.fieldsData[parameters['id'].toString()] =
-            _selected == null ? [] : [_selected];
+                _selected == null ? [] : [_selected];
 
             // بلّغ الفالديتور وحدث الواجهة
             state.didChange(_selected);
@@ -219,12 +219,14 @@ class _Header extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(title,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 3,
-                  softWrap: true)
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 3,
+                      softWrap: true)
                   .size(context.font.large)
                   .bold(weight: FontWeight.w500)
-                  .color(hasError ? context.color.error : context.color.textColorDark),
+                  .color(hasError
+                      ? context.color.error
+                      : context.color.textColorDark),
               if (notes != null && notes!.isNotEmpty) ...[
                 SizedBox(height: 5.rh(context)),
                 Text(notes!)
@@ -307,8 +309,10 @@ class _OptionTileState extends State<_OptionTile> {
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 140),
                   curve: Curves.easeInOut,
-                  constraints: const BoxConstraints(minHeight: 36, minWidth: 64),
-                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                  constraints:
+                      const BoxConstraints(minHeight: 36, minWidth: 64),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
                   decoration: BoxDecoration(
                     color: widget.isSelected
                         ? active.withOpacity(0.06)
@@ -328,21 +332,25 @@ class _OptionTileState extends State<_OptionTile> {
                           decoration: BoxDecoration(
                             color: widget.colorSwatch,
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.grey.shade300, width: 1),
+                            border: Border.all(
+                                color: Colors.grey.shade300, width: 1),
                           ),
                         ),
                         const SizedBox(width: 6),
                       ],
                       Flexible(
                         child: Text(
-                          widget.colorSwatch != null ? '#${widget.label}' : widget.label,
+                          widget.colorSwatch != null
+                              ? '#${widget.label}'
+                              : widget.label,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ).size(context.font.normal).color(
-                          widget.isSelected
-                              ? active
-                              : context.color.textDefaultColor.withOpacity(0.65),
-                        ),
+                              widget.isSelected
+                                  ? active
+                                  : context.color.textDefaultColor
+                                      .withOpacity(0.65),
+                            ),
                       ),
                     ],
                   ),

@@ -318,6 +318,14 @@ class CartController extends Controller
     {
         $departments = Config::get('cart.departments', []);
 
+
+        $request->merge([
+            'department' => $this->normalizeDepartment($request->input('department')),
+            'section' => $this->normalizeDepartment($request->input('section')),
+        ]);
+
+
+
         $validated = $request->validate([
             'department' => ['nullable', 'string', Rule::in($departments)],
             'section' => ['nullable', 'string', Rule::in($departments)],
@@ -749,6 +757,13 @@ class CartController extends Controller
     {
         $departments = Config::get('cart.departments', []);
 
+
+        $request->merge([
+            'department' => $this->normalizeDepartment($request->input('department')),
+            'section' => $this->normalizeDepartment($request->input('section')),
+        ]);
+
+
         return $request->validate([
             'item_id' => ['required', 'integer', 'exists:items,id'],
             'quantity' => ['required', 'integer', 'min:1'],
@@ -768,7 +783,8 @@ class CartController extends Controller
 
     protected function resolveDepartment(Item $item, array $validated): ?string
     {
-        $department = $validated['department'] ?? $validated['section'] ?? null;
+        $department = $this->normalizeDepartment($validated['department'] ?? null)
+            ?? $this->normalizeDepartment($validated['section'] ?? null);
 
         if ($department) {
             return $department;
@@ -777,14 +793,125 @@ class CartController extends Controller
         $categoryId = $validated['category_id'] ?? $item->category_id;
 
         if ($categoryId) {
-            $department = $this->departmentFromCategory($categoryId);
+            $department = $this->departmentFromCategory((int) $categoryId);
         }
 
         if (! $department && $item->interface_type) {
-            $department = Config::get('cart.interface_map.' . $item->interface_type);
+            $department = $this->normalizeDepartment(Config::get('cart.interface_map.' . $item->interface_type));
         }
 
-        return $department;
+        return $department ?: $this->defaultDepartment();
+    }
+
+    protected function defaultDepartment(): ?string
+    {
+        $departments = Config::get('cart.departments', []);
+        $preferred = $this->normalizeDepartment(Config::get('cart.default_department'));
+
+        if ($preferred && in_array($preferred, $departments, true)) {
+            return $preferred;
+        }
+
+        return $departments[0] ?? null;
+    }
+
+    protected function normalizeDepartment(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $normalized = Str::of($value)
+            ->lower()
+            ->trim();
+
+        if ($normalized->isEmpty()) {
+            return null;
+
+
+        }
+
+
+        $normalized = $normalized
+            ->replaceMatches('/[إأآٱ]/u', 'ا')
+            ->replace('ة', 'ه')
+            ->replace('ى', 'ي')
+            ->replace('ؤ', 'و')
+            ->replace('ئ', 'ي')
+            ->replaceMatches('/[\s_\-]+/u', '')
+            ->replaceMatches('/[^a-z0-9\u0621-\u064a]+/u', '')
+            ->value();
+
+        if ($normalized === '') {
+            return null;
+        }
+
+        $aliases = [
+            'shein' => 'shein',
+            'شيان' => 'shein',
+            'شيئن' => 'shein',
+            'شيان' => 'shein',
+            'شين' => 'shein',
+            'computer' => 'computer',
+            'كمبيوتر' => 'computer',
+            'الكترون' => 'computer',
+            'حاسب' => 'computer',
+            'store' => 'store',
+            'stores' => 'store',
+            'storeproducts' => 'store',
+            'storeproduct' => 'store',
+            'market' => 'store',
+            'markets' => 'store',
+            'general' => 'store',
+            'default' => 'store',
+            'public' => 'store',
+            'accessor' => 'store',
+            'متجر' => 'store',
+            'المتجر' => 'store',
+            'متجرعام' => 'store',
+            'سوق' => 'store',
+            'السوق' => 'store',
+            'بقاله' => 'store',
+            'عام' => 'store',
+            'عامه' => 'store',
+            'سوبرماركت' => 'store',
+            'ماركت' => 'store',
+        ];
+
+        if (array_key_exists($normalized, $aliases)) {
+            return $aliases[$normalized];
+        }
+
+        if (str_contains($normalized, 'shein') || str_contains($normalized, 'شيان') || str_contains($normalized, 'شين')) {
+            return 'shein';
+        }
+
+        if (str_contains($normalized, 'computer') || str_contains($normalized, 'كمبيوتر') || str_contains($normalized, 'الكترون') || str_contains($normalized, 'حاسب')) {
+            return 'computer';
+        }
+
+        if (str_contains($normalized, 'store') || str_contains($normalized, 'market') || str_contains($normalized, 'متجر') || str_contains($normalized, 'سوق')) {
+            return 'store';
+        }
+
+        if (str_starts_with($normalized, 'category')) {
+            $digits = preg_replace('/\D+/', '', $normalized);
+            if ($digits !== '') {
+                $department = $this->departmentFromCategory((int) $digits);
+                if ($department) {
+                    return $department;
+                }
+            }
+        }
+
+        $departments = Config::get('cart.departments', []);
+        if (in_array($normalized, $departments, true)) {
+            return $normalized;
+        }
+
+        return null;
+
+
     }
 
     protected function departmentFromCategory(int $categoryId): ?string

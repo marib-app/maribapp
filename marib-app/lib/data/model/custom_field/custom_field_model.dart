@@ -21,14 +21,20 @@ bool _isJsonArray(String s) {
 List<String> _asStringList(dynamic v) {
   if (v == null) return [];
   if (v is List) {
-    return v.map((e) => e?.toString() ?? '').where((e) => e.isNotEmpty).toList();
+    return v
+        .map((e) => e?.toString() ?? '')
+        .where((e) => e.isNotEmpty)
+        .toList();
   }
   if (v is String && v.trim().isNotEmpty) {
     try {
       if (_isJsonArray(v)) {
         final d = jsonDecode(v);
         if (d is List) {
-          return d.map((e) => e?.toString() ?? '').where((e) => e.isNotEmpty).toList();
+          return d
+              .map((e) => e?.toString() ?? '')
+              .where((e) => e.isNotEmpty)
+              .toList();
         }
       }
       // نص مفرد
@@ -75,13 +81,13 @@ class CustomFieldModel {
   String? name;
   String? type;
   String? image;
-  int? required;              // 0/1
+  int? required; // 0/1
   int? minLength;
   int? maxLength;
-  List<String> values;        // دائمًا قائمة
-  List<String> value;         // دائمًا قائمة
+  List<String> values; // دائمًا قائمة
+  List<String> value; // دائمًا قائمة
   String? notes;
-  int? isCustomerOption;      // 0/1
+  int? isCustomerOption; // 0/1
 
   CustomFieldModel({
     this.id,
@@ -96,7 +102,7 @@ class CustomFieldModel {
     this.notes,
     this.isCustomerOption,
   })  : values = values ?? const [],
-        value  = value  ?? const [];
+        value = value ?? const [];
 
   Map<String, dynamic> toMap() {
     return {
@@ -116,7 +122,8 @@ class CustomFieldModel {
 
   factory CustomFieldModel.fromMap(Map<String, dynamic> map) {
     // دعم مفاتيح بديلة للتوافق الخلفي
-    final reqRaw = map.containsKey('required') ? map['required'] : map['is_required'];
+    final reqRaw =
+        map.containsKey('required') ? map['required'] : map['is_required'];
     final icoRaw = map.containsKey('is_customer_option')
         ? map['is_customer_option']
         : map['customer_option'];
@@ -130,7 +137,7 @@ class CustomFieldModel {
       minLength: _asInt(map['min_length']),
       maxLength: _asInt(map['max_length']),
       values: _asStringList(map['values']),
-      value:  _pickValueList(map),
+      value: _pickValueList(map),
       notes: _asStr(map['notes']),
       isCustomerOption: _asInt(icoRaw) ?? 0,
     );
@@ -153,11 +160,11 @@ class VerificationFieldModel {
   int? id;
   String? name;
   String? type;
-  int? required;          // 0/1
+  int? required; // 0/1
   int? minLength;
   int? maxLength;
-  int? status;            // 0/1 (عدّل لنص إن لزم)
-  List<String> values;    // دائمًا قائمة
+  int? status; // 0/1 (عدّل لنص إن لزم)
+  List<String> values; // دائمًا قائمة
 
   VerificationFieldModel({
     this.id,
@@ -184,7 +191,8 @@ class VerificationFieldModel {
   }
 
   factory VerificationFieldModel.fromMap(Map<String, dynamic> map) {
-    final reqRaw = map.containsKey('required') ? map['required'] : map['is_required'];
+    final reqRaw =
+        map.containsKey('required') ? map['required'] : map['is_required'];
 
     return VerificationFieldModel(
       id: _asInt(map['id']),

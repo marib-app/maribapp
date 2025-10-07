@@ -1,17 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:marib/utils/extensions/extensions.dart'; // من أجل translate
 import 'package:marib/data/cubits/competition_cubit.dart'; // تأكد من المسار الصحيح
 import 'package:share_plus/share_plus.dart';
-import 'package:marib/utils/extensions/extensions.dart';
-
-
-
 
 class InviteFriendsScreen extends StatelessWidget {
   final String referralUrl = "https://app.com/ref/7C711MZBFF";
@@ -63,8 +56,8 @@ class InviteFriendsScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text("الرمز الشخصي الخاص بك",
-            style: theme.textTheme.bodySmall?.copyWith(
-                color: textColor.withOpacity(0.6))),
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: textColor.withOpacity(0.6))),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -86,12 +79,15 @@ class InviteFriendsScreen extends StatelessWidget {
                   backgroundColor: primaryColor,
                   shape: const StadiumBorder(),
                 ),
-                child: const Text(
-                    "ينسخ", style: TextStyle(color: Colors.white)),
+                child:
+                    const Text("ينسخ", style: TextStyle(color: Colors.white)),
               ),
               const SizedBox(width: 16),
-              Text(code, style: TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.bold, color: textColor)),
+              Text(code,
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: textColor)),
             ],
           ),
         ),
@@ -151,7 +147,8 @@ class InviteFriendsScreen extends StatelessWidget {
           Center(
             child: Text(
               "كيف تعمل",
-              style: TextStyle(color: primaryColor,
+              style: TextStyle(
+                  color: primaryColor,
                   fontWeight: FontWeight.bold,
                   fontSize: 16),
             ),
@@ -191,8 +188,6 @@ class InviteFriendsScreen extends StatelessWidget {
     );
   }
 
-
-
   Widget _buildInviteSection() {
     return BlocBuilder<CompetitionCubit, CompetitionState>(
       builder: (context, state) {
@@ -202,20 +197,20 @@ class InviteFriendsScreen extends StatelessWidget {
         if (state is CompetitionSuccess) {
           referralCode = state.referralPoints.referralCode.trim();
           final friendMessage =
-          state.referralPoints.inviteFriendMessage.trim().isNotEmpty
-              ? state.referralPoints.inviteFriendMessage
-              : state.referralPoints.qrCodeData;
+              state.referralPoints.inviteFriendMessage.trim().isNotEmpty
+                  ? state.referralPoints.inviteFriendMessage
+                  : state.referralPoints.qrCodeData;
           inviteMessage = friendMessage.trim().isNotEmpty
               ? friendMessage
               : state.referralPoints.qrCodeData;
         }
         final bool hasCode = referralCode.isNotEmpty;
         final unavailableLabelRaw =
-        "referralCodeUnavailable".translate(context);
+            "referralCodeUnavailable".translate(context);
         final String unavailableLabel =
-        unavailableLabelRaw == "referralCodeUnavailable"
-            ? 'Referral code is currently unavailable'
-            : unavailableLabelRaw;
+            unavailableLabelRaw == "referralCodeUnavailable"
+                ? 'Referral code is currently unavailable'
+                : unavailableLabelRaw;
         final String shareMessage = inviteMessage.trim();
         final bool canShare = shareMessage.isNotEmpty;
         return Container(
@@ -244,7 +239,8 @@ class InviteFriendsScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color:Theme.of(context).primaryColor, width: 2),
+                  border: Border.all(
+                      color: Theme.of(context).primaryColor, width: 2),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -275,23 +271,26 @@ class InviteFriendsScreen extends StatelessWidget {
                             padding: const EdgeInsets.only(top: 6),
                             child: Text(
                               unavailableLabel,
-                              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                              style: TextStyle(
+                                  fontSize: 11, color: Colors.grey[600]),
                             ),
                           ),
                       ],
                     ),
                     IconButton(
-
                       onPressed: hasCode
                           ? () {
-                        Clipboard.setData(ClipboardData(text: referralCode));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text("messageCopied".translate(context)),
-                            backgroundColor: Theme.of(context).colorScheme.primary,
-                          ),
-                        );
-                      }
+                              Clipboard.setData(
+                                  ClipboardData(text: referralCode));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content:
+                                      Text("messageCopied".translate(context)),
+                                  backgroundColor:
+                                      Theme.of(context).colorScheme.primary,
+                                ),
+                              );
+                            }
                           : null,
                       icon: Icon(
                         Icons.copy,
@@ -299,7 +298,6 @@ class InviteFriendsScreen extends StatelessWidget {
                             ? Theme.of(context).colorScheme.primary
                             : Colors.grey.shade400,
                       ),
-
                     ),
                   ],
                 ),
@@ -308,38 +306,43 @@ class InviteFriendsScreen extends StatelessWidget {
               SizedBox(height: 15),
 
               if (hasCode)
-        Container(
-        height: 120,
-        width: 120,
-        padding: EdgeInsets.all(8),
-        decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-        color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
-        ),
-        child: QrImageView(
-        data: shareMessage,
-        version: QrVersions.auto,
-        size: 104.0,
-        backgroundColor: Colors.white,
-        errorCorrectionLevel: QrErrorCorrectLevel.M,
-        ),
-                )
-                else
                 Container(
-                height: 120,
-                width: 120,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
+                  height: 120,
+                  width: 120,
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.3)),
+                  ),
+                  child: QrImageView(
+                    data: shareMessage,
+                    version: QrVersions.auto,
+                    size: 104.0,
+                    backgroundColor: Colors.white,
+                    errorCorrectionLevel: QrErrorCorrectLevel.M,
+                  ),
+                )
+              else
+                Container(
+                  height: 120,
+                  width: 120,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.3)),
+                  ),
+                  child: Icon(Icons.qr_code, size: 40, color: Colors.grey),
                 ),
-                child: Icon(Icons.qr_code, size: 40, color: Colors.grey),
-                ),
-
 
               SizedBox(height: 15),
 
@@ -357,12 +360,11 @@ class InviteFriendsScreen extends StatelessWidget {
                       ),
                       onPressed: canShare
                           ? () {
-                        if (state is CompetitionSuccess) {
-                          _shareInviteMessage(shareMessage, context);
-                        }
-                      }
+                              if (state is CompetitionSuccess) {
+                                _shareInviteMessage(shareMessage, context);
+                              }
+                            }
                           : null,
-
                       icon: Icon(Icons.share, color: Colors.white, size: 18),
                       label: Text(
                         "share".translate(context),

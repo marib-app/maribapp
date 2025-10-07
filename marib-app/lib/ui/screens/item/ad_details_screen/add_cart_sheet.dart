@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'package:marib/config/feature_flags.dart';
 import 'package:marib/ui/screens/cart/delivery_pricing_guard.dart';
@@ -12,13 +11,9 @@ import 'package:marib/data/model/item/cart_model.dart';
 import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/custom_field.dart';
 import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/api.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
-import 'cart_field_helpers.dart';
-
-
+import 'package:marib/ui/screens/item/ad_details_screen/cart_field_helpers.dart';
 
 String canonicalizeVariantAttributes(Map<String, dynamic>? attributes) {
   if (attributes == null || attributes.isEmpty) {
@@ -28,7 +23,8 @@ String canonicalizeVariantAttributes(Map<String, dynamic>? attributes) {
   dynamic normalize(dynamic value) {
     if (value is Map) {
       final sortedEntries = value.entries
-          .map((entry) => MapEntry(entry.key.toString(), normalize(entry.value)))
+          .map(
+              (entry) => MapEntry(entry.key.toString(), normalize(entry.value)))
           .toList()
         ..sort((a, b) => a.key.compareTo(b.key));
 
@@ -48,7 +44,8 @@ String canonicalizeVariantAttributes(Map<String, dynamic>? attributes) {
 
 String cartVariantSignature(Cart cart) {
   final String variantId = cart.variantId?.trim() ?? '';
-  final String normalizedAttributes = canonicalizeVariantAttributes(cart.variantAttributes);
+  final String normalizedAttributes =
+      canonicalizeVariantAttributes(cart.variantAttributes);
 
   return '$variantId|$normalizedAttributes';
 }
@@ -61,7 +58,9 @@ bool isDuplicateCartLine(Iterable<Cart> existingItems, Cart incoming) {
   final String incomingSignature = cartVariantSignature(incoming);
 
   return existingItems.any(
-        (item) => item.id == incoming.id && cartVariantSignature(item) == incomingSignature,
+    (item) =>
+        item.id == incoming.id &&
+        cartVariantSignature(item) == incomingSignature,
   );
 }
 
@@ -85,7 +84,8 @@ class AddCartSheet extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: context.color.secondaryColor,
-        borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
+        borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(16), topRight: Radius.circular(16)),
       ),
       child: SafeArea(
         top: false,
@@ -95,23 +95,30 @@ class AddCartSheet extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: Container(
-                height: 5, width: 50,
-                decoration: BoxDecoration(color: context.color.borderColor, borderRadius: BorderRadius.circular(3)),
+                height: 5,
+                width: 50,
+                decoration: BoxDecoration(
+                    color: context.color.borderColor,
+                    borderRadius: BorderRadius.circular(3)),
               ),
             ),
-
             Padding(
               padding: const EdgeInsets.only(top: 16, bottom: 8),
               child: Text(
-                pricingEnabled ? "اختر خياراتك".translate(context) : "الإضافة للسلة (بدون توصيل)".translate(context),
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: context.font.larger, color: context.color.textDefaultColor),
+                pricingEnabled
+                    ? "اختر خياراتك".translate(context)
+                    : "الإضافة للسلة (بدون توصيل)".translate(context),
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: context.font.larger,
+                    color: context.color.textDefaultColor),
               ),
             ),
             const Divider(height: 1),
-
             if (!pricingEnabled)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
                   children: [
                     Icon(Icons.block, size: 18, color: Colors.red),
@@ -119,67 +126,78 @@ class AddCartSheet extends StatelessWidget {
                     Expanded(
                       child: Text(
                         "التوصيل والتسعير متوقفان مؤقتًا. يمكنك الإضافة للسلة وإكمال الطلب لاحقًا.",
-                        style: TextStyle(fontSize: context.font.small, color: context.color.textDefaultColor.withOpacity(0.8)),
+                        style: TextStyle(
+                            fontSize: context.font.small,
+                            color: context.color.textDefaultColor
+                                .withOpacity(0.8)),
                       ),
                     ),
                   ],
                 ),
               ),
-
             Flexible(
               child: moreDetailDynamicFields.isEmpty
                   ? Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text("لا توجد خيارات إضافية متاحة", style: TextStyle(color: context.color.textDefaultColor)),
-                ),
-              )
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text("لا توجد خيارات إضافية متاحة",
+                            style: TextStyle(
+                                color: context.color.textDefaultColor)),
+                      ),
+                    )
                   : SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Column(
-                  children: moreDetailDynamicFields.map((field) {
-                    field.stateUpdater((fn) {});
-                    return Padding(padding: const EdgeInsets.symmetric(vertical: 6.0), child: field.build(context));
-                  }).toList(),
-                ),
-              ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      child: Column(
+                        children: moreDetailDynamicFields.map((field) {
+                          field.stateUpdater((fn) {});
+                          return Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 6.0),
+                              child: field.build(context));
+                        }).toList(),
+                      ),
+                    ),
             ),
-
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: context.color.secondaryColor,
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5, offset: const Offset(0, -2))],
-
-                ),
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 5,
+                      offset: const Offset(0, -2))
+                ],
+              ),
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: context.color.territoryColor,
                   foregroundColor: context.color.secondaryColor,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
                 onPressed: () async {
                   final String? validationError =
-                  validateRequiredCustomFieldSelections(
+                      validateRequiredCustomFieldSelections(
                     moreDetailDynamicFields,
                   );
 
-    if (validationError != null) {
-    HelperUtils.showSnackBarMessage(context, validationError);
-    return;
-                    }
-
+                  if (validationError != null) {
+                    HelperUtils.showSnackBarMessage(context, validationError);
+                    return;
+                  }
 
                   final List<Map<String, dynamic>> selectedCustomFields =
-                  buildSelectedCustomFieldsPayload();
+                      buildSelectedCustomFieldsPayload();
 
-                  cartItem.selectedCustomFields =
-                  selectedCustomFields.isEmpty ? null : selectedCustomFields;
+                  cartItem.selectedCustomFields = selectedCustomFields.isEmpty
+                      ? null
+                      : selectedCustomFields;
 
                   final existingItems = cartCubit.state.items;
-
 
                   String? _normalizeCurrency(String? raw) {
                     final String? trimmed = raw?.trim();
@@ -192,7 +210,7 @@ class AddCartSheet extends StatelessWidget {
                   String? _activeCartCurrency(Iterable<Cart> items) {
                     for (final Cart entry in items) {
                       final String? candidate =
-                      _normalizeCurrency(entry.currency);
+                          _normalizeCurrency(entry.currency);
                       if (candidate != null) {
                         return candidate;
                       }
@@ -201,15 +219,14 @@ class AddCartSheet extends StatelessWidget {
                   }
 
                   final String incomingSection = cartItem.section.trim();
-                  final String? existingSection =
-                  existingItems.isNotEmpty
+                  final String? existingSection = existingItems.isNotEmpty
                       ? existingItems.first.section.trim()
                       : null;
 
                   bool _sectionsMatch(String? a, String? b) =>
                       a != null &&
-                          b != null &&
-                          a.toLowerCase() == b.toLowerCase();
+                      b != null &&
+                      a.toLowerCase() == b.toLowerCase();
 
                   if (existingSection != null &&
                       !_sectionsMatch(existingSection, incomingSection)) {
@@ -226,12 +243,10 @@ class AddCartSheet extends StatelessWidget {
                     return;
                   }
 
-
-
                   final String? existingCurrency =
-                  _activeCartCurrency(existingItems);
+                      _activeCartCurrency(existingItems);
                   final String? incomingCurrency =
-                  _normalizeCurrency(cartItem.currency);
+                      _normalizeCurrency(cartItem.currency);
 
                   if (existingCurrency != null &&
                       incomingCurrency != null &&
@@ -243,19 +258,19 @@ class AddCartSheet extends StatelessWidget {
                     return;
                   }
 
-    if (isDuplicateCartLine(existingItems, cartItem)) {
-    HelperUtils.showSnackBarMessage(
-    context,
-    "productAlreadyInCart".translate(context),
-    );
-    return;
-    }
+                  if (isDuplicateCartLine(existingItems, cartItem)) {
+                    HelperUtils.showSnackBarMessage(
+                      context,
+                      "productAlreadyInCart".translate(context),
+                    );
+                    return;
+                  }
 
                   try {
                     // إن كانت التسعير/التوصيل متوقفة، لا تنفّذ أي استدعاء تسعير هنا.
                     // فقط أضف للسلة محليًا.
                     final result = cartCubit.addItem(cartItem);
-                    if (result is Future) await result;
+                    await result;
 
                     onItemAdded();
 
@@ -275,7 +290,9 @@ class AddCartSheet extends StatelessWidget {
                     );
                   }
                 },
-                child: Text("Cart".translate(context), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                child: Text("Cart".translate(context),
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -285,8 +302,4 @@ class AddCartSheet extends StatelessWidget {
   }
 }
 
-
-
 // نفس ويدجت التنويه لديك. لم يُعدّل.
-
-

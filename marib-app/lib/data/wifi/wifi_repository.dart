@@ -6,18 +6,15 @@ import 'package:marib/data/model/wifi/wifi_purchase.dart';
 import 'package:marib/data/model/wifi/wifi_purchase_result.dart';
 import 'dart:collection';
 
-
 class WifiRepository {
   const WifiRepository();
-
-
 
   Map<String, dynamic> _mapify(dynamic value) {
     if (value is Map<String, dynamic>) {
       return value;
     }
     if (value is Map) {
-      return Map<String, dynamic>.from(value as Map);
+      return Map<String, dynamic>.from(value);
     }
     return <String, dynamic>{};
   }
@@ -57,15 +54,6 @@ class WifiRepository {
     return int.tryParse(value.toString());
   }
 
-
-
-
-
-
-
-
-
-
   Future<List<WifiNetwork>> fetchNearbyNetworks({
     required double latitude,
     required double longitude,
@@ -88,14 +76,14 @@ class WifiRepository {
 
     return rawList
         .map((dynamic element) {
-      if (element is Map<String, dynamic>) {
-        return WifiNetwork.fromJson(element);
-      }
-      if (element is Map) {
-        return WifiNetwork.fromJson(Map<String, dynamic>.from(element as Map));
-      }
-      return null;
-    })
+          if (element is Map<String, dynamic>) {
+            return WifiNetwork.fromJson(element);
+          }
+          if (element is Map) {
+            return WifiNetwork.fromJson(Map<String, dynamic>.from(element));
+          }
+          return null;
+        })
         .whereType<WifiNetwork>()
         .toList();
   }
@@ -121,11 +109,6 @@ class WifiRepository {
     }
     return const [];
   }
-
-
-
-
-
 
   Future<List<WifiPlan>> fetchNetworkPlans(int networkId) async {
     final response = await Api.get(
@@ -159,8 +142,7 @@ class WifiRepository {
         response['payment_gateways'] ??
         response['items'];
 
-    final List<dynamic> gatewaysRaw =
-    List<dynamic>.from(_listify(container));
+    final List<dynamic> gatewaysRaw = List<dynamic>.from(_listify(container));
     if (gatewaysRaw.isEmpty && container is List) {
       gatewaysRaw.addAll(container);
     }
@@ -179,7 +161,6 @@ class WifiRepository {
 
     return gateways;
   }
-
 
   Future<Map<String, dynamic>> uploadBatch({
     required String name,
@@ -219,11 +200,6 @@ class WifiRepository {
     );
   }
 
-
-
-
-
-
   Future<List<WifiPurchase>> fetchPurchases({int? page}) async {
     final query = page != null ? <String, dynamic>{'page': page} : null;
     final response = await Api.get(
@@ -250,7 +226,7 @@ class WifiRepository {
 
     if (purchases.isNotEmpty) {
       purchases.sort(
-            (a, b) {
+        (a, b) {
           final aDate = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
           final bDate = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
           return bDate.compareTo(aDate);
@@ -276,7 +252,7 @@ class WifiRepository {
     );
 
     final WifiPurchase? purchase =
-    payload.isEmpty ? null : WifiPurchase.fromJson(payload);
+        payload.isEmpty ? null : WifiPurchase.fromJson(payload);
 
     final String? topMessage = _stringify(
       normalized['message'] ??
@@ -333,10 +309,10 @@ class WifiRepository {
         return true;
       }
       final int? code = _intify(
-        normalized['status_code'] ??
-            normalized['code'] ??
-            normalized['http_status'],
-      ) ??
+            normalized['status_code'] ??
+                normalized['code'] ??
+                normalized['http_status'],
+          ) ??
           _intify(payload['status_code'] ?? payload['code']);
       if (code == 202) {
         return true;
@@ -469,8 +445,4 @@ class WifiRepository {
 
     return _buildPurchaseResult(response);
   }
-
-
-
-
 }

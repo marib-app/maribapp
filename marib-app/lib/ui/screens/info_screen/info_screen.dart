@@ -15,7 +15,7 @@ import 'package:marib/data/cubits/system/user_details.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 // الواجهة المفصولة
-import 'info_screen_ui.dart';
+import 'package:marib/ui/screens/info_screen/info_screen_ui.dart';
 // إكستنشنات translate وغيرها
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/ui/theme/theme.dart';
@@ -26,12 +26,8 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
-import 'usage_guide_screen.dart';
-
-
-
+import 'package:marib/ui/screens/info_screen/usage_guide_screen.dart';
 
 class InfoScreen extends StatefulWidget {
   const InfoScreen({super.key});
@@ -67,7 +63,6 @@ class InfoScreenState extends State<InfoScreen> with TickerProviderStateMixin {
     if (initialState is FetchSystemSettingsSuccess) {
       _usageGuideHtml = _normalizeGuideHtml(initialState.usageGuide);
       _socialLinks = initialState.socialLinks;
-
     }
 
     _settingsSubscription =
@@ -79,8 +74,6 @@ class InfoScreenState extends State<InfoScreen> with TickerProviderStateMixin {
     _settingsSubscription?.cancel();
     super.dispose();
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -102,7 +95,6 @@ class InfoScreenState extends State<InfoScreen> with TickerProviderStateMixin {
         param: Api.privacyPolicy,
       ),
       socialLinks: _socialLinks,
-
     );
   }
 
@@ -153,8 +145,7 @@ class InfoScreenState extends State<InfoScreen> with TickerProviderStateMixin {
 
     _showGuideLoader();
     try {
-      final String? fetchedHtml =
-      await _waitForGuideAfterTrigger(currentState);
+      final String? fetchedHtml = await _waitForGuideAfterTrigger(currentState);
       _hideGuideLoader();
 
       if (!mounted) {
@@ -198,8 +189,8 @@ class InfoScreenState extends State<InfoScreen> with TickerProviderStateMixin {
   }
 
   Future<String?> _waitForGuideAfterTrigger(
-      FetchSystemSettingsState currentState,
-      ) async {
+    FetchSystemSettingsState currentState,
+  ) async {
     final Completer<String?> completer = Completer<String?>();
     late final StreamSubscription<FetchSystemSettingsState> subscription;
     subscription = _settingsCubit.stream.listen((state) {
@@ -280,8 +271,6 @@ class InfoScreenState extends State<InfoScreen> with TickerProviderStateMixin {
     );
   }
 
-
-
   Uri _buildUsageGuideFallbackUri() {
     final String base = Constant.baseUrl.trim();
     if (base.isEmpty) {
@@ -294,9 +283,8 @@ class InfoScreenState extends State<InfoScreen> with TickerProviderStateMixin {
       }
       return parsed.resolve('/page/usage-guide');
     } catch (_) {
-      final String sanitized = base.endsWith('/')
-          ? base.substring(0, base.length - 1)
-          : base;
+      final String sanitized =
+          base.endsWith('/') ? base.substring(0, base.length - 1) : base;
       return Uri.parse('$sanitized/page/usage-guide');
     }
   }
@@ -322,17 +310,14 @@ class InfoScreenState extends State<InfoScreen> with TickerProviderStateMixin {
       final bool guideChanged = _usageGuideHtml != normalized;
       final bool socialChanged = !listEquals(_socialLinks, state.socialLinks);
       if (!guideChanged && !socialChanged) {
-
         return;
       }
       setState(() {
         _usageGuideHtml = normalized;
         _socialLinks = state.socialLinks;
-
       });
     }
   }
-
 
   void _openContactUs() {
     Navigator.pushNamed(context, Routes.contactUs);
@@ -374,9 +359,9 @@ class InfoScreenState extends State<InfoScreen> with TickerProviderStateMixin {
   }
 
   Future<void> rateUs() => _inAppReview.openStoreListing(
-    appStoreId: Constant.iOSAppId,
-    microsoftStoreId: 'microsoftStoreId',
-  );
+        appStoreId: Constant.iOSAppId,
+        microsoftStoreId: 'microsoftStoreId',
+      );
 
   void logOutConfirmWidget() {
     UiUtils.showBlurredDialoge(
@@ -386,7 +371,7 @@ class InfoScreenState extends State<InfoScreen> with TickerProviderStateMixin {
         onAccept: () async {
           Future.delayed(
             Duration.zero,
-                () {
+            () {
               HiveUtils.clear();
               Constant.favoriteItemList.clear();
               context.read<UserDetailsCubit>().clear();
@@ -405,23 +390,24 @@ class InfoScreenState extends State<InfoScreen> with TickerProviderStateMixin {
     );
   }
 }
+
 class _GuideLoadingDialog extends StatelessWidget {
   const _GuideLoadingDialog();
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
-        backgroundColor: context.color.secondaryColor,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 120),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: SizedBox(
-            height: 32,
-            width: 32,
-            child: UiUtils.progress(width: 32, height: 32),
-          ),
+      backgroundColor: context.color.secondaryColor,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 120),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: SizedBox(
+          height: 32,
+          width: 32,
+          child: UiUtils.progress(width: 32, height: 32),
         ),
-        );
-    }
+      ),
+    );
+  }
 }

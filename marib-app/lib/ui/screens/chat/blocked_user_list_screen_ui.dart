@@ -39,7 +39,7 @@ extension _BlockedUserListScreenUi on _BlockedUserListScreenState {
                         padding: EdgeInsets.symmetric(
                             vertical: 0.0, horizontal: sidePadding),
                         child: Container(
-                          // height: 100,
+                            // height: 100,
                             decoration: BoxDecoration(
                                 color: context.color.secondaryColor,
                                 border: Border.all(
@@ -91,8 +91,8 @@ extension _BlockedUserListScreenUi on _BlockedUserListScreenState {
                 if (unBlock == true) {
                   Future.delayed(Duration.zero, () {
                     context.read<UnblockUserCubit>().unBlockUser(
-                      blockUserId: user.id!,
-                    );
+                          blockUserId: user.id!,
+                        );
                   });
                 }
               },
@@ -107,7 +107,7 @@ extension _BlockedUserListScreenUi on _BlockedUserListScreenState {
                         }
                         UiUtils.showFullScreenImage(context,
                             provider:
-                            CachedNetworkImageProvider(user.profile!));
+                                CachedNetworkImageProvider(user.profile!));
                       },
                       child: Container(
                         height: 40,
@@ -119,20 +119,20 @@ extension _BlockedUserListScreenUi on _BlockedUserListScreenState {
                           borderRadius: BorderRadius.circular(18),
                           child: user.profile == "" || user.profile == null
                               ? CircleAvatar(
-                            radius: 18,
-                            backgroundColor: context.color.territoryColor,
-                            child: SvgPicture.asset(AppIcons.profile,
-                                height: 20,
-                                width: 20,
-                                colorFilter: ColorFilter.mode(
-                                    context.color.buttonColor,
-                                    BlendMode.srcIn)),
-                          )
+                                  radius: 18,
+                                  backgroundColor: context.color.territoryColor,
+                                  child: SvgPicture.asset(AppIcons.profile,
+                                      height: 20,
+                                      width: 20,
+                                      colorFilter: ColorFilter.mode(
+                                          context.color.buttonColor,
+                                          BlendMode.srcIn)),
+                                )
                               : CircleAvatar(
-                            radius: 15,
-                            backgroundColor: context.color.territoryColor,
-                            backgroundImage: NetworkImage(user.profile!),
-                          ),
+                                  radius: 15,
+                                  backgroundColor: context.color.territoryColor,
+                                  backgroundImage: NetworkImage(user.profile!),
+                                ),
                         ),
                       ),
                     ),

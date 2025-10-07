@@ -17,7 +17,7 @@ class ChatMessageHandler {
   static final StreamController<List<Widget>> _chatMessageStream =
       StreamController<List<Widget>>.broadcast();
   static final ValueNotifier<ParticipantStatus?> participantStatusNotifier =
-  ValueNotifier<ParticipantStatus?>(null);
+      ValueNotifier<ParticipantStatus?>(null);
 /*  static void add(Widget chat) {
 
     List<Widget> msgs = (messages);
@@ -118,11 +118,9 @@ class ChatMessageHandler {
     participantStatusNotifier.value = null;
   }
 
-
   static Stream<List<Widget>> getChatStream() {
     return _chatMessageStream.stream;
   }
-
 
   static void updateMessageStatus({
     required int messageId,
@@ -163,14 +161,11 @@ class ChatMessageHandler {
     }
   }
 
-
-
-
-  static attachListener(void Function(dynamic)? onData) {
+  static void attachListener(void Function(dynamic)? onData) {
     _chatMessageStream.stream.listen(onData);
   }
 
-  static removeMessage(int id) {
+  static void removeMessage(int id) {
     List<Widget> msgs = (messages);
     msgs.removeWhere((element) {
       if (element is! Padding) {
@@ -183,7 +178,7 @@ class ChatMessageHandler {
   }
 
   ///This will replace message's key with server key so we will be able to delete message if we want
-  static updateMessageId(String identifier, int id) {
+  static void updateMessageId(String identifier, int id) {
     try {
       List<Widget> msgs = _chat;
       for (var i = 0; i < _chat.length; i++) {

@@ -15,39 +15,15 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'dart:io';
-import 'dart:convert';
-import 'package:flutter_svg/svg.dart';
-import 'package:marib/app/routes.dart';
-import 'package:marib/data/cubits/auth/authentication_cubit.dart';
-import 'package:marib/data/cubits/category/fetch_category_cubit.dart';
-import 'package:marib/data/model/category_model.dart';
-import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
-import 'package:marib/ui/screens/widgets/custom_text_form_field.dart';
-import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/utils/cloudState/cloud_state.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
-import 'package:marib/utils/ui_utils.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:marib/utils/api.dart';
-import 'package:country_picker/country_picker.dart';
-import 'package:marib/utils/hive_utils.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
-import 'package:file_picker/file_picker.dart';
 
-import 'package:marib/ui/screens/auth/sign_up/email_verification_screen.dart';
-import 'package:marib/ui/theme/theme.dart';       // context.color.*
-import 'package:marib/utils/helper_utils.dart';   // HelperUtils.showSnackBarMessage
+// context.color.*
+// HelperUtils.showSnackBarMessage
 
-import 'map_repository.dart' show normalizeCategory;
-import 'package:marib/data/model/item/item_model.dart';
+import 'package:marib/ui/screens/home_screen/section/section_screen/widgets/map_search/map_repository.dart'
+    show normalizeCategory;
 import 'package:marib/data/model/item/item_model.dart';
 
 // ===================================================================
@@ -67,13 +43,14 @@ class AdsGoogleMap extends StatefulWidget {
   final Set<Marker> markers; // بديل إذا لم تُمرّر ads
 
   // فلاتر/خيارات
-  final String? activeCategory;     // 'الكل' أو null
-  final LatLng? userLatLng;         // موقع المستخدم (للتمركز والنطاق)
-  final bool enableViewportSearch;  // تفعيل "بحث في هذه المنطقة"
-  final bool enableRadiusFilter;    // تفعيل "نطاق البحث"
-  final double initialRadiusKm;     // 0 = غير مفعّل افتراضياً
-  final Function(LatLngBounds)? onSearchThisArea; // (اختياري) نداء API مع bounds
-  final bool applyAppMapStyle;      // لو عندك JSON لستايل الخريطة
+  final String? activeCategory; // 'الكل' أو null
+  final LatLng? userLatLng; // موقع المستخدم (للتمركز والنطاق)
+  final bool enableViewportSearch; // تفعيل "بحث في هذه المنطقة"
+  final bool enableRadiusFilter; // تفعيل "نطاق البحث"
+  final double initialRadiusKm; // 0 = غير مفعّل افتراضياً
+  final Function(LatLngBounds)?
+      onSearchThisArea; // (اختياري) نداء API مع bounds
+  final bool applyAppMapStyle; // لو عندك JSON لستايل الخريطة
 
   // تهيئة العرض
   final PriceFormatter? priceFormatter;
@@ -172,7 +149,10 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
   bool _isValidLatLng(LatLng? p) {
     if (p == null) return false;
     if (p.latitude == 0 && p.longitude == 0) return false;
-    return p.latitude >= -90 && p.latitude <= 90 && p.longitude >= -180 && p.longitude <= 180;
+    return p.latitude >= -90 &&
+        p.latitude <= 90 &&
+        p.longitude >= -180 &&
+        p.longitude <= 180;
   }
 
   double _deg2rad(double deg) => deg * (math.pi / 180.0);
@@ -183,7 +163,11 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
     final dLon = _deg2rad(b.longitude - a.longitude);
     final s1 = math.sin(dLat / 2);
     final s2 = math.sin(dLon / 2);
-    final aa = s1 * s1 + math.cos(_deg2rad(a.latitude)) * math.cos(_deg2rad(b.latitude)) * s2 * s2;
+    final aa = s1 * s1 +
+        math.cos(_deg2rad(a.latitude)) *
+            math.cos(_deg2rad(b.latitude)) *
+            s2 *
+            s2;
     final c = 2 * math.atan2(math.sqrt(aa), math.sqrt(1 - aa));
     return R * c;
   }
@@ -244,7 +228,8 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
     if (_markers.isEmpty || _controller == null) return;
     final pts = _markers.map((m) => m.position).toList();
     if (pts.length == 1) {
-      await _controller!.animateCamera(CameraUpdate.newLatLngZoom(pts.first, 14));
+      await _controller!
+          .animateCamera(CameraUpdate.newLatLngZoom(pts.first, 14));
       return;
     }
     double? minLat, maxLat, minLng, maxLng;
@@ -268,8 +253,7 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
 
     if (widget.ads == null) {
       // لا يوجد ads: استخدم markers كما هي، وأضِف دائرة موقع المستخدم
-      _circles
-        ..clear();
+      _circles..clear();
       if (_isValidLatLng(widget.userLatLng)) {
         _circles.add(Circle(
           circleId: const CircleId('user_circle'),
@@ -285,23 +269,26 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
     }
 
     final ads = widget.ads!;
-    _totalValidAds = ads.where((a) => a.latitude != null && a.longitude != null).length;
+    _totalValidAds =
+        ads.where((a) => a.latitude != null && a.longitude != null).length;
 
     // فلتر الفئة
-    final byCat = (widget.activeCategory == null || widget.activeCategory == 'الكل')
+    final byCat = (widget.activeCategory == null ||
+            widget.activeCategory == 'الكل')
         ? ads
         : ads
-        .where((a) =>
-    normalizeCategory(_categoryLabel(a)) == widget.activeCategory)
-        .toList();
-
+            .where((a) =>
+                normalizeCategory(_categoryLabel(a)) == widget.activeCategory)
+            .toList();
 
     // فلتر نطاق البحث
     List<ItemModel> afterRadius = byCat;
     if (_radiusOn && widget.userLatLng != null) {
       afterRadius = byCat.where((a) {
         if (a.latitude == null || a.longitude == null) return false;
-        return _distanceKm(widget.userLatLng!, LatLng(a.latitude!, a.longitude!)) <= _radiusKm;
+        return _distanceKm(
+                widget.userLatLng!, LatLng(a.latitude!, a.longitude!)) <=
+            _radiusKm;
       }).toList();
     }
 
@@ -369,7 +356,8 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
         markerId: MarkerId(id),
         position: pos,
         icon: icon,
-        infoWindow: const InfoWindow(), // نستخدم بطاقة التفاصيل السفلية بدل InfoWindow
+        infoWindow:
+            const InfoWindow(), // نستخدم بطاقة التفاصيل السفلية بدل InfoWindow
         onTap: () {
           setState(() => _selectedAd = ad);
           HelperUtils.showSnackBarMessage(
@@ -392,8 +380,9 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
         ..clear()
         ..addAll(cs);
 
-      _currentShownCount =
-          afterViewport.where((a) => a.latitude != null && a.longitude != null).length;
+      _currentShownCount = afterViewport
+          .where((a) => a.latitude != null && a.longitude != null)
+          .length;
       _visibleAds = afterViewport;
     });
   }
@@ -414,7 +403,7 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
     HelperUtils.showSnackBarMessage(
       context,
       "تم تفعيل \"بحث في هذه المنطقة\" • المعروض: $_currentShownCount / $_totalValidAds\n"
-          "النتائج الآن حسب النطاق المرئي. لإلغاء التصفية استخدم زر (إلغاء) بجوار العداد.",
+      "النتائج الآن حسب النطاق المرئي. لإلغاء التصفية استخدم زر (إلغاء) بجوار العداد.",
       messageDuration: 4,
     );
   }
@@ -449,7 +438,8 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _applyMapStyle());
 
     final brand = context.color.territoryColor;
-    final hasResults = (widget.ads != null) ? _currentShownCount > 0 : _markers.isNotEmpty;
+    final hasResults =
+        (widget.ads != null) ? _currentShownCount > 0 : _markers.isNotEmpty;
 
     return Stack(
       children: [
@@ -479,9 +469,7 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
           compassEnabled: true,
           mapToolbarEnabled: false,
           mapType: _mapType,
-
           onLongPress: _handleLongPress,
-
           onCameraIdle: () async {
             if (!widget.enableViewportSearch) return;
             _idleTimer?.cancel();
@@ -510,7 +498,8 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
                   await _clearViewportFilter(withSnack: false);
                   setState(() => _radiusOn = false);
                   await _rebuildMarkers();
-                  HelperUtils.showSnackBarMessage(context, "تم إلغاء جميع محددات النطاق");
+                  HelperUtils.showSnackBarMessage(
+                      context, "تم إلغاء جميع محددات النطاق");
                 },
               ),
             ),
@@ -532,7 +521,8 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
                     backgroundColor: brand,
                     foregroundColor: Colors.white,
                     shape: const StadiumBorder(),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
                   ),
                 ),
               ),
@@ -540,11 +530,11 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
           ),
 
         // لا توجد نتائج
-        if (!hasResults)
-          const _NoResultsOverlay(),
+        if (!hasResults) const _NoResultsOverlay(),
 
         // بطاقات أفقية عند تفعيل أي نطاق/منطقة
-        if ((_viewportFilterOn || (_radiusOn && widget.userLatLng != null)) && _visibleAds.isNotEmpty)
+        if ((_viewportFilterOn || (_radiusOn && widget.userLatLng != null)) &&
+            _visibleAds.isNotEmpty)
           SafeArea(
             child: Align(
               alignment: Alignment.bottomCenter,
@@ -557,7 +547,8 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
                   onTapCard: (ad) async {
                     if (ad.latitude != null && ad.longitude != null) {
                       await _controller?.animateCamera(
-                        CameraUpdate.newLatLngZoom(LatLng(ad.latitude!, ad.longitude!), 15),
+                        CameraUpdate.newLatLngZoom(
+                            LatLng(ad.latitude!, ad.longitude!), 15),
                       );
                       setState(() => _selectedAd = ad);
                     }
@@ -600,13 +591,21 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
                     onTap: () {
                       setState(() {
                         switch (_mapType) {
-                          case MapType.normal:  _mapType = MapType.hybrid;  break;
-                          case MapType.hybrid:  _mapType = MapType.terrain; break;
-                          case MapType.terrain: _mapType = MapType.normal;  break;
-                          default: _mapType = MapType.normal;
+                          case MapType.normal:
+                            _mapType = MapType.hybrid;
+                            break;
+                          case MapType.hybrid:
+                            _mapType = MapType.terrain;
+                            break;
+                          case MapType.terrain:
+                            _mapType = MapType.normal;
+                            break;
+                          default:
+                            _mapType = MapType.normal;
                         }
                       });
-                      HelperUtils.showSnackBarMessage(context, "تم تغيير نوع الخريطة");
+                      HelperUtils.showSnackBarMessage(
+                          context, "تم تغيير نوع الخريطة");
                     },
                   ),
                   const SizedBox(height: 8),
@@ -615,19 +614,23 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
                     tooltip: 'العودة لموقعي',
                     onTap: _animateToUser,
                   ),
-                  if (widget.enableRadiusFilter && widget.userLatLng != null) ...[
+                  if (widget.enableRadiusFilter &&
+                      widget.userLatLng != null) ...[
                     const SizedBox(height: 8),
                     _MiniFab(
                       icon: Icons.radio_button_checked_rounded,
-                      tooltip: _radiusOn ? 'تعديل نطاق البحث' : 'تفعيل نطاق البحث',
+                      tooltip:
+                          _radiusOn ? 'تعديل نطاق البحث' : 'تفعيل نطاق البحث',
                       onTap: () async {
                         _radiusOn = true;
                         await showModalBottomSheet(
                           context: context,
                           isScrollControlled: true,
-                          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                          backgroundColor:
+                              Theme.of(context).scaffoldBackgroundColor,
                           shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+                            borderRadius:
+                                BorderRadius.vertical(top: Radius.circular(18)),
                           ),
                           builder: (_) => _RadiusSheet(
                             radiusKm: _radiusKm,
@@ -636,7 +639,8 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
                               setState(() => _radiusOn = false);
                               Navigator.pop(context);
                               _rebuildMarkers();
-                              HelperUtils.showSnackBarMessage(context, "تم تعطيل نطاق البحث");
+                              HelperUtils.showSnackBarMessage(
+                                  context, "تم تعطيل نطاق البحث");
                             },
                             onApply: () {
                               Navigator.pop(context);
@@ -644,7 +648,7 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
                               HelperUtils.showSnackBarMessage(
                                 context,
                                 "تم تطبيق نطاق ${_radiusKm.toStringAsFixed(0)} كم • المعروض: $_currentShownCount / $_totalValidAds\n"
-                                    "النتائج الآن حسب النطاق المحدد. لإلغاء، استخدم زر (إلغاء) بجوار العداد.",
+                                "النتائج الآن حسب النطاق المحدد. لإلغاء، استخدم زر (إلغاء) بجوار العداد.",
                                 messageDuration: 4,
                               );
                             },
@@ -662,12 +666,6 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
     );
   }
 }
-
-
-
-
-
-
 
 // ===================================================================
 // مكونات UI صغيرة (Top bar / FAB / No results / Bottom sheet / Strip)
@@ -701,7 +699,8 @@ class _TopInfoBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor.withOpacity(.96),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Theme.of(context).dividerColor.withOpacity(.25)),
+        border:
+            Border.all(color: Theme.of(context).dividerColor.withOpacity(.25)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(.08),
@@ -718,7 +717,8 @@ class _TopInfoBar extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.apartment_rounded, size: 16, color: context.color.textDefaultColor),
+              Icon(Icons.apartment_rounded,
+                  size: 16, color: context.color.textDefaultColor),
               const SizedBox(width: 6),
               Text(
                 text,
@@ -732,51 +732,55 @@ class _TopInfoBar extends StatelessWidget {
           if (activeCategory != null && activeCategory != 'الكل')
             _chip(context, activeCategory!),
           if (viewportOn) _chip(context, 'بحث في هذه المنطقة'),
-          if (radiusOn) _chip(context, 'نطاق ${radiusKm.toStringAsFixed(0)} كم'),
-          if (viewportOn || radiusOn)
-            _cancelChip(context, onTap: onClearAll),
+          if (radiusOn)
+            _chip(context, 'نطاق ${radiusKm.toStringAsFixed(0)} كم'),
+          if (viewportOn || radiusOn) _cancelChip(context, onTap: onClearAll),
         ],
       ),
     );
   }
 
   Widget _chip(BuildContext context, String text) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-    decoration: BoxDecoration(
-      color: Theme.of(context).chipTheme.backgroundColor ?? Theme.of(context).cardColor,
-      borderRadius: BorderRadius.circular(24),
-      border: Border.all(color: Theme.of(context).dividerColor.withOpacity(.25)),
-    ),
-    child: Text(
-      text,
-      style: TextStyle(
-        fontSize: 11.5,
-        color: context.color.textDefaultColor,
-        fontWeight: FontWeight.w700,
-      ),
-    ),
-  );
-
-  Widget _cancelChip(BuildContext context, {required VoidCallback onTap}) => InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(20),
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: context.color.territoryColor.withOpacity(.65), width: 1),
-      ),
-      child: Text(
-        'إلغاء',
-        style: TextStyle(
-          color: context.color.territoryColor,
-          fontWeight: FontWeight.w700,
-          fontSize: 12,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: Theme.of(context).chipTheme.backgroundColor ??
+              Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+              color: Theme.of(context).dividerColor.withOpacity(.25)),
         ),
-      ),
-    ),
-  );
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 11.5,
+            color: context.color.textDefaultColor,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      );
+
+  Widget _cancelChip(BuildContext context, {required VoidCallback onTap}) =>
+      InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+                color: context.color.territoryColor.withOpacity(.65), width: 1),
+          ),
+          child: Text(
+            'إلغاء',
+            style: TextStyle(
+              color: context.color.territoryColor,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
+        ),
+      );
 }
 
 class _MiniFab extends StatelessWidget {
@@ -784,7 +788,8 @@ class _MiniFab extends StatelessWidget {
   final String tooltip;
   final VoidCallback onTap;
 
-  const _MiniFab({required this.icon, required this.tooltip, required this.onTap});
+  const _MiniFab(
+      {required this.icon, required this.tooltip, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -801,13 +806,6 @@ class _MiniFab extends StatelessWidget {
   }
 }
 
-
-
-
-
-
-
-
 class _NoResultsOverlay extends StatelessWidget {
   const _NoResultsOverlay();
 
@@ -819,7 +817,8 @@ class _NoResultsOverlay extends StatelessWidget {
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor.withOpacity(.98),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Theme.of(context).dividerColor.withOpacity(.25)),
+          border: Border.all(
+              color: Theme.of(context).dividerColor.withOpacity(.25)),
         ),
         child: const Column(
           mainAxisSize: MainAxisSize.min,
@@ -833,15 +832,6 @@ class _NoResultsOverlay extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-
-
-
 
 class _BottomDetailsSheet extends StatelessWidget {
   final bool open;
@@ -890,63 +880,63 @@ class _BottomDetailsSheet extends StatelessWidget {
           child: (ad == null)
               ? const SizedBox.shrink()
               : Row(
-            children: [
-              // صورة
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: _previewImage(context, ad),
-                ),
-              ),
-              const SizedBox(width: 12),
-              // نصوص + أزرار
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _AutoScrollText(
-                      text: ad!.name ?? 'إعلان عقاري',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
-                        color: context.color.textDefaultColor,
+                    // صورة
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: _previewImage(context, ad),
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      priceFormatter(ad!),
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: brand,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const Spacer(),
-                    Row(
-                      children: [
-                        OutlinedButton.icon(
-                          onPressed: onClose,
-                          icon: const Icon(Icons.close),
-                          label: const Text('إغلاق'),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton.icon(
-                          onPressed: onOpenDetails,
-                          icon: const Icon(Icons.open_in_new_rounded),
-                          label: const Text('تفاصيل الإعلان'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: brand,
-                            foregroundColor: Colors.white,
+                    const SizedBox(width: 12),
+                    // نصوص + أزرار
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _AutoScrollText(
+                            text: ad!.name ?? 'إعلان عقاري',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                              color: context.color.textDefaultColor,
+                            ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 6),
+                          Text(
+                            priceFormatter(ad!),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: brand,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const Spacer(),
+                          Row(
+                            children: [
+                              OutlinedButton.icon(
+                                onPressed: onClose,
+                                icon: const Icon(Icons.close),
+                                label: const Text('إغلاق'),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton.icon(
+                                onPressed: onOpenDetails,
+                                icon: const Icon(Icons.open_in_new_rounded),
+                                label: const Text('تفاصيل الإعلان'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: brand,
+                                  foregroundColor: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -963,19 +953,6 @@ class _BottomDetailsSheet extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 class _HorizontalAdStrip extends StatelessWidget {
   final List<ItemModel> ads;
@@ -1010,18 +987,6 @@ class _HorizontalAdStrip extends StatelessWidget {
   }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
 class _AdThumbCard extends StatelessWidget {
   final ItemModel ad;
   final String? imageUrl;
@@ -1048,7 +1013,8 @@ class _AdThumbCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor.withOpacity(.98),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Theme.of(context).dividerColor.withOpacity(.25)),
+          border: Border.all(
+              color: Theme.of(context).dividerColor.withOpacity(.25)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(.08),
@@ -1066,9 +1032,9 @@ class _AdThumbCard extends StatelessWidget {
                 child: (imageUrl != null && imageUrl!.isNotEmpty)
                     ? Image.network(imageUrl!, fit: BoxFit.cover)
                     : Container(
-                  color: Theme.of(context).dividerColor.withOpacity(.15),
-                  child: const Icon(Icons.image, size: 28),
-                ),
+                        color: Theme.of(context).dividerColor.withOpacity(.15),
+                        child: const Icon(Icons.image, size: 28),
+                      ),
               ),
             ),
             const SizedBox(width: 10),
@@ -1099,11 +1065,6 @@ class _AdThumbCard extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
 
 // ===================================================================
 // شاشة "حدد نطاق البحث (كم)" — DraggableScrollableSheet
@@ -1143,7 +1104,8 @@ class _RadiusSheet extends StatelessWidget {
             children: [
               Center(
                 child: Container(
-                  width: 36, height: 4,
+                  width: 36,
+                  height: 4,
                   decoration: BoxDecoration(
                     color: Theme.of(context).dividerColor.withOpacity(.4),
                     borderRadius: BorderRadius.circular(6),
@@ -1170,10 +1132,13 @@ class _RadiusSheet extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('1 كم', style: TextStyle(color: Theme.of(context).hintColor)),
+                  Text('1 كم',
+                      style: TextStyle(color: Theme.of(context).hintColor)),
                   Text('${radiusKm.toStringAsFixed(0)} كم',
-                      style: TextStyle(fontWeight: FontWeight.bold, color: brand)),
-                  Text('50 كم', style: TextStyle(color: Theme.of(context).hintColor)),
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, color: brand)),
+                  Text('50 كم',
+                      style: TextStyle(color: Theme.of(context).hintColor)),
                 ],
               ),
               const SizedBox(height: 16),
@@ -1206,9 +1171,6 @@ class _RadiusSheet extends StatelessWidget {
   }
 }
 
-
-
-
 // ===================================================================
 // نص متحرّك تلقائي إذا كان أطول من العرض
 // ===================================================================
@@ -1218,7 +1180,8 @@ class _AutoScrollText extends StatefulWidget {
   final TextStyle? style;
   final double gap;
 
-  const _AutoScrollText({required this.text, this.style, this.gap = 40, Key? key})
+  const _AutoScrollText(
+      {required this.text, this.style, this.gap = 40, Key? key})
       : super(key: key);
 
   @override
@@ -1243,11 +1206,13 @@ class _AutoScrollTextState extends State<_AutoScrollText> {
     _timer = Timer.periodic(const Duration(seconds: 3), (_) async {
       if (!_ctrl.hasClients) return;
       await _ctrl.animateTo(_ctrl.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 1200), curve: Curves.easeInOut);
+          duration: const Duration(milliseconds: 1200),
+          curve: Curves.easeInOut);
       await Future.delayed(const Duration(milliseconds: 400));
       if (!_ctrl.hasClients) return;
       await _ctrl.animateTo(0,
-          duration: const Duration(milliseconds: 1200), curve: Curves.easeInOut);
+          duration: const Duration(milliseconds: 1200),
+          curve: Curves.easeInOut);
     });
   }
 
@@ -1275,12 +1240,6 @@ class _AutoScrollTextState extends State<_AutoScrollText> {
   }
 }
 
-
-
-
-
-
-
 // ===================================================================
 /* مصنع الماركرات: يرسم Pin منزل + شارة السعر على Canvas ثم يحولها Bitmap */
 // ===================================================================
@@ -1295,7 +1254,8 @@ class _MarkerFactory {
     required Color brand,
   }) async {
     // ✅ هنا كان الخطأ: selected_ -> selected
-    final key = '${priceLabel}_${selected}_${brand.value}_${Theme.of(context).brightness}';
+    final key =
+        '${priceLabel}_${selected}_${brand.value}_${Theme.of(context).brightness}';
 
     if (_cache.containsKey(key)) return _cache[key]!;
 
@@ -1326,13 +1286,15 @@ class _MarkerFactory {
 
     final recorder = ui.PictureRecorder();
     final canvas =
-    Canvas(recorder, Rect.fromLTWH(0, 0, totalW, totalH.toDouble()));
+        Canvas(recorder, Rect.fromLTWH(0, 0, totalW, totalH.toDouble()));
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final pinColor =
-    selected ? brand : (isDark ? const Color(0xFF2a7bff) : const Color(0xFF1e88e5));
-    final badgeColor =
-    selected ? brand : (isDark ? const Color(0xFF333333) : const Color(0xCC000000));
+    final pinColor = selected
+        ? brand
+        : (isDark ? const Color(0xFF2a7bff) : const Color(0xFF1e88e5));
+    final badgeColor = selected
+        ? brand
+        : (isDark ? const Color(0xFF333333) : const Color(0xCC000000));
 
     // جسم الـ Pin
     final pinRect = RRect.fromRectAndRadius(
@@ -1369,7 +1331,8 @@ class _MarkerFactory {
     // شارة السعر
     final badgeLeft = pinW + pinToBadgeSpace;
     final badgeRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(badgeLeft, (totalH - badgeH) / 2, textW + badgePad * 2, badgeH),
+      Rect.fromLTWH(
+          badgeLeft, (totalH - badgeH) / 2, textW + badgePad * 2, badgeH),
       const Radius.circular(20),
     );
     final paintBadge = Paint()..color = badgeColor;
@@ -1389,4 +1352,3 @@ class _MarkerFactory {
     return desc;
   }
 }
-

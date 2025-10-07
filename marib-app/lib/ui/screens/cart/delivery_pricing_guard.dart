@@ -4,10 +4,6 @@ import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:flutter/widgets.dart';
 
-
-
-
-
 /// حاجز مركزي لإيقاف/تجاوز أي منطق متعلق بتسعير/توصيل
 class DeliveryPricingGuard {
   DeliveryPricingGuard._();
@@ -30,30 +26,29 @@ class DeliveryPricingGuard {
     return null;
   }
 
-
-
-
   /// Converts an arbitrary error into a human friendly message.
   ///
   /// If delivery pricing is disabled or the error isn't related to pricing,
   /// the method falls back to extracting meaningful messages from known
   /// exception shapes returned by the cart APIs.
   static String readableErrorMessage(
-      BuildContext context,
-      Object error, {
-        String? fallback,
-      }) {
+    BuildContext context,
+    Object error, {
+    String? fallback,
+  }) {
     final String? normalizedPricingError = normalizeError(error);
-    if (normalizedPricingError != null && normalizedPricingError.trim().isNotEmpty) {
+    if (normalizedPricingError != null &&
+        normalizedPricingError.trim().isNotEmpty) {
       return normalizedPricingError;
     }
 
     final String fallbackMessage =
-    (fallback ?? 'حدث خطأ غير متوقع'.translate(context)).trim();
+        (fallback ?? 'حدث خطأ غير متوقع'.translate(context)).trim();
 
     String? extracted = _extractErrorMessage(error);
     if (extracted != null && extracted.trim().isNotEmpty) {
-      final String readable = HelperUtils.readableErrorMessage(context, extracted);
+      final String readable =
+          HelperUtils.readableErrorMessage(context, extracted);
       final String trimmed = readable.trim();
       if (trimmed.isNotEmpty && !_looksLikeDartObject(trimmed)) {
         return trimmed;
@@ -62,7 +57,8 @@ class DeliveryPricingGuard {
 
     final String stringified = error.toString().trim();
     if (stringified.isNotEmpty && !_looksLikeDartObject(stringified)) {
-      final String readable = HelperUtils.readableErrorMessage(context, stringified);
+      final String readable =
+          HelperUtils.readableErrorMessage(context, stringified);
       final String trimmed = readable.trim();
       if (trimmed.isNotEmpty && !_looksLikeDartObject(trimmed)) {
         return trimmed;
@@ -105,7 +101,13 @@ class DeliveryPricingGuard {
     }
 
     if (error is Map) {
-      const List<String> preferredKeys = <String>['message', 'error', 'detail', 'title', 'description'];
+      const List<String> preferredKeys = <String>[
+        'message',
+        'error',
+        'detail',
+        'title',
+        'description'
+      ];
       for (final String key in preferredKeys) {
         if (!error.containsKey(key)) {
           continue;
@@ -128,7 +130,4 @@ class DeliveryPricingGuard {
 
     return null;
   }
-
-
-
 }

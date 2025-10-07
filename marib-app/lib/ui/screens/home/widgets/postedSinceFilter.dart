@@ -1,4 +1,3 @@
-
 import 'package:marib/ui/screens/filter_screen.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
@@ -73,7 +72,8 @@ class _PostedSinceFilterState extends State<PostedSinceFilterScreen>
                 )
                     .color(context.color.textDefaultColor)
                     .size(context.font.normal)
-                    .bold(weight: index == 0 ? FontWeight.w600 : FontWeight.w500),
+                    .bold(
+                        weight: index == 0 ? FontWeight.w600 : FontWeight.w500),
                 onTap: () {
                   // Handle item selection here
                   widget.update(widget.list[index].value);

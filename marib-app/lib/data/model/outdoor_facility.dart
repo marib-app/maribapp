@@ -7,7 +7,12 @@ class OutdoorFacility {
   String? updatedAt;
 
   OutdoorFacility(
-      {this.id, this.name, this.image, this.createdAt, this.updatedAt,this.distance});
+      {this.id,
+      this.name,
+      this.image,
+      this.createdAt,
+      this.updatedAt,
+      this.distance});
 
   OutdoorFacility.fromJson(Map<String, dynamic> json) {
     id = json['id'];
@@ -15,7 +20,7 @@ class OutdoorFacility {
     image = json['image'];
     createdAt = json['created_at'];
     updatedAt = json['updated_at'];
-    distance=json['distance'];
+    distance = json['distance'];
   }
 
   Map<String, dynamic> toJson() {
@@ -25,7 +30,7 @@ class OutdoorFacility {
     data['image'] = image;
     data['created_at'] = createdAt;
     data['updated_at'] = updatedAt;
-    data['distance']=distance;
+    data['distance'] = distance;
     return data;
   }
 

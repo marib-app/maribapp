@@ -72,11 +72,11 @@ class ServiceRequestModel {
     }
 
     String status = parseString(
-      map['status'] ??
-          map['state'] ??
-          map['request_status'] ??
-          map['current_status'],
-    )?.toLowerCase() ??
+          map['status'] ??
+              map['state'] ??
+              map['request_status'] ??
+              map['current_status'],
+        )?.toLowerCase() ??
         'review';
 
     final id = parseId(

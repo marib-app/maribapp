@@ -160,8 +160,7 @@ class InAppPurchaseManager {
       try {
         await Future.delayed(Duration(seconds: 1));
         await _inAppPurchase.completePurchase(purchase);
-      } catch (e) {
-      }
+      } catch (e) {}
     }
   }
 
@@ -182,7 +181,7 @@ class InAppPurchaseManager {
     }
   }
 
-  static getPendings() {
+  static void getPendings() {
     _inAppPurchase.purchaseStream.listen((event) {
       ;
     });
@@ -233,7 +232,6 @@ class InAppPurchaseManager {
       onDone: () {
         // Cancel the subscription when the stream is done
         _subscription.cancel();
-
       },
       onError: (error) {
         // Handle stream errors here
@@ -246,7 +244,6 @@ class InAppPurchaseManager {
   Future<void> buy(String productId, String packageId) async {
     bool _isAvailable = await _inAppPurchase.isAvailable();
     if (_isAvailable) {
-
       ProductDetails productDetails = await getProductByProductId(productId);
 
       this.packageId = packageId;

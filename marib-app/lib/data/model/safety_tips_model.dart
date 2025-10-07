@@ -24,14 +24,15 @@ class SafetyTipsModel {
     this.department,
     this.productLink,
     List<SafetyTipAction>? actions,
-  }) : actions = List<SafetyTipAction>.unmodifiable(actions ?? const <SafetyTipAction>[]);
+  }) : actions = List<SafetyTipAction>.unmodifiable(
+            actions ?? const <SafetyTipAction>[]);
 
   SafetyTipsModel.fromJson(
-      Map<String, dynamic> json, {
-        SafetyTipsDepartment? department,
-        String? productLink,
-        List<SafetyTipAction>? sharedActions,
-      }) : actions = const <SafetyTipAction>[] {
+    Map<String, dynamic> json, {
+    SafetyTipsDepartment? department,
+    String? productLink,
+    List<SafetyTipAction>? sharedActions,
+  }) : actions = const <SafetyTipAction>[] {
     id = _coerceInt(json['id']);
     tipId = _coerceInt(json['tip_id']);
     languageId = _coerceInt(json['language_id']);
@@ -42,10 +43,10 @@ class SafetyTipsModel {
     createdAt = _coerceString(json['created_at']);
     updatedAt = _coerceString(json['updated_at']);
     this.productLink = productLink ?? _coerceString(json['product_link']);
-    this.department = department ??
-        SafetyTipsDepartment.fromNullableJson(json['department']);
+    this.department =
+        department ?? SafetyTipsDepartment.fromNullableJson(json['department']);
     final List<SafetyTipAction> parsedActions =
-    SafetyTipAction.parseList(json['actions']);
+        SafetyTipAction.parseList(json['actions']);
     actions = List<SafetyTipAction>.unmodifiable(
       parsedActions.isNotEmpty
           ? parsedActions
@@ -71,8 +72,6 @@ class SafetyTipsModel {
   }
 }
 
-
-
 class SafetyTipsDepartment {
   final int? id;
   final String? name;
@@ -95,7 +94,7 @@ class SafetyTipsDepartment {
 
   factory SafetyTipsDepartment.fromJson(Map<String, dynamic> json) {
     final Map<String, dynamic> normalized = json.map(
-          (String key, dynamic value) => MapEntry(key.toLowerCase(), value),
+      (String key, dynamic value) => MapEntry(key.toLowerCase(), value),
     );
 
     final String? resolvedName =
@@ -131,8 +130,8 @@ class SafetyTipsDepartment {
       data['raw'] = raw;
     }
     data.removeWhere(
-          (String key, dynamic value) =>
-      value == null || (value is String && value.isEmpty),
+      (String key, dynamic value) =>
+          value == null || (value is String && value.isEmpty),
     );
     return data;
   }
@@ -150,7 +149,7 @@ class SafetyTipsDepartment {
     if (value is Map) {
       return SafetyTipsDepartment.fromJson(
         value.map(
-              (dynamic key, dynamic value) => MapEntry(key.toString(), value),
+          (dynamic key, dynamic value) => MapEntry(key.toString(), value),
         ),
       );
     }
@@ -193,7 +192,8 @@ class SafetyTipAction {
       'url': url,
       'product_link': productLink,
     };
-    data.removeWhere((key, value) => value == null || (value is String && value.isEmpty));
+    data.removeWhere(
+        (key, value) => value == null || (value is String && value.isEmpty));
     return data;
   }
 
@@ -210,7 +210,7 @@ class SafetyTipAction {
     if (value is Map) {
       return SafetyTipAction.fromJson(
         value.map(
-              (dynamic key, dynamic value) => MapEntry(key.toString(), value),
+          (dynamic key, dynamic value) => MapEntry(key.toString(), value),
         ),
       );
     }

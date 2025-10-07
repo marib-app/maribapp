@@ -10,8 +10,6 @@ import 'package:lottie/lottie.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/ui/screens/settings/main_activity.dart';
 
-
-
 class SuccessItemScreen extends StatefulWidget {
   final ItemModel model;
   final bool isEdit;

@@ -1,7 +1,7 @@
 import 'dart:collection';
 
 class ChatMessageTracker {
-  ChatMessageTracker._({this.maxEntries = _defaultMaxEntries});
+  ChatMessageTracker._();
 
   static const int _defaultMaxEntries = 200;
 

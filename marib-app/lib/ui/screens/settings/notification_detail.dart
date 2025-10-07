@@ -6,7 +6,6 @@ import 'package:marib/data/model/notification_data.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 
 class NotificationDetail extends StatefulWidget {
@@ -40,9 +39,9 @@ class _NotificationDetailState extends State<NotificationDetail> {
       );
     }
 
-    final notif   = args as NotificationData;
-    final imgUrl  = _normalizeImage(notif.image);
-    final title   = (notif.title ?? '').trim();
+    final notif = args;
+    final imgUrl = _normalizeImage(notif.image);
+    final title = (notif.title ?? '').trim();
     final message = (notif.message ?? '').trim();
     final timeStr = UiUtils.formatSmartTime(notif.createdAt);
 
@@ -57,8 +56,7 @@ class _NotificationDetailState extends State<NotificationDetail> {
         padding: const EdgeInsets.only(bottom: 20),
         children: <Widget>[
           // صورة الإشعار (إن وُجدت)
-          if (imgUrl != null && imgUrl.isNotEmpty)
-            const SizedBox(height: 10),
+          if (imgUrl != null && imgUrl.isNotEmpty) const SizedBox(height: 10),
           if (imgUrl != null && imgUrl.isNotEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -72,9 +70,6 @@ class _NotificationDetailState extends State<NotificationDetail> {
             ),
 
           const SizedBox(height: 10),
-
-
-
 
 // سطر واحد: العنوان يمين — التاريخ يسار
 
@@ -115,10 +110,7 @@ class _NotificationDetailState extends State<NotificationDetail> {
             ),
           ),
 
-
-
           const SizedBox(height: 4),
-
 
           // فاصل خفيف جدًا (نصف خط تقريبًا) بلون رمادي باهت
           Padding(
@@ -131,7 +123,6 @@ class _NotificationDetailState extends State<NotificationDetail> {
           ),
 
           const SizedBox(height: 10),
-
 
           // نص الإشعار مع دعم الروابط
           if (message.isNotEmpty)
@@ -154,7 +145,6 @@ class _NotificationDetailState extends State<NotificationDetail> {
     );
   }
 
-
   /// تطبيع بسيط للرابط (أضف base لاحقًا إذا احتجت)
   String? _normalizeImage(String? url) {
     if (url == null) return null;
@@ -165,7 +155,6 @@ class _NotificationDetailState extends State<NotificationDetail> {
     return u; // اسم ملف فقط — بدّله إلى '$base/$u' لو احتجت
   }
 }
-
 
 /// صورة شبكة آمنة مع معالجة أخطاء
 class _NetworkImageSafe extends StatelessWidget {

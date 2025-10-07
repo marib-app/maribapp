@@ -64,7 +64,8 @@ class PaymentParams {
 
   /// تمثيل مختصر للمبلغ والعملة (مثال: "25 SAR")
   String? compact() {
-    final amt = amount ?? (amountRaw != null ? double.tryParse(amountRaw!) : null);
+    final amt =
+        amount ?? (amountRaw != null ? double.tryParse(amountRaw!) : null);
     final cur = currency?.trim();
     if (amt != null && cur != null && cur.isNotEmpty) {
       // بدون تنسيق معقّد كي لا نعتمد على intl هنا
@@ -89,10 +90,10 @@ class ContinueDirective {
   final PaymentParams? payment;
 
   const ContinueDirective(
-      this.action, {
-        this.params = const {},
-        this.payment,
-      });
+    this.action, {
+    this.params = const {},
+    this.payment,
+  });
 
   bool get isHidden => action == ContinueAction.none;
   bool get isPay => action == ContinueAction.pay;
@@ -182,7 +183,8 @@ class DirectiveParser {
     }
 
     // احتياطي (إن لم توجد تعليقة)، نحاول استنتاج كلمات بسيطة في الأسطر الأخيرة
-    final tailText = html.trim().split('\n').reversed.take(4).join(' ').toLowerCase();
+    final tailText =
+        html.trim().split('\n').reversed.take(4).join(' ').toLowerCase();
     if (tailText.contains('الخدمة بدون زر')) {
       return const ContinueDirective(ContinueAction.none);
     }
@@ -206,13 +208,13 @@ class ContinueNavigator {
   /// [itemId]         : معرّف الخدمة (إن توفر)
   /// [serviceTitle]   : عنوان الخدمة (إن توفر)
   static Future<void> handle(
-      BuildContext context, {
-        required ContinueDirective directive,
-        required String payRouteName,
-        required String fieldsRouteName,
-        int? itemId,
-        String? serviceTitle,
-      }) async {
+    BuildContext context, {
+    required ContinueDirective directive,
+    required String payRouteName,
+    required String fieldsRouteName,
+    int? itemId,
+    String? serviceTitle,
+  }) async {
     if (directive.isHidden || directive.action == ContinueAction.showDefault) {
       // لا شيء: إمّا مُخفى أو الافتراضي (اترك الزر يتصرف من الخارج إن رغبت)
       return;

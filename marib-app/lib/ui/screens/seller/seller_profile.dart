@@ -154,13 +154,15 @@ class SellerProfileScreenState extends State<SellerProfileScreen>
               //automaticallyImplyLeading: false,
               pinned: true,
 
-              expandedHeight: ((widget.model.createdAt != null && widget.model.createdAt != '') &&
-                ((widget.model.mobile != null && widget.model.mobile!.isNotEmpty) || widget.rating != null))
+              expandedHeight: ((widget.model.createdAt != null &&
+                          widget.model.createdAt != '') &&
+                      ((widget.model.mobile != null &&
+                              widget.model.mobile!.isNotEmpty) ||
+                          widget.rating != null))
                   ? context.screenHeight / 1.6
                   : context.screenHeight / 3.4,
               backgroundColor: context.color.secondaryColor,
-              flexibleSpace: 
-              FlexibleSpaceBar(
+              flexibleSpace: FlexibleSpaceBar(
                 background: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
@@ -195,13 +197,11 @@ class SellerProfileScreenState extends State<SellerProfileScreen>
                             .bold(weight: FontWeight.w400)
                             .color(context.color.textDefaultColor),
                       ],
-                      if(widget.model.mobile != null &&
-                        widget.model.mobile!.isNotEmpty) ...[
+                      if (widget.model.mobile != null &&
+                          widget.model.mobile!.isNotEmpty) ...[
                         SizedBox(
                           height: 7,
                         ),
-
-
                         Center(
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -234,17 +234,13 @@ class SellerProfileScreenState extends State<SellerProfileScreen>
                                     context: context,
                                   );
                                 },
-                                icon: SvgPicture.asset(AppIcons.message , color: context.color.territoryColor),
+                                icon: SvgPicture.asset(AppIcons.message,
+                                    color: context.color.territoryColor),
                               ),
                             ],
                           ),
                         )
-
                       ],
-
-
-
-                      
                       if (widget.rating != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
@@ -288,13 +284,13 @@ class SellerProfileScreenState extends State<SellerProfileScreen>
                             ),
                           ),
                         ),
-                                
-                SliderWidget(interfaceType: "homepage"),
-                SizedBox(height: 1,)
+                      SliderWidget(interfaceType: "homepage"),
+                      SizedBox(
+                        height: 1,
+                      )
                     ]),
               ),
-              bottom: 
-              PreferredSize(
+              bottom: PreferredSize(
                 preferredSize: Size.fromHeight(60.0),
                 child: Container(
                   decoration: BoxDecoration(
@@ -304,10 +300,8 @@ class SellerProfileScreenState extends State<SellerProfileScreen>
                           color: context.color.backgroundColor, width: 2.5),
                     ),
                   ),
-                  child:
-                   Column(
+                  child: Column(
                     children: [
-        
                       TabBar(
                         controller: _tabController,
                         indicatorColor: context.color.territoryColor,
@@ -1290,22 +1284,21 @@ class CustomRatingBar extends StatelessWidget {
   }
 }
 
-  
-  String formatPhoneNumber(String fullNumber, String countryCode) {
-    // Normalize the country code (remove '+' if present)
-    countryCode = countryCode.replaceAll('+', '');
+String formatPhoneNumber(String fullNumber, String countryCode) {
+  // Normalize the country code (remove '+' if present)
+  countryCode = countryCode.replaceAll('+', '');
 
-    // Remove '+' from fullNumber if present
-    fullNumber = fullNumber.replaceAll('+', '');
+  // Remove '+' from fullNumber if present
+  fullNumber = fullNumber.replaceAll('+', '');
 
-    // Check if the fullNumber already starts with the country code
-    if (!fullNumber.startsWith(countryCode)) {
-      // If not, prepend the country code
-      fullNumber = countryCode + fullNumber;
-    }
-
-    // Add '+' to the beginning of the full number
-    fullNumber = '+' + fullNumber;
-
-    return fullNumber;
+  // Check if the fullNumber already starts with the country code
+  if (!fullNumber.startsWith(countryCode)) {
+    // If not, prepend the country code
+    fullNumber = countryCode + fullNumber;
   }
+
+  // Add '+' to the beginning of the full number
+  fullNumber = '+' + fullNumber;
+
+  return fullNumber;
+}

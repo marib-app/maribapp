@@ -4,7 +4,6 @@ import 'package:flutter/services.dart'; // For SystemUiOverlayStyle
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart'; // For displaying SVG images
 import 'package:marib/app/routes.dart';
-import 'package:marib/data/cubits/auth/authentication_cubit.dart';
 import 'package:marib/data/cubits/otp_cubit.dart';
 import 'package:marib/data/repositories/otp_repository.dart';
 // <-- Added import for Api
@@ -15,9 +14,6 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/hive_utils.dart';
 // Still required for _showErrorDialog
 import 'package:pinput/pinput.dart'; // For OTP input fields
-import 'package:firebase_messaging/firebase_messaging.dart';
-import 'dart:io';
-import 'package:marib/utils/api.dart';
 
 const double sidePadding = 20.0;
 
@@ -37,20 +33,16 @@ class MobileVerificationScreen extends StatefulWidget {
     this.googleData,
   });
 
-
-
-
-
-
-
   static BlurredRouter route(RouteSettings settings) {
     final args = settings.arguments as Map<String, dynamic>?;
     final selectedType = args?['selectedAccountType'] as String?;
     final phoneNumber = (args?['phoneNumber'] as String?) ?? "";
 
     if (phoneNumber.isEmpty) {
-      print("Error: Phone number argument is missing for MobileVerificationScreen");
-      throw ArgumentError("Phone number is required for MobileVerificationScreen");
+      print(
+          "Error: Phone number argument is missing for MobileVerificationScreen");
+      throw ArgumentError(
+          "Phone number is required for MobileVerificationScreen");
     }
 
     return BlurredRouter(
@@ -65,10 +57,6 @@ class MobileVerificationScreen extends StatefulWidget {
       },
     );
   }
-
-
-
-
 
   @override
   State<MobileVerificationScreen> createState() =>
@@ -86,14 +74,10 @@ class _MobileVerificationScreenState extends State<MobileVerificationScreen> {
   bool _isLoading = false; // Added state variable for loading
   Timer? _bottomSheetTimer; // Timer to automatically close bottom sheet
 
-
-
   @override
   void initState() {
     super.initState();
     _otpCubit = OtpCubit(OtpRepository());
-
-
 
     print("Selected account type: " + (widget.selectedAccountType ?? ''));
     print("Verifying phone number: ${widget.phoneNumber}");
@@ -122,18 +106,11 @@ class _MobileVerificationScreenState extends State<MobileVerificationScreen> {
           if (mounted) {
             print("Auto-sending OTP to: ${widget.phoneNumber}");
             _otpCubit.sendOtp(widget.phoneNumber, widget.countryCode);
-
           }
         });
       }
     });
   }
-
-
-
-
-
-
 
   @override
   void dispose() {

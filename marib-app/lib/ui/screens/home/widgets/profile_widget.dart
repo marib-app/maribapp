@@ -267,7 +267,7 @@ class _ProfileHeaderWidgetState extends State<ProfileHeaderWidget>
                             width: context.screenWidth * 0.63,
                             child: Text(
                               // /        '#' +
-                              (HiveUtils.getUserDetails()?.mobile?.toString() ??
+                              (HiveUtils.getUserDetails().mobile?.toString() ??
                                   ''),
                               softWrap: true,
                               overflow: TextOverflow.ellipsis,

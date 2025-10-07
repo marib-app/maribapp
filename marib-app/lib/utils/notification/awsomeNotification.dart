@@ -27,9 +27,6 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/model/chat/chated_user_model.dart';
 
-
-
-
 class LocalAwsomeNotification {
   AwesomeNotifications notification = AwesomeNotifications();
 
@@ -69,7 +66,7 @@ class LocalAwsomeNotification {
     );
   }
 
-  createNotification({
+  Future<void> createNotification({
     required RemoteMessage notificationData,
     required bool isLocked,
   }) async {
@@ -240,21 +237,22 @@ class NotificationController {
                 ],
                 child: Builder(builder: (context) {
                   final Map<String, dynamic> notificationData =
-                  Map<String, dynamic>.from(payload ?? {});
+                      Map<String, dynamic>.from(payload ?? {});
                   final String? currency =
-                  NotificationService.extractCurrency(notificationData);
-                  final String? currencySymbol = NotificationService
-                      .extractCurrencySymbol(notificationData);
+                      NotificationService.extractCurrency(notificationData);
+                  final String? currencySymbol =
+                      NotificationService.extractCurrencySymbol(
+                          notificationData);
                   final List<ChatParticipant>? participants =
                       NotificationService.getCachedParticipants(
-                        (conversationId ?? '').toString(),
-                        itemOfferId:
-                        itemOfferIdParsed > 0 ? itemOfferIdParsed : null,
-                        senderId: senderId?.toString(),
-                        itemId: itemId?.toString(),
-                      ) ??
-                          NotificationService
-                              .buildParticipantsFromNotification(
+                            (conversationId ?? '').toString(),
+                            itemOfferId: itemOfferIdParsed > 0
+                                ? itemOfferIdParsed
+                                : null,
+                            senderId: senderId?.toString(),
+                            itemId: itemId?.toString(),
+                          ) ??
+                          NotificationService.buildParticipantsFromNotification(
                             data: notificationData,
                           );
                   return ChatScreen(
@@ -267,7 +265,6 @@ class NotificationController {
                     date: date ?? "",
                     itemOfferId: itemOfferIdParsed,
                     conversationId: (conversationId ?? '').toString(),
-
                     itemPrice: NotificationService.getPrice(itemPrice!)!,
                     itemOfferPrice:
                         NotificationService.getPrice(itemOfferPrice),
@@ -298,7 +295,6 @@ class NotificationController {
         var itemOfferPrice = payload?['item_offer_amount'];
         final String? itemOfferIdRaw = payload?['item_offer_id'];
 
-
         final int itemOfferIdParsed =
             int.tryParse(itemOfferIdRaw?.toString() ?? '') ?? 0;
 
@@ -322,21 +318,23 @@ class NotificationController {
                   ],
                   child: Builder(builder: (context) {
                     final Map<String, dynamic> notificationData =
-                    Map<String, dynamic>.from(payload ?? {});
-                    final String? currency = NotificationService.extractCurrency(
+                        Map<String, dynamic>.from(payload ?? {});
+                    final String? currency =
+                        NotificationService.extractCurrency(
                       notificationData,
                     );
-                    final String? currencySymbol = NotificationService
-                        .extractCurrencySymbol(notificationData);
+                    final String? currencySymbol =
+                        NotificationService.extractCurrencySymbol(
+                            notificationData);
                     final List<ChatParticipant>? participants =
                         NotificationService.getCachedParticipants(
-                          (conversationId ?? '').toString(),
-                          itemOfferId: itemOfferIdParsed > 0
-                              ? itemOfferIdParsed
-                              : null,
-                          senderId: senderId?.toString(),
-                          itemId: itemId?.toString(),
-                        ) ??
+                              (conversationId ?? '').toString(),
+                              itemOfferId: itemOfferIdParsed > 0
+                                  ? itemOfferIdParsed
+                                  : null,
+                              senderId: senderId?.toString(),
+                              itemId: itemId?.toString(),
+                            ) ??
                             NotificationService
                                 .buildParticipantsFromNotification(
                               data: notificationData,
@@ -353,14 +351,13 @@ class NotificationController {
                       conversationId: (conversationId ?? '').toString(),
                       itemPrice: NotificationService.getPrice(itemPrice!)!,
                       itemOfferPrice:
-                      NotificationService.getPrice(itemOfferPrice),
+                          NotificationService.getPrice(itemOfferPrice),
                       buyerId: HiveUtils.getUserId(),
                       alreadyReview: false,
                       isPurchased: 0,
                       participants: participants,
                       currency: currency,
                       currencySymbol: currencySymbol,
-
                     );
                   }),
                 );

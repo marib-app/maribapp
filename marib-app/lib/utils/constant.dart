@@ -6,7 +6,6 @@ import 'package:marib/ui/screens/filter_screen.dart';
 
 import 'package:flutter/material.dart';
 
-import 'package:marib/ui/screens/filter_screen.dart';
 import 'package:marib/data/model/item_filter_model.dart';
 import 'package:marib/data/model/social_link_model.dart';
 
@@ -19,7 +18,6 @@ class Constant {
   static String appstoreURLios = "";
   static String iOSAppId = '';
   static const String shareappText = AppSettings.shareAppText;
-
 
   static const double defaultPadding = 16.0;
 
@@ -110,8 +108,6 @@ class Constant {
 
   static List<int> delegatesShein = [];
   static List<int> delegatesComputer = [];
-
-
 
   static List<PostedSinceItem> postedSince = [
     PostedSinceItem(status: "All Time", value: "all-time"),

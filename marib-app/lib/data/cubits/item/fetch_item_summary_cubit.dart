@@ -81,7 +81,8 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
     final String? normalizedSort = _sanitizeQuery(sortBy);
     final ItemFilterModel? clonedFilter = _cloneFilter(filter);
 
-    if (_shouldResetState(categoryId, normalizedSearch, normalizedSort, clonedFilter)) {
+    if (_shouldResetState(
+        categoryId, normalizedSearch, normalizedSort, clonedFilter)) {
       emit(FetchItemSummaryInitial());
     }
 
@@ -89,7 +90,7 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
 
     try {
       final DataOutput<ItemSummary> result =
-      await _itemRepository.fetchItemSummariesFromCatId(
+          await _itemRepository.fetchItemSummariesFromCatId(
         categoryId: categoryId,
         page: 1,
         search: normalizedSearch,
@@ -123,7 +124,7 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
 
     try {
       final DataOutput<ItemSummary> result =
-      await _itemRepository.fetchItemSummariesFromCatId(
+          await _itemRepository.fetchItemSummariesFromCatId(
         categoryId: currentState.categoryId,
         page: currentState.page + 1,
         search: currentState.search,
@@ -132,7 +133,7 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
       );
 
       final List<ItemSummary> updatedItems =
-      List<ItemSummary>.from(currentState.items)..addAll(result.modelList);
+          List<ItemSummary>.from(currentState.items)..addAll(result.modelList);
 
       emit(
         currentState.copyWith(
@@ -178,11 +179,11 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
   }
 
   bool _shouldResetState(
-      int categoryId,
-      String? search,
-      String? sortBy,
-      ItemFilterModel? filter,
-      ) {
+    int categoryId,
+    String? search,
+    String? sortBy,
+    ItemFilterModel? filter,
+  ) {
     final currentState = state;
     if (currentState is! FetchItemSummarySuccess) {
       return false;

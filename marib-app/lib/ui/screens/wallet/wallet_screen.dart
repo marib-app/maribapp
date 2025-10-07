@@ -8,7 +8,6 @@ import 'package:marib/ui/screens/wallet/wallet_screen_ui.dart';
 import 'package:marib/data/cubits/wallet/wallet_transfers_cubit.dart';
 import 'package:marib/data/cubits/wallet/wallet_withdrawals_cubit.dart';
 
-
 class WalletScreen extends StatelessWidget {
   const WalletScreen({super.key});
 
@@ -19,13 +18,14 @@ class WalletScreen extends StatelessWidget {
         return MultiBlocProvider(
           providers: [
             BlocProvider(create: (_) => WalletSummaryCubit()..fetchSummary()),
-            BlocProvider(create: (_) => WalletTransactionsCubit()..loadInitial()),
-            BlocProvider(create: (_) => ManualPaymentRequestsCubit()..loadInitial()),
-
+            BlocProvider(
+                create: (_) => WalletTransactionsCubit()..loadInitial()),
+            BlocProvider(
+                create: (_) => ManualPaymentRequestsCubit()..loadInitial()),
             BlocProvider(create: (_) => WalletTransfersCubit()),
             BlocProvider(
-              create: (_) => WalletWithdrawalsCubit()
-                ..loadInitial(includeOptions: true),
+              create: (_) =>
+                  WalletWithdrawalsCubit()..loadInitial(includeOptions: true),
             ),
           ],
           child: const WalletScreenUI(),
@@ -40,11 +40,12 @@ class WalletScreen extends StatelessWidget {
       providers: [
         BlocProvider(create: (_) => WalletSummaryCubit()..fetchSummary()),
         BlocProvider(create: (_) => WalletTransactionsCubit()..loadInitial()),
-        BlocProvider(create: (_) => ManualPaymentRequestsCubit()..loadInitial()),
+        BlocProvider(
+            create: (_) => ManualPaymentRequestsCubit()..loadInitial()),
         BlocProvider(create: (_) => WalletTransfersCubit()),
         BlocProvider(
-          create: (_) => WalletWithdrawalsCubit()
-            ..loadInitial(includeOptions: true),
+          create: (_) =>
+              WalletWithdrawalsCubit()..loadInitial(includeOptions: true),
         ),
       ],
       child: const WalletScreenUI(),

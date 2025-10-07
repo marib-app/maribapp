@@ -43,13 +43,10 @@ class PaymentGateways {
       {required double price,
       required int packageId,
       required dynamic paymentIntent}) async {
-
     if (!_legacyGatewaysEnabled) {
       _showDisabledMessage(context);
       return;
     }
-
-
 
     String paymentIntentId = paymentIntent["id"].toString();
     String clientSecret =
@@ -116,7 +113,6 @@ class PaymentGateways {
           context, UiUtils.getTranslatedLabel(context, "setAPIkey"));
     }
   }
-
 
   static Future<void> _purchase(BuildContext context) async {
     try {

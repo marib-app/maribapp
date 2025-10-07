@@ -3,15 +3,15 @@ import 'package:flutter/services.dart';
 
 /// ألوان مطابقة
 const Color _secondaryColor = Color(0xFFFF8000); // برتقالي
-const Color _accentColor    = Color(0xFFE0E0E0); // رمادي فاتح
+const Color _accentColor = Color(0xFFE0E0E0); // رمادي فاتح
 
 /// نموذج بسيط للبنوك (نفس المفاتيح المستخدمة في الواجهة الأصلية)
 class BankInfo {
-  final String name;           // الاسم الظاهر
-  final String logo;           // مسار الأيقونة/الشعار
-  final String? accountName;   // رقم الحساب أو الاسم القابل للنسخ (اختياري)
-  final String? phone;         // رقم هاتف (اختياري)
-  final String? amount;        // مبلغ/وصف إضافي (اختياري)
+  final String name; // الاسم الظاهر
+  final String logo; // مسار الأيقونة/الشعار
+  final String? accountName; // رقم الحساب أو الاسم القابل للنسخ (اختياري)
+  final String? phone; // رقم هاتف (اختياري)
+  final String? amount; // مبلغ/وصف إضافي (اختياري)
 
   const BankInfo({
     required this.name,
@@ -79,7 +79,8 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color lightBackground = isDark ? Colors.grey.shade800 : const Color(0xFFF9F9F9);
+    final Color lightBackground =
+        isDark ? Colors.grey.shade800 : const Color(0xFFF9F9F9);
     final Color textColor = isDark ? Colors.white : const Color(0xFF222222);
     final Color backgroundColor = Theme.of(context).scaffoldBackgroundColor;
     final Color borderColor = isDark ? Colors.grey.shade600 : _accentColor;
@@ -138,15 +139,18 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
                           const SizedBox(height: 8),
 
                           // شريحة قابلة للنقر لنسخ رقم/اسم الحساب إن وُجد
-                          if (bank.accountName != null && bank.accountName!.trim().isNotEmpty)
+                          if (bank.accountName != null &&
+                              bank.accountName!.trim().isNotEmpty)
                             Material(
-                              color: _accentColor.withOpacity(isDark ? 0.1 : 0.5),
+                              color:
+                                  _accentColor.withOpacity(isDark ? 0.1 : 0.5),
                               borderRadius: BorderRadius.circular(8),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(8),
                                 onTap: () {
                                   // TODO: يمكنك إبقاء النسخ أو إزالته حسب رغبتك
-                                  Clipboard.setData(ClipboardData(text: bank.accountName!));
+                                  Clipboard.setData(
+                                      ClipboardData(text: bank.accountName!));
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text("✅ تم نسخ رقم الحساب"),
@@ -154,10 +158,12 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
                                     ),
                                   );
                                   setState(() => _selectedIndex = index);
-                                  widget.onSelect?.call(bank); // TODO: ربط إضافي عند النسخ
+                                  widget.onSelect
+                                      ?.call(bank); // TODO: ربط إضافي عند النسخ
                                 },
                                 child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
                                   child: Text(
                                     bank.accountName!,
                                     style: TextStyle(
@@ -201,11 +207,7 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
 
 Future<String?> showPurchaseCodeDialog(BuildContext context,
     {VoidCallback? onShowGuide}) async {
-
-
   final result = await showDialog<String?>(
-
-
     context: context,
     barrierDismissible: true,
     builder: (dialogContext) {
@@ -220,15 +222,11 @@ Future<String?> showPurchaseCodeDialog(BuildContext context,
 class _PurchaseCodeDialog extends StatefulWidget {
   const _PurchaseCodeDialog({this.onShowGuide});
 
-
   final VoidCallback? onShowGuide;
-
 
   @override
   State<_PurchaseCodeDialog> createState() => _PurchaseCodeDialogState();
 }
-
-
 
 class _PurchaseCodeDialogState extends State<_PurchaseCodeDialog> {
   late final TextEditingController _codeController;
@@ -288,35 +286,34 @@ class _PurchaseCodeDialogState extends State<_PurchaseCodeDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            const Text(
-            'يرجى إدخال كود الشراء المرسل من البنك لإتمام العملية.',
-            style: TextStyle(fontSize: 13),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _codeController,
-            autofocus: true,
-            keyboardType: TextInputType.number,
-            textInputAction: TextInputAction.done,
-            decoration: InputDecoration(
-              hintText: 'أدخل كود الشراء المكوّن من الأرقام',
-              filled: true,
-              fillColor:
-              isDark ? Colors.grey.shade800 : const Color(0xFFF3F3F3),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                  ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: _secondaryColor,
-                  width: 1.6,
-                    ),
+              const Text(
+                'يرجى إدخال كود الشراء المرسل من البنك لإتمام العملية.',
+                style: TextStyle(fontSize: 13),
               ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _codeController,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.done,
+                decoration: InputDecoration(
+                  hintText: 'أدخل كود الشراء المكوّن من الأرقام',
+                  filled: true,
+                  fillColor:
+                      isDark ? Colors.grey.shade800 : const Color(0xFFF3F3F3),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: _secondaryColor,
+                      width: 1.6,
+                    ),
+                  ),
                 ),
-            onChanged: (_) => setState(() {}),
-
-          ),
+                onChanged: (_) => setState(() {}),
+              ),
               const SizedBox(height: 8),
               const Align(
                 alignment: Alignment.centerRight,
@@ -324,12 +321,9 @@ class _PurchaseCodeDialogState extends State<_PurchaseCodeDialog> {
                   '🔒 يتم مراجعة الكود من قبل النظام قبل إتمام الطلب.',
                   style: TextStyle(fontSize: 11, color: Colors.grey),
                 ),
-
-
               ),
             ],
           ),
-
         ),
       ),
       actions: [
@@ -346,17 +340,13 @@ class _PurchaseCodeDialogState extends State<_PurchaseCodeDialog> {
           ),
           onPressed: _hasValue
               ? () => Navigator.of(context).pop(_codeController.text.trim())
-
               : null,
           child: const Text('تأكيد'),
-
         ),
       ],
     );
   }
 }
-
-
 
 /// مثال استعمال بسيط داخل شاشة (اختياري للمعاينة)
 class PaymentUIExample extends StatelessWidget {

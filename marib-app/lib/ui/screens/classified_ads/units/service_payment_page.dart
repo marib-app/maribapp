@@ -43,11 +43,12 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
   late final int? _itemId;
   late final String _serviceTitle;
   late final num? _amount;
-  late final String? _currency;      // كود العملة إن وُجد (USD/SAR/...)
-  late final String? _currencyLabel; // وصف/رمز العملة إن أُرسل (مثل "SAR ر.س" أو "﷼")
+  late final String? _currency; // كود العملة إن وُجد (USD/SAR/...)
+  late final String?
+      _currencyLabel; // وصف/رمز العملة إن أُرسل (مثل "SAR ر.س" أو "﷼")
   late final String? _note;
-  late final String? _payUrl;     // رابط دفع خارجي إن وجد
-  late final String? _returnTo;   // اسم Route للعودة عند نجاح الدفع
+  late final String? _payUrl; // رابط دفع خارجي إن وجد
+  late final String? _returnTo; // اسم Route للعودة عند نجاح الدفع
 
   // حالة الواجهة
   bool _processing = false;
@@ -75,25 +76,27 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
       return null;
     }
 
-    String? _toStr(dynamic v) => (v is String) ? v.trim() : v?.toString().trim();
+    String? _toStr(dynamic v) =>
+        (v is String) ? v.trim() : v?.toString().trim();
 
     // ===== قراءات مع Fallback للأسماء القديمة =====
     final a = widget.args;
 
-    _itemId       = _toInt(a['itemId'] ?? a['id']);
+    _itemId = _toInt(a['itemId'] ?? a['id']);
     _serviceTitle = _toStr(a['serviceTitle']) ?? 'دفع خدمة';
 
     // amount ← price/total (fallback)
-    _amount   = _toNum(a['amount'] ?? a['price'] ?? a['total']);
+    _amount = _toNum(a['amount'] ?? a['price'] ?? a['total']);
 
     // currency (أولوية للكود، مع حفظ label/الرمز لو متوفر)
-    _currency      = _toStr(a['currency'] ?? a['currency_code']);
-    _currencyLabel = _toStr(a['currency_label'] ?? a['currencyLabel'] ?? a['currency_symbol']);
+    _currency = _toStr(a['currency'] ?? a['currency_code']);
+    _currencyLabel = _toStr(
+        a['currency_label'] ?? a['currencyLabel'] ?? a['currency_symbol']);
 
     // note ← price_note/payment_note (fallback)
-    _note     = _toStr(a['note'] ?? a['price_note'] ?? a['payment_note']);
+    _note = _toStr(a['note'] ?? a['price_note'] ?? a['payment_note']);
 
-    _payUrl   = _toStr(a['pay_url'] ?? a['payment_url']);
+    _payUrl = _toStr(a['pay_url'] ?? a['payment_url']);
     _returnTo = _toStr(a['returnTo'] ?? a['return_to']);
   }
 
@@ -102,27 +105,40 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
   String _currencyLabelFromCode(String? code) {
     final c = (code ?? '').toUpperCase();
     switch (c) {
-      case 'USD': return 'USD \$';
-      case 'EUR': return 'EUR €';
-      case 'SAR': return 'SAR ر.س';
-      case 'AED': return 'AED د.إ';
-      case 'KWD': return 'KWD د.ك';
-      case 'OMR': return 'OMR ر.ع';
-      case 'QAR': return 'QAR ر.ق';
-      case 'BHD': return 'BHD د.ب';
-      case 'TRY': return 'TRY ₺';
-      case 'GBP': return 'GBP £';
+      case 'USD':
+        return 'USD \$';
+      case 'EUR':
+        return 'EUR €';
+      case 'SAR':
+        return 'SAR ر.س';
+      case 'AED':
+        return 'AED د.إ';
+      case 'KWD':
+        return 'KWD د.ك';
+      case 'OMR':
+        return 'OMR ر.ع';
+      case 'QAR':
+        return 'QAR ر.ق';
+      case 'BHD':
+        return 'BHD د.ب';
+      case 'TRY':
+        return 'TRY ₺';
+      case 'GBP':
+        return 'GBP £';
       case 'YER':
       case 'YRI':
       case 'YERR':
         return 'YER ﷼';
-      default: return c.isEmpty ? 'USD \$' : c;
+      default:
+        return c.isEmpty ? 'USD \$' : c;
     }
   }
 
-  String _formatAmount(num? amount, String? currencyCode, String? currencyLabel) {
+  String _formatAmount(
+      num? amount, String? currencyCode, String? currencyLabel) {
     if (amount == null) return '—';
-    final fixed = amount % 1 == 0 ? amount.toStringAsFixed(0) : amount.toString();
+    final fixed =
+        amount % 1 == 0 ? amount.toStringAsFixed(0) : amount.toString();
     // إن وُجد label مخصص من السيرفر استخدمه، وإلا كوّن من الكود
     final label = (currencyLabel?.isNotEmpty == true)
         ? currencyLabel!
@@ -250,8 +266,8 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
             buttonTitle: _processing
                 ? 'جارٍ المعالجة…'
                 : hasAmount
-                ? 'ادفع الآن • ${_formatAmount(_amount, _currency, _currencyLabel)}'
-                : 'المبلغ غير محدد',
+                    ? 'ادفع الآن • ${_formatAmount(_amount, _currency, _currencyLabel)}'
+                    : 'المبلغ غير محدد',
             radius: 12,
             height: 54,
             onPressed: () {
@@ -302,14 +318,16 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.info_outline, size: 18, color: theme.colorScheme.primary),
+                    Icon(Icons.info_outline,
+                        size: 18, color: theme.colorScheme.primary),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         _payUrl != null && _payUrl!.isNotEmpty
                             ? 'سيتم فتح بوابة الدفع في متصفح خارجي.'
                             : 'لا توجد بوابة دفع مفعّلة. سيتم تنفيذ دفع تجريبي (Mock) للتجربة.',
-                        style: theme.textTheme.bodySmall?.copyWith(height: 1.4, color: txt.withOpacity(0.85)),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                            height: 1.4, color: txt.withOpacity(0.85)),
                       ),
                     ),
                   ],
@@ -318,7 +336,8 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
 
               if (_error != null) ...[
                 const SizedBox(height: 10),
-                Text('خطأ: $_error', style: TextStyle(color: Colors.red.shade400)),
+                Text('خطأ: $_error',
+                    style: TextStyle(color: Colors.red.shade400)),
               ],
             ],
           ),
@@ -368,13 +387,21 @@ class _SummaryCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('تفاصيل الطلب', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: txt)),
+            Text('تفاصيل الطلب',
+                style: TextStyle(
+                    fontWeight: FontWeight.w700, fontSize: 16, color: txt)),
             const SizedBox(height: 10),
             _kv('الخدمة', title, txt),
             if (itemId != null) _kv('المعرف', '#$itemId', txt),
             _kv('المبلغ المطلوب', amountText, txt),
-            if ((currencyCode ?? currencyLabel)?.isNotEmpty == true && amountText == '—')
-              _kv('العملة', (currencyLabel?.isNotEmpty == true ? currencyLabel! : currencyCode!) , txt),
+            if ((currencyCode ?? currencyLabel)?.isNotEmpty == true &&
+                amountText == '—')
+              _kv(
+                  'العملة',
+                  (currencyLabel?.isNotEmpty == true
+                      ? currencyLabel!
+                      : currencyCode!),
+                  txt),
             if ((note ?? '').isNotEmpty) _kv('ملاحظة', note!, txt),
           ],
         ),
@@ -387,9 +414,13 @@ class _SummaryCard extends StatelessWidget {
       padding: const EdgeInsetsDirectional.only(bottom: 6),
       child: Row(
         children: [
-          SizedBox(width: 110, child: Text(k, style: TextStyle(color: txt.withOpacity(0.65)))),
+          SizedBox(
+              width: 110,
+              child: Text(k, style: TextStyle(color: txt.withOpacity(0.65)))),
           const SizedBox(width: 6),
-          Expanded(child: Text(v, style: TextStyle(fontWeight: FontWeight.w600, color: txt))),
+          Expanded(
+              child: Text(v,
+                  style: TextStyle(fontWeight: FontWeight.w600, color: txt))),
         ],
       ),
     );
@@ -419,7 +450,9 @@ class _PaymentMethodCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('طريقة الدفع', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: txt)),
+          Text('طريقة الدفع',
+              style: TextStyle(
+                  fontWeight: FontWeight.w700, fontSize: 16, color: txt)),
           const SizedBox(height: 8),
           _radio(context, 'card', 'بطاقة (Visa/Mastercard)'),
           _radio(context, 'bank', 'تحويل بنكي'),

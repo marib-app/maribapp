@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'user_referral_points.dart';
 
 extension MaribContextExtension on BuildContext {
   bool get isDarkMode => Theme.of(this).brightness == Brightness.dark;

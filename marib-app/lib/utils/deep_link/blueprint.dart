@@ -1,4 +1,3 @@
-
 import 'package:marib/utils/deep_link/nativeDeepLinkManager.dart';
 
 abstract class NativeDeepLinkUtility {

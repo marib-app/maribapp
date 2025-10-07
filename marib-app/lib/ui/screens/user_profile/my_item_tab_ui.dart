@@ -1,33 +1,27 @@
 // lib/ui/code_ui/user_profile/my_item_tab_ui.dart
 
-
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:marib/utils/constant.dart';
 
 import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 //- import 'package:marib/utils/constant.dart' as C;
-import 'package:marib/utils/constant.dart' show sidePadding, defaultPadding, Constant;
+import 'package:marib/utils/constant.dart'
+    show sidePadding, defaultPadding, Constant;
 
 import 'package:marib/data/cubits/item/fetch_my_item_cubit.dart';
 import 'package:marib/data/model/item/item_model.dart';
-import 'package:marib/utils/api.dart';
 
 import 'package:marib/ui/screens/widgets/errors/no_data_found.dart';
 import 'package:marib/ui/screens/widgets/errors/no_internet.dart';
 import 'package:marib/ui/screens/widgets/errors/something_went_wrong.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 
-import 'profile_item_card.dart';
-
+import 'package:marib/ui/screens/user_profile/profile_item_card.dart';
 
 const double sidePadding = Constant.defaultPadding;
 const double defaultPadding = Constant.defaultPadding;
-
 
 class MyItemTabUI extends StatelessWidget {
   final FetchMyItemsState state;
@@ -37,7 +31,6 @@ class MyItemTabUI extends StatelessWidget {
   final void Function(ItemModel) onTapItem;
   final String storageKey; // ✅ جديد
 
-
   const MyItemTabUI({
     super.key,
     required this.state,
@@ -46,33 +39,30 @@ class MyItemTabUI extends StatelessWidget {
     required this.onRetry,
     required this.onTapItem,
     required this.storageKey, // ✅ جديد
-
   });
 
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(
-      onRefresh: onRefresh,
-      color: context.color.territoryColor,
-      child: _buildBody(context,
-        contentMaxWidth: 820,
-        contentAlignment: Alignment.topCenter,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 1),
-        itemSpacing: 8,
-      )
-
-    );
+        onRefresh: onRefresh,
+        color: context.color.territoryColor,
+        child: _buildBody(
+          context,
+          contentMaxWidth: 820,
+          contentAlignment: Alignment.topCenter,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 1),
+          itemSpacing: 8,
+        ));
   }
 
-
   Widget _buildBody(
-      BuildContext context, {
-        double? contentMaxWidth,                         // NEW
-        AlignmentGeometry contentAlignment = Alignment.center, // NEW
-        EdgeInsetsGeometry? contentPadding,              // NEW
-        double itemSpacing = 6,                          // NEW
-        ScrollPhysics? physicsOverride,                  // NEW
-      }) {
+    BuildContext context, {
+    double? contentMaxWidth, // NEW
+    AlignmentGeometry contentAlignment = Alignment.center, // NEW
+    EdgeInsetsGeometry? contentPadding, // NEW
+    double itemSpacing = 6, // NEW
+    ScrollPhysics? physicsOverride, // NEW
+  }) {
     // مطاط دائمًا على كل المنصات (يمكن تجاوزه)
     final ScrollPhysics physics = physicsOverride ??
         const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
@@ -133,9 +123,6 @@ class MyItemTabUI extends StatelessWidget {
         );
       }
 
-
-
-
       // قائمة + لودر أخير
       final int itemCount = s.items.length + (s.isLoadingMore ? 1 : 0);
 
@@ -143,52 +130,45 @@ class MyItemTabUI extends StatelessWidget {
         behavior: const _AlwaysBouncyScrollBehavior(),
         child: Scrollbar(
           controller: controller,
-          child: wrapContent(
+          child: wrapContent(ListView.builder(
+            key: PageStorageKey(storageKey), // ✅ مفتاح ديناميكي لكل تبويب
+            controller: controller,
+            primary: false, // ✅ مهم مع NestedScrollView
+            physics: physics,
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            cacheExtent: 600, // ✅ سلاسة تمرير أفضل
+            itemCount: itemCount,
+            itemBuilder: (context, index) {
+              // اللودر الأخير
+              if (index == s.items.length) {
+                return Padding(
+                  padding:
+                      EdgeInsets.symmetric(vertical: itemSpacing * 2 / 1.5),
+                  child: Center(child: UiUtils.progress()),
+                );
+              }
 
+              final item = s.items[index];
 
-              ListView.builder(
-                key: PageStorageKey(storageKey),           // ✅ مفتاح ديناميكي لكل تبويب
-                controller: controller,
-                primary: false,                             // ✅ مهم مع NestedScrollView
-                physics: physics,
-                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                cacheExtent: 600,                           // ✅ سلاسة تمرير أفضل
-                itemCount: itemCount,
-                itemBuilder: (context, index) {
-                  // اللودر الأخير
-                  if (index == s.items.length) {
-                    return Padding(
-                      padding: EdgeInsets.symmetric(vertical: itemSpacing * 2 / 1.5),
-                      child: Center(child: UiUtils.progress()),
-                    );
-                  }
-
-                  final item = s.items[index];
-
-                  // ملاحظة: بما أنك ركّبت الشارة الجديدة داخل ProfileItemCard، ما نضيف أي شارة هنا
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: ProfileItemCard(
-                      item: item,
-                      onTap: () => onTapItem(item),
-                      // additionalHeight: 6,
-                      // additionalImageWidth: 12,
-                    ),
-                  );
-                },
-              )
-
-
-
-          ),
+              // ملاحظة: بما أنك ركّبت الشارة الجديدة داخل ProfileItemCard، ما نضيف أي شارة هنا
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: ProfileItemCard(
+                  item: item,
+                  onTap: () => onTapItem(item),
+                  // additionalHeight: 6,
+                  // additionalImageWidth: 12,
+                ),
+              );
+            },
+          )),
         ),
       );
     }
 
     return const SizedBox.shrink();
   }
-
 
   // ===== Helpers =====
   bool _isNoInternet(Object e) {
@@ -203,7 +183,6 @@ class MyItemTabUI extends StatelessWidget {
     } catch (_) {}
     return e.toString().toLowerCase().contains('no-internet');
   }
-
 
   // ===== شيمر =====
 
@@ -240,9 +219,6 @@ class MyItemTabUI extends StatelessWidget {
   }
 }
 
-
-
-
 // فصل صغير لهيكل سطور الشيمر
 class _ShimmerLines extends StatelessWidget {
   const _ShimmerLines();
@@ -270,7 +246,6 @@ class _ShimmerLines extends StatelessWidget {
   }
 }
 
-
 class _AlwaysBouncyScrollBehavior extends ScrollBehavior {
   const _AlwaysBouncyScrollBehavior();
   @override
@@ -278,23 +253,23 @@ class _AlwaysBouncyScrollBehavior extends ScrollBehavior {
       const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
   // إلغاء وميض التوهّج الأزرق/البرتقالي
   @override
-  Widget buildOverscrollIndicator(BuildContext context, Widget child, ScrollableDetails details) {
+  Widget buildOverscrollIndicator(
+      BuildContext context, Widget child, ScrollableDetails details) {
     return child;
   }
 }
-
-
-
 
 // === Status helpers (مطابقة لتفاصيل الإعلان، مختصرة) ===
 String _normalizeStatus(String? raw) {
   final s = (raw ?? '').trim().toLowerCase();
   if (s.isEmpty) return 'review';
-  if (['approved','active','published','enabled'].contains(s)) return 'approved';
-  if (['inactive','paused','disabled'].contains(s)) return 'inactive';
-  if (['rejected','declined'].contains(s)) return 'rejected';
-  if (['sold out','sold','completed'].contains(s)) return 'sold out';
-  if (['review','pending','under_review','inreview'].contains(s)) return 'review';
+  if (['approved', 'active', 'published', 'enabled'].contains(s))
+    return 'approved';
+  if (['inactive', 'paused', 'disabled'].contains(s)) return 'inactive';
+  if (['rejected', 'declined'].contains(s)) return 'rejected';
+  if (['sold out', 'sold', 'completed'].contains(s)) return 'sold out';
+  if (['review', 'pending', 'under_review', 'inreview'].contains(s))
+    return 'review';
   return s;
 }
 
@@ -302,7 +277,12 @@ class _StatusStyle {
   final Color bg, fg, border;
   final IconData icon;
   final String label;
-  const _StatusStyle({required this.bg,required this.fg,required this.border,required this.icon,required this.label});
+  const _StatusStyle(
+      {required this.bg,
+      required this.fg,
+      required this.border,
+      required this.icon,
+      required this.label});
 }
 
 Map<String, _StatusStyle> _statusStyles(BuildContext context) {
@@ -350,12 +330,13 @@ Map<String, _StatusStyle> _statusStyles(BuildContext context) {
 class _StatusChipSmall extends StatelessWidget {
   final String? rawStatus;
   final bool dense;
-  const _StatusChipSmall({required this.rawStatus, this.dense = true});
+  const _StatusChipSmall({required this.rawStatus});
 
   @override
   Widget build(BuildContext context) {
     final norm = _normalizeStatus(rawStatus);
-    final st = _statusStyles(context)[norm] ?? _statusStyles(context)['review']!;
+    final st =
+        _statusStyles(context)[norm] ?? _statusStyles(context)['review']!;
     final padH = dense ? 10.0 : 12.0;
     final padV = dense ? 6.0 : 8.0;
     return IgnorePointer(
@@ -375,8 +356,14 @@ class _StatusChipSmall extends StatelessWidget {
             children: [
               Icon(st.icon, size: dense ? 14 : 16, color: st.fg),
               const SizedBox(width: 6),
-              Text(st.label, maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: st.fg, fontWeight: FontWeight.w600, fontSize: dense ? 12 : 13),
+              Text(
+                st.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    color: st.fg,
+                    fontWeight: FontWeight.w600,
+                    fontSize: dense ? 12 : 13),
               ),
             ],
           ),

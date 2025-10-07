@@ -1,7 +1,6 @@
 part of 'chatTile.dart';
 
 extension _ChatTileUi on ChatTile {
-
   String _timeLabel() {
     final source = lastMessage?.createdAt ?? date;
     if (source.isEmpty) return '';
@@ -51,7 +50,6 @@ extension _ChatTileUi on ChatTile {
     return prefix + itemName;
   }
 
-
   Widget buildChatTile(BuildContext context) {
     return GestureDetector(
       onTap: () {
@@ -79,19 +77,16 @@ extension _ChatTileUi on ChatTile {
                   date: date,
                   itemOfferId: itemOfferId,
                   conversationId: conversationId,
-
                   itemPrice: itemPrice,
                   itemOfferPrice: itemAmount ?? null,
                   status: status,
                   buyerId: buyerId,
                   alreadyReview: alreadyReview,
                   isPurchased: isPurchased,
-
                   participants: participants,
                   lastMessage: lastMessage,
                   currency: itemCurrency,
                   currencySymbol: itemCurrencySymbol,
-
                 );
               }),
             );
@@ -117,7 +112,6 @@ extension _ChatTileUi on ChatTile {
               children: [
                 Stack(
                   clipBehavior: Clip.none,
-
                   children: [
                     const SizedBox(
                       width: 58,
@@ -153,7 +147,7 @@ extension _ChatTileUi on ChatTile {
                         onTap: () {
                           UiUtils.showFullScreenImage(context,
                               provider:
-                              CachedNetworkImageProvider(profilePicture));
+                                  CachedNetworkImageProvider(profilePicture));
                         },
                         child: Container(
                           height: 24,
@@ -161,28 +155,28 @@ extension _ChatTileUi on ChatTile {
                           decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(18),
                               border:
-                              Border.all(color: Colors.white, width: 1)),
+                                  Border.all(color: Colors.white, width: 1)),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(18),
                             child: profilePicture == ""
                                 ? CircleAvatar(
-                              radius: 18,
-                              backgroundColor:
-                              context.color.territoryColor,
-                              child: SvgPicture.asset(AppIcons.profile,
-                                  height: 15,
-                                  width: 15,
-                                  colorFilter: ColorFilter.mode(
-                                      context.color.buttonColor,
-                                      BlendMode.srcIn)),
-                            )
+                                    radius: 18,
+                                    backgroundColor:
+                                        context.color.territoryColor,
+                                    child: SvgPicture.asset(AppIcons.profile,
+                                        height: 15,
+                                        width: 15,
+                                        colorFilter: ColorFilter.mode(
+                                            context.color.buttonColor,
+                                            BlendMode.srcIn)),
+                                  )
                                 : CircleAvatar(
-                              radius: 15,
-                              backgroundColor:
-                              context.color.territoryColor,
-                              backgroundImage:
-                              NetworkImage(profilePicture),
-                            ),
+                                    radius: 15,
+                                    backgroundColor:
+                                        context.color.territoryColor,
+                                    backgroundImage:
+                                        NetworkImage(profilePicture),
+                                  ),
                           ),
                         ),
                       ),
@@ -195,12 +189,8 @@ extension _ChatTileUi on ChatTile {
                 Expanded(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
-
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-
-
-
                       Row(
                         children: [
                           Expanded(
@@ -223,11 +213,6 @@ extension _ChatTileUi on ChatTile {
                         ],
                       ),
                       const SizedBox(height: 4),
-
-
-
-
-
                       Text(
                         itemName,
                         softWrap: true,
@@ -268,7 +253,6 @@ extension _ChatTileUi on ChatTile {
                           ]
                         ],
                       ),
-
                     ],
                   ),
                 )

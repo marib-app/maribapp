@@ -6,11 +6,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/ui_utils.dart';
 
 /// واجهة شاشة المعلومات/حول - مفصولة بالكامل عن المنطق.
@@ -25,7 +23,6 @@ class InfoScreenUI extends StatelessWidget {
     required this.onTermsTap,
     required this.onPrivacyTap,
     required this.socialLinks,
-
   });
 
   final VoidCallback onGuideTap;
@@ -36,7 +33,6 @@ class InfoScreenUI extends StatelessWidget {
   final VoidCallback onTermsTap;
   final VoidCallback onPrivacyTap;
   final List<SocialLink> socialLinks;
-
 
   @override
   Widget build(BuildContext context) {
@@ -62,25 +58,45 @@ class InfoScreenUI extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 // الأزرار (صغيرة + فاصلة 10px بين كل زر)
-                _CustomTile(title: "دليل الاستخدام".translate(context),        svgImagePath: AppIcons.guide,   onTap: onGuideTap),
+                _CustomTile(
+                    title: "دليل الاستخدام".translate(context),
+                    svgImagePath: AppIcons.guide,
+                    onTap: onGuideTap),
                 const SizedBox(height: 8),
-                _CustomTile(title: "faqsLbl".translate(context),       svgImagePath: AppIcons.faqsIcon,onTap: onFaqsTap),
+                _CustomTile(
+                    title: "faqsLbl".translate(context),
+                    svgImagePath: AppIcons.faqsIcon,
+                    onTap: onFaqsTap),
                 const SizedBox(height: 8),
-                _CustomTile(title: "shareApp".translate(context),      svgImagePath: AppIcons.shareApp,onTap: onShareTap),
+                _CustomTile(
+                    title: "shareApp".translate(context),
+                    svgImagePath: AppIcons.shareApp,
+                    onTap: onShareTap),
                 const SizedBox(height: 8),
-                _CustomTile(title: "contactUs".translate(context),     svgImagePath: AppIcons.contactUs,onTap: onContactUsTap),
+                _CustomTile(
+                    title: "contactUs".translate(context),
+                    svgImagePath: AppIcons.contactUs,
+                    onTap: onContactUsTap),
                 const SizedBox(height: 8),
-                _CustomTile(title: "aboutUs".translate(context),       svgImagePath: AppIcons.aboutUs, onTap: onAboutUsTap),
+                _CustomTile(
+                    title: "aboutUs".translate(context),
+                    svgImagePath: AppIcons.aboutUs,
+                    onTap: onAboutUsTap),
                 const SizedBox(height: 8),
-                _CustomTile(title: "termsConditions".translate(context),svgImagePath: AppIcons.terms,  onTap: onTermsTap),
+                _CustomTile(
+                    title: "termsConditions".translate(context),
+                    svgImagePath: AppIcons.terms,
+                    onTap: onTermsTap),
                 const SizedBox(height: 8),
-                _CustomTile(title: "privacyPolicy".translate(context), svgImagePath: AppIcons.privacy, onTap: onPrivacyTap),
+                _CustomTile(
+                    title: "privacyPolicy".translate(context),
+                    svgImagePath: AppIcons.privacy,
+                    onTap: onPrivacyTap),
 
                 if (socialLinks.isNotEmpty) ...[
                   const SizedBox(height: 30),
                   _SocialLinksSection(links: socialLinks),
                 ],
-
               ],
             ),
           ),
@@ -90,20 +106,13 @@ class InfoScreenUI extends StatelessWidget {
   }
 }
 
-
-
-
 // ========================= Tiles صغيرة مع شريط جانبي متدرج =========================
-
 
 class _CustomTile extends StatelessWidget {
   const _CustomTile({
     required this.title,
     required this.svgImagePath,
     required this.onTap,
-    this.isSwitchBox,
-    this.switchValue,
-    this.onTapSwitch,
   });
 
   final String title;
@@ -137,7 +146,8 @@ class _CustomTile extends StatelessWidget {
           decoration: BoxDecoration(
             color: context.color.secondaryColor,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: context.color.textDefaultColor.withOpacity(0.06)),
+            border: Border.all(
+                color: context.color.textDefaultColor.withOpacity(0.06)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.03),
@@ -167,14 +177,17 @@ class _CustomTile extends StatelessWidget {
               // يسار: سهم أو سويتش (صغير)
               if (!withSwitch)
                 Container(
-                  width: 26, height: 26,
+                  width: 26,
+                  height: 26,
                   decoration: BoxDecoration(
                     color: context.color.backgroundColor,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   alignment: Alignment.center,
                   child: Transform.rotate(
-                    angle: Directionality.of(context) == ui.TextDirection.rtl ? 3.14159 : 0,
+                    angle: Directionality.of(context) == ui.TextDirection.rtl
+                        ? 3.14159
+                        : 0,
                     child: UiUtils.getSvg(
                       AppIcons.arrowRight,
                       color: context.color.textColorDark,
@@ -183,9 +196,10 @@ class _CustomTile extends StatelessWidget {
                 )
               else
                 SizedBox(
-                  height: 26, width: 42,
+                  height: 26,
+                  width: 42,
                   child: CupertinoSwitch(
-                    activeColor: accent,
+                    activeTrackColor: accent,
                     value: switchValue ?? false,
                     onChanged: (v) => onTapSwitch?.call(v),
                   ),
@@ -204,16 +218,19 @@ class _CustomTile extends StatelessWidget {
 
               // يمين: كبسولة الأيقونة (مصغّرة)
               Container(
-                width: 34, height: 34,
+                width: 34,
+                height: 34,
                 decoration: BoxDecoration(
                   color: accent.withOpacity(0.10),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: context.color.textDefaultColor.withOpacity(0.06)),
+                  border: Border.all(
+                      color: context.color.textDefaultColor.withOpacity(0.06)),
                 ),
                 alignment: Alignment.center,
                 child: UiUtils.getSvg(
                   svgImagePath,
-                  height: 18, width: 18,
+                  height: 18,
+                  width: 18,
                   color: accent,
                 ),
               ),
@@ -224,8 +241,6 @@ class _CustomTile extends StatelessWidget {
     );
   }
 }
-
-
 
 // ========================= أيقونات تواصل مصغّرة وواضحة =========================
 
@@ -256,7 +271,6 @@ class _SocialLinksSection extends StatelessWidget {
   }
 }
 
-
 class _SocialLinkButton extends StatelessWidget {
   const _SocialLinkButton({required this.link});
 
@@ -267,9 +281,9 @@ class _SocialLinkButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color accent = context.color.territoryColor;
-    final TextStyle labelStyle = (Theme.of(context).textTheme.bodySmall ??
-        const TextStyle(fontSize: 12))
-        .copyWith(
+    final TextStyle labelStyle =
+        (Theme.of(context).textTheme.bodySmall ?? const TextStyle(fontSize: 12))
+            .copyWith(
       fontSize: 11,
       height: 1.2,
       color: context.color.textDefaultColor.withOpacity(0.85),
@@ -306,22 +320,20 @@ class _SocialLinkButton extends StatelessWidget {
                 ),
                 child: Center(child: icon),
               ),
-
             ),
-    const SizedBox(height: 8),
-    Text(
-    link.label,
-    textAlign: TextAlign.center,
-    maxLines: 2,
-    overflow: TextOverflow.ellipsis,
-    style: labelStyle,
+            const SizedBox(height: 8),
+            Text(
+              link.label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: labelStyle,
             ),
           ],
         ),
       ),
     );
   }
-
 
   Widget _buildIcon(Color accent) {
     final IconData? iconData = _resolveFontAwesomeIcon(link);
@@ -353,15 +365,7 @@ class _SocialLinkButton extends StatelessWidget {
   void _handleTap(BuildContext context) {
     unawaited(_launchLink(context, link));
   }
-
 }
-
-
-
-
-
-
-
 
 Future<void> _launchLink(BuildContext context, SocialLink link) async {
   final Uri? uri = _normalizeLinkUri(link.url);
@@ -474,8 +478,9 @@ List<String> _collectKeywordCandidates(SocialLink link) {
   }
 
   if (link.iconClass != null && link.iconClass!.trim().isNotEmpty) {
-    final Iterable<String> tokens =
-    link.iconClass!.split(RegExp(r'\s+')).where((token) => token.isNotEmpty);
+    final Iterable<String> tokens = link.iconClass!
+        .split(RegExp(r'\s+'))
+        .where((token) => token.isNotEmpty);
     for (final String token in tokens) {
       addTokenWithVariants(token);
     }
@@ -483,8 +488,9 @@ List<String> _collectKeywordCandidates(SocialLink link) {
 
   final String label = link.label;
   if (label.trim().isNotEmpty) {
-    for (final String part
-    in label.split(RegExp(r'[^a-zA-Z0-9]+')).where((segment) => segment.isNotEmpty)) {
+    for (final String part in label
+        .split(RegExp(r'[^a-zA-Z0-9]+'))
+        .where((segment) => segment.isNotEmpty)) {
       addTokenWithVariants(part);
     }
   }
@@ -621,18 +627,18 @@ const Map<String, IconData> _fontAwesomeIconMap = <String, IconData>{
   'link': FontAwesomeIcons.link,
 };
 
-
-
 // ========= تأثير ضغط بسيط (Scale) — ضعه هنا إن لم يكن مستورداً =========
 class _Pressable extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
   final double scaleDown;
-  const _Pressable({Key? key, required this.child, this.onTap, this.scaleDown = 0.96}) : super(key: key);
+  const _Pressable({Key? key, required this.child, this.onTap})
+      : super(key: key);
 
   @override
   State<_Pressable> createState() => _PressableState();
 }
+
 class _PressableState extends State<_Pressable> {
   bool _down = false;
   @override

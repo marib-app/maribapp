@@ -10,10 +10,10 @@ class OtherServicesScreen extends StatefulWidget {
 
   /// استخدمها في onGenerateRoute
   static Route route(RouteSettings s) => MaterialPageRoute(
-    builder: (_) => const OtherServicesScreen(),
-    settings: s,
-    maintainState: true,
-  );
+        builder: (_) => const OtherServicesScreen(),
+        settings: s,
+        maintainState: true,
+      );
 
   @override
   State<OtherServicesScreen> createState() => _OtherServicesScreenState();
@@ -24,13 +24,13 @@ class _OtherServicesScreenState extends State<OtherServicesScreen> {
 
   // عناصر الشبكة (يمكن توسيعها لاحقاً)
   List<Map<String, dynamic>> get _items => [
-    {
-      'key': 'wifiCabin',
-      'titleKey': 'wifiCabin',
-      'icon': Icons.wifi,
-      'route': Routes.otherServicesWifiCabin,
-    },
-  ];
+        {
+          'key': 'wifiCabin',
+          'titleKey': 'wifiCabin',
+          'icon': Icons.wifi,
+          'route': Routes.otherServicesWifiCabin,
+        },
+      ];
 
   @override
   void initState() {
@@ -54,7 +54,8 @@ class _OtherServicesScreenState extends State<OtherServicesScreen> {
         elevation: 0,
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
-        systemOverlayStyle: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        systemOverlayStyle:
+            isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         leading: const BackButton(), // زر رجوع متوافق مع الثيم
       ),
       body: RepaintBoundary(
@@ -64,7 +65,8 @@ class _OtherServicesScreenState extends State<OtherServicesScreen> {
             duration: const Duration(milliseconds: 220),
             switchInCurve: Curves.easeOut,
             switchOutCurve: Curves.easeIn,
-            transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
+            transitionBuilder: (child, anim) =>
+                FadeTransition(opacity: anim, child: child),
             child: _isLoaded ? _buildGrid(context) : _buildShimmerGrid(context),
           ),
         ),
@@ -171,7 +173,8 @@ class _OtherServiceCard extends StatelessWidget {
                 width: double.infinity,
                 color: context.color.secondaryColor,
                 alignment: Alignment.center,
-                child: Icon(icon, size: 36, color: context.color.textDefaultColor),
+                child:
+                    Icon(icon, size: 36, color: context.color.textDefaultColor),
               ),
             ),
             const SizedBox(height: 5),

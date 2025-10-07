@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/utils/hive_utils.dart';
-import 'package:marib/utils/ui_utils.dart';
 
 class CardPlanetData {
   final String title;
@@ -164,7 +163,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
     CardPlanetData(
       title: "موثوق رسميًا",
-      subtitle: "تطبيق مرخص من وزارة الصناعة والتجارة – مأرب\nرقم القيد: 6561 / السجل: 3154",
+      subtitle:
+          "تطبيق مرخص من وزارة الصناعة والتجارة – مأرب\nرقم القيد: 6561 / السجل: 3154",
       image: const AssetImage("assets/image/6.png"),
       backgroundGradientColors: [Colors.black, Colors.blueGrey.shade900],
       titleColor: Colors.cyanAccent,
@@ -269,24 +269,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 builder: (context, index, _) {
                   return index == data.length - 1
                       ? ElevatedButton(
-                    onPressed: () {
-                      HiveUtils.setUserIsNotNew();
-                      Navigator.of(context).pushNamedAndRemoveUntil(
-                          Routes.login, (_) => false);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      elevation: 8,
-                    ),
-                    child: const Text("ابدأ الآن",
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                  )
+                          onPressed: () {
+                            HiveUtils.setUserIsNotNew();
+                            Navigator.of(context).pushNamedAndRemoveUntil(
+                                Routes.login, (_) => false);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 24, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            elevation: 8,
+                          ),
+                          child: const Text("ابدأ الآن",
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                        )
                       : const SizedBox();
                 },
               ),

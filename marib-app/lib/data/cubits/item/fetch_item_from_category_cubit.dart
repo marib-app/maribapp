@@ -20,19 +20,19 @@ class FetchItemFromCategorySuccess extends FetchItemFromCategoryState {
 
   FetchItemFromCategorySuccess(
       {required this.isLoadingMore,
-        required this.loadingMoreError,
-        required this.itemModel,
-        required this.page,
-        required this.total,
-        this.categoryId});
+      required this.loadingMoreError,
+      required this.itemModel,
+      required this.page,
+      required this.total,
+      this.categoryId});
 
   FetchItemFromCategorySuccess copyWith(
       {bool? isLoadingMore,
-        bool? loadingMoreError,
-        List<ItemModel>? itemModel,
-        int? page,
-        int? total,
-        int? categoryId}) {
+      bool? loadingMoreError,
+      List<ItemModel>? itemModel,
+      int? page,
+      int? total,
+      int? categoryId}) {
     return FetchItemFromCategorySuccess(
         isLoadingMore: isLoadingMore ?? this.isLoadingMore,
         loadingMoreError: loadingMoreError ?? this.loadingMoreError,
@@ -56,9 +56,9 @@ class FetchItemFromCategoryCubit extends Cubit<FetchItemFromCategoryState> {
 
   Future<void> fetchItemFromCategory(
       {required int categoryId,
-        required String search,
-        String? sortBy,
-        ItemFilterModel? filter}) async {
+      required String search,
+      String? sortBy,
+      ItemFilterModel? filter}) async {
     try {
       emit(FetchItemFromCategoryInProgress());
 
@@ -89,9 +89,9 @@ class FetchItemFromCategoryCubit extends Cubit<FetchItemFromCategoryState> {
 
   Future<void> fetchItemFromCategoryMore(
       {required int catId,
-        required String? search,
-        String? sortBy,
-        ItemFilterModel? filter}) async {
+      required String? search,
+      String? sortBy,
+      ItemFilterModel? filter}) async {
     try {
       if (state is FetchItemFromCategorySuccess) {
         if ((state as FetchItemFromCategorySuccess).isLoadingMore) {
@@ -108,7 +108,7 @@ class FetchItemFromCategoryCubit extends Cubit<FetchItemFromCategoryState> {
             filter: filter);
 
         FetchItemFromCategorySuccess item =
-        (state as FetchItemFromCategorySuccess);
+            (state as FetchItemFromCategorySuccess);
 
         item.itemModel.addAll(result.modelList);
 

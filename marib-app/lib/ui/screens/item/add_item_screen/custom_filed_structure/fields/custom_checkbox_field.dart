@@ -9,8 +9,6 @@ import 'package:flutter/services.dart' show HapticFeedback;
 
 import 'package:marib/utils/ui_utils.dart';
 
-
-
 import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/custom_field.dart';
 
 /// =====================
@@ -49,9 +47,10 @@ class CustomCheckboxField extends CustomField {
       builder: (state) {
         // قراءة بارامترات الواجهة فقط
         final String title = parameters['name'] ?? '';
-        final String? notes = (parameters['notes']?.toString().isNotEmpty ?? false)
-            ? parameters['notes'].toString()
-            : null;
+        final String? notes =
+            (parameters['notes']?.toString().isNotEmpty ?? false)
+                ? parameters['notes'].toString()
+                : null;
         final dynamic image = parameters['image'];
         final List values = (parameters['values'] as List?) ?? const [];
 
@@ -86,27 +85,6 @@ class CustomCheckboxField extends CustomField {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /// =====================
 /// UI (Presentation Only)
@@ -168,16 +146,17 @@ class CustomCheckboxFieldView extends StatelessWidget {
             switchOutCurve: Curves.easeIn,
             child: hasError
                 ? Padding(
-              key: const ValueKey('err'),
-              padding: const EdgeInsetsDirectional.only(top: 6.0, start: 8),
-              child: Semantics(
-                liveRegion: true, // يقرأها قارئ الشاشة فوراً
-                label: errorText ?? "",
-                child: Text(errorText ?? "")
-                    .size(context.font.small)
-                    .color(context.color.error),
-              ),
-            )
+                    key: const ValueKey('err'),
+                    padding:
+                        const EdgeInsetsDirectional.only(top: 6.0, start: 8),
+                    child: Semantics(
+                      liveRegion: true, // يقرأها قارئ الشاشة فوراً
+                      label: errorText ?? "",
+                      child: Text(errorText ?? "")
+                          .size(context.font.small)
+                          .color(context.color.error),
+                    ),
+                  )
                 : const SizedBox.shrink(key: ValueKey('noerr')),
           ),
           const SizedBox(height: 1),
@@ -186,7 +165,6 @@ class CustomCheckboxFieldView extends StatelessWidget {
     );
   }
 }
-
 
 /// عنوان + صورة + ملاحظات
 
@@ -238,7 +216,9 @@ class _Header extends StatelessWidget {
             Text(title)
                 .size(context.font.large)
                 .bold(weight: FontWeight.w500)
-                .color(hasError ? context.color.error : context.color.textColorDark),
+                .color(hasError
+                    ? context.color.error
+                    : context.color.textColorDark),
             if (notes != null) ...[
               SizedBox(height: 5.rh(context)),
               Text(notes!)
@@ -251,16 +231,6 @@ class _Header extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
 
 // شبكة الخيارات (Tags) مع دعم الألوان
 
@@ -278,8 +248,8 @@ class _OptionsWrap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Wrap(
-      spacing: 6,             // <-- بدل padding لكل عنصر
-      runSpacing: 6,          // <-- تباعد رأسي أنظف
+      spacing: 6, // <-- بدل padding لكل عنصر
+      runSpacing: 6, // <-- تباعد رأسي أنظف
       children: List.generate(values.length, (index) {
         final value = values[index].toString();
         final isChecked = checkedValues.contains(value);
@@ -305,7 +275,8 @@ class _OptionsWrap extends StatelessWidget {
               onTap: () => onToggle(value),
               child: AnimatedPadding(
                 duration: const Duration(milliseconds: 150),
-                padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 14),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 8.0, horizontal: 14),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -318,10 +289,13 @@ class _OptionsWrap extends StatelessWidget {
                     const SizedBox(width: 5),
                     if (valueColor != null) ...[
                       Container(
-                        width: 20, height: 20,
+                        width: 20,
+                        height: 20,
                         decoration: BoxDecoration(
-                          color: valueColor, shape: BoxShape.circle,
-                          border: Border.all(color: Colors.grey.shade300, width: 1),
+                          color: valueColor,
+                          shape: BoxShape.circle,
+                          border:
+                              Border.all(color: Colors.grey.shade300, width: 1),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -350,7 +324,3 @@ class _OptionsWrap extends StatelessWidget {
     return null;
   }
 }
-
-
-
-

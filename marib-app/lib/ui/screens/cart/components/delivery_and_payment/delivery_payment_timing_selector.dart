@@ -2,12 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 
-
-
-
-
-
-
 class DeliveryPaymentTimingOption {
   const DeliveryPaymentTimingOption({
     required this.value,
@@ -25,14 +19,14 @@ class DeliveryPaymentTimingOption {
 }
 
 List<DeliveryPaymentTimingOption> normalizeDeliveryPaymentTimingOptions(
-    List<dynamic>? rawOptions,
-    ) {
+  List<dynamic>? rawOptions,
+) {
   if (rawOptions == null || rawOptions.isEmpty) {
     return const <DeliveryPaymentTimingOption>[];
   }
 
   final List<DeliveryPaymentTimingOption> options =
-  <DeliveryPaymentTimingOption>[];
+      <DeliveryPaymentTimingOption>[];
 
   for (final dynamic entry in rawOptions) {
     if (entry == null) {
@@ -86,7 +80,7 @@ List<DeliveryPaymentTimingOption> normalizeDeliveryPaymentTimingOptions(
     addDescription(map['details']);
 
     final String? description =
-    descriptionParts.isEmpty ? null : descriptionParts.join('\n');
+        descriptionParts.isEmpty ? null : descriptionParts.join('\n');
 
     final bool isDisabled = (_asBool(map['disabled']) ?? false) ||
         (_asBool(map['enabled']) == false);
@@ -116,9 +110,9 @@ List<DeliveryPaymentTimingOption> normalizeDeliveryPaymentTimingOptions(
 }
 
 DeliveryPaymentTimingOption? findDeliveryPaymentTimingOption(
-    List<DeliveryPaymentTimingOption> options,
-    String? value,
-    ) {
+  List<DeliveryPaymentTimingOption> options,
+  String? value,
+) {
   if (value == null) {
     return null;
   }
@@ -164,13 +158,13 @@ class DeliveryPaymentTimingSelector extends StatelessWidget {
 
     final bool containsSelected = resolvedSelectedValue != null &&
         options.any(
-              (DeliveryPaymentTimingOption option) =>
-          option.value == resolvedSelectedValue,
+          (DeliveryPaymentTimingOption option) =>
+              option.value == resolvedSelectedValue,
         );
 
     if (!containsSelected) {
       final DeliveryPaymentTimingOption preselected = options.firstWhere(
-            (DeliveryPaymentTimingOption option) => option.isInitiallySelected,
+        (DeliveryPaymentTimingOption option) => option.isInitiallySelected,
         orElse: () => options.first,
       );
       resolvedSelectedValue = preselected.value;
@@ -189,13 +183,12 @@ class DeliveryPaymentTimingSelector extends StatelessWidget {
       return text != null && text.isNotEmpty;
     }
 
-    final bool useSegmented =
-        options.length <= 3 && options.every((option) => !hasDescription(option));
+    final bool useSegmented = options.length <= 3 &&
+        options.every((option) => !hasDescription(option));
 
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final Color accent = context.color.territoryColor;
-    final bool interactionsEnabled =
-        enabled && !isLoading && onSelect != null;
+    final bool interactionsEnabled = enabled && !isLoading && onSelect != null;
 
     Widget buildSegmentedSelector() {
       return Column(
@@ -212,7 +205,7 @@ class DeliveryPaymentTimingSelector extends StatelessWidget {
             splashColor: accent.withOpacity(0.15),
             isSelected: options
                 .map((DeliveryPaymentTimingOption option) =>
-            option.value == resolvedSelectedValue)
+                    option.value == resolvedSelectedValue)
                 .toList(growable: false),
             onPressed: (int index) {
               final DeliveryPaymentTimingOption option = options[index];
@@ -233,11 +226,11 @@ class DeliveryPaymentTimingSelector extends StatelessWidget {
               final Color textColor = isSelected
                   ? accent
                   : isOptionEnabled
-                  ? context.color.textDefaultColor
-                  : context.color.textDefaultColor.withOpacity(0.4);
+                      ? context.color.textDefaultColor
+                      : context.color.textDefaultColor.withOpacity(0.4);
               return Padding(
                 padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: Text(
                   option.label,
                   style: TextStyle(
@@ -284,13 +277,13 @@ class DeliveryPaymentTimingSelector extends StatelessWidget {
               groupValue: resolvedSelectedValue,
               onChanged: isOptionEnabled
                   ? (String? value) {
-                if (value == null) {
-                  return;
-                }
-                if (value != resolvedSelectedValue) {
-                  onSelect?.call(value);
-                }
-              }
+                      if (value == null) {
+                        return;
+                      }
+                      if (value != resolvedSelectedValue) {
+                        onSelect?.call(value);
+                      }
+                    }
                   : null,
               activeColor: accent,
               dense: true,
@@ -306,14 +299,13 @@ class DeliveryPaymentTimingSelector extends StatelessWidget {
               subtitle: option.description == null
                   ? null
                   : Text(
-                option.description!,
-                style: TextStyle(
-                  color:
-                  context.color.textDefaultColor.withOpacity(0.75),
-                  fontSize: 13,
-                  height: 1.35,
-                ),
-              ),
+                      option.description!,
+                      style: TextStyle(
+                        color: context.color.textDefaultColor.withOpacity(0.75),
+                        fontSize: 13,
+                        height: 1.35,
+                      ),
+                    ),
               controlAffinity: ListTileControlAffinity.trailing,
             ),
           );
@@ -370,7 +362,7 @@ Map<String, dynamic>? _castToStringKeyedMap(dynamic value) {
   }
   if (value is Map) {
     return value.map(
-          (dynamic key, dynamic value) => MapEntry(key.toString(), value),
+      (dynamic key, dynamic value) => MapEntry(key.toString(), value),
     );
   }
   return null;

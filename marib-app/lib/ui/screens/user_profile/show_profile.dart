@@ -24,7 +24,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:marib/data/cubits/auth/authentication_cubit.dart' as auth;
 
 // واجهة العرض المكوّنة في ملف منفصل
-import 'show_profile_ui.dart';
+import 'package:marib/ui/screens/user_profile/show_profile_ui.dart';
 
 // Utilities
 import 'package:marib/utils/ui_utils.dart';
@@ -160,9 +160,8 @@ class UserProfileScreenState extends State<ShowUserProfileScreen>
     // تنسيق رقم الهاتف حسب كود الدولة
     final cc = HiveUtils.getCountryCode();
     if (cc != null) {
-      phoneController.text = user.mobile != null
-          ? user.mobile!.replaceFirst("+$cc", "")
-          : "";
+      phoneController.text =
+          user.mobile != null ? user.mobile!.replaceFirst("+$cc", "") : "";
     } else {
       phoneController.text = user.mobile ?? "";
     }
@@ -193,12 +192,12 @@ class UserProfileScreenState extends State<ShowUserProfileScreen>
           appBar: widget.from == "login"
               ? null
               : UiUtils.buildAppBar(
-            // عنوان الشريط
-            title: "profileTab".translate(context),
-            context,
-            showBackButton: true,
-            actions: const [],
-          ),
+                  // عنوان الشريط
+                  title: "profileTab".translate(context),
+                  context,
+                  showBackButton: true,
+                  actions: const [],
+                ),
 
           /// ملاحظة:
           /// - استخدمنا ScrollConfiguration+Bouncing لمنح سحب لطيف.
@@ -290,22 +289,20 @@ class UserProfileScreenState extends State<ShowUserProfileScreen>
     }
   }
 
-
-
   Future<bool> profileupdateprocess() async {
     setState(() => isLoading = true);
     try {
       final resp = await context.read<AuthCubit>().updateuserdata(
-        context,
-        name: nameController.text.trim(),
-        email: emailController.text.trim(),
-        fileUserimg: fileUserimg,
-        address: addressController.text,
-        mobile: phoneController.text,
-        notification: isNotificationsEnabled ? "1" : "0",
-        countryCode: HiveUtils.getCountryCode(),
-        personalDetail: isPersonalDetailShow ? 1 : 0,
-      );
+            context,
+            name: nameController.text.trim(),
+            email: emailController.text.trim(),
+            fileUserimg: fileUserimg,
+            address: addressController.text,
+            mobile: phoneController.text,
+            notification: isNotificationsEnabled ? "1" : "0",
+            countryCode: HiveUtils.getCountryCode(),
+            personalDetail: isPersonalDetailShow ? 1 : 0,
+          );
 
       // النجاح حسب هيكلة الـ API عندك:
       final bool ok = (resp['status'] == 1) || (resp['success'] == true);
@@ -313,7 +310,9 @@ class UserProfileScreenState extends State<ShowUserProfileScreen>
       // حدّث بيانات المستخدم محليًا لو نجح
       if (ok) {
         Future.microtask(() {
-          context.read<UserDetailsCubit>().copy(UserModel.fromJson(resp['data']));
+          context
+              .read<UserDetailsCubit>()
+              .copy(UserModel.fromJson(resp['data']));
         });
       }
 
@@ -328,11 +327,6 @@ class UserProfileScreenState extends State<ShowUserProfileScreen>
       return false;
     }
   }
-
-
-
-
-
 
   /// BottomSheet لاختيار مصدر الصورة (كاميرا/ألبوم) + إزالة الصورة المؤقتة أثناء login
   void showPicker() {

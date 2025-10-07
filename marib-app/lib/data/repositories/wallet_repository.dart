@@ -18,10 +18,15 @@ class WalletRepository {
     final summary = WalletSummary.fromJson(summaryPayload);
 
     final filters = WalletFilter.fromResponse(
-      response['filters'] ?? response['available_filters'] ?? summaryPayload['filters'],
+      response['filters'] ??
+          response['available_filters'] ??
+          summaryPayload['filters'],
     );
 
-    return summary.copyWith(availableFilters: summary.availableFilters.isEmpty ? filters : summary.availableFilters);
+    return summary.copyWith(
+        availableFilters: summary.availableFilters.isEmpty
+            ? filters
+            : summary.availableFilters);
   }
 
   Future<DataOutput<WalletTransaction>> fetchTransactions({
@@ -45,7 +50,9 @@ class WalletRepository {
 
     final metaMap = _unwrapMeta(response);
     final filters = WalletFilter.fromResponse(
-      response['filters'] ?? response['available_filters'] ?? metaMap['filters'],
+      response['filters'] ??
+          response['available_filters'] ??
+          metaMap['filters'],
     );
 
     final meta = WalletTransactionsMeta(
@@ -75,7 +82,8 @@ class WalletRepository {
     return Map<String, dynamic>.from(response);
   }
 
-  List<Map<String, dynamic>> _unwrapTransactions(Map<String, dynamic> response) {
+  List<Map<String, dynamic>> _unwrapTransactions(
+      Map<String, dynamic> response) {
     final candidates = [
       response['data'],
       response['transactions'],
@@ -90,19 +98,19 @@ class WalletRepository {
         return candidate
             .whereType<dynamic>()
             .map((e) => e is Map<String, dynamic>
-            ? e
-            : Map<String, dynamic>.from(e as Map))
+                ? e
+                : Map<String, dynamic>.from(e as Map))
             .toList();
       }
       if (candidate is Map) {
-        final map = Map<String, dynamic>.from(candidate as Map);
+        final map = Map<String, dynamic>.from(candidate);
         final nested = map['data'] ?? map['items'];
         if (nested is List) {
           return nested
               .whereType<dynamic>()
               .map((e) => e is Map<String, dynamic>
-              ? e
-              : Map<String, dynamic>.from(e as Map))
+                  ? e
+                  : Map<String, dynamic>.from(e as Map))
               .toList();
         }
       }
@@ -121,7 +129,7 @@ class WalletRepository {
 
     for (final meta in metaCandidates) {
       if (meta is Map) {
-        return Map<String, dynamic>.from(meta as Map);
+        return Map<String, dynamic>.from(meta);
       }
     }
 
@@ -149,7 +157,8 @@ class WalletRepository {
       return rowCount >= perPage;
     }
 
-    final nextPage = _tryParseInt(meta['next_page']) ?? _tryParseInt(meta['next']);
+    final nextPage =
+        _tryParseInt(meta['next_page']) ?? _tryParseInt(meta['next']);
     if (nextPage != null) {
       return nextPage > page;
     }

@@ -17,11 +17,11 @@ class HomeScreenSection {
       {this.sectionId,
       this.style,
       this.title,
-        this.sectionType,
-        this.filter,
-        this.slug,
-        this.sequence,
-        this.rootIdentifier,
+      this.sectionType,
+      this.filter,
+      this.slug,
+      this.sequence,
+      this.rootIdentifier,
       this.totalData,
       this.sectionData});
 
@@ -33,8 +33,8 @@ class HomeScreenSection {
     filter = json['filter'];
     slug = json['slug'];
     sequence = _parseInt(json['sequence']);
-    rootIdentifier = _asString(json['root_identifier']) ??
-        _asString(json['rootIdentifier']);
+    rootIdentifier =
+        _asString(json['root_identifier']) ?? _asString(json['rootIdentifier']);
     totalData = json['total_data'];
     if (json['section_data'] != null) {
       sectionData = <ItemModel>[];
@@ -56,7 +56,6 @@ class HomeScreenSection {
     if (value is String) return value;
     return value.toString();
   }
-
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};

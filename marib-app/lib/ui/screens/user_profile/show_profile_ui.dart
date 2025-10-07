@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 // التبويب الداخلي لقائمة الإعلانات
-import 'my_item_tab.dart';
+import 'package:marib/ui/screens/user_profile/my_item_tab.dart';
 
 // حالات المستخدم والإحصائيات
 import 'package:marib/data/cubits/system/user_details.dart';
@@ -127,9 +127,9 @@ class _HeaderSection extends StatelessWidget {
                 return Text(
                   name,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 22,
-                  ),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 22,
+                      ),
                   overflow: TextOverflow.ellipsis,
                 );
               },
@@ -154,7 +154,7 @@ class _StatsRow extends StatelessWidget {
 
         final isReady = state is ProfileStatsSuccess;
         if (isReady) {
-          final s = state as ProfileStatsSuccess;
+          final s = state;
           fav = s.totalFavorites;
           ads = s.totalAds;
           chats = s.totalChats;
@@ -170,10 +170,14 @@ class _StatsRow extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              StatBox(value: showInt(fav),   label: "المفضلة".translate(context)),
-              StatBox(value: showInt(ads),   label: "الإعلانات".translate(context)),
-              StatBox(value: showInt(chats), label: "الرسائل".translate(context)),
-              StatBox(value: showRating(rating), label: "التقييم".translate(context)),
+              StatBox(value: showInt(fav), label: "المفضلة".translate(context)),
+              StatBox(
+                  value: showInt(ads), label: "الإعلانات".translate(context)),
+              StatBox(
+                  value: showInt(chats), label: "الرسائل".translate(context)),
+              StatBox(
+                  value: showRating(rating),
+                  label: "التقييم".translate(context)),
             ],
           ),
         );
@@ -187,13 +191,15 @@ class StatBox extends StatelessWidget {
   final String value;
   final String label;
   final VoidCallback? onTap;
-  const StatBox({super.key, required this.value, required this.label, this.onTap});
+  const StatBox(
+      {super.key, required this.value, required this.label, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final content = Column(
       children: [
-        Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        Text(value,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 4),
         Text(label, style: const TextStyle(color: Colors.grey)),
       ],
@@ -201,13 +207,13 @@ class StatBox extends StatelessWidget {
     return onTap == null
         ? content
         : InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.all(6.0),
-        child: content,
-      ),
-    );
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.all(6.0),
+              child: content,
+            ),
+          );
   }
 }
 
@@ -224,10 +230,6 @@ class _ProfileButtons extends StatelessWidget {
   const _ProfileButtons({
     required this.onEditProfilePressed,
     required this.onShareProfilePressed,
-    this.isEditLoading = false,
-    this.isShareLoading = false,
-    this.editEnabled = true,
-    this.shareEnabled = true,
   });
 
   @override
@@ -240,9 +242,9 @@ class _ProfileButtons extends StatelessWidget {
 
     final iconSize = clamp(width * 0.045, 16, 20);
     final fontSize = clamp(width * 0.035, 12, 16);
-    final hPad     = clamp(width * 0.04, 12, 20);
-    final vPad     = clamp(width * 0.02, 10, 14);
-    final minH     = clamp(width * 0.12, 44, 52);
+    final hPad = clamp(width * 0.04, 12, 20);
+    final vPad = clamp(width * 0.02, 10, 14);
+    final minH = clamp(width * 0.12, 44, 52);
 
     final cs = Theme.of(context).colorScheme;
 
@@ -257,21 +259,21 @@ class _ProfileButtons extends StatelessWidget {
       minimumSize: Size(0, minH), // ارتفاع موحّد ومتجاوب
     ).copyWith(
       // استخدام MaterialStateProperty لملاءمة إصدارات Flutter الأقدم
-      overlayColor: MaterialStatePropertyAll(cs.primary.withOpacity(.06)),
+      overlayColor: WidgetStatePropertyAll(cs.primary.withOpacity(.06)),
     );
 
     Widget labelText(String text) => FittedBox(
-      fit: BoxFit.scaleDown, // يضمن بقاء النص في سطر واحد
-      alignment: Alignment.centerLeft,
-      child: Text(
-        text,
-        maxLines: 1,
-        softWrap: false,
-        overflow: TextOverflow.visible,
-        style: TextStyle(fontSize: fontSize, color: cs.onSurface),
-        textAlign: TextAlign.center,
-      ),
-    );
+          fit: BoxFit.scaleDown, // يضمن بقاء النص في سطر واحد
+          alignment: Alignment.centerLeft,
+          child: Text(
+            text,
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.visible,
+            style: TextStyle(fontSize: fontSize, color: cs.onSurface),
+            textAlign: TextAlign.center,
+          ),
+        );
 
     Widget buildBtn({
       required IconData icon,
@@ -282,19 +284,19 @@ class _ProfileButtons extends StatelessWidget {
     }) {
       final child = loading
           ? SizedBox(
-        width: iconSize,
-        height: iconSize,
-        child: const CircularProgressIndicator.adaptive(strokeWidth: 2),
-      )
+              width: iconSize,
+              height: iconSize,
+              child: const CircularProgressIndicator.adaptive(strokeWidth: 2),
+            )
           : Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: iconSize, color: cs.onSurface),
-          const SizedBox(width: 8),
-          Flexible(child: labelText(text)),
-        ],
-      );
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: iconSize, color: cs.onSurface),
+                const SizedBox(width: 8),
+                Flexible(child: labelText(text)),
+              ],
+            );
 
       return ElevatedButton(
         onPressed: (enabled && !loading) ? onPressed : null,
@@ -360,15 +362,13 @@ class _ProfileTabBar extends StatelessWidget {
   const _ProfileTabBar({
     required this.controller,
     required this.adTabs,
-    this.counts,
-    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final textStyle = Theme.of(context).textTheme.bodyLarge;
     final indicatorThickness =
-    ((textStyle?.fontSize ?? 16) / 6).clamp(2.0, 4.0);
+        ((textStyle?.fontSize ?? 16) / 6).clamp(2.0, 4.0);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -395,7 +395,7 @@ class _ProfileTabBar extends StatelessWidget {
         indicatorSize: TabBarIndicatorSize.label,
 
         // استخدام MaterialStateProperty لمواءمة الإصدارات المختلفة
-        overlayColor: MaterialStatePropertyAll(
+        overlayColor: WidgetStatePropertyAll(
           context.color.territoryColor.withOpacity(.06),
         ),
 
@@ -407,7 +407,8 @@ class _ProfileTabBar extends StatelessWidget {
 
         tabs: List.generate(adTabs.length, (i) {
           final title = adTabs[i]['title']!.translate(context);
-          final count = (counts != null && i < counts!.length) ? counts![i] : null;
+          final count =
+              (counts != null && i < counts!.length) ? counts![i] : null;
 
           return Tab(
             child: Semantics(

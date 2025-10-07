@@ -34,7 +34,6 @@ class _LottieAnimationState extends State<LottieAnimation>
           controller
             ..duration = composition.duration
             ..forward();
-
         },
         height: 40,
         width: 40,

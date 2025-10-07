@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:marib/data/model/cart/checkout_models.dart';
 import 'package:marib/data/model/item/cart_model.dart';
 
-import 'shared_widgets.dart';
+import 'package:marib/ui/screens/cart/components/delivery_and_payment/shared_widgets.dart';
 
 /// ويدجت يشرح تفاصيل التوصيل بما في ذلك المسافة والشرائح والرسوم.
 class DeliveryDetailsSection extends StatelessWidget {
@@ -20,12 +20,10 @@ class DeliveryDetailsSection extends StatelessWidget {
   final String? shippingCurrency;
   final String? departmentNotice;
 
-
   const DeliveryDetailsSection({
     super.key,
     required this.loading,
     required this.addressReady,
-
     required this.cartItems,
     required this.deliveryInfo,
     required this.deliveryPrice,
@@ -43,7 +41,6 @@ class DeliveryDetailsSection extends StatelessWidget {
     if (loading) {
       return buildShimmerLine(context, width: double.infinity, height: 50);
     }
-
 
     if (!addressReady) {
       final bool isDark = Theme.of(context).brightness == Brightness.dark;
@@ -74,21 +71,25 @@ class DeliveryDetailsSection extends StatelessWidget {
 
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final Color cardColor = isDark ? Colors.grey.shade900 : Colors.white;
-    final Color borderColor = isDark ? Colors.grey.shade700 : Colors.grey.shade300;
-    final Color subTextColor = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
+    final Color borderColor =
+        isDark ? Colors.grey.shade700 : Colors.grey.shade300;
+    final Color subTextColor =
+        isDark ? Colors.grey.shade400 : Colors.grey.shade600;
     final Color textColor = isDark ? Colors.white : Colors.black87;
 
     final double orderWeight = cartItems.fold(
       0.0,
-          (total, item) => total + (item.weight ?? 0.0) * item.quantity,
+      (total, item) => total + (item.weight ?? 0.0) * item.quantity,
     );
     final String sizeKey = _weightSizeKey(orderWeight);
     final String sizeLabel = _arabicSize(sizeKey);
 
     final CheckoutDeliveryInfo? info = deliveryInfo;
-    final List<CheckoutDeliveryTier> tiers = info?.tiers ?? const <CheckoutDeliveryTier>[];
+    final List<CheckoutDeliveryTier> tiers =
+        info?.tiers ?? const <CheckoutDeliveryTier>[];
     final String currencyLabel = _resolveCurrency();
-    final String currencySuffix = currencyLabel.isNotEmpty ? ' $currencyLabel' : '';
+    final String currencySuffix =
+        currencyLabel.isNotEmpty ? ' $currencyLabel' : '';
 
     final String? trimmedDeliveryPrice = deliveryPrice?.trim();
     String resolvedPrice;
@@ -113,8 +114,8 @@ class DeliveryDetailsSection extends StatelessWidget {
     final String deliveryFeeHint = freeShippingApplied
         ? '🎉 تم تطبيق الشحن المجاني على هذا الطلب.'
         : hasDeliveryFee
-        ? '🚚 رسوم التوصيل تُدفع للسائق مباشرة.'
-        : '🚚 سيتم الاتفاق على أي رسوم توصيل مع السائق عند التسليم (إن وُجدت).';
+            ? '🚚 رسوم التوصيل تُدفع للسائق مباشرة.'
+            : '🚚 سيتم الاتفاق على أي رسوم توصيل مع السائق عند التسليم (إن وُجدت).';
 
     final Future<double?> future =
         distanceFutureGetter?.call() ?? Future<double?>.value(info?.distanceKm);
@@ -123,12 +124,14 @@ class DeliveryDetailsSection extends StatelessWidget {
       future: future,
       builder: (context, snapshot) {
         final double? distance = snapshot.data ?? info?.distanceKm;
-        final String distanceText =
-        distance != null ? '${distance.toStringAsFixed(2)} كم' : 'جاري التحديد...';
+        final String distanceText = distance != null
+            ? '${distance.toStringAsFixed(2)} كم'
+            : 'جاري التحديد...';
 
         return Card(
           elevation: 8,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 2),
           color: cardColor,
           child: Padding(
@@ -138,19 +141,27 @@ class DeliveryDetailsSection extends StatelessWidget {
               children: [
                 Text(
                   '🚚 بيانات التوصيل',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: textColor),
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: textColor),
                 ),
                 const SizedBox(height: 12),
                 if (freeShippingApplied)
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
                     margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.green.shade800 : const Color(0xFFE8F5E9),
+                      color: isDark
+                          ? Colors.green.shade800
+                          : const Color(0xFFE8F5E9),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: isDark ? Colors.greenAccent.shade100 : Colors.green.shade400,
+                        color: isDark
+                            ? Colors.greenAccent.shade100
+                            : Colors.green.shade400,
                       ),
                     ),
                     child: Text(
@@ -165,11 +176,14 @@ class DeliveryDetailsSection extends StatelessWidget {
                 if (tiers.isNotEmpty) ...[
                   Text(
                     'شرائح الأحجام حسب النظام',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textColor),
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: textColor),
                   ),
                   const SizedBox(height: 8),
                   ...tiers.map(
-                        (tier) => _buildTierRow(
+                    (tier) => _buildTierRow(
                       tier,
                       isDark: isDark,
                       textColor: textColor,
@@ -180,12 +194,20 @@ class DeliveryDetailsSection extends StatelessWidget {
                   const SizedBox(height: 16),
                 ],
                 Table(
-                  border: TableBorder.all(color: borderColor, width: 1, borderRadius: BorderRadius.circular(12)),
-                  columnWidths: const {0: FlexColumnWidth(3), 1: FlexColumnWidth(2)},
+                  border: TableBorder.all(
+                      color: borderColor,
+                      width: 1,
+                      borderRadius: BorderRadius.circular(12)),
+                  columnWidths: const {
+                    0: FlexColumnWidth(3),
+                    1: FlexColumnWidth(2)
+                  },
                   children: [
                     TableRow(
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.grey.shade800 : const Color(0xFFEEEEEE),
+                        color: isDark
+                            ? Colors.grey.shade800
+                            : const Color(0xFFEEEEEE),
                       ),
                       children: const [
                         Padding(
@@ -198,19 +220,26 @@ class DeliveryDetailsSection extends StatelessWidget {
                         ),
                       ],
                     ),
-                    _row('📦 وزن الطلب', '${orderWeight.toStringAsFixed(1)} كجم ($sizeLabel)', textColor),
+                    _row(
+                        '📦 وزن الطلب',
+                        '${orderWeight.toStringAsFixed(1)} كجم ($sizeLabel)',
+                        textColor),
                     _row('📍 المسافة إلى التاجر', distanceText, textColor),
                     _row('💸 رسوم التوصيل', resolvedPrice, textColor),
                   ],
                 ),
                 const SizedBox(height: 10),
-                if (paymentTimingLabel != null && paymentTimingLabel!.trim().isNotEmpty)
+                if (paymentTimingLabel != null &&
+                    paymentTimingLabel!.trim().isNotEmpty)
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     margin: const EdgeInsets.only(bottom: 10),
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE8F5E9),
+                      color: isDark
+                          ? const Color(0xFF2C2C2E)
+                          : const Color(0xFFE8F5E9),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Column(
@@ -224,53 +253,65 @@ class DeliveryDetailsSection extends StatelessWidget {
                             color: isDark ? Colors.white : Colors.black87,
                           ),
                         ),
-                        if (paymentTimingNote != null && paymentTimingNote!.trim().isNotEmpty)
+                        if (paymentTimingNote != null &&
+                            paymentTimingNote!.trim().isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.only(top: 6),
                             child: Text(
                               paymentTimingNote!.trim(),
                               style: TextStyle(
                                 fontSize: 12,
-                                color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                                color: isDark
+                                    ? Colors.grey.shade300
+                                    : Colors.grey.shade700,
                               ),
                             ),
                           ),
                       ],
                     ),
                   ),
-
-
-                if (departmentNotice != null && departmentNotice!.trim().isNotEmpty)
+                if (departmentNotice != null &&
+                    departmentNotice!.trim().isNotEmpty)
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     margin: const EdgeInsets.only(bottom: 10),
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF3A3A3A) : const Color(0xFFFFF3CD),
+                      color: isDark
+                          ? const Color(0xFF3A3A3A)
+                          : const Color(0xFFFFF3CD),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: isDark ? Colors.orange.shade200 : const Color(0xFFFFEEBA),
+                        color: isDark
+                            ? Colors.orange.shade200
+                            : const Color(0xFFFFEEBA),
                       ),
                     ),
                     child: Text(
                       departmentNotice!,
                       style: TextStyle(
                         fontSize: 13,
-                        color: isDark ? Colors.orange.shade100 : const Color(0xFF856404),
+                        color: isDark
+                            ? Colors.orange.shade100
+                            : const Color(0xFF856404),
                         fontWeight: FontWeight.w600,
                       ),
                       textAlign: TextAlign.center,
                     ),
                   ),
-
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color: freeShippingApplied
-                        ? (isDark ? Colors.green.shade900 : const Color(0xFFE8F5E9))
-                        : (isDark ? const Color(0xFF3A3A3A) : const Color(0xFFFFF3F3)),
-
+                        ? (isDark
+                            ? Colors.green.shade900
+                            : const Color(0xFFE8F5E9))
+                        : (isDark
+                            ? const Color(0xFF3A3A3A)
+                            : const Color(0xFFFFF3F3)),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
@@ -278,7 +319,9 @@ class DeliveryDetailsSection extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13,
                       color: freeShippingApplied
-                          ? (isDark ? Colors.greenAccent.shade100 : Colors.green.shade700)
+                          ? (isDark
+                              ? Colors.greenAccent.shade100
+                              : Colors.green.shade700)
                           : Colors.redAccent,
                       fontWeight: FontWeight.w600,
                     ),
@@ -304,13 +347,13 @@ class DeliveryDetailsSection extends StatelessWidget {
           padding: const EdgeInsets.all(10),
           child: Text(
             value,
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textColor),
+            style: TextStyle(
+                fontSize: 13, fontWeight: FontWeight.bold, color: textColor),
           ),
         ),
       ],
     );
   }
-
 
   String _resolveCurrency() {
     final String? fromShipping = shippingCurrency?.trim();
@@ -327,19 +370,17 @@ class DeliveryDetailsSection extends StatelessWidget {
   String _formatAmount(double amount, String currency) {
     final bool hasFraction = amount % 1 != 0;
     final String formatted =
-    hasFraction ? amount.toStringAsFixed(2) : amount.toStringAsFixed(0);
+        hasFraction ? amount.toStringAsFixed(2) : amount.toStringAsFixed(0);
     return '$formatted $currency';
   }
 
-
-
   Widget _buildTierRow(
-      CheckoutDeliveryTier tier, {
-        required bool isDark,
-        required Color textColor,
-        required Color subTextColor,
-        required String currencySuffix,
-      }) {
+    CheckoutDeliveryTier tier, {
+    required bool isDark,
+    required Color textColor,
+    required Color subTextColor,
+    required String currencySuffix,
+  }) {
     final String priceText = (tier.priceDisplay?.trim().isNotEmpty ?? false)
         ? tier.priceDisplay!.trim()
         : (tier.price != null ? '${tier.price}$currencySuffix' : '—');
@@ -359,9 +400,13 @@ class DeliveryDetailsSection extends StatelessWidget {
               children: [
                 Text(
                   tier.label,
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: textColor),
+                  style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: textColor),
                 ),
-                if (tier.description != null && tier.description!.trim().isNotEmpty)
+                if (tier.description != null &&
+                    tier.description!.trim().isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
@@ -374,7 +419,8 @@ class DeliveryDetailsSection extends StatelessWidget {
           ),
           Text(
             priceText,
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor),
+            style: TextStyle(
+                fontWeight: FontWeight.bold, fontSize: 14, color: textColor),
           ),
         ],
       ),

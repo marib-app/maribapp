@@ -74,11 +74,9 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
     });
   }
 
-
   void _lazyInit() {
     final authCubit = context.read<AuthenticationCubit>();
     authCubit.init();
-
 
     _authenticationListenerDisposer?.call();
     _authenticationListenerDisposer = authCubit.listen((MLoginState state) {
@@ -92,9 +90,7 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
       }
     });
     getSignature();
-
   }
-
 
   Future<void> getSignature() async {
     signature = await SmsAutoFill().getAppSignature;
@@ -103,8 +99,6 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
 
     setState(() {});
   }
-
-
 
   Future<bool> _ensureSystemSettingsAvailable() async {
     final cubit = context.read<FetchSystemSettingsCubit>();
@@ -118,8 +112,8 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
     try {
       if (currentState is FetchSystemSettingsInProgress) {
         resolvedState = await cubit.stream.firstWhere(
-              (state) =>
-          state is FetchSystemSettingsSuccess ||
+          (state) =>
+              state is FetchSystemSettingsSuccess ||
               state is FetchSystemSettingsFailure,
         );
       } else {
@@ -162,8 +156,6 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
       },
     );
   }
-
-
 
   /// it will return user's sim cards country code
   Future<Country> getSimCountry() async {
@@ -252,7 +244,8 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
     size = MediaQuery.of(context).size;
     final settingsState = context.watch<FetchSystemSettingsCubit>().state;
     final bool isSettingsReady = settingsState is FetchSystemSettingsSuccess;
-    final bool isSettingsLoading = settingsState is FetchSystemSettingsInProgress;
+    final bool isSettingsLoading =
+        settingsState is FetchSystemSettingsInProgress;
     return AnnotatedRegion(
       value: UiUtils.getSystemUiOverlayStyle(
         context: context,
@@ -283,7 +276,6 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
                       isSettingsReady: isSettingsReady,
                       isSettingsLoading: isSettingsLoading,
                     ),
-
                   );
                 }),
               ),
@@ -327,7 +319,6 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
     required bool isSettingsReady,
     required bool isSettingsLoading,
   }) {
-
     return SingleChildScrollView(
       child: SizedBox(
         height: context.screenHeight - 50,
@@ -368,7 +359,6 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
               const SizedBox(
                 height: 66,
               ),
-
               if (isSettingsLoading && !isSettingsReady)
                 const Padding(
                   padding: EdgeInsets.only(bottom: 16.0),
@@ -377,7 +367,6 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
                     child: LinearProgressIndicator(minHeight: 3),
                   ),
                 ),
-
               Text("welcome".translate(context))
                   .size(context.font.extraLarge)
                   .color(context.color.textDefaultColor),
@@ -544,9 +533,9 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
                     .color(context.color.territoryColor)
                     .size(context.font.small),
                 onTap: () => _openStaticContent(
-                  title: "termsConditions".translate(context),
-                  param: Api.termsAndConditions,
-                )),
+                      title: "termsConditions".translate(context),
+                      param: Api.termsAndConditions,
+                    )),
             /*CustomTextButton(
                 text:Text("termsOfService".translate(context)).underline().color(context.color.teritoryColor).size(context.font.small),
                 onPressed: () => Navigator.pushNamed(
@@ -571,9 +560,9 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
                     .color(context.color.territoryColor)
                     .size(context.font.small),
                 onTap: () => _openStaticContent(
-                  title: "privacyPolicy".translate(context),
-                  param: Api.privacyPolicy,
-                )),
+                      title: "privacyPolicy".translate(context),
+                      param: Api.privacyPolicy,
+                    )),
             /*CustomTextButton(
                 text:
                     Text("privacyPolicy".translate(context)).underline().color(context.color.teritoryColor).size(context.font.small),

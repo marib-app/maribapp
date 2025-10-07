@@ -9,7 +9,7 @@ import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 
 class SellerIntroVerificationScreen extends StatefulWidget {
   final bool isResubmitted;
-   SellerIntroVerificationScreen({super.key, required this.isResubmitted});
+  SellerIntroVerificationScreen({super.key, required this.isResubmitted});
 
   @override
   State<SellerIntroVerificationScreen> createState() =>
@@ -17,7 +17,9 @@ class SellerIntroVerificationScreen extends StatefulWidget {
 
   static Route route(RouteSettings routeSettings) {
     Map? arguments = routeSettings.arguments as Map?;
-    return BlurredRouter(builder: (_) => SellerIntroVerificationScreen(isResubmitted: arguments?["isResubmitted"]));
+    return BlurredRouter(
+        builder: (_) => SellerIntroVerificationScreen(
+            isResubmitted: arguments?["isResubmitted"]));
   }
 }
 
@@ -79,11 +81,8 @@ class _SellerIntroVerificationScreenState
           padding: EdgeInsets.symmetric(horizontal: sidePadding),
           child: UiUtils.buildButton(context, height: 46, radius: 8,
               onPressed: () {
-            Navigator.pushNamed(
-              context,
-              Routes.sellerVerificationScreen,
-                arguments: {"isResubmitted":widget.isResubmitted}
-            );
+            Navigator.pushNamed(context, Routes.sellerVerificationScreen,
+                arguments: {"isResubmitted": widget.isResubmitted});
           }, buttonTitle: "startVerification".translate(context)),
         ),
         SizedBox(

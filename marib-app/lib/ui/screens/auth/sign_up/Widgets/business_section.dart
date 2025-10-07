@@ -1,5 +1,5 @@
 // lib/ui/screens/auth/sign_up/widgets/business_section.dart
- //
+//
 // واجهة "التجاري" — مقسّمة إلى بطاقات/كلاسات صغيرة قابلة لإعادة الاستخدام.
 // - BusinessSection: الغلاف الذي يرتّب البطاقات
 // - _LogoCard: بطاقة الشعار مع أنيميشن تحميل/نجاح وتلميح بعد الرفع (اختياري)
@@ -13,9 +13,9 @@
 // - _SubmitBar: شريط إرسال/تقديم (زر رئيسي بحالة تحميل) — اختياري
 //
 // ملاحظة: جميع هذه الكلاسات UI فقط. المنطق (مثل الرفع/الحفظ) يبقى في الشاشة الأم.
-import 'package:flutter/cupertino.dart' show CupertinoScrollbar; // لعناصر Cupertino
-import 'package:flutter/services.dart';                          // للـ HapticFeedback
-import 'dart:ui' show ImageFilter;                               // لـ BackdropFilter.blur
+// لعناصر Cupertino
+import 'package:flutter/services.dart'; // للـ HapticFeedback
+import 'dart:ui' show ImageFilter; // لـ BackdropFilter.blur
 
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -23,15 +23,12 @@ import 'package:marib/ui/screens/widgets/custom_text_form_field.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/data/model/category_model.dart';
-import 'dart:ui' as ui;    // Path, PathMetric
+import 'dart:ui' as ui; // Path, PathMetric
 import 'dart:math' as math; // min
 import 'dart:async';
-import 'package:flutter/services.dart';
 import 'package:flutter/scheduler.dart'; // SchedulerBinding
-import 'working_hours.dart';
+import 'package:marib/ui/screens/auth/sign_up/Widgets/working_hours.dart';
 import 'package:marib/utils/ui_utils.dart';
-import 'package:marib/utils/helper_utils.dart';
-
 
 class BusinessSection extends StatelessWidget {
   // === الشعار ===
@@ -57,8 +54,8 @@ class BusinessSection extends StatelessWidget {
   final VoidCallback onGetLocation;
 
   // === الأقسام ===
-  final List<CategoryModel> categories;    // الأقسام المعروضة (أطفال القسم 6)
-  final List<int> selectedCategoryIds;     // المعرفات المحددة
+  final List<CategoryModel> categories; // الأقسام المعروضة (أطفال القسم 6)
+  final List<int> selectedCategoryIds; // المعرفات المحددة
   final void Function(int id) onToggleCategory;
 
   // === أوقات العمل (قديم) ===
@@ -73,16 +70,17 @@ class BusinessSection extends StatelessWidget {
   final ValueChanged<Map<String, dynamic>> onChangedWorkingHours;
 
   // === وسائل الدفع ===
-  final Map<String, String> paymentMethods; // مفتاح => النص المترجم (i18n key داخل القيمة)
+  final Map<String, String>
+      paymentMethods; // مفتاح => النص المترجم (i18n key داخل القيمة)
   final List<String> selectedPaymentMethods;
   final Map<String, TextEditingController> paymentControllers;
   final void Function(String key, bool isSelected) onTogglePayment;
   final String Function(String key) getAccountHint;
 
   // === أنيميشن الشعار (اختياري) ===
-  final bool isLogoUploading;       // يُظهر لودر أثناء الرفع
+  final bool isLogoUploading; // يُظهر لودر أثناء الرفع
   final double? logoUploadProgress; // 0..1
-  final bool showLogoPreviewHint;   // يُظهر تلميح "هكذا سيظهر شعارك للمستخدمين"
+  final bool showLogoPreviewHint; // يُظهر تلميح "هكذا سيظهر شعارك للمستخدمين"
 
   // === إبراز الحقول الإلزامية بصريًا ===
   final bool highlightRequired;
@@ -91,15 +89,7 @@ class BusinessSection extends StatelessWidget {
   final VoidCallback? onSubmit;
   final bool isSubmitting;
 
-
-
-
   final bool isUploading;
-
-
-
-
-
 
   const BusinessSection({
     super.key,
@@ -147,24 +137,19 @@ class BusinessSection extends StatelessWidget {
     // إرسال
     this.onSubmit,
     this.isSubmitting = false,
-
-
     required this.isUploading,
-
   });
 
   // خريطة افتراضية في حال كانت workingHours = null
   Map<String, dynamic> get _fallbackWorkingHours => const {
-    "sat": {"enabled": false, "from": null, "to": null},
-    "sun": {"enabled": false, "from": null, "to": null},
-    "mon": {"enabled": false, "from": null, "to": null},
-    "tue": {"enabled": false, "from": null, "to": null},
-    "wed": {"enabled": false, "from": null, "to": null},
-    "thu": {"enabled": false, "from": null, "to": null},
-    "fri": {"enabled": false, "from": null, "to": null},
-  };
-
-
+        "sat": {"enabled": false, "from": null, "to": null},
+        "sun": {"enabled": false, "from": null, "to": null},
+        "mon": {"enabled": false, "from": null, "to": null},
+        "tue": {"enabled": false, "from": null, "to": null},
+        "wed": {"enabled": false, "from": null, "to": null},
+        "thu": {"enabled": false, "from": null, "to": null},
+        "fri": {"enabled": false, "from": null, "to": null},
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -199,10 +184,6 @@ class BusinessSection extends StatelessWidget {
             ),
 
             const SizedBox(height: 14),
-
-
-
-
 
             // 3) اسم النشاط التجاري
             _BusinessNameCard(
@@ -239,12 +220,9 @@ class BusinessSection extends StatelessWidget {
             ),
             const SizedBox(height: 14),
 
-
             // 7) بطاقة أوقات العمل
             const WorkingHoursCard(),
             const SizedBox(height: 14),
-
-
 
             // 8) بطاقة وسائل الدفع + حقول الحسابات
             _PaymentMethodsCard(
@@ -263,7 +241,6 @@ class BusinessSection extends StatelessWidget {
                 isSubmitting: isSubmitting,
                 label: "completeRegistration".translate(context),
                 color: c.territoryColor,
-
               ),
             ],
             // 👇 أضف السطرين التاليين قبل إغلاق الـ Column
@@ -276,13 +253,9 @@ class BusinessSection extends StatelessWidget {
   }
 }
 
-
-
-
 /* =========================================
    بطاقة الشعار (أنيميشن + تلميح بعد الرفع)
    ========================================= */
-
 
 class _LogoCard extends StatefulWidget {
   final File? image;
@@ -399,7 +372,7 @@ class _LogoCardState extends State<_LogoCard> {
               final outline = th.colorScheme.outline
                   .withOpacity(th.brightness == Brightness.dark ? .45 : .75);
               final dash = outline;
-              final bg = th.colorScheme.surfaceVariant
+              final bg = th.colorScheme.surfaceContainerHighest
                   .withOpacity(th.brightness == Brightness.dark ? .18 : .45);
 
               return Center(
@@ -413,36 +386,39 @@ class _LogoCardState extends State<_LogoCard> {
                           borderRadius: BorderRadius.circular(_r),
                           child: widget.image != null
                               ? Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(_r),
-                              border: Border.all(color: outline, width: 1.2),
-                            ),
-                            child: _AnimatedLogoBox(
-                              image: widget.image,
-                              onTap: () {
-                                if (widget.isUploading) {
-                                  _softToast("الرفع قيد التنفيذ…", seconds: 2);
-                                  return;
-                                }
-                                widget.onPick();
-                              },
-                              // نستعيض عن اللودر الداخلي بمؤشر الزاوية
-                              isUploading: false,
-                              progress: null,
-                              success: showHint,
-                            ),
-                          )
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(_r),
+                                    border:
+                                        Border.all(color: outline, width: 1.2),
+                                  ),
+                                  child: _AnimatedLogoBox(
+                                    image: widget.image,
+                                    onTap: () {
+                                      if (widget.isUploading) {
+                                        _softToast("الرفع قيد التنفيذ…",
+                                            seconds: 2);
+                                        return;
+                                      }
+                                      widget.onPick();
+                                    },
+                                    // نستعيض عن اللودر الداخلي بمؤشر الزاوية
+                                    isUploading: false,
+                                    progress: null,
+                                    success: showHint,
+                                  ),
+                                )
                               : _DashedSquarePlaceholder(
-                            background: bg,
-                            dashColor: dash,
-                            onTap: () {
-                              if (widget.isUploading) {
-                                _softToast("الرفع قيد التنفيذ…", seconds: 2);
-                                return;
-                              }
-                              widget.onPick();
-                            },
-                          ),
+                                  background: bg,
+                                  dashColor: dash,
+                                  onTap: () {
+                                    if (widget.isUploading) {
+                                      _softToast("الرفع قيد التنفيذ…",
+                                          seconds: 2);
+                                      return;
+                                    }
+                                    widget.onPick();
+                                  },
+                                ),
                         ),
                       ),
 
@@ -485,8 +461,7 @@ class _LogoCardState extends State<_LogoCard> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.info_outline_rounded,
-                  size: 14,
-                  color: th.colorScheme.onSurface.withOpacity(0.72)),
+                  size: 14, color: th.colorScheme.onSurface.withOpacity(0.72)),
               const SizedBox(width: 6),
               Flexible(
                 child: Text(
@@ -513,12 +488,12 @@ class _LogoCardState extends State<_LogoCard> {
               opacity: showHint ? 1 : 0,
               child: showHint
                   ? Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: _HintBanner(
-                  icon: Icons.visibility_rounded,
-                  text: "هكذا سيظهر شعارك للمستخدمين ",
-                ),
-              )
+                      padding: const EdgeInsets.only(top: 12),
+                      child: _HintBanner(
+                        icon: Icons.visibility_rounded,
+                        text: "هكذا سيظهر شعارك للمستخدمين ",
+                      ),
+                    )
                   : const SizedBox.shrink(),
             ),
           ),
@@ -534,7 +509,6 @@ class _LogoCardState extends State<_LogoCard> {
   }
 }
 
-
 // ===================== Dashed Placeholder (مربع منقّط + أيقونة إضافة) =====================
 class _DashedSquarePlaceholder extends StatelessWidget {
   final Color background;
@@ -549,10 +523,6 @@ class _DashedSquarePlaceholder extends StatelessWidget {
     required this.background,
     required this.dashColor,
     required this.onTap,
-    this.radius = 14,
-    this.dashWidth = 8,
-    this.dashGap = 6,
-    this.strokeWidth = 1.2,
   });
 
   @override
@@ -608,7 +578,8 @@ class _DashedBorderPainterRect extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final rrect = RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(radius));
+    final rrect =
+        RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(radius));
     final paint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
@@ -655,9 +626,11 @@ class _SmallCornerLoader extends StatelessWidget {
       width: 26,
       height: 26,
       decoration: BoxDecoration(
-        color: th.colorScheme.surface.withOpacity(th.brightness == Brightness.dark ? 0.75 : 0.9),
+        color: th.colorScheme.surface
+            .withOpacity(th.brightness == Brightness.dark ? 0.75 : 0.9),
         borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: th.colorScheme.outline.withOpacity(.35), width: 0.8),
+        border: Border.all(
+            color: th.colorScheme.outline.withOpacity(.35), width: 0.8),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.08),
@@ -680,12 +653,6 @@ class _SmallCornerLoader extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
 
 /* =========================================
    بطاقة السجل التجاري (رفع/عرض)
@@ -717,7 +684,7 @@ class _CommercialRegisterCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _LabelWithAsterisk(
-            text: "$title (${ 'optional'.translate(context) })",
+            text: "$title (${'optional'.translate(context)})",
             icon: Icons.picture_as_pdf_rounded,
             showAsterisk: false,
           ),
@@ -748,8 +715,8 @@ class _CommercialRegisterCard extends StatelessWidget {
                   child: isLoading
                       ? _LoadingState(textTheme: textTheme, c: c)
                       : (file != null
-                      ? _FileState(file: file!, textTheme: textTheme, c: c)
-                      : _EmptyState(textTheme: textTheme, c: c)),
+                          ? _FileState(file: file!, textTheme: textTheme, c: c)
+                          : _EmptyState(textTheme: textTheme, c: c)),
                 ),
               ),
             ),
@@ -783,7 +750,7 @@ class _EmptyState extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: c.surfaceVariant.withOpacity(0.25),
+              color: c.surfaceContainerHighest.withOpacity(0.25),
               shape: BoxShape.circle,
             ),
             child: Icon(Icons.upload_file_rounded, size: 22, color: c.primary),
@@ -806,7 +773,8 @@ class _FileState extends StatelessWidget {
   final File file;
   final TextTheme textTheme;
   final ColorScheme c;
-  const _FileState({required this.file, required this.textTheme, required this.c});
+  const _FileState(
+      {required this.file, required this.textTheme, required this.c});
 
   @override
   Widget build(BuildContext context) {
@@ -913,9 +881,6 @@ class _DottedBorderPainter extends CustomPainter {
   }
 }
 
-
-
-
 /* =========================================
    بطاقة اسم النشاط التجاري
    ========================================= */
@@ -962,9 +927,10 @@ class _BusinessNameCard extends StatelessWidget {
    ========================================= */
 
 class _LocationCard extends StatelessWidget {
-  final TextEditingController controller;   // سيتم تعبئته تلقائيًا بعد اختيار الخريطة
-  final bool isLoading;                     // لودر زر تحديد الموقع
-  final VoidCallback onGetLocation;         // فتح الخريطة
+  final TextEditingController
+      controller; // سيتم تعبئته تلقائيًا بعد اختيار الخريطة
+  final bool isLoading; // لودر زر تحديد الموقع
+  final VoidCallback onGetLocation; // فتح الخريطة
   final bool highlightRequired;
   final String label;
 
@@ -979,7 +945,7 @@ class _LocationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final th = Theme.of(context);
-    final c  = context.color;
+    final c = context.color;
 
     final bool showErrorOutline =
         highlightRequired && controller.text.trim().isEmpty;
@@ -1036,7 +1002,8 @@ class _LocationCard extends StatelessWidget {
             isLoading: isLoading,
             label: isLoading
                 ? "gettingLocation".translate(context)
-                : "selectLocationOnMap".translate(context), // "حدد الموقع على الخريطة"
+                : "selectLocationOnMap"
+                    .translate(context), // "حدد الموقع على الخريطة"
             icon: Icons.my_location_rounded,
             onPressed: onGetLocation,
           ),
@@ -1046,17 +1013,16 @@ class _LocationCard extends StatelessWidget {
           // ملاحظة مختصرة + تنويه دقة المعلومات
           _InfoLine(
             icon: Icons.info_outline_rounded,
-            text: "يتم احتساب تكلفة التوصيل حسب المسافة، لذا دقّة تحديد موقع المتجر مهمة.",
+            text:
+                "يتم احتساب تكلفة التوصيل حسب المسافة، لذا دقّة تحديد موقع المتجر مهمة.",
           ),
 
           const SizedBox(height: 6),
-
         ],
       ),
     );
   }
 }
-
 
 /* =========================================
    بطاقة أرقام التواصل
@@ -1099,8 +1065,10 @@ class _ContactCard extends StatelessWidget {
             controller: phone,
             fillColor: c.secondaryColor,
             borderColor: c.borderColor.darken(30),
-            keyboard: TextInputType.phone, // ملاحظة: استخدم 'keyboard' وليس 'keyboardType'
-            fixedPrefix: _CountryPrefix(prefixText: prefixText, onPickCountry: onPickCountry),
+            keyboard: TextInputType
+                .phone, // ملاحظة: استخدم 'keyboard' وليس 'keyboardType'
+            fixedPrefix: _CountryPrefix(
+                prefixText: prefixText, onPickCountry: onPickCountry),
             hintText: "phoneNumber".translate(context),
           ),
 
@@ -1114,7 +1082,8 @@ class _ContactCard extends StatelessWidget {
             fillColor: c.secondaryColor,
             borderColor: c.borderColor.darken(30),
             keyboard: TextInputType.phone,
-            fixedPrefix: _CountryPrefix(prefixText: prefixText, onPickCountry: onPickCountry),
+            fixedPrefix: _CountryPrefix(
+                prefixText: prefixText, onPickCountry: onPickCountry),
             hintText: "whatsappNumber".translate(context),
           ),
 
@@ -1125,7 +1094,6 @@ class _ContactCard extends StatelessWidget {
     );
   }
 }
-
 
 /* =========================================
    بطاقة اختيار الأقسام (FilterChips)
@@ -1165,7 +1133,7 @@ class _CategoriesCard extends StatelessWidget {
           _NoticeBanner(
             icon: Icons.info_rounded,
             text:
-            "ملاحظة: اختر الأقسام التي تخص نشاطك التجاري لإتاحة واجهات النشر المخصصة لتلك الأقسام.",
+                "ملاحظة: اختر الأقسام التي تخص نشاطك التجاري لإتاحة واجهات النشر المخصصة لتلك الأقسام.",
           ),
           const SizedBox(height: 12),
 
@@ -1192,10 +1160,12 @@ class _CategoriesCard extends StatelessWidget {
                       style: TextStyle(fontSize: context.font.normal),
                     ),
                     style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
                       backgroundColor: c.territoryColor,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
                 ),
@@ -1292,19 +1262,20 @@ class _CategoriesPaletteSheet extends StatefulWidget {
   });
 
   @override
-  State<_CategoriesPaletteSheet> createState() => _CategoriesPaletteSheetState();
+  State<_CategoriesPaletteSheet> createState() =>
+      _CategoriesPaletteSheetState();
 }
 
 class _CategoriesPaletteSheetState extends State<_CategoriesPaletteSheet>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _ac =
-  AnimationController(vsync: this, duration: const Duration(milliseconds: 220))
+  late final AnimationController _ac = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 220))
     ..forward();
   late final Animation<Offset> _slide =
-  Tween(begin: const Offset(0, 0.06), end: Offset.zero)
-      .animate(CurvedAnimation(parent: _ac, curve: Curves.easeOutCubic));
+      Tween(begin: const Offset(0, 0.06), end: Offset.zero)
+          .animate(CurvedAnimation(parent: _ac, curve: Curves.easeOutCubic));
   late final Animation<double> _fade =
-  CurvedAnimation(parent: _ac, curve: Curves.easeOut);
+      CurvedAnimation(parent: _ac, curve: Curves.easeOut);
 
   final ValueNotifier<bool> _scrolled = ValueNotifier(false);
   late Set<int> _localSelected = {...widget.initialSelected};
@@ -1353,7 +1324,8 @@ class _CategoriesPaletteSheetState extends State<_CategoriesPaletteSheet>
                           children: [
                             const SizedBox(height: 8),
                             Container(
-                              width: 40, height: 4,
+                              width: 40,
+                              height: 4,
                               decoration: BoxDecoration(
                                 color: c.borderColor,
                                 borderRadius: BorderRadius.circular(2),
@@ -1366,17 +1338,19 @@ class _CategoriesPaletteSheetState extends State<_CategoriesPaletteSheet>
                               valueListenable: _scrolled,
                               builder: (_, sc, __) => AnimatedContainer(
                                 duration: const Duration(milliseconds: 160),
-                                padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+                                padding:
+                                    const EdgeInsets.fromLTRB(16, 10, 16, 12),
                                 decoration: BoxDecoration(
                                   color: c.backgroundColor,
                                   boxShadow: sc
                                       ? [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.06),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ]
+                                          BoxShadow(
+                                            color:
+                                                Colors.black.withOpacity(0.06),
+                                            blurRadius: 10,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ]
                                       : const [],
                                 ),
                                 child: Center(
@@ -1394,24 +1368,28 @@ class _CategoriesPaletteSheetState extends State<_CategoriesPaletteSheet>
                             ),
 
                             // خط فاصل باهت تحت العنوان
-                            Divider(height: 1, thickness: 1, color: faintDivider),
+                            Divider(
+                                height: 1, thickness: 1, color: faintDivider),
 
                             // الملاحظة بعرض كامل
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+                              padding:
+                                  const EdgeInsets.fromLTRB(16, 10, 16, 10),
                               child: Container(
                                 width: double.infinity,
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 10),
                                 decoration: BoxDecoration(
                                   color: c.territoryColor.withOpacity(0.06),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                      color: c.territoryColor.withOpacity(0.35), width: 1),
+                                      color: c.territoryColor.withOpacity(0.35),
+                                      width: 1),
                                 ),
                                 child: Text(
                                   "قد لا ترى بعض الأقسام بشكل صريح لأنها أقسام جامعة. "
-                                      "مثلاً: \"الإكسسوارات\" قد تشمل أكثر من 10 أنشطة تجارية فرعية، "
-                                      "وهكذا بقية الأقسام.",
+                                  "مثلاً: \"الإكسسوارات\" قد تشمل أكثر من 10 أنشطة تجارية فرعية، "
+                                  "وهكذا بقية الأقسام.",
                                   textAlign: TextAlign.start,
                                   style: TextStyle(
                                     fontSize: context.font.small,
@@ -1428,9 +1406,11 @@ class _CategoriesPaletteSheetState extends State<_CategoriesPaletteSheet>
                                 behavior: const _NoGlowScrollBehavior(),
                                 child: NotificationListener<ScrollNotification>(
                                   onNotification: (n) {
-                                    if (n.metrics.pixels <= 2 && _scrolled.value) {
+                                    if (n.metrics.pixels <= 2 &&
+                                        _scrolled.value) {
                                       _scrolled.value = false;
-                                    } else if (n.metrics.pixels > 2 && !_scrolled.value) {
+                                    } else if (n.metrics.pixels > 2 &&
+                                        !_scrolled.value) {
                                       _scrolled.value = true;
                                     }
                                     return false;
@@ -1444,11 +1424,11 @@ class _CategoriesPaletteSheetState extends State<_CategoriesPaletteSheet>
                                         parent: AlwaysScrollableScrollPhysics(),
                                       ),
                                       itemCount: list.length,
-                                      separatorBuilder: (_, __) =>
-                                          Divider(height: 1, color: faintDivider),
+                                      separatorBuilder: (_, __) => Divider(
+                                          height: 1, color: faintDivider),
                                       itemBuilder: (ctx, i) {
                                         final cat = list[i];
-                                        final id  = cat.id!;
+                                        final id = cat.id!;
                                         final sel = _localSelected.contains(id);
                                         return _PaletteRow(
                                           label: cat.name!.trim(),
@@ -1456,7 +1436,9 @@ class _CategoriesPaletteSheetState extends State<_CategoriesPaletteSheet>
                                           onTap: () {
                                             HapticFeedback.selectionClick();
                                             setState(() {
-                                              sel ? _localSelected.remove(id) : _localSelected.add(id);
+                                              sel
+                                                  ? _localSelected.remove(id)
+                                                  : _localSelected.add(id);
                                             });
                                             widget.onToggle(id);
                                           },
@@ -1471,26 +1453,31 @@ class _CategoriesPaletteSheetState extends State<_CategoriesPaletteSheet>
                             // الشريط السفلي: زر "تم" فقط مع Blur
                             ClipRect(
                               child: BackdropFilter(
-                                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                                filter:
+                                    ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                                 child: Container(
                                   decoration: BoxDecoration(
                                     color: c.backgroundColor.withOpacity(0.85),
-                                    border: Border(top: BorderSide(color: c.borderColor)),
+                                    border: Border(
+                                        top: BorderSide(color: c.borderColor)),
                                   ),
-                                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                                  padding:
+                                      const EdgeInsets.fromLTRB(12, 8, 12, 12),
                                   child: SizedBox(
                                     width: double.infinity,
                                     child: ElevatedButton.icon(
                                       onPressed: () => Navigator.pop(context),
                                       icon: const Icon(Icons.check_rounded),
-                                      label: Text("تم • ${_localSelected.length}"),
+                                      label:
+                                          Text("تم • ${_localSelected.length}"),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: c.territoryColor,
                                         foregroundColor: Colors.white,
                                         padding: const EdgeInsets.symmetric(
                                             horizontal: 12, vertical: 14),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
                                         ),
                                       ),
                                     ),
@@ -1504,7 +1491,8 @@ class _CategoriesPaletteSheetState extends State<_CategoriesPaletteSheet>
                         // زر الإغلاق معلّق في زاوية النافذة (منفصل عن العنوان)
                         PositionedDirectional(
                           top: 6,
-                          end: 8, // لو تريدها دائمًا أعلى اليمين: Positioned(top: 6, right: 8, child: ...)
+                          end:
+                              8, // لو تريدها دائمًا أعلى اليمين: Positioned(top: 6, right: 8, child: ...)
                           child: IconButton(
                             onPressed: () => Navigator.pop(context),
                             icon: const Icon(Icons.close_rounded),
@@ -1534,7 +1522,8 @@ class _PaletteRow extends StatefulWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  const _PaletteRow({required this.label, required this.selected, required this.onTap});
+  const _PaletteRow(
+      {required this.label, required this.selected, required this.onTap});
 
   @override
   State<_PaletteRow> createState() => _PaletteRowState();
@@ -1561,7 +1550,9 @@ class _PaletteRowState extends State<_PaletteRow> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         color: widget.selected
             ? c.territoryColor.withOpacity(0.06)
-            : (_pressed ? c.backgroundColor.withOpacity(0.60) : c.backgroundColor),
+            : (_pressed
+                ? c.backgroundColor.withOpacity(0.60)
+                : c.backgroundColor),
         child: Row(
           children: [
             SizedBox(
@@ -1581,16 +1572,20 @@ class _PaletteRowState extends State<_PaletteRow> {
                 ),
                 child: widget.selected
                     ? Container(
-                  key: const ValueKey('on'),
-                  width: 20, height: 20,
-                  decoration: BoxDecoration(
-                    color: c.territoryColor.withOpacity(0.15),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: c.territoryColor, width: 1.5),
-                  ),
-                  child: Icon(Icons.check_rounded, size: 14, color: c.territoryColor),
-                )
-                    : const SizedBox(key: ValueKey('off'), width: 20, height: 20),
+                        key: const ValueKey('on'),
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color: c.territoryColor.withOpacity(0.15),
+                          shape: BoxShape.circle,
+                          border:
+                              Border.all(color: c.territoryColor, width: 1.5),
+                        ),
+                        child: Icon(Icons.check_rounded,
+                            size: 14, color: c.territoryColor),
+                      )
+                    : const SizedBox(
+                        key: ValueKey('off'), width: 20, height: 20),
               ),
             ),
             const SizedBox(width: 8),
@@ -1602,7 +1597,8 @@ class _PaletteRowState extends State<_PaletteRow> {
                 style: TextStyle(
                   fontSize: context.font.normal,
                   fontWeight: FontWeight.w600,
-                  color: widget.selected ? c.territoryColor : c.textDefaultColor,
+                  color:
+                      widget.selected ? c.territoryColor : c.textDefaultColor,
                 ),
               ),
             ),
@@ -1617,7 +1613,8 @@ class _NoGlowScrollBehavior extends ScrollBehavior {
   const _NoGlowScrollBehavior();
 
   @override
-  Widget buildOverscrollIndicator(BuildContext context, Widget child, ScrollableDetails details) {
+  Widget buildOverscrollIndicator(
+      BuildContext context, Widget child, ScrollableDetails details) {
     return child; // بدون توهج
   }
 
@@ -1663,7 +1660,9 @@ class _SelectableRowState extends State<_SelectableRow> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         color: widget.selected
             ? c.territoryColor.withOpacity(0.06)
-            : (_pressed ? c.backgroundColor.withOpacity(0.6) : c.backgroundColor),
+            : (_pressed
+                ? c.backgroundColor.withOpacity(0.6)
+                : c.backgroundColor),
         child: Row(
           children: [
             // علامة الصح المتحركة (AnimatedSwitcher)
@@ -1674,23 +1673,24 @@ class _SelectableRowState extends State<_SelectableRow> {
               transitionBuilder: (child, a) => FadeTransition(
                 opacity: a,
                 child: ScaleTransition(
-                  scale: Tween(begin: 0.6, end: 1.0)
-                      .animate(CurvedAnimation(parent: a, curve: Curves.easeOutBack)),
+                  scale: Tween(begin: 0.6, end: 1.0).animate(
+                      CurvedAnimation(parent: a, curve: Curves.easeOutBack)),
                   child: child,
                 ),
               ),
               child: widget.selected
                   ? Container(
-                key: const ValueKey('on'),
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(
-                  color: c.territoryColor.withOpacity(0.15),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: c.territoryColor, width: 1.5),
-                ),
-                child: Icon(Icons.check_rounded, size: 16, color: c.territoryColor),
-              )
+                      key: const ValueKey('on'),
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: c.territoryColor.withOpacity(0.15),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: c.territoryColor, width: 1.5),
+                      ),
+                      child: Icon(Icons.check_rounded,
+                          size: 16, color: c.territoryColor),
+                    )
                   : const SizedBox(key: ValueKey('off'), width: 22, height: 22),
             ),
             const SizedBox(width: 12),
@@ -1702,7 +1702,8 @@ class _SelectableRowState extends State<_SelectableRow> {
                 style: TextStyle(
                   fontSize: context.font.normal,
                   fontWeight: FontWeight.w600,
-                  color: widget.selected ? c.territoryColor : c.textDefaultColor,
+                  color:
+                      widget.selected ? c.territoryColor : c.textDefaultColor,
                 ),
               ),
             ),
@@ -1729,7 +1730,8 @@ class _SelectedSummaryLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.color;
-    final selected = categories.where((e) => selectedIds.contains(e.id)).toList();
+    final selected =
+        categories.where((e) => selectedIds.contains(e.id)).toList();
 
     return SizedBox(
       height: 36,
@@ -1775,27 +1777,16 @@ class _SelectedSummaryLine extends StatelessWidget {
   }
 }
 
-
-
 /* =========================================
    بطاقة أوقات العمل
    ========================================= */
-
-
-
-
-
-
-
-
-
 
 /* =========================================
    بطاقة وسائل الدفع + حقول الحسابات
    ========================================= */
 
 class _PaymentMethodsCard extends StatelessWidget {
-  final Map<String, String> paymentMethods;                  // key -> i18n key
+  final Map<String, String> paymentMethods; // key -> i18n key
   final List<String> selectedMethods;
   final Map<String, TextEditingController> controllers;
   final void Function(String key, bool isSelected) onToggleMethod;
@@ -1823,7 +1814,6 @@ class _PaymentMethodsCard extends StatelessWidget {
             showAsterisk: false,
           ),
           const SizedBox(height: 10),
-
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
@@ -1838,8 +1828,10 @@ class _PaymentMethodsCard extends StatelessWidget {
 
                 return Card(
                   elevation: 2,
-                  margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  margin:
+                      const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                   child: Column(
                     children: [
                       CheckboxListTile(
@@ -1853,13 +1845,14 @@ class _PaymentMethodsCard extends StatelessWidget {
                           ),
                         ),
                         activeColor: const Color(0xFFF35A00),
-                        onChanged: (checked) => onToggleMethod(key, checked ?? false),
+                        onChanged: (checked) =>
+                            onToggleMethod(key, checked ?? false),
                         controlAffinity: ListTileControlAffinity.leading,
                       ),
-
                       if (isSelected)
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 6),
                           child: CustomTextFormField(
                             controller: controller,
                             fillColor: c.backgroundColor,
@@ -1884,7 +1877,6 @@ class _PaymentMethodsCard extends StatelessWidget {
    شريط تقديم الطلب (زر رئيسي)
    ========================================= */
 
-
 class _SubmitBar extends StatelessWidget {
   final VoidCallback onSubmit;
   final bool isSubmitting;
@@ -1906,22 +1898,23 @@ class _SubmitBar extends StatelessWidget {
         onPressed: isSubmitting ? null : onSubmit,
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         child: isSubmitting
             ? const SizedBox(
-          width: 20, height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-        )
-            : Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white),
+              )
+            : Text(label,
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w600)),
       ),
     );
   }
 }
-
-
-
-
 
 /* =========================================
    عناصر مساعدة داخلية (UI فقط)
@@ -1953,16 +1946,6 @@ class _CardShell extends StatelessWidget {
   }
 }
 
-
-
-
-
-
-
-
-
-
-
 class _LabelWithAsterisk extends StatelessWidget {
   final String text;
   final IconData icon;
@@ -1993,13 +1976,17 @@ class _LabelWithAsterisk extends StatelessWidget {
         Flexible(
           child: RichText(
             text: TextSpan(
-              style: TextStyle(fontSize: f.normal, color: c.textDefaultColor, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                  fontSize: f.normal,
+                  color: c.textDefaultColor,
+                  fontWeight: FontWeight.w600),
               children: [
                 TextSpan(text: text),
                 if (showAsterisk)
                   TextSpan(
                     text: "  *",
-                    style: TextStyle(color: Colors.redAccent, fontSize: f.normal + 1),
+                    style: TextStyle(
+                        color: Colors.redAccent, fontSize: f.normal + 1),
                   ),
               ],
             ),
@@ -2020,7 +2007,10 @@ class _FieldLabel extends StatelessWidget {
     final f = context.font;
     return Text(
       text,
-      style: TextStyle(fontSize: f.normal, color: c.textDefaultColor, fontWeight: FontWeight.w600),
+      style: TextStyle(
+          fontSize: f.normal,
+          color: c.textDefaultColor,
+          fontWeight: FontWeight.w600),
     );
   }
 }
@@ -2035,7 +2025,8 @@ class _TinyNote extends StatelessWidget {
     final f = context.font;
     return Text(
       text,
-      style: TextStyle(fontSize: f.small, color: c.textColorDark.withOpacity(0.75)),
+      style: TextStyle(
+          fontSize: f.small, color: c.textColorDark.withOpacity(0.75)),
     );
   }
 }
@@ -2057,7 +2048,8 @@ class _InfoLine extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: TextStyle(fontSize: f.small, color: c.textColorDark.withOpacity(0.8)),
+            style: TextStyle(
+                fontSize: f.small, color: c.textColorDark.withOpacity(0.8)),
           ),
         ),
       ],
@@ -2143,8 +2135,8 @@ class _AnimatedLogoBox extends StatelessWidget {
             if (image != null)
               Image.file(image!, fit: BoxFit.cover)
             else
-              Icon(Icons.add_photo_alternate_rounded, size: 56, color: c.territoryColor),
-
+              Icon(Icons.add_photo_alternate_rounded,
+                  size: 56, color: c.territoryColor),
             if (isUploading) ...[
               Container(color: Colors.black.withOpacity(0.3)),
               Center(
@@ -2152,12 +2144,15 @@ class _AnimatedLogoBox extends StatelessWidget {
                   height: 36,
                   width: 36,
                   child: progress != null
-                      ? CircularProgressIndicator(value: progress!.clamp(0.0, 1.0), strokeWidth: 3, color: Colors.white)
-                      : const CircularProgressIndicator(strokeWidth: 3, color: Colors.white),
+                      ? CircularProgressIndicator(
+                          value: progress!.clamp(0.0, 1.0),
+                          strokeWidth: 3,
+                          color: Colors.white)
+                      : const CircularProgressIndicator(
+                          strokeWidth: 3, color: Colors.white),
                 ),
               ),
             ],
-
             if (success && !isUploading)
               AnimatedOpacity(
                 duration: const Duration(milliseconds: 280),
@@ -2165,7 +2160,10 @@ class _AnimatedLogoBox extends StatelessWidget {
                 child: Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [Colors.black.withOpacity(0.0), Colors.black.withOpacity(0.25)],
+                      colors: [
+                        Colors.black.withOpacity(0.0),
+                        Colors.black.withOpacity(0.25)
+                      ],
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                     ),
@@ -2191,14 +2189,16 @@ class _SuccessCheckBadge extends StatefulWidget {
   State<_SuccessCheckBadge> createState() => _SuccessCheckBadgeState();
 }
 
-class _SuccessCheckBadgeState extends State<_SuccessCheckBadge> with SingleTickerProviderStateMixin {
+class _SuccessCheckBadgeState extends State<_SuccessCheckBadge>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _ctl;
   late final Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
-    _ctl = AnimationController(vsync: this, duration: const Duration(milliseconds: 380));
+    _ctl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 380));
     _scale = CurvedAnimation(parent: _ctl, curve: Curves.easeOutBack);
     _ctl.forward();
   }
@@ -2219,16 +2219,15 @@ class _SuccessCheckBadgeState extends State<_SuccessCheckBadge> with SingleTicke
         decoration: BoxDecoration(
           color: Colors.green,
           shape: BoxShape.circle,
-          boxShadow: [BoxShadow(color: Colors.green.withOpacity(0.35), blurRadius: 10)],
+          boxShadow: [
+            BoxShadow(color: Colors.green.withOpacity(0.35), blurRadius: 10)
+          ],
         ),
         child: Icon(Icons.check_rounded, size: 20, color: c.secondaryColor),
       ),
     );
   }
 }
-
-
-
 
 class _HintBanner extends StatelessWidget {
   final IconData icon;
@@ -2267,7 +2266,6 @@ class _HintBanner extends StatelessWidget {
   }
 }
 
-
 class _FullWidthActionButton extends StatelessWidget {
   final bool isLoading;
   final String label;
@@ -2291,27 +2289,26 @@ class _FullWidthActionButton extends StatelessWidget {
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: c.territoryColor,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         icon: isLoading
             ? const SizedBox(
-          width: 18, height: 18,
-          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-        )
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white),
+              )
             : Icon(icon, size: 20, color: Colors.white),
         label: Text(
           label,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          style:
+              const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
       ),
     );
   }
 }
-
-
-
-
-
 
 class _FootNote extends StatelessWidget {
   final String text;
@@ -2322,12 +2319,14 @@ class _FootNote extends StatelessWidget {
     final f = context.font;
     return Row(
       children: [
-        Icon(Icons.info_outline_rounded, size: 16, color: c.textColorDark.withOpacity(0.7)),
+        Icon(Icons.info_outline_rounded,
+            size: 16, color: c.textColorDark.withOpacity(0.7)),
         const SizedBox(width: 6),
         Expanded(
           child: Text(
             text,
-            style: TextStyle(fontSize: f.small, color: c.textColorDark.withOpacity(0.7)),
+            style: TextStyle(
+                fontSize: f.small, color: c.textColorDark.withOpacity(0.7)),
           ),
         ),
       ],

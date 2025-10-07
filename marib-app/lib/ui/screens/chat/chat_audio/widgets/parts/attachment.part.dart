@@ -21,7 +21,6 @@ class _AttachmentMessageState extends State<AttachmentMessage> {
   }
 
   Future<void> downloadFile() async {
-
     try {
       if (widget.url.startsWith('http')) {
         // Download file from URL using Dio
@@ -34,10 +33,8 @@ class _AttachmentMessageState extends State<AttachmentMessage> {
 
             if (persontage == 1) {
               HelperUtils.showSnackBarMessage(
-                  context,
-                  "fileSavedIn".translate(context),
-                  type: MessageType.success
-              );
+                  context, "fileSavedIn".translate(context),
+                  type: MessageType.success);
 
               await OpenFilex.open("$downloadPath/${getFileName()}");
             }
@@ -52,22 +49,17 @@ class _AttachmentMessageState extends State<AttachmentMessage> {
         File(widget.url).copy("$downloadPath/$fileName");
 
         HelperUtils.showSnackBarMessage(
-            context,
-            "fileSavedIn".translate(context),
-            type: MessageType.success
-        );
+            context, "fileSavedIn".translate(context),
+            type: MessageType.success);
 
         await OpenFilex.open("$downloadPath/$fileName");
       }
     } catch (e) {
       HelperUtils.showSnackBarMessage(
-          context,
-          "errorFileSave".translate(context),
-          type: MessageType.success
-      );
+          context, "errorFileSave".translate(context),
+          type: MessageType.success);
     }
   }
-
 
 /*  Future<void> downloadFile() async {
     print("widget url***${widget.url}");

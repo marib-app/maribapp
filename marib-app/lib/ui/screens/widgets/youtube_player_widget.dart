@@ -20,12 +20,12 @@ class _YoutubePlayerWidgetState extends State<YoutubePlayerWidget> {
   late YoutubePlayerController controller;
 
   String? getVideoId() {
-    return YoutubePlayer.convertUrlToId(widget.videoUrl)??null;
+    return YoutubePlayer.convertUrlToId(widget.videoUrl) ?? null;
   }
 
   @override
   void initState() {
-    if(getVideoId()!=null) {
+    if (getVideoId() != null) {
       controller = YoutubePlayerController(
         initialVideoId: getVideoId()!,
         flags: const YoutubePlayerFlags(
@@ -39,20 +39,22 @@ class _YoutubePlayerWidgetState extends State<YoutubePlayerWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return getVideoId()!=null?SizedBox(
-        child: YoutubePlayerBuilder(
-      onEnterFullScreen: () {
-        widget.onLandscape.call();
-      },
-      onExitFullScreen: () {
-        widget.onPortrate.call();
-      },
-      player: YoutubePlayer(
-        controller: controller,
-      ),
-      builder: (context, child) {
-        return child;
-      },
-    )):Container();
+    return getVideoId() != null
+        ? SizedBox(
+            child: YoutubePlayerBuilder(
+            onEnterFullScreen: () {
+              widget.onLandscape.call();
+            },
+            onExitFullScreen: () {
+              widget.onPortrate.call();
+            },
+            player: YoutubePlayer(
+              controller: controller,
+            ),
+            builder: (context, child) {
+              return child;
+            },
+          ))
+        : Container();
   }
 }

@@ -4,7 +4,7 @@ import 'package:marib/data/model/item/cart_model.dart';
 import 'package:marib/data/model/cart/checkout_models.dart';
 import 'package:marib/utils/app_icon.dart';
 
-import 'order_summary_section.dart';
+import 'package:marib/ui/screens/cart/components/delivery_and_payment/order_summary_section.dart';
 
 /// تبويب يستعرض تفاصيل ملخص الطلب من أصناف وخصومات وكوبونات.
 class CartOrderSummaryTab extends StatelessWidget {
@@ -17,13 +17,11 @@ class CartOrderSummaryTab extends StatelessWidget {
     required this.freeShippingApplied,
     required this.shippingAmount,
     required this.shippingCurrency,
-
     this.initiallyExpanded = true,
   });
 
   /// حالة التحميل لعرض قوالب الانتظار.
   final bool loading;
-
 
   /// عناصر السلة المراد تلخيصها.
   final List<Cart> cartItems;
@@ -42,7 +40,6 @@ class CartOrderSummaryTab extends StatelessWidget {
 
   /// العملة المصاحبة لقيمة الشحن الرقمية.
   final String? shippingCurrency;
-
 
   /// التحكم في ما إذا كان التبويب مفتوحًا افتراضيًا.
   final bool initiallyExpanded;
@@ -79,7 +76,8 @@ class CartOrderSummaryTab extends StatelessWidget {
             'ملخص الطلب',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
-          childrenPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          childrenPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           children: [
             OrderSummarySection(
               loading: loading,
@@ -89,7 +87,6 @@ class CartOrderSummaryTab extends StatelessWidget {
               freeShippingApplied: freeShippingApplied,
               shippingAmount: shippingAmount,
               shippingCurrency: shippingCurrency,
-
             ),
           ],
         ),

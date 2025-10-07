@@ -3,10 +3,10 @@ import 'package:shimmer/shimmer.dart';
 
 /// عناصر مساعدة مشتركة بين أقسام التوصيل والدفع في شاشة السلة.
 Widget buildShimmerLine(
-    BuildContext context, {
-      double height = 12,
-      double width = 120,
-    }) {
+  BuildContext context, {
+  double height = 12,
+  double width = 120,
+}) {
   final bool isDark = Theme.of(context).brightness == Brightness.dark;
   return Shimmer.fromColors(
     baseColor: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
@@ -24,16 +24,16 @@ Widget buildShimmerLine(
 
 /// صف يعرض السعر مع ملاحظة جانبية داخل شريط الدفع السفلي.
 Widget buildPriceRow(
-    BuildContext context, {
-      required String title,
-      required String note,
-      required String value,
-      required bool loading,
-      Color? valueColor,
-      FontWeight valueWeight = FontWeight.bold,
-      TextStyle? titleStyle,
-      TextStyle? noteStyle,
-    }) {
+  BuildContext context, {
+  required String title,
+  required String note,
+  required String value,
+  required bool loading,
+  Color? valueColor,
+  FontWeight valueWeight = FontWeight.bold,
+  TextStyle? titleStyle,
+  TextStyle? noteStyle,
+}) {
   final TextStyle resolvedTitleStyle = titleStyle ??
       TextStyle(
         fontSize: 14,
@@ -49,14 +49,12 @@ Widget buildPriceRow(
 
   final bool showNote = note.trim().isNotEmpty;
 
-
   return Row(
     mainAxisAlignment: MainAxisAlignment.spaceBetween,
     children: [
       Expanded(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
-
           children: [
             Flexible(
               child: Text(
@@ -81,16 +79,15 @@ Widget buildPriceRow(
       loading
           ? buildShimmerLine(context, width: 60, height: 14)
           : Text(
-        value,
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: valueWeight,
-          color: valueColor ?? Theme.of(context).colorScheme.onSurface,
-        ),
-      ),
+              value,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: valueWeight,
+                color: valueColor ?? Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
     ],
   );
-
 }
 
 /// بطاقة جاهزة تعرض نص سياسة الاسترجاع بتنسيق موحد.
@@ -125,5 +122,4 @@ Widget buildReturnPolicyCard(BuildContext context, String policyText) {
       ],
     ),
   );
-
 }

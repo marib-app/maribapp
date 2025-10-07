@@ -2,7 +2,6 @@ import 'package:marib/ui/screens/widgets/promoted_widget.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/string_extenstion.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -13,19 +12,9 @@ import 'package:marib/data/cubits/favorite/manage_fav_cubit.dart';
 import 'package:marib/data/cubits/system/app_theme_cubit.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marquee/marquee.dart';
-import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
-
-
-
-
-
-
-
-
-
 
 /// ✅ تعريف كلاس حالة الإعلان (محجوز / مباعة...)
 class StatusButton {
@@ -225,9 +214,9 @@ class FavoriteButtonWidget extends StatelessWidget {
                     context: context,
                     onNotGuest: () {
                       context.read<UpdateFavoriteCubit>().setFavoriteItem(
-                        item: item,
-                        type: isLike ? 0 : 1,
-                      );
+                            item: item,
+                            type: isLike ? 0 : 1,
+                          );
                     },
                   );
                 },
@@ -237,29 +226,28 @@ class FavoriteButtonWidget extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: context.color.secondaryColor,
                     shape: BoxShape.circle,
-                    boxShadow:
-                    context.watch<AppThemeCubit>().state.appTheme ==
-                        AppTheme.dark
+                    boxShadow: context.watch<AppThemeCubit>().state.appTheme ==
+                            AppTheme.dark
                         ? null
                         : [
-                      const BoxShadow(
-                        color: Color.fromARGB(12, 0, 0, 0),
-                        offset: Offset(0, 2),
-                        blurRadius: 10,
-                        spreadRadius: 4,
-                      ),
-                    ],
+                            const BoxShadow(
+                              color: Color.fromARGB(12, 0, 0, 0),
+                              offset: Offset(0, 2),
+                              blurRadius: 10,
+                              spreadRadius: 4,
+                            ),
+                          ],
                   ),
                   child: FittedBox(
                     fit: BoxFit.none,
                     child: state is UpdateFavoriteInProgress
                         ? Center(child: UiUtils.progress())
                         : UiUtils.getSvg(
-                      isLike ? AppIcons.like_fill : AppIcons.like,
-                      width: 22,
-                      height: 22,
-                      color: context.color.territoryColor,
-                    ),
+                            isLike ? AppIcons.like_fill : AppIcons.like,
+                            width: 22,
+                            height: 22,
+                            color: context.color.territoryColor,
+                          ),
                   ),
                 ),
               );
@@ -285,7 +273,7 @@ class ItemDetailsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String? address =
-    (item.address?.trim().isNotEmpty ?? false) ? item.address : null;
+        (item.address?.trim().isNotEmpty ?? false) ? item.address : null;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -298,7 +286,7 @@ class ItemDetailsSection extends StatelessWidget {
           builder: (context) {
             final title = item.name?.firstUpperCase() ?? "بدون عنوان";
             final dynamicFontSize =
-            title.length > 30 ? context.font.smaller : context.font.normal;
+                title.length > 30 ? context.font.smaller : context.font.normal;
             final style = TextStyle(
               fontSize: dynamicFontSize,
               color: context.color.textDefaultColor,
@@ -346,7 +334,6 @@ class ItemDetailsSection extends StatelessWidget {
               ),
             ),
             if (showLikeButton) favButton(item: item, size: 32),
-
           ],
         ),
 
@@ -368,10 +355,9 @@ class ItemDetailsSection extends StatelessWidget {
                     builder: (context) {
                       final style = TextStyle(
                         fontSize: context.font.smaller,
-                        color:
-                        context.color.textDefaultColor.withOpacity(0.5),
+                        color: context.color.textDefaultColor.withOpacity(0.5),
                       );
-                      if ((address?.length ?? 0) > 28) {
+                      if ((address.length ?? 0) > 28) {
                         return SizedBox(
                           height: style.fontSize! + 2,
                           child: Marquee(
@@ -382,10 +368,9 @@ class ItemDetailsSection extends StatelessWidget {
                             velocity: 25.0,
                             pauseAfterRound: const Duration(seconds: 1),
                             startPadding: 10.0,
-                            accelerationDuration:
-                            const Duration(seconds: 1),
+                            accelerationDuration: const Duration(seconds: 1),
                             decelerationDuration:
-                            const Duration(milliseconds: 500),
+                                const Duration(milliseconds: 500),
                           ),
                         );
                       }
@@ -404,9 +389,6 @@ class ItemDetailsSection extends StatelessWidget {
   }
 }
 
-
-
-
 Widget favButton({required ItemModel item, required double size}) {
   return BlocProvider(
     create: (context) => UpdateFavoriteCubit(FavoriteRepository()),
@@ -418,7 +400,8 @@ Widget favButton({required ItemModel item, required double size}) {
             // لما تجي نتيجة التفضيلات
           },
           builder: (context, likeAndDislikeState) {
-            bool isLike = context.read<FavoriteCubit>().isItemFavorite(item.id!);
+            bool isLike =
+                context.read<FavoriteCubit>().isItemFavorite(item.id!);
 
             return BlocConsumer<UpdateFavoriteCubit, UpdateFavoriteState>(
               bloc: context.read<UpdateFavoriteCubit>(),
@@ -427,7 +410,9 @@ Widget favButton({required ItemModel item, required double size}) {
                   if (state.wasProcess) {
                     context.read<FavoriteCubit>().addFavoriteitem(state.item);
                   } else {
-                    context.read<FavoriteCubit>().removeFavoriteItem(state.item);
+                    context
+                        .read<FavoriteCubit>()
+                        .removeFavoriteItem(state.item);
                   }
                 }
               },
@@ -440,39 +425,42 @@ Widget favButton({required ItemModel item, required double size}) {
                   child: IconButton(
                     icon: inProgress
                         ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
                         : UiUtils.getSvg(
-                      isLike ? AppIcons.like_fill : AppIcons.like,
-                      width: 22,
-                      height: 22,
-                      color: isLike ? Colors.redAccent : Colors.white,
-                    ),
+                            isLike ? AppIcons.like_fill : AppIcons.like,
+                            width: 22,
+                            height: 22,
+                            color: isLike ? Colors.redAccent : Colors.white,
+                          ),
                     onPressed: inProgress
                         ? null
                         : () {
-                      UiUtils.checkUser(
-                        onNotGuest: () {
-                          context.read<UpdateFavoriteCubit>().setFavoriteItem(
-                            item: item,
-                            type: isLike ? 0 : 1,
-                          );
+                            UiUtils.checkUser(
+                              onNotGuest: () {
+                                context
+                                    .read<UpdateFavoriteCubit>()
+                                    .setFavoriteItem(
+                                      item: item,
+                                      type: isLike ? 0 : 1,
+                                    );
 
-                          UiUtils.showSoftSnackBar(
-                            context,
-                            message: isLike
-                                ? "تمت الإزالة من المفضلة"
-                                : "تمت الإضافة إلى المفضلة",
-                          );
-                        },
-                        context: context,
-                      );
-                    },
+                                UiUtils.showSoftSnackBar(
+                                  context,
+                                  message: isLike
+                                      ? "تمت الإزالة من المفضلة"
+                                      : "تمت الإضافة إلى المفضلة",
+                                );
+                              },
+                              context: context,
+                            );
+                          },
                   ),
                 );
               },
@@ -483,14 +471,6 @@ Widget favButton({required ItemModel item, required double size}) {
     ),
   );
 }
-
-
-
-
-
-
-
-
 
 /// ✅ ويدجت سعر مبسط (بدون شيمر)
 class _PriceInline extends StatelessWidget {
@@ -507,7 +487,6 @@ class _PriceInline extends StatelessWidget {
     required this.textColor,
     required this.priceColor,
     required this.style,
-    this.spacing = 6.0,
   });
 
   @override
@@ -523,8 +502,7 @@ class _PriceInline extends StatelessWidget {
         Text(
           currency,
           style: style.copyWith(
-            fontSize:
-            style.fontSize != null ? style.fontSize! * 0.75 : null,
+            fontSize: style.fontSize != null ? style.fontSize! * 0.75 : null,
             color: textColor.withOpacity(0.6),
           ),
         ),
@@ -539,8 +517,6 @@ class _PriceInline extends StatelessWidget {
     }
     return formatted;
   }
-
-
 }
 
 /// ✅ الكارد الأفقي
@@ -600,10 +576,5 @@ class ItemHorizontalCard extends StatelessWidget {
         ),
       ),
     );
-
   }
 }
-
-
-
-

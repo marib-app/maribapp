@@ -37,17 +37,9 @@ import 'package:flutter_svg/svg.dart';
 import 'package:marib/data/repositories/chat_repository.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:marib/data/cubits/chat/get_seller_chat_users_cubit.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:marib/data/cubits/chat/get_seller_chat_users_cubit.dart';
-import 'dart:async';
 import 'package:marib/utils/chat/chat_sync_controller.dart';
 
-
 part 'chat_screen_ui.dart';
-
-
-
-
 
 int totalMessageCount = 0;
 
@@ -78,7 +70,6 @@ class ChatScreen extends StatefulWidget {
   final String? currency;
   final String? currencySymbol;
 
-
   const ChatScreen({
     super.key,
     required this.profilePicture,
@@ -89,7 +80,6 @@ class ChatScreen extends StatefulWidget {
     required this.itemId,
     required this.date,
     required this.conversationId,
-
     this.from,
     required this.itemOfferId,
     this.status,
@@ -121,9 +111,9 @@ class _ChatScreenState extends State<ChatScreen>
   bool isFetchedFirstTime = false;
   double scrollPositionWhenLoadMore = 0;
   final StreamController<PermissionStatus> _notificationStatusController =
-  StreamController<PermissionStatus>.broadcast();
+      StreamController<PermissionStatus>.broadcast();
   late final Stream<PermissionStatus> notificationStream =
-  notificationPermission();
+      notificationPermission();
   late StreamSubscription<PermissionStatus> notificationStreamSubsctription;
   Timer? _notificationStatusTimer;
   PermissionStatus? _lastEmittedPermissionStatus;
@@ -134,7 +124,6 @@ class _ChatScreenState extends State<ChatScreen>
   final TextEditingController _feedbackController = TextEditingController();
   late final ScrollController _pageScrollController = ScrollController()
     ..addListener(_handleScroll);
-
 
   ParticipantStatus? _otherParticipantStatus;
   String? _otherParticipantName;
@@ -156,7 +145,6 @@ class _ChatScreenState extends State<ChatScreen>
     return '';
   }
 
-
   @override
   void initState() {
     super.initState();
@@ -172,25 +160,22 @@ class _ChatScreenState extends State<ChatScreen>
       unawaited(_chatSyncController.setPresenceOnline());
     }
 
-
     context.read<LoadChatMessagesCubit>().load(
           itemOfferId: widget.itemOfferId,
-      conversationId: widget.conversationId,
-
-    );
+          conversationId: widget.conversationId,
+        );
 
     final String trimmedConversationId = widget.conversationId.trim();
-    final String resolvedConversationId =
-    trimmedConversationId.isNotEmpty ? trimmedConversationId : widget.userId;
-    final String resolvedItemIdentifier = widget.itemOfferId > 0
-        ? widget.itemOfferId.toString()
-        : widget.itemId;
+    final String resolvedConversationId = trimmedConversationId.isNotEmpty
+        ? trimmedConversationId
+        : widget.userId;
+    final String resolvedItemIdentifier =
+        widget.itemOfferId > 0 ? widget.itemOfferId.toString() : widget.itemId;
 
     currentlyChatItemId = resolvedItemIdentifier;
     currentlyChatingWith = effectiveConversationId.isNotEmpty
         ? effectiveConversationId
         : resolvedConversationId;
-
 
     _otherParticipantStatus =
         NotificationService.participantStatusNotifier.value ??
@@ -212,20 +197,13 @@ class _ChatScreenState extends State<ChatScreen>
 
     _cacheInitialParticipants(widget.participants);
 
-
-
-
-
-
     _fallbackParticipants = widget.participants
         ?.map(
           (participant) => ChatParticipant.fromJson(participant.toJson()),
-    )
+        )
         .toList();
 
-
     unawaited(_preparePresenceHandling());
-
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _markConversationAsRead();
@@ -248,7 +226,6 @@ class _ChatScreenState extends State<ChatScreen>
         ratingsAlertDialog();
       }
     });
-
   }
 
   Stream<PermissionStatus> notificationPermission() {
@@ -265,7 +242,6 @@ class _ChatScreenState extends State<ChatScreen>
     }
   }
 
-
   Future<void> _initializeNotificationPermissionFlow() async {
     await _emitCurrentNotificationStatus();
 
@@ -274,11 +250,13 @@ class _ChatScreenState extends State<ChatScreen>
     }
 
     final PermissionStatus? currentStatus = _lastEmittedPermissionStatus;
-    if (currentStatus == null || _shouldStopMonitoringPermission(currentStatus)) {
+    if (currentStatus == null ||
+        _shouldStopMonitoringPermission(currentStatus)) {
       return;
     }
 
-    final PermissionStatus requestedStatus = await Permission.notification.request();
+    final PermissionStatus requestedStatus =
+        await Permission.notification.request();
     _emitPermissionStatus(requestedStatus);
 
     if (!mounted || _shouldStopMonitoringPermission(requestedStatus)) {
@@ -297,13 +275,13 @@ class _ChatScreenState extends State<ChatScreen>
     _notificationStatusTimer?.cancel();
     _notificationStatusTimer =
         Timer.periodic(const Duration(seconds: 5), (Timer timer) async {
-          final PermissionStatus status = await Permission.notification.status;
-          _emitPermissionStatus(status);
+      final PermissionStatus status = await Permission.notification.status;
+      _emitPermissionStatus(status);
 
-          if (_shouldStopMonitoringPermission(status)) {
-            timer.cancel();
-          }
-        });
+      if (_shouldStopMonitoringPermission(status)) {
+        timer.cancel();
+      }
+    });
   }
 
   void _emitPermissionStatus(PermissionStatus status) {
@@ -321,9 +299,6 @@ class _ChatScreenState extends State<ChatScreen>
     return status.isGranted || status.isPermanentlyDenied;
   }
 
-
-
-
   void _cacheInitialParticipants(List<ChatParticipant>? participants) {
     if (participants == null || participants.isEmpty) {
       return;
@@ -336,11 +311,6 @@ class _ChatScreenState extends State<ChatScreen>
       itemId: widget.itemId,
     );
   }
-
-
-
-
-
 
   void _initializePresence() {
     final participants = _resolveParticipants();
@@ -362,11 +332,9 @@ class _ChatScreenState extends State<ChatScreen>
     }
     resolvedStatus ??= _otherParticipantStatus;
     resolvedName ??= _otherParticipantName;
-    final bool shouldUpdate =
-        resolvedStatus != _otherParticipantStatus ||
-            resolvedName != _otherParticipantName;
+    final bool shouldUpdate = resolvedStatus != _otherParticipantStatus ||
+        resolvedName != _otherParticipantName;
     if (!shouldUpdate) {
-
       return;
     }
     if (mounted) {
@@ -380,14 +348,13 @@ class _ChatScreenState extends State<ChatScreen>
     }
   }
 
-
   Future<void> _preparePresenceHandling() async {
     if (_fallbackParticipants != null && _fallbackParticipants!.isNotEmpty) {
       _initializePresence();
     }
 
     final List<ChatParticipant>? participants =
-    await _loadParticipantsIfNeeded();
+        await _loadParticipantsIfNeeded();
 
     if (!mounted) {
       if (participants != null && participants.isNotEmpty) {
@@ -404,34 +371,27 @@ class _ChatScreenState extends State<ChatScreen>
 
     _initializePresence();
 
-
-
     _presenceEventSubscription ??=
         NotificationService.userPresenceEvents.listen((event) {
-          if (!mounted) {
-            return;
-          }
-          setState(() {
-            _otherParticipantStatus = event.status;
-          });
-        });
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _otherParticipantStatus = event.status;
+      });
+    });
 
     final UserPresenceEvent? latestEvent =
         NotificationService.userPresenceEventNotifier.value;
-    final ParticipantStatus? latestStatus =
-        latestEvent?.status ??
-            NotificationService.participantStatusNotifier.value;
+    final ParticipantStatus? latestStatus = latestEvent?.status ??
+        NotificationService.participantStatusNotifier.value;
 
     if (latestStatus != null && latestStatus != _otherParticipantStatus) {
       setState(() {
         _otherParticipantStatus = latestStatus;
       });
     }
-
-
   }
-
-
 
   void _handleScroll() {
     if (!_pageScrollController.hasClients) {
@@ -446,10 +406,6 @@ class _ChatScreenState extends State<ChatScreen>
     }
   }
 
-
-
-
-
   List<ChatParticipant>? _resolveParticipants() {
     final participants = widget.participants;
     if (participants != null && participants.isNotEmpty) {
@@ -459,12 +415,11 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   Future<List<ChatParticipant>?> _loadParticipantsIfNeeded() async {
-
     if (widget.participants != null && widget.participants!.isNotEmpty) {
       return widget.participants!
           .map(
             (participant) => ChatParticipant.fromJson(participant.toJson()),
-      )
+          )
           .toList();
     }
 
@@ -472,7 +427,7 @@ class _ChatScreenState extends State<ChatScreen>
     final int itemOfferId = widget.itemOfferId;
 
     List<ChatParticipant>? resolvedParticipants =
-    NotificationService.getCachedParticipants(
+        NotificationService.getCachedParticipants(
       conversationId,
       itemOfferId: itemOfferId > 0 ? itemOfferId : null,
       senderId: widget.userId,
@@ -483,7 +438,7 @@ class _ChatScreenState extends State<ChatScreen>
         _findParticipantsFromCubit(conversationId, itemOfferId, widget.userId);
 
     final List<ChatParticipant>? notificationParticipants =
-    NotificationService.buildParticipantsFromNotification(
+        NotificationService.buildParticipantsFromNotification(
       data: {
         'user_id': widget.userId,
         'user_name': widget.userName,
@@ -495,21 +450,18 @@ class _ChatScreenState extends State<ChatScreen>
       resolvedParticipants = notificationParticipants;
     }
 
-    final bool shouldFetchFromRepository =
-        resolvedParticipants == null ||
-            resolvedParticipants.isEmpty ||
-            resolvedParticipants
-                .every((participant) => participant.status == null);
+    final bool shouldFetchFromRepository = resolvedParticipants == null ||
+        resolvedParticipants.isEmpty ||
+        resolvedParticipants.every((participant) => participant.status == null);
 
     if (shouldFetchFromRepository) {
       final List<ChatParticipant>? repositoryParticipants =
-      await _fetchParticipantsFromRepository(
+          await _fetchParticipantsFromRepository(
         conversationId,
         itemOfferId,
       );
 
-      if (repositoryParticipants != null &&
-          repositoryParticipants.isNotEmpty) {
+      if (repositoryParticipants != null && repositoryParticipants.isNotEmpty) {
         resolvedParticipants = repositoryParticipants;
       }
     }
@@ -518,7 +470,6 @@ class _ChatScreenState extends State<ChatScreen>
       _cacheInitialParticipants(resolvedParticipants);
     }
     return resolvedParticipants;
-
   }
 
   List<ChatParticipant>? _findParticipantsFromCubit(
@@ -533,8 +484,8 @@ class _ChatScreenState extends State<ChatScreen>
               return participants
                   .map(
                     (participant) =>
-                    ChatParticipant.fromJson(participant.toJson()),
-              )
+                        ChatParticipant.fromJson(participant.toJson()),
+                  )
                   .toList();
             }
             break;
@@ -553,8 +504,8 @@ class _ChatScreenState extends State<ChatScreen>
               return participants
                   .map(
                     (participant) =>
-                    ChatParticipant.fromJson(participant.toJson()),
-              )
+                        ChatParticipant.fromJson(participant.toJson()),
+                  )
                   .toList();
             }
             break;
@@ -566,8 +517,8 @@ class _ChatScreenState extends State<ChatScreen>
     return null;
   }
 
-  bool _doesChatMatch(ChatedUser chat, String conversationId, int itemOfferId,
-      String userId) {
+  bool _doesChatMatch(
+      ChatedUser chat, String conversationId, int itemOfferId, String userId) {
     final String candidateConversation =
         chat.conversationId ?? chat.itemOfferId?.toString() ?? '';
     if (conversationId.isNotEmpty && candidateConversation.isNotEmpty) {
@@ -595,36 +546,35 @@ class _ChatScreenState extends State<ChatScreen>
       String conversationId, int itemOfferId) async {
     final ChatRepostiory repository = ChatRepostiory();
     try {
-      final ChatedUser? conversation = await repository.fetchConversationDetails(
+      final ChatedUser? conversation =
+          await repository.fetchConversationDetails(
         conversationId: conversationId,
         itemOfferId: itemOfferId > 0 ? itemOfferId : null,
       );
       if (conversation?.participants != null &&
           conversation!.participants!.isNotEmpty) {
         return conversation.participants!
-            .map((participant) => ChatParticipant.fromJson(participant.toJson()))
+            .map(
+                (participant) => ChatParticipant.fromJson(participant.toJson()))
             .toList();
       }
     } catch (_) {}
     return null;
   }
 
-
-
-
-
   void _markConversationAsRead() {
     if (widget.conversationId.isEmpty) return;
     try {
-      context.read<GetBuyerChatListCubit>().markConversationRead(widget.conversationId);
+      context
+          .read<GetBuyerChatListCubit>()
+          .markConversationRead(widget.conversationId);
     } catch (_) {}
     try {
-      context.read<GetSellerChatListCubit>().markConversationRead(widget.conversationId);
+      context
+          .read<GetSellerChatListCubit>()
+          .markConversationRead(widget.conversationId);
     } catch (_) {}
   }
-
-
-
 
   void _handleChatSyncStream(List<Widget> widgets) {
     final String? userIdStr = HiveUtils.getUserId();
@@ -652,10 +602,9 @@ class _ChatScreenState extends State<ChatScreen>
       }
 
       final String status = (message.status ?? '').toLowerCase();
-      final bool deliveredKnown =
-          (message.deliveredAt?.isNotEmpty ?? false) ||
-              status == 'delivered' ||
-              status == 'read';
+      final bool deliveredKnown = (message.deliveredAt?.isNotEmpty ?? false) ||
+          status == 'delivered' ||
+          status == 'read';
       final bool readKnown =
           (message.readAt?.isNotEmpty ?? false) || status == 'read';
 
@@ -693,7 +642,6 @@ class _ChatScreenState extends State<ChatScreen>
     showRecordButton = !hasText && messageAttachment == null;
   }
 
-
   String? _presenceLabel(BuildContext context) {
     final status = _otherParticipantStatus;
     if (status == null) {
@@ -728,7 +676,6 @@ class _ChatScreenState extends State<ChatScreen>
     const candidates = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
     return candidates.any((ext) => clean.endsWith(ext));
   }
-
 
   @override
   void dispose() {
@@ -917,8 +864,7 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   @override
-  Widget build(BuildContext context) =>
-      buildChatScreen(context);
+  Widget build(BuildContext context) => buildChatScreen(context);
 
   Widget offerWidget() => buildOfferWidget();
 }

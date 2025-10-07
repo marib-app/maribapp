@@ -1,12 +1,11 @@
-
 import 'package:marib/utils/login/lib/payloads.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:marib/utils/login/lib/login_status.dart';
 import 'package:flutter/foundation.dart';
 
-
 int? forceResendingToken;
+
 abstract class LoginSystem {
   final List<void Function(MLoginState)> listeners = [];
   FirebaseAuth firebaseAuth = FirebaseAuth.instance;
@@ -23,7 +22,6 @@ abstract class LoginSystem {
     onEvent(state);
   }
 
-
   VoidCallback addListener(void Function(MLoginState) fn) {
     listeners.add(fn);
     return () => removeListener(fn);
@@ -32,7 +30,6 @@ abstract class LoginSystem {
   void removeListener(void Function(MLoginState) fn) {
     listeners.remove(fn);
   }
-
 
   Future<void> requestVerification() async {
     emit(MVerificationPending());
@@ -92,7 +89,7 @@ class MMultiAuthentication {
     }
   }
 
-  requestVerification() {
+  void requestVerification() {
     systems.forEach((String key, LoginSystem value) async {
       //like assign the particular payload if key is matching to selected login system
       LoginSystem? selectedSystem;
@@ -127,8 +124,6 @@ class MMultiAuthentication {
 
   ///This method will called for login
   Future<UserCredential?>? login() async {
-
-
     if (_selectedLoginSystem == "" || _selectedLoginSystem == null) {
       throw "Please select login system using setActive method";
     }
@@ -144,14 +139,10 @@ class MMultiAuthentication {
       }
     });
 
-
     UserCredential? credential;
     if (selectedSystem != null) {
-
-
       credential = await selectedSystem?.login();
     }
-
 
     return credential;
   }

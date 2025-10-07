@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/ui/screens/widgets/custom_text_form_field.dart';
-import 'package:marib/utils/ui_utils.dart';
-import 'package:marib/utils/hive_utils.dart';
 
 class NewPasswordDialog extends StatefulWidget {
   final Function(String password) onPasswordSet;

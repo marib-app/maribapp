@@ -1,21 +1,14 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
-import 'package:timeago/timeago.dart' as timeago;
 
 import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/responsiveSize.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:ui';
-import 'package:flutter/widgets.dart';
-import 'dart:ui' as ui;
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
-
 
 /// ✅ هذا الويجت يعرض خريطة ثابتة مع زر تفاعلي فوقها.
 /// يتم استخدامه في صفحة تفاصيل الإعلان لعرض موقع الإعلان بشكل مختصر.
-
 
 class MapPreviewBox extends StatelessWidget {
   final double latitude;
@@ -35,9 +28,8 @@ class MapPreviewBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textColor = isDarkMode
-        ? Colors.white.withOpacity(0.95)
-        : Colors.grey.shade800;
+    final textColor =
+        isDarkMode ? Colors.white.withOpacity(0.95) : Colors.grey.shade800;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -46,11 +38,8 @@ class MapPreviewBox extends StatelessWidget {
             .bold()
             .size(context.font.large)
             .color(textColor),
-
         addressWidget,
-
         const SizedBox(height: 8),
-
         Stack(
           children: [
             ClipRRect(
@@ -78,7 +67,6 @@ class MapPreviewBox extends StatelessWidget {
                 ),
               ),
             ),
-
             Positioned.fill(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(18),
@@ -90,7 +78,6 @@ class MapPreviewBox extends StatelessWidget {
                 ),
               ),
             ),
-
             Positioned.fill(
               child: Center(
                 child: ElevatedButton.icon(
@@ -119,8 +106,6 @@ class MapPreviewBox extends StatelessWidget {
     );
   }
 }
-
-
 
 class MapPreviewBoxShimmer extends StatelessWidget {
   const MapPreviewBoxShimmer({super.key});

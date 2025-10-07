@@ -33,14 +33,13 @@ class TransactionModel {
         json['reference'] ??
         json['payment_reference'];
     paymentId = (json['payment_id'] ??
-        json['payment_transaction_id'] ??
-        json['transaction_id'] ??
-        json['transaction_identifier'] ??
-        json['identifier'] ??
-        json['manual_payment_id'] ??
-        json['id'])
+            json['payment_transaction_id'] ??
+            json['transaction_id'] ??
+            json['transaction_identifier'] ??
+            json['identifier'] ??
+            json['manual_payment_id'] ??
+            json['id'])
         ?.toString();
-
 
     paymentSignature = json['payment_signature'];
     paymentStatus =
@@ -49,7 +48,6 @@ class TransactionModel {
     createdAt = json['created_at'];
     updatedAt = json['updated_at'];
   }
-
 
   double? _parseAmount(dynamic value) {
     if (value == null) {
@@ -64,7 +62,6 @@ class TransactionModel {
     }
     return null;
   }
-
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = new Map<String, dynamic>();

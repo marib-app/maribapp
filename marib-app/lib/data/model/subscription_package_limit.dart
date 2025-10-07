@@ -8,7 +8,6 @@ class SubscriptionPackageLimit {
     this.expiresAt,
   });
 
-
   factory SubscriptionPackageLimit.fromJson(String source) =>
       SubscriptionPackageLimit.fromMap(json.decode(source));
 
@@ -43,15 +42,13 @@ class SubscriptionPackageLimit {
   }
 
   Map<String, dynamic> toMap() => <String, dynamic>{
-    'allowed': allowed,
-    'remaining': remaining,
-    'total': total,
-    'expires_at': expiresAt?.toIso8601String(),
-  };
+        'allowed': allowed,
+        'remaining': remaining,
+        'total': total,
+        'expires_at': expiresAt?.toIso8601String(),
+      };
 
   String toJson() => json.encode(toMap());
-
-
 
   @override
   String toString() {

@@ -5,8 +5,6 @@ import 'package:marib/data/model/subscription_pacakage_model.dart';
 import 'package:marib/utils/api.dart';
 import 'package:marib/data/model/subscription_status.dart';
 
-
-
 class SubscriptionRepository {
   Future<DataOutput<SubscriptionPackageModel>> getSubscriptionPacakges(
       {required String type}) async {
@@ -58,8 +56,6 @@ class SubscriptionRepository {
         },
       );
 
-
-
       final Map<String, dynamic> root = _unwrapMap(response);
       final Map<String, dynamic> container = _firstNonEmptyMap(<dynamic>[
         root['data'],
@@ -81,7 +77,7 @@ class SubscriptionRepository {
       ]);
 
       final Map<String, dynamic> normalized =
-      Map<String, dynamic>.from(statusSource);
+          Map<String, dynamic>.from(statusSource);
 
       void ensureKey(String key, dynamic value) {
         if (value == null) {
@@ -101,10 +97,8 @@ class SubscriptionRepository {
           if (existing.trim().isEmpty && value.trim().isNotEmpty) {
             normalized[key] = value;
           }
-
         }
       }
-
 
       final Map<String, dynamic> meta = _firstNonEmptyMap(<dynamic>[
         container['meta'],
@@ -160,7 +154,6 @@ class SubscriptionRepository {
         container['limit'],
         meta['limits'],
         root['limits'],
-
       ]);
 
       final int? limitCount = _extractFeaturedCount(limits);
@@ -222,71 +215,63 @@ class SubscriptionRepository {
       if (!normalized.containsKey('has_active') ||
           normalized['has_active'] == null) {
         ensureKey('has_active', allowedCandidate);
-
-
       }
 
-      final dynamic activeCandidate =
-          normalized['has_active'] ??
-              normalized['hasActive'] ??
-              normalized['active'] ??
-              container['has_active'] ??
-              container['hasActive'] ??
-              container['active'] ??
-              meta['has_active'] ??
-              meta['hasActive'] ??
-              meta['active'] ??
-              root['has_active'] ??
-              root['hasActive'] ??
-              root['active'];
+      final dynamic activeCandidate = normalized['has_active'] ??
+          normalized['hasActive'] ??
+          normalized['active'] ??
+          container['has_active'] ??
+          container['hasActive'] ??
+          container['active'] ??
+          meta['has_active'] ??
+          meta['hasActive'] ??
+          meta['active'] ??
+          root['has_active'] ??
+          root['hasActive'] ??
+          root['active'];
       ensureKey('has_active', activeCandidate);
 
-      final dynamic balanceCandidate =
-          normalized['availableBalance'] ??
-              normalized['available_balance'] ??
-              normalized['balance'] ??
-              container['availableBalance'] ??
-              container['available_balance'] ??
-              container['balance'] ??
-              meta['availableBalance'] ??
-              meta['available_balance'] ??
-              meta['balance'] ??
-              root['availableBalance'] ??
-              root['available_balance'] ??
-              root['balance'];
+      final dynamic balanceCandidate = normalized['availableBalance'] ??
+          normalized['available_balance'] ??
+          normalized['balance'] ??
+          container['availableBalance'] ??
+          container['available_balance'] ??
+          container['balance'] ??
+          meta['availableBalance'] ??
+          meta['available_balance'] ??
+          meta['balance'] ??
+          root['availableBalance'] ??
+          root['available_balance'] ??
+          root['balance'];
       ensureKey('available_balance', balanceCandidate);
 
-      final dynamic isFeaturedCandidate =
-          normalized['is_featured'] ??
-              normalized['isFeatured'] ??
-              container['is_featured'] ??
-              container['isFeatured'] ??
-              container['featured'] ??
-              meta['is_featured'] ??
-              meta['isFeatured'];
+      final dynamic isFeaturedCandidate = normalized['is_featured'] ??
+          normalized['isFeatured'] ??
+          container['is_featured'] ??
+          container['isFeatured'] ??
+          container['featured'] ??
+          meta['is_featured'] ??
+          meta['isFeatured'];
       ensureKey('is_featured', isFeaturedCandidate);
 
-      final dynamic canPauseCandidate =
-          normalized['can_pause'] ??
-              normalized['canPause'] ??
-              container['can_pause'] ??
-              container['canPause'] ??
-              meta['can_pause'] ??
-              meta['canPause'];
+      final dynamic canPauseCandidate = normalized['can_pause'] ??
+          normalized['canPause'] ??
+          container['can_pause'] ??
+          container['canPause'] ??
+          meta['can_pause'] ??
+          meta['canPause'];
       ensureKey('can_pause', canPauseCandidate);
 
       if (normalized.isEmpty) {
         normalized['has_active'] = false;
       }
 
-
-
       SubscriptionStatus status =
-      SubscriptionStatus.fromJson(_unwrapMap(normalized));
+          SubscriptionStatus.fromJson(_unwrapMap(normalized));
 
       if (status.featuredCount == null) {
         final Map<String, dynamic> countResponse =
-        await Api.get(url: Api.adsFeaturedCountApi);
+            await Api.get(url: Api.adsFeaturedCountApi);
         final int? featuredCount = _extractFeaturedCount(countResponse);
         status = status.copyWith(featuredCount: featuredCount);
       }
@@ -309,17 +294,12 @@ class SubscriptionRepository {
   }
 
   Future<Map<String, dynamic>> unfeatureAd(int adId) async {
-
-
     try {
       return await Api.post(
         url: Api.unfeatureAdApi(adId),
         parameter: const <String, dynamic>{},
       );
     } on ApiHttpException catch (error) {
-
-
-
       throw _propagateError(error);
     }
   }
@@ -329,7 +309,7 @@ class SubscriptionRepository {
       return payload;
     }
     if (payload is Map) {
-      return Map<String, dynamic>.from(payload as Map);
+      return Map<String, dynamic>.from(payload);
     }
     return <String, dynamic>{};
   }
@@ -351,7 +331,7 @@ class SubscriptionRepository {
     if (payload is Map) {
       final Map<String, dynamic> map = payload is Map<String, dynamic>
           ? payload
-          : Map<String, dynamic>.from(payload as Map);
+          : Map<String, dynamic>.from(payload);
 
       final int? direct = _parseCount(
         map['featuredCount'] ??
@@ -415,7 +395,6 @@ class SubscriptionRepository {
     }
     if (value is Map) {
       return _extractFeaturedCount(value);
-
     }
     if (value is Iterable) {
       for (final dynamic element in value) {
@@ -451,7 +430,7 @@ class SubscriptionRepository {
     if (payload is Map) {
       final Map<String, dynamic> map = payload is Map<String, dynamic>
           ? payload
-          : Map<String, dynamic>.from(payload as Map);
+          : Map<String, dynamic>.from(payload);
       final String? direct = _extractErrorMessage(
         map['message'] ?? map['error'] ?? map['msg'],
       );
@@ -486,5 +465,4 @@ class SubscriptionRepository {
     }
     return value.toString();
   }
-
 }

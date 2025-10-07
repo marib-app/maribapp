@@ -12,8 +12,6 @@ import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/api.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
-import 'package:marib/settings.dart';
-import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -22,12 +20,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-
-
 
 enum MessageType {
   success(successMessageColor),
@@ -49,10 +44,7 @@ extension StringCasingExtension on String {
       .join(' ');
 }
 
-
-
 class HelperUtils {
-
   static String absoluteImage(String? path) {
     final String value = (path ?? '').trim();
     if (value.isEmpty) {
@@ -82,7 +74,6 @@ class HelperUtils {
     return '$base$value';
   }
 
-
   static String formatPhoneNumber(String fullNumber, String countryCode) {
     countryCode = countryCode.replaceAll('+', '');
     fullNumber = fullNumber.replaceAll('+', '');
@@ -94,15 +85,14 @@ class HelperUtils {
     return '+' + fullNumber;
   }
 
-  static final NumberFormat _priceGroupingFormatter = NumberFormat("#,###", "en");
+  static final NumberFormat _priceGroupingFormatter =
+      NumberFormat("#,###", "en");
 
   /// تنسيق الأرقام الكبيرة إلى صيغة مختصرة بالعربية مع دعم حتى «ديسيليون».
   /// - الأرقام الأقل من 10000 تُعرض كما هي مع فواصل آلاف.
   /// - عند تجاوز ذلك يتم التقسيم على 1000 تدريجيًا واختيار الوحدة المناسبة.
   /// - يتم التخلص من الأصفار العشرية غير اللازمة.
   /// - إذا كانت القيمة `null` يتم إرجاع سلسلة فارغة ليُتَعامل معها خارجيًا.
-
-
 
   static String formatPrice(num? price) {
     if (price == null) {
@@ -131,9 +121,6 @@ class HelperUtils {
     if (absoluteValue < 10000) {
       final String formatted = _priceGroupingFormatter.format(absoluteValue);
       return price.isNegative ? '-$formatted' : formatted;
-
-
-
     }
     int unitIndex = 0;
     double displayValue = absoluteValue;
@@ -153,19 +140,15 @@ class HelperUtils {
     }
 
     final String unitLabel = units[unitIndex];
-    final String valueWithUnit = unitLabel.isEmpty
-        ? formattedValue
-        : '$formattedValue $unitLabel';
+    final String valueWithUnit =
+        unitLabel.isEmpty ? formattedValue : '$formattedValue $unitLabel';
 
     return price.isNegative ? '-$valueWithUnit' : valueWithUnit;
   }
 
-
   static String nativeDeepLinkUrlOfItem(String itemSlug) {
     return "https://${AppSettings.shareNavigationWebUrl}/product-details/$itemSlug?share=true";
   }
-
-
 
   static Future<void> shareImageAndText(String imageUrl, String text) async {
     try {
@@ -189,10 +172,10 @@ class HelperUtils {
   }
 
   static Future<void> shareWithImage(
-      BuildContext context,
-      String itemSlug, {
-        required ItemModel model,
-      }) async {
+    BuildContext context,
+    String itemSlug, {
+    required ItemModel model,
+  }) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     String deepLink = HelperUtils.nativeDeepLinkUrlOfItem(itemSlug);
 
@@ -200,7 +183,10 @@ class HelperUtils {
     String shareMessage = "..."; // جهز نص المشاركة
 
     // جلب رابط الصورة من الإعلان تلقائي
-    String imageUrl = model.image ?? (model.galleryImages?.isNotEmpty == true ? model.galleryImages!.first.image! : "");
+    String imageUrl = model.image ??
+        (model.galleryImages?.isNotEmpty == true
+            ? model.galleryImages!.first.image!
+            : "");
 
     if (imageUrl.isNotEmpty) {
       await shareImageAndText(imageUrl, shareMessage);
@@ -210,33 +196,31 @@ class HelperUtils {
     }
   }
 
-
-
   ////////////    دالة زر المشاركة للاعلانات
 
   static Future<void> share(
-      BuildContext context,
-
-      String itemSlug, {
-        required ItemModel model,
-      }) async {
-
+    BuildContext context,
+    String itemSlug, {
+    required ItemModel model,
+  }) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     String deepLink = HelperUtils.nativeDeepLinkUrlOfItem(itemSlug);
-
-
-
 
     // اختيار الإيموجي حسب اسم الفئة (تقدر تضيف فئات أكثر)
     String emoji = "📢";
     String categoryName = model.category?.name?.toLowerCase() ?? "";
-    if (categoryName.contains("عقار") || categoryName.contains("شقة") || categoryName.contains("منزل")) {
+    if (categoryName.contains("عقار") ||
+        categoryName.contains("شقة") ||
+        categoryName.contains("منزل")) {
       emoji = "🏠";
-    } else if (categoryName.contains("سيارة") || categoryName.contains("مركبة")) {
+    } else if (categoryName.contains("سيارة") ||
+        categoryName.contains("مركبة")) {
       emoji = "🚗";
     } else if (categoryName.contains("وظيفة") || categoryName.contains("عمل")) {
       emoji = "💼";
-    } else if (categoryName.contains("عرض") || categoryName.contains("تخفيض") || categoryName.contains("خصم")) {
+    } else if (categoryName.contains("عرض") ||
+        categoryName.contains("تخفيض") ||
+        categoryName.contains("خصم")) {
       emoji = "🎉";
     } else if (categoryName.contains("منتج") || categoryName.contains("سلعة")) {
       emoji = "🛍";
@@ -284,10 +268,12 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Theme.of(context).scaffoldBackgroundColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -335,9 +321,11 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
                           label: "واتساب",
                           color: const Color(0xFF25D366),
                           onTap: () async {
-                            final url = Uri.parse("https://wa.me/?text=${Uri.encodeComponent(shareMessage)}");
+                            final url = Uri.parse(
+                                "https://wa.me/?text=${Uri.encodeComponent(shareMessage)}");
                             if (await canLaunchUrl(url)) {
-                              await launchUrl(url, mode: LaunchMode.externalApplication);
+                              await launchUrl(url,
+                                  mode: LaunchMode.externalApplication);
                             }
                           },
                         ),
@@ -348,9 +336,11 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
                           label: "تيليجرام",
                           color: const Color(0xFF0088CC),
                           onTap: () async {
-                            final url = Uri.parse("https://t.me/share/url?url=${Uri.encodeComponent(shareMessage)}");
+                            final url = Uri.parse(
+                                "https://t.me/share/url?url=${Uri.encodeComponent(shareMessage)}");
                             if (await canLaunchUrl(url)) {
-                              await launchUrl(url, mode: LaunchMode.externalApplication);
+                              await launchUrl(url,
+                                  mode: LaunchMode.externalApplication);
                             }
                           },
                         ),
@@ -361,9 +351,11 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
                           label: "انستقرام",
                           color: const Color(0xFFE1306C),
                           onTap: () async {
-                            final url = Uri.parse("https://www.instagram.com/?url=${Uri.encodeComponent(deepLink)}");
+                            final url = Uri.parse(
+                                "https://www.instagram.com/?url=${Uri.encodeComponent(deepLink)}");
                             if (await canLaunchUrl(url)) {
-                              await launchUrl(url, mode: LaunchMode.externalApplication);
+                              await launchUrl(url,
+                                  mode: LaunchMode.externalApplication);
                             }
                           },
                         ),
@@ -374,9 +366,11 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
                           label: "فيسبوك",
                           color: const Color(0xFF1877F2),
                           onTap: () async {
-                            final url = Uri.parse("https://www.facebook.com/sharer/sharer.php?u=${Uri.encodeComponent(deepLink)}&quote=${Uri.encodeComponent(shareMessage)}");
+                            final url = Uri.parse(
+                                "https://www.facebook.com/sharer/sharer.php?u=${Uri.encodeComponent(deepLink)}&quote=${Uri.encodeComponent(shareMessage)}");
                             if (await canLaunchUrl(url)) {
-                              await launchUrl(url, mode: LaunchMode.externalApplication);
+                              await launchUrl(url,
+                                  mode: LaunchMode.externalApplication);
                             }
                           },
                         ),
@@ -387,9 +381,11 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
                           label: "نسخ",
                           color: const Color(0xFFFFA726),
                           onTap: () async {
-                            await Clipboard.setData(ClipboardData(text: shareMessage));
+                            await Clipboard.setData(
+                                ClipboardData(text: shareMessage));
                             Navigator.pop(context);
-                            HelperUtils.showSnackBarMessage(context, "تم نسخ الرابط");
+                            HelperUtils.showSnackBarMessage(
+                                context, "تم نسخ الرابط");
                           },
                         ),
                         // المزيد
@@ -400,7 +396,8 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
                           color: isDark ? Colors.grey[600]! : Colors.grey[500]!,
                           onTap: () {
                             Navigator.pop(context);
-                            final box = context.findRenderObject() as RenderBox?;
+                            final box =
+                                context.findRenderObject() as RenderBox?;
                             Share.share(
                               shareMessage,
                               sharePositionOrigin: box != null
@@ -432,8 +429,6 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
       },
     );
   }
-
-
 
   // ويدجت لبناء أيقونة المشاركة مع اسمها ولونها
   static Widget _buildShareTile({
@@ -468,7 +463,6 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
                 ),
               ),
             ),
-
             const SizedBox(height: 6),
             Text(
               label,
@@ -483,23 +477,11 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
     );
   }
 
-
-
-
 /////////////////
-
-
-
-
-
-
-
 
   static String createAdUrl(String slugOrId) {
     return "https://yourdomain.com/ad/$slugOrId";
   }
-
-
 
   static void copyToClipboard(BuildContext context, String text) {
     Clipboard.setData(ClipboardData(text: text));
@@ -507,8 +489,6 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
       SnackBar(content: Text("تم نسخ الرابط")),
     );
   }
-
-
 
   static String decryptString(String encryptedText) {
     try {
@@ -527,20 +507,10 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
     }
   }
 
-
-
-
-
-
-
-
   static Future<bool> checkInternet() async {
     final r = await Connectivity().checkConnectivity();
     return r == ConnectivityResult.mobile || r == ConnectivityResult.wifi;
   }
-
-
-
 
   static String checkHost(String url) {
     if (url.endsWith("/")) {
@@ -564,8 +534,6 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
 
     return int.parse(plain);
   }
-
-
 
   static void unfocus() {
     FocusManager.instance.primaryFocus?.unfocus();
@@ -591,17 +559,14 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
     return mobileNumber;
   }
 
-
-
-
-  static showSnackBarMessage(
-      BuildContext? context,
-      String message, {
-        int messageDuration = 3,
-        MessageType? type,
-        bool? isFloating,
-        VoidCallback? onClose,
-      }) {
+  static void showSnackBarMessage(
+    BuildContext? context,
+    String message, {
+    int messageDuration = 3,
+    MessageType? type,
+    bool? isFloating,
+    VoidCallback? onClose,
+  }) {
     if (context == null) return;
 
     final overlay = Overlay.of(context);
@@ -615,8 +580,8 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
       duration: Duration(seconds: messageDuration),
       backgroundColor: type?.value ??
           (theme.brightness == Brightness.dark
-              ? Colors.grey[800]
-              : Colors.grey[900])!
+                  ? Colors.grey[800]
+                  : Colors.grey[900])!
               .withOpacity(0.9),
       textColor: Colors.white,
       fontSize: 15,
@@ -647,7 +612,6 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
         message.contains('timed out') ||
         message.contains('timeout');
   }
-
 
   static bool isPackageLimitError(dynamic error) {
     if (error == null) return false;
@@ -761,13 +725,10 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
     return rawMessage;
   }
 
-
-
-
   static Future<String> getJsonResponse(BuildContext context,
       {bool isfromfile = false,
-        StreamedResponse? streamedResponse,
-        Response? response}) async {
+      StreamedResponse? streamedResponse,
+      Response? response}) async {
     int code;
     if (isfromfile) {
       code = streamedResponse!.statusCode;
@@ -796,7 +757,7 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
 
         Future.delayed(
           Duration.zero,
-              () {
+          () {
             showSnackBarMessage(context, getdata[Api.message]);
           },
         );
@@ -810,9 +771,6 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
     }
   }
 
-
-
-
   static String getFileSizeString({required int bytes, int decimals = 0}) {
     const suffixes = ["b", "kb", "mb", "gb", "tb"];
     if (bytes == 0) return '0${suffixes[0]}';
@@ -820,12 +778,12 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
     return ((bytes / pow(1024, i)).toStringAsFixed(decimals)) + suffixes[i];
   }
 
-  static killPreviousPages(BuildContext context, var nextpage, var args) {
+  static void killPreviousPages(BuildContext context, var nextpage, var args) {
     Navigator.of(context)
         .pushNamedAndRemoveUntil(nextpage, (route) => false, arguments: args);
   }
 
-  static goToNextPage(var nextpage, BuildContext bcontext, bool isreplace,
+  static void goToNextPage(var nextpage, BuildContext bcontext, bool isreplace,
       {Map? args}) {
     if (isreplace) {
       Navigator.of(bcontext).pushReplacementNamed(nextpage, arguments: args);
@@ -841,7 +799,7 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
 
   static Widget checkVideoType(String url,
       {required Widget Function() onYoutubeVideo,
-        required Widget Function() onOtherVideo}) {
+      required Widget Function() onOtherVideo}) {
     List youtubeDomains = ["youtu.be", "youtube.com"];
 
     Uri uri = Uri.parse(url);
@@ -852,8 +810,6 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
       return onOtherVideo.call();
     }
   }
-
-
 
   static bool isYoutubeVideo(String url) {
     List youtubeDomains = ["youtu.be", "youtube.com"];
@@ -924,7 +880,7 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
         scheme: 'mailto',
         path: value,
         query:
-        'subject=${Constant.appName}&body=${"mailMsgLbl".translate(context)}',
+            'subject=${Constant.appName}&body=${"mailMsgLbl".translate(context)}',
       );
     } else {
       redirectUri = Uri.parse("sms:$value");
@@ -937,8 +893,6 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
     }
   }
 }
-
-
 
 class _SoftSnackBarWidget extends StatefulWidget {
   final String message;
@@ -997,7 +951,8 @@ class _SoftSnackBarWidgetState extends State<_SoftSnackBarWidget>
             color: Colors.transparent,
             child: IntrinsicWidth(
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                 decoration: BoxDecoration(
                   color: widget.backgroundColor,
                   borderRadius: BorderRadius.circular(22),
@@ -1043,4 +998,3 @@ class _SoftSnackBarWidgetState extends State<_SoftSnackBarWidget>
     );
   }
 }
-

@@ -47,7 +47,8 @@ class WalletWithdrawal {
       if (value == null) return null;
       if (value is DateTime) return value;
       if (value is int) {
-        return DateTime.fromMillisecondsSinceEpoch(value * (value.toString().length == 10 ? 1000 : 1));
+        return DateTime.fromMillisecondsSinceEpoch(
+            value * (value.toString().length == 10 ? 1000 : 1));
       }
       if (value is String && value.isNotEmpty) {
         try {
@@ -88,21 +89,25 @@ class WalletWithdrawal {
 
     final amount = _parseDouble(map['amount'] ?? map['total'] ?? map['value']);
     final currency = _parseString(map['currency'] ?? map['currency_code']);
-    final status = _parseString(map['status'] ?? map['state'] ?? map['payment_status']);
+    final status =
+        _parseString(map['status'] ?? map['state'] ?? map['payment_status']);
     final statusMessage = _parseString(
       map['status_message'] ?? map['message'] ?? map['description'],
     );
 
     return WalletWithdrawal(
       id: id,
-      reference: _parseString(map['reference'] ?? map['display_id'] ?? map['code']),
+      reference:
+          _parseString(map['reference'] ?? map['display_id'] ?? map['code']),
       amount: amount,
       currency: currency,
       status: status,
       statusMessage: statusMessage,
       metadata: _parseMetadata(),
-      createdAt: _parseDate(map['created_at'] ?? map['createdAt'] ?? map['created']),
-      updatedAt: _parseDate(map['updated_at'] ?? map['updatedAt'] ?? map['updated']),
+      createdAt:
+          _parseDate(map['created_at'] ?? map['createdAt'] ?? map['created']),
+      updatedAt:
+          _parseDate(map['updated_at'] ?? map['updatedAt'] ?? map['updated']),
       raw: map,
     );
   }

@@ -1,22 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:marib/utils/ui_utils.dart';
-import 'package:flutter/scheduler.dart'; // SchedulerBinding
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+// SchedulerBinding
 import 'dart:async';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
-import 'dart:ui';
 
-import 'package:flutter/widgets.dart';
 import 'dart:ui' as ui;
-
 
 /* =========================================
    بطاقة أوقات العمل
    ========================================= */
-
-
 
 class WorkingHoursCard extends StatefulWidget {
   const WorkingHoursCard({super.key});
@@ -26,10 +19,7 @@ class WorkingHoursCard extends StatefulWidget {
 }
 
 class _WorkingHoursCardState extends State<WorkingHoursCard> {
-
   bool globalEnabled = true;
-
-
 
   void _openWorkingHoursSheet() async {
     await showModalBottomSheet<WeeklyHours>(
@@ -51,8 +41,6 @@ class _WorkingHoursCardState extends State<WorkingHoursCard> {
     );
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     final c = context.color;
@@ -70,14 +58,14 @@ class _WorkingHoursCardState extends State<WorkingHoursCard> {
           Text(
             "أخبر عملاءك بالمواعيد المحددة لنشاطك التجاري .",
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: c.textColor.withOpacity(0.75),
-              height: 1.4,
-            ),
+                  color: c.textColor.withOpacity(0.75),
+                  height: 1.4,
+                ),
           ),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity, // الزر ياخذ كامل عرض الكارت
-            height: 50,             // ارتفاع مخصص
+            height: 50, // ارتفاع مخصص
             child: UiUtils.buildButton(
               context,
               onPressed: _openWorkingHoursSheet, // يفتح نافذة الساعات
@@ -85,20 +73,15 @@ class _WorkingHoursCardState extends State<WorkingHoursCard> {
               radius: 8,
             ),
           ),
-
         ],
       ),
     );
   }
 }
 
-
 /* =========================================
    عناصر مساعدة داخلية (UI فقط)
    ========================================= */
-
-
-
 
 // 2) النماذج المساعدة:
 class DayHours {
@@ -109,10 +92,10 @@ class DayHours {
   DayHours({this.enabled = false, this.from, this.to});
 
   Map<String, dynamic> toJson() => {
-    "enabled": enabled,
-    "from": from == null ? null : "${from!.hour}:${from!.minute}",
-    "to":   to   == null ? null : "${to!.hour}:${to!.minute}",
-  };
+        "enabled": enabled,
+        "from": from == null ? null : "${from!.hour}:${from!.minute}",
+        "to": to == null ? null : "${to!.hour}:${to!.minute}",
+      };
 }
 
 class WeeklyHours {
@@ -133,18 +116,13 @@ const _arabicWeekdays = [
   "الجمعة",
 ];
 
-
-String _fmt(BuildContext ctx, TimeOfDay? t) =>
-    t == null ? "—" : t.format(ctx);
-
-
-
+String _fmt(BuildContext ctx, TimeOfDay? t) => t == null ? "—" : t.format(ctx);
 
 Future<TimeOfDay?> _pickTime(
-    BuildContext context,
-    TimeOfDay? initial, {
-      required bool isOpening,
-    }) async {
+  BuildContext context,
+  TimeOfDay? initial, {
+  required bool isOpening,
+}) async {
   TimeOfDay? selected = initial ?? TimeOfDay.now();
 
   return showTimePicker(
@@ -167,19 +145,22 @@ Future<TimeOfDay?> _pickTime(
                     children: [
                       Expanded(child: child!),
                       Padding(
-                        padding: const EdgeInsets.only(top: 4, bottom: 12, left: 12, right: 12),
+                        padding: const EdgeInsets.only(
+                            top: 4, bottom: 12, left: 12, right: 12),
                         child: Text(
                           isOpening
                               ? "المتجر يبدأ من الساعة ${selected?.format(context) ?? "--:--"}"
                               : "المتجر ينتهي عند الساعة ${selected?.format(context) ?? "--:--"}",
                           textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface, // 👈 تلقائي مع الوضعين
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface, // 👈 تلقائي مع الوضعين
+                                  ),
                         ),
                       ),
-
                     ],
                   ),
                 ),
@@ -196,10 +177,6 @@ Future<TimeOfDay?> _pickTime(
     return selected;
   });
 }
-
-
-
-
 
 // 3) ورقة "تحديد الساعات":
 
@@ -220,15 +197,14 @@ class _WorkingHoursSheetState extends State<WorkingHoursSheet> {
     for (int i = 0; i < 7; i++) i: DayHours(),
   };
 
-
-
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
-    final padding = media.viewInsets +
-        const EdgeInsets.fromLTRB(16, 12, 16, 16);
+    final padding =
+        media.viewInsets + const EdgeInsets.fromLTRB(16, 12, 16, 16);
 
-    return Directionality( // 👈 عكس الاتجاه بالكامل
+    return Directionality(
+      // 👈 عكس الاتجاه بالكامل
       textDirection: ui.TextDirection.rtl,
       child: Padding(
         padding: padding,
@@ -241,10 +217,7 @@ class _WorkingHoursSheetState extends State<WorkingHoursSheet> {
               Text(
                 "إعداد ساعات العمل",
                 textAlign: TextAlign.center,
-                style: Theme
-                    .of(context)
-                    .textTheme
-                    .titleMedium,
+                style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 16),
 
@@ -252,14 +225,16 @@ class _WorkingHoursSheetState extends State<WorkingHoursSheet> {
               _GlobalRow(
                 from: globalFrom,
                 to: globalTo,
-                enabled: globalEnabled,                 // ✅
+                enabled: globalEnabled, // ✅
                 onToggle: (v) => setState(() => globalEnabled = v), // ✅
                 onPickFrom: () async {
-                  final t = await _pickTime(context, globalFrom, isOpening: true);
+                  final t =
+                      await _pickTime(context, globalFrom, isOpening: true);
                   if (t != null) setState(() => globalFrom = t);
                 },
                 onPickTo: () async {
-                  final t = await _pickTime(context, globalTo, isOpening: false);
+                  final t =
+                      await _pickTime(context, globalTo, isOpening: false);
                   if (t != null) setState(() => globalTo = t);
                 },
                 onApplyAll: () {
@@ -272,7 +247,6 @@ class _WorkingHoursSheetState extends State<WorkingHoursSheet> {
                   });
                 },
               ),
-
 
               const SizedBox(height: 12),
               const Divider(height: 1),
@@ -337,8 +311,9 @@ class _WorkingHoursSheetState extends State<WorkingHoursSheet> {
       final d = entry.value;
       if (d.enabled && (d.from == null || d.to == null)) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(
-              "يرجى تحديد ساعات يوم ${_arabicWeekdays[entry.key]}")),
+          SnackBar(
+              content:
+                  Text("يرجى تحديد ساعات يوم ${_arabicWeekdays[entry.key]}")),
         );
         return;
       }
@@ -347,21 +322,20 @@ class _WorkingHoursSheetState extends State<WorkingHoursSheet> {
   }
 }
 
-
 // 4) عناصر واجهة داخلية (سطر الوقت العام + سطر اليوم)
 
 class _GlobalRow extends StatelessWidget {
   final TimeOfDay? from, to;
-  final bool enabled;                 // ✅ جديد
-  final ValueChanged<bool> onToggle;  // ✅ جديد
+  final bool enabled; // ✅ جديد
+  final ValueChanged<bool> onToggle; // ✅ جديد
   final VoidCallback onApplyAll;
   final VoidCallback onPickFrom, onPickTo;
 
   const _GlobalRow({
     required this.from,
     required this.to,
-    required this.enabled,     // ✅
-    required this.onToggle,    // ✅
+    required this.enabled, // ✅
+    required this.onToggle, // ✅
     required this.onApplyAll,
     required this.onPickFrom,
     required this.onPickTo,
@@ -432,9 +406,6 @@ class _GlobalRow extends StatelessWidget {
   }
 }
 
-
-
-
 class _DayRow extends StatelessWidget {
   final String label;
   final bool enabled;
@@ -501,9 +472,6 @@ class _DayRow extends StatelessWidget {
   }
 }
 
-
-
-
 class _TimeButton extends StatelessWidget {
   final String label;
   final String value;
@@ -527,7 +495,8 @@ class _TimeButton extends StatelessWidget {
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
         side: BorderSide(color: disabled ? border.withOpacity(0.3) : border),
-        backgroundColor: disabled ? c.surfaceVariant.withOpacity(0.15) : null,
+        backgroundColor:
+            disabled ? c.surfaceContainerHighest.withOpacity(0.15) : null,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
       child: Row(
@@ -538,17 +507,16 @@ class _TimeButton extends StatelessWidget {
             children: [
               Icon(Icons.schedule_rounded,
                   size: 18,
-                  color: disabled
-                      ? Theme.of(context).disabledColor
-                      : c.primary),
+                  color:
+                      disabled ? Theme.of(context).disabledColor : c.primary),
               const SizedBox(width: 6),
               Text(
                 value,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: disabled
-                      ? Theme.of(context).disabledColor
-                      : c.onSurface,
-                ),
+                      color: disabled
+                          ? Theme.of(context).disabledColor
+                          : c.onSurface,
+                    ),
               ),
             ],
           ),
@@ -557,36 +525,15 @@ class _TimeButton extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: disabled
-                  ? Theme.of(context).disabledColor
-                  : c.primary,
-              fontWeight: FontWeight.w600,
-            ),
+                  color: disabled ? Theme.of(context).disabledColor : c.primary,
+                  fontWeight: FontWeight.w600,
+                ),
           ),
         ],
       ),
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 class _CardShell extends StatelessWidget {
   final Widget child;
@@ -613,8 +560,6 @@ class _CardShell extends StatelessWidget {
     );
   }
 }
-
-
 
 class _LabelWithAsterisk extends StatelessWidget {
   final String text;
@@ -646,13 +591,17 @@ class _LabelWithAsterisk extends StatelessWidget {
         Flexible(
           child: RichText(
             text: TextSpan(
-              style: TextStyle(fontSize: f.normal, color: c.textDefaultColor, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                  fontSize: f.normal,
+                  color: c.textDefaultColor,
+                  fontWeight: FontWeight.w600),
               children: [
                 TextSpan(text: text),
                 if (showAsterisk)
                   TextSpan(
                     text: "  *",
-                    style: TextStyle(color: Colors.redAccent, fontSize: f.normal + 1),
+                    style: TextStyle(
+                        color: Colors.redAccent, fontSize: f.normal + 1),
                   ),
               ],
             ),

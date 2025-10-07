@@ -48,17 +48,23 @@ class UserOrder {
   final OrderActions actions;
   final Map<String, dynamic>? raw;
 
-  String get displayLabel =>
-      (code != null && code!.trim().isNotEmpty) ? code!.trim() : (id.isNotEmpty ? '#$id' : 'طلب');
+  String get displayLabel => (code != null && code!.trim().isNotEmpty)
+      ? code!.trim()
+      : (id.isNotEmpty ? '#$id' : 'طلب');
 
-  String get statusLabel =>
-      (status != null && status!.trim().isNotEmpty) ? status!.trim() : 'قيد المراجعة';
+  String get statusLabel => (status != null && status!.trim().isNotEmpty)
+      ? status!.trim()
+      : 'قيد المراجعة';
 
   String get paymentLabel =>
-      (paymentStatus != null && paymentStatus!.trim().isNotEmpty) ? paymentStatus!.trim() : '—';
+      (paymentStatus != null && paymentStatus!.trim().isNotEmpty)
+          ? paymentStatus!.trim()
+          : '—';
 
   String get deliveryLabel =>
-      (deliveryStatus != null && deliveryStatus!.trim().isNotEmpty) ? deliveryStatus!.trim() : '—';
+      (deliveryStatus != null && deliveryStatus!.trim().isNotEmpty)
+          ? deliveryStatus!.trim()
+          : '—';
 
   String get totalLabel {
     if (totalFormatted != null && totalFormatted!.trim().isNotEmpty) {
@@ -67,8 +73,9 @@ class UserOrder {
 
     if (totalValue != null) {
       final String value = _formatNumber(totalValue!);
-      final String suffix =
-      (currency != null && currency!.trim().isNotEmpty) ? ' ${currency!.trim()}' : '';
+      final String suffix = (currency != null && currency!.trim().isNotEmpty)
+          ? ' ${currency!.trim()}'
+          : '';
       return '$value$suffix';
     }
 
@@ -89,30 +96,42 @@ class UserOrder {
   static UserOrder fromJson(Map<String, dynamic> json) {
     final Map<String, dynamic> map = Map<String, dynamic>.from(json);
 
-    final String id =
-        _asString(map['id'] ?? map['order_id'] ?? map['reference'] ?? map['code'] ?? '') ?? '';
+    final String id = _asString(map['id'] ??
+            map['order_id'] ??
+            map['reference'] ??
+            map['code'] ??
+            '') ??
+        '';
 
-    final String? code =
-    _asString(map['code'] ?? map['order_code'] ?? map['reference'] ?? map['invoice']);
+    final String? code = _asString(
+        map['code'] ?? map['order_code'] ?? map['reference'] ?? map['invoice']);
 
     final DateTime? createdAt = _parseDateTime(
       map['created_at'] ?? map['createdAt'] ?? map['order_date'] ?? map['date'],
     );
 
-    final String? status = _asString(map['status'] ?? map['order_status'] ?? map['state']);
-    final String? paymentStatus =
-    _asString(map['payment_status'] ?? map['paymentState'] ?? map['payment_state']);
+    final String? status =
+        _asString(map['status'] ?? map['order_status'] ?? map['state']);
+    final String? paymentStatus = _asString(
+        map['payment_status'] ?? map['paymentState'] ?? map['payment_state']);
     final String? deliveryStatus = _asString(
-      map['delivery_status'] ?? map['shipping_status'] ?? map['logistics_status'],
+      map['delivery_status'] ??
+          map['shipping_status'] ??
+          map['logistics_status'],
     );
 
     final String? totalFormatted = _asString(
-      map['total_formatted'] ?? map['total_display'] ?? map['grand_total_formatted'] ??
+      map['total_formatted'] ??
+          map['total_display'] ??
+          map['grand_total_formatted'] ??
           map['total_text'],
     );
 
     final num? totalValue = _asNum(
-      map['total'] ?? map['total_amount'] ?? map['grand_total'] ?? map['amount_due'],
+      map['total'] ??
+          map['total_amount'] ??
+          map['grand_total'] ??
+          map['amount_due'],
     );
 
     final String? currency = _asString(
@@ -120,7 +139,10 @@ class UserOrder {
     );
 
     final String? address = _formatAddress(
-      map['shipping_address'] ?? map['address'] ?? map['delivery_address'] ?? map['customer'],
+      map['shipping_address'] ??
+          map['address'] ??
+          map['delivery_address'] ??
+          map['customer'],
     );
 
     final List<OrderLine> lines = _parseLines(
@@ -129,9 +151,11 @@ class UserOrder {
     );
 
     final List<OrderTimelineEntry> timeline = _parseTimeline(
-      map['timeline'] ?? map['history'] ?? map['status_history'] ?? map['steps'],
+      map['timeline'] ??
+          map['history'] ??
+          map['status_history'] ??
+          map['steps'],
     );
-
 
     final Map<String, dynamic>? statusTimestamps = _mapify(
       map['status_timestamps'] ?? map['statusTimestamps'],
@@ -145,7 +169,8 @@ class UserOrder {
       map['delivery_payment_summary'] ?? map['deliveryPaymentSummary'],
     );
 
-    final dynamic paymentIntentRaw = map['payment_intent'] ?? map['paymentIntent'];
+    final dynamic paymentIntentRaw =
+        map['payment_intent'] ?? map['paymentIntent'];
     final Map<String, dynamic>? paymentIntent = _mapify(paymentIntentRaw);
     final String? paymentIntentId = _asString(
       paymentIntent?['id'] ??
@@ -160,8 +185,9 @@ class UserOrder {
           map['order_status_display'] ??
           map['status_display_data'],
     );
-    final OrderStatusDisplay? statusDisplay =
-    statusDisplayRaw != null ? OrderStatusDisplay.fromJson(statusDisplayRaw) : null;
+    final OrderStatusDisplay? statusDisplay = statusDisplayRaw != null
+        ? OrderStatusDisplay.fromJson(statusDisplayRaw)
+        : null;
 
     final Map<String, dynamic>? statusReserveRaw = _mapify(
       map['status_reserve_options'] ??
@@ -170,7 +196,9 @@ class UserOrder {
           map['status_reserve'],
     );
     final OrderStatusReserveOptions? statusReserveOptions =
-    statusReserveRaw != null ? OrderStatusReserveOptions.fromJson(statusReserveRaw) : null;
+        statusReserveRaw != null
+            ? OrderStatusReserveOptions.fromJson(statusReserveRaw)
+            : null;
 
     final Map<String, dynamic>? actionsRaw = _mapify(
       map['actions'] ??
@@ -179,7 +207,6 @@ class UserOrder {
           map['available_actions'],
     );
     final OrderActions actions = OrderActions.fromJson(actionsRaw);
-
 
     return UserOrder(
       id: id,
@@ -206,7 +233,6 @@ class UserOrder {
     );
   }
 
-
   List<OrderTimelineEntry> get effectiveTimeline {
     if (timeline.isNotEmpty) {
       return timeline;
@@ -216,14 +242,15 @@ class UserOrder {
       return const <OrderTimelineEntry>[];
     }
 
-    final List<OrderTimelineEntry> derived = statusTimestamps!.entries.map((entry) {
+    final List<OrderTimelineEntry> derived =
+        statusTimestamps!.entries.map((entry) {
       final dynamic value = entry.value;
       final Map<String, dynamic> normalized = value is Map
-          ? Map<String, dynamic>.from(value as Map)
+          ? Map<String, dynamic>.from(value)
           : <String, dynamic>{
-        'status': entry.key,
-        'timestamp': value,
-      };
+              'status': entry.key,
+              'timestamp': value,
+            };
       normalized.putIfAbsent('label', () => entry.key);
       return OrderTimelineEntry.fromJson(normalized);
     }).toList();
@@ -239,7 +266,6 @@ class UserOrder {
 
     return derived;
   }
-
 
   static List<OrderLine> _parseLines(dynamic payload, String? currency) {
     if (payload == null) return const <OrderLine>[];
@@ -285,7 +311,7 @@ class UserOrder {
 
   static Map<String, dynamic>? _mapify(dynamic source) {
     if (source is Map<String, dynamic>) return source;
-    if (source is Map) return Map<String, dynamic>.from(source as Map);
+    if (source is Map) return Map<String, dynamic>.from(source);
     return null;
   }
 
@@ -339,9 +365,10 @@ class UserOrder {
           .join(', ');
     }
     if (value is Map) {
-      final Map<String, dynamic> map = Map<String, dynamic>.from(value as Map);
+      final Map<String, dynamic> map = Map<String, dynamic>.from(value);
       final candidates = <String?>[
-        _asString(map['label'] ?? map['address'] ?? map['street'] ?? map['line']),
+        _asString(
+            map['label'] ?? map['address'] ?? map['street'] ?? map['line']),
         _asString(map['city'] ?? map['state'] ?? map['region']),
         _asString(map['country']),
         _asString(map['phone'] ?? map['mobile']),
@@ -386,21 +413,26 @@ class OrderLine {
 
   factory OrderLine.fromJson(Map<String, dynamic> json, {String? currency}) {
     final Map<String, dynamic> map = Map<String, dynamic>.from(json);
-    final String name =
-        UserOrder._asString(map['name'] ?? map['title'] ?? map['product_name'] ?? map['item']) ??
-            '';
-    final int quantity = (UserOrder._asNum(map['quantity'] ?? map['qty']) ?? 0).toInt();
+    final String name = UserOrder._asString(map['name'] ??
+            map['title'] ??
+            map['product_name'] ??
+            map['item']) ??
+        '';
+    final int quantity =
+        (UserOrder._asNum(map['quantity'] ?? map['qty']) ?? 0).toInt();
     final num? price = UserOrder._asNum(map['price'] ?? map['unit_price']);
     final num? subtotal =
-    UserOrder._asNum(map['subtotal'] ?? map['total'] ?? map['line_total']);
+        UserOrder._asNum(map['subtotal'] ?? map['total'] ?? map['line_total']);
     final String? priceDisplay = UserOrder._asString(
       map['price_display'] ?? map['unit_price_display'] ?? map['price_text'],
     );
     final String? subtotalDisplay = UserOrder._asString(
-      map['subtotal_display'] ?? map['total_display'] ?? map['line_total_display'],
+      map['subtotal_display'] ??
+          map['total_display'] ??
+          map['line_total_display'],
     );
-    final String? currencyOverride =
-    UserOrder._asString(map['currency'] ?? map['currency_code'] ?? currency);
+    final String? currencyOverride = UserOrder._asString(
+        map['currency'] ?? map['currency_code'] ?? currency);
 
     return OrderLine(
       name: name,
@@ -420,8 +452,9 @@ class OrderLine {
     }
     if (subtotal != null) {
       final String value = UserOrder._formatNumber(subtotal!);
-      final String suffix =
-      (currency != null && currency!.trim().isNotEmpty) ? ' ${currency!.trim()}' : '';
+      final String suffix = (currency != null && currency!.trim().isNotEmpty)
+          ? ' ${currency!.trim()}'
+          : '';
       return '$value$suffix';
     }
     if (priceDisplay != null && priceDisplay!.trim().isNotEmpty) {
@@ -429,8 +462,9 @@ class OrderLine {
     }
     if (price != null) {
       final String value = UserOrder._formatNumber(price!);
-      final String suffix =
-      (currency != null && currency!.trim().isNotEmpty) ? ' ${currency!.trim()}' : '';
+      final String suffix = (currency != null && currency!.trim().isNotEmpty)
+          ? ' ${currency!.trim()}'
+          : '';
       return '$value$suffix';
     }
     return '—';
@@ -459,16 +493,17 @@ class OrderTimelineEntry {
 
   factory OrderTimelineEntry.fromJson(Map<String, dynamic> json) {
     final Map<String, dynamic> map = Map<String, dynamic>.from(json);
-    final String label =
-        UserOrder._asString(map['label'] ?? map['title'] ?? map['status'] ?? map['name']) ??
-            'الحالة';
+    final String label = UserOrder._asString(
+            map['label'] ?? map['title'] ?? map['status'] ?? map['name']) ??
+        'الحالة';
     final String? status = UserOrder._asString(
       map['status_text'] ?? map['status'] ?? map['state'] ?? map['description'],
     );
     final DateTime? timestamp = UserOrder._parseDateTime(
       map['timestamp'] ?? map['time'] ?? map['created_at'] ?? map['date'],
     );
-    final String? description = UserOrder._asString(map['description'] ?? map['notes']);
+    final String? description =
+        UserOrder._asString(map['description'] ?? map['notes']);
 
     final String combined = (status ?? label).toLowerCase();
     final bool completed = map['completed'] == true ||
@@ -493,9 +528,6 @@ class OrderTimelineEntry {
       raw: map,
     );
   }
-
-
-
 }
 
 @immutable
@@ -566,8 +598,10 @@ class OrderStatusDisplay {
           map['chip'] ??
           map['pill'],
     );
-    final String? note = UserOrder._asString(map['note'] ?? map['hint'] ?? map['footnote']);
-    final String? style = UserOrder._asString(map['style'] ?? map['variant'] ?? map['type']);
+    final String? note =
+        UserOrder._asString(map['note'] ?? map['hint'] ?? map['footnote']);
+    final String? style =
+        UserOrder._asString(map['style'] ?? map['variant'] ?? map['type']);
 
     return OrderStatusDisplay(
       title: title,
@@ -582,10 +616,10 @@ class OrderStatusDisplay {
 
   bool get hasContent =>
       _stringHasValue(title) ||
-          _stringHasValue(subtitle) ||
-          _stringHasValue(description) ||
-          _stringHasValue(badge) ||
-          _stringHasValue(note);
+      _stringHasValue(subtitle) ||
+      _stringHasValue(description) ||
+      _stringHasValue(badge) ||
+      _stringHasValue(note);
 
   String? get primaryText {
     if (_stringHasValue(title)) return title!.trim();
@@ -697,10 +731,10 @@ class OrderStatusReserveOptions {
 
   bool get hasContent =>
       _stringHasValue(title) ||
-          _stringHasValue(message) ||
-          _stringHasValue(highlightText) ||
-          _stringHasValue(disclaimer) ||
-          points.isNotEmpty;
+      _stringHasValue(message) ||
+      _stringHasValue(highlightText) ||
+      _stringHasValue(disclaimer) ||
+      points.isNotEmpty;
 
   String? get emphasisText {
     if (_stringHasValue(highlightText)) return highlightText!.trim();
@@ -845,7 +879,8 @@ class OrderPolicy {
 
   bool get hasReturnPolicy => _stringHasValue(returnPolicyText);
 
-  String get effectiveTitle => _stringHasValue(title) ? title!.trim() : 'سياسة الاسترجاع';
+  String get effectiveTitle =>
+      _stringHasValue(title) ? title!.trim() : 'سياسة الاسترجاع';
 }
 
 @immutable
@@ -909,7 +944,8 @@ class OrderSupport {
           map['body'],
     );
 
-    final String? resolvedUrl = _resolveUrl(urlCandidate, whatsappNumber, whatsappMessage);
+    final String? resolvedUrl =
+        _resolveUrl(urlCandidate, whatsappNumber, whatsappMessage);
 
     return OrderSupport(
       type: type,
@@ -934,7 +970,8 @@ class OrderSupport {
     return 'التواصل مع الدعم';
   }
 
-  static String? _resolveUrl(String? urlCandidate, String? number, String? message) {
+  static String? _resolveUrl(
+      String? urlCandidate, String? number, String? message) {
     final String? normalized = _normalizeUrl(urlCandidate);
     if (normalized != null) {
       return normalized;
@@ -973,7 +1010,8 @@ class OrderSupport {
       }
     }
 
-    if (trimmed.startsWith('wa.me/') || trimmed.startsWith('api.whatsapp.com/')) {
+    if (trimmed.startsWith('wa.me/') ||
+        trimmed.startsWith('api.whatsapp.com/')) {
       return 'https://$trimmed';
     }
 
@@ -989,7 +1027,8 @@ class OrderSupport {
     if (normalized.isEmpty) return null;
 
     if (normalized.startsWith('+')) {
-      final String digits = normalized.substring(1).replaceAll(RegExp(r'[^0-9]'), '');
+      final String digits =
+          normalized.substring(1).replaceAll(RegExp(r'[^0-9]'), '');
       return digits.isNotEmpty ? digits : null;
     }
 

@@ -75,8 +75,8 @@ class SubscriptionStatus {
       if (value is DateTime) return value;
       if (value is int) {
         try {
-          return DateTime.fromMillisecondsSinceEpoch(value *
-              (value.toString().length == 10 ? 1000 : 1));
+          return DateTime.fromMillisecondsSinceEpoch(
+              value * (value.toString().length == 10 ? 1000 : 1));
         } catch (_) {
           return null;
         }
@@ -104,8 +104,8 @@ class SubscriptionStatus {
     ));
 
     final bool hasActive = parseBool(read(
-      const ['hasActive', 'has_active', 'active', 'allowed', 'allow'],
-    )) ??
+          const ['hasActive', 'has_active', 'active', 'allowed', 'allow'],
+        )) ??
         false;
 
     final double? availableBalance = parseDouble(read(
@@ -117,14 +117,14 @@ class SubscriptionStatus {
     ));
 
     final int? parsedFeaturedCount = parseInt(read(
-      const [
-        'featuredCount',
-        'featured_count',
-        'count',
-        'remaining',
-        'remaining_count',
-      ],
-    )) ??
+          const [
+            'featuredCount',
+            'featured_count',
+            'count',
+            'remaining',
+            'remaining_count',
+          ],
+        )) ??
         parsedRemaining;
 
     final int? parsedTotal = parseInt(read(
@@ -135,28 +135,20 @@ class SubscriptionStatus {
       const ['expiresAt', 'expires_at', 'expiry', 'expiry_date', 'expires_on'],
     ));
 
-
-
-
     return SubscriptionStatus(
       hasActive: hasActive,
-
       availableBalance: availableBalance,
       featuredCount: parsedFeaturedCount,
-
-
       isFeatured: parseBool(read(
         const ['isFeatured', 'is_featured'],
       )),
       canPause: parseBool(read(
         const ['canPause', 'can_pause'],
       )),
-
       allowed: allowed ?? (hasActive ? true : null),
       total: parsedTotal,
       remaining: parsedRemaining ?? parsedFeaturedCount,
       expiresAt: parsedExpiresAt,
-
     );
   }
 
@@ -205,6 +197,5 @@ class SubscriptionStatus {
         '$featuredCount, isFeatured: $isFeatured, canPause: $canPause, '
         'allowed: $allowed, total: $total, remaining: $remaining, '
         'expiresAt: $expiresAt)';
-
   }
 }

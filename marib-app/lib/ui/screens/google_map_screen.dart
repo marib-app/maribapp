@@ -1,6 +1,5 @@
 // شاشة عرض الخريطة في تفاصيل الاعلان
 
-
 // GoogleMapScreen — إصلاح تفعيل الأزرار + تلميح نصي فوق الماركر
 
 import 'dart:async';
@@ -10,57 +9,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'dart:async';
-import 'package:timeago/timeago.dart' as timeago;
-import 'package:marib/app/routes.dart';
-import 'package:marib/data/cubits/custom_field/fetch_custom_fields_cubit.dart';
-import 'package:marib/data/cubits/report/fetch_item_report_reason_list.dart';
-import 'package:marib/data/cubits/subscription/fetch_ads_listing_subscription_packages_cubit.dart';
-import 'package:marib/data/model/custom_field/custom_field_model.dart';
 
-import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/custom_field.dart';
-import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
-import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/hive_utils.dart';
-import 'package:marib/utils/responsiveSize.dart';
-import 'package:marib/data/cubits/chat/make_an_offer_item_cubit.dart';
-import 'package:marib/data/cubits/favorite/favorite_cubit.dart';
-import 'package:marib/data/cubits/item/create_featured_ad_cubit.dart';
-import 'package:marib/data/cubits/item/fetch_my_item_cubit.dart';
-import 'package:marib/data/cubits/item/item_total_click_cubit.dart';
-import 'package:marib/data/cubits/item/related_item_cubit.dart';
-import 'package:marib/data/cubits/renew_item_cubit.dart';
-import 'package:marib/data/cubits/safety_tips_cubit.dart';
-import 'package:marib/data/cubits/seller/fetch_seller_ratings_cubit.dart';
 import 'package:marib/data/model/item/item_model.dart';
-import 'package:marib/data/model/subscription_pacakage_model.dart';
-import 'package:intl/intl.dart';
-import 'package:marib/utils/app_icon.dart';
-import 'package:marib/utils/validator.dart';
-import 'package:flick_video_player/flick_video_player.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/svg.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:video_player/video_player.dart';
-import 'package:youtube_player_flutter/youtube_player_flutter.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'package:marib/data/repositories/favourites_repository.dart';
-import 'dart:ui';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
-import 'package:flutter/widgets.dart';
-import 'dart:ui' as ui;
 import 'package:marib/settings.dart';
 import 'package:shimmer/shimmer.dart';
-
-
-
-
 
 class GoogleMapScreen extends StatefulWidget {
   const GoogleMapScreen({
@@ -83,7 +39,6 @@ class _GoogleMapScreenState extends State<GoogleMapScreen> {
   bool _mapReady = false;
   late MapType _mapType;
 
-
   bool _isPopping = false;
 
   Future<void> _handleBack() async {
@@ -94,11 +49,9 @@ class _GoogleMapScreenState extends State<GoogleMapScreen> {
     _isPopping = false;
   }
 
-
   GoogleMapController? _mapController; // ← مرجع محلي فوري
 
-  LatLng get _pos =>
-      LatLng(
+  LatLng get _pos => LatLng(
         widget.item?.latitude ?? 0,
         widget.item?.longitude ?? 0,
       );
@@ -127,7 +80,6 @@ class _GoogleMapScreenState extends State<GoogleMapScreen> {
     }
   }
 
-
   void _buildMarkerAndCircle() {
     if (!_hasValidLatLng) return;
 
@@ -137,8 +89,8 @@ class _GoogleMapScreenState extends State<GoogleMapScreen> {
         Marker(
           markerId: _markerId,
           position: _pos,
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueOrange),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
           infoWindow: const InfoWindow(
             title: 'هذا موقع الإعلان',
           ),
@@ -161,19 +113,18 @@ class _GoogleMapScreenState extends State<GoogleMapScreen> {
     if (mounted) setState(() {});
   }
 
-
   void _haptic() => HapticFeedback.selectionClick();
 
   void _notify(String msg) => HelperUtils.showSnackBarMessage(context, msg);
 
   GoogleMapController? get _ctrlNow => _mapController;
 
-
   Future<void> _recenter() async {
     if (!_hasValidLatLng) return;
-    final c = _ctrlNow ?? (widget._controller.isCompleted
-        ? await widget._controller.future
-        : null);
+    final c = _ctrlNow ??
+        (widget._controller.isCompleted
+            ? await widget._controller.future
+            : null);
     if (c == null) return;
     await c.animateCamera(
       CameraUpdate.newCameraPosition(CameraPosition(target: _pos, zoom: 16)),
@@ -186,18 +137,20 @@ class _GoogleMapScreenState extends State<GoogleMapScreen> {
   }
 
   Future<void> _zoomIn() async {
-    final c = _ctrlNow ?? (widget._controller.isCompleted
-        ? await widget._controller.future
-        : null);
+    final c = _ctrlNow ??
+        (widget._controller.isCompleted
+            ? await widget._controller.future
+            : null);
     if (c == null) return;
     await c.animateCamera(CameraUpdate.zoomIn());
     _haptic();
   }
 
   Future<void> _zoomOut() async {
-    final c = _ctrlNow ?? (widget._controller.isCompleted
-        ? await widget._controller.future
-        : null);
+    final c = _ctrlNow ??
+        (widget._controller.isCompleted
+            ? await widget._controller.future
+            : null);
     if (c == null) return;
     await c.animateCamera(CameraUpdate.zoomOut());
     _haptic();
@@ -226,9 +179,6 @@ class _GoogleMapScreenState extends State<GoogleMapScreen> {
       _notify('تعذّر فتح تطبيق الخرائط');
     }
   }
-
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -323,7 +273,9 @@ class _GoogleMapScreenState extends State<GoogleMapScreen> {
 
             // بطاقة علوية (صورة + اسم + سعر)
             Positioned(
-              top: 14, left: 14, right: 14,
+              top: 14,
+              left: 14,
+              right: 14,
               child: SafeArea(
                 child: Align(
                   alignment: AlignmentDirectional.topStart,
@@ -331,10 +283,10 @@ class _GoogleMapScreenState extends State<GoogleMapScreen> {
                     title: widget.item?.name ?? 'إعلان',
                     priceLabel: (widget.item?.price != null)
                         ? '${widget.item!.price} ${widget.item?.currency ?? ''}'
-                        .trim()
+                            .trim()
                         : '—',
-                    imageUrl: widget.item
-                        ?.image, // عدّلها لاسم حقلك الفعلي إذا لزم
+                    imageUrl:
+                        widget.item?.image, // عدّلها لاسم حقلك الفعلي إذا لزم
                   ),
                 ),
               ),
@@ -370,12 +322,6 @@ class _GoogleMapScreenState extends State<GoogleMapScreen> {
   }
 }
 
-
-
-
-
-
-
 // زر دائري متوافق مع الثيم
 class _MapFab extends StatelessWidget {
   final IconData icon;
@@ -389,7 +335,7 @@ class _MapFab extends StatelessWidget {
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    final bg = isDark ? cs.surfaceVariant : Colors.white;
+    final bg = isDark ? cs.surfaceContainerHighest : Colors.white;
     final fg = isDark ? Colors.white : Colors.grey[800];
 
     return Tooltip(
@@ -401,7 +347,7 @@ class _MapFab extends StatelessWidget {
         shadowColor: Colors.black26,
         child: InkWell(
           customBorder: const CircleBorder(),
-          overlayColor: MaterialStateProperty.all(cs.primary.withOpacity(.1)),
+          overlayColor: WidgetStateProperty.all(cs.primary.withOpacity(.1)),
           onTap: onPressed,
           child: Padding(
             padding: const EdgeInsets.all(12.0),
@@ -412,8 +358,6 @@ class _MapFab extends StatelessWidget {
     );
   }
 }
-
-
 
 // كبسولة تكبير/تصغير متوافقة مع الثيم
 class _ZoomPill extends StatelessWidget {
@@ -431,7 +375,7 @@ class _ZoomPill extends StatelessWidget {
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    final bg = isDark ? cs.surfaceVariant : Colors.white;
+    final bg = isDark ? cs.surfaceContainerHighest : Colors.white;
     final fg = isDark ? Colors.white : Colors.grey[800];
 
     return Material(
@@ -445,8 +389,9 @@ class _ZoomPill extends StatelessWidget {
             message: 'تكبير الخريطة',
             waitDuration: const Duration(milliseconds: 300),
             child: InkWell(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-              overlayColor: MaterialStateProperty.all(cs.primary.withOpacity(.1)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(14)),
+              overlayColor: WidgetStateProperty.all(cs.primary.withOpacity(.1)),
               onTap: onZoomIn,
               child: Padding(
                 padding: const EdgeInsets.all(10),
@@ -459,8 +404,9 @@ class _ZoomPill extends StatelessWidget {
             message: 'تصغير الخريطة',
             waitDuration: const Duration(milliseconds: 300),
             child: InkWell(
-              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(14)),
-              overlayColor: MaterialStateProperty.all(cs.primary.withOpacity(.1)),
+              borderRadius:
+                  const BorderRadius.vertical(bottom: Radius.circular(14)),
+              overlayColor: WidgetStateProperty.all(cs.primary.withOpacity(.1)),
               onTap: onZoomOut,
               child: Padding(
                 padding: const EdgeInsets.all(10),
@@ -473,13 +419,6 @@ class _ZoomPill extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-
 
 class _HeaderCard extends StatelessWidget {
   final String title;
@@ -494,14 +433,15 @@ class _HeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t  = Theme.of(context);
+    final t = Theme.of(context);
     final cs = t.colorScheme;
 
     final isDark = t.brightness == Brightness.dark;
 
     // الخلفية والنص حسب الثيم
     final bgCard = isDark ? cs.surface : Colors.white;
-    final textColor = isDark ? Colors.white.withOpacity(0.95) : Colors.grey[800];
+    final textColor =
+        isDark ? Colors.white.withOpacity(0.95) : Colors.grey[800];
 
     final priceBg = context.color.territoryColor;
     final priceFg = Colors.white;
@@ -521,8 +461,6 @@ class _HeaderCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-
-
             // صورة الإعلان
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
@@ -532,14 +470,15 @@ class _HeaderCard extends StatelessWidget {
                 child: (imageUrl == null || imageUrl!.isEmpty)
                     ? _buildShimmer(context) // ← شيمر عند عدم وجود صورة
                     : Image.network(
-                  imageUrl!,
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return _buildShimmer(context); // ← شيمر أثناء التحميل
-                  },
-                  errorBuilder: (_, __, ___) => _buildShimmer(context), // ← عند الفشل
-                ),
+                        imageUrl!,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return _buildShimmer(context); // ← شيمر أثناء التحميل
+                        },
+                        errorBuilder: (_, __, ___) =>
+                            _buildShimmer(context), // ← عند الفشل
+                      ),
               ),
             ),
 
@@ -568,7 +507,10 @@ class _HeaderCard extends StatelessWidget {
                 color: priceBg,
                 borderRadius: BorderRadius.circular(999),
                 boxShadow: const [
-                  BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 2)),
+                  BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 6,
+                      offset: Offset(0, 2)),
                 ],
               ),
               constraints: const BoxConstraints(minHeight: 32),

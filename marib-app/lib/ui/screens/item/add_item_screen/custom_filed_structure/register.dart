@@ -1,5 +1,3 @@
-
-
 import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/custom_field.dart';
 
 import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/fields/custom_checkbox_field.dart';

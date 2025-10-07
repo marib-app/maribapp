@@ -3,7 +3,8 @@ import 'package:marib/data/model/data_output.dart';
 import 'package:marib/utils/api.dart';
 
 class ClassifiedRepository {
-  Future<DataOutput<ClassifiedModel>> fetchclassified({required int page}) async {
+  Future<DataOutput<ClassifiedModel>> fetchclassified(
+      {required int page}) async {
     Map<String, dynamic> parameters = {
       Api.page: page,
     };

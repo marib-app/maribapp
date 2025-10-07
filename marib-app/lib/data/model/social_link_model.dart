@@ -14,7 +14,6 @@ class SocialLink {
       'label': label,
       'url': url,
       if (iconClass != null && iconClass!.isNotEmpty) 'iconClass': iconClass,
-
     };
   }
 
@@ -40,7 +39,6 @@ class SocialLink {
     final String? iconClass = _parseIconClass(map);
 
     return SocialLink(label: label, url: url, iconClass: iconClass);
-
   }
 
   factory SocialLink.fromKeyValue(String key, dynamic value) {
@@ -83,6 +81,7 @@ class SocialLink {
 
     return SocialLink(label: text, url: text);
   }
+
   static String? _parseIconClass(Map<dynamic, dynamic> map) {
     final dynamic rawIcon = map['iconClass'] ??
         map['icon_class'] ??

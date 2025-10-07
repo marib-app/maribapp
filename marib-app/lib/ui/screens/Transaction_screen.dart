@@ -17,7 +17,6 @@ import 'package:marib/utils/payment/manual_payment_service.dart';
 import 'package:marib/app/routes.dart';
 
 class TransactionScreen extends StatefulWidget {
-
   const TransactionScreen({super.key, this.service});
 
   final ManualPaymentService? service;
@@ -46,7 +45,6 @@ class SoonScreenState extends State<TransactionScreen> {
 
   @override
   void initState() {
-
     super.initState();
     _service = widget.service ?? ManualPaymentService();
 
@@ -84,10 +82,14 @@ class SoonScreenState extends State<TransactionScreen> {
       final numVal = num.tryParse(s);
       if (numVal != null) {
         if (s.length >= 13) {
-          return DateTime.fromMillisecondsSinceEpoch(numVal.toInt(), isUtc: true).toLocal();
+          return DateTime.fromMillisecondsSinceEpoch(numVal.toInt(),
+                  isUtc: true)
+              .toLocal();
         }
         if (s.length >= 10) {
-          return DateTime.fromMillisecondsSinceEpoch(numVal.toInt() * 1000, isUtc: true).toLocal();
+          return DateTime.fromMillisecondsSinceEpoch(numVal.toInt() * 1000,
+                  isUtc: true)
+              .toLocal();
         }
       }
 
@@ -96,14 +98,16 @@ class SoonScreenState extends State<TransactionScreen> {
       if (iso != null) return iso;
 
       // صيغة شائعة: yyyy-MM-dd HH:mm[:ss]
-      final m = RegExp(r'^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$').firstMatch(s);
+      final m =
+          RegExp(r'^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$')
+              .firstMatch(s);
       if (m != null) {
         final year = int.parse(m.group(1)!);
-        final mon  = int.parse(m.group(2)!);
-        final day  = int.parse(m.group(3)!);
-        final hh   = int.parse(m.group(4)!);
-        final mm   = int.parse(m.group(5)!);
-        final ss   = int.parse(m.group(6) ?? '0');
+        final mon = int.parse(m.group(2)!);
+        final day = int.parse(m.group(3)!);
+        final hh = int.parse(m.group(4)!);
+        final mm = int.parse(m.group(5)!);
+        final ss = int.parse(m.group(6) ?? '0');
         return DateTime(year, mon, day, hh, mm, ss);
       }
 
@@ -115,7 +119,8 @@ class SoonScreenState extends State<TransactionScreen> {
       final list = await _service.fetchMyManualPayments();
 
       final sorted = List<ManualPayment>.from(list)
-        ..sort((a, b) => _toDt(b.createdAt).compareTo(_toDt(a.createdAt))); // الأحدث أولًا
+        ..sort((a, b) =>
+            _toDt(b.createdAt).compareTo(_toDt(a.createdAt))); // الأحدث أولًا
 
       if (!mounted) return;
       setState(() {
@@ -148,7 +153,6 @@ class SoonScreenState extends State<TransactionScreen> {
       _updatePolling();
     }
   }
-
 
   void _handleManualRefresh() {
     _loadManualPayments();
@@ -190,7 +194,6 @@ class SoonScreenState extends State<TransactionScreen> {
           child: _fetching && _transactions.isEmpty
               ? const CircularProgressIndicator.adaptive()
               : const Icon(Icons.refresh),
-
         ),
         body: RefreshIndicator(
           onRefresh: _onRefresh,
@@ -199,10 +202,6 @@ class SoonScreenState extends State<TransactionScreen> {
       ),
     );
   }
-
-
-
-
 
   Widget _buildBody() {
     if (_loading && _transactions.isEmpty) {
@@ -256,13 +255,11 @@ class SoonScreenState extends State<TransactionScreen> {
     );
   }
 
-
-
   Widget _manualPaymentTile(BuildContext context, ManualPayment mp) {
     final statusColor = mp.statusColor;
     final statusLabel = mp.statusLabelAr;
     final gatewayColor =
-    mp.isEastYemen ? context.color.territoryColor : statusColor;
+        mp.isEastYemen ? context.color.territoryColor : statusColor;
     final Widget? finalStatusWidget = _finalStatusSection(context, mp);
 
     return Container(
@@ -283,7 +280,6 @@ class SoonScreenState extends State<TransactionScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -307,7 +303,6 @@ class SoonScreenState extends State<TransactionScreen> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 8),
                 Align(
                   alignment: AlignmentDirectional.centerEnd,
@@ -316,11 +311,13 @@ class SoonScreenState extends State<TransactionScreen> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: statusColor.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: statusColor.withOpacity(0.35)),
+                          border:
+                              Border.all(color: statusColor.withOpacity(0.35)),
                         ),
                         child: Text(statusLabel)
                             .color(statusColor)
@@ -352,7 +349,8 @@ class SoonScreenState extends State<TransactionScreen> {
                 ],
                 if (mp.transactionReference != null &&
                     mp.transactionReference!.isNotEmpty &&
-                    mp.transactionReference != mp.displayTransactionIdentifier) ...[
+                    mp.transactionReference !=
+                        mp.displayTransactionIdentifier) ...[
                   const SizedBox(height: 6),
                   _infoRow(
                     context,
@@ -362,7 +360,8 @@ class SoonScreenState extends State<TransactionScreen> {
                     allowCopy: true,
                   ),
                 ],
-                if (mp.manualReference != null && mp.manualReference!.isNotEmpty) ...[
+                if (mp.manualReference != null &&
+                    mp.manualReference!.isNotEmpty) ...[
                   const SizedBox(height: 6),
                   _infoRow(
                     context,
@@ -372,7 +371,6 @@ class SoonScreenState extends State<TransactionScreen> {
                     allowCopy: true,
                   ),
                 ],
-
                 const SizedBox(height: 6),
                 _infoRow(
                   context,
@@ -401,26 +399,33 @@ class SoonScreenState extends State<TransactionScreen> {
                 if (mp.additionalHighlights.isNotEmpty) ...[
                   const SizedBox(height: 6),
                   ...mp.additionalHighlights.map(
-                        (line) => Padding(
-                      padding: const EdgeInsetsDirectional.only(start: 4, top: 2),
-                      child: Text('• $line')
-                          .size(context.font.small)
-                          .color(Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
+                    (line) => Padding(
+                      padding:
+                          const EdgeInsetsDirectional.only(start: 4, top: 2),
+                      child: Text('• $line').size(context.font.small).color(
+                          Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.8)),
                     ),
                   ),
                 ],
-
-                if (mp.statusMessage != null && mp.statusMessage!.isNotEmpty) ...[
+                if (mp.statusMessage != null &&
+                    mp.statusMessage!.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   _statusMessageBanner(context, mp),
                 ],
                 if (mp.isExpired) ...[
                   const SizedBox(height: 12),
                   _expiredBanner(context),
-                ] else if (mp.isFailure && (mp.statusMessage == null || mp.statusMessage!.isEmpty)) ...[
+                ] else if (mp.isFailure &&
+                    (mp.statusMessage == null ||
+                        mp.statusMessage!.isEmpty)) ...[
                   const SizedBox(height: 12),
                   _failureBanner(context),
-                ] else if (mp.isRefunded && (mp.statusMessage == null || mp.statusMessage!.isEmpty)) ...[
+                ] else if (mp.isRefunded &&
+                    (mp.statusMessage == null ||
+                        mp.statusMessage!.isEmpty)) ...[
                   const SizedBox(height: 12),
                   _refundedBanner(context),
                 ] else if (mp.shouldAutoRefresh) ...[
@@ -431,7 +436,6 @@ class SoonScreenState extends State<TransactionScreen> {
                   const SizedBox(height: 12),
                   finalStatusWidget,
                 ],
-
               ],
             ),
           ),
@@ -439,8 +443,6 @@ class SoonScreenState extends State<TransactionScreen> {
       ),
     );
   }
-
-
 
   Widget _errorBanner(BuildContext context, {bool includeRetry = false}) {
     final color = Colors.red.shade600;
@@ -456,11 +458,7 @@ class SoonScreenState extends State<TransactionScreen> {
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
-
-
             children: [
-
-
               Icon(Icons.warning_amber_rounded, color: color),
               const SizedBox(width: 8),
               Expanded(
@@ -486,12 +484,12 @@ class SoonScreenState extends State<TransactionScreen> {
   }
 
   Widget _infoRow(
-      BuildContext context, {
-        required String label,
-        required String value,
-        IconData? icon,
-        bool allowCopy = false,
-      }) {
+    BuildContext context, {
+    required String label,
+    required String value,
+    IconData? icon,
+    bool allowCopy = false,
+  }) {
     final labelColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.6);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -511,9 +509,7 @@ class SoonScreenState extends State<TransactionScreen> {
             children: [
               Text(label).size(context.font.small).color(labelColor),
               const SizedBox(height: 2),
-              Text(value)
-                  .bold(weight: FontWeight.w600)
-                  .setMaxLines(lines: 2),
+              Text(value).bold(weight: FontWeight.w600).setMaxLines(lines: 2),
             ],
           ),
         ),
@@ -531,8 +527,8 @@ class SoonScreenState extends State<TransactionScreen> {
     final Color color = isError
         ? Colors.red.shade600
         : mp.isApproved
-        ? Colors.green.shade600
-        : context.color.territoryColor;
+            ? Colors.green.shade600
+            : context.color.territoryColor;
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -546,9 +542,6 @@ class SoonScreenState extends State<TransactionScreen> {
           .setMaxLines(lines: 4),
     );
   }
-
-
-
 
   Widget _pendingInfoBanner(BuildContext context) {
     final color = context.color.territoryColor;
@@ -565,10 +558,6 @@ class SoonScreenState extends State<TransactionScreen> {
     );
   }
 
-
-
-
-
   Widget? _finalStatusSection(BuildContext context, ManualPayment mp) {
     final bool isFinalState = mp.isSucceeded || mp.isRejected;
     if (!isFinalState) return null;
@@ -577,11 +566,10 @@ class SoonScreenState extends State<TransactionScreen> {
     final Color color = mp.isSucceeded
         ? Colors.green.shade600
         : mp.isRejected
-        ? Colors.red.shade600
-        : context.color.territoryColor;
+            ? Colors.red.shade600
+            : context.color.territoryColor;
 
-    final List<Widget> actions =
-    _finalStatusActions(context, mp, color);
+    final List<Widget> actions = _finalStatusActions(context, mp, color);
 
     if (message == null && actions.isEmpty) {
       return null;
@@ -663,12 +651,12 @@ class SoonScreenState extends State<TransactionScreen> {
   }
 
   Widget _finalActionButton(
-      BuildContext context, {
-        required String label,
-        required Color color,
-        required VoidCallback onPressed,
-        required IconData icon,
-      }) {
+    BuildContext context, {
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+    required IconData icon,
+  }) {
     return OutlinedButton.icon(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
@@ -720,12 +708,12 @@ class SoonScreenState extends State<TransactionScreen> {
 
   void _openOrders(ManualPayment mp) {
     final String? orderId = _resolveIdentifier(mp, const [
-      'order_id',
-      'orderId',
-      'id',
-      'code',
-      'order_code',
-    ]) ??
+          'order_id',
+          'orderId',
+          'id',
+          'code',
+          'order_code',
+        ]) ??
         (mp.payableId != null ? '${mp.payableId}' : null);
 
     Navigator.of(context).pushNamed(
@@ -746,8 +734,6 @@ class SoonScreenState extends State<TransactionScreen> {
     }
     return null;
   }
-
-
 
   Widget _failureBanner(BuildContext context) {
     final color = Colors.red.shade600;
@@ -794,8 +780,6 @@ class SoonScreenState extends State<TransactionScreen> {
     );
   }
 
-
-
   bool _shouldShowUpdatedAt(ManualPayment mp) {
     final updatedAt = mp.updatedAt;
     if (updatedAt == null) return false;
@@ -818,14 +802,10 @@ class SoonScreenState extends State<TransactionScreen> {
     );
   }
 
-
-
   String _formatDateTime(DateTime? dateTime) {
     if (dateTime == null) return '—';
     return _dateFormat.format(dateTime.toLocal());
   }
-
-
 
   Future<void> _copyToClipboard(BuildContext context, String value,
       {String? message}) async {
@@ -838,44 +818,40 @@ class SoonScreenState extends State<TransactionScreen> {
   }
 
   Widget _sideBar({required Color color}) => Container(
-    width: 4,
-    height: 48,
-    decoration: BoxDecoration(
-      color: color,
-      borderRadius: const BorderRadiusDirectional.only(
-        topEnd: Radius.circular(4),
-        bottomEnd: Radius.circular(4),
-      ),
-    ),
-  );
+        width: 4,
+        height: 48,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: const BorderRadiusDirectional.only(
+            topEnd: Radius.circular(4),
+            bottomEnd: Radius.circular(4),
+          ),
+        ),
+      );
 
   Widget _tag(String text, Color color) => Container(
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(6),
-      color: color.withOpacity(0.1),
-    ),
-    padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 8),
-    child: Text(text).size(12).color(color),
-  );
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(6),
+          color: color.withOpacity(0.1),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 8),
+        child: Text(text).size(12).color(color),
+      );
 
   Widget _copyBtn(BuildContext context, String value) => GestureDetector(
-    onTap: () => _copyToClipboard(context, value),
-    child: Container(
-      height: 30,
-      width: 30,
-      decoration: BoxDecoration(
-        color: context.color.secondaryColor,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: context.color.borderColor, width: 1.5),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(5.0),
-        child: Icon(Icons.copy, size: context.font.larger),
-      ),
-    ),
-  );
-
-
+        onTap: () => _copyToClipboard(context, value),
+        child: Container(
+          height: 30,
+          width: 30,
+          decoration: BoxDecoration(
+            color: context.color.secondaryColor,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: context.color.borderColor, width: 1.5),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(5.0),
+            child: Icon(Icons.copy, size: context.font.larger),
+          ),
+        ),
+      );
 }
-
-

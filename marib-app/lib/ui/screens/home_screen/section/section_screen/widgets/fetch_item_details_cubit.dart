@@ -3,8 +3,6 @@ import 'package:equatable/equatable.dart';
 // استبدل بهيكل موديلك الحقيقي
 import 'package:marib/data/model/item/item_model.dart';
 
-
-
 // TODO: اربط ريبوزيتوري مشروعك هنا
 
 abstract class ItemDetailsRepository {

@@ -23,7 +23,8 @@ import 'package:marib/data/cubits/currency/currency_cubit.dart';
 import 'package:marib/data/repositories/currency_repository.dart';
 
 // 👇 واجهة العرض (UI-Only)
-import 'currency_screen_ui.dart' show CurrencyScreenUI;
+import 'package:marib/ui/screens/currency/currency_screen_ui.dart'
+    show CurrencyScreenUI;
 
 /// حالة صفحة العملات
 enum CurrencyPageStatus { loading, error, ready }
@@ -140,7 +141,8 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
     setState(() {
       _fromCurrency = value;
       if (_toCurrency == value && rates.length > 1) {
-        _toCurrency = _firstOtherCurrency(rates: rates, not: value) ?? _toCurrency;
+        _toCurrency =
+            _firstOtherCurrency(rates: rates, not: value) ?? _toCurrency;
       }
       _hasCalculated = false;
     });
@@ -190,7 +192,7 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
 
     String _name(d) => (d as dynamic).currencyName?.toString() ?? '';
     String _sell(d) => (d as dynamic).sellPrice?.toString() ?? '';
-    String _buy(d)  => (d as dynamic).buyPrice?.toString() ?? '';
+    String _buy(d) => (d as dynamic).buyPrice?.toString() ?? '';
     DateTime? _stamp(d) => (d as dynamic).lastUpdatedAt is DateTime
         ? (d as dynamic).lastUpdatedAt as DateTime
         : null;
@@ -200,7 +202,8 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
         .map((r) => "💱 ${_name(r)}\nبيع: ${_sell(r)}\nشراء: ${_buy(r)}\n")
         .join("\n");
 
-    final stamp = last != null ? DateFormat('yyyy-MM-dd HH:mm').format(last) : 'غير متاح';
+    final stamp =
+        last != null ? DateFormat('yyyy-MM-dd HH:mm').format(last) : 'غير متاح';
 
     final text = """
 💰 مارب بين يديك - أسعار العملات 💰
@@ -224,7 +227,9 @@ $ratesText
       final name = (r as dynamic).currencyName?.toString();
       if (name != null && name != not) return name;
     }
-    return rates.isNotEmpty ? (rates.first as dynamic).currencyName?.toString() : null;
+    return rates.isNotEmpty
+        ? (rates.first as dynamic).currencyName?.toString()
+        : null;
   }
 
   void _ensureInitialSelection(List<dynamic> rates) {

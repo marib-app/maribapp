@@ -16,7 +16,6 @@ import 'package:marib/utils/app_icon.dart';
 
 import 'package:marib/data/cubits/custom_field/fetch_custom_fields_cubit.dart';
 
-
 import 'package:marib/utils/api.dart';
 
 import 'package:marib/utils/ui_utils.dart';
@@ -111,7 +110,7 @@ class FilterScreenState extends State<FilterScreen> {
     getCustomFieldsData();
   }
 
-  setCategories() {
+  void setCategories() {
     if (widget.categoryIds != null && widget.categoryIds!.isNotEmpty) {
       selectedCategories.addAll(widget.categoryIds!);
     }
@@ -121,7 +120,7 @@ class FilterScreenState extends State<FilterScreen> {
     }
   }
 
-  getCustomFieldsData() {
+  void getCustomFieldsData() {
     if (Constant.itemFilter == null) {
       AbstractField.fieldsData.clear();
     }
@@ -390,7 +389,9 @@ class FilterScreenState extends State<FilterScreen> {
               .read<FetchCustomFieldsCubit>()
               .getFields()
               .where((field) =>
-                  field.type != "fileinput" && field.type != "textbox" && field.type != "number")
+                  field.type != "fileinput" &&
+                  field.type != "textbox" &&
+                  field.type != "number")
               .map((field) {
             Map<String, dynamic> fieldData = field.toMap();
 
@@ -659,7 +660,7 @@ class FilterScreenState extends State<FilterScreen> {
             inputFormatters: [FilteringTextInputFormatter.digitsOnly]));
   }
 
-  postedSinceUpdate(String value) {
+  void postedSinceUpdate(String value) {
     setState(() {
       postedOn = value;
     });
@@ -668,7 +669,6 @@ class FilterScreenState extends State<FilterScreen> {
   Widget postedSinceOption(BuildContext context) {
     int index =
         Constant.postedSince.indexWhere((item) => item.value == postedOn);
-
 
     return InkWell(
       onTap: () {

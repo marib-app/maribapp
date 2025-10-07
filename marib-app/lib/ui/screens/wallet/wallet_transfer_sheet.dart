@@ -4,7 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/cubits/wallet/wallet_transfers_cubit.dart';
 import 'package:marib/data/model/wallet/wallet_operation_options.dart';
 import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/custom_field.dart';
-import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart' as dynamic_field;
+import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart'
+    as dynamic_field;
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
@@ -77,10 +78,12 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
     if (preferredKey != null && combined.containsKey(preferredKey)) {
       values = combined[preferredKey] as List<dynamic>?;
     }
-    values ??= combined.entries.firstWhere(
+    values ??= combined.entries
+        .firstWhere(
           (entry) => entry.key.toLowerCase().contains('amount'),
-      orElse: () => const MapEntry<String, dynamic>('', null),
-    ).value as List<dynamic>?;
+          orElse: () => const MapEntry<String, dynamic>('', null),
+        )
+        .value as List<dynamic>?;
 
     if (values == null || values.isEmpty) {
       return null;
@@ -101,7 +104,8 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
     if (value is int) return value.toDouble();
     if (value is num) return value.toDouble();
     if (value is String) {
-      final normalized = value.replaceAll(RegExp(r'[^0-9.,-]'), '').replaceAll(',', '.');
+      final normalized =
+          value.replaceAll(RegExp(r'[^0-9.,-]'), '').replaceAll(',', '.');
       return double.tryParse(normalized);
     }
     return null;
@@ -137,12 +141,14 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
     });
 
     combinedFiles.forEach((key, value) {
-      final match = RegExp(r'(?:custom_field|fields)_files\[(.+?)\]').firstMatch(key);
+      final match =
+          RegExp(r'(?:custom_field|fields)_files\[(.+?)\]').firstMatch(key);
       final fieldKey = match != null ? match.group(1) : key;
       payload['fields_files[$fieldKey]'] = value;
     });
 
-    if (widget.options.clientTag != null && widget.options.clientTag!.isNotEmpty) {
+    if (widget.options.clientTag != null &&
+        widget.options.clientTag!.isNotEmpty) {
       payload['client_tag'] = widget.options.clientTag;
     }
 
@@ -156,11 +162,13 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
 
   bool _validateAmount(double? amount) {
     if (amount == null) {
-      HelperUtils.showSnackBarMessage(context, 'يرجى تحديد المبلغ المراد تحويله');
+      HelperUtils.showSnackBarMessage(
+          context, 'يرجى تحديد المبلغ المراد تحويله');
       return false;
     }
 
-    if (widget.options.minimumAmount != null && amount < widget.options.minimumAmount!) {
+    if (widget.options.minimumAmount != null &&
+        amount < widget.options.minimumAmount!) {
       HelperUtils.showSnackBarMessage(
         context,
         'قيمة التحويل أقل من الحد الأدنى المسموح',
@@ -168,7 +176,8 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
       return false;
     }
 
-    if (widget.options.maximumAmount != null && amount > widget.options.maximumAmount!) {
+    if (widget.options.maximumAmount != null &&
+        amount > widget.options.maximumAmount!) {
       HelperUtils.showSnackBarMessage(
         context,
         'قيمة التحويل تتجاوز الحد الأعلى المسموح',
@@ -177,7 +186,8 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
     }
 
     if (widget.balance != null && amount > widget.balance! + 0.0001) {
-      HelperUtils.showSnackBarMessage(context, 'لا يتوفر رصيد كافٍ لإكمال التحويل');
+      HelperUtils.showSnackBarMessage(
+          context, 'لا يتوفر رصيد كافٍ لإكمال التحويل');
       return false;
     }
 
@@ -202,7 +212,8 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
       final response = await cubit.submitTransfer(payload);
       if (!mounted) return;
       Navigator.of(context).pop<Map<String, dynamic>>(response);
-      final message = response['message']?.toString() ?? 'تم إرسال التحويل بنجاح';
+      final message =
+          response['message']?.toString() ?? 'تم إرسال التحويل بنجاح';
       HelperUtils.showSnackBarMessage(context, message);
     } catch (e) {
       if (!mounted) return;
@@ -276,7 +287,7 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
                 else
                   SliverList(
                     delegate: SliverChildBuilderDelegate(
-                          (context, index) {
+                      (context, index) {
                         final field = _fields[index];
                         field.stateUpdater(setState);
                         return Padding(
@@ -290,7 +301,8 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 20),
-                    child: BlocBuilder<WalletTransfersCubit, WalletTransfersState>(
+                    child:
+                        BlocBuilder<WalletTransfersCubit, WalletTransfersState>(
                       builder: (context, state) {
                         final submitting = state is WalletTransferSubmitting;
                         return UiUtils.buildButton(

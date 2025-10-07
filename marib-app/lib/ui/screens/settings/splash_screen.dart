@@ -12,14 +12,12 @@ import 'package:marib/data/cubits/system/fetch_language_cubit.dart';
 import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
 import 'package:marib/data/cubits/system/language_cubit.dart';
 import 'package:marib/data/model/system_settings_model.dart';
-import 'package:marib/settings.dart';
 import 'package:marib/ui/screens/widgets/errors/no_internet.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/screen_scaler.dart';
-import 'package:marib/utils/ui_utils.dart';
 
 ///==============================
 /// المنطق: SplashController
@@ -85,24 +83,24 @@ class SplashController extends ChangeNotifier {
 
     _settingsSub =
         context.read<FetchSystemSettingsCubit>().stream.listen((state) {
-          if (state is FetchSystemSettingsSuccess) {
-            Constant.isDemoModeOn = context
-                .read<FetchSystemSettingsCubit>()
-                .getSetting(SystemSetting.demoMode);
-            _defaultLanguageFromSettings = _resolveDefaultLanguageCode();
-            _completeDefaultLanguageWaiters();
+      if (state is FetchSystemSettingsSuccess) {
+        Constant.isDemoModeOn = context
+            .read<FetchSystemSettingsCubit>()
+            .getSetting(SystemSetting.demoMode);
+        _defaultLanguageFromSettings = _resolveDefaultLanguageCode();
+        _completeDefaultLanguageWaiters();
 
-            isSettingsLoaded = true;
-            notifyListeners();
-            _tryNavigate();
-          } else if (state is FetchSystemSettingsFailure) {
-            _completeDefaultLanguageWaiters();
+        isSettingsLoaded = true;
+        notifyListeners();
+        _tryNavigate();
+      } else if (state is FetchSystemSettingsFailure) {
+        _completeDefaultLanguageWaiters();
 
-            isSettingsLoaded = true; // استخدم الافتراضي
-            notifyListeners();
-            _tryNavigate();
-          }
-        });
+        isSettingsLoaded = true; // استخدم الافتراضي
+        notifyListeners();
+        _tryNavigate();
+      }
+    });
   }
 
   /// اشتراك حالة الإنترنت
@@ -142,13 +140,14 @@ class SplashController extends ChangeNotifier {
   Future<void> _getDefaultLanguage() async {
     try {
       final codeFromSettings = await _waitForDefaultLanguageCode();
-      final code =
-      (codeFromSettings != null && codeFromSettings.isNotEmpty)
+      final code = (codeFromSettings != null && codeFromSettings.isNotEmpty)
           ? codeFromSettings
           : "ar";
 
       final stored = HiveUtils.getLanguage();
-      if (stored == null || stored['data'] == null || HiveUtils.isUserFirstTime() == true) {
+      if (stored == null ||
+          stored['data'] == null ||
+          HiveUtils.isUserFirstTime() == true) {
         context.read<FetchLanguageCubit>().getLanguage(code);
       } else {
         isLanguageLoaded = true;
@@ -173,7 +172,6 @@ class SplashController extends ChangeNotifier {
     context.read<FetchSystemSettingsCubit>().fetchSettings(forceRefresh: true);
   }
 
-
   Future<String?> _waitForDefaultLanguageCode() async {
     if (_defaultLanguageFromSettings != null &&
         _defaultLanguageFromSettings!.isNotEmpty) {
@@ -196,8 +194,9 @@ class SplashController extends ChangeNotifier {
 
   String? _resolveDefaultLanguageCode() {
     try {
-      final raw =
-      context.read<FetchSystemSettingsCubit>().getSetting(SystemSetting.defaultLanguage);
+      final raw = context
+          .read<FetchSystemSettingsCubit>()
+          .getSetting(SystemSetting.defaultLanguage);
       if (raw is String) {
         return raw.trim();
       }
@@ -214,7 +213,6 @@ class SplashController extends ChangeNotifier {
       _defaultLanguageCompleter = null;
     }
   }
-
 
   /// مؤقت بسيط لعرض السبلّاش
   void _startTimer() {
@@ -244,12 +242,13 @@ class SplashController extends ChangeNotifier {
     if (!isTimerCompleted || !isSettingsLoaded || !isLanguageLoaded) return;
 
     final maintenance = context
-        .read<FetchSystemSettingsCubit>()
-        .getSetting(SystemSetting.maintenanceMode) ==
+            .read<FetchSystemSettingsCubit>()
+            .getSetting(SystemSetting.maintenanceMode) ==
         "1";
 
     if (maintenance) {
-      _go(() => Navigator.of(context).pushReplacementNamed(Routes.maintenanceMode));
+      _go(() =>
+          Navigator.of(context).pushReplacementNamed(Routes.maintenanceMode));
       return;
     }
 
@@ -324,12 +323,6 @@ class SplashController extends ChangeNotifier {
   }
 }
 
-
-
-
-
-
-
 ///==============================
 /// الواجهة: SplashScreen
 ///==============================
@@ -370,8 +363,6 @@ class SplashScreenState extends State<SplashScreen>
     );
   }
 
-
-
   Widget _buildOnline(BuildContext context) {
     // مقدار الرفع عن الوضع الحالي (وحدات لوحة 500px)
     final double lift = 150; // جرّب 60–120 حسب رغبتك
@@ -396,16 +387,22 @@ class SplashScreenState extends State<SplashScreen>
                     child: Column(
                       children: [
                         SizedBox(
-                          width: 500, height: 30,
-                          child: Lottie.asset('assets/lottie/data.json', fit: BoxFit.cover),
+                          width: 500,
+                          height: 30,
+                          child: Lottie.asset('assets/lottie/data.json',
+                              fit: BoxFit.cover),
                         ),
                         SizedBox(
-                          width: 500, height: 75,
-                          child: Lottie.asset('assets/lottie/2.json', fit: BoxFit.cover),
+                          width: 500,
+                          height: 75,
+                          child: Lottie.asset('assets/lottie/2.json',
+                              fit: BoxFit.cover),
                         ),
                         SizedBox(
-                          width: 500, height: 470,
-                          child: Lottie.asset('assets/lottie/3.json', fit: BoxFit.cover),
+                          width: 500,
+                          height: 470,
+                          child: Lottie.asset('assets/lottie/3.json',
+                              fit: BoxFit.cover),
                         ),
                       ],
                     ),
@@ -418,6 +415,4 @@ class SplashScreenState extends State<SplashScreen>
       ),
     );
   }
-
-
 }

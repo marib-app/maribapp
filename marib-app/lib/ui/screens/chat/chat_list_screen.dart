@@ -17,12 +17,8 @@ import 'package:marib/utils/ui_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:marib/utils/constant.dart';
 
 part 'chat_list_screen_ui.dart';
-
-
-
 
 class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
@@ -76,7 +72,6 @@ class _ChatListScreenState extends State<ChatListScreen>
   Widget build(BuildContext context) {
     super.build(context);
     return buildChatListScreen(context);
-
   }
 
   // helper: هل يوجد أي تقييم؟
@@ -90,14 +85,11 @@ class _ChatListScreenState extends State<ChatListScreen>
   // ---------------------- Buying ----------------------
   Widget buyingChatListData() => buildBuyingChatListData();
 
-
   // ---------------------- Selling ----------------------
   Widget sellingChatListData() => buildSellingChatListData();
 
-
   // ---------------------- Shimmer ----------------------
-  Widget buildChatListLoadingShimmer() =>
-      buildChatListLoadingShimmerUi();
+  Widget buildChatListLoadingShimmer() => buildChatListLoadingShimmerUi();
 
   @override
   bool get wantKeepAlive => true;

@@ -5,13 +5,9 @@ import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/item/fetch_my_item_cubit.dart';
 import 'package:marib/data/model/item/item_model.dart';
 
-import 'package:marib/utils/ui_utils.dart';
-import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/hive_utils.dart';
 
-
-
-import 'my_item_tab_ui.dart';
+import 'package:marib/ui/screens/user_profile/my_item_tab_ui.dart';
 
 Map<String, FetchMyItemsCubit> myAdsCubitReference = {};
 
@@ -55,7 +51,7 @@ class MyItemTab extends StatelessWidget {
 
 class _MyItemTabBody extends StatefulWidget {
   final String statusKey; // ex: 'active' / 'review' / 'all'
-  const _MyItemTabBody({super.key, required this.statusKey});
+  const _MyItemTabBody({required this.statusKey});
 
   @override
   State<_MyItemTabBody> createState() => _MyItemTabBodyState();
@@ -78,7 +74,7 @@ class _MyItemTabBodyState extends State<_MyItemTabBody>
     final cubit = context.read<FetchMyItemsCubit>();
     final st = cubit.state;
     final bool isLoadingMore =
-    st is FetchMyItemsSuccess ? st.isLoadingMore : false;
+        st is FetchMyItemsSuccess ? st.isLoadingMore : false;
 
     // حمّل المزيد بحذر
     if (_pageScrollController.hasClients &&
@@ -93,9 +89,6 @@ class _MyItemTabBodyState extends State<_MyItemTabBody>
     final cubit = context.read<FetchMyItemsCubit>();
     cubit.fetchMyItems(getItemsWithStatus: widget.statusKey); // ← بدون await
   }
-
-
-
 
   void _onTapItem(ItemModel item) {
     Navigator.pushNamed(context, Routes.adDetailsScreen, arguments: {

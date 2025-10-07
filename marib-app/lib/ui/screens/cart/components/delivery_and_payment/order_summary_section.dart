@@ -2,13 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:marib/data/model/cart/checkout_models.dart';
 import 'package:marib/data/model/item/cart_model.dart';
 
-import 'shared_widgets.dart';
-
-
+import 'package:marib/ui/screens/cart/components/delivery_and_payment/shared_widgets.dart';
 
 /// ويدجت يقدم ملخص الطلب مع تفاصيل الأسعار والعملة والتنبيهات.
 class OrderSummarySection extends StatelessWidget {
-
   const OrderSummarySection({
     super.key,
     required this.loading,
@@ -22,9 +19,6 @@ class OrderSummarySection extends StatelessWidget {
 
   // حالة التحميل لعرض قوالب الانتظار.
   final bool loading;
-
-
-
 
   /// عناصر السلة التي سيتم عرضها داخل الجدول.
   final List<Cart> cartItems;
@@ -44,7 +38,6 @@ class OrderSummarySection extends StatelessWidget {
   /// العملة المرتبطة بقيمة الشحن.
   final String? shippingCurrency;
 
-
   String _resolveCurrency() {
     final String? shippingCurrencyLabel = shippingCurrency?.trim();
     if (shippingCurrencyLabel != null && shippingCurrencyLabel.isNotEmpty) {
@@ -54,8 +47,6 @@ class OrderSummarySection extends StatelessWidget {
     if (deliveryCurrency != null && deliveryCurrency.trim().isNotEmpty) {
       return deliveryCurrency.trim();
     }
-
-
 
     for (final Cart item in cartItems) {
       final String? candidate = item.currency;
@@ -67,7 +58,6 @@ class OrderSummarySection extends StatelessWidget {
     return '';
   }
 
-
   @override
   Widget build(BuildContext context) {
     if (loading) {
@@ -75,7 +65,7 @@ class OrderSummarySection extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: List<Widget>.generate(
           5,
-              (int index) => Padding(
+          (int index) => Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: buildShimmerLine(
               context,
@@ -91,17 +81,20 @@ class OrderSummarySection extends StatelessWidget {
     final bool isDark = theme.brightness == Brightness.dark;
 
     final Color borderColor = isDark ? Colors.white24 : const Color(0xFFE0E6ED);
-    final Color tableBackground = isDark ? const Color(0xFF1F1F23) : Colors.white;
-    final Color headerColor = isDark ? const Color(0xFF2C2C30) : const Color(0xFFE9EEF3);
+    final Color tableBackground =
+        isDark ? const Color(0xFF1F1F23) : Colors.white;
+    final Color headerColor =
+        isDark ? const Color(0xFF2C2C30) : const Color(0xFFE9EEF3);
     final Color evenRowColor = isDark ? const Color(0xFF232327) : Colors.white;
-    final Color oddRowColor = isDark ? const Color(0xFF1B1B1D) : const Color(0xFFF7FAFC);
-    final Color totalRowColor = isDark ? const Color(0xFF2C2C30) : const Color(0xFFE6F2FF);
+    final Color oddRowColor =
+        isDark ? const Color(0xFF1B1B1D) : const Color(0xFFF7FAFC);
+    final Color totalRowColor =
+        isDark ? const Color(0xFF2C2C30) : const Color(0xFFE6F2FF);
     final Color textColor = isDark ? Colors.white : const Color(0xFF1C1C1C);
 
     final BorderRadius borderRadius = BorderRadius.circular(14);
 
     final String currencyLabel = _resolveCurrency();
-
 
     String formatAmount(double amount) {
       final double absolute = amount.abs();
@@ -113,15 +106,15 @@ class OrderSummarySection extends StatelessWidget {
       return amount < 0 ? '-$valueWithCurrency' : valueWithCurrency;
     }
 
-
     final double itemsTotal = cartItems.fold<double>(
       0,
-          (double sum, Cart item) => sum + item.subtotalAmount,
+      (double sum, Cart item) => sum + item.subtotalAmount,
     );
     final double shippingFee = _resolveShippingFeeValue();
     const double taxAmount = 0.0;
     const double discountAmount = 0.0;
-    final double grandTotal = itemsTotal + shippingFee + taxAmount - discountAmount;
+    final double grandTotal =
+        itemsTotal + shippingFee + taxAmount - discountAmount;
 
     final String shippingLabel = _resolveShippingLabel(
       shippingFee,
@@ -129,7 +122,8 @@ class OrderSummarySection extends StatelessWidget {
     );
 
     final List<_SummaryRowData> rows = <_SummaryRowData>[
-      _SummaryRowData(title: 'إجمالي سعر المنتجات', value: formatAmount(itemsTotal)),
+      _SummaryRowData(
+          title: 'إجمالي سعر المنتجات', value: formatAmount(itemsTotal)),
       _SummaryRowData(title: 'رسوم الشحن', value: shippingLabel),
       _SummaryRowData(title: 'الضريبة', value: formatAmount(taxAmount)),
       _SummaryRowData(title: 'تخفيض', value: formatAmount(-discountAmount)),
@@ -149,11 +143,11 @@ class OrderSummarySection extends StatelessWidget {
           color: backgroundColor,
           border: showDivider
               ? Border(
-            bottom: BorderSide(
-              color: borderColor,
-              width: 0.7,
-            ),
-          )
+                  bottom: BorderSide(
+                    color: borderColor,
+                    width: 0.7,
+                  ),
+                )
               : null,
         ),
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
@@ -172,26 +166,26 @@ class OrderSummarySection extends StatelessWidget {
                 ),
               ),
             ),
-      Expanded(
-      child: Align(
-      alignment: AlignmentDirectional.centerEnd,
-      child: Text(
-      value,
-      style: TextStyle(
-      color: emphasizeValue ? theme.colorScheme.primary : textColor,
-      fontSize: fontSize,
-      fontWeight: emphasizeValue ? FontWeight.w700 : FontWeight.w600,
+            Expanded(
+              child: Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: Text(
+                  value,
+                  style: TextStyle(
+                    color:
+                        emphasizeValue ? theme.colorScheme.primary : textColor,
+                    fontSize: fontSize,
+                    fontWeight:
+                        emphasizeValue ? FontWeight.w700 : FontWeight.w600,
                   ),
                   textAlign: TextAlign.end,
-
                 ),
               ),
-      ),
+            ),
           ],
         ),
       );
     }
-
 
     if (cartItems.isEmpty) {
       return DecoratedBox(
@@ -237,7 +231,8 @@ class OrderSummarySection extends StatelessWidget {
               final int index = entry.key;
               final _SummaryRowData data = entry.value;
               final bool isLast = index == rows.length - 1;
-              final Color background = index.isEven ? evenRowColor : oddRowColor;
+              final Color background =
+                  index.isEven ? evenRowColor : oddRowColor;
               return buildRow(
                 title: data.title,
                 value: data.value,
@@ -253,21 +248,16 @@ class OrderSummarySection extends StatelessWidget {
               showDivider: false,
               fontSize: 14,
             ),
-
           ],
         ),
       ),
     );
   }
 
-
-
-
-
   String _resolveShippingLabel(
-      double shippingFee,
-      String Function(double value) formatAmount,
-      ) {
+    double shippingFee,
+    String Function(double value) formatAmount,
+  ) {
     final String trimmedOverride = deliveryFeeLabel.trim();
     if (trimmedOverride.isNotEmpty && trimmedOverride != '—') {
       return trimmedOverride;
@@ -317,8 +307,7 @@ class OrderSummarySection extends StatelessWidget {
         .replaceAll('٬', '')
         .replaceAll('،', '')
         .replaceAll(',', '');
-    final String sanitized =
-    normalized.replaceAll(RegExp(r'[^0-9.\-]'), '');
+    final String sanitized = normalized.replaceAll(RegExp(r'[^0-9.\-]'), '');
     if (sanitized.isEmpty) {
       return null;
     }
@@ -328,13 +317,11 @@ class OrderSummarySection extends StatelessWidget {
   String _normalizeLocalizedDigits(String value) {
     return value.replaceAllMapped(RegExp(r'[٠-٩۰-۹]'), (Match match) {
       final int codeUnit = match.group(0)!.codeUnitAt(0);
-      final int base = (codeUnit >= 0x06F0 && codeUnit <= 0x06F9) ? 0x06F0 : 0x0660;
+      final int base =
+          (codeUnit >= 0x06F0 && codeUnit <= 0x06F9) ? 0x06F0 : 0x0660;
       return (codeUnit - base).toString();
     });
   }
-
-
-
 }
 
 class _SummaryRowData {

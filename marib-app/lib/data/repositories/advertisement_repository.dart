@@ -55,8 +55,6 @@ class AdvertisementRepository {
       extraHeaders: <String, dynamic>{
         'Idempotency-Key': Api.generateIdempotencyKey(),
       },
-
-
     );
     return response;
   }

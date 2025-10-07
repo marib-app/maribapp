@@ -6,14 +6,10 @@ import 'package:marib/ui/screens/cart/order_step.dart';
 
 import 'package:marib/ui/screens/competitions/competitions_screen.dart';
 
-
 import 'package:marib/ui/screens/home/widgets/categoryFilterScreen.dart';
 import 'package:marib/ui/screens/home/widgets/postedSinceFilter.dart';
 import 'package:marib/ui/screens/home/widgets/subCategoryFilterScreen.dart';
 import 'package:marib/ui/screens/info_screen/info_screen.dart';
-
-
-
 
 import 'package:marib/ui/screens/item/items_list_seller.dart';
 import 'package:marib/ui/screens/item/viewAll.dart';
@@ -35,7 +31,6 @@ import 'package:marib/ui/screens/my_review_screen.dart';
 import 'package:marib/ui/screens/sold_out_bought_screen.dart';
 import 'package:marib/ui/screens/support_screen.dart';
 import 'package:marib/ui/screens/user_profile/edit_profile.dart';
-
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -62,17 +57,10 @@ import 'package:marib/data/model/data_output.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/ui/screens/cart/cart.dart';
 
-
-
-
-
-
 import 'package:marib/ui/screens/settings/contact_us.dart';
 import 'package:marib/ui/screens/settings/notification_detail.dart';
 import 'package:marib/ui/screens/settings/notifications.dart';
 import 'package:marib/ui/screens/settings/profile_setting.dart';
-
-
 
 import 'package:marib/ui/screens/classified_ads/details.dart';
 import 'package:marib/ui/screens/classified_ads/classified_screen.dart';
@@ -81,9 +69,6 @@ import 'package:marib/ui/screens/classified_ads/classified_screen3.dart';
 import 'package:marib/ui/screens/classified_ads/units/service_payment_page.dart';
 import 'package:marib/ui/screens/home_screen/section/section_screen/section_screen.dart';
 
-
-
-
 import 'package:marib/ui/screens/item/promo/promote_ad_screen.dart';
 import 'package:marib/ui/screens/settings/main_activity.dart';
 import 'package:marib/ui/screens/settings/splash_screen.dart';
@@ -91,7 +76,6 @@ import 'package:marib/ui/screens/item/add_item_screen/widgets/success_item_scree
 
 import 'package:marib/ui/screens/item/add_item_screen/select_category.dart';
 //
-import 'package:marib/ui/screens/item/add_item_screen/add_item_details.dart';
 import 'package:marib/ui/screens/item/add_item_screen/add_item_details.dart';
 import 'package:marib/ui/screens/item/ad_details_screen/ad_details_screen.dart';
 import 'package:marib/ui/screens/user_profile/show_profile.dart';
@@ -105,9 +89,6 @@ import 'package:marib/ui/screens/home_screen/section/TemporarySectionScreen.dart
 
 import 'package:marib/ui/screens/widgets/errors/error_screen.dart';
 
-
-
-
 import 'package:marib/ui/screens/classified_ads/other_services/wifi_cabin/wifi_cabin_screen.dart';
 import 'package:marib/ui/screens/classified_ads/other_services/other_services_screen.dart';
 import 'package:marib/ui/screens/classified_ads/service_add_more_details_screen.dart';
@@ -116,15 +97,11 @@ import 'package:marib/ui/screens/home_screen/section/section_screen/widgets/map_
 import 'package:marib/ui/screens/wallet/wallet_screen.dart';
 import 'package:marib/ui/screens/cart/orders_list_screen.dart';
 
-
-
-
 class Routes {
   //private constructor
   //Routes._();
 
-
-  static const section_screen = 'section_screen';   // واجهة الاقسام
+  static const section_screen = 'section_screen'; // واجهة الاقسام
   static const promoteAdScreen = '/promoteAdScreen';
 
   // الخدمات
@@ -134,27 +111,15 @@ class Routes {
   static const servicePaymentPage = '/service-payment';
   static const myReviewsScreen = '/myReviewsScreenRoute';
   static const serviceAddMoreDetails = '/service-add-more-details';
-  static const String serviceRequestsPage  = '/service-requests';
+  static const String serviceRequestsPage = '/service-requests';
   // خدمات اخرى
   static const otherServices = '/other-services';
   static const otherServicesWifiCabin = '/other-services/wifi-cabin';
-
 
   static const temporarySection = '/temporarySection';
   static const String challengeInstructions = '/challenge-instructions';
 
   static const mapSearch = '/mapSearch'; // البحث بالخريطة
-
-
-
-
-
-
-
-
-
-
-
 
   static const splash = 'splash';
   static const onboarding = 'onboarding';
@@ -216,24 +181,7 @@ class Routes {
   static const classifiedDetailsScreenRoute = 'classifiedDetailsScreenRoute';
   static const mainServiceDetailsRoute = 'mainServiceDetailsRoute';
 
-
-
   static const addclassifiedScreenRoute = '/addclassifiedScreenRoute';
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   static const languageListScreenRoute = '/languageListScreenRoute';
   static const searchScreenRoute = '/searchScreenRoute';
@@ -250,8 +198,6 @@ class Routes {
   static const myAdvertisment = '/myAdvertisment';
   static const transactionHistory = '/transactionHistory';
   static const wallet = '/wallet';
-
-
 
   static const personalizedItemScreen = '/personalizedItemScreen';
   static const myItemScreen = '/myItemScreen';
@@ -294,15 +240,16 @@ class Routes {
 
   //static String previousCustomerRoute = splash;
 
-
-
   static Route onGenerateRouted(RouteSettings routeSettings) {
     currentRoute = routeSettings.name ?? "";
 
     // ⛔️ حارس: امنع الذهاب لتعديل/إكمال البروفايل إلا لو تم التصريح عبر arguments
-    if (routeSettings.name == Routes.completeProfile /* || routeSettings.name == Routes.editProfile */) {
+    if (routeSettings.name ==
+        Routes
+            .completeProfile /* || routeSettings.name == Routes.editProfile */) {
       final args = routeSettings.arguments;
-      final bool allow = args is Map && (args['allowProfileRoute'] == true || args['force'] == true);
+      final bool allow = args is Map &&
+          (args['allowProfileRoute'] == true || args['force'] == true);
       if (!allow) {
         // تحويل للرئيسية إذا كانت محاولة تلقائية/غير مصرّح بها
         return MainActivity.route(routeSettings);
@@ -330,9 +277,11 @@ class Routes {
           future: ItemRepository().fetchItemFromItemSlug(itemSlug),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Scaffold(body: Center(child: CircularProgressIndicator()));
+              return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()));
             } else if (snapshot.hasError) {
-              return Scaffold(body: Center(child: Text('Error: ${snapshot.error}')));
+              return Scaffold(
+                  body: Center(child: Text('Error: ${snapshot.error}')));
             } else {
               return AdDetailsScreen(model: snapshot.data!.modelList.first);
             }
@@ -341,17 +290,8 @@ class Routes {
       });
     }
 
-
-
-
-
-
-
     switch (routeSettings.name) {
-
-
-
-    // الخدمات
+      // الخدمات
 
       case classifiedScreenRoute:
         return ClassifiedScreen.route(routeSettings);
@@ -368,12 +308,6 @@ class Routes {
       case Routes.serviceRequestsPage:
         return ServiceRequestsScreen.route(routeSettings);
 
-
-
-
-
-
-
 // ✅ جديد: خدمات أخرى
       case otherServices:
         return OtherServicesScreen.route(routeSettings);
@@ -384,24 +318,17 @@ class Routes {
       case mapSearch:
         return MaterialPageRoute(builder: (_) => const MapSearchScreen());
 
-
-
-
-    // الدفع
+      // الدفع
       case Routes.servicePaymentPage:
         return ServicePaymentPage.route(routeSettings);
 
-      case Routes.section_screen:                // 👈 مسارك الجديد
+      case Routes.section_screen: // 👈 مسارك الجديد
         return Section_screen.route(routeSettings);
-
 
       case promoteAdScreen:
         return PromoteAdScreen.route(routeSettings);
 
-
-
-
-    //  الأقسام الموقوفة
+      //  الأقسام الموقوفة
       case Routes.temporarySection:
         final arguments = routeSettings.arguments as Map<String, String>;
         return MaterialPageRoute(
@@ -410,31 +337,6 @@ class Routes {
             catID: arguments['catID'] ?? '',
           ),
         );
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
       case splash:
         return BlurredRouter(builder: ((context) => const SplashScreen()));
@@ -454,19 +356,10 @@ class Routes {
       case mobileSignUp:
         return MobileSignUpScreen.route(routeSettings);
 
-
-
-
-
-
-    // ✅ بدّل هذه: كانت تفتح UserProfileScreen، خلّها ترجع الرئيسية
+      // ✅ بدّل هذه: كانت تفتح UserProfileScreen، خلّها ترجع الرئيسية
       case completeProfile:
-      // الآن سيصل هنا فقط لو allowProfileRoute == true
+        // الآن سيصل هنا فقط لو allowProfileRoute == true
         return UserProfileScreen.route(routeSettings);
-
-
-
-
 
       case showProfile:
         return ShowUserProfileScreen.route(routeSettings);
@@ -475,7 +368,7 @@ class Routes {
         return CategoryList.route(routeSettings);
 
       case CategoryPublic:
-    //    return CategoryListPublic.route(routeSettings);
+      //    return CategoryListPublic.route(routeSettings);
 
       case subCategoryScreen:
         return SubCategoryScreen.route(routeSettings);
@@ -502,7 +395,6 @@ class Routes {
       case notificationDetailPage:
         return NotificationDetail.route(routeSettings);
 
-
       case successItemScreen:
         return SuccessItemScreen.route(routeSettings);
 
@@ -526,7 +418,6 @@ class Routes {
       case wallet:
         return WalletScreen.route(routeSettings);
 
-
       case blockedUserListScreen:
         return BlockedUserListScreen.route(routeSettings);
       case countriesScreen:
@@ -548,7 +439,6 @@ class Routes {
 
       case itemsList:
         return ItemsList.route(routeSettings);
-
 
       case itemsListSeller:
         return ItemsListSeller.route(routeSettings);
@@ -611,8 +501,6 @@ class Routes {
 
       case ordersList:
         return OrdersListScreen.route(routeSettings);
-
-
 
       case otp:
         return MobileVerificationScreen.route(routeSettings);

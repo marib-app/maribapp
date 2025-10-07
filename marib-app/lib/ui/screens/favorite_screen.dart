@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/favorite/favorite_cubit.dart';
-import 'package:marib/data/helper/designs.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/ui/screens/item/cards/horizontal_card.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
@@ -153,7 +152,8 @@ class _FavoriteScreenState extends State<FavoriteScreen>
                             return Padding(
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               child: UiUtils.progress(
-                                normalProgressColor: context.color.territoryColor,
+                                normalProgressColor:
+                                    context.color.territoryColor,
                               ),
                             );
                           }
@@ -167,9 +167,9 @@ class _FavoriteScreenState extends State<FavoriteScreen>
                                       .textTheme
                                       .bodySmall
                                       ?.copyWith(
-                                    color: context.color.textDefaultColor
-                                        .withOpacity(0.5),
-                                  ),
+                                        color: context.color.textDefaultColor
+                                            .withOpacity(0.5),
+                                      ),
                                 ),
                               ),
                             );
@@ -190,7 +190,9 @@ class _FavoriteScreenState extends State<FavoriteScreen>
                           },
                           onDismissed: (_) {
                             // تحديث متفائل في الواجهة
-                            context.read<FavoriteCubit>().removeFavoriteItem(item);
+                            context
+                                .read<FavoriteCubit>()
+                                .removeFavoriteItem(item);
 
                             // استدعاء API في الخلفية (سريع)
                             context
@@ -202,7 +204,8 @@ class _FavoriteScreenState extends State<FavoriteScreen>
                             ScaffoldMessenger.of(context).clearSnackBars();
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: const Text("تمت إزالة العنصر من المفضلة"),
+                                content:
+                                    const Text("تمت إزالة العنصر من المفضلة"),
                                 action: SnackBarAction(
                                   label: "تراجع",
                                   onPressed: () {

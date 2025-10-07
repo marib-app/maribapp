@@ -3,7 +3,7 @@ import 'package:marib/utils/extensions/extensions.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:marib/ui/theme/theme.dart';
 
-import 'shared_widgets.dart';
+import 'package:marib/ui/screens/cart/components/delivery_and_payment/shared_widgets.dart';
 
 /// ويدجت يعرض معلومات عنوان التوصيل وإدارة العناوين للمستخدم.
 class DeliveryAddressSection extends StatelessWidget {
@@ -32,13 +32,12 @@ class DeliveryAddressSection extends StatelessWidget {
       if (value is Map) {
         final Map<String, dynamic> map = value is Map<String, dynamic>
             ? value
-            : Map<String, dynamic>.from(value as Map);
+            : Map<String, dynamic>.from(value);
         final Iterable<String> keys = isLat
             ? const <String>['lat', 'latitude', 'geo_lat']
             : const <String>['lng', 'longitude', 'geo_lng'];
         for (final String key in keys) {
-          final double? candidate =
-          parseCoordinate(map[key], isLat: isLat);
+          final double? candidate = parseCoordinate(map[key], isLat: isLat);
           if (candidate != null) {
             return candidate;
           }
@@ -54,7 +53,7 @@ class DeliveryAddressSection extends StatelessWidget {
         return value;
       }
       if (value is Map) {
-        return Map<String, dynamic>.from(value as Map);
+        return Map<String, dynamic>.from(value);
       }
       return null;
     }
@@ -82,24 +81,23 @@ class DeliveryAddressSection extends StatelessWidget {
     );
     final bool hasId = (address?['id']) != null;
     final bool hasLatLng = lat != null && lng != null;
-    final String baseLabel = (address?['label'] ?? address?['address'] ?? '')
-        .toString()
-        .trim();
+    final String baseLabel =
+        (address?['label'] ?? address?['address'] ?? '').toString().trim();
     final String formattedLabel =
-    (address?['formatted_address'] ?? '').toString().trim();
-    final String locationText = formattedLabel.isNotEmpty
-        ? formattedLabel
-        : baseLabel;
+        (address?['formatted_address'] ?? '').toString().trim();
+    final String locationText =
+        formattedLabel.isNotEmpty ? formattedLabel : baseLabel;
     final String region =
-    (address?['area'] ?? address?['city'] ?? '').toString().trim();
+        (address?['area'] ?? address?['city'] ?? '').toString().trim();
     final String note =
-    (address?['note'] ?? address?['description'] ?? '').toString().trim();
+        (address?['note'] ?? address?['description'] ?? '').toString().trim();
     final String name = (address?['name'] ?? '').toString().trim();
     final String phone = (address?['phone'] ?? '').toString().trim();
     final bool readyForShipping = hasId && hasLatLng;
-    final bool hasAnyAddress =
-        hasId || locationText.isNotEmpty || region.isNotEmpty || phone.isNotEmpty;
-
+    final bool hasAnyAddress = hasId ||
+        locationText.isNotEmpty ||
+        region.isNotEmpty ||
+        phone.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -107,26 +105,26 @@ class DeliveryAddressSection extends StatelessWidget {
         loading
             ? buildShimmerLine(context, width: double.infinity, height: 48)
             : FilledButton.icon(
-          onPressed: onManageAddresses,
-          icon: Icon(
-            hasAnyAddress
-                ? Icons.edit_location_alt
-                : Icons.add_location_alt_outlined,
-          ),
-          label: Text(hasAnyAddress ? 'إدارة العناوين' : 'أضف عنوانًا'),
-          style: ElevatedButton.styleFrom(
-            elevation: 0,
-            backgroundColor:
-            context.color.secondaryColor.withOpacity(0.1),
-            foregroundColor: context.color.territoryColor,
-            padding:
-            const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: context.color.territoryColor),
-            ),
-          ),
-        ),
+                onPressed: onManageAddresses,
+                icon: Icon(
+                  hasAnyAddress
+                      ? Icons.edit_location_alt
+                      : Icons.add_location_alt_outlined,
+                ),
+                label: Text(hasAnyAddress ? 'إدارة العناوين' : 'أضف عنوانًا'),
+                style: ElevatedButton.styleFrom(
+                  elevation: 0,
+                  backgroundColor:
+                      context.color.secondaryColor.withOpacity(0.1),
+                  foregroundColor: context.color.territoryColor,
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: context.color.territoryColor),
+                  ),
+                ),
+              ),
         if (!loading && !hasAnyAddress) ...[
           const SizedBox(height: 12),
           Text(
@@ -157,7 +155,10 @@ class DeliveryAddressSection extends StatelessWidget {
                   ),
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: const [
-                    BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 2)),
+                    BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 8,
+                        offset: Offset(0, 2)),
                   ],
                 ),
                 child: Column(
@@ -213,7 +214,8 @@ class DeliveryAddressSection extends StatelessWidget {
                               ? Icons.check_circle_outline
                               : Icons.warning_amber_rounded,
                           size: 18,
-                          color: readyForShipping ? Colors.green : Colors.orange,
+                          color:
+                              readyForShipping ? Colors.green : Colors.orange,
                         ),
                         const SizedBox(width: 6),
                         Expanded(
@@ -223,7 +225,9 @@ class DeliveryAddressSection extends StatelessWidget {
                                 : 'أضف الموقع الجغرافي لهذا العنوان لضمان إتمام التوصيل.',
                             style: TextStyle(
                               fontSize: 13,
-                              color: readyForShipping ? Colors.green : Colors.orange,
+                              color: readyForShipping
+                                  ? Colors.green
+                                  : Colors.orange,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -233,17 +237,16 @@ class DeliveryAddressSection extends StatelessWidget {
                   ],
                 ),
               ),
-                  if (readyForShipping)
-                  const Positioned(
+              if (readyForShipping)
+                const Positioned(
                   top: 8,
                   left: 8,
                   child: CircleAvatar(
-                  radius: 14,
-                  backgroundColor: Color(0xFF4CAF50),
-                  child: Icon(Icons.check, color: Colors.white, size: 16),
+                    radius: 14,
+                    backgroundColor: Color(0xFF4CAF50),
+                    child: Icon(Icons.check, color: Colors.white, size: 16),
                   ),
                 ),
-
             ],
           )
         else
@@ -252,17 +255,16 @@ class DeliveryAddressSection extends StatelessWidget {
     );
   }
 
-
-
   Widget _addressRow(
-      BuildContext context,
-      IconData icon,
-      String label,
-      String value,
-      ) {
+    BuildContext context,
+    IconData icon,
+    String label,
+    String value,
+  ) {
     return Row(
       children: [
-        Icon(icon, size: 18, color: context.color.textColorDark.withOpacity(0.7)),
+        Icon(icon,
+            size: 18, color: context.color.textColorDark.withOpacity(0.7)),
         const SizedBox(width: 6),
         Text(
           '$label:',
@@ -299,7 +301,7 @@ class DeliveryAddressSection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: List.generate(
             4,
-                (_) => Padding(
+            (_) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Container(
                 height: 14,
@@ -315,10 +317,6 @@ class DeliveryAddressSection extends StatelessWidget {
       ),
     );
   }
-
-
-
-
 
   Widget _buildAddAddressPlaceholder(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
@@ -352,7 +350,4 @@ class DeliveryAddressSection extends StatelessWidget {
       ),
     );
   }
-
-
-
 }

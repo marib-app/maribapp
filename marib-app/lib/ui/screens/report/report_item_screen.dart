@@ -9,7 +9,6 @@ import 'package:flutter/material.dart';
 import 'package:marib/data/model/report_item/reason_model.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-
 class ReportItemScreen extends StatefulWidget {
   final int itemId;
 
@@ -47,7 +46,6 @@ class _ReportItemScreenState extends State<ReportItemScreen> {
     return BlocListener<ItemReportCubit, ItemReportState>(
       listener: (context, state) {
         if (state is ItemReportFailure) {
-
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.error.toString()),

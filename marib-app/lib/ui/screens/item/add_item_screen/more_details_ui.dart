@@ -40,8 +40,6 @@ class MoreDetailsUI extends StatelessWidget {
   bool get _isLoading => state is FetchCustomFieldInProgress;
   bool get _isFail => state is FetchCustomFieldFail;
 
-
-
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -70,10 +68,6 @@ class MoreDetailsUI extends StatelessWidget {
       ),
     );
   }
-
-
-
-
 
   // زر الأسفل
   Widget _bottomBar(BuildContext context, {required bool isDisabled}) {
@@ -166,9 +160,6 @@ class MoreDetailsUI extends StatelessWidget {
     );
   }
 
-
-
-
 // نموذج الحقول (بطاقة ملاحظة + تمرير تلقائي + صور وأيقونات كبيرة داخل بطاقة الحقل)
   Widget _formView(BuildContext context) {
     final border = BorderSide(
@@ -200,8 +191,6 @@ class MoreDetailsUI extends StatelessWidget {
       // كثافة أقل لإعطاء مساحة عمودية مريحة
       visualDensity: VisualDensity.adaptivePlatformDensity,
     );
-
-
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14.0),
@@ -244,7 +233,8 @@ class MoreDetailsUI extends StatelessWidget {
                   },
                   child: ListView.separated(
                     controller: scrollController,
-                    physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                    physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics()),
                     padding: EdgeInsets.only(top: 8.0, bottom: 12.0 + kb),
                     itemCount: fields.length + (_isLoading ? 1 : 0),
                     separatorBuilder: (_, __) => const SizedBox(height: 12.0),
@@ -267,7 +257,8 @@ class MoreDetailsUI extends StatelessWidget {
                           return Focus(
                             onFocusChange: (hasFocus) {
                               if (hasFocus) {
-                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                WidgetsBinding.instance
+                                    .addPostFrameCallback((_) {
                                   if (!ctx.mounted) return;
                                   Scrollable.ensureVisible(
                                     ctx,
@@ -297,8 +288,6 @@ class MoreDetailsUI extends StatelessWidget {
     );
   }
 
-
-
 // بطاقة الملاحظة: رمادي باهت + أيقونة بلون الهوية
   Widget _adviceCard(BuildContext context, BorderSide border) {
     final cs = Theme.of(context).colorScheme;
@@ -311,7 +300,7 @@ class MoreDetailsUI extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.fromBorderSide(border),
         // رمادي باهت يعتمد على الثيم
-        color: cs.surfaceVariant.withOpacity(0.20),
+        color: cs.surfaceContainerHighest.withOpacity(0.20),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -320,7 +309,7 @@ class MoreDetailsUI extends StatelessWidget {
           Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: cs.surfaceVariant.withOpacity(0.50),
+              color: cs.surfaceContainerHighest.withOpacity(0.50),
             ),
             padding: const EdgeInsets.all(8),
             margin: const EdgeInsetsDirectional.only(end: 14, top: 2),

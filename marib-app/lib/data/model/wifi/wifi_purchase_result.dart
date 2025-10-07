@@ -29,12 +29,12 @@ class WifiPurchaseResult extends Equatable {
 
   @override
   List<Object?> get props => [
-    status,
-    isPending,
-    requiresAction,
-    purchase,
-    message,
-    redirectUrl,
-    raw,
-  ];
+        status,
+        isPending,
+        requiresAction,
+        purchase,
+        message,
+        redirectUrl,
+        raw,
+      ];
 }

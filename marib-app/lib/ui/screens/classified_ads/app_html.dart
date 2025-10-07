@@ -1,37 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
-import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/ui_utils.dart';
-import 'package:marib/utils/screen_scaler.dart';
-
-
-
-import 'package:flutter/material.dart';
-import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 
 // إضافات fwfh
-import 'package:fwfh_webview/fwfh_webview.dart';
-import 'package:fwfh_svg/fwfh_svg.dart';
-import 'package:fwfh_chewie/fwfh_chewie.dart';
-
 
 import 'package:url_launcher/url_launcher.dart';
-
-import 'package:marib/utils/ui_utils.dart';
-import 'package:marib/utils/responsiveSize.dart';
-
-
-
-
-
-
-
-
-
-
-
-
 
 class AppHtml extends StatelessWidget {
   final String data;
@@ -86,14 +59,17 @@ class AppHtml extends StatelessWidget {
     return map;
   }
 
-  EdgeInsets _marginFromStyle(Map<String, String> st, {double fallbackBottom = 10}) {
+  EdgeInsets _marginFromStyle(Map<String, String> st,
+      {double fallbackBottom = 10}) {
     // نقرأ margin أو margin-bottom إن وجدت
     if (st.containsKey('margin')) {
       final m = st['margin']!;
       // أشكال مختصرة: 10px | 10px 5px | 10px 5px 8px | 10px 5px 8px 2px
       final parts = m.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
       double px(String s) =>
-          double.tryParse(RegExp(r'(-?\d+(\.\d+)?)').firstMatch(s)?.group(1) ?? '') ?? 0;
+          double.tryParse(
+              RegExp(r'(-?\d+(\.\d+)?)').firstMatch(s)?.group(1) ?? '') ??
+          0;
       if (parts.length == 1) {
         final v = px(parts[0]);
         return EdgeInsets.all(v);
@@ -155,8 +131,9 @@ class AppHtml extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final baseText = (Theme.of(context).textTheme.bodyMedium ?? const TextStyle())
-        .copyWith(height: 1.65);
+    final baseText =
+        (Theme.of(context).textTheme.bodyMedium ?? const TextStyle())
+            .copyWith(height: 1.65);
 
     final htmlView = HtmlWidget(
       data,
@@ -168,7 +145,8 @@ class AppHtml extends StatelessWidget {
       // + دعم أصناف (class) خاصة للـ badge/chips لتحسين التناسق
       customStylesBuilder: (element) {
         final tag = element.localName?.toLowerCase();
-        final classes = (element.attributes['class'] ?? '').split(RegExp(r'\s+')).toSet();
+        final classes =
+            (element.attributes['class'] ?? '').split(RegExp(r'\s+')).toSet();
         final hasInline = element.attributes.containsKey('style');
 
         // نبدأ بخريطة فارغة ونضيف عليها حسب الحاجة
@@ -209,29 +187,55 @@ class AppHtml extends StatelessWidget {
         if (!hasInline) {
           switch (tag) {
             case 'h1':
-              s.addAll({'margin': '0 0 14px', 'font-size': '24px', 'font-weight': '800', 'text-align': 'center'});
+              s.addAll({
+                'margin': '0 0 14px',
+                'font-size': '24px',
+                'font-weight': '800',
+                'text-align': 'center'
+              });
               break;
             case 'h2':
-              s.addAll({'margin': '0 0 12px', 'font-size': '20px', 'font-weight': '700'});
+              s.addAll({
+                'margin': '0 0 12px',
+                'font-size': '20px',
+                'font-weight': '700'
+              });
               break;
             case 'h3':
-              s.addAll({'margin': '0 0 10px', 'font-size': '18px', 'font-weight': '700'});
+              s.addAll({
+                'margin': '0 0 10px',
+                'font-size': '18px',
+                'font-weight': '700'
+              });
               break;
             case 'p':
               s.addAll({'margin': '0 0 10px', 'line-height': '1.65'});
               break;
             case 'ul':
             case 'ol':
-              s.addAll({'margin': '0 0 12px', 'padding': '0 18px', 'list-style-position': 'inside'});
+              s.addAll({
+                'margin': '0 0 12px',
+                'padding': '0 18px',
+                'list-style-position': 'inside'
+              });
               break;
             case 'li':
               s.addAll({'margin': '0 0 6px'});
               break;
             case 'img':
-              s.addAll({'display': 'block', 'max-width': '100%', 'height': 'auto', 'margin': '0 0 10px'});
+              s.addAll({
+                'display': 'block',
+                'max-width': '100%',
+                'height': 'auto',
+                'margin': '0 0 10px'
+              });
               break;
             case 'table':
-              s.addAll({'width': '100%', 'border-collapse': 'separate', 'border-spacing': '0'});
+              s.addAll({
+                'width': '100%',
+                'border-collapse': 'separate',
+                'border-spacing': '0'
+              });
               break;
             case 'th':
             case 'td':
@@ -247,7 +251,8 @@ class AppHtml extends StatelessWidget {
         if (!enableImageViewer) return null;
         if (element.localName?.toLowerCase() != 'img') return null;
 
-        final src = element.attributes['src'] ?? element.attributes['data-src'] ?? '';
+        final src =
+            element.attributes['src'] ?? element.attributes['data-src'] ?? '';
         if (src.isEmpty) return const SizedBox.shrink();
 
         final st = _parseInlineStyle(element.attributes['style']);

@@ -47,7 +47,6 @@ class ItemFilterModel {
     double? latitude,
     double? longitude,
     String? currency,
-
     Map<String, dynamic>? customFields,
   }) {
     return ItemFilterModel(
@@ -70,7 +69,6 @@ class ItemFilterModel {
 
   Map<String, dynamic> toMap() {
     final Map<String, dynamic> map = <String, dynamic>{
-
       'max_price': maxPrice,
       'min_price': minPrice,
       'category_id': categoryId,
@@ -84,7 +82,6 @@ class ItemFilterModel {
       'longitude': longitude,
       'latitude': latitude,
       'currency': currency,
-
     };
     if (customFields != null && customFields!.isNotEmpty) {
       map['custom_fields'] = customFields;
@@ -104,14 +101,13 @@ class ItemFilterModel {
       postedSince: map['posted_since'].toString(),
       area: map['area']?.toString(),
       radius:
-      map['radius'] != null ? int.tryParse(map['radius'].toString()) : null,
+          map['radius'] != null ? int.tryParse(map['radius'].toString()) : null,
       areaId: map['area_id'] != null
           ? int.tryParse(map['area_id'].toString())
           : null,
       latitude: map['latitude'] != null ? map['latitude'] : null,
       longitude: map['longitude'] != null ? map['longitude'] : null,
       currency: map['currency']?.toString(),
-
       customFields: Map<String, dynamic>.from(map['custom_fields'] ?? {}),
     );
   }
@@ -161,26 +157,24 @@ class ItemFilterModel {
         other.latitude == latitude &&
         other.longitude == longitude &&
         other.currency == currency &&
-
         other.customFields == customFields;
   }
 
   @override
   int get hashCode {
     return maxPrice.hashCode ^
-    minPrice.hashCode ^
-    categoryId.hashCode ^
-    postedSince.hashCode ^
-    city.hashCode ^
-    state.hashCode ^
-    country.hashCode ^
-    area.hashCode ^
-    radius.hashCode ^
-    areaId.hashCode ^
-    latitude.hashCode ^
-    longitude.hashCode ^
-    currency.hashCode ^
-
-    customFields.hashCode;
+        minPrice.hashCode ^
+        categoryId.hashCode ^
+        postedSince.hashCode ^
+        city.hashCode ^
+        state.hashCode ^
+        country.hashCode ^
+        area.hashCode ^
+        radius.hashCode ^
+        areaId.hashCode ^
+        latitude.hashCode ^
+        longitude.hashCode ^
+        currency.hashCode ^
+        customFields.hashCode;
   }
 }

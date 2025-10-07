@@ -8,11 +8,9 @@ class ChatSyncController {
   ChatSyncController({
     required String conversationId,
     int? itemOfferId,
-  })
-      : _conversationId = conversationId.trim(),
-        _itemOfferId = itemOfferId != null && itemOfferId > 0
-            ? itemOfferId
-            : null;
+  })  : _conversationId = conversationId.trim(),
+        _itemOfferId =
+            itemOfferId != null && itemOfferId > 0 ? itemOfferId : null;
 
   final ChatRepostiory _repository = ChatRepostiory();
   final LinkedHashSet<int> _delivered = LinkedHashSet<int>();
@@ -30,10 +28,7 @@ class ChatSyncController {
   static const Duration _typingDebounceDuration = Duration(milliseconds: 150);
   static const Duration _typingIdleTimeout = Duration(seconds: 6);
 
-  bool get _hasConversation =>
-      _conversationId
-          .trim()
-          .isNotEmpty;
+  bool get _hasConversation => _conversationId.trim().isNotEmpty;
 
   void updateIdentifiers({String? conversationId, int? itemOfferId}) {
     if (_disposed) {
@@ -107,8 +102,7 @@ class ChatSyncController {
       _read.addAll(pending);
       _delivered.addAll(pending);
     } catch (error, stackTrace) {
-      Logger.error(
-          'Failed to mark messages read for $_conversationId: $error');
+      Logger.error('Failed to mark messages read for $_conversationId: $error');
       Logger.debug(stackTrace, name: 'ChatSyncController');
     }
   }
@@ -146,11 +140,13 @@ class ChatSyncController {
 
     _lastTypingSent = isTyping;
 
-    unawaited(_repository.updateTypingStatus(
+    unawaited(_repository
+        .updateTypingStatus(
       conversationId: _conversationId,
       isTyping: isTyping,
       itemOfferId: _itemOfferId,
-    ).catchError((error, stackTrace) {
+    )
+        .catchError((error, stackTrace) {
       Logger.error(
           'Failed to update typing status for $_conversationId: $error');
       Logger.debug(stackTrace, name: 'ChatSyncController');
@@ -184,8 +180,7 @@ class ChatSyncController {
         itemOfferId: _itemOfferId,
       );
     } catch (error, stackTrace) {
-      Logger.error(
-          'Failed to update presence for $_conversationId: $error');
+      Logger.error('Failed to update presence for $_conversationId: $error');
       Logger.debug(stackTrace, name: 'ChatSyncController');
       if (isOnline) {
         _lastPresenceStatus = '';

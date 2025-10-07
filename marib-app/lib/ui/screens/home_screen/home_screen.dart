@@ -1,18 +1,16 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:async';
-import 'package:timeago/timeago.dart' as timeago;
 import 'package:marib/app/routes.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter/widgets.dart';
 
 import 'package:permission_handler/permission_handler.dart';
 import 'package:marib/ui/screens/home_screen/sections_widget.dart';
 
-import 'home_ui.dart';
+import 'package:marib/ui/screens/home_screen/home_ui.dart';
 
 import 'package:marib/data/cubits/category/fetch_category_cubit.dart';
 import 'package:marib/data/cubits/slider_cubit.dart';
@@ -23,26 +21,19 @@ import 'package:marib/data/cubits/home/fetch_home_screen_cubit.dart';
 
 import 'package:marib/data/model/system_settings_model.dart';
 
-
 import 'package:marib/ui/screens/home/widgets/animated_search_bar.dart';
-import 'category_widget_offline.dart';
+import 'package:marib/ui/screens/home_screen/category_widget_offline.dart';
 import 'package:marib/utils/notification/awsomeNotification.dart';
 import 'package:marib/utils/notification/notification_service.dart';
-
-
 
 //import 'package:marib/ui/code/section/Computers/Computers.dart';
 import 'package:marib/ui/screens/sliders/slider_widget.dart';
 
 import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
-import 'package:marib/utils/helper_utils.dart';
 //import 'package:marib/ui/code/section/sections/general_section_screen_paged.dart';
 
-
-
-
-import 'home_ui.dart'; // ← الواجهة المنفصلة
+// ← الواجهة المنفصلة
 
 const double sidePadding = 18;
 
@@ -107,7 +98,8 @@ class HomeScreenState extends State<HomeScreen>
 
   void initializeSettings() {
     final settingsCubit = context.read<FetchSystemSettingsCubit>();
-    if (!const bool.fromEnvironment("force-disable-demo-mode", defaultValue: false)) {
+    if (!const bool.fromEnvironment("force-disable-demo-mode",
+        defaultValue: false)) {
       Constant.isDemoModeOn =
           settingsCubit.getSetting(SystemSetting.demoMode) ?? false;
     }
@@ -239,7 +231,6 @@ class HomeScreenState extends State<HomeScreen>
                       ElevatedButton(
                         onPressed: () =>
                             context.read<FetchHomeScreenCubit>().fetch(),
-
                         child: const Text('إعادة المحاولة'),
                       ),
                     ],
@@ -283,7 +274,6 @@ class HomeScreenState extends State<HomeScreen>
   bool _navLockRealEstate = false;
   final Duration _navThrottle = const Duration(milliseconds: 700);
 
-
   Future<void> _goRealEstate() async {
     if (_navLockRealEstate) return;
     _navLockRealEstate = true;
@@ -319,17 +309,12 @@ class HomeScreenState extends State<HomeScreen>
 
       // 5) بعد الرجوع (اختياري): حدّث جزء من الصفحة لو لزم
       // context.read<FetchHomeScreenCubit>().refreshIfNeeded();
-
     } finally {
       // فك القفل بعد فترة قصيرة لمنع السبام وتحسين السلاسة
       await Future.delayed(_navThrottle);
       _navLockRealEstate = false;
     }
   }
-
-
-
-
 
   void _goTourism() {
     Navigator.pushNamed(
@@ -351,19 +336,14 @@ class HomeScreenState extends State<HomeScreen>
     });
   }
 
-
-
   void _goShein() {
     Navigator.pushNamed(context, Routes.section_screen, arguments: {
       'catID': "4",
       'catName': "productsShein".translate(context),
       "categoryIds": ["4"],
       "interfaceType": "shein_products",
-
     });
   }
-
-
 
   void _goComputerSection() {
     Navigator.pushNamed(context, Routes.section_screen, arguments: {
@@ -374,7 +354,6 @@ class HomeScreenState extends State<HomeScreen>
     });
   }
 
-
   void _goPublicAds() {
     Navigator.pushNamed(context, Routes.section_screen, arguments: {
       'catID': "6",
@@ -384,8 +363,6 @@ class HomeScreenState extends State<HomeScreen>
     });
   }
 }
-
-
 
 // =============
 // أذونات الإشعارات

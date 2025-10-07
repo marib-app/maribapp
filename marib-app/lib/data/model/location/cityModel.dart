@@ -14,17 +14,17 @@ class CityModel {
 
   CityModel(
       {this.id,
-        this.name,
-        this.stateId,
-        this.stateCode,
-        this.countryId,
-        this.countryCode,
-        this.latitude,
-        this.longitude,
-        this.createdAt,
-        this.updatedAt,
-        this.flag,
-        this.wikiDataId});
+      this.name,
+      this.stateId,
+      this.stateCode,
+      this.countryId,
+      this.countryCode,
+      this.latitude,
+      this.longitude,
+      this.createdAt,
+      this.updatedAt,
+      this.flag,
+      this.wikiDataId});
 
   CityModel.fromJson(Map<String, dynamic> json) {
     id = json['id'];

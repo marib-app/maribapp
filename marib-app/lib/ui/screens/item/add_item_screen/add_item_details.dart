@@ -1,41 +1,27 @@
 import 'dart:io';
-import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
-import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:html/parser.dart' as html;
-import 'package:dotted_border/dotted_border.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/custom_field/fetch_custom_fields_cubit.dart';
 import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart';
 import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
-import 'package:marib/ui/screens/widgets/custom_text_form_field.dart';
-import 'package:marib/ui/screens/widgets/custom_drop_down.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/ui/screens/item/add_item_screen/select_category.dart';
-import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/cloudState/cloud_state.dart';
-import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/imagePicker.dart';
-import 'package:marib/utils/responsiveSize.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:dropdown_search/dropdown_search.dart';
-import 'image_section.dart';
+import 'package:marib/ui/screens/item/add_item_screen/image_section.dart';
 // لنماذج الحقول المخصصة
 import 'package:marib/data/model/custom_field/custom_field_model.dart';
-import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart'; // فيه CustomTextFieldDynamic
-import 'package:marib/data/model/custom_field/custom_field_model.dart';
+// فيه CustomTextFieldDynamic
 
 // ويدجت الحقول المخصصة
-import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart';
 import 'dart:typed_data';
-
 
 import 'package:marib/utils/ui_utils.dart';
 
@@ -43,18 +29,12 @@ import 'package:marib/data/model/category_model.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
-import 'package:html/parser.dart' as html;
-import 'package:html/dom.dart' as dom;
-import 'package:html/parser.dart' as html; // مكرر مرتين
-import 'package:html/dom.dart' as dom;
+// مكرر مرتين
 import 'package:image/image.dart' as img;
 
-import 'shein_grabber_page.dart';
+import 'package:marib/ui/screens/item/add_item_screen/shein_grabber_page.dart';
 
 part 'add_item_details_ui.dart';
-
-
-
 
 class AddItemDetails extends StatefulWidget {
   final List<CategoryModel>? breadCrumbItems;
@@ -68,7 +48,7 @@ class AddItemDetails extends StatefulWidget {
 
   static Route route(RouteSettings settings) {
     Map<String, dynamic>? arguments =
-    settings.arguments as Map<String, dynamic>?;
+        settings.arguments as Map<String, dynamic>?;
     return BlurredRouter(
       builder: (context) {
         return BlocProvider(
@@ -115,10 +95,9 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
   bool _keyboardWasVisible = false;
 
   Timer? _linkDebounce;
-  List<CustomFieldModel>? customFields;           // تأتي من Cubit/API
-  bool isLoadingCustomFields = false;             // حالة تحميل
+  List<CustomFieldModel>? customFields; // تأتي من Cubit/API
+  bool isLoadingCustomFields = false; // حالة تحميل
   final Map<int, dynamic> selectedCustomFieldValues = {}; // قيم المُدخلات
-
 
   final List<Map<String, String>> arabCountries = [
     {"name": "اليمن", "code": "+967"},
@@ -150,11 +129,7 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
 // ✅ العنوان النصي الناتج من الإحداثيات
   String? locationAddress;
 
-
-
-
   // دالة جلب بيانات المنتج من رابط شي إن
-
 
   bool _isFetchingShein = false;
 
@@ -201,7 +176,7 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
           final dotIndex = lastSegment.lastIndexOf('.');
           if (dotIndex != -1 && dotIndex < lastSegment.length - 1) {
             final candidate =
-            lastSegment.substring(dotIndex + 1).trim().toLowerCase();
+                lastSegment.substring(dotIndex + 1).trim().toLowerCase();
 
             if (candidate.length <= 5) {
               extensionFromUrl = candidate;
@@ -210,7 +185,7 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
         }
 
         String resolvedExtension =
-        (extensionFromUrl ?? headerExtension ?? 'jpg').toLowerCase();
+            (extensionFromUrl ?? headerExtension ?? 'jpg').toLowerCase();
 
         final normalizedHeaderExtension = headerExtension?.toLowerCase();
         bool requiresTranscode =
@@ -250,13 +225,8 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
     return materializedImages;
   }
 
-
-
   @override
   PageController get imageSectionPageController => _imageSectionPageController;
-
-
-
 
   @override
   void didChangeMetrics() {
@@ -273,10 +243,8 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
         _lastViewInsetsBottom = 0.0;
       }
 
-
       return;
     }
-
 
     const double kMinBottomDiff = 16.0;
     final bool heightChangedSignificantly =
@@ -307,8 +275,6 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
     });
   }
 
-
-
 // ====== جلب بيانات المنتج من رابط شي إن (محسّنة) ======
 
   Future<void> _onSheinFetchRequested(BuildContext context) async {
@@ -320,8 +286,11 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
       return;
     }
     final uri = Uri.tryParse(url);
-    if (uri == null || !(uri.host.contains("shein.com") || uri.host.contains("sheinapp.com"))) {
-      HelperUtils.showSnackBarMessage(context, "الرجاء إدخال رابط صالح من موقع شي إن");
+    if (uri == null ||
+        !(uri.host.contains("shein.com") ||
+            uri.host.contains("sheinapp.com"))) {
+      HelperUtils.showSnackBarMessage(
+          context, "الرجاء إدخال رابط صالح من موقع شي إن");
       return;
     }
 
@@ -336,20 +305,25 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
       );
 
       if (res == null) {
-        HelperUtils.showSnackBarMessage(context, "تم الإلغاء، لم يتم جلب بيانات");
+        HelperUtils.showSnackBarMessage(
+            context, "تم الإلغاء، لم يتم جلب بيانات");
         return;
       }
 
       // قراءة النتائج
-      final String? title   = (res['title'] as String?)?.trim();
+      final String? title = (res['title'] as String?)?.trim();
       final String? priceRaw = (res['price'] as String?)?.trim();
       final String? currency = (res['currency'] as String?)?.trim();
-      final List<String> images = (res['images'] as List?)?.cast<String>() ?? const [];
+      final List<String> images =
+          (res['images'] as List?)?.cast<String>() ?? const [];
 
       // تنظيف السعر (أرقام فقط)
       final String? price = priceRaw == null
           ? null
-          : RegExp(r'[\d\.,]+').firstMatch(priceRaw)?.group(0)?.replaceAll(',', '');
+          : RegExp(r'[\d\.,]+')
+              .firstMatch(priceRaw)
+              ?.group(0)
+              ?.replaceAll(',', '');
 
       // تطبيق على الواجهة
       if (title != null && title.isNotEmpty) {
@@ -363,7 +337,6 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
       }
 
       if (images.isNotEmpty) {
-
         final materializedImages = await _materializeRemoteImages(images);
         if (materializedImages.isNotEmpty) {
           final firstImage = materializedImages.first;
@@ -371,7 +344,6 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
             firstImage['isMain'] = true;
           }
         }
-
 
         mixedItemImageList
           ..clear()
@@ -387,14 +359,9 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
     }
   }
 
-
-
-
   void handleFormSubmission(BuildContext context) {
     if (_formKey.currentState?.validate() ?? false) {
-      List<File> galleryImages = mixedItemImageList
-          .whereType<File>()
-          .toList();
+      List<File> galleryImages = mixedItemImageList.whereType<File>().toList();
       final List<File> resolvedGalleryFiles = [];
       File? flaggedMainFromList;
 
@@ -423,8 +390,6 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
       }
 
       if (mainImageFile == null && titleImageURL.isEmpty) {
-
-
         UiUtils.showBlurredDialoge(
           context,
           dialoge: BlurredDialogBox(
@@ -434,7 +399,6 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
         );
         return;
       }
-
 
       _updateSheinCategoryFlag(_currentCategoryIds(), notify: false);
       final bool isSheinCategory = _isSheinCategory;
@@ -446,7 +410,6 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
           adProductLinkController.clear();
         }
       }
-
 
       Map<String, dynamic> itemDetailsData = {
         "name": adTitleController.text,
@@ -461,8 +424,8 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
           "delete_item_image_id": deleteItemImageList.join(','),
         "all_category_ids": widget.isEdit == true
             ? (item!.allCategoryIds ??
-            item!.categoryId?.toString() ??
-            selectedCategoryList.join(','))
+                item!.categoryId?.toString() ??
+                selectedCategoryList.join(','))
             : selectedCategoryList.join(',')
       };
 
@@ -486,9 +449,6 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
         itemDetailsData.remove("product_link");
       }
 
-
-
-
       addCloudData("item_details", itemDetailsData);
       addCloudData("with_more_details", itemDetailsData);
 
@@ -510,14 +470,13 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
     }
   }
 
-
   //Text Controllers
   final TextEditingController adTitleController = TextEditingController();
   final TextEditingController adDescriptionController = TextEditingController();
   final TextEditingController adPriceController = TextEditingController();
   final TextEditingController adPhoneNumberController = TextEditingController();
   final TextEditingController adAdditionalDetailsController =
-  TextEditingController();
+      TextEditingController();
 
   void _onBreadCrumbItemTap(int index) {
     int popTimes = (widget.breadCrumbItems!.length - 1) - index;
@@ -538,9 +497,7 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
   ItemModel? item;
   bool _isSheinCategory = false;
 
-
   Iterable<int> _currentCategoryIds() {
-
     if (selectedCategoryList.isNotEmpty) {
       return selectedCategoryList;
     }
@@ -584,12 +541,10 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
     }
   }
 
-
   @override
   void initState() {
     AbstractField.fieldsData.clear();
     AbstractField.files.clear();
-
 
     if (widget.isEdit == true) {
       item = getCloudData('edit_request') as ItemModel;
@@ -610,8 +565,8 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
               "1";
         }
         context.read<FetchCustomFieldsCubit>().fetchCustomFields(
-          categoryIds: categoryIds,
-        );
+              categoryIds: categoryIds,
+            );
       });
 
       adTitleController.text = item?.name ?? "";
@@ -629,17 +584,12 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
       if (_isSheinCategory) {
         reviewLinkController.text = item?.reviewLink ?? "";
         adProductLinkController.text = item?.productLink ?? "";
-
       } else {
         reviewLinkController.clear();
         adProductLinkController.clear();
-
       }
 
-
-
-      mixedItemImageList
-        ..clear();
+      mixedItemImageList..clear();
 
       final String mainImageUrl = titleImageURL;
       if (mainImageUrl.isNotEmpty) {
@@ -652,14 +602,12 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
 
       final galleryImages = item?.galleryImages ?? [];
       mixedItemImageList.addAll(
-        galleryImages
-            .where((e) => (e.image ?? '').isNotEmpty)
-            .map(
+        galleryImages.where((e) => (e.image ?? '').isNotEmpty).map(
               (e) => {
-            'id': e.id,
-            'url': HelperUtils.absoluteImage(e.image),
-          },
-        ),
+                'id': e.id,
+                'url': HelperUtils.absoluteImage(e.image),
+              },
+            ),
       );
 
       setState(() {});
@@ -677,10 +625,7 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
 
       _updateSheinCategoryFlag(ids, notify: false);
 
-
-      adPhoneNumberController.text = HiveUtils
-          .getUserDetails()
-          .mobile ?? "";
+      adPhoneNumberController.text = HiveUtils.getUserDetails().mobile ?? "";
       adTitleController.addListener(() {
         // Check if the default language is English
         // String languageCode = HiveUtils.getLanguage()['code'].toString();
@@ -730,9 +675,6 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
   @override
   Widget build(BuildContext context) => buildUI(context);
 
-
-
-
   @override
   void dispose() {
     _imageSectionPageController.dispose();
@@ -749,16 +691,4 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
     adAdditionalDetailsController.dispose();
     super.dispose();
   }
-
-
-
-
 }
-
-
-
-
-
-
-
-

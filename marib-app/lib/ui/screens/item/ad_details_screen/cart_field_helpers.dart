@@ -1,8 +1,8 @@
-import '../add_item_screen/custom_filed_structure/custom_field.dart';
+import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/custom_field.dart';
 
 String? validateRequiredCustomFieldSelections(
-    List<CustomFieldBuilder> fields,
-    ) {
+  List<CustomFieldBuilder> fields,
+) {
   for (final CustomFieldBuilder builder in fields) {
     final Map<dynamic, dynamic> rawField = builder.field;
     if (!_isTruthy(rawField['required'])) {
@@ -11,7 +11,7 @@ String? validateRequiredCustomFieldSelections(
 
     final String fieldKey = rawField['id']?.toString() ?? '';
     final dynamic storedValue =
-    fieldKey.isEmpty ? null : CustomField.fieldsData[fieldKey];
+        fieldKey.isEmpty ? null : CustomField.fieldsData[fieldKey];
 
     if (_hasMeaningfulSelection(storedValue)) {
       continue;
@@ -37,7 +37,7 @@ List<Map<String, dynamic>> buildSelectedCustomFieldsPayload() {
     }
 
     final int? numericId =
-    rawKey is int ? rawKey : int.tryParse(rawKey.toString());
+        rawKey is int ? rawKey : int.tryParse(rawKey.toString());
     final dynamic fieldId = numericId ?? rawKey.toString();
 
     payload.add(<String, dynamic>{

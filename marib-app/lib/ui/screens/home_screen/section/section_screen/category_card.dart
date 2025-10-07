@@ -8,9 +8,6 @@ import 'package:marib/utils/ui_utils.dart';
 // عند الضغط على البطاقة يتم استدعاء دالة onTap المحددة.
 // يُستخدم هذا الويدجيت عادةً في واجهات تعرض تصنيفات بشكل شبكي أو أفقي.
 
-
-
-
 class CategoryPcCard extends StatelessWidget {
   /// عنوان التصنيف الذي سيُعرض أسفل الصورة.
   final String title;
@@ -36,7 +33,8 @@ class CategoryPcCard extends StatelessWidget {
       onTap: onTap,
 
       child: Column(
-        mainAxisSize: MainAxisSize.min, // يجبر العمود على الحجم الأدنى اللازم لمحتوياته فقط.
+        mainAxisSize: MainAxisSize
+            .min, // يجبر العمود على الحجم الأدنى اللازم لمحتوياته فقط.
         children: [
           Container(
             width: 60, // عرض الدائرة 60 بكسل
@@ -46,7 +44,8 @@ class CategoryPcCard extends StatelessWidget {
               shape: BoxShape.circle, // شكل الحاوية دائري
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.15), // ظل خفيف رمادي شفاف قليلاً
+                  color: Colors.grey
+                      .withOpacity(0.15), // ظل خفيف رمادي شفاف قليلاً
                   blurRadius: 6, // مقدار تمويه الظل ليبدو ناعماً
                   offset: const Offset(0, 2), // إزاحة الظل قليلاً للأسفل
                 ),
@@ -57,7 +56,8 @@ class CategoryPcCard extends StatelessWidget {
             child: ClipOval(
               child: UiUtils.imageType(
                 url, // تحميل الصورة من الرابط
-                fit: BoxFit.cover, // تغطية المساحة بالكامل مع قص الأجزاء الزائدة
+                fit:
+                    BoxFit.cover, // تغطية المساحة بالكامل مع قص الأجزاء الزائدة
               ),
             ),
           ),
@@ -68,11 +68,13 @@ class CategoryPcCard extends StatelessWidget {
             title, // عرض عنوان التصنيف
             textAlign: TextAlign.center, // توسيط النص
             maxLines: 2, // الحد الأقصى لعدد أسطر النص
-            overflow: TextOverflow.ellipsis, // قطع النص مع ثلاث نقاط إذا طالت المساحة
+            overflow:
+                TextOverflow.ellipsis, // قطع النص مع ثلاث نقاط إذا طالت المساحة
             style: TextStyle(
               fontSize: 11.5, // حجم الخط صغير قليلاً
               fontWeight: FontWeight.w500, // وزن الخط متوسط
-              color: context.color.textDefaultColor, // لون النص مأخوذ من الثيم عبر امتداد context
+              color: context.color
+                  .textDefaultColor, // لون النص مأخوذ من الثيم عبر امتداد context
             ),
           ),
         ],

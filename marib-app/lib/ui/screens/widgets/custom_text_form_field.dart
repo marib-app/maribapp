@@ -47,7 +47,6 @@ class CustomTextFormField extends StatelessWidget {
   final TextAlign? textAlign;
   final EdgeInsetsGeometry? contentPadding;
 
-
   const CustomTextFormField({
     super.key,
     this.hintText,
@@ -56,7 +55,6 @@ class CustomTextFormField extends StatelessWidget {
     this.maxLine,
     this.formaters,
     this.formatters,
-
     this.isReadOnly,
     this.validator,
     this.fillColor,
@@ -78,8 +76,6 @@ class CustomTextFormField extends StatelessWidget {
     this.isCustomStyle = false,
     this.textAlign,
     this.contentPadding,
-
-
   });
 
   @override
@@ -90,7 +86,6 @@ class CustomTextFormField extends StatelessWidget {
       obscureText: obscureText ?? false,
       textInputAction: action,
       textAlign: textAlign ?? TextAlign.start,
-
       onTapOutside: (PointerDownEvent event) {
         FocusManager.instance.primaryFocus?.unfocus();
       },
@@ -170,8 +165,8 @@ class CustomTextFormField extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
                 borderSide: BorderSide.none,
               ),
-        contentPadding: contentPadding ??
-            const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              contentPadding: contentPadding ??
+                  const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               prefixIcon: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 8),
                 child: Row(
@@ -202,8 +197,8 @@ class CustomTextFormField extends StatelessWidget {
               isDense: dense,
               prefixIcon: fixedPrefix,
               suffixIcon: suffix,
-        contentPadding: contentPadding ??
-            const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              contentPadding: contentPadding ??
+                  const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               hintText: hintText,
               hintStyle: hintTextStyle ??
                   TextStyle(

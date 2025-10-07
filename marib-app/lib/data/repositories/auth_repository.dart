@@ -69,7 +69,7 @@ class AuthRepository {
     return response;
   }
 
-  loginEmailUser() async {}
+  Future<void> loginEmailUser() async {}
 
   Future<void> sendOTP(
       {required String phoneNumber,

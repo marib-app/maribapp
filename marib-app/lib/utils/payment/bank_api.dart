@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'bank_account.dart';
+import 'package:marib/utils/payment/bank_account.dart';
 
 // ملاحظة: اضبط baseUrl من إعداداتك (AppSettings.baseUrl) حيث تُنشئ BankApi.
 class BankApi {
@@ -33,7 +33,10 @@ class BankApi {
         list = const [];
       }
 
-      return list.map<BankAccount>((e) => BankAccount.fromJson(Map<String, dynamic>.from(e))).toList();
+      return list
+          .map<BankAccount>(
+              (e) => BankAccount.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
     } on DioException catch (e) {
       // ignore: avoid_print
       print('Banks error: ${e.response?.statusCode} ${e.response?.data}');

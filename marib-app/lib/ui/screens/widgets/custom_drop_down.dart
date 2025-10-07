@@ -33,13 +33,12 @@ class CustomDropdownFormField<T> extends StatelessWidget {
     this.fixedPrefix,
     this.dense,
     this.textStyle,
-
   });
 
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<T>(
-      value: value,
+      initialValue: value,
       onChanged: onChanged,
       validator: (T? selectedValue) {
         if (isRequired == true && selectedValue == null) {
@@ -64,7 +63,9 @@ class CustomDropdownFormField<T> extends StatelessWidget {
         isDense: dense,
         prefixIcon: fixedPrefix,
         suffixIcon: suffix,
-        hintText: value == null ? hintText : null, // Show hint text when no value is selected
+        hintText: value == null
+            ? hintText
+            : null, // Show hint text when no value is selected
         hintStyle: hintTextStyle ??
             TextStyle(
                 color: context.color.textColorDark.withOpacity(0.7),
@@ -72,7 +73,8 @@ class CustomDropdownFormField<T> extends StatelessWidget {
         filled: true,
         fillColor: fillColor ?? context.color.secondaryColor,
         focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(width: 1.5, color: context.color.territoryColor),
+          borderSide:
+              BorderSide(width: 1.5, color: context.color.territoryColor),
           borderRadius: BorderRadius.circular(10),
         ),
         enabledBorder: OutlineInputBorder(

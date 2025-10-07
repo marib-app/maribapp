@@ -27,7 +27,9 @@ TextDirection _dirFor(BuildContext context, String initial) {
   if (initial.trim().isNotEmpty) return _autoDir(initial);
   final lang = Localizations.localeOf(context).languageCode.toLowerCase();
   const rtlLangs = ['ar', 'fa', 'ur', 'he', 'ps'];
-  return rtlLangs.any((l) => lang.startsWith(l)) ? TextDirection.rtl : TextDirection.ltr;
+  return rtlLangs.any((l) => lang.startsWith(l))
+      ? TextDirection.rtl
+      : TextDirection.ltr;
 }
 
 /// تطبيع Map إلى Map<String, dynamic> بلا كراش
@@ -45,7 +47,7 @@ class TextFieldController {
   final String? notes;
   final String? image;
   final bool isRequired;
-  final int? maxLen;     // حد صلب (يمنع الإدخال بعده)
+  final int? maxLen; // حد صلب (يمنع الإدخال بعده)
   final int? minLen;
   final int? softMaxLen; // حد ناعم (تحذير فقط)
   final dynamic id;
@@ -194,7 +196,8 @@ class CustomFieldText extends CustomField {
 
   @override
   void init() {
-    _controller = TextFieldController.fromParams(_asStringDynamicMap(parameters));
+    _controller =
+        TextFieldController.fromParams(_asStringDynamicMap(parameters));
     update(() {}); // يحافظ على السلوك السابق (تهيئة ثم إعادة بناء)
     super.init();
   }

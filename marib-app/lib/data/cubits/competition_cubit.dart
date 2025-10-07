@@ -3,7 +3,6 @@ import 'package:marib/data/model/challenge_model.dart';
 import 'package:marib/ui/screens/competitions/user_referral_points.dart';
 import 'package:marib/data/repositories/competition_repository.dart';
 
-
 // الحالة الأساسية للكوبت
 abstract class CompetitionState {
   const CompetitionState();
@@ -23,27 +22,26 @@ class CompetitionSuccess extends CompetitionState {
   final int totalPoints;
   final int totalRequiredReferrals;
 
-
   const CompetitionSuccess(
-      this.referralPoints,
-      this.challenges,
-      this.paymentTransactions,
-      this.nextChallenge,
-      this.maxPoints,
-      this.totalPoints,
-      this.totalRequiredReferrals,
-      );
+    this.referralPoints,
+    this.challenges,
+    this.paymentTransactions,
+    this.nextChallenge,
+    this.maxPoints,
+    this.totalPoints,
+    this.totalRequiredReferrals,
+  );
 
   @override
   List<Object?> get props => [
-    referralPoints,
-    challenges,
-    paymentTransactions,
-    nextChallenge,
-    maxPoints,
-    totalPoints,
-    totalRequiredReferrals,
-  ];
+        referralPoints,
+        challenges,
+        paymentTransactions,
+        nextChallenge,
+        maxPoints,
+        totalPoints,
+        totalRequiredReferrals,
+      ];
 }
 
 class CompetitionFailure extends CompetitionState {
@@ -54,7 +52,6 @@ class CompetitionFailure extends CompetitionState {
   @override
   List<Object?> get props => [error];
 }
-
 
 // الكيوبت الرئيسي
 class CompetitionCubit extends Cubit<CompetitionState> {
@@ -67,11 +64,11 @@ class CompetitionCubit extends Cubit<CompetitionState> {
     try {
       // جلب البيانات الأولية من الريبو
       final referralPointsRaw =
-      await _competitionRepository.getUserReferralPoints();
+          await _competitionRepository.getUserReferralPoints();
       final envelope = await _competitionRepository.getChallenges();
 
       final paymentTransactions =
-      await _competitionRepository.getRecentPaymentTransactions();
+          await _competitionRepository.getRecentPaymentTransactions();
 
       // التحويل إلى نماذج فعلية
       final referralPoints = UserReferralPoints.fromJson(referralPointsRaw);
@@ -93,7 +90,6 @@ class CompetitionCubit extends Cubit<CompetitionState> {
       final int totalRequiredReferrals =
           (envelope['total_required_referrals'] as num?)?.toInt() ?? 0;
 
-
       // ترتيب التحديات وتصفيتها
       final sortedChallenges = challenges.where((c) => c.isActive).toList()
         ..sort((a, b) => a.requiredReferrals.compareTo(b.requiredReferrals));
@@ -104,8 +100,8 @@ class CompetitionCubit extends Cubit<CompetitionState> {
         nextChallenge = Challenge.empty();
       } else {
         nextChallenge = sortedChallenges.firstWhere(
-              (challenge) =>
-          referralPoints.currentPoints < challenge.requiredReferrals,
+          (challenge) =>
+              referralPoints.currentPoints < challenge.requiredReferrals,
           orElse: () => sortedChallenges.last,
         );
       }

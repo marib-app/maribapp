@@ -5,65 +5,56 @@ import 'package:marib/data/repositories/cart/checkout_repository.dart';
 import 'package:marib/data/services/cart_shipping_quote_service.dart';
 import 'package:marib/utils/api.dart';
 
-
 typedef _ApiPostHandler = Future<Map<String, dynamic>> Function({
-required String url,
-dynamic parameter,
-Options? options,
-bool? useBaseUrl,
-Map<String, dynamic>? extraHeaders,
+  required String url,
+  dynamic parameter,
+  Options? options,
+  bool? useBaseUrl,
+  Map<String, dynamic>? extraHeaders,
 });
 
 typedef _ApiGetHandler = Future<Map<String, dynamic>> Function({
-required String url,
-Map<String, dynamic>? queryParameters,
-bool? useBaseUrl,
+  required String url,
+  Map<String, dynamic>? queryParameters,
+  bool? useBaseUrl,
 });
 
 typedef _ApiDeleteHandler = Future<Map<String, dynamic>> Function({
-required String url,
-Map<String, dynamic>? queryParameters,
-bool? useBaseUrl,
+  required String url,
+  Map<String, dynamic>? queryParameters,
+  bool? useBaseUrl,
 });
 
 typedef _ApiJsonRequestHandler = Future<Map<String, dynamic>> Function({
-required String url,
-String method,
-Map<String, dynamic>? data,
-Options? options,
-bool? useBaseUrl,
-Map<String, dynamic>? extraHeaders,
+  required String url,
+  String method,
+  Map<String, dynamic>? data,
+  Options? options,
+  bool? useBaseUrl,
+  Map<String, dynamic>? extraHeaders,
 });
-
-
 
 class AddressesRepository {
   AddressesRepository({
     CartShippingQuoteService? shippingQuoteService,
     CheckoutRepository? checkoutRepository,
-
     _ApiPostHandler? apiPostHandler,
     _ApiGetHandler? apiGetHandler,
     _ApiDeleteHandler? apiDeleteHandler,
     _ApiJsonRequestHandler? apiJsonRequestHandler,
-
     Future<void> Function()? onAddressesMutated,
-
-
-
   })  : _shippingQuoteService =
-      shippingQuoteService ?? CartShippingQuoteService.shared,
+            shippingQuoteService ?? CartShippingQuoteService.shared,
         _checkoutRepository = checkoutRepository ??
             CheckoutRepository(
               shippingQuoteService:
-              shippingQuoteService ?? CartShippingQuoteService.shared,
+                  shippingQuoteService ?? CartShippingQuoteService.shared,
             ),
         _apiPostHandler = apiPostHandler ?? Api.post,
         _apiGetHandler = apiGetHandler ?? Api.get,
         _apiDeleteHandler = apiDeleteHandler ?? Api.delete,
         _apiJsonRequestHandler = apiJsonRequestHandler ?? Api.requestJson,
-
-      _onAddressesMutated = onAddressesMutated;
+        _onAddressesMutated = onAddressesMutated;
 
   final CartShippingQuoteService _shippingQuoteService;
   final CheckoutRepository _checkoutRepository;
@@ -72,8 +63,6 @@ class AddressesRepository {
   final _ApiDeleteHandler _apiDeleteHandler;
   final Future<void> Function()? _onAddressesMutated;
   final _ApiJsonRequestHandler _apiJsonRequestHandler;
-
-
 
   Future<List<Map<String, dynamic>>> fetchAddresses() async {
     final Map<String, dynamic> response = await _apiGetHandler(
@@ -87,39 +76,39 @@ class AddressesRepository {
       Map<String, dynamic> payload) {
     final Map<String, dynamic> sanitized = _preparePayload(payload);
     return _mutate(() => _requestAddress(
-      endpoint: _addressesEndpoint,
-      method: 'POST',
-      payload: sanitized,
-    ));
+          endpoint: _addressesEndpoint,
+          method: 'POST',
+          payload: sanitized,
+        ));
   }
 
   Future<List<Map<String, dynamic>>> updateAddress(
-      int id,
-      Map<String, dynamic> payload,
-      ) {
+    int id,
+    Map<String, dynamic> payload,
+  ) {
     final Map<String, dynamic> sanitized = _preparePayload(payload);
     return _mutate(() => _requestAddress(
-      endpoint: '$_addressesEndpoint/$id',
-      method: 'PATCH',
-      payload: sanitized,
-      allowPutFallback: true,
-    ));
+          endpoint: '$_addressesEndpoint/$id',
+          method: 'PATCH',
+          payload: sanitized,
+          allowPutFallback: true,
+        ));
   }
 
   Future<List<Map<String, dynamic>>> deleteAddress(int id) {
     return _mutate(() => _apiDeleteHandler(
-      url: '$_addressesEndpoint/$id',
-      useBaseUrl: true,
-    ));
+          url: '$_addressesEndpoint/$id',
+          useBaseUrl: true,
+        ));
   }
 
   Future<List<Map<String, dynamic>>> markDefault(int id) {
     return _mutate(() => _requestAddress(
-      endpoint: '$_addressesEndpoint/$id/default',
-      method: 'PATCH',
-      payload: const <String, dynamic>{},
-      allowPutFallback: true,
-    ));
+          endpoint: '$_addressesEndpoint/$id/default',
+          method: 'PATCH',
+          payload: const <String, dynamic>{},
+          allowPutFallback: true,
+        ));
   }
 
   Future<List<Map<String, dynamic>>> _mutate(
@@ -156,7 +145,6 @@ class AddressesRepository {
         }
         source.putIfAbsent(key, () => entry);
       });
-
     }
 
     merge(payload);
@@ -187,7 +175,6 @@ class AddressesRepository {
       return null;
     }
 
-
     bool? resolveBool(List<String> keys) {
       for (final String key in keys) {
         final bool? value = _asBool(source[key]);
@@ -197,8 +184,14 @@ class AddressesRepository {
       }
       return null;
     }
+
     double _resolveDistanceKm() {
-      for (final String key in const <String>['distance_km', 'distanceKm', 'distance', 'radius']) {
+      for (final String key in const <String>[
+        'distance_km',
+        'distanceKm',
+        'distance',
+        'radius'
+      ]) {
         final double? candidate = _roundDistance(source[key]);
         if (candidate != null) {
           return candidate < 0 ? 0.0 : candidate;
@@ -210,7 +203,14 @@ class AddressesRepository {
     final Map<String, dynamic> sanitized = <String, dynamic>{};
 
     final String? label = resolveString(
-      const <String>['label', 'address', 'full_address', 'fullAddress', 'street', 'title'],
+      const <String>[
+        'label',
+        'address',
+        'full_address',
+        'fullAddress',
+        'street',
+        'title'
+      ],
       maxLength: 100,
     );
     if (label != null) {
@@ -218,7 +218,13 @@ class AddressesRepository {
     }
 
     final String? phone = resolveString(
-      const <String>['phone', 'phone_number', 'mobile', 'contact_phone', 'contactPhone'],
+      const <String>[
+        'phone',
+        'phone_number',
+        'mobile',
+        'contact_phone',
+        'contactPhone'
+      ],
       maxLength: 50,
     );
     if (phone != null) {
@@ -247,11 +253,9 @@ class AddressesRepository {
     }
     sanitized['distance_km'] = _resolveDistanceKm();
 
-
-
-
     final int? areaId = () {
-      final dynamic direct = source['area_id'] ?? source['areaId'] ?? source['areaID'];
+      final dynamic direct =
+          source['area_id'] ?? source['areaId'] ?? source['areaID'];
       final int? parsedDirect = _asInt(direct);
       if (parsedDirect != null) {
         return parsedDirect;
@@ -276,13 +280,18 @@ class AddressesRepository {
       sanitized['area_id'] = areaId;
     }
     final String? street = resolveString(
-      const <String>['street', 'street_name', 'streetName', 'address_line_1', 'addressLine1'],
+      const <String>[
+        'street',
+        'street_name',
+        'streetName',
+        'address_line_1',
+        'addressLine1'
+      ],
       maxLength: 150,
     );
     if (street != null) {
       sanitized['street'] = street;
     }
-
 
     final String? building = resolveString(
       const <String>['building', 'building_name', 'buildingName', 'details'],
@@ -308,7 +317,6 @@ class AddressesRepository {
     }
 
     return sanitized;
-
   }
 
   Future<void> _requestAddress({
@@ -317,7 +325,6 @@ class AddressesRepository {
     required Map<String, dynamic> payload,
     bool allowPutFallback = false,
   }) async {
-
     try {
       await _apiJsonRequestHandler(
         url: endpoint,
@@ -327,7 +334,8 @@ class AddressesRepository {
       );
       return;
     } on ApiHttpException catch (error) {
-      if (allowPutFallback && (error.statusCode == 405 || error.statusCode == 404)) {
+      if (allowPutFallback &&
+          (error.statusCode == 405 || error.statusCode == 404)) {
         await _requestAddress(
           endpoint: endpoint,
           method: 'PUT',
@@ -348,7 +356,6 @@ class AddressesRepository {
       throw error;
     }
   }
-
 
   Future<void> _sendMultipartRequest({
     required String endpoint,
@@ -371,8 +378,8 @@ class AddressesRepository {
       if (allowPutFallback &&
           method == 'PATCH' &&
           (error.statusCode == 405 || error.statusCode == 404)) {
-        final Map<String, dynamic> putPayload = Map<String, dynamic>.from(payload)
-          ..['_method'] = 'PUT';
+        final Map<String, dynamic> putPayload =
+            Map<String, dynamic>.from(payload)..['_method'] = 'PUT';
         await _apiPostHandler(
           url: endpoint,
           parameter: putPayload,
@@ -392,28 +399,29 @@ class AddressesRepository {
 
     return rawAddresses
         .map<Map<String, dynamic>>((dynamic item) {
-      if (item is Map<String, dynamic>) {
-        return _normaliseAddress(item);
-      }
-      if (item is Map) {
-        return _normaliseAddress(Map<String, dynamic>.from(item));
-      }
-      return _normaliseAddress(<String, dynamic>{'label': item});
-    })
+          if (item is Map<String, dynamic>) {
+            return _normaliseAddress(item);
+          }
+          if (item is Map) {
+            return _normaliseAddress(Map<String, dynamic>.from(item));
+          }
+          return _normaliseAddress(<String, dynamic>{'label': item});
+        })
         .where((Map<String, dynamic> element) => element.isNotEmpty)
         .toList();
   }
 
   List<dynamic>? _extractAddressList(
-      dynamic payload, {
-        Set<int>? visited,
-        String? keyHint,
-      }) {
+    dynamic payload, {
+    Set<int>? visited,
+    String? keyHint,
+  }) {
     final Set<int> seen = visited ?? <int>{};
 
     if (payload == null) {
       return null;
-    }    if (payload is List<dynamic>) {
+    }
+    if (payload is List<dynamic>) {
       if (_isAddressListCandidate(payload, keyHint: keyHint)) {
         return payload;
       }
@@ -436,7 +444,6 @@ class AddressesRepository {
         return null;
       }
       seen.add(identity);
-
 
       final Map<String, dynamic> map = payload is Map<String, dynamic>
           ? payload
@@ -481,9 +488,9 @@ class AddressesRepository {
   }
 
   bool _isAddressListCandidate(
-      List<dynamic> list, {
-        String? keyHint,
-      }) {
+    List<dynamic> list, {
+    String? keyHint,
+  }) {
     if (list.isEmpty) {
       return keyHint == null || _isAddressishKey(keyHint);
     }
@@ -522,8 +529,6 @@ class AddressesRepository {
         lower == 'result' ||
         lower == 'payload' ||
         lower == 'response';
-
-
   }
 
   dynamic _walk(Map<String, dynamic> map, List<String> path) {
@@ -532,7 +537,7 @@ class AddressesRepository {
       if (current is Map<String, dynamic>) {
         current = current[key];
       } else if (current is Map) {
-        current = (current as Map)[key];
+        current = (current)[key];
       } else {
         return null;
       }
@@ -545,7 +550,6 @@ class AddressesRepository {
         payload.containsKey('address') ||
         payload.containsKey('label') ||
         payload.containsKey('title');
-
   }
 
   Map<String, dynamic> _normaliseAddress(Map<String, dynamic> raw) {
@@ -584,9 +588,9 @@ class AddressesRepository {
     }
 
     double? latitude =
-    _asDouble(raw['latitude'] ?? raw['lat'] ?? raw['geo_lat']);
+        _asDouble(raw['latitude'] ?? raw['lat'] ?? raw['geo_lat']);
     double? longitude =
-    _asDouble(raw['longitude'] ?? raw['lng'] ?? raw['geo_lng']);
+        _asDouble(raw['longitude'] ?? raw['lng'] ?? raw['geo_lng']);
 
     if (latitude == null || longitude == null) {
       final Map<String, dynamic>? coordinatesMap =
@@ -609,7 +613,12 @@ class AddressesRepository {
       normalized['lng'] = longitude;
     }
 
-    for (final String key in const <String>['area', 'city', 'state', 'country']) {
+    for (final String key in const <String>[
+      'area',
+      'city',
+      'state',
+      'country'
+    ]) {
       final String? value = _asString(raw[key]);
       if (value != null) {
         normalized[key] = value;
@@ -617,7 +626,10 @@ class AddressesRepository {
     }
 
     final bool? isDefault = _asBool(
-      raw['is_default'] ?? raw['default'] ?? raw['isDefault'] ?? raw['default_address'],
+      raw['is_default'] ??
+          raw['default'] ??
+          raw['isDefault'] ??
+          raw['default_address'],
     );
     if (isDefault != null) {
       normalized['is_default'] = isDefault;
@@ -684,18 +696,15 @@ class AddressesRepository {
     return double.parse(distance.toStringAsFixed(3));
   }
 
-
-
   Map<String, dynamic>? _mapify(dynamic value) {
     if (value is Map<String, dynamic>) {
       return value;
     }
     if (value is Map) {
-      return Map<String, dynamic>.from(value as Map);
+      return Map<String, dynamic>.from(value);
     }
     return null;
   }
-
 
   static const String _addressesEndpoint = 'addresses';
   static const List<List<String>> _preferredAddressPaths = <List<String>>[

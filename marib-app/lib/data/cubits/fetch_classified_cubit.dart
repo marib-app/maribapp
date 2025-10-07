@@ -56,13 +56,14 @@ class FetchClassifiedCubit extends Cubit<FetchclassifiedState> {
     try {
       emit(FetchClassifiedInProgress());
 
-      DataOutput<ClassifiedModel> result = await _classifiedRepository.fetchclassified(page: 1);
+      DataOutput<ClassifiedModel> result =
+          await _classifiedRepository.fetchclassified(page: 1);
 
       emit(
         FetchClassifiedSuccess(
             isLoadingMore: false,
             loadingMoreError: false,
-          classifiedModel: result.modelList,
+            classifiedModel: result.modelList,
             page: 1,
             total: result.total),
       );
@@ -80,11 +81,13 @@ class FetchClassifiedCubit extends Cubit<FetchclassifiedState> {
 
         emit((state as FetchClassifiedSuccess).copyWith(isLoadingMore: true));
 
-        DataOutput<ClassifiedModel> result = await _classifiedRepository.fetchclassified(
+        DataOutput<ClassifiedModel> result =
+            await _classifiedRepository.fetchclassified(
           page: (state as FetchClassifiedSuccess).page + 1,
         );
 
-        FetchClassifiedSuccess blogModelState = (state as FetchClassifiedSuccess);
+        FetchClassifiedSuccess blogModelState =
+            (state as FetchClassifiedSuccess);
         blogModelState.classifiedModel.addAll(result.modelList);
         emit(FetchClassifiedSuccess(
             isLoadingMore: false,

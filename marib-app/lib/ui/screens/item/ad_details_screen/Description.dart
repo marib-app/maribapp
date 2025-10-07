@@ -8,22 +8,22 @@ import 'package:marib/utils/extensions/extensions.dart';
 /// - يدعم "عرض المزيد" لو النص طويل.
 /// - ⚙️ تحكّم بالتباعد والمسافات عبر: lineHeight / titleBottomSpacing / letterSpacing.
 class AdDescriptionSection extends StatefulWidget {
-  final String? description;                         // وصف جاهز (اختياري)
+  final String? description; // وصف جاهز (اختياري)
   final Future<String?> Function()? loadDescription; // جلب من السيرفر (اختياري)
   final String title;
   final EdgeInsetsGeometry? margin;
 
   // ⚙️ إعدادات تجربة الاستخدام (اختيارية)
-  final bool selectable;                // جعل النص قابل للتحديد
-  final int collapsedLines;             // عدد الأسطر في الوضع المطوي
-  final double fadeHeight;              // ارتفاع طبقة التدرّج عند الطي
-  final String expandLabel;             // نص زر التوسيع
-  final String collapseLabel;           // نص زر الإخفاء
+  final bool selectable; // جعل النص قابل للتحديد
+  final int collapsedLines; // عدد الأسطر في الوضع المطوي
+  final double fadeHeight; // ارتفاع طبقة التدرّج عند الطي
+  final String expandLabel; // نص زر التوسيع
+  final String collapseLabel; // نص زر الإخفاء
 
   // ⚙️ إعدادات التنسيق
-  final double lineHeight;              // تباعد الأسطر
-  final double titleBottomSpacing;      // المسافة بين العنوان والنص
-  final double letterSpacing;           // مسافة طفيفة بين الحروف
+  final double lineHeight; // تباعد الأسطر
+  final double titleBottomSpacing; // المسافة بين العنوان والنص
+  final double letterSpacing; // مسافة طفيفة بين الحروف
 
   const AdDescriptionSection({
     super.key,
@@ -85,20 +85,19 @@ class _AdDescriptionSectionState extends State<AdDescriptionSection>
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     final cs = context.color;
     final bgColor = Theme.of(context).scaffoldBackgroundColor;
 
     return Padding(
-      padding: widget.margin ?? const EdgeInsetsDirectional.fromSTEB(10, 8, 10, 8),
+      padding:
+          widget.margin ?? const EdgeInsetsDirectional.fromSTEB(10, 8, 10, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ===== سطر عنوان ضمن خط علوي =====
-          _headingLine(context),               // ← ----- عنوان القسم -----
+          _headingLine(context), // ← ----- عنوان القسم -----
           SizedBox(height: widget.titleBottomSpacing),
 
           // حالة تحميل
@@ -130,8 +129,7 @@ class _AdDescriptionSectionState extends State<AdDescriptionSection>
           ],
 
           // النص
-          if (!_loading && _error == null)
-            _buildTextSection(context, bgColor),
+          if (!_loading && _error == null) _buildTextSection(context, bgColor),
 
           // ===== مسافة + فاصل سفلي باهت =====
           const SizedBox(height: 10),
@@ -141,8 +139,6 @@ class _AdDescriptionSectionState extends State<AdDescriptionSection>
     );
   }
 
-
-
   /// ----- عنوان القسم ----- (Divider يمين ويسار والعنوان بالوسط)
 
   /// ----- عنوان القسم -------------------------
@@ -151,14 +147,14 @@ class _AdDescriptionSectionState extends State<AdDescriptionSection>
   Widget _headingLine(BuildContext context) {
     final lineColor = Theme.of(context).dividerColor.withOpacity(0.16);
     final titleStyle = Theme.of(context).textTheme.titleSmall?.copyWith(
-      fontWeight: FontWeight.w700,
-      letterSpacing: .2,
-    );
+          fontWeight: FontWeight.w700,
+          letterSpacing: .2,
+        );
 
     // 👇 عدّل النسب حسب رغبتك:
     // كلما زدت leftFlex، اندفع العنوان أكثر لليمين.
-    const int leftFlex = 1;   // جرّب 3..6
-    const int rightFlex = 7;  // يظل قصير لترك العنوان قريبًا من اليمين
+    const int leftFlex = 1; // جرّب 3..6
+    const int rightFlex = 7; // يظل قصير لترك العنوان قريبًا من اليمين
 
     return Row(
       children: [
@@ -167,14 +163,11 @@ class _AdDescriptionSectionState extends State<AdDescriptionSection>
           padding: const EdgeInsets.symmetric(horizontal: 5),
           child: Text(widget.title, style: titleStyle),
         ),
-        Expanded(flex: rightFlex, child: Container(height: 1, color: lineColor)),
+        Expanded(
+            flex: rightFlex, child: Container(height: 1, color: lineColor)),
       ],
     );
   }
-
-
-
-
 
   /// Divider ناعم (رمادي باهت) متوافق مع الوضعين
 
@@ -191,13 +184,13 @@ class _AdDescriptionSectionState extends State<AdDescriptionSection>
     final cs = context.color;
     // شيمر بسيط (بدون حزمة خارجية)
     Widget bar(double h, [double w = double.infinity]) => Container(
-      height: h,
-      width: w,
-      decoration: BoxDecoration(
-        color: cs.territoryColor.withOpacity(.10),
-        borderRadius: BorderRadius.circular(8),
-      ),
-    );
+          height: h,
+          width: w,
+          decoration: BoxDecoration(
+            color: cs.territoryColor.withOpacity(.10),
+            borderRadius: BorderRadius.circular(8),
+          ),
+        );
     return Column(
       children: [
         bar(12),
@@ -252,24 +245,25 @@ class _AdDescriptionSectionState extends State<AdDescriptionSection>
                   child: ConstrainedBox(
                     constraints: _expanded
                         ? const BoxConstraints() // ارتفاع حر عند التوسيع
-                        : BoxConstraints(       // قصّ إلى عدد أسطر محدد عند الطي
-                      maxHeight: _estimatedHeightForLines(
-                        context,
-                        lines: widget.collapsedLines,
-                        style: textStyle ?? base,
-                      ),
-                    ),
+                        : BoxConstraints(
+                            // قصّ إلى عدد أسطر محدد عند الطي
+                            maxHeight: _estimatedHeightForLines(
+                              context,
+                              lines: widget.collapsedLines,
+                              style: textStyle ?? base,
+                            ),
+                          ),
                     child: widget.selectable
                         ? SelectableText(
-                      txt,
-                      style: textStyle ?? base,
-                      textAlign: TextAlign.start,
-                    )
+                            txt,
+                            style: textStyle ?? base,
+                            textAlign: TextAlign.start,
+                          )
                         : Text(
-                      txt,
-                      style: textStyle ?? base,
-                      textAlign: TextAlign.start,
-                    ),
+                            txt,
+                            style: textStyle ?? base,
+                            textAlign: TextAlign.start,
+                          ),
                   ),
                 ),
 
@@ -300,7 +294,6 @@ class _AdDescriptionSectionState extends State<AdDescriptionSection>
               ],
             ),
 
-
             // زر عرض المزيد/إخفاء — يظهر فقط إذا كان هناك تجاوز فعلي
             if (_isOverflowing) ...[
               const SizedBox(height: 6),
@@ -313,7 +306,8 @@ class _AdDescriptionSectionState extends State<AdDescriptionSection>
                     turns: _expanded ? 0.5 : 0.0, // تدوير السهم 180°
                     child: const Icon(Icons.expand_more_rounded, size: 20),
                   ),
-                  label: Text(_expanded ? widget.collapseLabel : widget.expandLabel),
+                  label: Text(
+                      _expanded ? widget.collapseLabel : widget.expandLabel),
                   style: TextButton.styleFrom(
                     foregroundColor: Theme.of(context).colorScheme.onSurface,
                     padding: const EdgeInsetsDirectional.fromSTEB(8, 6, 8, 6),
@@ -326,10 +320,6 @@ class _AdDescriptionSectionState extends State<AdDescriptionSection>
       },
     );
   }
-
-
-
-
 
   // يفحص هل النص سيتجاوز عدد الأسطر المحدد فعليًا ضمن عرض معيّن
 
@@ -353,10 +343,10 @@ class _AdDescriptionSectionState extends State<AdDescriptionSection>
 
   /// تقدير ارتفاع عدد أسطر محدد لنمط معيّن (للاقتطاع الناعم عند الطي)
   double _estimatedHeightForLines(
-      BuildContext context, {
-        required int lines,
-        required TextStyle? style,
-      }) {
+    BuildContext context, {
+    required int lines,
+    required TextStyle? style,
+  }) {
     final s = style ?? Theme.of(context).textTheme.bodyMedium;
     final fontSize = s?.fontSize ?? 14;
     final heightFactor = s?.height ?? 1.2;

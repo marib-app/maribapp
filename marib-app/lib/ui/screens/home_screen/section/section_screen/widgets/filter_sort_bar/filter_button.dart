@@ -10,44 +10,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/app/routes.dart';
-import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/data/model/category_model.dart';
 import 'package:marib/data/model/item_filter_model.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/hive_utils.dart';
-import 'package:marib/utils/responsiveSize.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'package:marib/utils/app_icon.dart';
 
 import 'package:marib/data/cubits/custom_field/fetch_custom_fields_cubit.dart';
 
-
 import 'package:marib/utils/api.dart';
-import 'package:marib/ui/screens/home/widgets/categoryFilterScreen.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/custom_field.dart';
 import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart';
 import 'package:marib/ui/screens/settings/main_activity.dart';
-import 'package:marib/ui/screens/settings/main_activity.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:marib/data/cubits/category/fetch_category_cubit.dart';
-import 'package:marib/data/cubits/item/fetch_item_from_category_cubit.dart';
-import 'package:marib/data/model/category_model.dart';
-import 'filter_memory.dart';
-import 'advanced_search_button.dart';
-
-import 'package:marib/data/cubits/category/fetch_category_cubit.dart';
-
+import 'package:marib/ui/screens/home_screen/section/section_screen/widgets/filter_sort_bar/filter_memory.dart';
+import 'package:marib/ui/screens/home_screen/section/section_screen/widgets/filter_sort_bar/advanced_search_button.dart';
 
 // —————————————————————————————————————————————
 // زر الفلترة داخل الشريط
 // —————————————————————————————————————————————
-
 
 class FilterButton extends StatelessWidget {
   final List<String> categoryIds;
@@ -61,9 +44,8 @@ class FilterButton extends StatelessWidget {
   final List<CategoryModel>? categoryList;
 
   final String? parentCategoryId; // ✅ لتحميل الفرعيات
-  final Future<List<
-      CategoryModel>> Function(String)? loadSubcategories; // ✅ لودر الفرعيات
-
+  final Future<List<CategoryModel>> Function(String)?
+      loadSubcategories; // ✅ لودر الفرعيات
 
   const FilterButton({
     super.key,
@@ -72,22 +54,16 @@ class FilterButton extends StatelessWidget {
     this.categoryListInitial,
     this.currentFilter,
     this.categoryList,
-
     this.parentCategoryId, // ✅
     this.loadSubcategories, // ✅
-
-
   });
-
-
-
 
   @override
   Widget build(BuildContext context) {
     // ألوان/حدود الكبسولة حسب الثيم العام
-    final bg = context.color.secondaryColor;         // الخلفية
-    final fg = context.color.textDefaultColor;       // لون الأيقونة/النص
-    final br = context.color.borderColor;            // لون الحدود
+    final bg = context.color.secondaryColor; // الخلفية
+    final fg = context.color.textDefaultColor; // لون الأيقونة/النص
+    final br = context.color.borderColor; // لون الحدود
 
     return InkWell(
       onTap: () => _openFilterBottomSheet(context),
@@ -129,33 +105,12 @@ class FilterButton extends StatelessWidget {
     );
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   // يفتح الفلترة كـ BottomSheet (بديل عن التنقل لشاشة مستقلة)
-
 
   void _openFilterBottomSheet(BuildContext context) {
     // اجمع المصدرين (لو عندك alias باسم categoryList) أو استخدم categoryListInitial فقط
     final List<CategoryModel> initialCats =
-    (categoryList ?? categoryListInitial ?? const <CategoryModel>[]);
+        (categoryList ?? categoryListInitial ?? const <CategoryModel>[]);
 
     showModalBottomSheet(
       context: context,
@@ -184,21 +139,9 @@ class FilterButton extends StatelessWidget {
   }
 }
 
-
-
-
-
-
-
-
-
-
-
 /// —————————————————————————————————————————————
 /// نافذة الفلترة (تحويل لـ FilterScreen إلى BottomSheet)
 /// —————————————————————————————————————————————
-
-
 
 class _FilterBottomSheet extends StatefulWidget {
   final Function(ItemFilterModel) onSubmit;
@@ -213,21 +156,15 @@ class _FilterBottomSheet extends StatefulWidget {
   final String? parentCategoryId;
   final Future<List<CategoryModel>> Function(String)? loadSubcategories;
 
-
   const _FilterBottomSheet({
     required this.onSubmit,
     required this.from,
     required this.categoryIds,
     required this.categoryListInitial,
     this.currentFilter,
-
     required this.scopeKey,
-
-
-    this.parentCategoryId,           // ✅
-    this.loadSubcategories,          // ✅
-
-
+    this.parentCategoryId, // ✅
+    this.loadSubcategories, // ✅
   });
 
   @override
@@ -258,10 +195,6 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
 
   late List<CategoryModel> categoryList;
 
-
-
-
-
 // ---- Category Browser State ----
   final List<CategoryModel> _path = [];
   final Map<String, List<CategoryModel>> _subCache = {};
@@ -269,16 +202,13 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
   String? _catsError;
   List<CategoryModel> _currentCats = [];
 
-
 // بحث الفئات
   String _catQuery = '';
-
 
   String? _pickedSubcatId;
   List<CategoryModel> _subcats = [];
   bool _loadingSubcats = false;
   String? _subcatsError;
-
 
   @override
   void initState() {
@@ -303,10 +233,8 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
     categoryList = [...widget.categoryListInitial];
     _setCategories();
 
-
     if (selectedCategories.isNotEmpty) _getCustomFieldsData();
   }
-
 
   @override
   void dispose() {
@@ -316,7 +244,6 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
   }
 
   // ——— مساوية لـ setCategories في الأصل ———
-
 
   void _setCategories() {
     selectedCategories
@@ -330,7 +257,6 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
         .toList();
   }
 
-
   int? get _pid {
     // نفس فكرة PcSlider: نحتاج int
     if (widget.parentCategoryId != null) {
@@ -343,7 +269,6 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
     return null;
   }
 
-
   // ——— جلب الحقول المخصّصة حسب selectedCategories ———
   void _getCustomFieldsData() {
     if (Constant.itemFilter == null) {
@@ -351,10 +276,9 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
     }
     if (selectedCategories.isEmpty) return; // ✅
     context.read<FetchCustomFieldsCubit>().fetchCustomFields(
-      categoryIds: selectedCategories.join(','),
-    );
+          categoryIds: selectedCategories.join(','),
+        );
   }
-
 
   // ——— يبني ItemFilterModel ويرسله للأب ———
 
@@ -382,9 +306,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
     Navigator.pop(context, true);
   }
 
-
   // ——— إعادة تعيين ———
-
 
   void _resetAll() {
     setState(() {
@@ -422,23 +344,19 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
     });
   }
 
-
   // ——— تحويل حقول الديناميك لصيغة custom_fields[ID]=VALUE ———
   Map<String, dynamic> _convertToCustomFields(
       Map<dynamic, dynamic> fieldsData) {
-    return fieldsData.map((key, value) =>
-        MapEntry('custom_fields[$key]', value));
+    return fieldsData
+        .map((key, value) => MapEntry('custom_fields[$key]', value));
     // الدالة في الريبو تتكفل بتحويل List إلى comma-separated
   }
-
 
   // ——— اختيار موقع (كما في الأصل) ———
   void _onTapChooseLocation() {
     FocusManager.instance.primaryFocus?.unfocus();
-    Navigator
-        .pushNamed(
-        context, Routes.nearbyLocationScreen, arguments: {"from": "filter"})
-        .then((value) {
+    Navigator.pushNamed(context, Routes.nearbyLocationScreen,
+        arguments: {"from": "filter"}).then((value) {
       if (value != null) {
         final Map<String, dynamic> location = value as Map<String, dynamic>;
         setState(() {
@@ -455,7 +373,6 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
     });
   }
 
-
   // ——— واجهات مساعدة (منسوخة/معدلة من الأصل) ———
   Widget _currencySelector(BuildContext context) {
     final currencies = ["ريال يمني", "ريال سعودي", "دولار أمريكي"];
@@ -465,17 +382,15 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
           context: context,
           shape: const RoundedRectangleBorder(
               borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-          builder: (_) =>
-              ListView.separated(
-                shrinkWrap: true,
-                itemCount: currencies.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
-                itemBuilder: (ctx, i) =>
-                    ListTile(
-                      title: Text(currencies[i]),
-                      onTap: () => Navigator.pop(ctx, currencies[i]),
-                    ),
-              ),
+          builder: (_) => ListView.separated(
+            shrinkWrap: true,
+            itemCount: currencies.length,
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (ctx, i) => ListTile(
+              title: Text(currencies[i]),
+              onTap: () => Navigator.pop(ctx, currencies[i]),
+            ),
+          ),
         );
         if (result != null) setState(() => selectedCurrency = result);
       },
@@ -484,8 +399,8 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
         decoration: BoxDecoration(
           color: context.color.secondaryColor,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-              color: context.color.borderColor.darken(30), width: 1),
+          border:
+              Border.all(color: context.color.borderColor.darken(30), width: 1),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 14),
         child: Row(
@@ -497,14 +412,13 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                     color: context.color.textDefaultColor.withOpacity(0.7)),
               ),
             ),
-            UiUtils.getSvg(
-                AppIcons.downArrow, color: context.color.textDefaultColor),
+            UiUtils.getSvg(AppIcons.downArrow,
+                color: context.color.textDefaultColor),
           ],
         ),
       ),
     );
   }
-
 
   Widget _locationWidget(BuildContext context) {
     return InkWell(
@@ -530,25 +444,20 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                   child: Padding(
                     padding: const EdgeInsetsDirectional.only(start: 10.0),
                     child: [area, city, _state, country]
-                        .where((e) =>
-                    e != null && e
-                        .toString()
-                        .isNotEmpty)
-                        .join(", ")
-                        .toString()
-                        .isNotEmpty
+                            .where((e) => e != null && e.toString().isNotEmpty)
+                            .join(", ")
+                            .toString()
+                            .isNotEmpty
                         ? Text(
-                      [area, city, _state, country]
-                          .where((e) =>
-                      e != null && e
-                          .toString()
-                          .isNotEmpty)
-                          .join(", "),
-                      overflow: TextOverflow.ellipsis,
-                      softWrap: true,
-                    )
-                        : Text("اضغط لتحديد الموقع من الخريطة")
-                        .color(context.color.textDefaultColor.withOpacity(0.5)),
+                            [area, city, _state, country]
+                                .where(
+                                    (e) => e != null && e.toString().isNotEmpty)
+                                .join(", "),
+                            overflow: TextOverflow.ellipsis,
+                            softWrap: true,
+                          )
+                        : Text("اضغط لتحديد الموقع من الخريطة").color(
+                            context.color.textDefaultColor.withOpacity(0.5)),
                   ),
                 ),
               ],
@@ -558,9 +467,6 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
       ),
     );
   }
-
-
-
 
   Widget _budgetOption() {
     return Row(
@@ -573,26 +479,19 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
     );
   }
 
-
   Widget _minMaxTFF(String label) {
-    final controller = (label == "minLbl".translate(context))
-        ? minController
-        : maxController;
+    final controller =
+        (label == "minLbl".translate(context)) ? minController : maxController;
     return Container(
       alignment: AlignmentDirectional.center,
       decoration: BoxDecoration(
         borderRadius: const BorderRadius.all(Radius.circular(10)),
-        color: Theme
-            .of(context)
-            .colorScheme
-            .secondaryColor,
+        color: Theme.of(context).colorScheme.secondaryColor,
       ),
       child: TextFormField(
         controller: controller,
         onChanged: (value) {
-          final isEmpty = value
-              .trim()
-              .isEmpty;
+          final isEmpty = value.trim().isEmpty;
           if (label == "minLbl".translate(context)) {
             if (isEmpty && searchbody.containsKey(Api.minPrice)) {
               searchbody.remove(Api.minPrice);
@@ -618,32 +517,22 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide(color: context.color.borderColor.darken(30)),
           ),
-          labelStyle: TextStyle(
-              color: context.color.textDefaultColor.withOpacity(0.5)),
+          labelStyle:
+              TextStyle(color: context.color.textDefaultColor.withOpacity(0.5)),
           hintText: "00",
           label: Text(label),
           prefixText: '${Constant.currencySymbol} ',
-          prefixStyle: TextStyle(color: Theme
-              .of(context)
-              .colorScheme
-              .territoryColor),
-          fillColor: Theme
-              .of(context)
-              .colorScheme
-              .secondaryColor,
+          prefixStyle:
+              TextStyle(color: Theme.of(context).colorScheme.territoryColor),
+          fillColor: Theme.of(context).colorScheme.secondaryColor,
           border: const OutlineInputBorder(),
         ),
         keyboardType: TextInputType.number,
-        style: TextStyle(color: Theme
-            .of(context)
-            .colorScheme
-            .territoryColor),
+        style: TextStyle(color: Theme.of(context).colorScheme.territoryColor),
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
       ),
     );
   }
-
-
 
   void _postedSinceUpdate(String value) => setState(() => postedOn = value);
 
@@ -652,67 +541,66 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
       context: context,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (_) =>
-          ListView.separated(
-            shrinkWrap: true,
-            itemCount: Constant.postedSince.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (ctx, i) {
-              final opt = Constant.postedSince[i];
-              final selected = opt.value == postedOn;
-              return ListTile(
-                title: Text(opt.status),
-                trailing: selected
-                    ? const Icon(Icons.check_circle, color: Colors.green)
-                    : null,
-                onTap: () => Navigator.pop(ctx, opt.value),
-              );
-            },
-          ),
+      builder: (_) => ListView.separated(
+        shrinkWrap: true,
+        itemCount: Constant.postedSince.length,
+        separatorBuilder: (_, __) => const Divider(height: 1),
+        itemBuilder: (ctx, i) {
+          final opt = Constant.postedSince[i];
+          final selected = opt.value == postedOn;
+          return ListTile(
+            title: Text(opt.status),
+            trailing: selected
+                ? const Icon(Icons.check_circle, color: Colors.green)
+                : null,
+            onTap: () => Navigator.pop(ctx, opt.value),
+          );
+        },
+      ),
     );
     if (res != null) _postedSinceUpdate(res);
   }
 
-
-
-
   @override
   Widget build(BuildContext context) {
-    final t       = Theme.of(context);
-    final bg      = context.color.secondaryColor;
-    final accent  = context.color.territoryColor;
-    final onBg    = t.colorScheme.onSurface;
-    final int parentIdForAdvanced = int.tryParse(widget.parentCategoryId ?? '') ??
-        (widget.categoryIds.isNotEmpty ? int.tryParse(widget.categoryIds.first) : null) ??
-        0;
-
+    final t = Theme.of(context);
+    final bg = context.color.secondaryColor;
+    final accent = context.color.territoryColor;
+    final onBg = t.colorScheme.onSurface;
+    final int parentIdForAdvanced =
+        int.tryParse(widget.parentCategoryId ?? '') ??
+            (widget.categoryIds.isNotEmpty
+                ? int.tryParse(widget.categoryIds.first)
+                : null) ??
+            0;
 
     // فاصل بصري أنيق بين الأقسام
     Widget separator(String text) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        children: [
-          Expanded(child: Divider(color: t.dividerColor)),
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: t.colorScheme.surface.withOpacity(.6),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: t.dividerColor),
-            ),
-            child: Text(
-              text,
-              style: t.textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: onBg.withOpacity(.8),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Row(
+            children: [
+              Expanded(child: Divider(color: t.dividerColor)),
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: t.colorScheme.surface.withOpacity(.6),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: t.dividerColor),
+                ),
+                child: Text(
+                  text,
+                  style: t.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: onBg.withOpacity(.8),
+                  ),
+                ),
               ),
-            ),
+              Expanded(child: Divider(color: t.dividerColor)),
+            ],
           ),
-          Expanded(child: Divider(color: t.dividerColor)),
-        ],
-      ),
-    );
+        );
 
     return FractionallySizedBox(
       heightFactor: 0.94,
@@ -734,7 +622,8 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
             children: [
               const SizedBox(height: 8),
               Container(
-                height: 5, width: 56,
+                height: 5,
+                width: 56,
                 decoration: BoxDecoration(
                   color: t.dividerColor.withOpacity(0.7),
                   borderRadius: BorderRadius.circular(3),
@@ -744,14 +633,16 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
 
               // رأس النافذة (عنوان + إعادة تعيين + إغلاق)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
                   children: [
                     const Icon(Icons.filter_alt_rounded, size: 20),
                     const SizedBox(width: 8),
                     Text(
                       "filterTitle".translate(context),
-                      style: t.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                      style: t.textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w800),
                     ),
                     const Spacer(),
                     TextButton.icon(
@@ -760,7 +651,8 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                       label: Text("reset".translate(context)),
                       style: TextButton.styleFrom(
                         foregroundColor: onBg,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
                     IconButton(
@@ -777,7 +669,8 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
               Expanded(
                 child: SingleChildScrollView(
                   physics: const ClampingScrollPhysics(),
-                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   padding: const EdgeInsets.fromLTRB(20, 10, 20, 120),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -802,7 +695,6 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                           .color(context.color.textDefaultColor),
                       const SizedBox(height: 15),
 
-
                       _budgetOption(),
                       separator('النشر'),
                       Text('postedSinceLbl'.translate(context))
@@ -811,14 +703,14 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                       const SizedBox(height: 5),
                       _postedSinceOption(context),
 
-
                       const SizedBox(height: 5),
 
                       separator('البحث المتقدم'),
                       // زر بحث متقدم (مطابق لشكلنا الجديد)
                       AdvancedSearchButton(
                         parentId: parentIdForAdvanced, // ← غير nullable الآن
-                        initiallySelected: categoryList.isNotEmpty ? categoryList.first : null,
+                        initiallySelected:
+                            categoryList.isNotEmpty ? categoryList.first : null,
                         initialSaved: AbstractField.fieldsData.isNotEmpty,
                         onSaved: (picked) {
                           if (picked != null) {
@@ -829,7 +721,8 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                           }
                           try {
                             UiUtils.showSoftSnackBar(context,
-                                message: 'تم حفظ التخصيص — اضغط "تطبيق" لتفعيله');
+                                message:
+                                    'تم حفظ التخصيص — اضغط "تطبيق" لتفعيله');
                           } catch (_) {}
                         },
                       ),
@@ -866,8 +759,10 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                           label: Text("reset".translate(context)),
                           style: OutlinedButton.styleFrom(
                             minimumSize: const Size.fromHeight(48),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            side: BorderSide(color: t.colorScheme.outline.withOpacity(.5)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            side: BorderSide(
+                                color: t.colorScheme.outline.withOpacity(.5)),
                             foregroundColor: onBg,
                           ),
                         ),
@@ -885,7 +780,8 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                             elevation: 2,
                             backgroundColor: accent,
                             foregroundColor: t.colorScheme.onPrimary,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                           ),
                         ),
                       ),
@@ -899,14 +795,6 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
       ),
     );
   }
-
-
-
-
-
-
-
-
 
   Widget _postedSinceOption(BuildContext context) {
     final t = Theme.of(context);
@@ -923,19 +811,22 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
           decoration: BoxDecoration(
             color: context.color.secondaryColor,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: context.color.borderColor.darken(30), width: 1),
+            border: Border.all(
+                color: context.color.borderColor.darken(30), width: 1),
           ),
           child: Padding(
             padding: const EdgeInsetsDirectional.only(start: 14.0, end: 14.0),
             child: Row(
               children: [
-                UiUtils.getSvg(AppIcons.sinceIcon, color: context.color.textDefaultColor),
+                UiUtils.getSvg(AppIcons.sinceIcon,
+                    color: context.color.textDefaultColor),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(label)
                       .color(context.color.textDefaultColor.withOpacity(0.85)),
                 ),
-                UiUtils.getSvg(AppIcons.downArrow, color: context.color.textDefaultColor),
+                UiUtils.getSvg(AppIcons.downArrow,
+                    color: context.color.textDefaultColor),
               ],
             ),
           ),
@@ -943,9 +834,4 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
       ),
     );
   }
-
-
-
-
-
 }

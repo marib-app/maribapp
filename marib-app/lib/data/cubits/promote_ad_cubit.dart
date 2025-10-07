@@ -26,7 +26,6 @@ class PromoteAdSubscriberReady extends PromoteAdState {
     required this.isFeatured,
     required this.canPause,
     this.message,
-
   });
 
   final SubscriptionStatus status;
@@ -47,7 +46,6 @@ class PromoteAdNonSubscriber extends PromoteAdState {
 
   final SubscriptionStatus status;
   final String? message;
-
 }
 
 class PromoteAdActing extends PromoteAdState {
@@ -75,7 +73,8 @@ class PromoteAdCubit extends Cubit<PromoteAdState> {
     required int adId,
     SubscriptionRepository? subscriptionRepository,
   })  : _adId = adId,
-        _subscriptionRepository = subscriptionRepository ?? SubscriptionRepository(),
+        _subscriptionRepository =
+            subscriptionRepository ?? SubscriptionRepository(),
         super(const PromoteAdIdle());
 
   final int _adId;
@@ -85,7 +84,8 @@ class PromoteAdCubit extends Cubit<PromoteAdState> {
     final SubscriptionStatus? previous = _extractStatus(state);
     emit(PromoteAdChecking(previousStatus: previous));
     try {
-      final SubscriptionStatus status = await _subscriptionRepository.fetchStatus();
+      final SubscriptionStatus status =
+          await _subscriptionRepository.fetchStatus();
       _emitFromStatus(status);
     } on ApiException catch (error) {
       emit(PromoteAdError(
@@ -126,10 +126,11 @@ class PromoteAdCubit extends Cubit<PromoteAdState> {
     emit(PromoteAdActing(status: previous, isFeaturing: true));
     try {
       final Map<String, dynamic> response =
-      await _subscriptionRepository.featureAd(_adId);
+          await _subscriptionRepository.featureAd(_adId);
       final String? message = _extractSuccessMessage(response);
 
-      final SubscriptionStatus status = await _subscriptionRepository.fetchStatus();
+      final SubscriptionStatus status =
+          await _subscriptionRepository.fetchStatus();
       _emitFromStatus(status, successMessage: message);
     } on ApiException catch (error) {
       emit(PromoteAdError(
@@ -162,10 +163,11 @@ class PromoteAdCubit extends Cubit<PromoteAdState> {
     emit(PromoteAdActing(status: previous, isFeaturing: false));
     try {
       final Map<String, dynamic> response =
-      await _subscriptionRepository.unfeatureAd(_adId);
+          await _subscriptionRepository.unfeatureAd(_adId);
       final String? message = _extractSuccessMessage(response);
 
-      final SubscriptionStatus status = await _subscriptionRepository.fetchStatus();
+      final SubscriptionStatus status =
+          await _subscriptionRepository.fetchStatus();
       _emitFromStatus(status, successMessage: message);
     } on ApiException catch (error) {
       emit(PromoteAdError(
@@ -182,7 +184,8 @@ class PromoteAdCubit extends Cubit<PromoteAdState> {
 
   void _emitFromStatus(SubscriptionStatus status, {String? successMessage}) {
     final String? trimmed = successMessage?.trim();
-    final String? message = (trimmed == null || trimmed.isEmpty) ? null : trimmed;
+    final String? message =
+        (trimmed == null || trimmed.isEmpty) ? null : trimmed;
 
     if (!status.hasActive) {
       emit(PromoteAdNonSubscriber(status: status, message: message));

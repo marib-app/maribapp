@@ -110,7 +110,7 @@ class _PurchasesSheetState extends State<_PurchasesSheet> {
             decoration: BoxDecoration(
               color: color.backgroundColor,
               borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(16)),
+                  const BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Column(
               children: [
@@ -162,9 +162,9 @@ class _PurchasesSheetState extends State<_PurchasesSheet> {
   }
 
   Widget _buildBody(
-      BuildContext context,
-      ScrollController controller,
-      ) {
+    BuildContext context,
+    ScrollController controller,
+  ) {
     final color = context.color;
     if (_isLoading && _purchases.isEmpty) {
       return const Center(child: CircularProgressIndicator());
@@ -304,7 +304,7 @@ class _PurchaseTile extends StatelessWidget {
     final bool pending = _isPending(status);
     final DateTime? createdAt = purchase.createdAt;
     final String? created =
-    createdAt != null ? dateFormat.format(createdAt.toLocal()) : null;
+        createdAt != null ? dateFormat.format(createdAt.toLocal()) : null;
     final String? totalText = purchase.total != null
         ? '${purchase.total!.toStringAsFixed(2)} ${purchase.currency ?? ''}'
         : null;
@@ -384,7 +384,7 @@ class _PurchaseTile extends StatelessWidget {
             children: [
               Container(
                 padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: pending
                       ? Colors.orange.withOpacity(0.2)
@@ -394,9 +394,7 @@ class _PurchaseTile extends StatelessWidget {
                 child: Text(
                   status,
                   style: TextStyle(
-                    color: pending
-                        ? Colors.orange
-                        : color.primaryColor,
+                    color: pending ? Colors.orange : color.primaryColor,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -406,7 +404,7 @@ class _PurchaseTile extends StatelessWidget {
                 const SizedBox(width: 8),
                 Container(
                   padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: color.secondaryColor.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(10),
@@ -454,28 +452,28 @@ class _PurchaseTile extends StatelessWidget {
               children: purchase.codes
                   .map(
                     (code) => Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: color.backgroundColor,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: color.secondaryColor.withOpacity(0.4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color.backgroundColor,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: color.secondaryColor.withOpacity(0.4),
+                        ),
+                      ),
+                      child: SelectableText(
+                        code,
+                        style: TextStyle(
+                          color: color.textDefaultColor,
+                          fontFamily: 'monospace',
+                          letterSpacing: 1.0,
+                          fontSize: 13,
+                        ),
+                      ),
                     ),
-                  ),
-                  child: SelectableText(
-                    code,
-                    style: TextStyle(
-                      color: color.textDefaultColor,
-                      fontFamily: 'monospace',
-                      letterSpacing: 1.0,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              )
+                  )
                   .toList(),
             ),
           ] else

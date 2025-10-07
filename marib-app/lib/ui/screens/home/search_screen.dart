@@ -287,7 +287,7 @@ class SearchScreenState extends State<SearchScreen>
     );
   }
 
-  getFilterValue(ItemFilterModel model) {
+  void getFilterValue(ItemFilterModel model) {
     filter = model;
     setState(() {});
   }

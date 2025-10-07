@@ -9,7 +9,6 @@ import 'package:flutter/material.dart';
 import 'package:marib/data/model/category_model.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-
 class CategoryFilterScreen extends StatefulWidget {
   final List<CategoryModel> categoryList;
 
@@ -167,7 +166,8 @@ class _CategoryFilterScreenState extends State<CategoryFilterScreen>
                             },
                           ),
                         ),
-                        if (state.isLoadingMore) Center(child: UiUtils.progress())
+                        if (state.isLoadingMore)
+                          Center(child: UiUtils.progress())
                       ],
                     ),
                   ),

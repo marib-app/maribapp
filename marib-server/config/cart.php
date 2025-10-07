@@ -8,6 +8,9 @@ return [
 
     ],
 
+    'default_department' => env('CART_DEFAULT_DEPARTMENT', 'store'),
+
+
     'department_roots' => [
         'shein' => (int) env('CART_SHEIN_ROOT_CATEGORY_ID', 4),
         'computer' => (int) env('CART_COMPUTER_ROOT_CATEGORY_ID', 5),

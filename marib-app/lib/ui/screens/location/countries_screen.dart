@@ -295,7 +295,7 @@ class CountriesScreenState extends State<CountriesScreen> {
     return searchItemsWidget();
   }
 
-  defaultLocation() {
+  void defaultLocation() {
     _currentLocation = [
       HiveUtils.getCurrentAreaName(),
       HiveUtils.getCurrentCityName(),
@@ -552,7 +552,8 @@ class CountriesScreenState extends State<CountriesScreen> {
 
               if (state is FetchCountriesSuccess) {
                 if (state.countriesModel.isEmpty) {
-                  return Center(child: SingleChildScrollView(child: NoDataFound()));
+                  return Center(
+                      child: SingleChildScrollView(child: NoDataFound()));
                 }
 
                 return Container(

@@ -1,12 +1,6 @@
 import 'package:marib/data/model/challenge_model.dart';
 import 'package:marib/utils/api.dart';
-import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/payment/transaction_response_parser.dart';
-
-
-
-
-
 
 class CompetitionRepository {
   Future<Map<String, dynamic>> getChallenges() async {
@@ -15,13 +9,13 @@ class CompetitionRepository {
       // Ensure Api.baseUrl is correctly defined in your utils/api.dart
       final response = await Api.get(url: Api.challengesApi);
 
-      if (response['error'] == false && response['data'] is Map<String, dynamic>) {
+      if (response['error'] == false &&
+          response['data'] is Map<String, dynamic>) {
         final Map<String, dynamic> envelope =
-        Map<String, dynamic>.from(response['data'] as Map<String, dynamic>);
+            Map<String, dynamic>.from(response['data'] as Map<String, dynamic>);
 
         final List<dynamic> challengesJson =
             envelope['challenges'] as List<dynamic>? ?? <dynamic>[];
-
 
         final List<Challenge> challenges = challengesJson
             .whereType<Map<String, dynamic>>()
@@ -29,7 +23,8 @@ class CompetitionRepository {
             .toList();
 
         final int maxPoints = (envelope['max_points'] as num?)?.toInt() ?? 0;
-        final int totalPoints = (envelope['total_points'] as num?)?.toInt() ?? 0;
+        final int totalPoints =
+            (envelope['total_points'] as num?)?.toInt() ?? 0;
         final int totalRequiredReferrals =
             (envelope['total_required_referrals'] as num?)?.toInt() ?? 0;
 
@@ -40,8 +35,8 @@ class CompetitionRepository {
           'total_required_referrals': totalRequiredReferrals,
         };
       } else {
-        throw Exception(
-            response['message'] ?? 'Failed to load challenges: Invalid data format');
+        throw Exception(response['message'] ??
+            'Failed to load challenges: Invalid data format');
       }
     } catch (e) {
       // Handle other errors
@@ -56,7 +51,6 @@ class CompetitionRepository {
       if (response['error'] == false) {
         return Map<String, dynamic>.from(
             response['data'] ?? const <String, dynamic>{});
-
       } else {
         throw Exception(
             response['message'] ?? 'Failed to load user referral points');
@@ -126,7 +120,6 @@ class CompetitionRepository {
         return data is Map<String, dynamic>
             ? Map<String, dynamic>.from(data)
             : <String, dynamic>{};
-
       } else {
         throw Exception(response['message'] ?? 'Failed to save payment info');
       }
@@ -151,10 +144,8 @@ class CompetitionRepository {
       );
 
       if (response['error'] == false) {
-
         final transactions = extractTransactionRows(response);
         return transactions;
-
       } else {
         throw Exception(
             response['message'] ?? 'Failed to load payment transactions');

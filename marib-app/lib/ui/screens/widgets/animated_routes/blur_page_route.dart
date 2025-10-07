@@ -34,7 +34,8 @@ class BlurredRouter<T> extends PageRoute<T> {
   bool get maintainState => true;
 
   @override
-  Widget buildPage(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation) {
+  Widget buildPage(BuildContext context, Animation<double> animation,
+      Animation<double> secondaryAnimation) {
     return builder(context);
   }
 
@@ -53,8 +54,6 @@ class BlurredRouter<T> extends PageRoute<T> {
     );
   }
 }
-
-
 
 /*
 import 'dart:io';

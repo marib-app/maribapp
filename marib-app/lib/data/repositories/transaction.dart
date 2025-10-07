@@ -3,8 +3,6 @@ import 'package:marib/data/model/transaction_model.dart';
 import 'package:marib/utils/api.dart';
 import 'package:marib/utils/payment/transaction_response_parser.dart';
 
-
-
 class TransactionRepository {
   Future<DataOutput<TransactionModel>> fetchTransactions(
       {required int page}) async {
@@ -17,10 +15,8 @@ class TransactionRepository {
 
     final rows = extractTransactionRows(response);
 
-    List<TransactionModel> transactionList = rows
-
-        .map((e) => TransactionModel.fromJson(e))
-        .toList();
+    List<TransactionModel> transactionList =
+        rows.map((e) => TransactionModel.fromJson(e)).toList();
 
     return DataOutput<TransactionModel>(
         total: transactionList.length, modelList: transactionList);

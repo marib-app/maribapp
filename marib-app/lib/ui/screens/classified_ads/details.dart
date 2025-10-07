@@ -8,10 +8,9 @@
 // -----------------------------------------------------------------------------
 
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Clipboard إن احتجته
+// Clipboard إن احتجته
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:marib/data/repositories/my_services_repository.dart';
@@ -23,7 +22,8 @@ import 'package:marib/data/cubits/chat/send_message.dart';
 import 'package:marib/data/cubits/chat/load_chat_messages.dart';
 import 'package:marib/data/cubits/chat/delete_message_cubit.dart';
 
-import 'package:marib/data/model/classified_model.dart' show ClassifiedModel, ClassifiedSummary;
+import 'package:marib/data/model/classified_model.dart'
+    show ClassifiedModel, ClassifiedSummary;
 import 'package:marib/data/model/chat/chated_user_model.dart';
 
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
@@ -34,15 +34,16 @@ import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/hive_utils.dart';
 
-import 'service_rating_page.dart' show ServiceRatingPage;
-import 'widgets/report_service.dart';
-import 'details_ui.dart';
+import 'package:marib/ui/screens/classified_ads/service_rating_page.dart'
+    show ServiceRatingPage;
+import 'package:marib/ui/screens/classified_ads/widgets/report_service.dart';
+import 'package:marib/ui/screens/classified_ads/details_ui.dart';
 import 'package:marib/utils/notification/notification_service.dart';
 
 class ClassifiedDetails extends StatefulWidget {
   final ClassifiedModel? classified; // قد يمرّر من شاشة أخرى (كامل)
-  final int? id;                     // أو id فقط
-  final String? initialTitle;        // عنوان مبدئي أثناء التحميل
+  final int? id; // أو id فقط
+  final String? initialTitle; // عنوان مبدئي أثناء التحميل
 
   const ClassifiedDetails({
     super.key,
@@ -50,10 +51,6 @@ class ClassifiedDetails extends StatefulWidget {
     this.id,
     this.initialTitle,
   });
-
-
-
-
 
   // دالة route مرنة تُستدعى من routes.dart: ClassifiedDetails.route(routeSettings)
   // - arguments: int / String(id) / ClassifiedSummary / ClassifiedModel / Map {id|item_id|model|title}
@@ -71,7 +68,7 @@ class ClassifiedDetails extends StatefulWidget {
       if (raw is ClassifiedModel) return raw.id;
       if (raw is ClassifiedSummary) return raw.id;
       if (raw is Map) {
-        final m = raw as Map;
+        final m = raw;
         final d = m['id'] ?? m['item_id'];
         if (d is int) return d;
         if (d is String) return int.tryParse(d);
@@ -97,7 +94,7 @@ class ClassifiedDetails extends StatefulWidget {
         initialTitle = rawModel.title;
       } else if (rawModel is Map<String, dynamic>) {
         model = ClassifiedModel.fromJson(rawModel);
-        initialTitle = model?.title;
+        initialTitle = model.title;
       }
       id = _coerceId(map['id'] ?? map['item_id']) ?? id ?? model?.id;
       initialTitle = (map['title'] as String?) ?? initialTitle;
@@ -118,7 +115,6 @@ class ClassifiedDetails extends StatefulWidget {
   State<ClassifiedDetails> createState() => _ClassifiedDetailsState();
 }
 
-
 class _ApiAttempt {
   final Future<Map<String, dynamic>> Function() run;
   final bool requireServiceMarkers;
@@ -129,15 +125,14 @@ class _ApiAttempt {
   });
 }
 
-
 class _ClassifiedDetailsState extends State<ClassifiedDetails> {
   // --------- State ----------
   ClassifiedModel? _data; // بيانات نهائية بعد الجلب
-  bool _loading = true;   // شيمر حتى يكتمل الجلب
+  bool _loading = true; // شيمر حتى يكتمل الجلب
   bool _error = false;
   String? _errorMsg;
   bool _isProcessing = false; // لمنع تكرار النقر على زر الاستمرار
-  bool _fabVisible = true;    // لإظهار/إخفاء زر المشاركة العائم
+  bool _fabVisible = true; // لإظهار/إخفاء زر المشاركة العائم
   bool _isReporting = false;
   final MyServicesRepository _ownerRepository = MyServicesRepository();
   bool _statusUpdating = false;
@@ -148,9 +143,12 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
 
   // --------- Regex للمساعدة ----------
   static final RegExp _htmlTagRe = RegExp(r'<[^>]+>');
-  static final RegExp _telRe = RegExp(r'tel:\s*([0-9+]+)', caseSensitive: false);
-  static final RegExp _waRe  = RegExp(r'(?:https?:)?\/\/wa\.me\/([0-9]+)', caseSensitive: false);
-  static final RegExp _ratingRe = RegExp(r'([4-5](?:\.\d)?)\s*\((\d+)\s*تقييم', caseSensitive: false);
+  static final RegExp _telRe =
+      RegExp(r'tel:\s*([0-9+]+)', caseSensitive: false);
+  static final RegExp _waRe =
+      RegExp(r'(?:https?:)?\/\/wa\.me\/([0-9]+)', caseSensitive: false);
+  static final RegExp _ratingRe =
+      RegExp(r'([4-5](?:\.\d)?)\s*\((\d+)\s*تقييم', caseSensitive: false);
 
   @override
   void initState() {
@@ -159,9 +157,6 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
       _fetchDetails();
     });
   }
-
-
-
 
   // ===============================
   // جلب تفاصيل الخدمة
@@ -217,16 +212,6 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
     }
   }
 
-
-
-
-
-
-
-
-
-
-
   bool _hasSchemaData(dynamic v) {
     if (v == null) return false;
     if (v is String) {
@@ -234,7 +219,7 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
       return s.isNotEmpty && s != '[]' && s != '{}' && s != 'null';
     }
     if (v is List) return v.isNotEmpty;
-    if (v is Map)  return v.isNotEmpty;
+    if (v is Map) return v.isNotEmpty;
     return true;
   }
 
@@ -275,26 +260,13 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
   dynamic _pickServiceSchema() {
     // أولاً لو الموديل فيه خاصية عليا معروفة
     try {
-      final direct = ( _data as dynamic ).serviceFieldsSchema;
+      final direct = (_data as dynamic).serviceFieldsSchema;
       if (_hasSchemaData(direct)) return direct;
     } catch (_) {}
     // بعدها نفتّش في الـ JSON كامل
     final j = _data?.toJson() ?? {};
     return _findSchemaDeep(j);
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   /// محاولات مرنة: get-item ثم get-services (POST/GET) مع فلترة id
   Future<ClassifiedModel?> _fetchDetailsFromApi(int id) async {
@@ -315,7 +287,6 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
         ),
         requireServiceMarkers: true,
       ),
-
     ];
 
     for (final attempt in tries) {
@@ -327,17 +298,12 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
           continue;
         }
         return ClassifiedModel.fromJson(m);
-
-
       } catch (_) {
         // تجاهل وجرب التالية
       }
     }
     return null;
   }
-
-
-
 
   bool _containsServiceMarkers(Map<String, dynamic> data) {
     bool hasAnyKey(Iterable<String> keys) {
@@ -376,22 +342,24 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
     }
 
     return false;
-
   }
 
-
-
-
-
-
   /// extractor صارم مع fallback آمن
-  Map<String, dynamic>? _extractPayloadStrict(Map<String, dynamic>? resp, {required int wantedId}) {
+  Map<String, dynamic>? _extractPayloadStrict(Map<String, dynamic>? resp,
+      {required int wantedId}) {
     if (resp == null) return null;
-    Map<String, dynamic>? asMap(dynamic v) => (v is Map) ? v.cast<String, dynamic>() : null;
+    Map<String, dynamic>? asMap(dynamic v) =>
+        (v is Map) ? v.cast<String, dynamic>() : null;
 
     int? _readId(dynamic v) {
       if (v is Map) {
-        final idAny = v['id'] ?? v[Api.id] ?? v['item_id'] ?? v[Api.itemId] ?? v['items_id'] ?? v[Api.itemsId] ?? v['service_id'];
+        final idAny = v['id'] ??
+            v[Api.id] ??
+            v['item_id'] ??
+            v[Api.itemId] ??
+            v['items_id'] ??
+            v[Api.itemsId] ??
+            v['service_id'];
         if (idAny is int) return idAny;
         if (idAny is String) return int.tryParse(idAny);
       }
@@ -402,7 +370,14 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
 
     dynamic _firstLayer(dynamic root) {
       if (root is Map) {
-        return root[Api.item] ?? root['item'] ?? root[Api.data] ?? root['data'] ?? root['result'] ?? root['record'] ?? root['payload'] ?? root;
+        return root[Api.item] ??
+            root['item'] ??
+            root[Api.data] ??
+            root['data'] ??
+            root['result'] ??
+            root['record'] ??
+            root['payload'] ??
+            root;
       }
       return root;
     }
@@ -410,7 +385,10 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
     dynamic bucket = _firstLayer(resp);
 
     if (bucket is Map) {
-      final inner = bucket[Api.item] ?? bucket['item'] ?? bucket[Api.data] ?? bucket['data'];
+      final inner = bucket[Api.item] ??
+          bucket['item'] ??
+          bucket[Api.data] ??
+          bucket['data'];
       if (inner != null) bucket = inner;
     }
 
@@ -432,7 +410,6 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
     if (bucket is List) {
       final match = bucket.firstWhere((e) => _idMatches(e), orElse: () => null);
       if (match is Map) return match.cast<String, dynamic>();
-
     }
 
     if (_idMatches(resp)) return resp.cast<String, dynamic>();
@@ -441,7 +418,8 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
 
   // -------- Helpers --------
   String _stripHtml(String s) => s.replaceAll(_htmlTagRe, ' ');
-  String _truncate(String s, int max) => s.length <= max ? s : '${s.substring(0, max)}…';
+  String _truncate(String s, int max) =>
+      s.length <= max ? s : '${s.substring(0, max)}…';
 
   String? _firstTelFromHtml(String html) {
     final m = _telRe.firstMatch(html);
@@ -455,23 +433,26 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
 
   String _buildShareText(BuildContext context) {
     final title = ((_data?.title ?? '').trim());
-    final desc  = _truncate(_stripHtml((_data?.description ?? '').trim()), 220);
-    final date  = _data?.createdAt != null ? _data!.createdAt.toString().formatDate() : '';
-    final tel   = _firstTelFromHtml(_data?.description ?? '');
-    final wa    = _firstWaFromHtml(_data?.description ?? '');
+    final desc = _truncate(_stripHtml((_data?.description ?? '').trim()), 220);
+    final date = _data?.createdAt != null
+        ? _data!.createdAt.toString().formatDate()
+        : '';
+    final tel = _firstTelFromHtml(_data?.description ?? '');
+    final wa = _firstWaFromHtml(_data?.description ?? '');
     final lines = <String>[
       if (title.isNotEmpty) '📄 $title',
-      if (date.isNotEmpty)  '🗓️ $date',
-      if (desc.isNotEmpty)  '—\n$desc',
-      if (tel != null)      '\n📞 اتصال: $tel',
-      if (wa != null)       '💬 واتساب: $wa',
+      if (date.isNotEmpty) '🗓️ $date',
+      if (desc.isNotEmpty) '—\n$desc',
+      if (tel != null) '\n📞 اتصال: $tel',
+      if (wa != null) '💬 واتساب: $wa',
     ];
     return lines.where((e) => e.trim().isNotEmpty).join('\n');
   }
 
   Future<void> _share(BuildContext context) async {
     final text = _buildShareText(context);
-    await Share.share(text, subject: ((_data?.title ?? 'إعلان').firstUpperCase()));
+    await Share.share(text,
+        subject: ((_data?.title ?? 'إعلان').firstUpperCase()));
   }
 
   String? _extractRatingText(String html) {
@@ -511,11 +492,14 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
     final j = _data?.toJson() ?? {};
 
     // direct_to_user
-    final direct = _asBoolFlex(j['direct_to_user']) || _asBoolFlex((_data as dynamic)?.directToUser);
-    final directUserId = j['direct_user_id'] ?? (_data as dynamic)?.directUserId;
+    final direct = _asBoolFlex(j['direct_to_user']) ||
+        _asBoolFlex((_data as dynamic)?.directToUser);
+    final directUserId =
+        j['direct_user_id'] ?? (_data as dynamic)?.directUserId;
 
     // has_custom_fields + service_fields_schema (نص/مصفوفة/خريطة)
-    final dynamic schemaRaw = j['service_fields_schema'] ?? (_data as dynamic)?.serviceFieldsSchema;
+    final dynamic schemaRaw =
+        j['service_fields_schema'] ?? (_data as dynamic)?.serviceFieldsSchema;
     bool schemaHasData = false;
     if (schemaRaw is String) {
       final s = schemaRaw.trim();
@@ -530,8 +514,10 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
         schemaHasData;
 
     // is_paid أو price>0
-    final isPaidFlag = _asBoolFlex(j['is_paid']) || _asBoolFlex((_data as dynamic)?.isPaid);
-    final priceNum = _asNumFlex(j['price']) ?? _asNumFlex((_data as dynamic)?.price) ?? 0;
+    final isPaidFlag =
+        _asBoolFlex(j['is_paid']) || _asBoolFlex((_data as dynamic)?.isPaid);
+    final priceNum =
+        _asNumFlex(j['price']) ?? _asNumFlex((_data as dynamic)?.price) ?? 0;
     final isPaid = isPaidFlag || (priceNum > 0);
 
     if (direct && _asIntFlex(directUserId) != null) return _NextAction.chat;
@@ -562,15 +548,10 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
         await _openPayment(context);
         break;
       case _NextAction.none:
-      // UiUtils.showSnackBar(context, message: 'continue'.translate(context), type: SnackBarType.info);
+        // UiUtils.showSnackBar(context, message: 'continue'.translate(context), type: SnackBarType.info);
         break;
     }
   }
-
-
-
-
-
 
   Future<void> _openCustomFields(BuildContext context) async {
     final id = _data?.id;
@@ -582,19 +563,14 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
       context,
       Routes.serviceAddMoreDetails,
       arguments: {
-        'serviceId'          : id,
-        'categoryId'         : _data?.categoryId,
-        'serviceUid'         : _data?.serviceUid,
-        'serviceTitle'       : _data?.title,
+        'serviceId': id,
+        'categoryId': _data?.categoryId,
+        'serviceUid': _data?.serviceUid,
+        'serviceTitle': _data?.title,
         'serviceFieldsSchema': schema, // ✅ مهم جدًا
       },
     );
   }
-
-
-
-
-
 
   Future<void> _openPayment(BuildContext context) async {
     final id = _data?.id;
@@ -604,12 +580,12 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
       context,
       Routes.servicePaymentPage,
       arguments: {
-        'serviceId'   : id,
-        'itemId'      : id,
-        'amount'      : _data?.price,      // ✅ تمرير باسم amount
-        'currency'    : _data?.currency,
-        'note'        : _data?.priceNote,  // ✅ تمرير الملاحظة
-        'serviceUid'  : _data?.serviceUid,
+        'serviceId': id,
+        'itemId': id,
+        'amount': _data?.price, // ✅ تمرير باسم amount
+        'currency': _data?.currency,
+        'note': _data?.priceNote, // ✅ تمرير الملاحظة
+        'serviceUid': _data?.serviceUid,
         'serviceTitle': _data?.title,
       },
     );
@@ -639,8 +615,6 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
     final int itemOfferId = existing?.itemOfferId ?? existing?.id ?? 0;
     final String conversationId =
         existing?.conversationId ?? existing?.id?.toString() ?? '';
-
-
 
     String? fallbackName;
     String? fallbackProfile;
@@ -673,8 +647,6 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
             'item_offer_id': itemOfferId,
           },
         );
-
-
 
     Navigator.push(
       context,
@@ -709,10 +681,6 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
       ),
     );
   }
-
-
-
-
 
   // ===============================
   // أدوات مالك الخدمة
@@ -792,10 +760,10 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
     final DateTime initial = _resolveOwnerExpiry() ?? now;
     final DateTime firstDate = DateTime(now.year, now.month, now.day);
     final DateTime adjustedInitial =
-    initial.isBefore(firstDate) ? firstDate : initial;
+        initial.isBefore(firstDate) ? firstDate : initial;
     final DateTime lastDate = DateTime(now.year + 5, now.month, now.day);
     final DateTime cappedInitial =
-    adjustedInitial.isAfter(lastDate) ? lastDate : adjustedInitial;
+        adjustedInitial.isAfter(lastDate) ? lastDate : adjustedInitial;
 
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -850,14 +818,13 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
     final ColorScheme scheme = theme.colorScheme;
     final bool active = _resolveOwnerStatus();
     final DateTime? expiry = _resolveOwnerExpiry();
-    final String expiryLabel = expiry != null
-        ? expiry.toIso8601String().formatDate()
-        : 'غير محدد';
+    final String expiryLabel =
+        expiry != null ? expiry.toIso8601String().formatDate() : 'غير محدد';
 
     final TextStyle titleStyle = theme.textTheme.titleMedium?.copyWith(
-      fontWeight: FontWeight.w600,
-      color: scheme.onSurface,
-    ) ??
+          fontWeight: FontWeight.w600,
+          color: scheme.onSurface,
+        ) ??
         TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w600,
@@ -865,17 +832,17 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
         );
 
     final TextStyle subtitleStyle = theme.textTheme.bodyMedium?.copyWith(
-      color: scheme.onSurface.withOpacity(0.7),
-    ) ??
+          color: scheme.onSurface.withOpacity(0.7),
+        ) ??
         TextStyle(
           fontSize: 14,
           color: scheme.onSurface.withOpacity(0.7),
         );
 
     final TextStyle valueStyle = theme.textTheme.titleSmall?.copyWith(
-      fontWeight: FontWeight.w600,
-      color: scheme.primary,
-    ) ??
+          fontWeight: FontWeight.w600,
+          color: scheme.primary,
+        ) ??
         TextStyle(
           fontSize: 15,
           fontWeight: FontWeight.w600,
@@ -960,7 +927,8 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
                   label: const Text('تعديل'),
                   style: TextButton.styleFrom(
                     foregroundColor: scheme.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     textStyle: theme.textTheme.labelLarge,
                   ),
                 ),
@@ -1017,17 +985,15 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
     );
   }
 
-
-
-
   // ===============================
   // واجهة العرض (تفويض كامل إلى details_ui.dart)
   // ===============================
   @override
   Widget build(BuildContext context) {
-    final bool hasImage   = ((_data?.image ?? '').isNotEmpty);
-    final String html     = (_data?.description ?? '');
-    final String appBarTitle = _loading ? (_initialTitle ?? '') : (_data?.title ?? '');
+    final bool hasImage = ((_data?.image ?? '').isNotEmpty);
+    final String html = (_data?.description ?? '');
+    final String appBarTitle =
+        _loading ? (_initialTitle ?? '') : (_data?.title ?? '');
     final String buttonTitle = 'continue'.translate(context);
     final String ratingText = _extractRatingText(html) ?? 'التقييم';
     final String? dateLine = _data?.createdAt != null
@@ -1094,7 +1060,6 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
               'itemId': itemId,
               'sellerId': sellerId,
               'serviceUid': _data?.serviceUid,
-
             }),
           ),
         );

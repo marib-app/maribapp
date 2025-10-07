@@ -1,8 +1,6 @@
-import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart'; // استيراد أيقونة واتساب
-import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart'; // للتعامل مع روابط الواتساب
 
 // IMPORTS لثيمك وهيلبرزكم (عدّل المسارات لو اختلفت عندك)
@@ -53,8 +51,8 @@ class _TemporarySectionScreenState extends State<TemporarySectionScreen> {
 
     return Scaffold(
       appBar: UiUtils.buildAppBar(
-        context,  // تمرير context
-        title: widget.catName,  // تمرير title
+        context, // تمرير context
+        title: widget.catName, // تمرير title
       ),
       body: Stack(
         children: [
@@ -106,13 +104,15 @@ class _TemporarySectionScreenState extends State<TemporarySectionScreen> {
     if (interfaceType == 'computer_section' || catId == '5') {
       return _FrontTexts(
         title: 'قسم الكمبيوتر قادم 💻',
-        subtitle: 'قريبًا: جميع أنواع أجهزة الكمبيوتر الحديثة مع ملحقاتها.\nطلبات خاصة حسب احتياجاتك، نصلها لباب منزلك.',
+        subtitle:
+            'قريبًا: جميع أنواع أجهزة الكمبيوتر الحديثة مع ملحقاتها.\nطلبات خاصة حسب احتياجاتك، نصلها لباب منزلك.',
       );
     }
     if (catId == '4') {
       return _FrontTexts(
         title: 'انضموا لمتجرنا المحلي!\nللتجار فقط',
-        subtitle: 'افتح متجرًا خاصًا بك، وأضف منتجاتك، وادير عمليات البيع بسهولة.\nفريقنا سيقوم بتوصيل الطلبات مباشرة للعميل.',
+        subtitle:
+            'افتح متجرًا خاصًا بك، وأضف منتجاتك، وادير عمليات البيع بسهولة.\nفريقنا سيقوم بتوصيل الطلبات مباشرة للعميل.',
       );
     }
     return _FrontTexts(
@@ -202,7 +202,8 @@ class _FrontComingSoon extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(FontAwesomeIcons.whatsapp, color: Colors.green.shade600),
+                    Icon(FontAwesomeIcons.whatsapp,
+                        color: Colors.green.shade600),
                     const SizedBox(width: 8),
                     Text(
                       'للاستفسار، تواصل معنا عبر الواتساب',

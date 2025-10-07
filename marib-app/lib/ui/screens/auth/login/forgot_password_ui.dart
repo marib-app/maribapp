@@ -120,8 +120,7 @@ class ForgotPasswordUI extends StatelessWidget {
                                 controller: phoneController,
                                 keyboard: TextInputType.phone,
                                 hintText: "phoneNumber".translate(context),
-                                validator:
-                                CustomTextFieldValidator.phoneNumber,
+                                validator: CustomTextFieldValidator.phoneNumber,
                                 fixedPrefix: InkWell(
                                   onTap: onCountryPickerPressed,
                                   child: Container(
@@ -140,8 +139,7 @@ class ForgotPasswordUI extends StatelessWidget {
                                         "$flagEmoji $countryCode",
                                         style: TextStyle(
                                           fontSize: context.font.normal,
-                                          color:
-                                          context.color.textDefaultColor,
+                                          color: context.color.textDefaultColor,
                                         ),
                                       ),
                                     ),
@@ -161,8 +159,7 @@ class ForgotPasswordUI extends StatelessWidget {
                                 UiUtils.buildButton(
                                   context,
                                   onPressed: onSendOtp,
-                                  buttonTitle:
-                                  "sendOtpCode".translate(context),
+                                  buttonTitle: "sendOtpCode".translate(context),
                                   radius: 8,
                                 ),
                             ] else ...[
@@ -246,7 +243,7 @@ class ForgotPasswordUI extends StatelessWidget {
                                   keyboardType: TextInputType.number,
                                   useNativeKeyboard: true,
                                   pinputAutovalidateMode:
-                                  PinputAutovalidateMode.onSubmit,
+                                      PinputAutovalidateMode.onSubmit,
                                   showCursor: true,
                                   onChanged: onOtpChanged,
                                 ),
@@ -271,14 +268,14 @@ class ForgotPasswordUI extends StatelessWidget {
                                           : onSendOtp,
                                       style: OutlinedButton.styleFrom(
                                         foregroundColor:
-                                        (isLoading || isTimerActive)
-                                            ? context.color.textColor
-                                            .withOpacity(0.5)
-                                            : context.color.territoryColor,
+                                            (isLoading || isTimerActive)
+                                                ? context.color.textColor
+                                                    .withOpacity(0.5)
+                                                : context.color.territoryColor,
                                         side: BorderSide(
                                           color: (isLoading || isTimerActive)
                                               ? context.color.textColor
-                                              .withOpacity(0.5)
+                                                  .withOpacity(0.5)
                                               : context.color.territoryColor,
                                         ),
                                       ),
@@ -301,13 +298,13 @@ class ForgotPasswordUI extends StatelessWidget {
                               else
                                 ElevatedButton(
                                   onPressed: (isLoading ||
-                                      currentOtp.length != 6 ||
-                                      !isTimerActive)
+                                          currentOtp.length != 6 ||
+                                          !isTimerActive)
                                       ? null
                                       : onVerifyOtp,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor:
-                                    context.color.territoryColor,
+                                        context.color.territoryColor,
                                     foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(8),
@@ -315,7 +312,7 @@ class ForgotPasswordUI extends StatelessWidget {
                                     padding: const EdgeInsets.symmetric(
                                         vertical: 15),
                                     minimumSize:
-                                    const Size(double.infinity, 50),
+                                        const Size(double.infinity, 50),
                                   ),
                                   child: Text("verify".translate(context)),
                                 ),

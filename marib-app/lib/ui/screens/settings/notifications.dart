@@ -12,7 +12,6 @@ import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/api.dart'; // إن لم تكن تستعمله يمكنك حذفه
 import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/ui_utils.dart';
-import 'package:marib/utils/helper_utils.dart';
 
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/ui/screens/widgets/intertitial_ads_screen.dart';
@@ -33,7 +32,8 @@ String? normalizeImage(String? url, {String? base}) {
   final u = url.trim();
   if (u.isEmpty) return null;
   if (u.startsWith('http')) return u;
-  if (u.startsWith('/')) return (base != null && base.isNotEmpty) ? '$base$u' : u;
+  if (u.startsWith('/'))
+    return (base != null && base.isNotEmpty) ? '$base$u' : u;
   return (base != null && base.isNotEmpty) ? '$base/$u' : u;
 }
 
@@ -145,7 +145,9 @@ class NotificationsState extends State<Notifications> {
             if (state.errorMessage is ApiException &&
                 state.errorMessage.error == "no-internet") {
               return NoInternet(
-                onRetry: () => context.read<FetchNotificationsCubit>().fetchNotifications(),
+                onRetry: () => context
+                    .read<FetchNotificationsCubit>()
+                    .fetchNotifications(),
               );
             }
             return const SomethingWentWrong();
@@ -153,7 +155,9 @@ class NotificationsState extends State<Notifications> {
           if (state is FetchNotificationsSuccess) {
             if (state.notificationdata.isEmpty) {
               return NoDataFound(
-                onTap: () => context.read<FetchNotificationsCubit>().fetchNotifications(),
+                onTap: () => context
+                    .read<FetchNotificationsCubit>()
+                    .fetchNotifications(),
               );
             }
             return _buildNotificationList(context, state);
@@ -241,8 +245,6 @@ class NotificationsState extends State<Notifications> {
                 borderRadius: BorderRadius.circular(10),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(10),
-
-
                   onTap: () {
                     setState(() => _readIds.add(id));
                     ReadNotifStore.save(_userId, _readIds);
@@ -253,9 +255,6 @@ class NotificationsState extends State<Notifications> {
                       arguments: n,
                     );
                   },
-
-
-
                   child: Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10),
@@ -264,15 +263,16 @@ class NotificationsState extends State<Notifications> {
                         width: 1,
                       ),
                     ),
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // صورة الإشعار - باستخدام أسلوبك UiUtils.getImage
                         ClipRRect(
                           clipBehavior: Clip.antiAliasWithSaveLayer,
-                          borderRadius: const BorderRadius.all(Radius.circular(15)),
+                          borderRadius:
+                              const BorderRadius.all(Radius.circular(15)),
                           child: UiUtils.getImage(
                             img, // قد يكون فارغًا؛ UiUtils عادة يتعامل مع ذلك
                             height: 53.rh(context),
@@ -298,18 +298,18 @@ class NotificationsState extends State<Notifications> {
                                           .textTheme
                                           .titleMedium!
                                           .merge(TextStyle(
-                                        fontWeight: isRead
-                                            ? FontWeight.w500
-                                            : FontWeight.w700,
-                                      )),
+                                            fontWeight: isRead
+                                                ? FontWeight.w500
+                                                : FontWeight.w700,
+                                          )),
                                     ),
                                   ),
                                   if (!isRead)
                                     Container(
                                       width: 8,
                                       height: 8,
-                                      margin:
-                                      const EdgeInsetsDirectional.only(start: 8),
+                                      margin: const EdgeInsetsDirectional.only(
+                                          start: 8),
                                       decoration: BoxDecoration(
                                         color: Theme.of(context)
                                             .colorScheme

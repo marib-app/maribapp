@@ -1,10 +1,7 @@
 import 'package:lottie/lottie.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/ui_utils.dart';
 import 'package:flutter/material.dart';
-
-import 'package:marib/utils/app_icon.dart';
 
 class NoDataFound extends StatelessWidget {
   final double? height;
@@ -27,21 +24,19 @@ class NoDataFound extends StatelessWidget {
             //   AppIcons.no_data_found,
             // ),
 
-            child:         Lottie.asset(
+            child: Lottie.asset(
               'assets/lottie/no_data.json', // Replace with your Lottie file path
               width: 200, // Adjust the width as needed
               height: 200, // Adjust the height as needed
               fit: BoxFit.fill, // Adjust the fit if necessary
             ),
-
-
           ),
           const SizedBox(
             height: 20,
           ),
           Text(mainMessage == null
-              ? "nodatafound".translate(context)
-              : mainMessage!)
+                  ? "nodatafound".translate(context)
+                  : mainMessage!)
               .size(context.font.extraLarge)
               .color(context.color.territoryColor)
               .bold(weight: FontWeight.w600),
@@ -49,8 +44,8 @@ class NoDataFound extends StatelessWidget {
             height: 14,
           ),
           Text(subMessage == null
-              ? "sorryLookingFor".translate(context)
-              : subMessage!)
+                  ? "sorryLookingFor".translate(context)
+                  : subMessage!)
               .size(context.font.larger)
               .centerAlign(),
           // Text(UiUtils.getTranslatedLabel(context, "nodatafound")),

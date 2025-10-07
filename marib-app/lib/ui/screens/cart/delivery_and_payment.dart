@@ -12,7 +12,7 @@ import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/cart/cart_cubit.dart';
 import 'package:marib/data/model/item/cart_model.dart';
 import 'package:marib/utils/hive_utils.dart';
-import 'deliveryandpayment_ui.dart';
+import 'package:marib/ui/screens/cart/deliveryandpayment_ui.dart';
 import 'package:marib/data/model/orders/order_submission_result.dart';
 import 'package:marib/utils/api.dart';
 import 'package:marib/utils/payment/bank_transfer_args.dart';
@@ -21,24 +21,19 @@ import 'package:marib/data/model/wallet/wallet_summary.dart';
 import 'package:marib/ui/screens/cart/order_step.dart';
 import 'package:marib/data/model/cart/cart_discount.dart';
 import 'package:marib/data/services/cart_shipping_quote_service.dart';
-import 'package:meta/meta.dart';
 import 'package:marib/config/feature_flags.dart';
 import 'package:marib/data/repositories/cart/addresses_repository.dart';
 import 'package:marib/utils/helper_utils.dart';
 
 import 'package:marib/data/model/orders/user_order.dart';
-import 'components/delivery_and_payment/delivery_payment_timing_selector.dart';
-
-
-
-
-
+import 'package:marib/ui/screens/cart/components/delivery_and_payment/delivery_payment_timing_selector.dart';
 
 class DeliveryandpaymentScreen extends StatefulWidget {
   const DeliveryandpaymentScreen({super.key});
 
   @override
-  State<DeliveryandpaymentScreen> createState() => _DeliveryandpaymentScreenState();
+  State<DeliveryandpaymentScreen> createState() =>
+      _DeliveryandpaymentScreenState();
 
   static Route route(RouteSettings routeSettings) {
     return BlurredRouter(builder: (_) => const DeliveryandpaymentScreen());
@@ -46,12 +41,9 @@ class DeliveryandpaymentScreen extends StatefulWidget {
 }
 
 class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
-
-
   bool _loading = true;
 
   bool _submitting = false;
-
 
   final CheckoutRepository _checkoutRepository = CheckoutRepository();
   late final CartCubit _cartCubit;
@@ -62,7 +54,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
   WalletSummary? _walletSummary;
   bool _walletAvailable = false;
   final TextEditingController _addressController =
-  TextEditingController(text: HiveUtils.getUserDetails().address ?? '');
+      TextEditingController(text: HiveUtils.getUserDetails().address ?? '');
   final TextEditingController _couponController = TextEditingController();
 
   CartState _latestCartState = const CartState();
@@ -103,26 +95,19 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
   int? _lastRequestedAddressId;
   bool _requiresAddressBlock = true;
 
-
-
   @override
   void initState() {
     super.initState();
 
-
-
-
-
     _addressesRepository =
         AddressesRepository(checkoutRepository: _checkoutRepository);
-
 
     _cartCubit = context.read<CartCubit>();
     _latestCartState = _cartCubit.state;
     _cartItems = _latestCartState.items;
     _discounts = _latestCartState.discounts;
     final _PolicyData initialPolicyData =
-    _resolvePolicyDataFromState(_latestCartState);
+        _resolvePolicyDataFromState(_latestCartState);
     _appliedCouponCodes = _extractAppliedCouponCodes(_discounts);
     _returnPolicyText = initialPolicyData.returnPolicyText;
     _updateDepositConfiguration(initialPolicyData.depositInfo);
@@ -132,8 +117,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     _addressController.addListener(() => setState(() {}));
     _loadCheckout();
   }
-
-
 
   Future<void> _applyCoupon() async {
     await context.read<CartCubit>().applyCoupon(_couponController.text);
@@ -164,7 +147,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     if (resolvedAddressId == null) {
       try {
         final List<Map<String, dynamic>> addresses =
-        await _addressesRepository.fetchAddresses();
+            await _addressesRepository.fetchAddresses();
         Map<String, dynamic>? defaultAddress;
         Map<String, dynamic>? fallbackAddress;
 
@@ -178,16 +161,15 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
           }
         }
 
-        final Map<String, dynamic>? selected = defaultAddress ?? fallbackAddress;
+        final Map<String, dynamic>? selected =
+            defaultAddress ?? fallbackAddress;
         if (selected != null) {
           final int? selectedId = _asInt(
-            selected['id'] ??
-                selected['address_id'] ??
-                selected['addressId'],
+            selected['id'] ?? selected['address_id'] ?? selected['addressId'],
           );
           if (selectedId != null) {
             final Future<CheckoutAddress?> future =
-            _checkoutRepository.fetchAddressForCheckout(selectedId);
+                _checkoutRepository.fetchAddressForCheckout(selectedId);
             if (!mounted) return;
             await _loadCheckout(
               addressId: selectedId,
@@ -201,17 +183,14 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
 
     _lastRequestedAddressId = resolvedAddressId;
 
-
     if (resolvedAddressId != null && preloadedAddressFuture == null) {
       preloadedAddressFuture =
           _checkoutRepository.fetchAddressForCheckout(resolvedAddressId);
     }
 
-    final Future<CheckoutAddress?>? eagerAddressFuture =
-        preloadedAddressFuture;
+    final Future<CheckoutAddress?>? eagerAddressFuture = preloadedAddressFuture;
     if (eagerAddressFuture != null) {
       unawaited(eagerAddressFuture.then((CheckoutAddress? address) {
-
         if (!mounted || address == null) return;
         if (_lastRequestedAddressId != resolvedAddressId) return;
 
@@ -229,9 +208,9 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     }
 
     Map<String, dynamic> _mergeStringKeyedMaps(
-        Map<String, dynamic>? a,
-        Map<String, dynamic>? b,
-        ) {
+      Map<String, dynamic>? a,
+      Map<String, dynamic>? b,
+    ) {
       final Map<String, dynamic> res = {...?a};
       if (b == null) return res;
       b.forEach((k, v) {
@@ -244,7 +223,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       });
       return res;
     }
-
 
     final _CheckoutStateSnapshot previousState = _CheckoutStateSnapshot(
       userAddress: _userAddress,
@@ -265,11 +243,10 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       codFeeDisplay: _codFeeDisplay,
     );
 
-
     final Map<String, dynamic>? shippingPaymentOverride =
-    _buildShippingPaymentPreferencePayload();
+        _buildShippingPaymentPreferencePayload();
     final String? deliveryPaymentTimingToken =
-    _stringValue(_latestCartState.deliveryPaymentTiming);
+        _stringValue(_latestCartState.deliveryPaymentTiming);
 
     setState(() {
       _loading = true;
@@ -290,46 +267,37 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       _allowPayOnDelivery = true;
       _codFeeAmount = null;
       _codFeeDisplay = null;
-
-
     });
 
     final bool depositEnabledFlag = _shouldRequestDepositDetails;
     _lastQuoteDepositEnabled = depositEnabledFlag;
 
-
     try {
       final CheckoutResult result = resolvedAddressId != null
           ? await _checkoutRepository.fetchCheckout(
-        department: _activeDepartment,
-        addressId: resolvedAddressId,
-        preloadedAddress: preloadedAddressFuture,
-        depositEnabled: depositEnabledFlag,
-
-        deliveryPaymentTiming: deliveryPaymentTimingToken,
-        shippingPaymentOverride: shippingPaymentOverride,
-
-      )
+              department: _activeDepartment,
+              addressId: resolvedAddressId,
+              preloadedAddress: preloadedAddressFuture,
+              depositEnabled: depositEnabledFlag,
+              deliveryPaymentTiming: deliveryPaymentTimingToken,
+              shippingPaymentOverride: shippingPaymentOverride,
+            )
           : await _checkoutRepository.fetchCheckout(
-        department: _activeDepartment,
-        preloadedAddress: preloadedAddressFuture,
-        depositEnabled: depositEnabledFlag,
-
-        deliveryPaymentTiming: deliveryPaymentTimingToken,
-        shippingPaymentOverride: shippingPaymentOverride,
-
-      );
-
+              department: _activeDepartment,
+              preloadedAddress: preloadedAddressFuture,
+              depositEnabled: depositEnabledFlag,
+              deliveryPaymentTiming: deliveryPaymentTimingToken,
+              shippingPaymentOverride: shippingPaymentOverride,
+            );
 
       if (!mounted) return;
-
 
       final CheckoutDeliveryInfo? deliveryInfo = result.deliveryInfo;
       final CheckoutAddress? userAddress = result.userAddress;
       final bool fallbackPathActive = !FeatureFlags.deliveryPricingEnabled;
 
       final Map<String, dynamic>? paymentSettingsMap =
-      _castToStringKeyedMap(result.paymentSettings);
+          _castToStringKeyedMap(result.paymentSettings);
 
       final bool requiresAddressBlock = _resolveRequiresAddressBlockFlag(
         blocking: _latestCartState.blocking,
@@ -350,11 +318,10 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       _cartQuantitySnapshot = _buildCartQuantitySnapshot(_cartItems);
       _suppressCartListener = true;
       final Map<String, dynamic>? incomingDeliveryQuote =
-      _castToStringKeyedMap(result.shippingQuote?.deliveryQuote);
+          _castToStringKeyedMap(result.shippingQuote?.deliveryQuote);
 
-      final Map<String, dynamic>? mergedDeliveryQuote =
-      _mergeStringKeyedMaps(_latestCartState.deliveryQuote, incomingDeliveryQuote);
-
+      final Map<String, dynamic>? mergedDeliveryQuote = _mergeStringKeyedMaps(
+          _latestCartState.deliveryQuote, incomingDeliveryQuote);
 
       _cartCubit.replaceWithSummary(
         CartSummary(
@@ -372,29 +339,29 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         _suppressCartListener = false;
       });
 
-
-
       final String? resolvedDepartment =
-      _normalizeDepartment(deliveryInfo?.department);
+          _normalizeDepartment(deliveryInfo?.department);
       if (resolvedDepartment != null && resolvedDepartment.isNotEmpty) {
         _activeDepartment = resolvedDepartment;
       } else if (_cartItems.isNotEmpty) {
-        _activeDepartment ??=
-            _normalizeDepartment(_cartItems.first.section);
+        _activeDepartment ??= _normalizeDepartment(_cartItems.first.section);
       }
 
       _banks = result.banks;
       _requiresAddressBlock = requiresAddressBlock;
-      _deliveryInfo = (!requiresAddressBlock || hasValidAddress) ? deliveryInfo : null;
+      _deliveryInfo =
+          (!requiresAddressBlock || hasValidAddress) ? deliveryInfo : null;
 
       _userAddress = addressAvailable ? userAddress : null;
       _walletSummary = result.walletSummary;
-      _walletAvailable = result.isWalletAvailable ?? result.walletSummary != null;
+      _walletAvailable =
+          result.isWalletAvailable ?? result.walletSummary != null;
       _deliveryPrice = (!requiresAddressBlock || hasValidAddress)
           ? (deliveryInfo?.feeDisplay ??
-          (deliveryInfo?.fee != null ? deliveryInfo!.fee!.toString() : null))
+              (deliveryInfo?.fee != null
+                  ? deliveryInfo!.fee!.toString()
+                  : null))
           : null;
-
 
       _shippingQuote = result.shippingQuote;
       final Map<String, dynamic>? shippingData = _shippingQuote?.data;
@@ -411,17 +378,18 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       if (shippingData != null) {
         final dynamic paymentRaw = shippingData['payment'];
         if (paymentRaw is Map) {
-          paymentData = Map<String, dynamic>.from(paymentRaw as Map);
+          paymentData = Map<String, dynamic>.from(paymentRaw);
           allowPayNow = _asBool(paymentData['allow_pay_now']) ?? allowPayNow;
-          allowPayOnDelivery =
-              _asBool(paymentData['allow_pay_on_delivery']) ?? allowPayOnDelivery;
+          allowPayOnDelivery = _asBool(paymentData['allow_pay_on_delivery']) ??
+              allowPayOnDelivery;
           codFeeDisplay = _asTrimmedString(
               paymentData['cod_fee_display'] ?? paymentData['codFeeDisplay']);
-          codFeeAmount = _asDouble(paymentData['cod_fee'] ?? paymentData['codFee']);
+          codFeeAmount =
+              _asDouble(paymentData['cod_fee'] ?? paymentData['codFee']);
         }
 
-        final bool? freeAppliedValue =
-        _asBool(shippingData['free_applied'] ?? shippingData['freeApplied']);
+        final bool? freeAppliedValue = _asBool(
+            shippingData['free_applied'] ?? shippingData['freeApplied']);
         if (freeAppliedValue != null) {
           freeApplied = freeAppliedValue;
         }
@@ -441,8 +409,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         }
       }
 
-
-
       final num? deliveryFeeValue = deliveryInfo?.fee;
       if (shippingAmount == null && deliveryFeeValue != null) {
         shippingAmount = deliveryFeeValue.toDouble();
@@ -459,7 +425,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
           final String? feeDisplay = deliveryInfo?.feeDisplay?.trim();
           if (feeDisplay != null && feeDisplay.isNotEmpty) {
             final bool hasDigits =
-            RegExp(r'[0-9\u0660-\u0669\u06F0-\u06F9]').hasMatch(feeDisplay);
+                RegExp(r'[0-9\u0660-\u0669\u06F0-\u06F9]').hasMatch(feeDisplay);
             if (!hasDigits) {
               final String lower = feeDisplay.toLowerCase();
               freeApplied = feeDisplay.contains('مجان') ||
@@ -470,15 +436,13 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         }
       }
 
-      final String? resolvedShippingDisplay =
-      _resolveShippingFeeDisplayLabel(
+      final String? resolvedShippingDisplay = _resolveShippingFeeDisplayLabel(
         shippingData: shippingData,
         freeApplied: freeApplied,
         amount: shippingAmount,
         currency: shippingCurrency,
         fallback: _deliveryPrice,
       );
-
 
       _shippingPayment = paymentData;
       _freeShippingApplied = freeApplied;
@@ -491,15 +455,15 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       _codFeeAmount = codFeeAmount;
       _codFeeDisplay = codFeeDisplay;
       final _PolicyData quotePolicyData =
-      _resolvePolicyDataFromQuote(_shippingQuote);
+          _resolvePolicyDataFromQuote(_shippingQuote);
 
       void applyQuotePolicy() {
         final String? quotePolicyText = quotePolicyData.returnPolicyText;
         if (quotePolicyText != null && quotePolicyText.trim().isNotEmpty) {
           _returnPolicyText = quotePolicyText;
         }
-        _updateDepositConfiguration(quotePolicyData.depositInfo, preserveSelection: true);
-
+        _updateDepositConfiguration(quotePolicyData.depositInfo,
+            preserveSelection: true);
       }
 
       if (mounted) {
@@ -516,7 +480,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       }
 
       if (requiresAddressBlock && !addressAvailable) {
-
         _selectedBankIndex = null;
         _selectedPaymentMethod = null;
         _addressController.clear();
@@ -532,10 +495,12 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         }
 
         _selectedPaymentMethod = _selectedBankIndex != null &&
-            _selectedBankIndex! >= 0 &&
-            _selectedBankIndex! < _banks.length
+                _selectedBankIndex! >= 0 &&
+                _selectedBankIndex! < _banks.length
             ? _banks[_selectedBankIndex!].paymentMethod
-            : (_selectedPaymentMethod == 'wallet' && _walletCanPay ? 'wallet' : null);
+            : (_selectedPaymentMethod == 'wallet' && _walletCanPay
+                ? 'wallet'
+                : null);
         if (!requiresAddressBlock && userAddress == null) {
           _addressController.clear();
         }
@@ -594,8 +559,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
           message: error.errorMessage?.toString(),
         );
       });
-
-
     } catch (_) {
       if (!mounted) return;
 
@@ -603,10 +566,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         _restoreCheckoutSnapshot(previousState);
 
         _checkoutError = _createCheckoutError();
-
       });
-
-
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -643,16 +603,14 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     if (!mounted) return;
 
     final Map<String, int> nextSnapshot =
-    _buildCartQuantitySnapshot(state.items);
+        _buildCartQuantitySnapshot(state.items);
     final bool itemsChanged =
-    !_areCartSnapshotsEqual(_cartQuantitySnapshot, nextSnapshot);
-    final String? resolvedDepartment =
-    _resolveActiveDepartment(state.items);
+        !_areCartSnapshotsEqual(_cartQuantitySnapshot, nextSnapshot);
+    final String? resolvedDepartment = _resolveActiveDepartment(state.items);
     final String? currentDepartment = _normalizeDepartment(_activeDepartment);
-    final bool shouldUpdateDepartment =
-        resolvedDepartment != currentDepartment;
-    final bool shouldTriggerReload = !_suppressCartListener &&
-        (itemsChanged || shouldUpdateDepartment);
+    final bool shouldUpdateDepartment = resolvedDepartment != currentDepartment;
+    final bool shouldTriggerReload =
+        !_suppressCartListener && (itemsChanged || shouldUpdateDepartment);
 
     final _PolicyData policyData = _resolvePolicyDataFromState(state);
     final bool resolvedRequiresAddressBlock = _resolveRequiresAddressBlockFlag(
@@ -661,19 +619,17 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       deliveryInfo: _deliveryInfo,
     );
 
-
     final Set<String> nextAppliedCoupons =
-    _extractAppliedCouponCodes(state.discounts);
+        _extractAppliedCouponCodes(state.discounts);
     CartDiscount? newlyAppliedDiscount;
     if (!state.couponInProgress && state.couponError == null) {
       final Set<String> addedCoupons =
-      nextAppliedCoupons.difference(_appliedCouponCodes);
+          nextAppliedCoupons.difference(_appliedCouponCodes);
       if (addedCoupons.isNotEmpty) {
         newlyAppliedDiscount =
             _findDiscountByNormalizedCode(state.discounts, addedCoupons.first);
       }
     }
-
 
     setState(() {
       _cartItems = state.items;
@@ -682,9 +638,9 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         _activeDepartment = resolvedDepartment;
       }
       _returnPolicyText = policyData.returnPolicyText;
-      _updateDepositConfiguration(policyData.depositInfo, preserveSelection: true);
+      _updateDepositConfiguration(policyData.depositInfo,
+          preserveSelection: true);
       _requiresAddressBlock = resolvedRequiresAddressBlock;
-
     });
 
     _cartQuantitySnapshot = nextSnapshot;
@@ -729,8 +685,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     _loadCheckout(addressId: _userAddress?.id);
   }
 
-
-
   Set<String> _extractAppliedCouponCodes(List<CartDiscount> discounts) {
     final Set<String> codes = <String>{};
     for (final CartDiscount discount in discounts) {
@@ -767,11 +721,12 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     _couponSuccessDialogVisible = true;
 
     final String rawCode = (discount.code ?? '').trim();
-    final String couponCode = rawCode.isEmpty ? 'القسيمة' : rawCode.toUpperCase();
+    final String couponCode =
+        rawCode.isEmpty ? 'القسيمة' : rawCode.toUpperCase();
     final String? discountAmount = discount.amountDisplay;
     final String message = discount.displayMessage;
     final String totalAfterDiscount =
-    _formatCurrencyAmount(_resolveRequiredPaymentAmount());
+        _formatCurrencyAmount(_resolveRequiredPaymentAmount());
 
     showDialog<void>(
       context: context,
@@ -783,7 +738,8 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
             theme.textTheme.bodyMedium ?? const TextStyle(fontSize: 14);
 
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
           title: Row(
             children: [
               Icon(Icons.check_circle_outline, color: accent, size: 28),
@@ -804,7 +760,8 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
                 'رمز القسيمة: $couponCode',
                 style: baseTextStyle.copyWith(fontWeight: FontWeight.w600),
               ),
-              if (discountAmount != null && discountAmount.trim().isNotEmpty) ...[
+              if (discountAmount != null &&
+                  discountAmount.trim().isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
                   'قيمة الخصم: $discountAmount',
@@ -820,9 +777,10 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
               Container(
                 width: double.infinity,
                 padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceVariant.withOpacity(0.6),
+                  color: theme.colorScheme.surfaceContainerHighest
+                      .withOpacity(0.6),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -830,7 +788,8 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
                   children: [
                     Text(
                       'الإجمالي بعد الخصم',
-                      style: baseTextStyle.copyWith(fontWeight: FontWeight.w600),
+                      style:
+                          baseTextStyle.copyWith(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -858,12 +817,10 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     });
   }
 
-
   _PolicyData _resolvePolicyDataFromState(CartState state) {
     final Map<String, dynamic>? depositMap =
-    _castToStringKeyedMap(state.deliveryQuote?['deposit']);
-    final Map<String, dynamic>? depositInfo =
-    _buildDepositInfoMap(depositMap);
+        _castToStringKeyedMap(state.deliveryQuote?['deposit']);
+    final Map<String, dynamic>? depositInfo = _buildDepositInfoMap(depositMap);
 
     final Map<String, dynamic>? departmentPolicy =
         _castToStringKeyedMap(state.departmentPolicy) ?? state.departmentPolicy;
@@ -885,19 +842,13 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
           state.deliveryQuote?['returnPolicyText'],
     );
 
-    final String? returnPolicyText =
-        departmentPolicyText ?? fallbackPolicyText;
-
+    final String? returnPolicyText = departmentPolicyText ?? fallbackPolicyText;
 
     return _PolicyData(
       returnPolicyText: returnPolicyText,
       depositInfo: depositInfo,
     );
   }
-
-
-
-
 
   _PolicyData _resolvePolicyDataFromQuote(CheckoutShippingQuote? quote) {
     if (quote == null) {
@@ -944,9 +895,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
 
     String? extractPolicyText(Map<String, dynamic> map) {
       final Map<String, dynamic>? policyMap = _firstMap(
-        map['department_policy'] ??
-            map['departmentPolicy'] ??
-            map['policy'],
+        map['department_policy'] ?? map['departmentPolicy'] ?? map['policy'],
       );
       if (policyMap != null) {
         depositMap ??= extractDeposit(policyMap);
@@ -1056,11 +1005,9 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     );
   }
 
-
-
   Map<String, dynamic>? _buildDepositInfoMap(
-      Map<String, dynamic>? deposit,
-      ) {
+    Map<String, dynamic>? deposit,
+  ) {
     if (deposit == null || deposit.isEmpty) {
       return null;
     }
@@ -1077,8 +1024,8 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       'due_now',
     ]);
 
-
-    final double? amountDueNowValue = _firstNumericValue(deposit, const <String>[
+    final double? amountDueNowValue =
+        _firstNumericValue(deposit, const <String>[
       'amount_due_now_value',
       'amount_due_now_numeric',
       'amount_due_now',
@@ -1088,8 +1035,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       'due_now_amount',
       'due_now',
     ]);
-
-
 
     final String? percent = _ensurePercentage(
       _firstStringValue(deposit, const <String>[
@@ -1102,8 +1047,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         'percentage',
       ]),
     );
-
-
 
     final double? ratioValue = _firstNumericValue(deposit, const <String>[
       'ratio_value',
@@ -1118,7 +1061,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       normalizedRatio = normalizedRatio / 100.0;
     }
 
-
     final String? minimum = _firstStringValue(deposit, const <String>[
       'minimum_display',
       'minimum_text',
@@ -1131,10 +1073,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       'minimum_amount',
       'minimum',
     ]);
-
-
-
-
 
     final double? minimumValue = _firstNumericValue(deposit, const <String>[
       'minimum_value',
@@ -1214,14 +1152,14 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       'remaining',
     ]);
 
-    final double? remainingBalanceValue = _firstNumericValue(deposit, const <String>[
+    final double? remainingBalanceValue =
+        _firstNumericValue(deposit, const <String>[
       'remaining_balance_value',
       'remaining_balance',
       'balance_due_later_value',
       'balance_due',
       'remaining_amount',
     ]);
-
 
     final bool? includesShipping = _firstBoolValue(
       deposit,
@@ -1346,11 +1284,12 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         normalizedRatio != null ||
         minimumValue != null;
 
-    if (!hasTextContent && !hasNumericContent && includesShipping == null &&
-        allowToggle != true && required != true && applied != true) {
-
-
-
+    if (!hasTextContent &&
+        !hasNumericContent &&
+        includesShipping == null &&
+        allowToggle != true &&
+        required != true &&
+        applied != true) {
       return null;
     }
 
@@ -1383,9 +1322,9 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
   }
 
   void _updateDepositConfiguration(
-      Map<String, dynamic>? info, {
-        bool preserveSelection = false,
-      }) {
+    Map<String, dynamic>? info, {
+    bool preserveSelection = false,
+  }) {
     if (info == null || info.isEmpty) {
       _depositInfo = null;
       _depositToggleAllowed = false;
@@ -1394,20 +1333,18 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       return;
     }
 
-    final bool? allowToggleRaw =
-        _firstBoolValue(info, const <String>[
-          'allowToggle',
-          'allow_toggle',
-          'toggle_allowed',
-          'toggleAllowed',
-          'optional',
-          'is_optional',
-          'can_toggle',
-          'canToggle',
-        ]);
+    final bool? allowToggleRaw = _firstBoolValue(info, const <String>[
+      'allowToggle',
+      'allow_toggle',
+      'toggle_allowed',
+      'toggleAllowed',
+      'optional',
+      'is_optional',
+      'can_toggle',
+      'canToggle',
+    ]);
 
-    final bool requiredRaw =
-        _firstBoolValue(info, const <String>[
+    final bool requiredRaw = _firstBoolValue(info, const <String>[
           'required',
           'is_required',
           'mandatory',
@@ -1415,10 +1352,9 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
           'force',
           'force_deposit',
         ]) ??
-            false;
+        false;
 
-    final bool? defaultEnabled =
-    _firstBoolValue(info, const <String>[
+    final bool? defaultEnabled = _firstBoolValue(info, const <String>[
       'defaultEnabled',
       'default_enabled',
       'default_on',
@@ -1426,8 +1362,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       'enabledByDefault',
     ]);
 
-    final bool? appliedRaw =
-    _firstBoolValue(info, const <String>[
+    final bool? appliedRaw = _firstBoolValue(info, const <String>[
       'applied',
       'active',
       'isApplied',
@@ -1451,7 +1386,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
 
     final bool enforcedActivation =
         requiredRaw || (!allowToggle && serverSuggestedActive);
-
 
     final bool preserve =
         preserveSelection && _depositToggleAllowed && allowToggle;
@@ -1481,7 +1415,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       '٫': '.',
       '٬': ',',
     };
-
 
     String normalized = input;
     replacements.forEach((String key, String value) {
@@ -1520,7 +1453,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     }
     return null;
   }
-
 
   bool get _shouldRequestDepositDetails =>
       _depositRequired || (_depositToggleAllowed && _depositToggleValue);
@@ -1633,7 +1565,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         : _resolveDepositCurrency(_depositInfo);
     final bool hasFraction = amount % 1 != 0;
     final String formatted =
-    hasFraction ? amount.toStringAsFixed(2) : amount.toStringAsFixed(0);
+        hasFraction ? amount.toStringAsFixed(2) : amount.toStringAsFixed(0);
     if (resolvedCurrency.isEmpty) {
       return formatted;
     }
@@ -1662,7 +1594,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
 
     final double? depositDueValue = _resolveDepositDueAmount(info);
     double resolvedDueValue =
-    ((depositDueValue ?? totalValue ?? 0) as num).toDouble();
+        ((depositDueValue ?? totalValue ?? 0) as num).toDouble();
     if (resolvedDueValue < 0) {
       resolvedDueValue = 0;
     }
@@ -1670,15 +1602,17 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     double? remainingValue = info['remainingBalanceValue'] is num
         ? (info['remainingBalanceValue'] as num).toDouble()
         : _numericValue(info['remainingBalanceValue']);
-    if (remainingValue == null && totalValue != null && depositDueValue != null) {
+    if (remainingValue == null &&
+        totalValue != null &&
+        depositDueValue != null) {
       remainingValue = totalValue - depositDueValue;
     }
     if (remainingValue != null && remainingValue < 0) {
       remainingValue = 0;
     }
 
-    String? totalDisplay = _stringValue(info['totalAmount']) ??
-        _stringValue(info['goodsValue']);
+    String? totalDisplay =
+        _stringValue(info['totalAmount']) ?? _stringValue(info['goodsValue']);
     if ((totalDisplay == null || totalDisplay.trim().isEmpty) &&
         totalValue != null) {
       totalDisplay = _formatCurrencyAmount(totalValue, currency: currency);
@@ -1691,30 +1625,30 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         depositDueValue != null) {
       dueDisplay = _formatCurrencyAmount(depositDueValue, currency: currency);
     } else if (dueDisplay == null || dueDisplay.trim().isEmpty) {
-
-
       dueDisplay = totalDisplay;
-
     } else {
-      dueDisplay = dueDisplay?.trim();
+      dueDisplay = dueDisplay.trim();
     }
 
     String? remainingDisplay = _stringValue(info['remainingBalance']);
     if ((remainingDisplay == null || remainingDisplay.trim().isEmpty) &&
-        remainingValue != null && remainingValue > 0.009) {
+        remainingValue != null &&
+        remainingValue > 0.009) {
       remainingDisplay =
           _formatCurrencyAmount(remainingValue, currency: currency);
     } else {
       remainingDisplay = remainingDisplay?.trim();
     }
 
-    if (!viewModel.containsKey('goodsValue') || viewModel['goodsValue'] == null) {
+    if (!viewModel.containsKey('goodsValue') ||
+        viewModel['goodsValue'] == null) {
       if (goodsValue != null) {
         viewModel['goodsValue'] =
             _formatCurrencyAmount(goodsValue, currency: currency);
       }
     }
-    if (!viewModel.containsKey('shippingFee') || viewModel['shippingFee'] == null) {
+    if (!viewModel.containsKey('shippingFee') ||
+        viewModel['shippingFee'] == null) {
       if (shippingValue != null) {
         viewModel['shippingFee'] =
             _formatCurrencyAmount(shippingValue, currency: currency);
@@ -1725,7 +1659,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     viewModel['applied'] = applied;
     viewModel['toggleAllowed'] = _depositToggleAllowed;
     viewModel['toggleValue'] =
-    _depositToggleAllowed ? _depositToggleValue : applied;
+        _depositToggleAllowed ? _depositToggleValue : applied;
     viewModel['toggleRequired'] = _depositRequired;
     viewModel['effectiveTotalValue'] = totalValue;
     viewModel['effectiveTotalDisplay'] = totalDisplay;
@@ -1755,15 +1689,13 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     }
   }
 
-
-
   Map<String, dynamic>? _castToStringKeyedMap(dynamic value) {
     if (value is Map<String, dynamic>) {
       return value;
     }
     if (value is Map) {
       return value.map(
-            (dynamic key, dynamic innerValue) =>
+        (dynamic key, dynamic innerValue) =>
             MapEntry<String, dynamic>(key.toString(), innerValue),
       );
     }
@@ -1839,7 +1771,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     }
     return null;
   }
-
 
   Map<String, dynamic>? _buildShippingPaymentPreferencePayload() {
     final Map<String, dynamic> source = _shippingPayment == null
@@ -1923,10 +1854,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     return payload;
   }
 
-
-
-
-
   String? _ensurePercentage(String? value) {
     if (value == null) return null;
     final String trimmed = value.trim();
@@ -1959,9 +1886,9 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
   }
 
   bool _areCartSnapshotsEqual(
-      Map<String, int> previous,
-      Map<String, int> current,
-      ) {
+    Map<String, int> previous,
+    Map<String, int> current,
+  ) {
     if (identical(previous, current)) {
       return true;
     }
@@ -1971,12 +1898,10 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     for (final MapEntry<String, int> entry in previous.entries) {
       if (current[entry.key] != entry.value) {
         return false;
-
       }
     }
     return true;
   }
-
 
   String _cartItemKey(Cart item) {
     final String baseId = item.cartItemId?.toString() ??
@@ -1988,22 +1913,19 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     final List<String> attributeParts = <String>[];
     if (attributes != null && attributes.isNotEmpty) {
       final List<String> keys =
-      attributes.keys.map((dynamic key) => key.toString()).toList()
-        ..sort();
+          attributes.keys.map((dynamic key) => key.toString()).toList()..sort();
       for (final String key in keys) {
         final dynamic value = attributes[key];
         attributeParts.add('$key:$value');
       }
     }
 
-    final List<Map<String, dynamic>>? customFields =
-        item.selectedCustomFields;
+    final List<Map<String, dynamic>>? customFields = item.selectedCustomFields;
     final List<String> customFieldParts = <String>[];
     if (customFields != null && customFields.isNotEmpty) {
       for (final Map<String, dynamic> field in customFields) {
         final List<String> fieldKeys =
-        field.keys.map((dynamic key) => key.toString()).toList()
-          ..sort();
+            field.keys.map((dynamic key) => key.toString()).toList()..sort();
         final List<String> entries = <String>[];
         for (final String key in fieldKeys) {
           final dynamic value = field[key];
@@ -2014,9 +1936,9 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     }
 
     final String attributesKey =
-    attributeParts.isEmpty ? '' : attributeParts.join(';');
+        attributeParts.isEmpty ? '' : attributeParts.join(';');
     final String customFieldsKey =
-    customFieldParts.isEmpty ? '' : customFieldParts.join(';');
+        customFieldParts.isEmpty ? '' : customFieldParts.join(';');
 
     return '$baseId::$variantId::$attributesKey::$customFieldsKey';
   }
@@ -2032,43 +1954,26 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     return trimmed;
   }
 
-
-
   Future<void> _retryCheckout() {
-
     if (!mounted) return Future<void>.value();
     setState(() {
-
-
-
       _checkoutError = null;
     });
 
     return _loadCheckout(addressId: _lastRequestedAddressId);
   }
 
-
-
-
-
-
-
-
-
   Future<double?> _fetchDistanceFromApi() {
-
     if (!_hasValidAddress) {
       return Future<double?>.value(_deliveryInfo?.distanceKm);
     }
 
     if (_distanceFuture != null) return _distanceFuture!;
 
-
     final Map<String, dynamic>? paymentOverride =
-    _buildShippingPaymentPreferencePayload();
+        _buildShippingPaymentPreferencePayload();
     final String? distancePaymentTimingToken =
-    _stringValue(_latestCartState.deliveryPaymentTiming);
-
+        _stringValue(_latestCartState.deliveryPaymentTiming);
 
     final future = _checkoutRepository
         .refreshDeliveryInfo(
@@ -2077,9 +1982,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       depositEnabled: _shouldRequestDepositDetails,
       deliveryPaymentTiming: distancePaymentTimingToken,
       shippingPaymentOverride: paymentOverride,
-
     )
-
         .then((CheckoutDeliveryInfo? info) {
       final double? distance = info?.distanceKm ?? _deliveryInfo?.distanceKm;
       if (info != null && mounted) {
@@ -2102,25 +2005,25 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     return future;
   }
 
-
   _DeliveryPaymentMeta _resolveDeliveryPaymentMeta({
     CheckoutBank? selectedBank,
   }) {
-
     final List<DeliveryPaymentTimingOption> timingOptions =
-    normalizeDeliveryPaymentTimingOptions(
+        normalizeDeliveryPaymentTimingOptions(
       _latestCartState.deliveryPaymentOptions,
     );
     final DeliveryPaymentTimingOption? selectedTimingOption =
-    findDeliveryPaymentTimingOption(
+        findDeliveryPaymentTimingOption(
       timingOptions,
       _latestCartState.deliveryPaymentTiming,
     );
 
     final String normalizedSelectedMethod =
-    (_selectedPaymentMethod ?? '').trim().toLowerCase();
+        (_selectedPaymentMethod ?? '').trim().toLowerCase();
     final String method =
-    (selectedBank?.paymentMethod ?? normalizedSelectedMethod).trim().toLowerCase();
+        (selectedBank?.paymentMethod ?? normalizedSelectedMethod)
+            .trim()
+            .toLowerCase();
     final bool walletSelected = normalizedSelectedMethod == 'wallet';
     final bool hasMethod = method.isNotEmpty;
 
@@ -2161,7 +2064,8 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       if (!payOnDelivery) {
         if (method.contains('cod') || method.contains('cash')) {
           payOnDelivery = true;
-        } else if (method.contains('manual') || method.contains('transfer') ||
+        } else if (method.contains('manual') ||
+            method.contains('transfer') ||
             method.contains('deposit')) {
           payOnDelivery = true;
         }
@@ -2181,8 +2085,12 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       if (optionValue.isNotEmpty) {
         value = optionValue;
         final String normalizedValue = optionValue.toLowerCase();
-        final bool explicitlyPayNow =
-        <String>{'now', 'pay_now', 'paynow', 'online'}.contains(normalizedValue);
+        final bool explicitlyPayNow = <String>{
+          'now',
+          'pay_now',
+          'paynow',
+          'online'
+        }.contains(normalizedValue);
         payOnDelivery = !explicitlyPayNow;
       }
       label = selectedTimingOption.label;
@@ -2236,10 +2144,10 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
 
     final CheckoutBank? selectedBank = _currentSelectedBank;
     final _DeliveryPaymentMeta paymentTimingMeta =
-    _resolveDeliveryPaymentMeta(selectedBank: selectedBank);
+        _resolveDeliveryPaymentMeta(selectedBank: selectedBank);
 
     final String normalizedMethod =
-    (_selectedPaymentMethod ?? '').trim().toLowerCase();
+        (_selectedPaymentMethod ?? '').trim().toLowerCase();
     if (normalizedMethod == 'wallet') {
       if (!_walletAvailable) {
         HelperUtils.showSnackBarMessage(
@@ -2263,7 +2171,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       if (!_walletCanPay) {
         final double requiredAmount = _resolveRequiredPaymentAmount();
         final String requiredDisplay =
-        _formatCurrencyAmount(requiredAmount, currency: _orderCurrency);
+            _formatCurrencyAmount(requiredAmount, currency: _orderCurrency);
         HelperUtils.showSnackBarMessage(
           context,
           'رصيد المحفظة غير كافٍ لإكمال المبلغ المطلوب ($requiredDisplay).',
@@ -2272,17 +2180,14 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       }
     }
 
-
     setState(() => _submitting = true);
 
     try {
       final OrderSubmissionResult result =
-      await _checkoutRepository.submitOrder(
-
+          await _checkoutRepository.submitOrder(
         cartItems: _cartItems,
         address: address,
         addressId: _userAddress?.id,
-
         deliveryInfo: _deliveryInfo,
         paymentBank: selectedBank,
         paymentMethodName: _selectedPaymentMethod,
@@ -2302,12 +2207,10 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       if (!mounted) return;
 
       final bool requiresManualTransfer =
-      _handleOrderSubmission(result, selectedBank, paymentTimingMeta);
+          _handleOrderSubmission(result, selectedBank, paymentTimingMeta);
       if (requiresManualTransfer) {
         return;
       }
-
-
     } on ApiException catch (error) {
       if (!mounted) return;
       final String message = error.errorMessage?.toString().trim() ??
@@ -2329,24 +2232,18 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     }
   }
 
-
-
-  bool _handleOrderSubmission(
-      OrderSubmissionResult result,
-      CheckoutBank? selectedBank,
-      _DeliveryPaymentMeta paymentTimingMeta) {
-
+  bool _handleOrderSubmission(OrderSubmissionResult result,
+      CheckoutBank? selectedBank, _DeliveryPaymentMeta paymentTimingMeta) {
     final List<Map<String, dynamic>> payloadCandidates =
-    _collectPayloadCandidates(result);
-    final String? orderId =
-    _resolveOrderIdentifier(result, payloadCandidates);
+        _collectPayloadCandidates(result);
+    final String? orderId = _resolveOrderIdentifier(result, payloadCandidates);
     final _ResolvedPaymentMeta paymentMeta =
-    _resolvePaymentMeta(result, payloadCandidates);
+        _resolvePaymentMeta(result, payloadCandidates);
 
     final String paymentMethod =
-    (selectedBank?.paymentMethod ?? _selectedPaymentMethod ?? '')
-        .trim()
-        .toLowerCase();
+        (selectedBank?.paymentMethod ?? _selectedPaymentMethod ?? '')
+            .trim()
+            .toLowerCase();
     final bool requiresManualTransfer = paymentTimingMeta.isManualTransfer ||
         paymentMethod == 'manual_bank' ||
         paymentMethod == 'east_yemen_bank';
@@ -2354,7 +2251,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
 
     if (requiresManualTransfer) {
       final int packageId =
-      _resolveNumericOrderId(result, orderId, payloadCandidates);
+          _resolveNumericOrderId(result, orderId, payloadCandidates);
 
       final BankTransferArgs args = BankTransferArgs(
         purpose: 'order',
@@ -2371,10 +2268,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
 
       HelperUtils.showSnackBarMessage(context, manualMessage);
 
-
-
-
-
       Navigator.of(context, rootNavigator: true).push(
         BankTransferScreen.route(
           RouteSettings(name: 'bank-transfer', arguments: args),
@@ -2386,13 +2279,11 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     final String confirmationTimingText =
         'تم إرسال طلب الدفع (${paymentTimingMeta.label})، يتم تحويلك لمتابعة الطلب.';
     final String confirmationMessage =
-    timingNote != null && timingNote.isNotEmpty
-        ? '$confirmationTimingText $timingNote'
-        : confirmationTimingText;
-
+        timingNote != null && timingNote.isNotEmpty
+            ? '$confirmationTimingText $timingNote'
+            : confirmationTimingText;
 
     HelperUtils.showSnackBarMessage(context, confirmationMessage);
-
 
     final Map<String, dynamic> orderStepArguments = <String, dynamic>{
       'order_id': orderId,
@@ -2405,14 +2296,11 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         RouteSettings(
           name: 'order-step',
           arguments: orderStepArguments,
-
         ),
       ),
-          (Route route) => route.isFirst,
+      (Route route) => route.isFirst,
     );
     return false;
-
-
   }
 
   List<Map<String, dynamic>> _collectPayloadCandidates(
@@ -2426,7 +2314,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
 
     addCandidate(result.order);
     addCandidate(result.raw);
-
 
     final OrderDetails? details = result.details;
     final UserOrder? order = details?.order;
@@ -2474,8 +2361,8 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     return collected;
   }
 
-  String? _resolveOrderIdentifier(OrderSubmissionResult result,
-      List<Map<String, dynamic>> candidates) {
+  String? _resolveOrderIdentifier(
+      OrderSubmissionResult result, List<Map<String, dynamic>> candidates) {
     final UserOrder? order = result.details?.order;
     final List<String?> directCandidates = <String?>[
       order?.id,
@@ -2529,7 +2416,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     }
 
     final int? fromCandidates =
-    _findIntValue(candidates, const <String>['order_id', 'orderId', 'id']);
+        _findIntValue(candidates, const <String>['order_id', 'orderId', 'id']);
     if (fromCandidates != null && fromCandidates > 0) {
       return fromCandidates;
     }
@@ -2539,7 +2426,9 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
 
   _ResolvedPaymentMeta _resolvePaymentMeta(
       OrderSubmissionResult result, List<Map<String, dynamic>> candidates) {
-    final List<Map<String, dynamic>> sources = <Map<String, dynamic>>[...candidates];
+    final List<Map<String, dynamic>> sources = <Map<String, dynamic>>[
+      ...candidates
+    ];
 
     void addSource(Map<String, dynamic>? map) {
       if (map == null || map.isEmpty) return;
@@ -2557,7 +2446,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     addSource(order?.paymentIntent);
 
     final double? amount = _findDoubleValue(sources, const <String>[
-
       'payable_amount',
       'payable',
       'total_amount',
@@ -2588,12 +2476,13 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     final num deliveryFee = _deliveryInfo?.fee ?? 0;
     final double fallbackAmount = (_subtotal + deliveryFee.toDouble());
 
-    final double finalAmount =
-    resolvedAmount != null && resolvedAmount > 0 ? resolvedAmount : fallbackAmount;
-    final String resolvedCurrency = (currency != null &&
-        currency.trim().isNotEmpty)
-        ? currency.trim().toUpperCase()
-        : 'SAR';
+    final double finalAmount = resolvedAmount != null && resolvedAmount > 0
+        ? resolvedAmount
+        : fallbackAmount;
+    final String resolvedCurrency =
+        (currency != null && currency.trim().isNotEmpty)
+            ? currency.trim().toUpperCase()
+            : 'SAR';
 
     return _ResolvedPaymentMeta(
       amount: finalAmount,
@@ -2629,12 +2518,10 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     return null;
   }
 
-
-
   String _resolveShippingCurrency(
-      String? override,
-      List<Map<String, dynamic>> candidates,
-      ) {
+    String? override,
+    List<Map<String, dynamic>> candidates,
+  ) {
     final String? explicit = _asTrimmedString(override);
     if (explicit != null && explicit.isNotEmpty) {
       return explicit;
@@ -2666,7 +2553,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     final double absolute = amount.abs();
     final bool hasFraction = absolute % 1 != 0;
     final String formatted =
-    hasFraction ? absolute.toStringAsFixed(2) : absolute.toStringAsFixed(0);
+        hasFraction ? absolute.toStringAsFixed(2) : absolute.toStringAsFixed(0);
     final String? trimmedCurrency = currency?.trim();
     if (trimmedCurrency == null || trimmedCurrency.isEmpty) {
       return amount < 0 ? '-$formatted' : formatted;
@@ -2687,7 +2574,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       candidates.add(shippingData);
       final dynamic paymentRaw = shippingData['payment'];
       if (paymentRaw is Map) {
-        candidates.add(Map<String, dynamic>.from(paymentRaw as Map));
+        candidates.add(Map<String, dynamic>.from(paymentRaw));
       }
     }
 
@@ -2716,8 +2603,8 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       return 'مجانًا';
     }
 
-    final double? resolvedAmount =
-        amount ?? _findDoubleValue(candidates, const <String>[
+    final double? resolvedAmount = amount ??
+        _findDoubleValue(candidates, const <String>[
           'amount',
           'fee',
           'price',
@@ -2727,7 +2614,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         ]);
     if (resolvedAmount != null) {
       final String resolvedCurrency =
-      _resolveShippingCurrency(currency, candidates);
+          _resolveShippingCurrency(currency, candidates);
       return _formatShippingAmount(resolvedAmount, currency: resolvedCurrency);
     }
 
@@ -2739,9 +2626,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     return null;
   }
 
-
-  int? _findIntValue(
-      List<Map<String, dynamic>> candidates, List<String> keys) {
+  int? _findIntValue(List<Map<String, dynamic>> candidates, List<String> keys) {
     for (final Map<String, dynamic> map in candidates) {
       for (final String key in keys) {
         if (!map.containsKey(key)) continue;
@@ -2766,7 +2651,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     return value.toString();
   }
 
-
   bool? _asBool(dynamic value) {
     if (value == null) return null;
     if (value is bool) return value;
@@ -2788,8 +2672,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     return null;
   }
 
-
-
   double? _asDouble(dynamic value) {
     if (value == null) return null;
     if (value is num) {
@@ -2799,7 +2681,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       final String trimmed = value.trim();
       if (trimmed.isEmpty) return null;
       final String normalized =
-      trimmed.replaceAll(RegExp(r'[^0-9.,-]'), '').replaceAll(',', '');
+          trimmed.replaceAll(RegExp(r'[^0-9.,-]'), '').replaceAll(',', '');
       if (normalized.isEmpty) return null;
       return double.tryParse(normalized);
     }
@@ -2817,17 +2699,12 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     if (value is String) {
       final String trimmed = value.trim();
       if (trimmed.isEmpty) return null;
-      final String digitsOnly =
-      trimmed.replaceAll(RegExp(r'[^0-9-]'), '');
+      final String digitsOnly = trimmed.replaceAll(RegExp(r'[^0-9-]'), '');
       final String candidate = digitsOnly.isEmpty ? trimmed : digitsOnly;
       return int.tryParse(candidate);
     }
     return null;
   }
-
-
-
-
 
   void _onSelectBank(int index) {
     if (index < 0 || index >= _banks.length) {
@@ -2836,10 +2713,8 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     setState(() {
       _selectedBankIndex = index;
       _selectedPaymentMethod = _banks[index].paymentMethod;
-
     });
   }
-
 
   String? _normalizeCurrencyToken(String? value) {
     final String? trimmed = value?.trim();
@@ -2909,9 +2784,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     return null;
   }
 
-
-
-
   void _onSelectWallet() {
     if (!_walletAvailable) {
       HelperUtils.showSnackBarMessage(
@@ -2921,10 +2793,12 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       return;
     }
 
-    final String? walletCurrency = _normalizeCurrencyToken(_walletSummary?.currency);
+    final String? walletCurrency =
+        _normalizeCurrencyToken(_walletSummary?.currency);
     final String? orderCurrency = _orderCurrency;
 
-    if (walletCurrency != null && orderCurrency != null &&
+    if (walletCurrency != null &&
+        orderCurrency != null &&
         walletCurrency != orderCurrency) {
       HelperUtils.showSnackBarMessage(
         context,
@@ -2937,7 +2811,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     if (!_walletCanPay) {
       final double requiredAmount = _resolveRequiredPaymentAmount();
       final String requiredDisplay =
-      _formatCurrencyAmount(requiredAmount, currency: orderCurrency);
+          _formatCurrencyAmount(requiredAmount, currency: orderCurrency);
       HelperUtils.showSnackBarMessage(
         context,
         'رصيد المحفظة غير كافٍ لإكمال المبلغ المطلوب ($requiredDisplay).',
@@ -2945,17 +2819,15 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       return;
     }
 
-
     setState(() {
       _selectedBankIndex = null;
       _selectedPaymentMethod = 'wallet';
-
     });
   }
 
-
   bool get _walletCurrencyMatchesOrder {
-    final String? walletCurrency = _normalizeCurrencyToken(_walletSummary?.currency);
+    final String? walletCurrency =
+        _normalizeCurrencyToken(_walletSummary?.currency);
     final String? orderCurrency = _orderCurrency;
     if (walletCurrency == null || orderCurrency == null) {
       return true;
@@ -2963,25 +2835,23 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     return walletCurrency == orderCurrency;
   }
 
-
   bool get _canProceed {
     final bool addressInputEmpty = _addressController.text.trim().isEmpty;
     if ((_requiresAddressBlock && (!_hasValidAddress || addressInputEmpty)) ||
         _submitting) {
-
       return false;
     }
 
     final bool hasSelection =
-    ((_selectedPaymentMethod == 'wallet' && _walletCanPay) ||
-        (_selectedBankIndex != null));
+        ((_selectedPaymentMethod == 'wallet' && _walletCanPay) ||
+            (_selectedBankIndex != null));
 
     if (!hasSelection) {
       return false;
     }
 
     final _DeliveryPaymentMeta meta =
-    _resolveDeliveryPaymentMeta(selectedBank: _currentSelectedBank);
+        _resolveDeliveryPaymentMeta(selectedBank: _currentSelectedBank);
 
     if (meta.payOnDelivery && !_allowPayOnDelivery) {
       return false;
@@ -2994,16 +2864,10 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     return true;
   }
 
-
-
-
-
   bool get _walletCanPay =>
       _walletAvailable &&
-
-          _walletCurrencyMatchesOrder &&
-
-          (_walletSummary?.balance ?? 0) >= _resolveRequiredPaymentAmount();
+      _walletCurrencyMatchesOrder &&
+      (_walletSummary?.balance ?? 0) >= _resolveRequiredPaymentAmount();
 
   CheckoutBank? get _currentSelectedBank {
     if (_selectedBankIndex == null) {
@@ -3016,14 +2880,10 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     return _banks[index];
   }
 
-
-
   double get _subtotal => _cartItems.fold<double>(
-    0,
+        0,
         (double sum, Cart item) => sum + item.subtotalAmount,
-  );
-
-
+      );
 
   bool get _hasValidAddress {
     if (!_requiresAddressBlock) {
@@ -3037,14 +2897,14 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     if (address == null || address.id == null) {
       return false;
     }
-    final Map<String, double?> coordinates =
-    _resolveAddressCoordinates(address: address, deliveryInfo: deliveryInfo);
+    final Map<String, double?> coordinates = _resolveAddressCoordinates(
+        address: address, deliveryInfo: deliveryInfo);
     if (coordinates['lat'] == null || coordinates['lng'] == null) {
       return false;
     }
 
     final double? distance =
-    _resolveAddressDistanceKm(address: address, deliveryInfo: deliveryInfo);
+        _resolveAddressDistanceKm(address: address, deliveryInfo: deliveryInfo);
     if (distance == null || distance < 0) {
       return false;
     }
@@ -3056,8 +2916,10 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     required CheckoutAddress? address,
     required CheckoutDeliveryInfo? deliveryInfo,
   }) {
-    double? lat = deliveryInfo?.userCoordinates?.lat ?? address?.coordinates?.lat;
-    double? lng = deliveryInfo?.userCoordinates?.lng ?? address?.coordinates?.lng;
+    double? lat =
+        deliveryInfo?.userCoordinates?.lat ?? address?.coordinates?.lat;
+    double? lng =
+        deliveryInfo?.userCoordinates?.lng ?? address?.coordinates?.lng;
 
     final Map<String, dynamic>? raw = address?.raw;
     if ((lat == null || lng == null) && raw != null && raw.isNotEmpty) {
@@ -3120,7 +2982,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         if (current is Map<String, dynamic>) {
           current = current[segment];
         } else if (current is Map) {
-          current = (current as Map)[segment];
+          current = (current)[segment];
         } else {
           current = null;
         }
@@ -3136,7 +2998,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     return null;
   }
 
-
   double? _readNumericFromRaw(
       Map<String, dynamic> raw, List<List<String>> candidates) {
     for (final List<String> path in candidates) {
@@ -3145,7 +3006,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         if (current is Map<String, dynamic>) {
           current = current[segment];
         } else if (current is Map) {
-          current = (current as Map)[segment];
+          current = (current)[segment];
         } else {
           current = null;
         }
@@ -3170,9 +3031,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     }
     return double.parse(value.toStringAsFixed(3));
   }
-
-
-
 
   bool _resolveRequiresAddressBlockFlag({
     Map<String, dynamic>? blocking,
@@ -3287,7 +3145,11 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       return null;
     }
 
-    for (final String key in const <String>['code', 'error_code', 'errorCode']) {
+    for (final String key in const <String>[
+      'code',
+      'error_code',
+      'errorCode'
+    ]) {
       final String? value = _asTrimmedString(map[key]);
       if (value != null && value.isNotEmpty) {
         return value;
@@ -3316,7 +3178,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     final CheckoutAddress? address = _userAddress;
     final CheckoutDeliveryInfo? deliveryInfo = _deliveryInfo;
 
-
     final Map<String, double?> coordinates = _resolveAddressCoordinates(
       address: address,
       deliveryInfo: deliveryInfo,
@@ -3324,11 +3185,9 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     final double? lat = coordinates['lat'];
     final double? lng = coordinates['lng'];
     final double? distanceKm =
-
-    _resolveAddressDistanceKm(address: address, deliveryInfo: deliveryInfo);
+        _resolveAddressDistanceKm(address: address, deliveryInfo: deliveryInfo);
 
     final user = HiveUtils.getUserDetails();
-
 
     final String controllerLabel = _addressController.text.trim();
     final String rawLabel = address?.label?.trim() ?? '';
@@ -3350,7 +3209,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       return null;
     }
 
-
     String? readFromRaw(
         Map<String, dynamic>? raw, List<List<String>> candidates) {
       if (raw == null || raw.isEmpty) return null;
@@ -3360,7 +3218,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
           return current[key];
         }
         if (current is Map) {
-          return (current as Map)[key];
+          return (current)[key];
         }
         return null;
       }
@@ -3393,7 +3251,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     }
 
     final Map<String, dynamic>? raw = address?.raw;
-
 
     String? name = address?.name?.trim();
     if (name != null && name.isEmpty) {
@@ -3432,8 +3289,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       ['contact', 'phone'],
     ]);
 
-
-
     final int? areaId = _asInt(raw?['area_id'] ?? raw?['areaId']);
     final String? street = readFromRaw(raw, const [
       ['street'],
@@ -3453,7 +3308,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
 
     return {
       if (address?.id != null) 'id': address!.id,
-
       'label': label,
       'address': label,
       'name': (name ?? user.name ?? '').trim(),
@@ -3465,7 +3319,8 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       if (address?.description != null) 'description': address!.description,
       if (areaId != null) 'area_id': areaId,
       if (street != null && street.trim().isNotEmpty) 'street': street.trim(),
-      if (building != null && building.trim().isNotEmpty) 'building': building.trim(),
+      if (building != null && building.trim().isNotEmpty)
+        'building': building.trim(),
       if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
     };
   }
@@ -3474,7 +3329,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
   Widget build(BuildContext context) {
     final CheckoutBank? selectedBank = _currentSelectedBank;
     final _DeliveryPaymentMeta paymentTimingMeta =
-    _resolveDeliveryPaymentMeta(selectedBank: selectedBank);
+        _resolveDeliveryPaymentMeta(selectedBank: selectedBank);
     final Map<String, dynamic>? addressViewModel = _addressViewModel;
     final bool hasValidAddress = _hasValidAddress;
     final bool hasAddressData = addressViewModel != null;
@@ -3487,12 +3342,10 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     final double requiredAmount = _resolveRequiredPaymentAmount();
 
     final String? walletCurrency =
-    _normalizeCurrencyToken(_walletSummary?.currency);
+        _normalizeCurrencyToken(_walletSummary?.currency);
     final String? orderCurrency = _orderCurrency;
 
-
-    final String requiredAmountDisplay =
-    _formatCurrencyAmount(requiredAmount);
+    final String requiredAmountDisplay = _formatCurrencyAmount(requiredAmount);
     return AnnotatedRegion(
       value: UiUtils.getSystemUiOverlayStyle(
         context: context,
@@ -3513,25 +3366,22 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         address: addressViewModel,
         onManageAddresses: () async {
           final int? selectedAddressId =
-          await Navigator.pushNamed<int>(context, Routes.adress);
+              await Navigator.pushNamed<int>(context, Routes.adress);
           if (!mounted) return;
           await _loadCheckout(addressId: selectedAddressId);
         },
-
-
         banks: _banks,
         selectedBankIndex: _selectedBankIndex,
         selectedPaymentMethod: _selectedPaymentMethod,
         onSelectBank: _onSelectBank,
         walletSummary: _walletSummary,
         walletAvailable: _walletAvailable,
-        walletSelected: (_selectedPaymentMethod ?? '').toLowerCase() == 'wallet',
+        walletSelected:
+            (_selectedPaymentMethod ?? '').toLowerCase() == 'wallet',
         walletEnabled: addressReady && _walletCanPay,
-
         walletCurrencyMatchesOrder: _walletCurrencyMatchesOrder,
         walletCurrency: walletCurrency,
         orderCurrency: orderCurrency,
-
         allowPayNow: _allowPayNow,
         allowPayOnDelivery: _allowPayOnDelivery,
         codFeeAmount: _codFeeAmount,
@@ -3554,27 +3404,21 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         departmentNotice: _departmentNotice,
         returnPolicyText: _returnPolicyText,
         depositInfo: depositViewModel,
-        onToggleDeposit:
-        _depositToggleAllowed ? _handleDepositToggle : null,
+        onToggleDeposit: _depositToggleAllowed ? _handleDepositToggle : null,
         deliveryInfo: addressReady ? _deliveryInfo : null,
         deliveryPrice: addressReady ? _deliveryPrice : null,
-
         canProceed: addressReady ? _canProceed : false,
         submitting: _submitting,
-
         onConfirm: _onConfirm,
-
         checkoutErrorMessage: _checkoutError?.message,
         checkoutErrorIsAddressIssue: _checkoutError?.isAddressIssue ?? false,
         checkoutErrorCanRetry: _checkoutError?.isRetryable ?? false,
         onRetryCheckout:
-        _checkoutError?.isRetryable == true ? _retryCheckout : null,
-
+            _checkoutError?.isRetryable == true ? _retryCheckout : null,
       ),
     );
   }
 }
-
 
 class _CheckoutStateSnapshot {
   const _CheckoutStateSnapshot({
@@ -3614,8 +3458,6 @@ class _CheckoutStateSnapshot {
   final String? codFeeDisplay;
 }
 
-
-
 class _PolicyData {
   const _PolicyData({
     this.returnPolicyText,
@@ -3624,8 +3466,7 @@ class _PolicyData {
 
   final String? returnPolicyText;
   final Map<String, dynamic>? depositInfo;
- }
-
+}
 
 class _CheckoutLoadError {
   const _CheckoutLoadError({
@@ -3633,7 +3474,6 @@ class _CheckoutLoadError {
     this.isRetryable = false,
     this.isAddressIssue = false,
     this.code,
-
   });
   final String? code;
 
@@ -3649,7 +3489,6 @@ _CheckoutLoadError _createCheckoutError({
   bool? isAddressIssueOverride,
   bool? isRetryableOverride,
 }) {
-
   final String resolvedMessage = () {
     final String? trimmed = message?.trim();
     if (trimmed == null || trimmed.isEmpty) {
@@ -3675,19 +3514,13 @@ _CheckoutLoadError _createCheckoutError({
     isRetryable: isRetryable,
     isAddressIssue: isAddressIssue,
     code: code,
-
   );
 }
 
-
-
-
 @visibleForTesting
-dynamic debugCreateCheckoutError({String? message, int? statusCode, String? code}) =>
+dynamic debugCreateCheckoutError(
+        {String? message, int? statusCode, String? code}) =>
     _createCheckoutError(message: message, statusCode: statusCode, code: code);
-
-
-
 
 class _ResolvedPaymentMeta {
   const _ResolvedPaymentMeta({

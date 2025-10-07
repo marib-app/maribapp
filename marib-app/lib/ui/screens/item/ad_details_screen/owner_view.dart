@@ -1,66 +1,21 @@
 // lib/ui/screens/item/owner_view.dart
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/ui/theme/theme.dart';
 
 // أجزاء من شاشة التفاصيل العامة التي سنعيد استخدامها
-import 'AdImagesHeader.dart';
-import 'AdInfoSection.dart';
-import 'Description.dart';
-import 'Custom_Fields_Widget.dart';
-import 'map_preview_box.dart';
-import 'bottom_buttons.dart';
-import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/custom_field.dart' show CustomFieldBuilder;
+import 'package:marib/ui/screens/item/ad_details_screen/AdImagesHeader.dart';
+import 'package:marib/ui/screens/item/ad_details_screen/AdInfoSection.dart';
+import 'package:marib/ui/screens/item/ad_details_screen/Description.dart';
+import 'package:marib/ui/screens/item/ad_details_screen/Custom_Fields_Widget.dart';
+import 'package:marib/ui/screens/item/ad_details_screen/map_preview_box.dart';
+import 'package:marib/ui/screens/item/ad_details_screen/bottom_buttons.dart';
+import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/custom_field.dart'
+    show CustomFieldBuilder;
 
-import 'owner_action_bar.dart';
-import 'package:marib/app/routes.dart';
 import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/custom_field.dart';
-import 'package:marib/utils/hive_utils.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
-import 'dart:ui' as ui;
-import 'AdImagesHeader.dart';
-import 'AdInfoSection.dart';
-import 'Description.dart';
-import 'Custom_Fields_Widget.dart';
-import 'Seller_Profile.dart';
-import 'map_preview_box.dart';
-import 'add_cart_sheet.dart';
-import 'bottom_buttons.dart';
-import 'owner_view.dart';
-import 'AdImagesHeader.dart';
-import 'ad_custom_fields.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'AdImagesHeader.dart';
-
-import 'ad_details_screen.dart';
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // ==============================
 // شريحة إضافات المالك (مثلاً: تمييز الإعلان)
@@ -107,12 +62,9 @@ class _StatChip extends StatelessWidget {
   }
 }
 
-
-
 // ==============================
 // الصف العلوي: إحصائيات + قائمة خيارات المالك
 // ==============================
-
 
 class OwnerStatsActions extends StatelessWidget {
   final ItemModel model;
@@ -144,37 +96,62 @@ class OwnerStatsActions extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6),
       child: Row(
         children: [
-          _StatChip(icon: Icons.remove_red_eye_rounded, text: (views ?? 0).toString()),
+          _StatChip(
+              icon: Icons.remove_red_eye_rounded,
+              text: (views ?? 0).toString()),
           const SizedBox(width: 8),
-          _StatChip(icon: Icons.favorite_rounded, text: (likes ?? 0).toString()),
+          _StatChip(
+              icon: Icons.favorite_rounded, text: (likes ?? 0).toString()),
           const Spacer(),
           PopupMenuButton<String>(
             tooltip: 'خيارات',
             onSelected: (v) {
               switch (v) {
-                case 'edit':    if (onEdit != null) onEdit!(); break;
-                case 'delete':  if (onDelete != null) onDelete!(); break;
-                case 'toggle':  if (onToggleStatus != null) onToggleStatus!(); break;
-                case 'share':   if (onShare != null) onShare!(); break;
+                case 'edit':
+                  if (onEdit != null) onEdit!();
+                  break;
+                case 'delete':
+                  if (onDelete != null) onDelete!();
+                  break;
+                case 'toggle':
+                  if (onToggleStatus != null) onToggleStatus!();
+                  break;
+                case 'share':
+                  if (onShare != null) onShare!();
+                  break;
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(value: 'edit',   child: ListTile(leading: Icon(Icons.edit),   title: Text('تعديل الإعلان'))),
-              const PopupMenuItem(value: 'delete', child: ListTile(leading: Icon(Icons.delete_outline), title: Text('حذف الإعلان'))),
+              const PopupMenuItem(
+                  value: 'edit',
+                  child: ListTile(
+                      leading: Icon(Icons.edit), title: Text('تعديل الإعلان'))),
+              const PopupMenuItem(
+                  value: 'delete',
+                  child: ListTile(
+                      leading: Icon(Icons.delete_outline),
+                      title: Text('حذف الإعلان'))),
               PopupMenuItem(
                 value: 'toggle',
                 child: ListTile(
-                  leading: Icon(isActive ? Icons.pause_circle_outline : Icons.play_circle_outline),
+                  leading: Icon(isActive
+                      ? Icons.pause_circle_outline
+                      : Icons.play_circle_outline),
                   title: Text(isActive ? 'إيقاف مؤقت' : 'تفعيل'),
                 ),
               ),
-              const PopupMenuItem(value: 'share',  child: ListTile(leading: Icon(Icons.share),  title: Text('مشاركة'))),
+              const PopupMenuItem(
+                  value: 'share',
+                  child: ListTile(
+                      leading: Icon(Icons.share), title: Text('مشاركة'))),
             ],
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(.2)),
+                border: Border.all(
+                    color:
+                        Theme.of(context).colorScheme.outline.withOpacity(.2)),
               ),
               child: Row(children: [
                 Text('خيارات', style: text.bodyMedium),
@@ -189,14 +166,9 @@ class OwnerStatsActions extends StatelessWidget {
   }
 }
 
-
-
-
-
 // ==============================
 // الـ Bottom bar الخاص بالمالك
 // ==============================
-
 
 class OwnerViewBar extends StatelessWidget {
   final ItemModel model;
@@ -210,24 +182,20 @@ class OwnerViewBar extends StatelessWidget {
   /// كولباك لتحديث moreDetailDynamicFields في الشاشة الأب (Stateful)
   final void Function(List<CustomFieldBuilder>) onUpdateFields;
 
-
   final Future<bool> Function()? onPausePressed;
   final Future<bool> Function()? onResumePressed;
 
   const OwnerViewBar({
     super.key,
-
-
     required this.model,
     required this.moreDetailDynamicFields,
     required this.onRenewPressed,
     this.isBusy = false,
-    required this.isAddedByMe,      // ✅ أضفناه كـ required
-    required this.onUpdateFields,   // ✅ موجود ومطلوب
+    required this.isAddedByMe, // ✅ أضفناه كـ required
+    required this.onUpdateFields, // ✅ موجود ومطلوب
 
     this.onPausePressed,
     this.onResumePressed,
-
   });
 
   @override
@@ -246,7 +214,6 @@ class OwnerViewBar extends StatelessWidget {
       onResumePressed: onResumePressed,
     );
 
-
     return SafeArea(
       // خليه يغطي العرض كامل، بدون حواف جانبية
       left: false,
@@ -255,12 +222,12 @@ class OwnerViewBar extends StatelessWidget {
       top: false,
       child: isBusy
           ? const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: SizedBox(
-          height: 46,
-          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-        ),
-      )
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: SizedBox(
+                height: 46,
+                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+              ),
+            )
           : bar,
     );
   }
@@ -270,7 +237,6 @@ class OwnerViewBar extends StatelessWidget {
 // الجسم الكامل لواجهة المالك
 // ==============================
 class OwnerAdDetailsBody extends StatelessWidget {
-
   final void Function(String key, dynamic value) addCloudDataFn; // 👈 جديد
 
   final ItemModel model;
@@ -303,15 +269,14 @@ class OwnerAdDetailsBody extends StatelessWidget {
     required this.addCloudDataFn, // 👈 جديد
 
     this.featuredSection,
-
-
   });
 
   @override
   Widget build(BuildContext context) {
-    final adInfo = AdInfoSection(context: context, model: model, isAddedByMe: true);
-    final views    = model.views ?? 0;
-    final likes    = model.totalLikes ?? 0;
+    final adInfo =
+        AdInfoSection(context: context, model: model, isAddedByMe: true);
+    final views = model.views ?? 0;
+    final likes = model.totalLikes ?? 0;
 
     // شريط الإحصائيات بعرض كامل
     Widget _statsBar(BuildContext context) {
@@ -343,25 +308,34 @@ class OwnerAdDetailsBody extends StatelessWidget {
           final isNarrow = c.maxWidth < 360;
           return isNarrow
               ? Column(
-            children: [
-              SizedBox(width: double.infinity, child: chip(Icons.remove_red_eye_rounded, views.toString())),
-              const SizedBox(height: 8),
-              SizedBox(width: double.infinity, child: chip(Icons.favorite_rounded, likes.toString())),
-            ],
-          )
+                  children: [
+                    SizedBox(
+                        width: double.infinity,
+                        child: chip(
+                            Icons.remove_red_eye_rounded, views.toString())),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                        width: double.infinity,
+                        child: chip(Icons.favorite_rounded, likes.toString())),
+                  ],
+                )
               : Row(
-            children: [
-              Expanded(child: chip(Icons.remove_red_eye_rounded, views.toString())),
-              const SizedBox(width: 10),
-              Expanded(child: chip(Icons.favorite_rounded, likes.toString())),
-            ],
-          );
+                  children: [
+                    Expanded(
+                        child: chip(
+                            Icons.remove_red_eye_rounded, views.toString())),
+                    const SizedBox(width: 10),
+                    Expanded(
+                        child: chip(Icons.favorite_rounded, likes.toString())),
+                  ],
+                );
         }),
       );
     }
 
     return CustomScrollView(
-      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+      physics:
+          const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       slivers: [
         // السلايدر مع تكبير عند السحب للأسفل (بدون blur)
         SliverAppBar(
@@ -412,7 +386,6 @@ class OwnerAdDetailsBody extends StatelessWidget {
                 // السعر + الحالة
                 adInfo.priceAndStatus(),
 
-
                 // سبب الرفض (إن وجد)
                 if (model.rejectedReason?.isNotEmpty == true)
                   RejectedReasonCard(reason: model.rejectedReason!),
@@ -430,9 +403,13 @@ class OwnerAdDetailsBody extends StatelessWidget {
                     width: MediaQuery.of(context).size.width / 2 - 20,
                   ),
 
-                Divider(thickness: 1, color: context.color.textDefaultColor.withOpacity(0.1)),
+                Divider(
+                    thickness: 1,
+                    color: context.color.textDefaultColor.withOpacity(0.1)),
                 AdDescriptionSection(description: model.description),
-                Divider(thickness: 1, color: context.color.textDefaultColor.withOpacity(0.1)),
+                Divider(
+                    thickness: 1,
+                    color: context.color.textDefaultColor.withOpacity(0.1)),
 
                 // الخريطة
                 if (model.latitude != null && model.longitude != null)
@@ -450,16 +427,11 @@ class OwnerAdDetailsBody extends StatelessWidget {
       ],
     );
   }
-
-
 }
-
-
 
 // ==============================
 // ويدجت سبب الرفض (تصميم أجمل)
 // ==============================
-
 
 class RejectedReasonCard extends StatelessWidget {
   final String reason;
@@ -468,7 +440,7 @@ class RejectedReasonCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final t  = Theme.of(context).textTheme;
+    final t = Theme.of(context).textTheme;
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 14),

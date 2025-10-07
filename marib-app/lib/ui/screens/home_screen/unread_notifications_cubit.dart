@@ -1,9 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/model/notification_data.dart';
-import 'package:marib/ui/screens/settings/notifications.dart' show ReadNotifStore; // للوصول لمخزن القراءة
+// للوصول لمخزن القراءة
 import 'package:shared_preferences/shared_preferences.dart';
-
-
 
 class UnreadNotificationsCubit extends Cubit<int> {
   final String userId;
@@ -29,22 +27,12 @@ class UnreadNotificationsCubit extends Cubit<int> {
 
   /// تعليم عنصر كمقروء وتخفيض العدّاد محليًا
   Future<void> markAsRead(String id) async {
-    final set = await ReadNotifStore.load(userId)..add(id);
+    final set = await ReadNotifStore.load(userId)
+      ..add(id);
     await ReadNotifStore.save(userId, set);
     if (state > 0) emit(state - 1);
   }
 }
-
-
-
-
-
-
-
-
-
-
-
 
 /// مسؤول عن حفظ/تحميل حالة الإشعارات المقروءة لكل مستخدم
 class ReadNotifStore {
@@ -65,13 +53,15 @@ class ReadNotifStore {
 
   /// إضافة إشعار كمقروء
   static Future<void> add(String userId, String id) async {
-    final set = await load(userId)..add(id);
+    final set = await load(userId)
+      ..add(id);
     await save(userId, set);
   }
 
   /// إزالة إشعار من المقروء
   static Future<void> remove(String userId, String id) async {
-    final set = await load(userId)..remove(id);
+    final set = await load(userId)
+      ..remove(id);
     await save(userId, set);
   }
 

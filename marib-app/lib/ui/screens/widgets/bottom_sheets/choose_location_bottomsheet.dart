@@ -43,7 +43,7 @@ class ChooseLocatonBottomSheetState extends State<ChooseLocatonBottomSheet> {
        we wait, If we try to write in that field again so timer is already active and it is
         on 300 miliseconds , Now we have not completed our writing and API will call on 500 miliseconds
          , To prevent this we cancel timer when we write again in that field
-     *//*
+     */ /*
 
       if (delayTimer?.isActive ?? false) delayTimer?.cancel();
 

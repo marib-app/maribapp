@@ -45,8 +45,7 @@ class MyReviewModel {
     deletedAt = json['deleted_at'];
     reportStatus = json['report_status'];
     reportReason = json['report_reason'];
-    seller =
-    json['seller'] != null ? Seller.fromJson(json['seller']) : null;
+    seller = json['seller'] != null ? Seller.fromJson(json['seller']) : null;
     buyer = json['buyer'] != null ? Buyer.fromJson(json['buyer']) : null;
     item = json['item'] != null ? Item.fromJson(json['item']) : null;
     isExpanded = json['is_expanded'] ?? false; // Deserialize isExpanded

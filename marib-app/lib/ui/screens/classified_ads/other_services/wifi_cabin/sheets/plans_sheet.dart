@@ -257,8 +257,8 @@ class _PlansSheetState extends State<_PlansSheet> {
     final messenger = ScaffoldMessenger.of(context);
 
     if (result.isPending) {
-      final String message = result.message ??
-          'تم إرسال طلب الدفع. سنخطرك عند اكتمال المعالجة.';
+      final String message =
+          result.message ?? 'تم إرسال طلب الدفع. سنخطرك عند اكتمال المعالجة.';
       messenger.showSnackBar(SnackBar(content: Text(message)));
       unawaited(widget.onRefreshPurchases(force: true));
       return;

@@ -1,4 +1,4 @@
-﻿class SellerRatingsModel {
+class SellerRatingsModel {
   Seller? seller;
   Ratings? ratings;
 
@@ -7,7 +7,7 @@
   SellerRatingsModel.fromJson(Map<String, dynamic> json) {
     seller = json['seller'] != null ? Seller.fromJson(json['seller']) : null;
     ratings =
-    json['ratings'] != null ? Ratings.fromJson(json['ratings']) : null;
+        json['ratings'] != null ? Ratings.fromJson(json['ratings']) : null;
   }
 
   Map<String, dynamic> toJson() {
@@ -104,6 +104,7 @@ class Ratings {
     return data;
   }
 }
+
 class UserRatings {
   int? id;
   int? sellerId;
@@ -189,7 +190,6 @@ class UserRatings {
     );
   }
 }
-
 
 /*class UserRatings {
   int? id;

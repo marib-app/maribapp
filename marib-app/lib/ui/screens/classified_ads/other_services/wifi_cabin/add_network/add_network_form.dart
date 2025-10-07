@@ -100,14 +100,15 @@ abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
           onChanged: _isSubmitting
               ? null
               : (value) {
-            setState(() => _coverage = value);
-          },
+                  setState(() => _coverage = value);
+                },
         ),
       ],
     );
   }
 
-  Widget buildSubmitButton({EdgeInsetsGeometry padding = const EdgeInsets.all(16)}) {
+  Widget buildSubmitButton(
+      {EdgeInsetsGeometry padding = const EdgeInsets.all(16)}) {
     return Padding(
       padding: padding,
       child: SizedBox(
@@ -117,10 +118,10 @@ abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
           onPressed: _isSubmitting ? null : _onSubmit,
           child: _isSubmitting
               ? const SizedBox(
-            width: 22,
-            height: 22,
-            child: CircularProgressIndicator(strokeWidth: 2.5),
-          )
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2.5),
+                )
               : const Text('إرسال الطلب'),
         ),
       ),
@@ -157,8 +158,7 @@ abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
     setState(() => _isSubmitting = true);
     try {
       final double coverage = double.parse(_coverage.toStringAsFixed(1));
-      final Map<String, dynamic> response =
-      await repository.createOwnerRequest(
+      final Map<String, dynamic> response = await repository.createOwnerRequest(
         name: name,
         latitude: _selected!.latitude,
         longitude: _selected!.longitude,

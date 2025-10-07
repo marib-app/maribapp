@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:marib/utils/app_icon.dart';
 
-import 'delivery_address_section.dart';
+import 'package:marib/ui/screens/cart/components/delivery_and_payment/delivery_address_section.dart';
 
 /// تبويب يعرض عنوان التوصيل داخل عنصر قابل للتمدد مع الأيقونة المناسبة.
 class CartDeliveryAddressTab extends StatelessWidget {
@@ -53,12 +53,14 @@ class CartDeliveryAddressTab extends StatelessWidget {
         child: ExpansionTile(
           initiallyExpanded: initiallyExpanded,
           tilePadding: const EdgeInsets.symmetric(horizontal: 16),
-          leading: SvgPicture.asset(AppIcons.locationIcon, width: 24, height: 24),
+          leading:
+              SvgPicture.asset(AppIcons.locationIcon, width: 24, height: 24),
           title: const Text(
             'العنوان',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
-          childrenPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          childrenPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           children: [
             DeliveryAddressSection(
               loading: loading,

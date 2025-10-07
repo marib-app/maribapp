@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-
-import 'fullscreen_gallery.dart';
+import 'package:marib/ui/screens/item/ad_details_screen/fullscreen_gallery.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
-
-
 
 class AdImagesHeaderShimmer extends StatelessWidget {
   const AdImagesHeaderShimmer({super.key});
@@ -27,7 +24,7 @@ class AdImagesHeaderShimmer extends StatelessWidget {
             child: SafeArea(
               child: Padding(
                 padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -85,8 +82,6 @@ class _HeaderCircleShimmer extends StatelessWidget {
     );
   }
 }
-
-
 
 class AdImageHeader extends StatefulWidget {
   final List<String> images;
@@ -203,15 +198,13 @@ class _AdImageHeaderState extends State<AdImageHeader> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      FullscreenGalleryPage(
-                        images: widget.images,
-                        initialIndex: currentImageIndex,
-                        heroTagBuilder: (index) =>
-                        widget.modelId != null
-                            ? 'ad-image-${widget.modelId}-$index'
-                            : 'ad-image-$index',
-                      ),
+                  builder: (context) => FullscreenGalleryPage(
+                    images: widget.images,
+                    initialIndex: currentImageIndex,
+                    heroTagBuilder: (index) => widget.modelId != null
+                        ? 'ad-image-${widget.modelId}-$index'
+                        : 'ad-image-$index',
+                  ),
                 ),
               );
             },
@@ -241,15 +234,13 @@ class _AdImageHeaderState extends State<AdImageHeader> {
               widget.onReport != null ||
               widget.likeButton != null)
             Positioned(
-              top: 0, left: 0, right: 0,
+              top: 0,
+              left: 0,
+              right: 0,
               child: SafeArea(
                 child: _buildTopButtons(context),
               ),
             ),
-
-
-
-
           if (widget.images.length > 1)
             Positioned(
               bottom: 20,
@@ -273,10 +264,7 @@ class _AdImageHeaderState extends State<AdImageHeader> {
           height: 8,
           decoration: BoxDecoration(
             color: currentImageIndex == index
-                ? Theme
-                .of(context)
-                .colorScheme
-                .primary
+                ? Theme.of(context).colorScheme.primary
                 : Colors.white.withOpacity(0.7),
             borderRadius: BorderRadius.circular(4),
           ),
@@ -318,7 +306,7 @@ class _AdImageHeaderState extends State<AdImageHeader> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
-        textDirection: TextDirection.ltr,            // 👈 يسار دائمًا
+        textDirection: TextDirection.ltr, // 👈 يسار دائمًا
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -332,8 +320,6 @@ class _AdImageHeaderState extends State<AdImageHeader> {
             ),
             const SizedBox(width: 8),
           ],
-
-
           if (widget.onShare != null) ...[
             CircleAvatar(
               backgroundColor: Colors.black54,
@@ -372,16 +358,9 @@ class _AdImageHeaderState extends State<AdImageHeader> {
     );
   }
 
-
-
-
-
-
 // دالة مساعدة لبناء مؤشر الصور (يمكن استخدامها خارجيًا)
   Widget buildPageIndicator(BuildContext context, int total, int current) {
-    final cs = Theme
-        .of(context)
-        .colorScheme;
+    final cs = Theme.of(context).colorScheme;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(total, (i) {

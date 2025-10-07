@@ -4,13 +4,10 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/app/routes.dart'; // لـ Routes.selectCategoryScreen
+// لـ Routes.selectCategoryScreen
 import 'package:flutter_bloc/flutter_bloc.dart'; // لـ context.read(...)
 import 'package:marib/data/cubits/subscription/fetch_user_package_limit_cubit.dart'; // نوع الكيوبت
-import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/ui/screens/chat/chat_badge_controller.dart';
-
-
 
 // ===========================
 // تبويبات واضحة بدل int
@@ -19,8 +16,6 @@ enum MainTab { home, chat, transactions, more }
 
 typedef TabSelect = void Function(MainTab tab);
 typedef CenterActionBuilder = Widget Function(BuildContext context);
-
-
 
 // ===========================
 // تعريف عنصر ناف بار
@@ -62,7 +57,6 @@ class MainActivityUI extends StatelessWidget {
     required MainTab currentTab,
     required int pageCount,
     required IndexedWidgetBuilder pageBuilder,
-
     required TabSelect onTabSelected,
     bool maintenanceOn = false,
     Widget? maintenanceOverlay,
@@ -181,18 +175,18 @@ class MainActivityUI extends StatelessWidget {
       // ✅ زر الإضافة العائم (المنتصف) — مطابق للشكل السابق مع إصلاح الـHero
       floatingActionButton: Transform.translate(
         offset: const Offset(0, 5),
-        child: BlocBuilder<FetchUserPackageLimitCubit, FetchUserPackageLimitState>(
+        child:
+            BlocBuilder<FetchUserPackageLimitCubit, FetchUserPackageLimitState>(
           buildWhen: (prev, curr) => prev.runtimeType != curr.runtimeType,
           builder: (context, state) {
             final busy = state is FetchUserPackageLimitInProgress;
 
-            final Widget action =
-                _centerActionBuilderCfg?.call(context) ?? _buildDefaultCenterAction(context, busy);
+            final Widget action = _centerActionBuilderCfg?.call(context) ??
+                _buildDefaultCenterAction(context, busy);
 
             return AbsorbPointer(
               absorbing: busy, // يمنع النقرات المكررة أثناء التحميل
               child: action,
-
             );
           },
         ),
@@ -204,27 +198,27 @@ class MainActivityUI extends StatelessWidget {
       bottomNavigationBar: _maintenanceOnCfg
           ? null
           : ValueListenableBuilder<int>(
-        valueListenable: ChatBadgeController.totalUnread,
-        builder: (context, totalUnread, _) {
-          final badges = <MainTab, String>{};
+              valueListenable: ChatBadgeController.totalUnread,
+              builder: (context, totalUnread, _) {
+                final badges = <MainTab, String>{};
 
-          if (totalUnread > 0) {
-            final chatBadge = totalUnread > 99 ? '99+' : '$totalUnread';
-            badges[MainTab.chat] = chatBadge;
-          }
+                if (totalUnread > 0) {
+                  final chatBadge = totalUnread > 99 ? '99+' : '$totalUnread';
+                  badges[MainTab.chat] = chatBadge;
+                }
 
-          return AnimatedBottomBar(
-            items: _navItemsCfg,
-            current: _currentTabCfg,
-            onSelect: _onTabSelectedCfg,
-            centerActionBuilder:
-            _centerActionBuilderCfg ?? (ctx) => const SizedBox.shrink(),
-            background: colors.secondaryColor,
-            showTopShadow: true,
-            badges: badges,
-          );
-        },
-      ),
+                return AnimatedBottomBar(
+                  items: _navItemsCfg,
+                  current: _currentTabCfg,
+                  onSelect: _onTabSelectedCfg,
+                  centerActionBuilder: _centerActionBuilderCfg ??
+                      (ctx) => const SizedBox.shrink(),
+                  background: colors.secondaryColor,
+                  showTopShadow: true,
+                  badges: badges,
+                );
+              },
+            ),
 
       body: Stack(
         children: [
@@ -259,31 +253,30 @@ class MainActivityUI extends StatelessWidget {
             ),
           ),
 
-          if (_maintenanceOnCfg) (_maintenanceOverlayCfg ?? const SizedBox.shrink()),
+          if (_maintenanceOnCfg)
+            (_maintenanceOverlayCfg ?? const SizedBox.shrink()),
         ],
       ),
     );
   }
 
-
-
   Widget _buildDefaultCenterAction(BuildContext context, bool busy) {
     final Widget icon = busy
         ? const SizedBox(
-      key: ValueKey('spinner'),
-      width: 24,
-      height: 24,
-      child: CircularProgressIndicator(
-        strokeWidth: 2.6,
-        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-      ),
-    )
+            key: ValueKey('spinner'),
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.6,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+          )
         : const Icon(
-      Icons.add,
-      key: ValueKey('plus'),
-      size: 32,
-      color: Colors.white,
-    );
+            Icons.add,
+            key: ValueKey('plus'),
+            size: 32,
+            color: Colors.white,
+          );
 
     return Semantics(
       button: true,
@@ -298,16 +291,16 @@ class MainActivityUI extends StatelessWidget {
         onPressed: busy
             ? null
             : () {
-          HapticFeedback.selectionClick();
-          UiUtils.checkUser(
-            context: context,
-            onNotGuest: () {
-              context
-                  .read<FetchUserPackageLimitCubit>()
-                  .fetchUserPackageLimit(packageType: "item_listing");
-            },
-          );
-        },
+                HapticFeedback.selectionClick();
+                UiUtils.checkUser(
+                  context: context,
+                  onNotGuest: () {
+                    context
+                        .read<FetchUserPackageLimitCubit>()
+                        .fetchUserPackageLimit(packageType: "item_listing");
+                  },
+                );
+              },
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 180),
           switchInCurve: Curves.easeOut,
@@ -319,14 +312,11 @@ class MainActivityUI extends StatelessWidget {
   }
 }
 
-
-
-
 class _FixedCenterDockedFabLocation extends FloatingActionButtonLocation {
   const _FixedCenterDockedFabLocation();
 
   static const double _bottomBarHeight = 195; // 👈 كما في كودك
-  static const double _extraYOffset = 8;     // 👈 كما في كودك
+  static const double _extraYOffset = 8; // 👈 كما في كودك
 
   @override
   Offset getOffset(ScaffoldPrelayoutGeometry geometry) {
@@ -337,10 +327,10 @@ class _FixedCenterDockedFabLocation extends FloatingActionButtonLocation {
     final double dx = (scaffoldSize.width - fabSize.width) / 2;
 
     // Y: أعلى الشريط السفلي بنصف ارتفاع الـ FAB + إزاحة بسيطة
-    final double dy = scaffoldSize.height
-        - _bottomBarHeight / 2
-        - fabSize.height / 2
-        + _extraYOffset;
+    final double dy = scaffoldSize.height -
+        _bottomBarHeight / 2 -
+        fabSize.height / 2 +
+        _extraYOffset;
 
     return Offset(dx, dy);
   }
@@ -362,7 +352,7 @@ class AnimatedBottomBar extends StatelessWidget {
     this.background,
     this.showTopShadow = true,
     this.badges = const <MainTab, String>{},
-    });
+  });
 
   final List<MainNavItem> items; // 4 عناصر (يمين 2 ويسار 2)
   final MainTab current;
@@ -390,12 +380,12 @@ class AnimatedBottomBar extends StatelessWidget {
           color: background ?? colors.secondaryColor,
           boxShadow: showTopShadow
               ? [
-            BoxShadow(
-              color: Colors.black.withOpacity(.08),
-              offset: const Offset(0, -2),
-              blurRadius: 2,
-            )
-          ]
+                  BoxShadow(
+                    color: Colors.black.withOpacity(.08),
+                    offset: const Offset(0, -2),
+                    blurRadius: 2,
+                  )
+                ]
               : null,
         ),
         child: SizedBox(
@@ -503,8 +493,8 @@ class _NavItemTile extends StatelessWidget {
                       duration: const Duration(milliseconds: 200),
                       scale: 1.0,
                       child: Container(
-                        padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: selectedColor,
                           borderRadius: BorderRadius.circular(999),

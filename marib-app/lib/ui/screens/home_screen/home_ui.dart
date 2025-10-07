@@ -26,9 +26,6 @@ import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/helper_utils.dart';
 
-import 'unread_notifications_cubit.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-
 // ملاحظة: ProfileHeaderUI يدعم welcomeText و welcomeColor و shrinkFactor.
 
 class HomeScreenUI extends StatelessWidget {
@@ -100,135 +97,134 @@ class HomeScreenUI extends StatelessWidget {
 
     // بيانات المستخدم الحقيقية من التخزين
     return ValueListenableBuilder<Box<dynamic>>(
-        valueListenable: Hive.box(HiveKeys.userDetailsBox).listenable(),
-        builder: (context, _, __) {
-          final details = HiveUtils.getUserDetails();
-          final bool auth = HiveUtils.isUserAuthenticated();
+      valueListenable: Hive.box(HiveKeys.userDetailsBox).listenable(),
+      builder: (context, _, __) {
+        final details = HiveUtils.getUserDetails();
+        final bool auth = HiveUtils.isUserAuthenticated();
 
-          final String accountName = (() {
-            if (paramName.isEmpty || (idStr.isNotEmpty && paramName == idStr)) {
-              final dn = (details.name ?? '').trim();
-              if (dn.isNotEmpty && dn != idStr) return dn;
-              return '  زائر';
-            }
-            return paramName;
-          })();
+        final String accountName = (() {
+          if (paramName.isEmpty || (idStr.isNotEmpty && paramName == idStr)) {
+            final dn = (details.name ?? '').trim();
+            if (dn.isNotEmpty && dn != idStr) return dn;
+            return '  زائر';
+          }
+          return paramName;
+        })();
 
-          final String phone = (mobile?.isNotEmpty == true)
-              ? mobile!
-              : (details.mobile?.toString() ?? '');
-          final String avatar = (profileUrl?.isNotEmpty == true)
-              ? profileUrl!
-              : (details.profile ?? '');
-          final bool verified = isVerified ?? (details.isVerified == 1);
-          final int cart = cartCount ?? 0;
-          final int notif = notifCount ?? 0;
+        final String phone = (mobile?.isNotEmpty == true)
+            ? mobile!
+            : (details.mobile?.toString() ?? '');
+        final String avatar = (profileUrl?.isNotEmpty == true)
+            ? profileUrl!
+            : (details.profile ?? '');
+        final bool verified = isVerified ?? (details.isVerified == 1);
+        final int cart = cartCount ?? 0;
+        final int notif = notifCount ?? 0;
 
-          return SafeArea(
-            child: Scaffold(
-              backgroundColor: context.color.primaryColor, // لا تغيّر ألوان الـAppBar
-              body: NestedScrollView(
-                controller: scrollController,
-                headerSliverBuilder: (context, _) => [
-                  SliverAppBar(
-                    pinned: true,
-                    stretch: true,
-                    elevation: 0,
-                    backgroundColor: context.color.primaryColor,
-                    expandedHeight: kExpanded,
-                    flexibleSpace: LayoutBuilder(
-                      builder: (ctx, constraints) {
-                        final double current = constraints.biggest.height;
-                        final double denom = (kExpanded - kToolbarHeight);
-                        final double t = denom <= 0
-                            ? 0.0
-                            : ((current - kToolbarHeight) / denom).clamp(0.0, 1.0);
+        return SafeArea(
+          child: Scaffold(
+            backgroundColor:
+                context.color.primaryColor, // لا تغيّر ألوان الـAppBar
+            body: NestedScrollView(
+              controller: scrollController,
+              headerSliverBuilder: (context, _) => [
+                SliverAppBar(
+                  pinned: true,
+                  stretch: true,
+                  elevation: 0,
+                  backgroundColor: context.color.primaryColor,
+                  expandedHeight: kExpanded,
+                  flexibleSpace: LayoutBuilder(
+                    builder: (ctx, constraints) {
+                      final double current = constraints.biggest.height;
+                      final double denom = (kExpanded - kToolbarHeight);
+                      final double t = denom <= 0
+                          ? 0.0
+                          : ((current - kToolbarHeight) / denom)
+                              .clamp(0.0, 1.0);
 
-                        final Widget header = appBarLeading ??
-                            ProfileHeaderUI(
-                              isAuthenticated: isAuthenticated ?? auth,
-                              name: accountName,
-                              mobile: phone,
-                              profileUrl: avatar,
-                              isVerified: verified,
-                              cartCount: cart,
-                              notifCount: notif,
-                              onAvatarTap: onAvatarTap ?? () {},
-                              onCartTap: onCartTap ?? () {},
-                              onNotificationTap: onNotificationTap ?? () {},
-                              onInfoTap: onInfoTap ?? () {},
-                              shrinkFactor: t,
-                              welcomeText: (showWelcomeLine && idStr.isNotEmpty)
-                                  ? "مرحبًا بك: $idStr"
-                                  : null,
-                              welcomeColor: Theme.of(context)
-                                  .colorScheme
-                                  .onPrimary
-                                  .withOpacity(.85),
-                            );
+                      final Widget header = appBarLeading ??
+                          ProfileHeaderUI(
+                            isAuthenticated: isAuthenticated ?? auth,
+                            name: accountName,
+                            mobile: phone,
+                            profileUrl: avatar,
+                            isVerified: verified,
+                            cartCount: cart,
+                            notifCount: notif,
+                            onAvatarTap: onAvatarTap ?? () {},
+                            onCartTap: onCartTap ?? () {},
+                            onNotificationTap: onNotificationTap ?? () {},
+                            onInfoTap: onInfoTap ?? () {},
+                            shrinkFactor: t,
+                            welcomeText: (showWelcomeLine && idStr.isNotEmpty)
+                                ? "مرحبًا بك: $idStr"
+                                : null,
+                            welcomeColor: Theme.of(context)
+                                .colorScheme
+                                .onPrimary
+                                .withOpacity(.85),
+                          );
 
-                        return Stack(
-                            fit: StackFit.expand,
-                            children: [
-                            if (appBarBackdrop != null)
-                        Opacity(opacity: t, child: appBarBackdrop!)
-                        else
-                        Opacity(
-                        opacity: t,
-                        child: Container(color: context.color.primaryColor),
-                        ),
-                        Align(
-                        alignment: Alignment.bottomCenter,
-                        child: _curvedBottom(context, opacity: t),
+                      return Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          if (appBarBackdrop != null)
+                            Opacity(opacity: t, child: appBarBackdrop!)
+                          else
+                            Opacity(
+                              opacity: t,
+                              child:
+                                  Container(color: context.color.primaryColor),
+                            ),
+                          Align(
+                            alignment: Alignment.bottomCenter,
+                            child: _curvedBottom(context, opacity: t),
                           ),
-                              Align(
-                                alignment: Alignment.bottomCenter,
-                                child: Padding(
-                                  padding: EdgeInsetsDirectional.only(
-                                    start: 10.rw(context),
-                                    end: 10.rw(context),
-                                    bottom: (12.rh(context)).floorToDouble(),
-                                  ),
-                                  child: header,
-                                ),
+                          Align(
+                            alignment: Alignment.bottomCenter,
+                            child: Padding(
+                              padding: EdgeInsetsDirectional.only(
+                                start: 10.rw(context),
+                                end: 10.rw(context),
+                                bottom: (12.rh(context)).floorToDouble(),
                               ),
-                            ],
-                        );
-                      },
+                              child: header,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
+              body: _buildBody(context),
+            ),
+            floatingActionButton: hideFabOnScroll
+                ? _FabHider(
+                    scrollController: scrollController,
+                    onPressed: onSupportPressed,
+                  )
+                : FloatingActionButton(
+                    onPressed: onSupportPressed,
+                    backgroundColor: context.color.territoryColor,
+                    child: SvgPicture.asset(
+                      AppIcons.support,
+                      height: 26,
+                      width: 26,
+                      color: Colors.white,
                     ),
                   ),
-                ],
-                body: _buildBody(context),
-            ),
-              floatingActionButton: hideFabOnScroll
-                  ? _FabHider(
-                scrollController: scrollController,
-                onPressed: onSupportPressed,
-              )
-                  : FloatingActionButton(
-                onPressed: onSupportPressed,
-                backgroundColor: context.color.territoryColor,
-                child: SvgPicture.asset(
-                  AppIcons.support,
-                  height: 26,
-                  width: 26,
-                  color: Colors.white,
-                ),
-              ),
           ),
-          );
-        },
+        );
+      },
     );
   }
-
-
-
 
   Widget _buildBody(BuildContext context) {
     // ✨ لا نستخدم SingleChildScrollView ولا PrimaryScrollController هنا
     final scroll = CustomScrollView(
       physics: const BouncingScrollPhysics(),
-
       slivers: [
         // حوّل الجسم إلى سليفَر واحد
         SliverToBoxAdapter(child: bodyContent),
@@ -238,13 +234,10 @@ class HomeScreenUI extends StatelessWidget {
     return onRefresh == null
         ? scroll
         : RefreshIndicator.adaptive(
-      onRefresh: onRefresh!,
-      child: scroll,
-    );
+            onRefresh: onRefresh!,
+            child: scroll,
+          );
   }
-
-
-
 
   Widget _curvedBottom(BuildContext context, {required double opacity}) {
     // انحناءة بسيطة تندمج مع أسفل الـAppBar
@@ -332,7 +325,6 @@ class _FabHiderState extends State<_FabHider> {
    Header UI (داخلي) مع تحجيم مرن
    ======================= */
 
-
 class ProfileHeaderUI extends StatelessWidget {
   const ProfileHeaderUI({
     super.key,
@@ -347,16 +339,10 @@ class ProfileHeaderUI extends StatelessWidget {
     required this.onCartTap,
     required this.onNotificationTap,
     required this.onInfoTap,
-
-
     this.guestIconSize,
     this.guestIconScale = 0.80,
     this.guestIconMin,
     this.guestIconMax,
-
-
-
-
     this.shrinkFactor = 1.0, // 1 موسّع، 0 منكمش
     this.welcomeText,
     this.welcomeColor,
@@ -369,12 +355,10 @@ class ProfileHeaderUI extends StatelessWidget {
   final bool isVerified;
 
   // أضف هذه الحقول مع البقية
-  final double? guestIconSize;   // حجم ثابت بالبكسل (إن حددته يتجاهل scale)
-  final double  guestIconScale;  // نسبة من قطر الأفاتار (افتراضي 0.62)
-  final double? guestIconMin;    // حد أدنى اختياري
-  final double? guestIconMax;    // حد أقصى اختياري
-
-
+  final double? guestIconSize; // حجم ثابت بالبكسل (إن حددته يتجاهل scale)
+  final double guestIconScale; // نسبة من قطر الأفاتار (افتراضي 0.62)
+  final double? guestIconMin; // حد أدنى اختياري
+  final double? guestIconMax; // حد أقصى اختياري
 
   final int cartCount;
   final int notifCount;
@@ -403,23 +387,24 @@ class ProfileHeaderUI extends StatelessWidget {
         final double maxIconTap = (w * 0.12).clamp(36.0, 44.0);
         final double minIconTap = maxIconTap * 0.84;
         final double iconTap =
-        (minIconTap + (maxIconTap - minIconTap) * shrinkFactor);
+            (minIconTap + (maxIconTap - minIconTap) * shrinkFactor);
 
         final double maxIconSize = (w * 0.06).clamp(20.0, 24.0);
         final double minIconSize = maxIconSize * 0.88;
         final double iconSize =
-        (minIconSize + (maxIconSize - minIconSize) * shrinkFactor);
+            (minIconSize + (maxIconSize - minIconSize) * shrinkFactor);
 
         /* ============================================
        * 2) الأفاتار: كبير موسّع → يتقلّص تدريجيًا
        *    (انيميشنه مستقل عن رقم الجوال/الاسم)
        * ============================================ */
-        const double avatarExpandScale = 1.70; // مقدار تكبير الأفاتار قبل التمرير
+        const double avatarExpandScale =
+            1.70; // مقدار تكبير الأفاتار قبل التمرير
         final double maxAvatarTap = maxIconTap * avatarExpandScale;
-        final double minAvatarTap = minIconTap *
-            0.82; // حجم الأفاتار عند الانكماش الكامل
+        final double minAvatarTap =
+            minIconTap * 0.82; // حجم الأفاتار عند الانكماش الكامل
         final double avatarTap =
-        (minAvatarTap + (maxAvatarTap - minAvatarTap) * shrinkFactor);
+            (minAvatarTap + (maxAvatarTap - minAvatarTap) * shrinkFactor);
 
         const double borderStroke = 1.0;
         const double innerPadding = 0.0;
@@ -436,9 +421,8 @@ class ProfileHeaderUI extends StatelessWidget {
         final bool small = w < 360; // شاشة ضيّقة
         final double nameMin = context.font.small;
         final double nameMax = context.font.large;
-        final double nameSize =
-            nameMin +
-                (nameMax - nameMin) * shrinkFactor; // حجم اسم ديناميكي (مستقل)
+        final double nameSize = nameMin +
+            (nameMax - nameMin) * shrinkFactor; // حجم اسم ديناميكي (مستقل)
 
         /* ====================================================
        * 4) سلوك رقم الجوال: يظهر موسّع، يختفي بانكماش الهيدر
@@ -503,12 +487,11 @@ class ProfileHeaderUI extends StatelessWidget {
                         tween: Tween(begin: avatarRadius, end: avatarRadius),
                         duration: const Duration(milliseconds: 200),
                         curve: Curves.easeOutCubic,
-                        builder: (context, r, _) =>
-                            CircleAvatar(
-                              backgroundColor: colors.backgroundColor,
-                              radius: r,
-                              child: _buildAvatar(context),
-                            ),
+                        builder: (context, r, _) => CircleAvatar(
+                          backgroundColor: colors.backgroundColor,
+                          radius: r,
+                          child: _buildAvatar(context),
+                        ),
                       ),
                     ),
                   ),
@@ -539,39 +522,37 @@ class ProfileHeaderUI extends StatelessWidget {
                             duration: const Duration(milliseconds: 180),
                             switchInCurve: Curves.easeOut,
                             switchOutCurve: Curves.easeIn,
-                            transitionBuilder: (child, anim) =>
-                                SizeTransition(
-                                  sizeFactor: anim,
-                                  axisAlignment: -1.0,
-                                  child: FadeTransition(
-                                      opacity: anim, child: child),
-                                ),
+                            transitionBuilder: (child, anim) => SizeTransition(
+                              sizeFactor: anim,
+                              axisAlignment: -1.0,
+                              child:
+                                  FadeTransition(opacity: anim, child: child),
+                            ),
                             child: showBadge
                                 ? Container(
-                              key: const ValueKey('badge'),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(6),
-                                color: colors.forthColor,
-                              ),
-                              padding: EdgeInsets.symmetric(
-                                horizontal: small ? 4 : 6,
-                                vertical: 2,
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  UiUtils.getSvg(
-                                      AppIcons.verifiedIcon, width: 14,
-                                      height: 14),
-                                  if (!small) ...[
-                                    const SizedBox(width: 4),
-                                    Text("verifiedLbl".translate(context))
-                                        .color(colors.secondaryColor)
-                                        .bold(weight: FontWeight.w500),
-                                  ],
-                                ],
-                              ),
-                            )
+                                    key: const ValueKey('badge'),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(6),
+                                      color: colors.forthColor,
+                                    ),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: small ? 4 : 6,
+                                      vertical: 2,
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        UiUtils.getSvg(AppIcons.verifiedIcon,
+                                            width: 14, height: 14),
+                                        if (!small) ...[
+                                          const SizedBox(width: 4),
+                                          Text("verifiedLbl".translate(context))
+                                              .color(colors.secondaryColor)
+                                              .bold(weight: FontWeight.w500),
+                                        ],
+                                      ],
+                                    ),
+                                  )
                                 : const SizedBox(key: ValueKey('no_badge')),
                           ),
                         ),
@@ -603,15 +584,14 @@ class ProfileHeaderUI extends StatelessWidget {
                             child: AnimatedDefaultTextStyle(
                               duration: const Duration(milliseconds: 180),
                               curve: Curves.easeOut,
-                              style: Theme
-                                  .of(context)
+                              style: Theme.of(context)
                                   .textTheme
                                   .titleMedium!
                                   .copyWith(
-                                fontSize: nameSize,
-                                color: colors.textColorDark,
-                                height: 1.1,
-                              ),
+                                    fontSize: nameSize,
+                                    color: colors.textColorDark,
+                                    height: 1.1,
+                                  ),
                               child: Text(
                                 name,
                                 maxLines: 1,
@@ -632,28 +612,27 @@ class ProfileHeaderUI extends StatelessWidget {
                             duration: const Duration(milliseconds: 220),
                             switchInCurve: Curves.easeOut,
                             switchOutCurve: Curves.easeIn,
-                            transitionBuilder: (child, anim) =>
-                                SizeTransition(
-                                  sizeFactor: anim,
-                                  axisAlignment: 1.0,
-                                  child: FadeTransition(
-                                      opacity: anim, child: child),
-                                ),
+                            transitionBuilder: (child, anim) => SizeTransition(
+                              sizeFactor: anim,
+                              axisAlignment: 1.0,
+                              child:
+                                  FadeTransition(opacity: anim, child: child),
+                            ),
                             child: (isAuthenticated && showPhoneNow)
                                 ? Text(
-                              mobile,
-                              key: const ValueKey('phone'),
-                              maxLines: small ? 1 : 2,
-                              overflow: TextOverflow.ellipsis,
-                              softWrap: true,
-                              style: TextStyle(
-                                fontSize: small
-                                    ? (context.font.small * 0.92)
-                                    : context.font.small,
-                                color: colors.textColorDark,
-                                height: 1.1,
-                              ),
-                            )
+                                    mobile,
+                                    key: const ValueKey('phone'),
+                                    maxLines: small ? 1 : 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    softWrap: true,
+                                    style: TextStyle(
+                                      fontSize: small
+                                          ? (context.font.small * 0.92)
+                                          : context.font.small,
+                                      color: colors.textColorDark,
+                                      height: 1.1,
+                                    ),
+                                  )
                                 : const SizedBox(key: ValueKey('no_phone')),
                           ),
                         ),
@@ -693,7 +672,7 @@ class ProfileHeaderUI extends StatelessWidget {
                   );
                 },
                 count: notifCount,
-           //     count: context.watch<UnreadNotificationsCubit>().state,
+                //     count: context.watch<UnreadNotificationsCubit>().state,
 
                 tapSize: iconTap,
                 iconSize: iconSize,
@@ -723,7 +702,6 @@ class ProfileHeaderUI extends StatelessWidget {
       },
     );
   }
-
 
   // صورة الحساب: شبكة أو أيقونة افتراضية
   Widget _buildAvatar(BuildContext context) {
@@ -758,14 +736,7 @@ class ProfileHeaderUI extends StatelessWidget {
       },
     );
   }
-
-
 }
-
-
-
-
-
 
 class _IconWithBadge extends StatelessWidget {
   const _IconWithBadge({
@@ -841,7 +812,8 @@ class _BadgeDot extends StatelessWidget {
         child: Text(
           // سيتم تعيين النص لاحقًا مع نفس النمط
           '',
-          style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w700),
+          style: TextStyle(
+              fontSize: 10, color: Colors.white, fontWeight: FontWeight.w700),
         ),
       ),
     );
@@ -863,16 +835,13 @@ extension on _BadgeDot {
       child: Center(
         child: Text(
           text,
-          style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w700),
+          style: const TextStyle(
+              fontSize: 10, color: Colors.white, fontWeight: FontWeight.w700),
         ),
       ),
     );
   }
 }
-
-
-
-
 
 /// نفس الشيمر السابق لكن كدالة واجهة
 
@@ -880,7 +849,8 @@ Widget homeShimmerEffect(BuildContext context) {
   const defaultPadding = 16.0;
   return SingleChildScrollView(
     child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: defaultPadding),
+      padding:
+          const EdgeInsets.symmetric(vertical: 24, horizontal: defaultPadding),
       child: Column(
         children: [
           const _ShimmerBox(h: 52),
@@ -935,8 +905,6 @@ class _ShimmerBox extends StatelessWidget {
   }
 }
 
-
-
 /// واجهة عناصر "الكل"
 class AllItemsWidget extends StatelessWidget {
   const AllItemsWidget({super.key});
@@ -953,7 +921,8 @@ class AllItemsWidget extends StatelessWidget {
                   type: ListUiType.Mixed,
                   mixMode: true,
                   crossAxisCount: 2,
-                  height: (MediaQuery.of(context).size.height / 3.5).rh(context),
+                  height:
+                      (MediaQuery.of(context).size.height / 3.5).rh(context),
                   builder: (context, int index, bool isGrid) {
                     final ItemModel item = state.items[index]; // ✅ غير nullable
 

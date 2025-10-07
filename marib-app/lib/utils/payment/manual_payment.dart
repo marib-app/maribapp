@@ -1,11 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 
-
-
 class ManualPayment {
   ManualPayment({
-
     this.manualPaymentId,
     this.paymentTransactionId,
     this.transactionIdentifier,
@@ -15,9 +12,6 @@ class ManualPayment {
     required this.paymentStatus,
     this.status,
     this.transactionStatus,
-
-
-
     required this.amount,
     required this.currency,
     required this.createdAt,
@@ -142,20 +136,20 @@ class ManualPayment {
     final context = mapify(json['context']) ?? mapify(metadata?['context']);
     final payable = mapify(json['payable']) ?? mapify(metadata?['payable']);
 
-    final paymentTransactionId =
-    toStr(json['payment_transaction_id'] ?? json['transaction_id'] ?? json['id']);
+    final paymentTransactionId = toStr(
+        json['payment_transaction_id'] ?? json['transaction_id'] ?? json['id']);
     final transactionIdentifier = toStr(
-      json['transaction_identifier'] ??
-          json['transaction_code'] ??
-          json['transaction_number'] ??
-          json['identifier'],
-    ) ??
+          json['transaction_identifier'] ??
+              json['transaction_code'] ??
+              json['transaction_number'] ??
+              json['identifier'],
+        ) ??
         paymentTransactionId;
     final transactionReference = toStr(
-      json['transaction_reference'] ??
-          json['payment_reference'] ??
-          metadata?['transaction_reference'],
-    ) ??
+          json['transaction_reference'] ??
+              json['payment_reference'] ??
+              metadata?['transaction_reference'],
+        ) ??
         toStr(json['reference']);
     final manualReference = toStr(
       manualData?['reference'] ??
@@ -164,24 +158,21 @@ class ManualPayment {
     );
 
     final paymentGateway = toStr(
-      json['payment_gateway'] ??
-          manualData?['payment_gateway'] ??
-          metadata?['payment_gateway'],
-    ) ??
+          json['payment_gateway'] ??
+              manualData?['payment_gateway'] ??
+              metadata?['payment_gateway'],
+        ) ??
         'manual_bank';
 
     final paymentStatus = toStr(
-      json['payment_status'] ??
-          manualData?['payment_status'] ??
-          metadata?['payment_status'],
-    ) ??
+          json['payment_status'] ??
+              manualData?['payment_status'] ??
+              metadata?['payment_status'],
+        ) ??
         'pending';
 
-
     final status = toStr(
-      json['status'] ??
-          manualData?['status'] ??
-          metadata?['status'],
+      json['status'] ?? manualData?['status'] ?? metadata?['status'],
     );
 
     final transactionStatus = toStr(
@@ -189,7 +180,6 @@ class ManualPayment {
           manualData?['transaction_status'] ??
           metadata?['transaction_status'],
     );
-
 
     DateTime? resolveTimestamp(Iterable<dynamic> candidates) {
       for (final candidate in candidates) {
@@ -200,25 +190,20 @@ class ManualPayment {
     }
 
     final createdAt = resolveTimestamp([
-      json['created_at'],
-      manualData?['created_at'],
-      metadata?['created_at'],
-      json['createdAt'],
-      manualData?['createdAt'],
-      metadata?['createdAt'],
-      json['updated_at'],
-      manualData?['updated_at'],
-      metadata?['updated_at'],
-      json['updatedAt'],
-      manualData?['updatedAt'],
-      metadata?['updatedAt'],
-    ]) ??
-
-
-          DateTime.now();
-
-
-
+          json['created_at'],
+          manualData?['created_at'],
+          metadata?['created_at'],
+          json['createdAt'],
+          manualData?['createdAt'],
+          metadata?['createdAt'],
+          json['updated_at'],
+          manualData?['updated_at'],
+          metadata?['updated_at'],
+          json['updatedAt'],
+          manualData?['updatedAt'],
+          metadata?['updatedAt'],
+        ]) ??
+        DateTime.now();
 
     return ManualPayment(
       manualPaymentId: toStr(json['manual_payment_id'] ?? manualData?['id']),
@@ -228,10 +213,8 @@ class ManualPayment {
       manualReference: manualReference,
       paymentGateway: paymentGateway,
       paymentStatus: paymentStatus,
-
       status: status,
       transactionStatus: transactionStatus,
-
       amount: toDouble(json['amount'] ?? manualData?['amount']),
       currency: toStr(json['currency'] ?? manualData?['currency']) ?? 'YER',
       createdAt: createdAt,
@@ -262,12 +245,10 @@ class ManualPayment {
     return raw?.toLowerCase().trim() ?? '';
   }
 
-
   String get normalizedTransactionStatus =>
       transactionStatus?.toLowerCase().trim() ?? '';
 
   String get normalizedPaymentStatus => paymentStatus.toLowerCase().trim();
-
 
   String? get resolvedStatus {
     for (final candidate in [status, transactionStatus, paymentStatus]) {
@@ -310,14 +291,10 @@ class ManualPayment {
   static const Set<String> _actionRequiredStatuses = {
     'requires_action',
     'action_required',
-
     'requires_payment_method',
   };
 
   static const Set<String> _successStatuses = {
-
-
-
     'approved',
     'success',
     'succeed',
@@ -326,8 +303,6 @@ class ManualPayment {
     'paid',
     'settled',
   };
-
-
 
   static const Set<String> _failureStatuses = {
     'failed',
@@ -354,9 +329,8 @@ class ManualPayment {
 
   bool get isManualBank => normalizedGateway == 'manual_bank';
 
-  String get gatewayLabel => isEastYemen
-      ? 'بوابة بنك الشرق الإلكترونية'
-      : 'التحويل البنكي اليدوي';
+  String get gatewayLabel =>
+      isEastYemen ? 'بوابة بنك الشرق الإلكترونية' : 'التحويل البنكي اليدوي';
 
   bool get isApproved => _matchesStatus(_successStatuses);
 
@@ -371,18 +345,16 @@ class ManualPayment {
 
   bool get isRejected => _matchesStatus(_failureStatuses);
 
-
-
-
-  bool get isExpired => normalizedStatus == 'expired' ||
+  bool get isExpired =>
+      normalizedStatus == 'expired' ||
       (expiresAt != null && expiresAt!.isBefore(DateTime.now()));
 
-  bool get isRefunded => const {'refunded', 'reversed'}.contains(normalizedStatus);
+  bool get isRefunded =>
+      const {'refunded', 'reversed'}.contains(normalizedStatus);
 
   bool get isFinal => isExpired || isRefunded || isSucceeded || isRejected;
 
   bool get isTerminal => isFinal;
-
 
   bool get shouldAutoRefresh => !isTerminal;
 
@@ -437,15 +409,11 @@ class ManualPayment {
   }
 
   String get amountValueLabel {
-
-
     final isWhole = amount == amount.roundToDouble();
     return isWhole ? amount.toStringAsFixed(0) : amount.toStringAsFixed(2);
   }
 
   String? get currencyLabel {
-
-
     final trimmedCurrency = currency.trim();
     return trimmedCurrency.isEmpty ? null : trimmedCurrency;
   }
@@ -454,7 +422,6 @@ class ManualPayment {
     final amountStr = amountValueLabel;
     final currencyStr = currencyLabel;
     return currencyStr == null ? amountStr : '$amountStr $currencyStr';
-
   }
 
   String get displayTransactionIdentifier {
@@ -502,8 +469,7 @@ class ManualPayment {
       ],
     );
 
-    final idPart = code ??
-        (payableId != null ? '#$payableId' : null);
+    final idPart = code ?? (payableId != null ? '#$payableId' : null);
 
     final pieces = <String>[];
     if (label != null && label.isNotEmpty) pieces.add(label);
@@ -513,8 +479,6 @@ class ManualPayment {
     if (pieces.isEmpty) return null;
     return pieces.join(' • ');
   }
-
-
 
   String? get _normalizedManualPaymentId {
     final raw = manualPaymentId;
@@ -543,7 +507,6 @@ class ManualPayment {
     }
     return normalized;
   }
-
 
   List<String> get additionalHighlights {
     final combined = _combinedDetails;
@@ -585,7 +548,6 @@ class ManualPayment {
         result.add('حالة بنك الشرق: $eastStatus');
       }
     }
-
 
     return result;
   }

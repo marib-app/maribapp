@@ -82,11 +82,6 @@ import 'package:nested/nested.dart';
 
 import 'package:marib/data/cubits/item/fetch_item_summary_cubit.dart';
 
-
-
-
-
-
 class RegisterCubits {
   List<SingleChildWidget> providers = [
     BlocProvider(create: (context) => FavoriteCubit(FavoriteRepository())),
@@ -101,9 +96,7 @@ class RegisterCubits {
     BlocProvider(create: (context) => NotificationCubit()),
     BlocProvider(create: (context) => AppThemeCubit()),
     BlocProvider(create: (context) => FetchItemFromCategoryCubit()),
-
     BlocProvider(create: (context) => FetchItemSummaryCubit()),
-
     BlocProvider(create: (context) => FetchNotificationsCubit()),
     BlocProvider(create: (context) => LanguageCubit()),
     BlocProvider(create: (context) => FetchClassifiedCubit()),
@@ -120,9 +113,13 @@ class RegisterCubits {
     BlocProvider(create: (context) => GetSellerChatListCubit()),
     BlocProvider(create: (context) => FetchItemReportReasonsListCubit()),
     BlocProvider(create: (context) => ItemEditCubit()),
-    BlocProvider(create: (context) => FetchHomeScreenCubit(defaultInterfaceType: 'homepage')),
+    BlocProvider(
+        create: (context) =>
+            FetchHomeScreenCubit(defaultInterfaceType: 'homepage')),
     BlocProvider(create: (context) => AuthenticationCubit()),
-    BlocProvider(create: (context) => FetchHomeScreenCubit(defaultInterfaceType: 'homepage')),
+    BlocProvider(
+        create: (context) =>
+            FetchHomeScreenCubit(defaultInterfaceType: 'homepage')),
     BlocProvider(create: (context) => FetchHomeAllItemsCubit()),
     BlocProvider(create: (context) => DeleteItemCubit()),
     BlocProvider(create: (context) => ItemTotalClickCubit()),

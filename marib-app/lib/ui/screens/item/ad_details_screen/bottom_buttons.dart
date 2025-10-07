@@ -822,15 +822,39 @@ class AdDetailsBottomBar extends StatelessWidget {
         }
 
 
-        final String incomingSection = cartItem.section.trim();
-        final String? existingSection =
-        existingItems.isNotEmpty ? existingItems.first.section.trim() : null;
+        String? canonicalSection(String? raw) {
+          if (raw == null) {
+            return null;
+          }
 
-        bool sectionsMatch(String? a, String? b) =>
-            a != null && b != null && a.toLowerCase() == b.toLowerCase();
+          final String? normalized = normalizeDeliveryDepartment(raw);
+          if (normalized != null) {
+            return normalized;
+          }
 
-        if (existingSection != null && !sectionsMatch(existingSection, incomingSection)) {
-           UiUtils.showBlurredDialoge(
+          final String trimmed = raw.trim();
+          if (trimmed.isEmpty) {
+            return null;
+          }
+
+          return trimmed.toLowerCase();
+        }
+
+        final String? existingSectionRaw =
+        existingItems.isNotEmpty ? existingItems.first.section : null;
+        final String incomingSectionRaw = cartItem.section;
+
+        final String? existingSection = canonicalSection(existingSectionRaw);
+        final String? incomingSection = canonicalSection(incomingSectionRaw);
+
+
+        final bool sectionsMismatch = existingSection != null &&
+            incomingSection != null &&
+            existingSection != incomingSection;
+
+
+        if (sectionsMismatch) {
+          UiUtils.showBlurredDialoge(
             context,
             dialoge: const BlurredDialogBox(
               title: "تنبيه السلة",

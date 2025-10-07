@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 use JsonException;
 
@@ -23,6 +24,58 @@ class ServiceRequestController extends Controller
         private ServiceCustomFieldSubmissionService $submissionService
     ) {
     }
+
+    public function index(Request $request): JsonResponse
+    {
+        $user = $request->user() ?? Auth::user();
+
+        if (!$user) {
+            return response()->json([
+                'message' => __('Unauthenticated.'),
+            ], 401);
+        }
+
+        $validated = $request->validate([
+            'status' => ['sometimes', 'string', Rule::in(['review', 'approved', 'rejected', 'all'])],
+            'category_id' => ['sometimes', 'integer'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        $query = ServiceRequest::query()
+            ->with(['service:id,title,category_id'])
+            ->where('user_id', $user->getKey())
+            ->orderByDesc('created_at');
+
+        $status = $validated['status'] ?? null;
+        if ($status && $status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        if (array_key_exists('category_id', $validated)) {
+            $query->whereHas('service', static function ($q) use ($validated): void {
+                $q->where('category_id', $validated['category_id']);
+            });
+        }
+
+        $perPage = $validated['per_page'] ?? 15;
+
+        $paginator = $query->paginate($perPage);
+
+        $items = $paginator->getCollection()
+            ->map(fn(ServiceRequest $serviceRequest): array => $this->transformRequest($serviceRequest))
+            ->values();
+
+        return response()->json([
+            'data' => $items,
+            'meta' => [
+                'total' => $paginator->total(),
+                'per_page' => $paginator->perPage(),
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+            ],
+        ]);
+    }
+
 
     public function store(Request $request): JsonResponse
     {
@@ -192,5 +245,27 @@ class ServiceRequestController extends Controller
             'status' => $serviceRequest->status,
             'service_id' => $serviceRequest->service_id,
         ], 201);
+    }
+    private function transformRequest(ServiceRequest $serviceRequest): array
+    {
+        $service = $serviceRequest->service;
+
+        return [
+            'id' => $serviceRequest->getKey(),
+            'status' => $serviceRequest->status,
+            'service_id' => $serviceRequest->service_id,
+            'service_title' => $service?->title,
+            'service' => $service ? [
+                'id' => $service->getKey(),
+                'title' => $service->title,
+                'category_id' => $service->category_id,
+            ] : null,
+            'note' => $serviceRequest->note,
+            'custom_fields' => $serviceRequest->payload,
+            'payload' => $serviceRequest->payload,
+            'submitted_at' => optional($serviceRequest->created_at)->toIso8601String(),
+            'created_at' => optional($serviceRequest->created_at)->toDateTimeString(),
+            'updated_at' => optional($serviceRequest->updated_at)->toDateTimeString(),
+        ];
     }
 }

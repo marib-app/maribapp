@@ -67,6 +67,7 @@ use App\Models\WalletTransaction;
 use App\Models\WalletWithdrawalRequest;
 use App\Models\ReferralAttempt;
 use App\Services\SliderEligibilityService;
+use App\Models\ServiceReviewReport;
 
 use App\Models\CurrencyRate;
 use App\Models\Challenge;
@@ -2165,6 +2166,72 @@ class ApiController extends Controller {
             ResponseService::errorResponse();
         }
     }
+
+    public function getFeaturedAdsCount(Request $request)
+    {
+        $user = Auth::user();
+
+        $baseQuery = FeaturedItems::query()
+            ->whereHas('item', static function ($query) use ($user): void {
+                $query->where('user_id', $user->id);
+            });
+
+        $activeCount = (clone $baseQuery)
+            ->whereDate('start_date', '<=', now()->toDateString())
+            ->where(static function ($query): void {
+                $query->whereNull('end_date')
+                    ->orWhereDate('end_date', '>=', now()->toDateString());
+            })
+            ->count();
+
+        $totalCount = $baseQuery->count();
+
+        return response()->json([
+            'error' => false,
+            'message' => __('Featured ads count fetched successfully.'),
+            'data' => [
+                'featured_count' => $activeCount,
+                'active' => $activeCount,
+                'total' => $totalCount,
+            ],
+            'count' => $activeCount,
+        ]);
+    }
+
+    public function unfeatureAd(Request $request, Item $item)
+    {
+        $user = Auth::user();
+
+        if ((int) $item->user_id !== (int) $user->id) {
+            ResponseService::errorResponse(__('You are not allowed to manage this advertisement.'), null, 403);
+        }
+
+        $featuredItems = FeaturedItems::query()
+            ->where('item_id', $item->getKey())
+            ->get();
+
+        if ($featuredItems->isEmpty()) {
+            ResponseService::errorResponse(__('This advertisement is not currently featured.'), null, 422);
+        }
+
+        DB::transaction(static function () use ($featuredItems): void {
+            foreach ($featuredItems as $featured) {
+                $packageId = $featured->user_purchased_package_id;
+                $featured->delete();
+
+                if ($packageId) {
+                    $package = UserPurchasedPackage::find($packageId);
+                    if ($package) {
+                        $newUsedLimit = max(0, (int) $package->used_limit - 1);
+                        $package->forceFill(['used_limit' => $newUsedLimit])->save();
+                    }
+                }
+            }
+        });
+
+        ResponseService::successResponse(__('Featured advertisement removed successfully.'));
+    }
+
 
     public function manageFavourite(Request $request) {
         try {
@@ -4620,6 +4687,48 @@ class ApiController extends Controller {
         }
     }
 
+    public function getMyServiceReviews(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'service_id' => 'required|exists:services,id',
+        ]);
+
+        if ($validator->fails()) {
+            ResponseService::validationError($validator->errors()->first());
+        }
+
+        try {
+            /** @var User $user */
+            $user = Auth::user();
+
+            $review = ServiceReview::query()
+                ->with('service:id,title')
+                ->where('service_id', $request->service_id)
+                ->where('user_id', $user->id)
+                ->first();
+
+            $payload = [];
+
+            if ($review) {
+                $payload[] = [
+                    'id' => $review->id,
+                    'service_id' => $review->service_id,
+                    'rating' => $review->rating,
+                    'review' => $review->review,
+                    'status' => $review->status,
+                    'service_title' => $review->service?->title,
+                    'created_at' => optional($review->created_at)->toDateTimeString(),
+                    'updated_at' => optional($review->updated_at)->toDateTimeString(),
+                ];
+            }
+
+            ResponseService::successResponse('Service review fetched successfully.', $payload);
+        } catch (Throwable $th) {
+            ResponseService::logErrorResponse($th, 'API Controller -> getMyServiceReviews');
+            ResponseService::errorResponse();
+        }
+    }
+
     public function getServiceReviews(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -4668,6 +4777,67 @@ class ApiController extends Controller {
             ResponseService::successResponse('Service reviews fetched successfully.', $response);
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, 'API Controller -> getServiceReviews');
+            ResponseService::errorResponse();
+        }
+    }
+
+
+    public function addServiceReviewReport(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'review_id' => 'required|exists:service_reviews,id',
+            'message' => 'nullable|string|max:2000',
+            'details' => 'nullable|string|max:2000',
+            'reason' => 'nullable|string|max:255',
+            'type' => 'nullable|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            ResponseService::validationError($validator->errors()->first());
+        }
+
+        try {
+            /** @var User $user */
+            $user = Auth::user();
+            $review = ServiceReview::with('service')->findOrFail($request->review_id);
+
+            if ((int) $review->user_id === (int) $user->id) {
+                ResponseService::errorResponse(__('You cannot report your own review.'));
+            }
+
+            $alreadyReported = ServiceReviewReport::query()
+                ->where('service_review_id', $review->id)
+                ->where('reporter_id', $user->id)
+                ->exists();
+
+            if ($alreadyReported) {
+                ResponseService::errorResponse(__('You have already reported this review.'));
+            }
+
+            $message = $request->input('message');
+            if ($message === null || trim((string) $message) === '') {
+                $message = $request->input('details');
+            }
+
+            $reason = $request->input('reason');
+            if ($reason === null || trim((string) $reason) === '') {
+                $reason = $request->input('type');
+            }
+
+            $report = ServiceReviewReport::create([
+                'service_review_id' => $review->id,
+                'reporter_id' => $user->id,
+                'reason' => $reason !== null ? trim((string) $reason) ?: null : null,
+                'message' => $message !== null ? trim((string) $message) ?: null : null,
+                'status' => 'pending',
+            ]);
+
+            ResponseService::successResponse(__('Your report has been submitted successfully.'), [
+                'id' => $report->id,
+                'status' => $report->status,
+            ]);
+        } catch (Throwable $th) {
+            ResponseService::logErrorResponse($th, 'API Controller -> addServiceReviewReport');
             ResponseService::errorResponse();
         }
     }

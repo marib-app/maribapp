@@ -2,7 +2,7 @@
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\Api\DeliveryPriceCalculatorController;
 use App\Http\Controllers\WifiCabinApiController;
-
+use App\Http\Controllers\WifiPaymentGatewayController;
 use App\Http\Controllers\ApiController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ServiceRequestController as ApiServiceRequestController;
@@ -62,6 +62,7 @@ Route::group(['middleware' => ['auth:sanctum']], static function () {
 
         Route::put('plans/{plan}', [WifiPlanController::class, 'update'])->whereNumber('plan');
 
+        Route::get('payment-gateways', [WifiPaymentGatewayController::class, 'index']);
 
         Route::post('plans/{plan}/batches', [WifiCodeBatchController::class, 'store'])->whereNumber('plan');
         Route::post('plans/{plan}/purchase', [WifiPlanController::class, 'purchase'])->whereNumber('plan');
@@ -69,6 +70,7 @@ Route::group(['middleware' => ['auth:sanctum']], static function () {
             ->withoutMiddleware(['auth:sanctum']);
             
         Route::get('codes/mine', [WifiPurchaseController::class, 'index']);
+        Route::get('purchases', [WifiPurchaseController::class, 'index']);
 
 
     });
@@ -89,7 +91,8 @@ Route::group(['middleware' => ['auth:sanctum']], static function () {
     Route::get('item-buyer-list', [ApiController::class, 'getItemBuyerList']);
 
     Route::post('renew-item', [ApiController::class, 'renewItem']);
-
+    Route::get('ads/featured/count', [ApiController::class, 'getFeaturedAdsCount']);
+    Route::post('ads/{item}/unfeature', [ApiController::class, 'unfeatureAd'])->whereNumber('item');
     Route::post('assign-free-package', [ApiController::class, 'assignFreePackage']);
     Route::post('make-item-featured', [ApiController::class, 'makeFeaturedItem']);
     Route::post('manage-favourite', [ApiController::class, 'manageFavourite']);
@@ -135,7 +138,9 @@ Route::group(['middleware' => ['auth:sanctum']], static function () {
     Route::delete('my-services/{service}', [ApiController::class, 'deleteOwnedService']);
 
 
-
+    Route::get('service-requests', [ApiServiceRequestController::class, 'index']);
+    Route::post('service-requests', [ApiServiceRequestController::class, 'store']);
+    Route::post('services/requests', [ApiServiceRequestController::class, 'store']);
 
 
 
@@ -160,7 +165,8 @@ Route::group(['middleware' => ['auth:sanctum']], static function () {
     Route::get('my-review', [ApiController::class, 'getMyReview']);
     Route::post('add-review-report', [ApiController::class, 'addReviewReport']);
     Route::post('add-service-review', [ApiController::class, 'addServiceReview']);
-
+    Route::get('my-service-reviews', [ApiController::class, 'getMyServiceReviews']);
+    Route::post('add-service-review-report', [ApiController::class, 'addServiceReviewReport']);
 
 
     Route::get('cart', [CartController::class, 'index']);

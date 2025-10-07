@@ -7,7 +7,7 @@ class ReferralAuditLogger
 {
     public function record(string $status, array $context = []): ReferralAttempt
     {
-        TelemetryService::record('referral.attempt', array_merge($context, [
+        app(TelemetryService::class)->record('referral.attempt', array_merge($context, [
             'status' => $status,
         ]));
 

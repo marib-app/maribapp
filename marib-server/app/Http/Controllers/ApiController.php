@@ -1133,7 +1133,7 @@ class ApiController extends Controller {
         $departmentKey = $request->input('department');
         $itemId = $request->input('item_id');
 
-        TelemetryService::record('api.tips.called', [
+        app(TelemetryService::class)->record('api.tips.called', [
             'department' => $departmentKey,
             'item_id' => $itemId,
         ]);

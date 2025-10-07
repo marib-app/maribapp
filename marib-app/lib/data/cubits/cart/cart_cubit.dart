@@ -208,7 +208,13 @@ class CartCubit extends Cubit<CartState> {
 
 
   Future<void> fetchCart() async {
-    _pendingAdditionCache = null;
+    final PendingCartAddition? existingPendingAddition =
+        state.pendingAddition ?? _pendingAdditionCache;
+    final bool preservePendingAddition = existingPendingAddition != null;
+
+    if (!preservePendingAddition) {
+      _pendingAdditionCache = null;
+    }
 
     final CartSummary summary = await _repository.fetchCart();
     _syncSection(summary.items);
@@ -220,8 +226,9 @@ class CartCubit extends Cubit<CartState> {
         clearCouponError: true,
         clearThrottle: true,
         lastUpdated: DateTime.now(),
-        clearSafetyTips: true,
-        pendingAddition: null,
+        clearSafetyTips: !preservePendingAddition,
+        pendingAddition:
+        preservePendingAddition ? existingPendingAddition : null,
         departmentPolicy: summary.departmentPolicy,
         support: summary.support,
         deliveryQuote: summary.deliveryQuote,
@@ -230,6 +237,10 @@ class CartCubit extends Cubit<CartState> {
         deliveryPaymentTiming: summary.deliveryPaymentTiming,
       ),
     );
+
+    if (preservePendingAddition) {
+      _pendingAdditionCache = existingPendingAddition;
+    }
   }
 
 
@@ -514,7 +525,14 @@ class CartCubit extends Cubit<CartState> {
         skipTipFetch: true,
       );
     } finally {
-      _pendingAdditionCache = null;
+      final PendingCartAddition? existingPendingAddition =
+          state.pendingAddition ?? _pendingAdditionCache;
+      final bool preservePendingAddition = existingPendingAddition != null;
+
+      if (!preservePendingAddition) {
+        _pendingAdditionCache = null;
+      }
+
       _clearPendingAddition(clearSafetyTips: true);
     }
   }

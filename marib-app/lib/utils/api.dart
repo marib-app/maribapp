@@ -175,6 +175,47 @@ class Api {
     return headers;
   }
 
+  static Map<String, dynamic>? _cloneMap(Map<String, dynamic>? source) {
+    if (source == null) {
+      return null;
+    }
+
+    if (source.isEmpty) {
+      return <String, dynamic>{};
+    }
+
+    return Map<String, dynamic>.from(source);
+  }
+
+
+  static Options _buildRequestOptions({
+    Options? base,
+    String? method,
+    Map<String, dynamic>? headers,
+    Object? contentType,
+    bool? followRedirects,
+  }) {
+    final Options resolvedBase = base ?? Options();
+
+    return Options(
+      method: method ?? resolvedBase.method,
+      sendTimeout: resolvedBase.sendTimeout,
+      receiveTimeout: resolvedBase.receiveTimeout,
+      extra: _cloneMap(resolvedBase.extra),
+      headers: headers ?? _cloneMap(resolvedBase.headers),
+      responseType: resolvedBase.responseType,
+      contentType: contentType ?? resolvedBase.contentType,
+      validateStatus: resolvedBase.validateStatus,
+      receiveDataWhenStatusError:
+      resolvedBase.receiveDataWhenStatusError,
+      followRedirects: followRedirects ?? resolvedBase.followRedirects,
+      maxRedirects: resolvedBase.maxRedirects,
+      requestEncoder: resolvedBase.requestEncoder,
+      responseDecoder: resolvedBase.responseDecoder,
+      listFormat: resolvedBase.listFormat,
+    );
+  }
+
 
 
 
@@ -593,10 +634,10 @@ class Api {
       };
       _ensureSliderSessionHeaders(mergedHeaders);
 
-      final Options baseOptions = options ?? Options();
-      final Options requestOptions = baseOptions.copyWith(
+      final Options requestOptions = _buildRequestOptions(
+        base: options,
         headers: mergedHeaders,
-        contentType: baseOptions.contentType ?? "multipart/form-data",
+        contentType: options?.contentType ?? "multipart/form-data",
         followRedirects: false,
       );
 
@@ -814,11 +855,13 @@ class Api {
 
       _ensureSliderSessionHeaders(mergedHeaders);
 
-      final Options baseOptions = options ?? Options();
-      final Options requestOptions = baseOptions.copyWith(
+      final Options requestOptions = _buildRequestOptions(
+        base: options,
         method: resolvedMethod,
         headers: mergedHeaders,
-        contentType: hasJsonBody ? Headers.jsonContentType : baseOptions.contentType,
+        contentType: hasJsonBody
+            ? Headers.jsonContentType
+            : options?.contentType,
         followRedirects: false,
 
       );

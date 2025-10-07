@@ -15,8 +15,6 @@ import 'package:marib/utils/hive_utils.dart';
 import 'deliveryandpayment_ui.dart';
 import 'package:marib/data/model/orders/order_submission_result.dart';
 import 'package:marib/utils/api.dart';
-import 'package:marib/utils/payment/bank_transfer_args.dart';
-import 'package:marib/utils/payment/bank_transfer_screen.dart';
 import 'package:marib/data/model/wallet/wallet_summary.dart';
 import 'package:marib/ui/screens/cart/order_step.dart';
 import 'package:marib/data/model/cart/cart_discount.dart';
@@ -2301,11 +2299,8 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
 
       if (!mounted) return;
 
-      final bool requiresManualTransfer =
       _handleOrderSubmission(result, selectedBank, paymentTimingMeta);
-      if (requiresManualTransfer) {
-        return;
-      }
+
 
 
     } on ApiException catch (error) {
@@ -2331,7 +2326,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
 
 
 
-  bool _handleOrderSubmission(
+  void _handleOrderSubmission(
       OrderSubmissionResult result,
       CheckoutBank? selectedBank,
       _DeliveryPaymentMeta paymentTimingMeta) {
@@ -2352,43 +2347,30 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         paymentMethod == 'east_yemen_bank';
     final String? timingNote = paymentTimingMeta.note?.trim();
 
+    final String confirmationMessage;
+    final String? formattedAmount = paymentMeta.amount > 0
+        ? _formatCurrencyAmount(paymentMeta.amount, currency: paymentMeta.currency)
+        : null;
+
     if (requiresManualTransfer) {
-      final int packageId =
-      _resolveNumericOrderId(result, orderId, payloadCandidates);
+      final String baseMessage = timingNote != null && timingNote.isNotEmpty
 
-      final BankTransferArgs args = BankTransferArgs(
-        purpose: 'order',
-        packageType: 'order',
-        packageId: packageId,
-        amount: paymentMeta.amount,
-        currency: paymentMeta.currency,
-        token: HiveUtils.getJWT(),
-      );
-
-      final String manualMessage = timingNote != null && timingNote.isNotEmpty
           ? 'تم إرسال الطلب (${paymentTimingMeta.label}). $timingNote'
-          : 'تم إرسال الطلب (${paymentTimingMeta.label}). سيتم توجيهك لإكمال الدفع اليدوي.';
-
-      HelperUtils.showSnackBarMessage(context, manualMessage);
-
-
-
-
-
-      Navigator.of(context, rootNavigator: true).push(
-        BankTransferScreen.route(
-          RouteSettings(name: 'bank-transfer', arguments: args),
-        ),
-      );
-      return true;
+          : 'تم إرسال الطلب (${paymentTimingMeta.label}). سيتم تزويدك بتفاصيل الدفع اليدوي ضمن متابعة الطلب.';
+      confirmationMessage = formattedAmount != null
+          ? '$baseMessage (المبلغ المستحق: $formattedAmount)'
+          : baseMessage;
+    } else {
+      final String confirmationTimingText =
+          'تم إرسال طلب الدفع (${paymentTimingMeta.label})، يتم تحويلك لمتابعة الطلب.';
+      final String baseMessage = timingNote != null && timingNote.isNotEmpty
+          ? '$confirmationTimingText $timingNote'
+          : confirmationTimingText;
+      confirmationMessage = formattedAmount != null
+          ? '$baseMessage (الإجمالي: $formattedAmount)'
+          : baseMessage;
     }
 
-    final String confirmationTimingText =
-        'تم إرسال طلب الدفع (${paymentTimingMeta.label})، يتم تحويلك لمتابعة الطلب.';
-    final String confirmationMessage =
-    timingNote != null && timingNote.isNotEmpty
-        ? '$confirmationTimingText $timingNote'
-        : confirmationTimingText;
 
 
     HelperUtils.showSnackBarMessage(context, confirmationMessage);
@@ -2410,9 +2392,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       ),
           (Route route) => route.isFirst,
     );
-    return false;
-
-
   }
 
   List<Map<String, dynamic>> _collectPayloadCandidates(
@@ -2508,34 +2487,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     return _asTrimmedString(rawOrderId);
   }
 
-  int _resolveNumericOrderId(OrderSubmissionResult result, String? resolved,
-      List<Map<String, dynamic>> candidates) {
-    final UserOrder? order = result.details?.order;
-    final int? fromOrder = _asInt(order?.id);
-    if (fromOrder != null && fromOrder > 0) {
-      return fromOrder;
-    }
 
-    final int? direct = _asInt(result.orderId ?? result.raw['order_id']);
-    if (direct != null && direct > 0) {
-      return direct;
-    }
-
-    if (resolved != null) {
-      final int? parsedResolved = _asInt(resolved);
-      if (parsedResolved != null && parsedResolved > 0) {
-        return parsedResolved;
-      }
-    }
-
-    final int? fromCandidates =
-    _findIntValue(candidates, const <String>['order_id', 'orderId', 'id']);
-    if (fromCandidates != null && fromCandidates > 0) {
-      return fromCandidates;
-    }
-
-    return 0;
-  }
 
   _ResolvedPaymentMeta _resolvePaymentMeta(
       OrderSubmissionResult result, List<Map<String, dynamic>> candidates) {

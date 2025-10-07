@@ -16,143 +16,124 @@ import 'package:marib/utils/payment/manual_payment_service.dart'
 
 
 
+
+
+
+
+
+
+import 'package:flutter/material.dart';
+
 class SoonScreen extends StatefulWidget {
   const SoonScreen({super.key});
-
-  static Route route(RouteSettings routeSettings) {
-    return BlurredRouter(builder: (_) => const SoonScreen());
-  }
-
-  @override
-  State<SoonScreen> createState() => SoonScreenState();
+  static Route route(RouteSettings s) => MaterialPageRoute(builder: (_) => const SoonScreen());
+  @override State<SoonScreen> createState() => _SoonScreenState();
 }
 
-class SoonScreenState extends State<SoonScreen> with TickerProviderStateMixin {
-  Future<void> _openBankTransferForPackage({
-    required int packageId,
-    required double amount,
-    String currency = 'YER',
-    required String packageType, // 'item_listing' | 'advertisement' | 'user'
-    int? itemId,
-  }) async {
-    final token = HiveUtils.getJWT();
-    if (token == null || token.isEmpty) {
-      // UiUtils.showSnackBarMessage(context, "سجّل الدخول أولاً");
-      return;
-    }
-
-    final result = await Navigator.of(context).push(
-      BankTransferScreen.route(
-        RouteSettings(
-          name: '/bank-transfer',
-          arguments: BankTransferArgs(
-            token: token,
-            packageId: packageId,
-            amount: amount,
-            currency: currency,
-            packageType: packageType,
-            purpose: 'package',
-            itemId: itemId,
-          ),
-        ),
-      ),
-    );
-
-    if (!mounted) return;
-    final success = result is ManualPaymentSubmissionResult
-        ? result.success
-        : result == true;
-    if (success) {
-
-      // UiUtils.showSnackBarMessage(context, "تم رفع الإيصال وبانتظار المراجعة");
-      // UiUtils.showSnackBarMessage(context, "تم رفع الإيصال وبانتظار المراجعة");
-    }
-  }
+class _SoonScreenState extends State<SoonScreen> {
+  final _scroll = ScrollController();
 
   @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion(
-      value: UiUtils.getSystemUiOverlayStyle(
-        context: context,
-        statusBarColor: context.color.secondaryColor,
+    return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _scroll.animateTo(600, duration: const Duration(milliseconds: 450), curve: Curves.easeOutCubic),
+        icon: const Icon(Icons.south_rounded), label: const Text('اذهب للنصف'),
       ),
-      child: Scaffold(
-        backgroundColor: context.color.primaryColor,
-        appBar: UiUtils.buildAppBar(
-          context,
-          showBackButton: true,
-          title: "soon".translate(context),
-          bottomHeight: 20,
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SvgPicture.asset('assets/svg/soon.svg', width: 200, height: 200),
-              const SizedBox(height: 20),
-              Text(
-                "Coming Soon",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: context.color.territoryColor,
-                ),
-              ),
-              const SizedBox(height: 40),
-
-              // شاشة الباقات (كما هي)
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: context.color.territoryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: () async {
-                  final res = await Navigator.of(context).push(
-                    SubscriptionPackageListScreen.route(
-                      const RouteSettings(
-                        name: '/subscription-packages',
-                        arguments: {'source': 'soon_screen_test'},
-                      ),
+      body: StretchingOverscrollIndicator(
+        axisDirection: AxisDirection.down,
+        child: CustomScrollView(
+          controller: _scroll,
+          physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+          slivers: [
+            SliverAppBar(
+              pinned: true, stretch: true, expandedHeight: 220,
+              title: const Text('🚀 قريباً — تجربة التمرير'),
+              flexibleSpace: FlexibleSpaceBar(
+                stretchModes: const [StretchMode.zoomBackground, StretchMode.fadeTitle],
+                background: Stack(fit: StackFit.expand, children: [
+                  Image.network('https://picsum.photos/1000/400?blur=2', fit: BoxFit.cover),
+                  Container(color: Colors.black26),
+                  Positioned(
+                    left: 16, bottom: 16,
+                    child: ElevatedButton.icon(
+                      onPressed: () {}, icon: const Icon(Icons.info_outline), label: const Text('معلومات'),
+                      style: ElevatedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                     ),
-                  );
-                  if (res == true) {
-                    // UiUtils.showSnackBarMessage(context, "✅ Package Activated!");
-                  }
-                },
-                child: const Text("جرّب شاشة الباقات",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
+                ]),
               ),
+            ),
 
-              const SizedBox(height: 14),
+            // عنوان صغير
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Row(children: const [
+                  Text('قائمة عناصر وهمية', style: TextStyle(fontWeight: FontWeight.w700)),
+                ]),
+              ),
+            ),
 
-              // اختبار التحويل البنكي مباشرةً
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: context.color.territoryColor.withOpacity(0.85),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            // قائمة طويلة للتجربة (بدون overflow)
+            SliverList.builder(
+              itemCount: 30,
+              itemBuilder: (c, i) => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                child: Material(
+                  color: Colors.white, elevation: 2, borderRadius: BorderRadius.circular(14),
+                  child: SizedBox(
+                    height: 128,
+                    child: Row(children: [
+                      ClipRRect(
+                        borderRadius: const BorderRadius.only(topLeft: Radius.circular(14), bottomLeft: Radius.circular(14)),
+                        child: Image.network('https://picsum.photos/seed/card$i/320/220', width: 140, height: 128, fit: BoxFit.cover),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text('عنوان تجريبي ${i + 1}', maxLines: 1, overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                            const SizedBox(height: 6),
+                            Text('وصف تجريبي يوضّح سلوك الالتفاف والتمرير. نص وهمي لملء المساحة.',
+                                maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.grey[700])),
+                            const Spacer(),
+                            Row(children: [
+                              const Icon(Icons.star, size: 16, color: Colors.amber),
+                              const SizedBox(width: 6),
+                              Text('${(4.0 + (i % 5) * 0.1).toStringAsFixed(1)}'),
+                              const Spacer(),
+                              SizedBox(
+                                height: 36,
+                                child: FilledButton.tonal(onPressed: () {}, child: const Text('تفاصيل')),
+                              ),
+                            ]),
+                          ]),
+                        ),
+                      ),
+                    ]),
+                  ),
                 ),
-                onPressed: () async {
-                  const pkgId = 1;
-                  const amount = 5000.0;
-                  const currency = 'YER';
-                  const packageType = 'item_listing';
-                  await _openBankTransferForPackage(
-                    packageId: pkgId,
-                    amount: amount,
-                    currency: currency,
-                    packageType: packageType,
-                    itemId: null,
-                  );
-                },
-                child: const Text("ادفع الآن (تحويل بنكي)",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
-            ],
-          ),
+            ),
+
+            // مساحة إعلان + ذيل
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 16, 14, 60),
+                child: Column(children: [
+                  Container(
+                    height: 92, width: double.infinity,
+                    decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(12)),
+                    child: const Center(child: Text('مساحة إعلان تجريبية — 300×250')),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('نهاية المعاينة — اسحب لشدّ الرأس/الذيل', style: TextStyle(color: Colors.black54)),
+                ]),
+              ),
+            ),
+          ],
         ),
       ),
     );

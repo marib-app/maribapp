@@ -12,6 +12,9 @@ import 'package:marib/data/model/cart/cart_safety_tip.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:marib/utils/helper_utils.dart';
+import 'package:marib/utils/constant.dart';
+
+
 
 class CartUI extends StatelessWidget {
   // مدخلات الحالة
@@ -19,6 +22,7 @@ class CartUI extends StatelessWidget {
   final List<Cart> cartItems;
   final double subtotal;
   final List<CartDiscount> discounts;
+  final String? currency;
 
   final String? supportWhatsappLabel;
   final String? supportWhatsappNumber;
@@ -58,6 +62,7 @@ class CartUI extends StatelessWidget {
     required this.cartItems,
     required this.subtotal,
     required this.discounts,
+    required this.currency,
 
     required this.couponController,
     required this.couponInProgress,
@@ -89,7 +94,14 @@ class CartUI extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
+    final String? normalizedCurrency = () {
+      final String? trimmed = currency?.trim();
+      if (trimmed != null && trimmed.isNotEmpty) {
+        return trimmed;
+      }
+      final String fallback = Constant.currencySymbol.trim();
+      return fallback.isEmpty ? null : fallback;
+    }();
     final String? storeName = () {
       if (cartItems.isEmpty) return null;
       for (final cart in cartItems) {
@@ -343,7 +355,13 @@ class CartUI extends StatelessWidget {
     final Widget? safetyBanner = buildSafetyTipsBanner();
 
 
-
+    String _formatTotalAmount(double value, String? currencyToken) {
+      final String formatted = value.toStringAsFixed(2);
+      if (currencyToken == null || currencyToken.isEmpty) {
+        return formatted;
+      }
+      return '$formatted $currencyToken';
+    }
 
     Widget buildDiscountTile(CartDiscount discount) {
       final bool applied = discount.isApplied;
@@ -985,7 +1003,7 @@ class CartUI extends StatelessWidget {
                           isLoading
                               ? _buildShimmerLine(context, width: 80)
                               : Text(
-                            "${subtotal.toStringAsFixed(2)} ر.س",
+                            _formatTotalAmount(subtotal, normalizedCurrency),
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w700,

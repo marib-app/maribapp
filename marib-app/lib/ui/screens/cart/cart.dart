@@ -16,6 +16,7 @@ import 'package:marib/data/model/cart/cart_discount.dart';
 import 'package:marib/data/model/cart/cart_safety_tip.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:marib/utils/helper_utils.dart';
+import 'package:marib/utils/constant.dart';
 
 
 
@@ -41,6 +42,9 @@ class _CartScreenState extends State<CartScreen> {
   // نفس القيم الأصلية
   final double _whatsappBottom = 155;
   final double _whatsappRight = 340;
+  Set<String> _appliedCouponSnapshot = <String>{};
+  CartState? _lastCartState;
+
 
   @override
   void initState() {
@@ -61,16 +65,11 @@ class _CartScreenState extends State<CartScreen> {
       // مثال: await context.read<CartCubit>().loadCartFromApi();
       // ملاحظة: عند وصول البيانات، لا تنسَ ضبط الاختيارات/الافتراضي حسب حاجتك.
       final CartCubit cubit = context.read<CartCubit>();
+      _syncCouponSnapshot(cubit.state.discounts);
+      _lastCartState = cubit.state;
       await cubit.fetchCart();
-      final CartState cartState = cubit.state;
-      final bool needsPaymentTimingRefresh =
-          cartState.deliveryPaymentOptions == null ||
-              cartState.deliveryPaymentOptions!.isEmpty ||
-              cartState.deliveryPaymentTiming == null ||
-              cartState.deliveryPaymentTiming!.trim().isEmpty;
-      if (needsPaymentTimingRefresh) {
-        await cubit.refreshDeliveryPaymentTiming();
-      }
+      _syncCouponSnapshot(cubit.state.discounts);
+      _lastCartState = cubit.state;
     } catch (_) {
       // TODO: تعامل مع الخطأ حسب نظام التنبيهات لديك
     } finally {
@@ -98,6 +97,134 @@ class _CartScreenState extends State<CartScreen> {
       }
       _selectAll = (_selectedItems.length == totalCount && totalCount > 0);
     });
+  }
+
+
+  void _syncCouponSnapshot(List<CartDiscount> discounts) {
+    _appliedCouponSnapshot = _extractAppliedCoupons(discounts);
+  }
+
+  Set<String> _extractAppliedCoupons(List<CartDiscount> discounts) {
+    final Set<String> applied = <String>{};
+    for (final CartDiscount discount in discounts) {
+      final String? code = discount.code;
+      if (code == null || !discount.isApplied) {
+        continue;
+      }
+      final String trimmed = code.trim();
+      if (trimmed.isEmpty) {
+        continue;
+      }
+      applied.add(trimmed.toLowerCase());
+    }
+    return applied;
+  }
+
+  CartDiscount? _findDiscountByNormalizedCode(
+      List<CartDiscount> discounts,
+      String normalizedCode,
+      ) {
+    for (final CartDiscount discount in discounts) {
+      final String? code = discount.code;
+      if (code == null) continue;
+      final String trimmed = code.trim();
+      if (trimmed.isEmpty) continue;
+      if (trimmed.toLowerCase() == normalizedCode) {
+        return discount;
+      }
+    }
+    return null;
+  }
+
+  String? _resolveCartCurrency(CartState state) {
+    final List<String?> candidates = <String?>[
+      _currencyFromMap(state.deliveryQuote),
+      _currencyFromMap(state.departmentPolicy),
+      _currencyFromMap(state.blocking),
+      _currencyFromMap(state.support),
+    ];
+
+    for (final String? candidate in candidates) {
+      if (candidate != null) {
+        return candidate;
+      }
+    }
+
+    for (final Cart item in state.items) {
+      final String? normalized = _normalizeCurrencyToken(item.currency);
+      if (normalized != null) {
+        return normalized;
+      }
+    }
+
+    final String fallback = Constant.currencySymbol.trim();
+    return fallback.isEmpty ? null : fallback;
+  }
+
+  String? _currencyFromMap(Map<String, dynamic>? source) {
+    if (source == null || source.isEmpty) {
+      return null;
+    }
+
+    const List<String> currencyKeys = <String>[
+      'currency',
+      'currency_code',
+      'currencyCode',
+      'currency_display',
+      'currencyDisplay',
+      'currency_symbol',
+      'currencySymbol',
+    ];
+
+    for (final String key in currencyKeys) {
+      if (!source.containsKey(key)) {
+        continue;
+      }
+      final dynamic value = source[key];
+      final String? direct = _normalizeCurrencyToken(_asString(value));
+      if (direct != null) {
+        return direct;
+      }
+      if (value is Map<String, dynamic>) {
+        final String? nested = _currencyFromMap(value);
+        if (nested != null) {
+          return nested;
+        }
+      }
+    }
+
+    for (final dynamic entry in source.values) {
+      if (entry is Map<String, dynamic>) {
+        final String? nested = _currencyFromMap(entry);
+        if (nested != null) {
+          return nested;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  String? _normalizeCurrencyToken(String? token) {
+    if (token == null) {
+      return null;
+    }
+    final String trimmed = token.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    return trimmed.toUpperCase();
+  }
+
+  String? _asString(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is String) {
+      final String trimmed = value.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+    return value.toString();
   }
 
   Future<void> _clearAll() async {
@@ -181,6 +308,7 @@ class _CartScreenState extends State<CartScreen> {
     final CartState cartState = context.watch<CartCubit>().state;
     final List<Cart> cartItems = cartState.items;
     final double subtotal = context.read<CartCubit>().subtotal;
+    final String? orderCurrency = _resolveCartCurrency(cartState);
 
 
 
@@ -363,25 +491,59 @@ class _CartScreenState extends State<CartScreen> {
               previous.couponError != current.couponError;
         },
         listener: (BuildContext context, CartState state) {
+          final CartState? previousState = _lastCartState;
+          final Set<String> previousCoupons = _appliedCouponSnapshot;
+          final Set<String> nextCoupons = _extractAppliedCoupons(state.discounts);
+
+          if (_loading) {
+            _appliedCouponSnapshot = nextCoupons;
+            _lastCartState = state;
+            return;
+          }
           if (!state.couponInProgress && state.couponError == null) {
             final String trimmed = _couponController.text.trim();
             if (trimmed.isNotEmpty) {
               final String lower = trimmed.toLowerCase();
-              final bool applied = state.discounts.any((CartDiscount discount) {
-                final String? code = discount.code?.trim();
-                if (code == null || code.isEmpty) return false;
-                return discount.isApplied && code.toLowerCase() == lower;
-              });
-              if (applied) {
+              if (nextCoupons.contains(lower)) {
+
                 _couponController.clear();
               }
             }
           }
+
+          final String? trimmedError = state.couponError?.trim();
+          final String? previousError = previousState?.couponError?.trim();
+          if (trimmedError != null &&
+              trimmedError.isNotEmpty &&
+              trimmedError != previousError) {
+            HelperUtils.showSnackBarMessage(context, trimmedError);
+          } else if (!state.couponInProgress) {
+            final Set<String> newlyApplied = nextCoupons.difference(previousCoupons);
+            if (newlyApplied.isNotEmpty) {
+              for (final String normalized in newlyApplied) {
+                final CartDiscount? discount =
+                _findDiscountByNormalizedCode(state.discounts, normalized);
+                final String resolvedCode =
+                (discount?.code ?? normalized).trim().toUpperCase();
+                final String title = ((discount?.displayTitle ?? '').trim());
+                final String message = title.isNotEmpty &&
+                    title.toLowerCase() != resolvedCode.toLowerCase()
+                    ? 'تم تطبيق القسيمة $resolvedCode بنجاح: $title'
+                    : 'تم تطبيق القسيمة $resolvedCode بنجاح.';
+                HelperUtils.showSnackBarMessage(context, message);
+              }
+            }
+          }
+
+          _appliedCouponSnapshot = nextCoupons;
+          _lastCartState = state;
+
         },
         child: CartUI(
           isLoading: _loading,
           cartItems: cartItems,
           subtotal: subtotal,
+          currency: orderCurrency,
           selectAll: _selectAll,
           selectedItemIds: _selectedItems,
           whatsappBottom: _whatsappBottom,

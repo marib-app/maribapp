@@ -25,6 +25,9 @@ String.fromEnvironment('CART_REMOVE_COUPON_ENDPOINTS');
 const String _cartDeliveryTimingEndpointOverride =
 String.fromEnvironment('CART_DELIVERY_PAYMENT_TIMING_ENDPOINTS');
 
+const String _cartCheckoutInfoEndpointOverride =
+String.fromEnvironment('CART_CHECKOUT_INFO_ENDPOINTS');
+
 /// Endpoint candidates in priority order. First working one wins.
 final List<String> _cartFetchEndpointCandidates = _buildCartEndpointCandidates(
   override: _cartGetEndpointOverride,
@@ -131,6 +134,16 @@ _buildCartEndpointCandidates(
   ],
 );
 
+final List<String> _cartCheckoutInfoEndpointCandidates =
+_buildCartEndpointCandidates(
+  override: _cartCheckoutInfoEndpointOverride,
+  defaults: <String>[
+    'checkout-info',
+    'cart/checkout-info',
+    'cart/checkout',
+    'cart/checkout-details',
+  ],
+);
 
 
 List<String> _buildCartEndpointCandidates({
@@ -247,6 +260,15 @@ class CartRepository {
     }
   }
 
+
+  Future<CartCheckoutDetails> fetchCheckoutInfo() async {
+    final Map<String, dynamic> response = await _getWithFallback(
+      _cartCheckoutInfoEndpointCandidates,
+      queryParameters: const <String, dynamic>{},
+    );
+
+    return _parseCheckoutDetails(response);
+  }
 
   Future<CartSummary> addItem({
     required int itemId,
@@ -979,6 +1001,7 @@ class CartRepository {
       'cartSummary',
       'extras',
       'extra',
+      'checkout',
     ];
 
     while (queue.isNotEmpty) {
@@ -1010,6 +1033,48 @@ class CartRepository {
 
     );
   }
+
+
+
+  CartCheckoutDetails _parseCheckoutDetails(Map<String, dynamic> response) {
+    final CartSummary summary = _parseCartSummary(response);
+    final Map<String, dynamic>? data =
+        _castToStringKeyedMap(response['data']) ?? _castToStringKeyedMap(response);
+    final Map<String, dynamic>? checkout = data == null
+        ? null
+        : _castToStringKeyedMap(
+        data['checkout'] ?? data['checkout_info'] ?? data['checkoutInfo']);
+
+    String? departmentNotice = _stringFrom(
+      checkout?['department_notice'] ?? checkout?['departmentNotice'],
+    );
+
+    departmentNotice ??=
+        _stringFrom(data?['department_notice'] ?? data?['departmentNotice']);
+    departmentNotice ??= _stringFrom(
+      response['department_notice'] ?? response['departmentNotice'],
+    );
+
+    Map<String, dynamic>? deliveryQuote = summary.deliveryQuote == null
+        ? null
+        : Map<String, dynamic>.from(summary.deliveryQuote!);
+
+    if (departmentNotice != null) {
+      deliveryQuote ??= <String, dynamic>{};
+      deliveryQuote['department_notice'] = departmentNotice;
+    }
+
+    return CartCheckoutDetails(
+      departmentPolicy: summary.departmentPolicy,
+      support: summary.support,
+      deliveryQuote: deliveryQuote,
+      blocking: summary.blocking,
+      deliveryPaymentOptions: summary.deliveryPaymentOptions,
+      deliveryPaymentTiming: summary.deliveryPaymentTiming,
+      departmentNotice: departmentNotice,
+    );
+  }
+
 
   List<CartDiscount> _parseDiscounts(Map<String, dynamic> response) {
     final List<CartDiscount> discounts = <CartDiscount>[];
@@ -1110,6 +1175,25 @@ class CartRepository {
     }
     return null;
   }
+
+
+
+  String? _stringFrom(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is String) {
+      final String trimmed = value.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+
+    final String text = value.toString().trim();
+    return text.isEmpty ? null : text;
+  }
+
+
+
+
 
   Map<String, dynamic> _ensureSellerRow(Map<String, dynamic> row) {
     final Map<String, dynamic> result = Map<String, dynamic>.from(row);

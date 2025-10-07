@@ -33,13 +33,15 @@ String? normalizeImage(String? url, {String? base}) {
   final u = url.trim();
   if (u.isEmpty) return null;
   if (u.startsWith('http')) return u;
-  if (u.startsWith('/')) return (base != null && base.isNotEmpty) ? '$base$u' : u;
+  if (u.startsWith('/'))
+    return (base != null && base.isNotEmpty) ? '$base$u' : u;
   return (base != null && base.isNotEmpty) ? '$base/$u' : u;
 }
 
 /// تخزين حالة المقروء لكل مستخدم
 class ReadNotifStore {
   static const _prefix = 'read_notifications';
+
   static String _keyForUser(String userId) => '$_prefix:$userId';
 
   static Future<Set<String>> load(String userId) async {
@@ -145,7 +147,9 @@ class NotificationsState extends State<Notifications> {
             if (state.errorMessage is ApiException &&
                 state.errorMessage.error == "no-internet") {
               return NoInternet(
-                onRetry: () => context.read<FetchNotificationsCubit>().fetchNotifications(),
+                onRetry: () => context
+                    .read<FetchNotificationsCubit>()
+                    .fetchNotifications(),
               );
             }
             return const SomethingWentWrong();
@@ -153,7 +157,9 @@ class NotificationsState extends State<Notifications> {
           if (state is FetchNotificationsSuccess) {
             if (state.notificationdata.isEmpty) {
               return NoDataFound(
-                onTap: () => context.read<FetchNotificationsCubit>().fetchNotifications(),
+                onTap: () => context
+                    .read<FetchNotificationsCubit>()
+                    .fetchNotifications(),
               );
             }
             return _buildNotificationList(context, state);
@@ -217,131 +223,137 @@ class NotificationsState extends State<Notifications> {
 
   Widget _buildNotificationList(
       BuildContext context, FetchNotificationsSuccess state) {
+    final cubit = context.read<FetchNotificationsCubit>();
+
     return Column(
       children: [
         Expanded(
-          child: ListView.separated(
-            controller: _pageScrollController,
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.all(10),
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemCount: state.notificationdata.length,
-            itemBuilder: (context, index) {
-              final NotificationData n = state.notificationdata[index];
+          child: RefreshIndicator(
+            color: Theme.of(context).colorScheme.territoryColor,
+            onRefresh: () => cubit.refreshNotifications(),
+            child: ListView.separated(
+              controller: _pageScrollController,
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              padding: const EdgeInsets.all(10),
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemCount: state.notificationdata.length,
+              itemBuilder: (context, index) {
+                final NotificationData n = state.notificationdata[index];
 
-              final String id = _notifKey(n, index);
-              final bool isRead = _readIds.contains(id);
+                final String id = _notifKey(n, index);
+                final bool isRead = _readIds.contains(id);
 
-              // صورة مع تطبيع/حماية
-              final String img = (normalizeImage(n.image) ?? '').trim();
+                // صورة مع تطبيع/حماية
+                final String img = (normalizeImage(n.image) ?? '').trim();
 
-              return Material(
-                key: ValueKey(id),
-                color: Theme.of(context).colorScheme.secondaryColor,
-                borderRadius: BorderRadius.circular(10),
-                child: InkWell(
+                return Material(
+                  key: ValueKey(id),
+                  color: Theme.of(context).colorScheme.secondaryColor,
                   borderRadius: BorderRadius.circular(10),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () {
+                      setState(() => _readIds.add(id));
+                      ReadNotifStore.save(_userId, _readIds);
 
-
-                  onTap: () {
-                    setState(() => _readIds.add(id));
-                    ReadNotifStore.save(_userId, _readIds);
-
-                    Navigator.pushNamed(
-                      context,
-                      Routes.notificationDetailPage,
-                      arguments: n,
-                    );
-                  },
-
-
-
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: context.color.borderColor.darken(50),
-                        width: 1,
-                      ),
-                    ),
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // صورة الإشعار - باستخدام أسلوبك UiUtils.getImage
-                        ClipRRect(
-                          clipBehavior: Clip.antiAliasWithSaveLayer,
-                          borderRadius: const BorderRadius.all(Radius.circular(15)),
-                          child: UiUtils.getImage(
-                            img, // قد يكون فارغًا؛ UiUtils عادة يتعامل مع ذلك
-                            height: 53.rh(context),
-                            width: 53.rw(context),
-                            fit: BoxFit.cover, // أفضل من fill لتفادي التشويه
-                          ),
+                      Navigator.pushNamed(
+                        context,
+                        Routes.notificationDetailPage,
+                        arguments: n,
+                      );
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: context.color.borderColor.darken(50),
+                          width: 1,
                         ),
-                        const SizedBox(width: 12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // صورة الإشعار - باستخدام أسلوبك UiUtils.getImage
+                          ClipRRect(
+                            clipBehavior: Clip.antiAliasWithSaveLayer,
+                            borderRadius:
+                                const BorderRadius.all(Radius.circular(15)),
+                            child: UiUtils.getImage(
+                              img, // قد يكون فارغًا؛ UiUtils عادة يتعامل مع ذلك
+                              height: 53.rh(context),
+                              width: 53.rw(context),
+                              fit: BoxFit.cover, // أفضل من fill لتفادي التشويه
+                            ),
+                          ),
+                          const SizedBox(width: 12),
 
-                        // نصوص
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      (n.title ?? '').firstUpperCase(),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium!
-                                          .merge(TextStyle(
-                                        fontWeight: isRead
-                                            ? FontWeight.w500
-                                            : FontWeight.w700,
-                                      )),
-                                    ),
-                                  ),
-                                  if (!isRead)
-                                    Container(
-                                      width: 8,
-                                      height: 8,
-                                      margin:
-                                      const EdgeInsetsDirectional.only(start: 8),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .territoryColor,
-                                        shape: BoxShape.circle,
+                          // نصوص
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        (n.title ?? '').firstUpperCase(),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium!
+                                            .merge(TextStyle(
+                                              fontWeight: isRead
+                                                  ? FontWeight.w500
+                                                  : FontWeight.w700,
+                                            )),
                                       ),
                                     ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                (n.message ?? '').firstUpperCase(),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall!
-                                    .copyWith(height: 1.35),
-                              ).color(context.color.textLightColor),
-                              const SizedBox(height: 10),
-                              Text((n.createdAt?.formatDate().toString() ?? ''))
-                                  .size(context.font.smaller)
-                                  .color(context.color.textLightColor),
-                            ],
+                                    if (!isRead)
+                                      Container(
+                                        width: 8,
+                                        height: 8,
+                                        margin:
+                                            const EdgeInsetsDirectional.only(
+                                                start: 8),
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .territoryColor,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  (n.message ?? '').firstUpperCase(),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall!
+                                      .copyWith(height: 1.35),
+                                ).color(context.color.textLightColor),
+                                const SizedBox(height: 10),
+                                Text((n.createdAt?.formatDate().toString() ??
+                                        ''))
+                                    .size(context.font.smaller)
+                                    .color(context.color.textLightColor),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
         if (state.isLoadingMore) UiUtils.progress(),

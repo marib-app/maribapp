@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/model/item/cart_model.dart';
@@ -37,7 +38,8 @@ class CartState {
     this.deliveryPaymentOptions,
     this.deliveryPaymentTiming,
     this.pendingAddition,
-
+    this.checkoutLoading = false,
+    this.departmentNotice,
   });
 
   final List<Cart> items;
@@ -54,7 +56,8 @@ class CartState {
   final List<dynamic>? deliveryPaymentOptions;
   final String? deliveryPaymentTiming;
   final PendingCartAddition? pendingAddition;
-
+  final bool checkoutLoading;
+  final String? departmentNotice;
 
   CartState copyWith({
     List<Cart>? items,
@@ -74,6 +77,8 @@ class CartState {
     Object? blocking = _sentinel,
     Object? deliveryPaymentOptions = _sentinel,
     Object? deliveryPaymentTiming = _sentinel,
+    bool? checkoutLoading,
+    Object? departmentNotice = _sentinel,
   }) {
     return CartState(
       items: items ?? this.items,
@@ -109,6 +114,10 @@ class CartState {
       identical(deliveryPaymentTiming, _sentinel)
           ? this.deliveryPaymentTiming
           : deliveryPaymentTiming as String?,
+      checkoutLoading: checkoutLoading ?? this.checkoutLoading,
+      departmentNotice: identical(departmentNotice, _sentinel)
+          ? this.departmentNotice
+          : departmentNotice as String?,
     );
   }
   static const Object _sentinel = Object();
@@ -204,7 +213,8 @@ class CartCubit extends Cubit<CartState> {
   final CartRepository _repository;
   final CartTipsRepository _tipsRepository;
   PendingCartAddition? _pendingAdditionCache;
-
+  bool _checkoutRefreshInProgress = false;
+  bool _checkoutRefreshPending = false;
 
 
   Future<void> fetchCart() async {
@@ -229,18 +239,84 @@ class CartCubit extends Cubit<CartState> {
         clearSafetyTips: !preservePendingAddition,
         pendingAddition:
         preservePendingAddition ? existingPendingAddition : null,
-        departmentPolicy: summary.departmentPolicy,
-        support: summary.support,
-        deliveryQuote: summary.deliveryQuote,
-        blocking: summary.blocking,
-        deliveryPaymentOptions: summary.deliveryPaymentOptions,
-        deliveryPaymentTiming: summary.deliveryPaymentTiming,
+        departmentPolicy:
+        summary.departmentPolicy ?? state.departmentPolicy,
+        support: summary.support ?? state.support,
+        deliveryQuote: summary.deliveryQuote ?? state.deliveryQuote,
+        blocking: summary.blocking ?? state.blocking,
+        deliveryPaymentOptions: summary.deliveryPaymentOptions ??
+            state.deliveryPaymentOptions,
+        deliveryPaymentTiming: summary.deliveryPaymentTiming ??
+            state.deliveryPaymentTiming,
+        checkoutLoading: true,
       ),
     );
 
     if (preservePendingAddition) {
       _pendingAdditionCache = existingPendingAddition;
     }
+
+
+
+    unawaited(refreshCheckoutDetails(force: true));
+  }
+
+  Future<void> refreshCheckoutDetails({bool force = false}) async {
+    if (state.items.isEmpty) {
+      _checkoutRefreshPending = false;
+      emit(
+        state.copyWith(
+          checkoutLoading: false,
+          departmentPolicy: null,
+          support: null,
+          deliveryQuote: null,
+          blocking: null,
+          deliveryPaymentOptions: null,
+          deliveryPaymentTiming: null,
+          departmentNotice: null,
+        ),
+      );
+      return;
+    }
+
+    if (_checkoutRefreshInProgress) {
+      if (force) {
+        _checkoutRefreshPending = true;
+      }
+      return;
+    }
+
+    _checkoutRefreshInProgress = true;
+    emit(state.copyWith(checkoutLoading: true));
+
+    try {
+      final CartCheckoutDetails details = await _repository.fetchCheckoutInfo();
+      emit(
+        state.copyWith(
+          checkoutLoading: false,
+          departmentPolicy:
+          details.departmentPolicy ?? state.departmentPolicy,
+          support: details.support ?? state.support,
+          deliveryQuote: details.deliveryQuote ?? state.deliveryQuote,
+          blocking: details.blocking ?? state.blocking,
+          deliveryPaymentOptions: details.deliveryPaymentOptions ??
+              state.deliveryPaymentOptions,
+          deliveryPaymentTiming: details.deliveryPaymentTiming ??
+              state.deliveryPaymentTiming,
+          departmentNotice:
+          details.departmentNotice ?? state.departmentNotice,
+        ),
+      );
+    } catch (_) {
+      emit(state.copyWith(checkoutLoading: false));
+    } finally {
+      _checkoutRefreshInProgress = false;
+      if (_checkoutRefreshPending) {
+        _checkoutRefreshPending = false;
+        unawaited(refreshCheckoutDetails());
+      }
+    }
+
   }
 
 
@@ -272,13 +348,16 @@ class CartCubit extends Cubit<CartState> {
           items: summary.items,
           discounts: summary.discounts,
           lastUpdated: DateTime.now(),
-          departmentPolicy: summary.departmentPolicy,
-          support: summary.support,
-          deliveryQuote: summary.deliveryQuote,
-          blocking: summary.blocking,
-          deliveryPaymentOptions: summary.deliveryPaymentOptions,
+          departmentPolicy:
+          summary.departmentPolicy ?? state.departmentPolicy,
+          support: summary.support ?? state.support,
+          deliveryQuote: summary.deliveryQuote ?? state.deliveryQuote,
+          blocking: summary.blocking ?? state.blocking,
+          deliveryPaymentOptions: summary.deliveryPaymentOptions ??
+              state.deliveryPaymentOptions,
           deliveryPaymentTiming:
           summary.deliveryPaymentTiming ?? normalized,
+          checkoutLoading: true,
         ),
       );
 
@@ -290,6 +369,8 @@ class CartCubit extends Cubit<CartState> {
       if (requiresRefresh) {
         await refreshDeliveryPaymentTiming();
       }
+      unawaited(refreshCheckoutDetails());
+
     } catch (_) {
       emit(
         state.copyWith(
@@ -438,12 +519,16 @@ class CartCubit extends Cubit<CartState> {
           safetyTips: skipTipFetch ? null : resolvedTips,
           clearSafetyTips: skipTipFetch || resolvedTips == null,
           pendingAddition: null,
-          departmentPolicy: summary.departmentPolicy,
-          support: summary.support,
-          deliveryQuote: summary.deliveryQuote,
-          blocking: summary.blocking,
-          deliveryPaymentOptions: summary.deliveryPaymentOptions,
-          deliveryPaymentTiming: summary.deliveryPaymentTiming,
+          departmentPolicy:
+          summary.departmentPolicy ?? state.departmentPolicy,
+          support: summary.support ?? state.support,
+          deliveryQuote: summary.deliveryQuote ?? state.deliveryQuote,
+          blocking: summary.blocking ?? state.blocking,
+          deliveryPaymentOptions: summary.deliveryPaymentOptions ??
+              state.deliveryPaymentOptions,
+          deliveryPaymentTiming: summary.deliveryPaymentTiming ??
+              state.deliveryPaymentTiming,
+          checkoutLoading: true,
         ),
       );
       _pendingAdditionCache = null;
@@ -463,6 +548,8 @@ class CartCubit extends Cubit<CartState> {
       if (shouldRefreshPaymentTiming) {
         await refreshDeliveryPaymentTiming();
       }
+      unawaited(refreshCheckoutDetails());
+
     } catch (error, _) {
       _recordTelemetry('cart_add.failed', <String, dynamic>{
         'department': normalizedDepartment,
@@ -499,8 +586,10 @@ class CartCubit extends Cubit<CartState> {
           summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
           deliveryPaymentTiming:
           summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
+          checkoutLoading: true,
         ),
       );
+      unawaited(refreshCheckoutDetails());
     } catch (_) {
       // Ignore delivery payment timing fetch failures.
     }
@@ -582,14 +671,20 @@ class CartCubit extends Cubit<CartState> {
         discounts: summary.discounts,
         lastUpdated: DateTime.now(),
         clearSafetyTips: true,
-        departmentPolicy: summary.departmentPolicy,
-        support: summary.support,
-        deliveryQuote: summary.deliveryQuote,
-        blocking: summary.blocking,
-        deliveryPaymentOptions: summary.deliveryPaymentOptions,
-        deliveryPaymentTiming: summary.deliveryPaymentTiming,
+        departmentPolicy:
+        summary.departmentPolicy ?? state.departmentPolicy,
+        support: summary.support ?? state.support,
+        deliveryQuote: summary.deliveryQuote ?? state.deliveryQuote,
+        blocking: summary.blocking ?? state.blocking,
+        deliveryPaymentOptions: summary.deliveryPaymentOptions ??
+            state.deliveryPaymentOptions,
+        deliveryPaymentTiming:
+        summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
+        checkoutLoading: true,
       ),
     );
+    unawaited(refreshCheckoutDetails());
+
   }
 
   Future<void> increaseQuantity({int? cartItemId, required int itemId}) async {
@@ -635,14 +730,19 @@ class CartCubit extends Cubit<CartState> {
         items: summary.items,
         discounts: summary.discounts,
         lastUpdated: DateTime.now(),
-        departmentPolicy: summary.departmentPolicy,
-        support: summary.support,
-        deliveryQuote: summary.deliveryQuote,
-        blocking: summary.blocking,
-        deliveryPaymentOptions: summary.deliveryPaymentOptions,
-        deliveryPaymentTiming: summary.deliveryPaymentTiming,
+        departmentPolicy:
+        summary.departmentPolicy ?? state.departmentPolicy,
+        support: summary.support ?? state.support,
+        deliveryQuote: summary.deliveryQuote ?? state.deliveryQuote,
+        blocking: summary.blocking ?? state.blocking,
+        deliveryPaymentOptions: summary.deliveryPaymentOptions ??
+            state.deliveryPaymentOptions,
+        deliveryPaymentTiming:
+        summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
+        checkoutLoading: true,
       ),
     );
+    unawaited(refreshCheckoutDetails());
   }
 
   Future<void> clearCart() async {
@@ -654,14 +754,19 @@ class CartCubit extends Cubit<CartState> {
         items: summary.items,
         discounts: summary.discounts,
         lastUpdated: DateTime.now(),
-        departmentPolicy: summary.departmentPolicy,
-        support: summary.support,
-        deliveryQuote: summary.deliveryQuote,
-        blocking: summary.blocking,
-        deliveryPaymentOptions: summary.deliveryPaymentOptions,
-        deliveryPaymentTiming: summary.deliveryPaymentTiming,
+        departmentPolicy:
+        summary.departmentPolicy ?? state.departmentPolicy,
+        support: summary.support ?? state.support,
+        deliveryQuote: summary.deliveryQuote ?? state.deliveryQuote,
+        blocking: summary.blocking ?? state.blocking,
+        deliveryPaymentOptions: summary.deliveryPaymentOptions ??
+            state.deliveryPaymentOptions,
+        deliveryPaymentTiming:
+        summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
+        checkoutLoading: true,
       ),
     );
+    unawaited(refreshCheckoutDetails());
   }
 
   Future<void> applyCoupon(String rawCode) async {
@@ -699,14 +804,19 @@ class CartCubit extends Cubit<CartState> {
           clearCouponError: true,
           clearThrottle: true,
           lastUpdated: DateTime.now(),
-          departmentPolicy: summary.departmentPolicy,
-          support: summary.support,
-          deliveryQuote: summary.deliveryQuote,
-          blocking: summary.blocking,
-          deliveryPaymentOptions: summary.deliveryPaymentOptions,
-          deliveryPaymentTiming: summary.deliveryPaymentTiming,
+          departmentPolicy:
+          summary.departmentPolicy ?? state.departmentPolicy,
+          support: summary.support ?? state.support,
+          deliveryQuote: summary.deliveryQuote ?? state.deliveryQuote,
+          blocking: summary.blocking ?? state.blocking,
+          deliveryPaymentOptions: summary.deliveryPaymentOptions ??
+              state.deliveryPaymentOptions,
+          deliveryPaymentTiming:
+          summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
+          checkoutLoading: true,
         ),
       );
+      unawaited(refreshCheckoutDetails());
     } on ApiHttpException catch (error) {
       if (error.statusCode == 429) {
         emit(
@@ -774,14 +884,19 @@ class CartCubit extends Cubit<CartState> {
           clearCouponError: true,
           clearThrottle: true,
           lastUpdated: DateTime.now(),
-          departmentPolicy: summary.departmentPolicy,
-          support: summary.support,
-          deliveryQuote: summary.deliveryQuote,
-          blocking: summary.blocking,
-          deliveryPaymentOptions: summary.deliveryPaymentOptions,
-          deliveryPaymentTiming: summary.deliveryPaymentTiming,
+          departmentPolicy:
+          summary.departmentPolicy ?? state.departmentPolicy,
+          support: summary.support ?? state.support,
+          deliveryQuote: summary.deliveryQuote ?? state.deliveryQuote,
+          blocking: summary.blocking ?? state.blocking,
+          deliveryPaymentOptions: summary.deliveryPaymentOptions ??
+              state.deliveryPaymentOptions,
+          deliveryPaymentTiming:
+          summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
+          checkoutLoading: true,
         ),
       );
+      unawaited(refreshCheckoutDetails());
     } on ApiHttpException catch (error) {
       if (error.statusCode == 429) {
         emit(
@@ -828,14 +943,19 @@ class CartCubit extends Cubit<CartState> {
         items: summary.items,
         discounts: summary.discounts,
         lastUpdated: DateTime.now(),
-        departmentPolicy: summary.departmentPolicy,
-        support: summary.support,
-        deliveryQuote: summary.deliveryQuote,
-        blocking: summary.blocking,
-        deliveryPaymentOptions: summary.deliveryPaymentOptions,
-        deliveryPaymentTiming: summary.deliveryPaymentTiming,
+        departmentPolicy:
+        summary.departmentPolicy ?? state.departmentPolicy,
+        support: summary.support ?? state.support,
+        deliveryQuote: summary.deliveryQuote ?? state.deliveryQuote,
+        blocking: summary.blocking ?? state.blocking,
+        deliveryPaymentOptions: summary.deliveryPaymentOptions ??
+            state.deliveryPaymentOptions,
+        deliveryPaymentTiming:
+        summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
+        checkoutLoading: true,
       ),
     );
+    unawaited(refreshCheckoutDetails());
   }
 
   int get totalItems =>

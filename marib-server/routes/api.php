@@ -170,6 +170,7 @@ Route::group(['middleware' => ['auth:sanctum']], static function () {
 
 
     Route::get('cart', [CartController::class, 'index']);
+    Route::get('checkout-info', [CartController::class, 'checkoutInfo']);
     Route::post('cart/items', [CartController::class, 'store']);
     Route::post('cart/add', [CartController::class, 'store']);
     Route::post('add-to-cart', [CartController::class, 'store']);

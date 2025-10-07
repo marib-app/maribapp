@@ -18,6 +18,7 @@ import 'package:marib/utils/api.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
 import 'slider_shimmer.dart';
+import 'package:marib/ui/screens/widgets/lazy_network_image.dart';
 
 
 
@@ -698,34 +699,19 @@ class _SliderComponentState extends State<SliderComponent>
 
                 return _buildBannerShell(
                   onTap: () => _handleTap(slider),
-                  child: Image.network(
-                    slider.image ?? '',
+                  child: LazyNetworkImage(
+                    imageUrl: slider.image ?? '',
                     fit: BoxFit.fill,
-                    loadingBuilder: (
-                        BuildContext context,
-                        Widget child,
-                        ImageChunkEvent? loadingProgress,
-                          ) {
-                      if (loadingProgress == null) {
-                        return child;
-                      }
-                      return Container(
-                        color: Colors.grey.shade200,
-                        alignment: Alignment.center,
-                        child: const CircularProgressIndicator(),
-                      );
-                    },
-                    errorBuilder: (
-                        BuildContext context,
-                        Object error,
-                        StackTrace? stackTrace,
-                          ) {
-                      return Container(
-                        color: Colors.grey.shade200,
-                        alignment: Alignment.center,
-                        child: const Icon(Icons.broken_image),
-                      );
-                    },
+                    placeholder: Container(
+                      color: Colors.grey.shade200,
+                      alignment: Alignment.center,
+                      child: const CircularProgressIndicator(),
+                    ),
+                    errorWidget: Container(
+                      color: Colors.grey.shade200,
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.broken_image),
+                    ),
                   ),
                 );
               },

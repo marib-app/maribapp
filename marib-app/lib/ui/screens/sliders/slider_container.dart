@@ -9,6 +9,7 @@ import 'package:marib/data/model/home_slider.dart';
 import 'package:marib/data/cubits/slider_cubit.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
 import 'dart:async';
+import 'package:marib/ui/screens/widgets/lazy_network_image.dart';
 
 
 class SliderWidget extends StatefulWidget {
@@ -191,20 +192,12 @@ class _SliderWidgetState extends State<SliderWidget> {
               ),
               child: ClipRRect(
                 borderRadius: borderRadius,
-                child: Image.network(
-                  imageUrl,
+                child: LazyNetworkImage(
+                  imageUrl: imageUrl,
                   fit: BoxFit.cover,
-                  errorBuilder: (
-                      BuildContext context,
-                      Object error,
-                      StackTrace? stackTrace,
-                      ) {
-                    return Container(
-                      color: Colors.grey.shade200,
-                      alignment: Alignment.center,
-                      child: const Icon(Icons.broken_image),
-                    );
-                  },
+                  placeholder: Container(
+                    color: Colors.grey.shade200,
+                  ),
                 ),
               ),
             ),

@@ -3,12 +3,22 @@ import 'package:marib/data/model/notification_data.dart';
 import 'package:marib/utils/api.dart';
 
 class NotificationsRepository {
-  Future<DataOutput<NotificationData>> fetchNotifications(
-      {required int page}) async {
+  Future<DataOutput<NotificationData>> fetchNotifications({
+    required int page,
+    int perPage = 20,
+    DateTime? since,
+  }) async {
+
     try {
       Map<String, dynamic> parameters = {
         Api.page: page,
+        Api.perPageQuery: perPage,
+
       };
+      if (since != null) {
+        parameters['since'] = since.toUtc().toIso8601String();
+      }
+
       Map<String, dynamic> response = await Api.get(
           url: Api.getNotificationListApi, queryParameters: parameters);
 

@@ -9,6 +9,7 @@ import 'shared_widgets.dart';
 import 'package:marib/data/model/wallet/wallet_summary.dart';
 import 'package:marib/utils/currency_utils.dart';
 import 'package:marib/utils/helper_utils.dart';
+import 'package:marib/ui/screens/widgets/lazy_network_image.dart';
 
 
 /// ويدجت يعرض طرق الدفع المتاحة ويتعامل مع الحوارات الخاصة بالحوالة أو الكود.
@@ -552,12 +553,20 @@ class PaymentMethodsSection extends StatelessWidget {
       if (rawLogo.startsWith('http')) {
         return ClipRRect(
           borderRadius: radius,
-          child: Image.network(
-            rawLogo,
+          child: LazyNetworkImage(
+            imageUrl: rawLogo,
             width: size,
             height: size,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _fallbackBankIcon(isDark),
+            errorWidget: _fallbackBankIcon(isDark),
+            placeholder: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: radius,
+              ),
+            ),
           ),
         );
       }

@@ -2018,9 +2018,28 @@ class ApiController extends Controller {
         }
     }
 
-    public function getNotificationList() {
+    public function getNotificationList(Request $request) {
         try {
-            $notifications = Notifications::whereRaw("FIND_IN_SET(" . Auth::user()->id . ",user_id)")->orWhere('send_to', 'all')->orderBy('id', 'DESC')->paginate();
+            $perPage = (int) max(1, min($request->integer('per_page', 20), 50));
+            $query = Notifications::query()
+                ->where(function ($query) {
+                    $query->whereRaw("FIND_IN_SET(" . Auth::user()->id . ",user_id)")
+                        ->orWhere('send_to', 'all');
+                })
+                ->orderByDesc('id');
+
+            if ($request->filled('since')) {
+                try {
+                    $since = Carbon::parse($request->input('since'));
+                    $query->where('created_at', '>=', $since);
+                } catch (Throwable $th) {
+                    // Ignore invalid date filters to avoid failing the request.
+                }
+            }
+
+            $notifications = $query->paginate($perPage)
+                ->appends($request->only(['per_page', 'page', 'since']));
+                
             ResponseService::successResponse("Notification fetched successfully", $notifications);
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, 'API Controller -> getNotificationList');

@@ -246,4 +246,49 @@ class CartSummary {
     return Map<String, dynamic>.unmodifiable(Map<String, dynamic>.from(source));
   }
 
+
+}
+
+@immutable
+class CartCheckoutDetails {
+  const CartCheckoutDetails({
+    this.departmentPolicy,
+    this.support,
+    this.deliveryQuote,
+    this.blocking,
+    this.deliveryPaymentOptions,
+    this.deliveryPaymentTiming,
+    this.departmentNotice,
+  });
+
+  final Map<String, dynamic>? departmentPolicy;
+  final Map<String, dynamic>? support;
+  final Map<String, dynamic>? deliveryQuote;
+  final Map<String, dynamic>? blocking;
+  final List<dynamic>? deliveryPaymentOptions;
+  final String? deliveryPaymentTiming;
+  final String? departmentNotice;
+
+  CartCheckoutDetails copyWith({
+    Map<String, dynamic>? departmentPolicy,
+    Map<String, dynamic>? support,
+    Map<String, dynamic>? deliveryQuote,
+    Map<String, dynamic>? blocking,
+    List<dynamic>? deliveryPaymentOptions,
+    String? deliveryPaymentTiming,
+    String? departmentNotice,
+  }) {
+    return CartCheckoutDetails(
+      departmentPolicy: departmentPolicy ?? this.departmentPolicy,
+      support: support ?? this.support,
+      deliveryQuote: deliveryQuote ?? this.deliveryQuote,
+      blocking: blocking ?? this.blocking,
+      deliveryPaymentOptions:
+      deliveryPaymentOptions ?? this.deliveryPaymentOptions,
+      deliveryPaymentTiming:
+      deliveryPaymentTiming ?? this.deliveryPaymentTiming,
+      departmentNotice: departmentNotice ?? this.departmentNotice,
+    );
+  }
+
 }

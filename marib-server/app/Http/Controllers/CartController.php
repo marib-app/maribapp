@@ -26,6 +26,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use App\Services\OrderCheckoutService;
+use Carbon\Carbon;
 
 class CartController extends Controller
 {
@@ -49,7 +50,10 @@ class CartController extends Controller
         $cartItems = $this->userCartItems($user);
         $this->recordCartTelemetry('cart.view_cart', $user, $cartItems);
 
-        return $this->buildResponse($user, $cartItems, __('تم جلب السلة بنجاح.'));
+        $includeCheckout = $this->shouldIncludeCheckout($request);
+
+        return $this->buildResponse($user, $cartItems, __('تم جلب السلة بنجاح.'), $includeCheckout);
+    
     }
 
     public function store(Request $request): JsonResponse
@@ -189,12 +193,14 @@ class CartController extends Controller
             'quantity' => $cartItem->quantity,
             'added_quantity' => $quantity,
         ]);
+        $includeCheckout = $this->shouldIncludeCheckout($request);
 
         return $this->buildResponse(
             $user,
             $cartItems,
             
-            __('تم إضافة العنصر إلى السلة بنجاح.')
+            __('تم إضافة العنصر إلى السلة بنجاح.'),
+            $includeCheckout
         );
     }
 
@@ -302,12 +308,14 @@ class CartController extends Controller
             'quantity' => $cartItem->quantity,
         ]);
 
+        $includeCheckout = $this->shouldIncludeCheckout($request);
 
         return $this->buildResponse(
             $user,
             $cartItems,
             
-            __('تم تحديث الكمية بنجاح.')
+            __('تم تحديث الكمية بنجاح.'),
+            $includeCheckout
         );
     }
 
@@ -323,13 +331,15 @@ class CartController extends Controller
 
         $cartItem->delete();
         $this->cartShippingQuoteService->clearCachedQuotes($user);
+        $includeCheckout = $this->shouldIncludeCheckout($request);
 
         return $this->buildResponse(
             $user,
             $this->userCartItems($user),
             
             
-            __('تم حذف العنصر من السلة.')
+            __('تم حذف العنصر من السلة.'),
+            $includeCheckout
         );
     }
 
@@ -365,12 +375,14 @@ class CartController extends Controller
 
         $query->delete();
         $this->cartShippingQuoteService->clearCachedQuotes($user);
+        $includeCheckout = $this->shouldIncludeCheckout($request);
 
         return $this->buildResponse(
             $request->user(),
             $this->userCartItems($request->user()),
             
-            __('تم إفراغ السلة بنجاح.')
+            __('تم إفراغ السلة بنجاح.'),
+            $includeCheckout
         );
     }
 
@@ -483,10 +495,15 @@ class CartController extends Controller
             'coupon_code' => $coupon->code,
         ]);
 
+
+        $includeCheckout = $this->shouldIncludeCheckout($request);
+
+
         return $this->buildResponse(
             $user,
             $cartItems,
-            __('تم تطبيق القسيمة على السلة بنجاح.')
+            __('تم تطبيق القسيمة على السلة بنجاح.'),
+            $includeCheckout
         );
     }
 
@@ -515,15 +532,17 @@ class CartController extends Controller
             ]);
         }
 
+        $includeCheckout = $this->shouldIncludeCheckout($request);
 
         return $this->buildResponse(
             $user,
             $cartItems,
-            __('تمت إزالة القسيمة من السلة.')
+            __('تمت إزالة القسيمة من السلة.'),
+            $includeCheckout
         );
     }
 
-    protected function buildResponse(User $user, Collection $cartItems, string $message): JsonResponse
+    protected function buildResponse(User $user, Collection $cartItems, string $message, bool $includeCheckout = false): JsonResponse
     {
 
         $selection = $user->cartCouponSelection()->with('coupon')->first();
@@ -539,28 +558,8 @@ class CartController extends Controller
             $selection = null;
         }
 
-        $items = $cartItems->map(function (CartItem $cartItem) {
-            $item = $cartItem->item;
-            $currency = $this->normalizeCurrency($cartItem->currency ?? null);
+        $items = $this->mapCartItems($cartItems);
 
-            return [
-                'cart_item_id' => $cartItem->id,
-                'item_id' => $cartItem->item_id,
-                
-                'name' => $item?->name,
-                'image' => $item?->image,
-                'product_link' => $item?->product_link,
-                'quantity' => $cartItem->quantity,
-                'department' => $cartItem->department,
-                'variant_id' => $cartItem->variant_id,
-                'attributes' => $cartItem->attributes ?? [],
-                'stock_snapshot' => $cartItem->stock_snapshot ?? [],
-                'unit_price' => $cartItem->unit_price !== null ? (float) $cartItem->unit_price : null,
-                'unit_price_locked' => (float) $cartItem->getLockedUnitPrice(),
-                'currency' => $currency,
-                'subtotal' => (float) $cartItem->subtotal,
-            ];
-        })->values();
 
         $subtotal = $cartItems->sum(static fn (CartItem $cartItem) => $cartItem->subtotal);
 
@@ -568,21 +567,95 @@ class CartController extends Controller
 
         $discounts = $this->resolveDiscounts($user, $selection, $subtotal);
 
+        [$currency, $currencyConflict] = $this->resolveCurrency(collect($items), null);
+        if ($currency === null && ! $currencyConflict) {
+            $currency = $this->defaultCurrency();
+        }
+
+        $total = (float) ($subtotal - $discounts['total']);
+
+        $data = [
+            'department' => $this->formatDepartmentMetadata($departmentKey),
+            'items' => $items,
+            'subtotal' => (float) $subtotal,
+            'discounts' => $discounts,
+            'total' => $total,
+            'currency' => $currency,
+            'currency_conflict' => $currencyConflict,
+            'total_quantity' => (int) $totalQuantity,
+            'meta' => [
+                'last_updated' => $this->latestCartTimestamp($cartItems)?->toIso8601String(),
+            ],
+            'checkout' => null,
+        ];
+
+        if ($includeCheckout) {
+            $checkout = $this->buildCheckoutPayload(
+                $user,
+                $cartItems,
+                $departmentKey,
+                $items,
+                $subtotal,
+                $discounts
+            );
+
+            $data['checkout'] = $checkout['payload'];
+            $data['currency'] = $checkout['currency'] ?? $data['currency'];
+            $data['currency_conflict'] = $checkout['currency_conflict'];
+            $data['total'] = $checkout['total'];
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => $message,
+            'data' => $data,
+        ]);
+    }
+
+    /**
+     * @return array{payload: array<string, mixed>, currency: ?string, currency_conflict: bool, total: float}
+     */
+    protected function buildCheckoutPayload(
+        User $user,
+        Collection $cartItems,
+        ?string $departmentKey,
+        array $items,
+        float $subtotal,
+        array $discounts
+    ): array {
+        if ($cartItems->isEmpty()) {
+            return [
+                'payload' => [
+                    'delivery_quote' => null,
+                    'delivery_payment_options' => [],
+                    'delivery_payment_timing' => null,
+                    'blocking' => null,
+                    'department_notice' => null,
+                    'department_policy' => null,
+                    'support' => null,
+                ],
+                'currency' => $this->defaultCurrency(),
+                'currency_conflict' => false,
+                'total' => (float) ($subtotal - $discounts['total']),
+            ];
+        }
+
+
+
 
         $metrics = $this->cartShippingQuoteService->computeCartMetrics($cartItems);
         $rawDeliveryQuote = $this->getDeliveryQuote($user, $departmentKey, $metrics);
         $requiresAddressBlock = $this->requiresAddressBlock($user, $rawDeliveryQuote);
         $deliveryQuote = $requiresAddressBlock ? null : $rawDeliveryQuote;
         
-        
-        $deliveryAmount = $this->resolveDeliveryAmount($deliveryQuote);
+        [$currency, $currencyConflict] = $this->resolveCurrency(collect($items), $rawDeliveryQuote);
 
-        [$currency, $currencyConflict] = $this->resolveCurrency($items, $rawDeliveryQuote);
 
         if ($currency === null && ! $currencyConflict) {
             $currency = $this->defaultCurrency();
         }
 
+        $deliveryAmount = $this->resolveDeliveryAmount($deliveryQuote);
 
         $total = (float) ($subtotal - $discounts['total'] + $deliveryAmount);
         $departmentPolicy = $this->departmentPolicyService->policyFor($departmentKey);
@@ -608,11 +681,13 @@ class CartController extends Controller
 
 
 
-        $cartCurrencies = collect($items)
-            ->pluck('currency')
-            ->filter()
-            ->unique()
-            ->values();
+            $cartCurrencies = collect($items)
+                ->pluck('currency')
+                ->filter()
+                ->unique()
+                ->values();
+
+            $blocking ??= [];
 
 
         if ($currencyConflict) {
@@ -623,36 +698,141 @@ class CartController extends Controller
         }
 
 
-
+        $departmentNotice = $this->departmentNoticeService->getActiveNotice($departmentKey);
+        $departmentPolicy = $this->rememberDepartmentPolicy($departmentKey);
+        $support = $this->rememberDepartmentSupport($departmentKey);
         $deliveryPaymentOptions = $this->buildDeliveryPaymentOptions($user, $departmentKey, $deliveryQuote);
 
-        return response()->json([
-            'status' => true,
-            'message' => $message,
-            'data' => [
-                'department' => $this->formatDepartmentMetadata($departmentKey),
-                'items' => $items,
-                'subtotal' => (float) $subtotal,
-                'discounts' => $discounts,
-                'delivery' => $deliveryQuote,
+        return [
+            'payload' => [
 
 
                 'delivery_quote' => $deliveryQuote,
                 'delivery_payment_options' => $deliveryPaymentOptions,
                 'delivery_payment_timing' => $deliveryPaymentOptions['selected_timing'] ?? null,
                 'blocking' => $blocking,
-
-
-                'total' => $total,
-                'currency' => $currency,
-
-                'total_quantity' => (int) $totalQuantity,
-                'department_notice' => $this->departmentNoticeService->getActiveNotice($departmentKey),
+                'department_notice' => $departmentNotice,
                 'department_policy' => $departmentPolicy,
-                'support' => $this->departmentSupportService->supportFor($departmentKey),
-
+                'support' => $support,
             ],
-        ]);
+            'currency' => $currency,
+            'currency_conflict' => $currencyConflict,
+            'total' => $total,
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    protected function mapCartItems(Collection $cartItems): array
+    {
+        return $cartItems->map(function (CartItem $cartItem) {
+            $item = $cartItem->item;
+            $currency = $this->normalizeCurrency($cartItem->currency ?? null);
+
+
+            return [
+                'cart_item_id' => $cartItem->id,
+                'item_id' => $cartItem->item_id,
+                'name' => $item?->name,
+                'image' => $item?->image,
+                'product_link' => $item?->product_link,
+                'quantity' => $cartItem->quantity,
+                'department' => $cartItem->department,
+                'variant_id' => $cartItem->variant_id,
+                'attributes' => $cartItem->attributes ?? [],
+                'stock_snapshot' => $cartItem->stock_snapshot ?? [],
+                'unit_price' => $cartItem->unit_price !== null ? (float) $cartItem->unit_price : null,
+                'unit_price_locked' => (float) $cartItem->getLockedUnitPrice(),
+                'currency' => $currency,
+                'subtotal' => (float) $cartItem->subtotal,
+            ];
+        })->values()->all();
+    }
+    protected function latestCartTimestamp(Collection $cartItems): ?Carbon
+    {
+        $timestamps = $cartItems
+            ->map(static function (CartItem $cartItem) {
+                $updatedAt = $cartItem->updated_at ?? $cartItem->created_at;
+                if ($updatedAt instanceof Carbon) {
+                    return $updatedAt;
+                }
+
+                if ($updatedAt === null) {
+                    return null;
+                }
+
+                return Carbon::parse($updatedAt);
+            })
+            ->filter();
+
+        if ($timestamps->isEmpty()) {
+            return null;
+        }
+
+        return $timestamps->max();
+    }
+
+    protected function rememberDepartmentPolicy(?string $departmentKey): ?array
+    {
+        if (! $departmentKey) {
+            return null;
+        }
+
+        return Cache::remember(
+            sprintf('cart:department_policy:%s', $departmentKey),
+            now()->addMinutes(30),
+            fn () => $this->departmentPolicyService->policyFor($departmentKey)
+        );
+    }
+
+    protected function rememberDepartmentSupport(?string $departmentKey): ?array
+    {
+        if (! $departmentKey) {
+            return null;
+        }
+
+        return Cache::remember(
+            sprintf('cart:department_support:%s', $departmentKey),
+            now()->addMinutes(30),
+            fn () => $this->departmentSupportService->supportFor($departmentKey)
+        );
+    }
+
+    protected function isNotModified(Request $request, string $etag, Carbon $lastModified): bool
+    {
+        $ifNoneMatch = $request->headers->get('If-None-Match');
+        if ($ifNoneMatch !== null && trim($ifNoneMatch, '"') === $etag) {
+            return true;
+        }
+
+        $ifModifiedSince = $request->headers->get('If-Modified-Since');
+        if ($ifModifiedSince !== null) {
+            try {
+                $ifModified = Carbon::parse($ifModifiedSince);
+                if ($lastModified->lessThanOrEqualTo($ifModified)) {
+                    return true;
+                }
+            } catch (\Exception) {
+                // Ignore parsing errors and proceed with fresh response.
+            }
+        }
+
+        return false;
+    }
+
+    protected function shouldIncludeCheckout(Request $request): bool
+    {
+        if ($request->has('include_checkout')) {
+            return $this->boolFrom($request->input('include_checkout'));
+        }
+
+        if ($request->has('with')) {
+            $with = Arr::wrap($request->input('with'));
+            return in_array('checkout', $with, true);
+        }
+
+        return false;
     }
 
 
@@ -712,6 +892,72 @@ class CartController extends Controller
 
 
     
+
+    public function checkoutInfo(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $cartItems = $this->userCartItems($user);
+
+        $selection = $user->cartCouponSelection()->with('coupon')->first();
+        if ($cartItems->isEmpty() && $selection) {
+            $selection->delete();
+            $selection = null;
+        }
+
+        $departmentKey = $cartItems->pluck('department')->filter()->unique()->values()->first();
+        if ($selection && $selection->department && $departmentKey && $selection->department !== $departmentKey) {
+            $selection->delete();
+            $selection = null;
+        }
+
+        $items = $this->mapCartItems($cartItems);
+        $subtotal = $cartItems->sum(static fn (CartItem $cartItem) => $cartItem->subtotal);
+        $discounts = $this->resolveDiscounts($user, $selection, $subtotal);
+
+        $checkout = $this->buildCheckoutPayload(
+            $user,
+            $cartItems,
+            $departmentKey,
+            $items,
+            $subtotal,
+            $discounts
+        );
+
+        $lastModified = $this->latestCartTimestamp($cartItems) ?? Carbon::now();
+        $etag = sha1(json_encode([
+            'user' => $user->getKey(),
+            'updated_at' => $lastModified->toIso8601String(),
+            'total' => $checkout['total'],
+            'currency' => $checkout['currency'],
+            'discount_total' => $discounts['total'] ?? null,
+        ], JSON_THROW_ON_ERROR));
+
+        if ($this->isNotModified($request, $etag, $lastModified)) {
+            return response('', 304)
+                ->setEtag($etag)
+                ->setLastModified($lastModified);
+        }
+
+        $response = response()->json([
+            'status' => true,
+            'message' => __('تم جلب معلومات السداد والشحن بنجاح.'),
+            'data' => [
+                'department' => $this->formatDepartmentMetadata($departmentKey),
+                'checkout' => $checkout['payload'],
+                'subtotal' => (float) $subtotal,
+                'discounts' => $discounts,
+                'total' => $checkout['total'],
+                'currency' => $checkout['currency'],
+                'currency_conflict' => $checkout['currency_conflict'],
+            ],
+        ]);
+
+        $response->setEtag($etag);
+        $response->setLastModified($lastModified);
+
+        return $response;
+    }
+
 
     /**
      * @return array{coupons: array<int, array<string, mixed>>, total: float}
@@ -1023,8 +1269,14 @@ class CartController extends Controller
 
     protected function userCartItems(User $user): Collection
     {
-        return $user->cartItems()->with('item')->orderByDesc('created_at')->get();
-    }
+        return $user->cartItems()
+            ->with(['item' => static function ($query) {
+                $query->select(['id', 'name', 'image', 'product_link']);
+            }])
+            ->orderByDesc('created_at')
+            ->get();
+        
+        }
 
 
     protected function recordCartTelemetry(string $event, User $user, Collection $cartItems, array $extra = []): void

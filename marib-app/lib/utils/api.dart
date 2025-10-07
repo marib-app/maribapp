@@ -470,8 +470,13 @@ class Api {
   // ==========================
   // ✅ إضافات الدفع اليدوي/البنوك
   // ==========================
-  /// GET /api/banks  → قائمة الحسابات البنكية (عامة)
-  static String banksApi = "banks";
+  /// مصفوفة بمسارات الـ API المحتملة للحصول على الحسابات البنكية اليدوية
+  static const List<String> _manualBankApiCandidates = <String>[
+    'manual-banks',
+    'manual-payments/banks',
+    // متروكة في النهاية للتوافق مع الإصدارات القديمة من الـ API
+    'banks',
+  ];
 
 
 
@@ -1131,20 +1136,45 @@ class Api {
 
 
   static Future<List<BankAccount>> fetchBanks() async {
-    final res = await Api.get(url: banksApi);
+    ApiHttpException? lastHttpError;
 
-    // السيرفر قد يرجّع { data: [...] } أو [...] مباشرة
-    final raw = res['data'] ?? res;
+    for (final endpoint in _manualBankApiCandidates) {
+      try {
+        final res = await Api.get(url: endpoint);
 
-    // حوّل العناصر إلى Map<String, dynamic> ثم إلى BankAccount
-    final items = (raw as List).map<BankAccount>((e) {
-      final m = e is Map<String, dynamic>
-          ? e
-          : Map<String, dynamic>.from(e as Map);
-      return BankAccount.fromJson(m); // ← لأن موديلك يملك fromJson
-    }).toList();
+        // السيرفر قد يرجّع { data: [...] } أو [...] مباشرة
+        final dynamic raw = res is Map<String, dynamic> ? (res['data'] ?? res['banks']) : res;
+        final List<dynamic> list = raw is List ? raw : <dynamic>[];
 
-    return items; // الآن النوع Future<List<BankAccount>>
+        if (list.isEmpty && raw is! List) {
+          continue;
+        }
+
+        final items = list.map<BankAccount>((dynamic e) {
+          final map = e is Map<String, dynamic>
+              ? e
+              : Map<String, dynamic>.from(e as Map);
+          return BankAccount.fromJson(map);
+        }).toList();
+
+        if (items.isNotEmpty || raw is List) {
+          return items;
+        }
+      } on ApiHttpException catch (error) {
+        lastHttpError = error;
+
+        if (error.statusCode != 404 && error.statusCode != 405 &&
+            error.statusCode != 410) {
+          throw error;
+        }
+      }
+    }
+
+    if (lastHttpError != null) {
+      throw lastHttpError;
+    }
+
+    throw ApiException('فشل في جلب الحسابات البنكية اليدوية');
   }
 
 

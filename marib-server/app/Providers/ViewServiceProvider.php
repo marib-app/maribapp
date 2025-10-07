@@ -13,7 +13,18 @@ class ViewServiceProvider extends ServiceProvider {
     /**
      * Register services.
      */
-    public function register(): void {
+    public function register(): void
+    {
+        //
+    }
+
+    /**
+     * Bootstrap services.
+     */
+    public function boot(): void
+    {
+
+
         /*** Header File ***/
         View::composer('layouts.topbar', static function (\Illuminate\View\View $view) {
             $languages = CachingService::getLanguages();
@@ -23,7 +34,7 @@ class ViewServiceProvider extends ServiceProvider {
             $currentLanguage = Session::get('language', $defaultLanguage);
             $view->with([
                 'languages' => $languages,
-                'currentLanguage' => $currentLanguage
+                'currentLanguage' => $currentLanguage,
             ]);
             // $view->with('languages', CachingService::getLanguages() );
         });
@@ -63,10 +74,5 @@ class ViewServiceProvider extends ServiceProvider {
         });
     }
 
-    /**
-     * Bootstrap services.
-     */
-    public function boot(): void {
-        //
-    }
+
 }

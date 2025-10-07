@@ -1151,7 +1151,6 @@ class ApiController extends Controller {
                 'interface_type',
                 'category_id',
                 'all_category_ids',
-                'item_type',
             ])->find($request->integer('item_id'));
 
             if ($item !== null) {

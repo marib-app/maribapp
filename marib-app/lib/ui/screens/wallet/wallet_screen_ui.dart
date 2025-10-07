@@ -22,6 +22,7 @@ import 'package:marib/ui/screens/wallet/wallet_withdrawal_sheet.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/ui/screens/wallet/wallet_manual_payments_section.dart';
 import 'package:marib/utils/currency_utils.dart';
+import 'package:marib/data/model/wallet/wallet_summary.dart';
 
 
 

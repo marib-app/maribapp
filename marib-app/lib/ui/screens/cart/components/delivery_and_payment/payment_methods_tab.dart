@@ -170,7 +170,7 @@ class CartPaymentMethodsTab extends StatelessWidget {
               walletCurrencyCode: walletCurrencyCode,
               walletCurrencyLabel: walletCurrencyLabel,
               orderCurrencyCode: orderCurrencyCode,
-              orderCurrencyLabel: orderCurrencyLabel,marib-app/lib/ui/screens/cart/delivery_and_payment.dart
+              orderCurrencyLabel: orderCurrencyLabel,
             ),
           ],
         ),

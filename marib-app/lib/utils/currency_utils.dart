@@ -102,7 +102,7 @@ class CurrencyUtils {
     'usd': 'USD',
     'دولار': 'USD',
     'دولار امريكي': 'USD',
-    '$': 'USD',
+    '\$': 'USD',
     'eur': 'EUR',
     '€': 'EUR',
     'جنيه استرليني': 'GBP',

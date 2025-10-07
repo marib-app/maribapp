@@ -2833,8 +2833,8 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     if (value is Map<String, dynamic>) {
       return CurrencyUtils.parseCurrency(value);
     }
-    final String? stringValue = value.toString();
-    final String? trimmed = stringValue.trim();
+    final String trimmed = value.toString().trim();
+
     if (trimmed.isEmpty) {
       return const CurrencyParseResult();
     }
@@ -2944,6 +2944,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     }
 
     if (!_walletCanPay) {
+      final double requiredAmount = _resolveRequiredPaymentAmount();
       final String requiredDisplay =
       _formatCurrencyAmount(requiredAmount, currency: _orderCurrencyLabel);
       HelperUtils.showSnackBarMessage(

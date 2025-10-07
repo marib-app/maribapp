@@ -68,8 +68,7 @@ class OrderController extends Controller
         // تطبيق التصفية حسب حالة الدفع
         if ($request->filled('payment_status')) {
             $query->where('payment_status', $request->payment_status);
-        } else {
-            $query->whereIn('payment_status', self::PAID_PAYMENT_STATUSES);
+
         }
 
         // تطبيق التصفية حسب التاريخ
@@ -155,8 +154,7 @@ class OrderController extends Controller
         // تطبيق التصفية حسب حالة الدفع
         if ($request->filled('payment_status')) {
             $query->where('payment_status', $request->payment_status);
-        } else {
-            $query->whereIn('payment_status', self::PAID_PAYMENT_STATUSES);
+
         }
 
         // تطبيق التصفية حسب التاريخ
@@ -244,8 +242,7 @@ class OrderController extends Controller
 
         if ($request->filled('payment_status')) {
             $query->where('payment_status', $request->payment_status);
-        } else {
-            $query->whereIn('payment_status', self::PAID_PAYMENT_STATUSES); 
+
 
         }
 

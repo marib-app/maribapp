@@ -1,4 +1,4 @@
-{
+    {
     "name": "laravel/laravel",
     "type": "project",
     "description": "The Laravel Framework.",
@@ -58,6 +58,7 @@
     "autoload": {
         "psr-4": {
             "App\\": "app/",
+            "Barryvdh\\DomPDF\\": "app/Support/Dompdf/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
         }

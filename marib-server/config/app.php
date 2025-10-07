@@ -207,6 +207,8 @@ return [
         \App\Providers\ViewServiceProvider::class,
 
         Devaslanphp\AutoTranslate\AutoTranslateProvider::class,
+        Barryvdh\DomPDF\ServiceProvider::class,
+
     ],
 
     /*
@@ -225,6 +227,7 @@ return [
         'Form'     => Collective\Html\FormFacde::class,
         'html'     => Collective\Html\HtmlFacde::class,
         'Paystack' => Unicodeveloper\Paystack\Facades\Paystack::class,
+        'PDF'      => Barryvdh\DomPDF\Facade\Pdf::class,
     ])->toArray(),
 
 ];

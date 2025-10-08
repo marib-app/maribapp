@@ -1413,6 +1413,15 @@ class ManualPaymentService {
     String? userNote,
     Map<String, dynamic>? metadata,
   }) async {
+    final trimmedIntentId = intentId.trim();
+    if (trimmedIntentId.isEmpty) {
+      throw ArgumentError('intentId cannot be empty for wallet payments');
+    }
+
+    final trimmedTransactionId = transactionId?.trim();
+    if (trimmedTransactionId == null || trimmedTransactionId.isEmpty) {
+      throw ArgumentError('transactionId cannot be empty for wallet payments');
+    }
     final userNoteValue = userNote?.trim();
     final payableTypeValue = payableType?.trim();
     final normalizedCurrency = _normalizeCurrencyCode(currency);
@@ -1420,55 +1429,34 @@ class ManualPaymentService {
     formatManualPaymentAmount(amount, normalizedCurrency);
     final normalizedPurpose = _normalizePurposeForApi(purpose);
 
-    final Map<String, dynamic> formMap = {
-      'payment_method': 'wallet',
+    final Map<String, dynamic> additionalData = <String, dynamic>{
+
       'amount': formattedAmount,
       'currency': normalizedCurrency,
-      'intent_id': intentId,
-      'payment_intent_id': intentId,
-      if (transactionId != null && transactionId.isNotEmpty)
-        'transaction_id': transactionId,
-      if (transactionId != null && transactionId.isNotEmpty)
-        'payment_transaction_id': transactionId,
+
       if (normalizedPurpose != null) 'purpose': normalizedPurpose,
       if (orderId != null) 'order_id': orderId,
       if (packageId != null) 'package_id': packageId,
-      if (userNoteValue != null && userNoteValue.isNotEmpty)
-        'notes': userNoteValue,
+      if (userNoteValue != null && userNoteValue.isNotEmpty) 'note': userNoteValue,
+
       if (payableTypeValue != null && payableTypeValue.isNotEmpty)
         'payable_type': payableTypeValue,
       if (payableId != null) 'payable_id': payableId,
     };
 
-    _writeMetadataFields(formMap, metadata);
+    final Map<String, dynamic> metadataFields = <String, dynamic>{};
+    _writeMetadataFields(metadataFields, metadata);
+    additionalData.addAll(metadataFields);
 
-    final response = await Api.post(
-        url: Api.submitManualPaymentApi,
-        parameter: formMap,
-        extraHeaders: {
-        'Authorization': 'Bearer $token',
-        'Idempotency-Key': Api.generateIdempotencyKey(),
-      }
+    return _confirmPayment(
+      token: token,
+      paymentMethod: 'wallet',
+      intentId: trimmedIntentId,
+      transactionId: trimmedTransactionId,
+      additionalData: additionalData.isEmpty ? null : additionalData,
     );
 
-    var result = ManualPaymentSubmissionResult.fromResponse(response);
 
-    final String? resolvedIntentId =
-        result.paymentIntentId ?? intentId;
-    final String? resolvedTransactionId =
-        result.paymentTransactionId ?? transactionId;
-
-    if (result.requiresConfirmation &&
-        resolvedIntentId != null && resolvedIntentId.isNotEmpty) {
-      result = await _confirmPayment(
-        token: token,
-        paymentMethod: 'wallet',
-        intentId: resolvedIntentId,
-        transactionId: resolvedTransactionId,
-      );
-    }
-
-    return result;
   }
 
 

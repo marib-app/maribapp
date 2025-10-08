@@ -127,11 +127,31 @@ class CartController extends Controller
 
 
 
-        $normalizedCurrency = array_key_exists('currency', $validated)
-            ? $this->normalizeCurrency($validated['currency'])
-            : ($cartItem->exists && $cartItem->currency
-                ? $this->normalizeCurrency($cartItem->currency)
-                : $this->normalizeCurrency($item->currency ?? $this->defaultCurrency()));
+        $itemCurrency = $this->normalizeCurrency($item->currency ?? null);
+        $requestedCurrency = array_key_exists('currency', $validated)
+        
+        ? $this->normalizeCurrency($validated['currency'])
+            : null;
+
+        if ($itemCurrency && $requestedCurrency && $requestedCurrency !== $itemCurrency) {
+            return $this->validationError(
+                __('cart.currency_mismatch_with_item', [
+                    'item_currency' => $itemCurrency,
+                    'requested_currency' => $requestedCurrency,
+                ]),
+                422,
+                'currency_mismatch'
+            );
+        }
+
+        $normalizedCurrency = $itemCurrency
+            ?? ($requestedCurrency
+                ?? ($cartItem->exists && $cartItem->currency
+                    ? $this->normalizeCurrency($cartItem->currency)
+                    : $this->normalizeCurrency($this->defaultCurrency())));
+        $currentCurrency = $this->normalizeCurrency($cartItem->currency ?? null);
+
+
 
         $existingCurrencies = $user->cartItems()
             ->when($cartItem->exists, static fn ($query) => $query->where('id', '!=', $cartItem->getKey()))
@@ -166,7 +186,7 @@ class CartController extends Controller
             $cartItem->unit_price_locked = (float) $cartItem->unit_price;
         }
 
-        if (array_key_exists('currency', $validated) || ! $cartItem->currency) {
+        if ($normalizedCurrency !== $currentCurrency) {
             $cartItem->currency = $normalizedCurrency;
 
 
@@ -218,8 +238,11 @@ class CartController extends Controller
         ]);
 
         $user = $request->user();
-        $cartItem = CartItem::where('user_id', $user->id)->find($cartItemId);
-
+        $cartItem = CartItem::query()
+            ->with(['item' => static fn ($query) => $query->select(['id', 'currency'])])
+            ->where('user_id', $user->id)
+            ->whereKey($cartItemId)
+            ->first();
 
         if (! $cartItem) {
             return $this->validationError(__('العنصر غير موجود في سلة المشتريات.'), 422);
@@ -227,9 +250,27 @@ class CartController extends Controller
 
 
 
-        $normalizedCurrency = array_key_exists('currency', $validated)
-            ? $this->normalizeCurrency($validated['currency'])
-            : $this->normalizeCurrency($cartItem->currency ?? null);
+        $itemCurrency = $this->normalizeCurrency($cartItem->item?->currency ?? null);
+        $requestedCurrency = array_key_exists('currency', $validated)
+        
+        ? $this->normalizeCurrency($validated['currency'])
+            : null;
+        $currentCurrency = $this->normalizeCurrency($cartItem->currency ?? null);
+
+        if ($itemCurrency && $requestedCurrency && $requestedCurrency !== $itemCurrency) {
+            return $this->validationError(
+                __('cart.currency_mismatch_with_item', [
+                    'item_currency' => $itemCurrency,
+                    'requested_currency' => $requestedCurrency,
+                ]),
+                422,
+                'currency_mismatch'
+            );
+        }
+
+        $normalizedCurrency = $itemCurrency
+            ?? ($requestedCurrency ?? $currentCurrency);
+
 
         $existingCurrencies = $user->cartItems()
             ->where('id', '!=', $cartItem->getKey())
@@ -289,11 +330,10 @@ class CartController extends Controller
                 : null;
         }
 
-        if (array_key_exists('currency', $validated)) {
+        if ($normalizedCurrency !== $currentCurrency) {
             $cartItem->currency = $normalizedCurrency;
-        } elseif ($cartItem->currency) {
-            $cartItem->currency = $this->normalizeCurrency($cartItem->currency);
-        
+
+    
         }
 
 
@@ -1309,7 +1349,14 @@ class CartController extends Controller
             return null;
         }
 
-        return strtoupper($currency);
+        $trimmed = trim($currency);
+
+        if ($trimmed === '') {
+            return null;
+        }
+
+        return strtoupper($trimmed);
+    
     }
 
 

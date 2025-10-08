@@ -550,6 +550,7 @@
     "Verify Product": "تحقق من المنتج",
     "tips.shein.body": "يرجى التحقق من رابط المنتج على شي إن قبل إتمام عملية الشراء.",
     "cart.currency_conflict_on_add": "لا يمكنك إضافة عنصر بالعملة :requested_currency لأن السلة تحتوي على عناصر بالعملة :current_currencies.",
+    "cart.currency_mismatch_with_item": "عملة الدفع المطلوبة (:requested_currency) لا تتطابق مع عملة المنتج (:item_currency).",
     "cart.currency_conflict_summary": "لا يمكن استخدام أكثر من عملة واحدة في السلة. العملات الحالية: :currencies.",
     "cart.delivery_payment_timing.pay_now": "ادفع الآن",
     "cart.delivery_payment_timing.pay_on_delivery": "الدفع عند الاستلام",

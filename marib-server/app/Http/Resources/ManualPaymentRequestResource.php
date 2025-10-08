@@ -1,10 +1,10 @@
 <?php
 
 namespace App\Http\Resources;
-use Illuminate\Database\Eloquent\Model as EloquentModel;
 
+use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Storage; 
 use Throwable;
 
 class ManualPaymentRequestResource extends JsonResource

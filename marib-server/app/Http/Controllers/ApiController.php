@@ -2083,21 +2083,6 @@ class ApiController extends Controller {
         }
     }
 
-    public function appPaymentStatus(Request $request) {
-        try {
-            $paypalInfo = $request->all();
-            if (!empty($paypalInfo) && isset($_GET['st']) && strtolower($_GET['st']) == "completed") {
-                ResponseService::successResponse("Your Package will be activated within 10 Minutes", $paypalInfo['txn_id']);
-            } elseif (!empty($paypalInfo) && isset($_GET['st']) && strtolower($_GET['st']) == "authorized") {
-                ResponseService::successResponse("Your Transaction is Completed. Ads wil be credited to your account within 30 minutes.", $paypalInfo);
-            } else {
-                ResponseService::errorResponse("Payment Cancelled / Declined ", (isset($_GET)) ? $paypalInfo : "");
-            }
-        } catch (Throwable $th) {
-            ResponseService::logErrorResponse($th, "API Controller -> appPaymentStatus");
-            ResponseService::errorResponse();
-        }
-    }
 
     public function getPaymentSettings() {
         try {

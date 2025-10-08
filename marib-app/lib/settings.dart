@@ -1,6 +1,7 @@
 import 'package:marib/utils/helper_utils.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-
+import 'package:marib/utils/payment/bank_account.dart';
+import 'package:marib/utils/payment/east_yemen_bank_config.dart';
 
 /// Configure your app from here
 /// Most of basic configuration will be from here
@@ -8,20 +9,26 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 ///
 ///
 
-class PaymentGateway {
-  final String name;
-  final String key;
-  final String currency;
-  final int status;
-  final String type;
+enum PaymentGatewayType { wallet, manualBank, eastYemenBank }
 
-  PaymentGateway({
+
+class PaymentGateway {
+  const PaymentGateway({
+    required this.id,
     required this.name,
-    required this.key,
-    required this.currency,
-    required this.status,
     required this.type,
+
+    this.enabled = true,
+    this.metadata = const <String, dynamic>{},
   });
+
+  final String id;
+  final String name;
+  final PaymentGatewayType type;
+  final bool enabled;
+  final Map<String, dynamic> metadata;
+
+  bool get isEnabled => enabled;
 }
 
 class AppSettings {
@@ -112,67 +119,64 @@ it will call API in background without showing the process and when data availab
     // },
   };
 
-  static List<PaymentGateway> paymentGateways = [];
+  static List<PaymentGateway> paymentGateways = const <PaymentGateway>[];
+  static bool walletEnabled = true;
+  static List<BankAccount> manualPaymentBanks = const <BankAccount>[];
+  static EastYemenBankConfig? eastYemenBankConfig;
 
-  static void updatePaymentGateways() {
-    paymentGateways = [
+  static void updatePaymentGateways({
+    bool wallet = true,
+    List<BankAccount>? manualBanks,
+    EastYemenBankConfig? eastYemenBank,
+  }) {
+    walletEnabled = wallet;
+    manualPaymentBanks = manualBanks == null
+        ? const <BankAccount>[]
+        : List<BankAccount>.unmodifiable(manualBanks);
+    eastYemenBankConfig = eastYemenBank;
+
+    final List<PaymentGateway> configured = <PaymentGateway>[
       PaymentGateway(
-        name: "Stripe",
-        key: stripePublishableKey,
-        currency: stripeCurrency,
-        status: stripeStatus,
-        type: "stripe",
-      ),
-      PaymentGateway(
-        name: "Paystack",
-        key: payStackKey,
-        currency: payStackCurrency,
-        status: payStackStatus,
-        type: "paystack",
-      ),
-      PaymentGateway(
-        name: "Razorpay",
-        key: razorpayKey,
-        currency: razorpayCurrency,
-        // Replace with actual currency if needed
-        status: razorpayStatus,
-        type: "razorpay",
-      ),
-      PaymentGateway(
-        name: "PhonePe",
-        key: phonePeKey,
-        currency: phonePeCurrency,
-        // Replace with actual currency if needed
-        status: phonePeStatus,
-        type: "phonepe",
+        id: 'wallet',
+        name: 'المحفظة',
+        type: PaymentGatewayType.wallet,
+        enabled: wallet,
       ),
     ];
+
+
+    if (eastYemenBank != null) {
+      configured.add(
+        PaymentGateway(
+          id: 'east_yemen_bank',
+          name: eastYemenBank.displayName,
+          type: PaymentGatewayType.eastYemenBank,
+          enabled: eastYemenBank.isEnabled,
+          metadata: <String, dynamic>{
+            'note': eastYemenBank.note,
+            'logo_url': eastYemenBank.logoUrl,
+            'currency_code': eastYemenBank.currencyCode,
+            'raw': eastYemenBank.raw,
+          },
+        ),
+      );
+    }
+
+    if (manualPaymentBanks.isNotEmpty) {
+      configured.add(
+        const PaymentGateway(
+          id: 'manual_bank',
+          name: 'تحويل بنكي',
+          type: PaymentGatewayType.manualBank,
+        ),
+      );
+    }
+
+    paymentGateways = configured;
   }
 
-  //// Don't change these
-  //// Payment gatway API keys
-  ///Here is for only reference you have to change it from panel
-  static String enabledPaymentGateway = "";
-  static String razorpayKey = "";
-  static int razorpayStatus = 1;
-  static String razorpayCurrency = "";
-  static String payStackKey = ""; // public key
-  static String payStackCurrency = "";
-  static int payStackStatus = 1;
-  static String paypalClientId = "";
-  static String paypalServerKey = ""; //secrete
-  static bool isSandBoxMode = true; //testing mode
-  static String paypalCancelURL = "";
-  static String paypalReturnURL = "";
-  static String stripeCurrency = "";
-  static String stripePublishableKey = "";
-  static int stripeStatus = 1;
-  static int phonePeStatus = 1;
-  static String phonePeKey = ""; // public key
-  static String phonePeCurrency = "";
-
   static List<PaymentGateway> getEnabledPaymentGateways() {
-    return paymentGateways.where((gateway) => gateway.status == 1).toList();
+    return paymentGateways.where((gateway) => gateway.isEnabled).toList(growable: false);
   }
 }
 

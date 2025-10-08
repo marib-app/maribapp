@@ -230,20 +230,11 @@ class _SubscriptionPackageListScreenState
         body: BlocListener<GetApiKeysCubit, GetApiKeysState>(
           listener: (context, state) {
             if (state is GetApiKeysSuccess) {
-              AppSettings.stripeCurrency = state.stripeCurrency ?? "";
-              AppSettings.stripePublishableKey =
-                  state.stripePublishableKey ?? "";
-              AppSettings.stripeStatus = state.stripeStatus ?? 0;
-              AppSettings.payStackCurrency = state.payStackCurrency ?? "";
-              AppSettings.payStackKey = state.payStackApiKey ?? "";
-              AppSettings.payStackStatus = state.payStackStatus ?? 0;
-              AppSettings.razorpayKey = state.razorPayApiKey ?? "";
-              AppSettings.razorpayStatus = state.razorPayStatus ?? 0;
-              AppSettings.phonePeCurrency = state.phonePeCurrency ?? "";
-              AppSettings.phonePeKey = state.phonePeKey ?? "";
-              AppSettings.phonePeStatus = state.phonePeStatus ?? 0;
-
-              AppSettings.updatePaymentGateways();
+              AppSettings.updatePaymentGateways(
+                wallet: state.walletEnabled,
+                manualBanks: state.manualBanks,
+                eastYemenBank: state.eastYemenBank,
+              );
             }
           },
           child: TabBarView(
@@ -494,7 +485,7 @@ class _SubscriptionPackageListScreenState
       token: token,
       packageId: packageId,
       amount: amount,
-      currency: _resolveCurrency(),
+      currency: selected.currency,
       packageType: packageType,
       itemId: null,
     );
@@ -533,24 +524,6 @@ class _SubscriptionPackageListScreenState
         ),
       );
     }
-  }
-
-
-  String _resolveCurrency() {
-    final candidates = [
-      AppSettings.stripeCurrency,
-      AppSettings.payStackCurrency,
-      AppSettings.razorpayCurrency,
-      AppSettings.phonePeCurrency,
-    ];
-
-    for (final currency in candidates) {
-      if (currency.trim().isNotEmpty) {
-        return currency;
-      }
-    }
-
-    return 'YER';
   }
 }
 

@@ -1,7 +1,5 @@
-import 'dart:io';
 
-import 'package:marib/settings.dart';
-import 'package:marib/ui/screens/subscription/payment_gatways.dart';
+
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/constant.dart';
@@ -10,15 +8,13 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/data/cubits/subscription/assign_free_package_cubit.dart';
-import 'package:marib/data/cubits/subscription/get_payment_intent_cubit.dart';
 import 'package:marib/data/model/subscription_pacakage_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart' as intl;
 
 import 'package:marib/utils/payment/gatways/inAppPurchaseManager.dart';
-import 'package:marib/utils/payment/gatways/payment_webview.dart';
-import 'package:marib/utils/payment/gatways/stripe_service.dart';
+
 import 'package:marib/data/helper/widgets.dart';
 import 'package:marib/utils/payment/bank_transfer_screen.dart';
 import 'package:marib/utils/payment/bank_transfer_args.dart';
@@ -48,145 +44,37 @@ class ItemListingSubscriptionPlansItem extends StatefulWidget {
 
 class _ItemListingSubscriptionPlansItemState
     extends State<ItemListingSubscriptionPlansItem> {
-  String? _selectedGateway;
 
-  @override
-  void initState() {
-    super.initState();
-    if (Platform.isAndroid) {
-      if (AppSettings.stripeStatus == 1) {
-        StripeService.initStripe(
-          AppSettings.stripePublishableKey,
-          "test",
-        );
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.color.backgroundColor,
       bottomNavigationBar: bottomWidget(),
-      body: MultiBlocProvider(
-        providers: [
-          BlocProvider(
-            create: (context) => AssignFreePackageCubit(),
-          ),
-          BlocProvider(
-            create: (context) => GetPaymentIntentCubit(),
-          ),
-        ],
-        child: Builder(builder: (context) {
-          return BlocListener<GetPaymentIntentCubit, GetPaymentIntentState>(
+        body: BlocProvider(
+          create: (context) => AssignFreePackageCubit(),
+          child: BlocListener<AssignFreePackageCubit, AssignFreePackageState>(
             listener: (context, state) {
-              if (state is GetPaymentIntentInSuccess) {
+              if (state is AssignFreePackageInSuccess) {
                 Widgets.hideLoder(context);
-
-                // نحمي التفريع بوجود بوابة مختارة فعلاً
-                final g = _selectedGateway;
-                if (g == null) return;
-
-                if (g == "stripe") {
-                  PaymentGateways.stripe(
-                    context,
-                    price: widget.model.finalPrice!.toDouble(),
-                    packageId: widget.model.id!,
-                    paymentIntent: state.paymentIntent,
-                  );
-                } else if (g == "paystack") {
-                  Navigator.of(context).push(MaterialPageRoute(
-                    builder: (context) => PaymentWebView(
-                      authorizationUrl: state.paymentIntent["payment_gateway_response"]["data"]["authorization_url"],
-                      reference: state.paymentIntent["payment_gateway_response"]["data"]["reference"],
-                      onSuccess: (reference) {
-                        HelperUtils.showSnackBarMessage(
-                          context,
-                          "paymentSuccessfullyCompleted".translate(context),
-                        );
-                      },
-                      onFailed: (reference) {
-                        HelperUtils.showSnackBarMessage(
-                          context,
-                          "purchaseFailed".translate(context),
-                        );
-                      },
-                      onCancel: () {
-                        HelperUtils.showSnackBarMessage(
-                          context,
-                          "subscriptionsCancelled".translate(context),
-                        );
-                      },
-                    ),
-                  ));
-                } else if (g == "phonepe") {
-                  Navigator.of(context).push(MaterialPageRoute(
-                    builder: (context) => PaymentWebView(
-                      authorizationUrl: state.paymentIntent["payment_gateway_response"],
-                      onSuccess: (reference) {
-                        HelperUtils.showSnackBarMessage(
-                          context,
-                          "paymentSuccessfullyCompleted".translate(context),
-                        );
-                      },
-                      onFailed: (reference) {
-                        HelperUtils.showSnackBarMessage(
-                          context,
-                          "purchaseFailed".translate(context),
-                        );
-                      },
-                      onCancel: () {
-                        HelperUtils.showSnackBarMessage(
-                          context,
-                          "subscriptionsCancelled".translate(context),
-                        );
-                      },
-                    ),
-                  ));
-                } else if (g == "razorpay") {
-                  PaymentGateways.razorpay(
-                    orderId: state.paymentIntent["id"].toString(),
-                    context: context,
-                    packageId: widget.model.id!,
-                    price: widget.model.finalPrice!.toDouble(),
-                  );
-                }
+                HelperUtils.showSnackBarMessage(
+                  context,
+                  state.responseMessage,
+                );
+                Navigator.pop(context);
               }
-
-              if (state is GetPaymentIntentInProgress) {
-                Widgets.showLoader(context);
-              }
-
-              if (state is GetPaymentIntentFailure) {
+              if (state is AssignFreePackageFailure) {
                 Widgets.hideLoder(context);
                 HelperUtils.showSnackBarMessage(
                   context,
                   state.error.toString(),
                 );
               }
+              if (state is AssignFreePackageInProgress) {
+                Widgets.showLoader(context);
+              }
             },
-            child: BlocListener<AssignFreePackageCubit, AssignFreePackageState>(
-              listener: (context, state) {
-                if (state is AssignFreePackageInSuccess) {
-                  Widgets.hideLoder(context);
-                  HelperUtils.showSnackBarMessage(
-                    context,
-                    state.responseMessage,
-                  );
-                  Navigator.pop(context);
-                }
-                if (state is AssignFreePackageFailure) {
-                  Widgets.hideLoder(context);
-                  HelperUtils.showSnackBarMessage(
-                    context,
-                    state.error.toString(),
-                  );
-                }
-                if (state is AssignFreePackageInProgress) {
-                  Widgets.showLoader(context);
-                }
-              },
-              child: Padding(
+            child: Padding(
                 padding: EdgeInsets.only(
                   top: (widget.index == widget.itemIndex) ? 40 : 70,
                   bottom: (widget.index == widget.itemIndex) ? 100 : 120,
@@ -375,8 +263,6 @@ class _ItemListingSubscriptionPlansItemState
                 ),
               ),
             ),
-          );
-        }),
       ),
     );
   }
@@ -384,22 +270,6 @@ class _ItemListingSubscriptionPlansItemState
 
 
 
-  // خرائط القيم من واجهة المستخدم إلى القيمة المطلوبة من الخادم
-  // TODO: لو الخادم يتوقع lowercase بدّل القيم هنا (e.g. 'stripe', 'paystack' ...)
-  String? _mapGatewayToServerKey(String g) {
-    switch (g) {
-      case 'stripe':
-        return 'Stripe';
-      case 'paystack':
-        return 'Paystack';
-      case 'razorpay':
-        return 'Razorpay';
-      case 'phonepe':
-        return 'PhonePe';
-      default:
-        return null;
-    }
-  }
 
   Widget adsData() {
     return Expanded(
@@ -558,143 +428,9 @@ class _ItemListingSubscriptionPlansItemState
       ),
     );
   }
-
-  Future<void> paymentGatewayBottomSheet() async {
-    // إن لم توجد بوابات مفعّلة، نخبر المستخدم ونتوقف مبكرًا
-    List<PaymentGateway> enabledGateways = AppSettings.getEnabledPaymentGateways();
-    if (enabledGateways.isEmpty) {
-      HelperUtils.showSnackBarMessage(context, "لا توجد بوابات دفع مفعّلة");
-      return;
-    }
-
-    String? selectedGateway = await showModalBottomSheet<String>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(18.0),
-          topRight: Radius.circular(18.0),
-        ),
-      ),
-      isScrollControlled: true,
-      builder: (BuildContext context) {
-        String? _localSelectedGateway = _selectedGateway;
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return Container(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.85,
-              ),
-              decoration: BoxDecoration(
-                color: context.color.secondaryColor,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(18),
-                  topRight: Radius.circular(18),
-                ),
-              ),
-              child: ListView(
-                shrinkWrap: true,
-                children: [
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 12.0),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(3),
-                          color: context.color.textDefaultColor.withOpacity(0.1),
-                        ),
-                        height: 6,
-                        width: 60,
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 24.0, bottom: 5),
-                    child: Text('selectPaymentMethod'.translate(context))
-                        .bold(weight: FontWeight.w600)
-                        .size(context.font.larger)
-                        .centerAlign(),
-                  ),
-                  ListView.builder(
-                    shrinkWrap: true,
-                    padding: const EdgeInsets.only(top: 10),
-                    itemCount: enabledGateways.length,
-                    physics: const BouncingScrollPhysics(),
-                    itemBuilder: (context, index) {
-                      return PaymentMethodTile(
-                        gateway: enabledGateways[index],
-                        isSelected: _localSelectedGateway == enabledGateways[index].type,
-                        onSelect: (String? value) {
-                          setState(() {
-                            _localSelectedGateway = value;
-                          });
-                          Navigator.pop(context, value); // إعادة القيمة المختارة
-                        },
-                      );
-                    },
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-
-    if (!mounted) return;
-    if (selectedGateway != null) {
-      setState(() {
-        _selectedGateway = selectedGateway;
-      });
-    }
-  }
 }
 
-class PaymentMethodTile extends StatelessWidget {
-  final PaymentGateway gateway;
-  final bool isSelected;
-  final ValueChanged<String?> onSelect;
 
-  PaymentMethodTile({
-    required this.gateway,
-    required this.isSelected,
-    required this.onSelect,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: UiUtils.getSvg(
-        gatewayIcon(gateway.type),
-        width: 23,
-        height: 23,
-        fit: BoxFit.contain,
-      ),
-      title: Text(gateway.name),
-      trailing: isSelected
-          ? Icon(Icons.check_circle, color: context.color.territoryColor)
-          : Icon(
-        Icons.radio_button_unchecked,
-        color: context.color.textDefaultColor.withOpacity(0.5),
-      ),
-      onTap: () => onSelect(gateway.type),
-    );
-  }
-
-  String gatewayIcon(String type) {
-    switch (type) {
-      case 'stripe':
-        return AppIcons.stripeIcon;
-      case 'paystack':
-        return AppIcons.paystackIcon;
-      case 'razorpay':
-        return AppIcons.razorpayIcon;
-      case 'phonepe':
-        return AppIcons.phonePeIcon;
-      default:
-        return "";
-    }
-  }
-}
 
 class HexagonClipper extends CustomClipper<Path> {
   @override

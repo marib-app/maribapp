@@ -82,20 +82,11 @@ on _SubscriptionPackageListScreenState {
       body: BlocListener<GetApiKeysCubit, GetApiKeysState>(
         listener: (context, state) {
           if (state is GetApiKeysSuccess) {
-            AppSettings.stripeCurrency = state.stripeCurrency ?? "";
-            AppSettings.stripePublishableKey =
-                state.stripePublishableKey ?? "";
-            AppSettings.stripeStatus = state.stripeStatus ?? 0;
-            AppSettings.payStackCurrency = state.payStackCurrency ?? "";
-            AppSettings.payStackKey = state.payStackApiKey ?? "";
-            AppSettings.payStackStatus = state.payStackStatus ?? 0;
-            AppSettings.razorpayKey = state.razorPayApiKey ?? "";
-            AppSettings.razorpayStatus = state.razorPayStatus ?? 0;
-            AppSettings.phonePeCurrency = state.phonePeCurrency ?? "";
-            AppSettings.phonePeKey = state.phonePeKey ?? "";
-            AppSettings.phonePeStatus = state.phonePeStatus ?? 0;
-
-            AppSettings.updatePaymentGateways();
+            AppSettings.updatePaymentGateways(
+              wallet: state.walletEnabled,
+              manualBanks: state.manualBanks,
+              eastYemenBank: state.eastYemenBank,
+            );
           }
         },
         child: TabBarView(

@@ -40,7 +40,6 @@ import 'package:marib/data/cubits/subscription/in_app_purchase_cubit.dart';
 import 'package:marib/data/cubits/subscription/assign_free_package_cubit.dart';
 import 'package:marib/data/cubits/subscription/fetch_ads_listing_subscription_packages_cubit.dart';
 import 'package:marib/data/cubits/subscription/fetch_user_package_limit_cubit.dart';
-import 'package:marib/data/cubits/subscription/get_payment_intent_cubit.dart';
 import 'package:marib/data/cubits/system/app_theme_cubit.dart';
 import 'package:marib/data/cubits/system/fetch_language_cubit.dart';
 import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
@@ -136,7 +135,6 @@ class RegisterCubits {
     BlocProvider(create: (context) => CreateFeaturedAdCubit()),
     BlocProvider(create: (context) => AssignFreePackageCubit()),
     BlocProvider(create: (context) => FetchUserPackageLimitCubit()),
-    BlocProvider(create: (context) => GetPaymentIntentCubit()),
     BlocProvider(create: (context) => DeleteUserCubit()),
     BlocProvider(create: (context) => MakeAnOfferItemCubit()),
     BlocProvider(create: (context) => InAppPurchaseCubit()),

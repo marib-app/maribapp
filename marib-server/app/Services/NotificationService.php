@@ -135,6 +135,16 @@ class NotificationService {
 
             //TODO : Add this process to queue for better performance
 
+
+            $notificationBody = is_string($message) ? trim($message) : $message;
+            if (empty($notificationBody) && !empty($customBodyFields['message_preview'])) {
+                $notificationBody = $customBodyFields['message_preview'];
+            }
+            if (empty($notificationBody) && !empty($customBodyFields['message'])) {
+                $notificationBody = $customBodyFields['message'];
+            }
+
+
             $navigationPayload = [
                 'deeplink' => $customBodyFields['deeplink'] ?? null,
                 'click_action' => $customBodyFields['click_action'] ?? null,
@@ -143,8 +153,11 @@ class NotificationService {
             $dataWithTitle = [
                 ...$customBodyFields,
                 "title" => $title,
-                "body"  => $message,
+                "body"  => $notificationBody,
                 "type"  => $type,
+                "notification_type" => $type,
+
+
             ];
             // \Log::info('NotificationService: Starting to send notifications', [
             //     'total_devices' => count($registrationIDs)
@@ -165,7 +178,9 @@ class NotificationService {
 
                 $notificationPayload = [
                     "title" => $title,
-                    "body"  => $message,
+                    "body"  => $notificationBody,
+                    "sound" => "default",
+                
                 ];
 
                 if (!empty($navigationPayload['click_action'])) {
@@ -178,45 +193,65 @@ class NotificationService {
                         "token"        => $registrationID,
                         "data"         => self::convertToStringRecursively($dataWithTitle),
                         "notification" => $notificationPayload,
+                                                "android"      => [
+                            "priority"       => "HIGH",
+                            "ttl"            => "0s",
+                            "direct_boot_ok" => true,
+                            "notification"   => [
+                                "title" => $title,
+                                "body"  => $notificationBody,
+                                "sound" => "default",
+                            ],
+                        ],
                         "apns"         => [
                             "headers" => [
-                                "apns-priority" => "10" // Set APNs priority to 10 (high) for immediate delivery
+                                "apns-priority" => "10",
+                                "apns-push-type" => "alert",
+                            
                             ],
                             "payload" => [
                                 "aps" => [
                                     "alert" => [
                                         "title" => $title,
-                                        "body"  => $message,
+                                        "body"  => $notificationBody,
                                     ],
-                                ]
-                            ]
-                        ]
-                    ]
+                                    "sound"             => "default",
+                                    "content-available" => 1,
+                                ],
+                            ],
+                        ],
+                        "webpush"      => [
+                            "headers" => [
+                                "Urgency" => "high",
+                            ],
+                            "notification" => [
+                                "title" => $title,
+                                "body"  => $notificationBody,
+                            ],
+                        ],
+                    ],
                 ];
                 if (!empty($navigationPayload['deeplink'])) {
                     $data['message']['notification']['deeplink'] = $navigationPayload['deeplink'];
                     $data['message']['apns']['payload']['deeplink'] = $navigationPayload['deeplink'];
                     $data['message']['fcm_options']['link'] = $navigationPayload['deeplink'];
+                    $data['message']['webpush']['fcm_options']['link'] = $navigationPayload['deeplink'];
+
+
                 }
 
                 if (!empty($navigationPayload['click_action'])) {
                     $data['message']['apns']['payload']['click_action'] = $navigationPayload['click_action'];
+                    $data['message']['android']['notification']['click_action'] = $navigationPayload['click_action'];
+
+
                 }
 
+                $data['message']['fcm_options']['analytics_label'] = $type === 'chat' ? 'chat_message' : 'general_notification';
+
                 if (is_string($platformType) && strcasecmp($platformType, 'Android') === 0) {
-                    $androidNotification = [
-
-
-                        "title" => $title,
-                        "body"  => $message,
-                    ];
-
-
-                    if (!empty($navigationPayload['click_action'])) {
-                        $androidNotification['click_action'] = $navigationPayload['click_action'];
-                    }
-
-                    $data['message']['android']['notification'] = $androidNotification;
+                    $data['message']['android']['notification']['title'] = $title;
+                    $data['message']['android']['notification']['body'] = $notificationBody;
 
                 }
 

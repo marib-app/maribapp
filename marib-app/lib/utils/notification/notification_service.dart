@@ -236,12 +236,20 @@ class NotificationService {
 
   static Future<void> handleNotification(RemoteMessage? message,
       [BuildContext? context]) async {
-    final String notificationType =
-    (message?.data['type'] ?? message?.data['notification_type'] ?? '')
-        .toString();
+    final String rawNotificationType =
+        _normalizeNotificationValue(message?.data['notification_type']) ??
+            _normalizeNotificationValue(message?.data['type']) ??
+            '';
 
-    final String eventType = message?.data['event']?.toString() ?? '';
-    final String actionType = message?.data['action']?.toString() ?? '';
+    final String rawEventType =
+        _normalizeNotificationValue(message?.data['event']) ?? '';
+    final String rawActionType =
+        _normalizeNotificationValue(message?.data['action']) ?? '';
+
+    final String normalizedNotificationType =
+    rawNotificationType.toLowerCase();
+    final String normalizedEventType = rawEventType.toLowerCase();
+    final String normalizedActionType = rawActionType.toLowerCase();
     const Set<String> presenceEvents = {'UserTyping', 'UserPresenceUpdated'};
     const Set<String> messageStatusEvents = {
       'MessageDelivered',
@@ -252,9 +260,7 @@ class NotificationService {
       'messageread',
     };
 
-    final String normalizedNotificationType = notificationType.toLowerCase();
-    final String normalizedEventType = eventType.toLowerCase();
-    final String normalizedActionType = actionType.toLowerCase();
+
     final Set<String> normalizedPresenceEvents =
     presenceEvents.map((event) => event.toLowerCase()).toSet();
     final Set<String> normalizedMessageStatusEvents =
@@ -270,7 +276,7 @@ class NotificationService {
             normalizedMessageStatusEvents.contains(normalizedActionType);
 
 
-    print("@notificaiton data is ${message?.data}****${notificationType}");
+    print("@notificaiton data is ${message?.data}****$rawNotificationType");
 
 
     if (isPresenceEvent) {
@@ -289,7 +295,7 @@ class NotificationService {
       return;
     }
 
-    if (notificationType == 'wallet') {
+    if (normalizedNotificationType == 'wallet') {
       final ctx = context ?? Constant.navigatorKey.currentContext;
       final summaryCubit = ctx != null
           ? _maybeReadCubit<WalletSummaryCubit>(ctx)
@@ -362,7 +368,7 @@ class NotificationService {
     }
 
 
-    if (notificationType == "chat") {
+    if (normalizedNotificationType == "chat") {
       var username = message?.data['user_name'];
       var itemImage = message?.data['item_image'];
       var itemName = message?.data['item_name'];
@@ -445,6 +451,10 @@ class NotificationService {
       final Map<String, dynamic> chatData =
       Map<String, dynamic>.from(message?.data ?? const {});
       _cacheParticipantsFromData(chatData);
+      final String? chatMessageType =
+          _normalizeNotificationValue(message?.data['chat_message_type']) ??
+              _normalizeNotificationValue(message?.data['message_type']) ??
+              _normalizeNotificationValue(message?.data['message_type_temp']);
       final bool isConversationMatch = conversationIdStr.isNotEmpty
           ? (conversationIdStr == currentlyChatingWith &&
           itemOfferIdStr == currentlyChatItemId)
@@ -486,7 +496,7 @@ class NotificationService {
             status: status,
             deliveredAt: deliveredAt,
             readAt: readAt,
-            messageType: message?.data['message_type'],
+            messageType: chatMessageType,
 
             receiverId: receiverIdParsed,
             senderId: senderIdParsed);

@@ -3447,24 +3447,30 @@ class ApiController extends Controller {
             $notificationPayload = $chatMessage->toArray();
             $notificationPayload['item_offer_id'] = $conversation->item_offer_id;
             $notificationPayload['conversation_id'] = $conversation->id;
+            $messagePreview = $request->message ?? $chatMessage->message ?? '';
 
             $fcmMsg = [
                 ...$notificationPayload,
-                'user_id'           => $user->id,
-                'user_name'         => $user->name,
-                'user_profile'      => $user->profile,
-                'user_type'         => $userType,
-                'item_id'           => $itemOffer->item->id,
-                'item_name'         => $itemOffer->item->name,
-                'item_image'        => $itemOffer->item->image,
-                'item_price'        => $itemOffer->item->price,
-                'item_offer_id'     => $itemOffer->id,
-                'item_offer_amount' => $itemOffer->amount,
-                'type'              => $notificationPayload['message_type'],
-                'message_type_temp' => $notificationPayload['message_type']
+                'user_id'             => $user->id,
+                'user_name'           => $user->name,
+                'user_profile'        => $user->profile,
+                'user_type'           => $userType,
+                'item_id'             => $itemOffer->item->id,
+                'item_name'           => $itemOffer->item->name,
+                'item_image'          => $itemOffer->item->image,
+                'item_price'          => $itemOffer->item->price,
+                'item_offer_id'       => $itemOffer->id,
+                'item_offer_amount'   => $itemOffer->amount,
+                'notification_type'   => 'chat',
+                'type'                => 'chat',
+                'chat_message_type'   => $notificationPayload['message_type'] ?? null,
+                'message_preview'     => $messagePreview,
             ];
-            /* message_type is reserved keyword in FCM so removed here*/
-            unset($fcmMsg['message_type']);
+
+            if (array_key_exists('message_type', $fcmMsg)) {
+                unset($fcmMsg['message_type']);
+            }
+            
             $receiverFCMTokens = UserFcmToken::where('user_id', $receiver_id)->pluck('fcm_token')->toArray();
             $notification = NotificationService::sendFcmNotification($receiverFCMTokens, 'Message', $request->message, "chat", $fcmMsg);
 

@@ -2877,6 +2877,12 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         return true;
       }
 
+      if (requiresPurchaseCodeGateway(bank.paymentMethod) ||
+          isManualBankGateway(bank.paymentMethod)) {
+        return true;
+      }
+
+
       final Set<String> allowedCodes = <String>{};
       final Set<String> allowedTokens = <String>{};
       final Set<String> excludedCodes = <String>{};
@@ -3067,11 +3073,28 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       considerDisplay(info.display);
       considerCode(info.code);
     }
+    final List<CurrencyParseResult> itemCandidates = <CurrencyParseResult>[];
 
     void considerCartItem(Cart item) {
       considerDisplay(item.currency);
       considerCode(item.currencyCode);
       considerCode(item.currency);
+
+      final String? trimmedCurrency = item.currency?.trim();
+      final String? trimmedCode = item.currencyCode?.trim();
+      final String? normalizedCode =
+      CurrencyUtils.normalizeCurrencyCode(trimmedCode ?? trimmedCurrency);
+
+      if ((trimmedCurrency != null && trimmedCurrency.isNotEmpty) ||
+          (normalizedCode != null && normalizedCode.isNotEmpty)) {
+        itemCandidates.add(
+          CurrencyParseResult(
+            code: normalizedCode,
+            display: trimmedCurrency ?? trimmedCode,
+          ),
+        );
+      }
+
     }
 
     for (final Cart item in _cartItems) {
@@ -3084,11 +3107,56 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
 
     }
 
+    if (itemCandidates.isNotEmpty) {
+      final Set<String> itemCodes = itemCandidates
+          .map((CurrencyParseResult candidate) => candidate.code)
+          .whereType<String>()
+          .where((String value) => value.trim().isNotEmpty)
+          .map((String value) => value.trim())
+          .toSet();
+
+      if (itemCodes.length == 1) {
+        code = itemCodes.first;
+      } else if (code == null && itemCodes.isNotEmpty) {
+        code = itemCodes.first;
+      }
+
+      final String? currentDisplayNormalized =
+      CurrencyUtils.normalizeCurrencyCode(display);
+      if (code != null &&
+          (currentDisplayNormalized == null || currentDisplayNormalized != code)) {
+        for (final CurrencyParseResult candidate in itemCandidates) {
+          final String? candidateDisplay = candidate.display?.trim();
+          if (candidateDisplay == null || candidateDisplay.isEmpty) {
+            continue;
+          }
+          if (candidate.code != null && candidate.code == code) {
+            display = candidateDisplay;
+            break;
+          }
+        }
+      }
+
+      if (display == null || display!.trim().isEmpty) {
+        final Iterable<String> displays = itemCandidates
+            .map((CurrencyParseResult candidate) => candidate.display?.trim())
+            .whereType<String>()
+            .where((String value) => value.isNotEmpty);
+        final Set<String> uniqueDisplays = displays.toSet();
+        if (uniqueDisplays.length == 1) {
+          display = uniqueDisplays.first;
+        } else if (display == null && displays.isNotEmpty) {
+          display = displays.first;
+        }
+      }
+
+    }
+
     if (code == null) {
       considerCode(display);
     }
 
-    return CurrencyParseResult(code: code, display: display);
+    return CurrencyParseResult(code: code, display: display?.trim());
   }
 
   String? get _orderCurrencyCode => _orderCurrencyInfo.code;

@@ -4,6 +4,7 @@ import 'package:marib/data/model/item/cart_model.dart';
 
 import 'shared_widgets.dart';
 import 'package:marib/utils/currency_utils.dart';
+import 'package:marib/utils/money_formatter.dart';
 
 
 
@@ -93,8 +94,12 @@ class DeliveryDetailsSection extends StatelessWidget {
 
     final CheckoutDeliveryInfo? info = deliveryInfo;
     final List<CheckoutDeliveryTier> tiers = info?.tiers ?? const <CheckoutDeliveryTier>[];
-    final String currencyLabel = _resolveCurrency();
-    final String currencySuffix = currencyLabel.isNotEmpty ? ' $currencyLabel' : '';
+    final CurrencyParseResult currencyInfo = _resolveCurrencyInfo();
+    final MoneyFormatter moneyFormatter = MoneyFormatter.fromCartCurrency(
+      currency: currencyInfo.display,
+      currencyCode: currencyInfo.code,
+      fallbackLabel: currencyInfo.display ?? currencyInfo.code,
+    );
 
     final String? trimmedDeliveryPrice = deliveryPrice?.trim();
     String resolvedPrice;
@@ -105,9 +110,10 @@ class DeliveryDetailsSection extends StatelessWidget {
         trimmedDeliveryPrice != '—') {
       resolvedPrice = trimmedDeliveryPrice;
     } else if (shippingAmount != null) {
-      resolvedPrice = _formatAmount(shippingAmount!, currencyLabel);
+      resolvedPrice = moneyFormatter.format(shippingAmount!);
     } else if (info?.fee != null) {
-      resolvedPrice = '${info!.fee}$currencySuffix';
+      final num fee = info!.fee!;
+      resolvedPrice = moneyFormatter.format(fee.toDouble());
     } else {
       resolvedPrice = '—';
     }
@@ -176,12 +182,12 @@ class DeliveryDetailsSection extends StatelessWidget {
                   const SizedBox(height: 8),
                   ...tiers.map(
                         (tier) => _buildTierRow(
-                      tier,
-                      isDark: isDark,
-                      textColor: textColor,
-                      subTextColor: subTextColor,
-                      currencySuffix: currencySuffix,
-                    ),
+                          tier,
+                          isDark: isDark,
+                          textColor: textColor,
+                          subTextColor: subTextColor,
+                          formatter: moneyFormatter,
+                        ),
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -318,7 +324,7 @@ class DeliveryDetailsSection extends StatelessWidget {
   }
 
 
-  String _resolveCurrency() {
+  CurrencyParseResult _resolveCurrencyInfo() {
     String? display;
     String? code;
 
@@ -361,20 +367,8 @@ class DeliveryDetailsSection extends StatelessWidget {
       considerCode(display);
     }
 
-    return CurrencyUtils.displayToken(
-      label: display,
-      fallback: code,
-      code: code,
-    ) ??
-        code ??
-        'ر.س';
-  }
+    return CurrencyParseResult(code: code, display: display);
 
-  String _formatAmount(double amount, String currency) {
-    final bool hasFraction = amount % 1 != 0;
-    final String formatted =
-    hasFraction ? amount.toStringAsFixed(2) : amount.toStringAsFixed(0);
-    return currency.isEmpty ? formatted : '$formatted $currency';
   }
 
 
@@ -384,11 +378,13 @@ class DeliveryDetailsSection extends StatelessWidget {
         required bool isDark,
         required Color textColor,
         required Color subTextColor,
-        required String currencySuffix,
+        required MoneyFormatter formatter,
       }) {
     final String priceText = (tier.priceDisplay?.trim().isNotEmpty ?? false)
         ? tier.priceDisplay!.trim()
-        : (tier.price != null ? '${tier.price}$currencySuffix' : '—');
+        : (tier.price != null
+        ? formatter.format((tier.price as num).toDouble())
+        : '—');
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),

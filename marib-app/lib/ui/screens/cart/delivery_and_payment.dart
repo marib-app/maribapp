@@ -28,6 +28,7 @@ import 'package:marib/data/model/orders/user_order.dart';
 import 'components/delivery_and_payment/delivery_payment_timing_selector.dart';
 
 import 'package:marib/utils/currency_utils.dart';
+import 'package:marib/utils/money_formatter.dart';
 
 
 
@@ -382,7 +383,12 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
             _normalizeDepartment(_cartItems.first.section);
       }
 
-      _banks = result.banks;
+      _banks = _filterBanksForCurrency(
+        result.banks,
+        _orderCurrencyCode,
+        _orderCurrencyLabel,
+      );
+
       _requiresAddressBlock = requiresAddressBlock;
       _deliveryInfo = (!requiresAddressBlock || hasValidAddress) ? deliveryInfo : null;
 
@@ -1610,7 +1616,8 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     return _subtotal;
   }
 
-  String _resolveDepositCurrency(Map<String, dynamic>? info) {
+  String? _resolveDepositCurrency(Map<String, dynamic>? info) {
+
     final String? fromInfo = _stringValue(info?['currency']);
     if (fromInfo != null && fromInfo.trim().isNotEmpty) {
       return fromInfo.trim();
@@ -1631,20 +1638,16 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     if (orderCurrencyCode != null && orderCurrencyCode.trim().isNotEmpty) {
       return orderCurrencyCode.trim();
     }
-    return '';
+    return null;
+
   }
 
   String _formatCurrencyAmount(double amount, {String? currency}) {
-    final String resolvedCurrency = currency?.trim().isNotEmpty == true
-        ? currency!.trim()
-        : _resolveDepositCurrency(_depositInfo);
-    final bool hasFraction = amount % 1 != 0;
-    final String formatted =
-    hasFraction ? amount.toStringAsFixed(2) : amount.toStringAsFixed(0);
-    if (resolvedCurrency.isEmpty) {
-      return formatted;
-    }
-    return '$formatted $resolvedCurrency';
+    final MoneyFormatter formatter = _buildMoneyFormatter(
+      label: currency,
+      fallbackLabel: _resolveDepositCurrency(_depositInfo),
+    );
+    return formatter.format(amount);
   }
 
   Map<String, dynamic>? _buildDepositViewModel() {
@@ -1655,7 +1658,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
 
     final Map<String, dynamic> viewModel = Map<String, dynamic>.from(info);
     final bool applied = _isDepositApplied;
-    final String currency = _resolveDepositCurrency(info);
+    final String? currency = _resolveDepositCurrency(info);
 
     final double? goodsValue = info['goodsValueValue'] is num
         ? (info['goodsValueValue'] as num).toDouble()
@@ -1728,7 +1731,9 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       }
     }
 
-    viewModel['currency'] = currency;
+    if (currency != null && currency.isNotEmpty) {
+      viewModel['currency'] = currency;
+    }
     viewModel['applied'] = applied;
     viewModel['toggleAllowed'] = _depositToggleAllowed;
     viewModel['toggleValue'] =
@@ -2620,20 +2625,26 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       return fromDelivery;
     }
 
-    return 'ر.س';
+    final String? orderLabel = _orderCurrencyLabel;
+    if (orderLabel != null && orderLabel.trim().isNotEmpty) {
+      return orderLabel.trim();
+    }
+
+    final String? orderCode = _orderCurrencyCode;
+    if (orderCode != null && orderCode.trim().isNotEmpty) {
+      return orderCode.trim();
+    }
+
+    return '';
   }
 
   String _formatShippingAmount(double amount, {String? currency}) {
-    final double absolute = amount.abs();
-    final bool hasFraction = absolute % 1 != 0;
-    final String formatted =
-    hasFraction ? absolute.toStringAsFixed(2) : absolute.toStringAsFixed(0);
-    final String? trimmedCurrency = currency?.trim();
-    if (trimmedCurrency == null || trimmedCurrency.isEmpty) {
-      return amount < 0 ? '-$formatted' : formatted;
-    }
-    final String valueWithCurrency = '$formatted $trimmedCurrency';
-    return amount < 0 ? '-$valueWithCurrency' : valueWithCurrency;
+    final MoneyFormatter formatter = _buildMoneyFormatter(
+      label: currency,
+      fallbackLabel: currency ?? _orderCurrencyLabel,
+    );
+    final String formatted = formatter.format(amount.abs());
+    return amount < 0 ? '-$formatted' : formatted;
   }
 
   String? _resolveShippingFeeDisplayLabel({
@@ -2814,6 +2825,179 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     }
     return trimmed;
   }
+
+
+  MoneyFormatter _buildMoneyFormatter({
+    String? label,
+    String? code,
+    String? fallbackLabel,
+  }) {
+    String? sanitizedLabel = label?.trim();
+    if (sanitizedLabel != null && sanitizedLabel.isEmpty) {
+      sanitizedLabel = null;
+    }
+
+    String? sanitizedFallbackLabel = fallbackLabel?.trim();
+    if (sanitizedFallbackLabel != null && sanitizedFallbackLabel.isEmpty) {
+      sanitizedFallbackLabel = null;
+    }
+
+    String? orderLabel = _orderCurrencyLabel?.trim();
+    if (orderLabel != null && orderLabel.isEmpty) {
+      orderLabel = null;
+    }
+
+    String? effectiveCode = CurrencyUtils.normalizeCurrencyCode(
+      code ?? sanitizedLabel ?? _orderCurrencyCode ?? sanitizedFallbackLabel ?? orderLabel,
+    );
+
+    final String? fallback = sanitizedFallbackLabel ?? orderLabel ?? _orderCurrencyCode ?? effectiveCode ?? sanitizedLabel;
+    final String? effectiveLabel = sanitizedLabel ?? fallback ?? effectiveCode;
+
+    return MoneyFormatter.fromCartCurrency(
+      currency: effectiveLabel,
+      currencyCode: effectiveCode ?? CurrencyUtils.normalizeCurrencyCode(fallback ?? effectiveLabel),
+      fallbackLabel: fallback ?? effectiveCode ?? effectiveLabel,
+    );
+  }
+
+  List<CheckoutBank> _filterBanksForCurrency(
+      List<CheckoutBank> banks, String? orderCurrencyCode, String? orderCurrencyLabel) {
+    final String? normalizedOrderCode =
+    CurrencyUtils.normalizeCurrencyCode(orderCurrencyCode ?? orderCurrencyLabel);
+    final String? normalizedOrderLabel = orderCurrencyLabel?.trim();
+
+    if (normalizedOrderCode == null && (normalizedOrderLabel == null || normalizedOrderLabel.isEmpty)) {
+      return banks;
+    }
+
+    bool isCompatible(CheckoutBank bank) {
+      final Map<String, dynamic>? raw = bank.raw;
+      if (raw == null || raw.isEmpty) {
+        return true;
+      }
+
+      final Set<String> allowedCodes = <String>{};
+      final Set<String> allowedTokens = <String>{};
+      final Set<String> excludedCodes = <String>{};
+      final Set<String> excludedTokens = <String>{};
+
+      void absorbToken(String? token, {bool excluded = false}) {
+        if (token == null) {
+          return;
+        }
+        final String trimmed = token.trim();
+        if (trimmed.isEmpty) {
+          return;
+        }
+        final String upper = trimmed.toUpperCase();
+        final String? normalized = CurrencyUtils.normalizeCurrencyCode(trimmed);
+        if (excluded) {
+          excludedTokens.add(upper);
+          if (normalized != null) {
+            excludedCodes.add(normalized);
+          }
+        } else {
+          allowedTokens.add(upper);
+          if (normalized != null) {
+            allowedCodes.add(normalized);
+          }
+        }
+      }
+
+      void absorb(dynamic value, {bool excluded = false}) {
+        if (value == null) {
+          return;
+        }
+        if (value is String) {
+          for (final String part in value.split(RegExp(r'[;,]'))) {
+            absorbToken(part, excluded: excluded);
+          }
+          return;
+        }
+        if (value is num) {
+          absorbToken(value.toString(), excluded: excluded);
+          return;
+        }
+        if (value is Iterable) {
+          for (final dynamic element in value) {
+            absorb(element, excluded: excluded);
+          }
+          return;
+        }
+        if (value is Map) {
+          final Map<String, dynamic> map = value is Map<String, dynamic>
+              ? value
+              : Map<String, dynamic>.from(value as Map);
+          final CurrencyParseResult info = CurrencyUtils.parseCurrency(map);
+          absorbToken(info.display, excluded: excluded);
+          absorbToken(info.code, excluded: excluded);
+          for (final dynamic entry in map.values) {
+            absorb(entry, excluded: excluded);
+          }
+          return;
+        }
+      }
+
+      void absorbFromKeys(Map<String, dynamic> source, Iterable<String> keys,
+          {bool excluded = false}) {
+        for (final String key in keys) {
+          if (!source.containsKey(key)) {
+            continue;
+          }
+          absorb(source[key], excluded: excluded);
+        }
+      }
+
+      absorb(raw);
+
+      const List<String> allowedKeys = <String>[
+        'currencies',
+        'supported_currencies',
+        'allowed_currencies',
+        'currency_list',
+        'currencyList',
+        'currency_options',
+        'currencyOptions',
+        'currency_codes',
+        'currencyCodes',
+        'payment_currencies',
+        'paymentCurrencies',
+      ];
+
+      const List<String> excludedKeys = <String>[
+        'excluded_currencies',
+        'disallowed_currencies',
+        'blocked_currencies',
+      ];
+
+      absorbFromKeys(raw, allowedKeys);
+      absorbFromKeys(raw, excludedKeys, excluded: true);
+
+      if (excludedCodes.contains(normalizedOrderCode) ||
+          excludedTokens.contains(normalizedOrderLabel?.toUpperCase() ?? '')) {
+        return false;
+      }
+
+      if (allowedCodes.isEmpty && allowedTokens.isEmpty) {
+        return true;
+      }
+
+      if (normalizedOrderCode != null && allowedCodes.contains(normalizedOrderCode)) {
+        return true;
+      }
+
+      final String? upperLabel = normalizedOrderLabel?.toUpperCase();
+      if (upperLabel != null && allowedTokens.contains(upperLabel)) {
+        return true;
+      }
+
+      return false;
+    }
+
+    return banks.where(isCompatible).toList();
+  }
+
 
   String? _currencyDisplayToken(String? value, {String? code, String? fallback}) {
     final String? trimmed = value?.trim();

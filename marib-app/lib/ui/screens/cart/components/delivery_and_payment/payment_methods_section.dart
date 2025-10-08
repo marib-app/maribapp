@@ -10,6 +10,7 @@ import 'package:marib/data/model/wallet/wallet_summary.dart';
 import 'package:marib/utils/currency_utils.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/ui/screens/widgets/lazy_network_image.dart';
+import 'package:marib/utils/money_formatter.dart';
 
 
 /// ويدجت يعرض طرق الدفع المتاحة ويتعامل مع الحوارات الخاصة بالحوالة أو الكود.
@@ -202,16 +203,20 @@ class PaymentMethodsSection extends StatelessWidget {
       code: resolvedOrderCode,
     );
 
-    final String currencyLabelForBalance = walletDisplay ??
-        orderDisplay ??
-        resolvedWalletCode ??
-        resolvedOrderCode ??
-        '';
+    final MoneyFormatter orderFormatter = MoneyFormatter.fromCartCurrency(
+      currency: orderDisplay ?? walletDisplay,
+      currencyCode: resolvedOrderCode ?? resolvedWalletCode,
+      fallbackLabel: orderDisplay ?? walletDisplay ?? resolvedOrderCode ?? resolvedWalletCode,
+    );
+    final MoneyFormatter balanceFormatter = MoneyFormatter.fromCartCurrency(
+      currency: walletDisplay ?? orderDisplay,
+      currencyCode: resolvedWalletCode ?? resolvedOrderCode,
+      fallbackLabel: orderDisplay ?? walletDisplay ?? resolvedWalletCode ?? resolvedOrderCode,
+    );
     final String balanceText = summary == null
         ? '—'
-        : currencyLabelForBalance.isEmpty
-        ? balance.toStringAsFixed(2)
-        : '${balance.toStringAsFixed(2)} $currencyLabelForBalance';
+        : balanceFormatter.format(balance);
+
 
     final String walletMessageLabel = walletDisplay ??
         resolvedWalletCode ??
@@ -244,10 +249,8 @@ class PaymentMethodsSection extends StatelessWidget {
       'لا يمكن استخدام المحفظة بعملة $walletMessageLabel لطلب عملته $orderMessageLabel.';
       statusColor = Colors.orange;
     } else if (!walletEnabled) {
-      final String requiredAmountText =
-      requiredAmount.toStringAsFixed(2);
-      statusText =
-      'الرصيد غير كافٍ لإجمالي $requiredAmountText $orderMessageLabel';
+      final String requiredAmountText = orderFormatter.format(requiredAmount);
+      statusText = 'الرصيد غير كافٍ لإجمالي $requiredAmountText';
 
       statusColor = Colors.redAccent;
     } else {

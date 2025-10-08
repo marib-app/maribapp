@@ -4,16 +4,14 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/model/item/cart_model.dart';
 import 'package:marib/data/repositories/cart/cart_repository.dart';
-import 'package:marib/utils/hive_utils.dart';
-import 'package:marib/utils/delivery_department.dart';
-import 'package:meta/meta.dart';
-import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/data/model/cart/cart_discount.dart';
-import 'package:marib/utils/api.dart';
-import 'package:marib/data/repositories/cart/cart_tips_repository.dart';
 import 'package:marib/data/model/cart/cart_safety_tip.dart';
+import 'package:marib/data/repositories/cart/cart_tips_repository.dart';
+import 'package:marib/utils/api.dart';
 import 'package:marib/utils/app_telemetry.dart';
-
+import 'package:marib/utils/delivery_department.dart';
+import 'package:marib/utils/hive_utils.dart';
+import 'package:meta/meta.dart';
 
 
 
@@ -40,6 +38,8 @@ class CartState {
     this.pendingAddition,
     this.checkoutLoading = false,
     this.departmentNotice,
+    this.currency,
+    this.currencyCode,
   });
 
   final List<Cart> items;
@@ -58,6 +58,9 @@ class CartState {
   final PendingCartAddition? pendingAddition;
   final bool checkoutLoading;
   final String? departmentNotice;
+  final String? currency;
+  final String? currencyCode;
+
 
   CartState copyWith({
     List<Cart>? items,
@@ -79,6 +82,10 @@ class CartState {
     Object? deliveryPaymentTiming = _sentinel,
     bool? checkoutLoading,
     Object? departmentNotice = _sentinel,
+    Object? currency = _sentinel,
+    Object? currencyCode = _sentinel,
+
+
   }) {
     return CartState(
       items: items ?? this.items,
@@ -118,6 +125,12 @@ class CartState {
       departmentNotice: identical(departmentNotice, _sentinel)
           ? this.departmentNotice
           : departmentNotice as String?,
+      currency: identical(currency, _sentinel)
+          ? this.currency
+          : currency as String?,
+      currencyCode: identical(currencyCode, _sentinel)
+          ? this.currencyCode
+          : currencyCode as String?,
     );
   }
   static const Object _sentinel = Object();
@@ -249,6 +262,8 @@ class CartCubit extends Cubit<CartState> {
         deliveryPaymentTiming: summary.deliveryPaymentTiming ??
             state.deliveryPaymentTiming,
         checkoutLoading: true,
+        currency: summary.currency ?? state.currency,
+        currencyCode: summary.currencyCode ?? state.currencyCode,
       ),
     );
 
@@ -358,6 +373,8 @@ class CartCubit extends Cubit<CartState> {
           deliveryPaymentTiming:
           summary.deliveryPaymentTiming ?? normalized,
           checkoutLoading: true,
+          currency: summary.currency ?? state.currency,
+          currencyCode: summary.currencyCode ?? state.currencyCode,
         ),
       );
 
@@ -545,6 +562,8 @@ class CartCubit extends Cubit<CartState> {
           deliveryPaymentTiming: summary.deliveryPaymentTiming ??
               state.deliveryPaymentTiming,
           checkoutLoading: true,
+          currency: summary.currency ?? state.currency,
+          currencyCode: summary.currencyCode ?? state.currencyCode,
         ),
       );
       _pendingAdditionCache = null;
@@ -602,6 +621,8 @@ class CartCubit extends Cubit<CartState> {
           summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
           deliveryPaymentTiming:
           summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
+          currency: summary.currency ?? state.currency,
+          currencyCode: summary.currencyCode ?? state.currencyCode,
           checkoutLoading: true,
         ),
       );
@@ -697,6 +718,8 @@ class CartCubit extends Cubit<CartState> {
         deliveryPaymentTiming:
         summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
         checkoutLoading: true,
+        currency: summary.currency ?? state.currency,
+        currencyCode: summary.currencyCode ?? state.currencyCode,
       ),
     );
     unawaited(refreshCheckoutDetails());
@@ -756,6 +779,8 @@ class CartCubit extends Cubit<CartState> {
         deliveryPaymentTiming:
         summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
         checkoutLoading: true,
+        currency: summary.currency ?? state.currency,
+        currencyCode: summary.currencyCode ?? state.currencyCode,
       ),
     );
     unawaited(refreshCheckoutDetails());
@@ -780,6 +805,8 @@ class CartCubit extends Cubit<CartState> {
         deliveryPaymentTiming:
         summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
         checkoutLoading: true,
+        currency: summary.currency ?? state.currency,
+        currencyCode: summary.currencyCode ?? state.currencyCode,
       ),
     );
     unawaited(refreshCheckoutDetails());
@@ -830,6 +857,8 @@ class CartCubit extends Cubit<CartState> {
           deliveryPaymentTiming:
           summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
           checkoutLoading: true,
+          currency: summary.currency ?? state.currency,
+          currencyCode: summary.currencyCode ?? state.currencyCode,
         ),
       );
       unawaited(refreshCheckoutDetails());
@@ -910,6 +939,8 @@ class CartCubit extends Cubit<CartState> {
           deliveryPaymentTiming:
           summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
           checkoutLoading: true,
+          currency: summary.currency ?? state.currency,
+          currencyCode: summary.currencyCode ?? state.currencyCode,
         ),
       );
       unawaited(refreshCheckoutDetails());
@@ -969,6 +1000,8 @@ class CartCubit extends Cubit<CartState> {
         deliveryPaymentTiming:
         summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
         checkoutLoading: true,
+        currency: summary.currency ?? state.currency,
+        currencyCode: summary.currencyCode ?? state.currencyCode,
       ),
     );
     unawaited(refreshCheckoutDetails());

@@ -4,6 +4,7 @@ import 'package:marib/data/model/item/cart_model.dart';
 
 import 'shared_widgets.dart';
 import 'package:marib/utils/currency_utils.dart';
+import 'package:marib/utils/money_formatter.dart';
 
 
 
@@ -46,7 +47,7 @@ class OrderSummarySection extends StatelessWidget {
   final String? shippingCurrency;
 
 
-  String _resolveCurrency() {
+  CurrencyParseResult _resolveCurrencyInfo() {
     String? display;
     String? code;
 
@@ -88,13 +89,8 @@ class OrderSummarySection extends StatelessWidget {
       considerCode(display);
     }
 
-    return CurrencyUtils.displayToken(
-      label: display,
-      fallback: code,
-      code: code,
-    ) ??
-        code ??
-        '';
+    return CurrencyParseResult(code: code, display: display);
+
   }
 
 
@@ -130,17 +126,16 @@ class OrderSummarySection extends StatelessWidget {
 
     final BorderRadius borderRadius = BorderRadius.circular(14);
 
-    final String currencyLabel = _resolveCurrency();
-
+    final CurrencyParseResult currencyInfo = _resolveCurrencyInfo();
+    final MoneyFormatter moneyFormatter = MoneyFormatter.fromCartCurrency(
+      currency: currencyInfo.display,
+      currencyCode: currencyInfo.code,
+      fallbackLabel: currencyInfo.display ?? currencyInfo.code,
+    );
 
     String formatAmount(double amount) {
-      final double absolute = amount.abs();
-      final String formatted = absolute.toStringAsFixed(2);
-      if (currencyLabel.isEmpty) {
-        return amount < 0 ? '-$formatted' : formatted;
-      }
-      final String valueWithCurrency = '$formatted $currencyLabel';
-      return amount < 0 ? '-$valueWithCurrency' : valueWithCurrency;
+      return moneyFormatter.format(amount);
+
     }
 
 

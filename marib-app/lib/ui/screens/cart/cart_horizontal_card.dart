@@ -7,16 +7,20 @@ import 'package:marib/data/cubits/cart/cart_cubit.dart';
 import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:marib/ui/screens/widgets/promoted_widget.dart';
 import 'package:marib/ui/theme/theme.dart';
-
 import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/data/model/item/cart_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
 import 'package:marib/utils/ui_utils.dart';
-import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/currency_utils.dart';
+import 'package:marib/utils/money_formatter.dart';
+
+
+
+
+
+
+
 
 class CartHorizontalCard extends StatelessWidget {
   final Cart item;
@@ -188,25 +192,13 @@ class CartHorizontalCard extends StatelessWidget {
         ? Colors.black.withOpacity(showShadow ? 0.35 : 0.25)
         : Colors.black.withOpacity(showShadow ? 0.12 : 0.08);
 
-    final String? fallbackSymbol = () {
-      final String trimmed = Constant.currencySymbol.trim();
-      return trimmed.isEmpty ? null : trimmed;
-    }();
-    final String currencyToken =
-        CurrencyUtils.displayToken(
-          label: item.currency,
-          fallback: item.currencyCode ?? fallbackSymbol,
-          code: item.currencyCode ??
-              CurrencyUtils.normalizeCurrencyCode(item.currency),
-        ) ??
-            fallbackSymbol ??
-            'ر.س';
-
-    final String formattedPrice = HelperUtils.formatPrice(item.unitPriceValue);
-    final String priceLabel = formattedPrice.isEmpty ? '—' : formattedPrice;
-    final String currencySuffix = currencyToken.trim().isEmpty
-        ? ''
-        : ' ${currencyToken.trim()}';
+    final MoneyFormatter moneyFormatter = MoneyFormatter.fromCartCurrency(
+      currency: item.currency,
+      currencyCode:
+      item.currencyCode ?? CurrencyUtils.normalizeCurrencyCode(item.currency),
+      fallbackLabel: item.currency ?? item.currencyCode,
+    );
+    final String priceLabel = moneyFormatter.format(item.unitPriceValue);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.5),
@@ -295,7 +287,7 @@ class CartHorizontalCard extends StatelessWidget {
                               Row(
                                 children: [
                                   Expanded(
-                                    child: Text('$priceLabel$currencySuffix')
+                                    child: Text(priceLabel)
 
                                         .size(context.font.large)
                                         .color(context.color.territoryColor)

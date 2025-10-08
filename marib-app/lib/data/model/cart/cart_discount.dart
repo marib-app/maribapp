@@ -1,6 +1,10 @@
 import 'package:meta/meta.dart';
 
 import 'package:marib/data/model/item/cart_model.dart';
+import 'package:marib/utils/currency_utils.dart';
+
+
+
 
 @immutable
 class CartDiscount {
@@ -170,6 +174,8 @@ class CartSummary {
     Map<String, dynamic>? blocking,
     List<dynamic>? deliveryPaymentOptions,
     String? deliveryPaymentTiming,
+    String? currency,
+    String? currencyCode,
   })  : items = List<Cart>.unmodifiable(List<Cart>.from(items)),
         discounts =
         List<CartDiscount>.unmodifiable(List<CartDiscount>.from(discounts)),
@@ -185,7 +191,11 @@ class CartSummary {
             : List<dynamic>.unmodifiable(List<dynamic>.from(
           deliveryPaymentOptions,
         )),
-        deliveryPaymentTiming = deliveryPaymentTiming;
+        deliveryPaymentTiming = deliveryPaymentTiming,
+        currency = _sanitize(currency),
+        currencyCode = CurrencyUtils.normalizeCurrencyCode(
+          currencyCode ?? currency,
+        );
 
   final List<Cart> items;
   final List<CartDiscount> discounts;
@@ -196,7 +206,8 @@ class CartSummary {
   final Map<String, dynamic>? blocking;
   final List<dynamic>? deliveryPaymentOptions;
   final String? deliveryPaymentTiming;
-
+  final String? currency;
+  final String? currencyCode;
   double get subtotal =>
       items.fold(0, (double sum, Cart item) => sum + item.subtotalAmount);
 
@@ -210,6 +221,8 @@ class CartSummary {
     Object? blocking = _sentinel,
     Object? deliveryPaymentOptions = _sentinel,
     Object? deliveryPaymentTiming = _sentinel,
+    Object? currency = _sentinel,
+    Object? currencyCode = _sentinel,
   }) {
     return CartSummary(
       items: items ?? this.items,
@@ -235,6 +248,12 @@ class CartSummary {
       identical(deliveryPaymentTiming, _sentinel)
           ? this.deliveryPaymentTiming
           : deliveryPaymentTiming as String?,
+      currency: identical(currency, _sentinel)
+          ? this.currency
+          : currency as String?,
+      currencyCode: identical(currencyCode, _sentinel)
+          ? this.currencyCode
+          : currencyCode as String?,
     );
   }
   static const Object _sentinel = Object();
@@ -246,7 +265,13 @@ class CartSummary {
     return Map<String, dynamic>.unmodifiable(Map<String, dynamic>.from(source));
   }
 
-
+  static String? _sanitize(String? value) {
+    if (value == null) {
+      return null;
+    }
+    final String trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
 }
 
 @immutable

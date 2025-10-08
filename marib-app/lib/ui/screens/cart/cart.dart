@@ -137,16 +137,9 @@ class _CartScreenState extends State<CartScreen> {
     return null;
   }
 
-  String? _resolveCartCurrency(CartState state) {
-    final List<CurrencyParseResult> infoCandidates = <CurrencyParseResult>[
-      _currencyInfoFromMap(state.deliveryQuote),
-      _currencyInfoFromMap(state.departmentPolicy),
-      _currencyInfoFromMap(state.blocking),
-      _currencyInfoFromMap(state.support),
-    ];
-
-    String? display;
-    String? code;
+  CurrencyParseResult _resolveCartCurrencyInfo(CartState state) {
+    String? display = state.currency?.trim();
+    String? code = CurrencyUtils.normalizeCurrencyCode(state.currencyCode);
 
     void considerDisplay(String? candidate) {
       if (display != null) {
@@ -163,12 +156,26 @@ class _CartScreenState extends State<CartScreen> {
         return;
       }
       final String? normalized = CurrencyUtils.normalizeCurrencyCode(candidate);
-      if (normalized != null) {
+      if (normalized != null && normalized.isNotEmpty) {
         code = normalized;
       }
     }
 
-    for (final CurrencyParseResult info in infoCandidates) {
+    considerCode(display);
+    considerCode(state.currencyCode);
+
+    final List<Map<String, dynamic>?> currencySources = <Map<String, dynamic>?>[
+      state.deliveryQuote,
+      state.departmentPolicy,
+      state.blocking,
+      state.support,
+    ];
+
+    for (final Map<String, dynamic>? source in currencySources) {
+      if (source == null || source.isEmpty) {
+        continue;
+      }
+      final CurrencyParseResult info = CurrencyUtils.parseCurrency(source);
       considerDisplay(info.display);
       considerCode(info.code);
     }
@@ -183,18 +190,20 @@ class _CartScreenState extends State<CartScreen> {
       considerCode(display);
     }
 
-    final String? fallbackSymbol = () {
-      final String trimmed = Constant.currencySymbol.trim();
-      return trimmed.isEmpty ? null : trimmed;
-    }();
+    return CurrencyParseResult(code: code, display: display);
+  }
 
-    final String? token = CurrencyUtils.displayToken(
-      label: display,
-      fallback: code ?? fallbackSymbol,
-      code: code,
+  String? _resolveCartCurrencyLabel(CartState state) {
+    final CurrencyParseResult info = _resolveCartCurrencyInfo(state);
+    return CurrencyUtils.displayToken(
+      label: info.display,
+      fallback: info.code,
+      code: info.code,
     );
-
-    return token ?? fallbackSymbol ?? code;
+  }
+  String? _resolveCartCurrencyCode(CartState state) {
+    final CurrencyParseResult info = _resolveCartCurrencyInfo(state);
+    return info.code;
   }
 
   CurrencyParseResult _currencyInfoFromMap(Map<String, dynamic>? source) {
@@ -296,7 +305,6 @@ class _CartScreenState extends State<CartScreen> {
     final CartState cartState = context.watch<CartCubit>().state;
     final List<Cart> cartItems = cartState.items;
     final double subtotal = context.read<CartCubit>().subtotal;
-    final String? orderCurrency = _resolveCartCurrency(cartState);
 
 
 
@@ -531,7 +539,8 @@ class _CartScreenState extends State<CartScreen> {
           isLoading: _loading,
           cartItems: cartItems,
           subtotal: subtotal,
-          currency: orderCurrency,
+          currency: _resolveCartCurrencyLabel(cartState),
+          currencyCode: _resolveCartCurrencyCode(cartState),
           selectAll: _selectAll,
           selectedItemIds: _selectedItems,
           whatsappBottom: _whatsappBottom,

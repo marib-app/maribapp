@@ -17,6 +17,7 @@ import 'components/delivery_and_payment/payment_methods_section.dart';
 import 'components/delivery_and_payment/return_and_deposit_tab.dart';
 import 'components/delivery_and_payment/delivery_payment_timing_selector.dart';
 import 'package:marib/utils/helper_utils.dart';
+import 'package:marib/utils/money_formatter.dart';
 
 
 class DeliveryAndPaymentUI extends StatelessWidget {
@@ -722,10 +723,12 @@ class DeliveryAndPaymentUI extends StatelessWidget {
   }
 
   String _formatAmount(double amount) {
-    final bool hasFraction = amount % 1 != 0;
-    final String formatted =
-    hasFraction ? amount.toStringAsFixed(2) : amount.toStringAsFixed(0);
-    return '$formatted ${_currencyLabel}';
+    final MoneyFormatter formatter = MoneyFormatter.fromCartCurrency(
+      currency: shippingCurrency ?? orderCurrencyLabel,
+      currencyCode: orderCurrencyCode,
+      fallbackLabel: orderCurrencyLabel ?? orderCurrencyCode,
+    );
+    return formatter.format(amount);
   }
 
   String get _currencyLabel {
@@ -737,7 +740,15 @@ class DeliveryAndPaymentUI extends StatelessWidget {
     if (fromDelivery != null && fromDelivery.isNotEmpty) {
       return fromDelivery;
     }
-    return 'ر.س';
+    final String? orderLabel = orderCurrencyLabel?.trim();
+    if (orderLabel != null && orderLabel.isNotEmpty) {
+      return orderLabel;
+    }
+    final String? orderCode = orderCurrencyCode?.trim();
+    if (orderCode != null && orderCode.isNotEmpty) {
+      return orderCode;
+    }
+    return '';
   }
 
   String? _resolvePaymentNotice() {

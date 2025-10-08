@@ -12,7 +12,8 @@ import 'package:marib/data/model/cart/cart_safety_tip.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:marib/utils/helper_utils.dart';
-import 'package:marib/utils/constant.dart';
+import 'package:marib/utils/currency_utils.dart';
+import 'package:marib/utils/money_formatter.dart';
 
 
 
@@ -23,6 +24,7 @@ class CartUI extends StatelessWidget {
   final double subtotal;
   final List<CartDiscount> discounts;
   final String? currency;
+  final String? currencyCode;
 
   final String? supportWhatsappLabel;
   final String? supportWhatsappNumber;
@@ -63,6 +65,7 @@ class CartUI extends StatelessWidget {
     required this.subtotal,
     required this.discounts,
     required this.currency,
+    this.currencyCode,
 
     required this.couponController,
     required this.couponInProgress,
@@ -94,14 +97,29 @@ class CartUI extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final String? normalizedCurrency = () {
-      final String? trimmed = currency?.trim();
-      if (trimmed != null && trimmed.isNotEmpty) {
-        return trimmed;
+    String? fallbackCurrencyLabel;
+    String? fallbackCurrencyCode;
+    for (final Cart cart in cartItems) {
+      final String? labelCandidate = cart.currency?.trim();
+      if (labelCandidate != null && labelCandidate.isNotEmpty) {
+        fallbackCurrencyLabel ??= labelCandidate;
       }
-      final String fallback = Constant.currencySymbol.trim();
-      return fallback.isEmpty ? null : fallback;
-    }();
+      final String? codeCandidate = cart.currencyCode ?? cart.currency;
+      final String? normalizedCode =
+      CurrencyUtils.normalizeCurrencyCode(codeCandidate);
+      if (normalizedCode != null && normalizedCode.isNotEmpty) {
+        fallbackCurrencyCode ??= normalizedCode;
+      }
+      if (fallbackCurrencyLabel != null && fallbackCurrencyCode != null) {
+        break;
+      }
+    }
+
+    final MoneyFormatter moneyFormatter = MoneyFormatter.fromCartCurrency(
+      currency: currency ?? fallbackCurrencyLabel,
+      currencyCode: currencyCode ?? fallbackCurrencyCode,
+      fallbackLabel: fallbackCurrencyLabel ?? fallbackCurrencyCode,
+    );
     final String? storeName = () {
       if (cartItems.isEmpty) return null;
       for (final cart in cartItems) {
@@ -355,12 +373,8 @@ class CartUI extends StatelessWidget {
     final Widget? safetyBanner = buildSafetyTipsBanner();
 
 
-    String _formatTotalAmount(double value, String? currencyToken) {
-      final String formatted = value.toStringAsFixed(2);
-      if (currencyToken == null || currencyToken.isEmpty) {
-        return formatted;
-      }
-      return '$formatted $currencyToken';
+    String _formatTotalAmount(double value) {
+      return moneyFormatter.format(value);
     }
 
     Widget buildDiscountTile(CartDiscount discount) {
@@ -1003,7 +1017,7 @@ class CartUI extends StatelessWidget {
                           isLoading
                               ? _buildShimmerLine(context, width: 80)
                               : Text(
-                            _formatTotalAmount(subtotal, normalizedCurrency),
+                            _formatTotalAmount(subtotal),
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w700,

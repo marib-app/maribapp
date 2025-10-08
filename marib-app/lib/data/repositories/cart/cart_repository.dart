@@ -5,6 +5,7 @@ import 'package:marib/utils/api.dart';
 import 'package:marib/utils/delivery_department.dart';
 import 'package:marib/data/services/cart_shipping_quote_service.dart';
 import 'package:marib/data/model/cart/cart_discount.dart';
+import 'package:marib/utils/currency_utils.dart';
 
 /// Environment overrides (comma-separated lists allowed).
 const String _cartGetEndpointOverride =
@@ -1004,6 +1005,30 @@ class CartRepository {
       'checkout',
     ];
 
+
+    CurrencyParseResult currencyInfo = const CurrencyParseResult();
+
+    void considerCurrencyMap(Map<String, dynamic>? map) {
+      if (map == null || map.isEmpty) {
+        return;
+      }
+      currencyInfo = currencyInfo.mergePreferNew(CurrencyUtils.parseCurrency(map));
+    }
+
+    void considerCurrencyValue(String? value) {
+      final String? trimmed = value?.trim();
+      if (trimmed == null || trimmed.isEmpty) {
+        return;
+      }
+      final String? code = CurrencyUtils.normalizeCurrencyCode(trimmed);
+      currencyInfo = currencyInfo.mergePreferNew(
+        CurrencyParseResult(
+          display: trimmed,
+          code: code,
+        ),
+      );
+    }
+
     while (queue.isNotEmpty) {
       final dynamic current = queue.removeAt(0);
       final Map<String, dynamic>? map = _castToStringKeyedMap(current);
@@ -1012,6 +1037,7 @@ class CartRepository {
       }
 
       _considerCandidate(map);
+      considerCurrencyMap(map);
 
       for (final String key in nestedKeys) {
         if (map.containsKey(key)) {
@@ -1019,6 +1045,44 @@ class CartRepository {
         }
       }
     }
+
+
+
+
+
+    considerCurrencyMap(departmentPolicy);
+    considerCurrencyMap(support);
+    considerCurrencyMap(deliveryQuote);
+    considerCurrencyMap(blocking);
+
+    for (final Cart item in items) {
+      if (item.currency != null) {
+        considerCurrencyValue(item.currency);
+      }
+      if (item.currencyCode != null) {
+        currencyInfo = currencyInfo.mergePreferNew(
+          CurrencyParseResult(
+            code: CurrencyUtils.normalizeCurrencyCode(item.currencyCode),
+            display: item.currency,
+          ),
+        );
+      }
+    }
+
+    if (currencyInfo.code == null && currencyInfo.display != null) {
+      final String? normalized = CurrencyUtils.normalizeCurrencyCode(currencyInfo.display);
+      if (normalized != null) {
+        currencyInfo = currencyInfo.mergePreferNew(
+          CurrencyParseResult(code: normalized, display: currencyInfo.display),
+        );
+      }
+    }
+
+    final String? currencyLabel = CurrencyUtils.displayToken(
+      label: currencyInfo.display,
+      fallback: currencyInfo.code,
+      code: currencyInfo.code,
+    );
 
     return CartSummary(
       items: items,
@@ -1030,7 +1094,8 @@ class CartRepository {
       blocking: blocking,
       deliveryPaymentOptions: deliveryPaymentOptions,
       deliveryPaymentTiming: deliveryPaymentTiming,
-
+      currency: currencyLabel,
+      currencyCode: currencyInfo.code,
     );
   }
 

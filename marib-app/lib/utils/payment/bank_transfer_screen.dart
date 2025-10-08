@@ -560,6 +560,22 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           payableId = widget.args.packageId;
       }
 
+
+      final int? resolvedId = widget.args.packageId > 0 ? widget.args.packageId : null;
+      String? purposeForApi;
+      int? orderIdForApi;
+      int? packageIdForApi;
+      if (normalizedPurpose == 'order') {
+        purposeForApi = 'order';
+        orderIdForApi = resolvedId;
+      } else if (normalizedPurpose == 'package') {
+        purposeForApi = 'package';
+        packageIdForApi = resolvedId;
+      } else if (resolvedId != null) {
+        purposeForApi = 'package';
+        packageIdForApi = resolvedId;
+      }
+
       final notesText = _notesCtrl.text.trim();
       final senderName = _shouldShowSenderField ? _senderCtrl.text.trim() : '';
 
@@ -607,6 +623,9 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           transactionId: transactionId,
           payableType: payableType,
           payableId: payableId,
+          purpose: purposeForApi,
+          orderId: orderIdForApi,
+          packageId: packageIdForApi,
           amount: widget.args.amount,
           currency: submissionCurrency,
           reference:
@@ -622,6 +641,9 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           transactionId: transactionId,
           payableType: payableType,
           payableId: payableId,
+          purpose: purposeForApi,
+          orderId: orderIdForApi,
+          packageId: packageIdForApi,
           amount: widget.args.amount,
           currency: submissionCurrency,
           userNote: userNote.isEmpty ? null : userNote,
@@ -636,6 +658,9 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           transactionId: transactionId,
           payableType: payableType,
           payableId: payableId,
+          purpose: purposeForApi,
+          orderId: orderIdForApi,
+          packageId: packageIdForApi,
           amount: widget.args.amount,
           currency: submissionCurrency,
           reference: null,

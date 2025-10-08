@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Services\Payments;
-
+use App\Services\Payments\ManualPaymentRequestService;
 use App\Models\Order;
 use App\Models\PaymentTransaction;
 use App\Models\User;
@@ -20,8 +20,10 @@ class OrderPaymentService
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly WalletService $walletService,
-        private readonly PaymentFulfillmentService $fulfillmentService
-    ) {
+        private readonly PaymentFulfillmentService $fulfillmentService,
+        private readonly ManualPaymentRequestService $manualPaymentRequestService
+        
+        ) {
     }
 
     /**
@@ -33,65 +35,8 @@ class OrderPaymentService
         $this->assertSupportedMethod($method);
 
         return $this->db->transaction(function () use ($user, $order, $method, $idempotencyKey, $data) {
-            $existing = PaymentTransaction::query()
-                ->where('user_id', $user->getKey())
-                ->where('payment_gateway', $method)
-                ->where('idempotency_key', $idempotencyKey)
-                ->first();
+            return $this->findOrCreateTransaction($user, $order, $method, $idempotencyKey, $data);
 
-            if ($existing) {
-                if ((int) $existing->payable_id !== $order->getKey()) {
-                    throw ValidationException::withMessages([
-                        'idempotency' => __('المعاملة المرتبطة بالمفتاح المرسل تتعلق بطلب مختلف.'),
-                    ]);
-                }
-
-                return $existing;
-            }
-
-            $overallDue = $this->resolveOverallDue($order);
-            $depositDue = $this->resolveDepositOutstanding($order);
-            $dueAmount = $this->resolveAmountDue($order, $overallDue, $depositDue);            $requestedAmount = isset($data['amount']) ? (float) $data['amount'] : null;
-
-            if ($requestedAmount !== null && $requestedAmount > 0) {
-                $amount = min($overallDue, round($requestedAmount, 2));
-            } else {
-                $amount = $dueAmount;
-            }
-
-            if ($amount <= 0) {
-                throw ValidationException::withMessages([
-                    'amount' => __('لا يوجد رصيد مستحق على هذا الطلب.'),
-                ]);
-            }
-
-
-            $orderCurrency = $this->resolveOrderCurrency($order);
-            $transactionCurrency = strtoupper((string) ($data['currency'] ?? $orderCurrency));
-
-            if ($method === 'wallet') {
-                $transactionCurrency = $this->assertWalletCurrencyCompatibility($user, $order, $transactionCurrency, true);
-            }
-
-            $data['currency'] = $transactionCurrency;
-
-
-            $meta = $this->buildTransactionMeta('initiated', $data);
-            $meta = $this->mergeCurrencyMeta($meta, $order, $method, $amount, $data);
-
-
-            return PaymentTransaction::create([
-                'user_id' => $user->getKey(),
-                'amount' => $amount,
-                'currency' => $transactionCurrency,
-                'payment_gateway' => $method,
-                'order_id' => $order->order_number,
-                'payment_status' => 'pending',
-                'payable_type' => Order::class,
-                'payable_id' => $order->getKey(),
-                'idempotency_key' => $idempotencyKey,
-                'meta' => $meta,
-            ]);
         });
     }
 
@@ -136,6 +81,13 @@ class OrderPaymentService
             'meta' => $this->mergeTransactionMeta($transaction, $data, $idempotencyKey),
             'payment_reference' => $data['reference'] ?? null,
         ];
+
+        $manualPaymentRequestId = $data['manual_payment_request_id'] ?? $transaction->manual_payment_request_id;
+
+        if ($manualPaymentRequestId) {
+            $options['manual_payment_request_id'] = $manualPaymentRequestId;
+        }
+
 
         if ($method === 'wallet') {
             $transactionCurrency = strtoupper((string) ($transaction->currency ?? $this->resolveOrderCurrency($order)));
@@ -185,20 +137,134 @@ class OrderPaymentService
      */
     public function createManual(User $user, Order $order, string $idempotencyKey, array $data = []): PaymentTransaction
     {
-        $transaction = $this->initiate($user, $order, 'manual', $idempotencyKey, $data);
+        return $this->db->transaction(function () use ($user, $order, $idempotencyKey, $data) {
+            $transaction = $this->findOrCreateTransaction($user, $order, 'manual', $idempotencyKey, $data);
 
-        $transaction->meta = array_replace_recursive($transaction->meta ?? [], [
-            'manual' => Arr::only($data, ['note', 'reference', 'attachments']),
-        ]);
-        $transaction->payment_status = Arr::get($data, 'auto_confirm') ? 'succeed' : 'pending';
-        $transaction->payment_id = $data['reference'] ?? $transaction->payment_id;
-        $transaction->save();
+            $manualPaymentRequest = $this->manualPaymentRequestService->createOrUpdateForManualTransaction(
+                $user,
+                Order::class,
+                $order->getKey(),
+                $transaction,
+                $data
+            );
 
-        if (Arr::get($data, 'auto_confirm')) {
-            $this->confirm($user, $transaction, $idempotencyKey, $data);
+            $manualMeta = array_filter(
+                Arr::only($data, ['note', 'reference', 'attachments']),
+                static fn ($value) => $value !== null && $value !== ''
+            );
+
+            if (!empty($data['bank_id']) || !empty($data['bank_account_id'])) {
+                $manualMeta['bank'] = array_filter([
+                    'id' => $data['bank_id'] ?? null,
+                    'account_id' => $data['bank_account_id'] ?? null,
+                ], static fn ($value) => $value !== null && $value !== '');
+            }
+
+
+            $metadata = Arr::get($data, 'metadata');
+            if (is_array($metadata) && ! empty($metadata)) {
+                $manualMeta['metadata'] = $metadata;
+            }
+
+            $manualMeta['idempotency_key'] = $transaction->idempotency_key;
+
+            $transaction->manual_payment_request_id = $manualPaymentRequest->getKey();
+            $transaction->payment_status = Arr::get($data, 'auto_confirm') ? 'succeed' : 'pending';
+            $transaction->payment_id = $data['reference'] ?? $transaction->payment_id;
+            $transaction->meta = array_replace_recursive($transaction->meta ?? [], [
+                'manual' => $manualMeta,
+                'manual_payment_request' => [
+                    'id' => $manualPaymentRequest->getKey(),
+                    'status' => $manualPaymentRequest->status,
+                ],
+            ]);
+            $transaction->save();
+
+
+
+            $transaction->setRelation('manualPaymentRequest', $manualPaymentRequest->fresh(['manualBank']));
+
+            if (Arr::get($data, 'auto_confirm')) {
+                $dataWithManualRequest = $data;
+                $dataWithManualRequest['manual_payment_request_id'] = $manualPaymentRequest->getKey();
+
+                return $this->confirm($user, $transaction->fresh(), $idempotencyKey, $dataWithManualRequest);
+            }
+
+            return $transaction->fresh();
+        });
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function findOrCreateTransaction(
+        User $user,
+        Order $order,
+        string $method,
+        string $idempotencyKey,
+        array $data = []
+    ): PaymentTransaction {
+        $existing = PaymentTransaction::query()
+            ->where('user_id', $user->getKey())
+            ->where('payment_gateway', $method)
+            ->where('idempotency_key', $idempotencyKey)
+            ->lockForUpdate()
+            ->first();
+
+        if ($existing) {
+            if ((int) $existing->payable_id !== $order->getKey()) {
+                throw ValidationException::withMessages([
+                    'idempotency' => __('المعاملة المرتبطة بالمفتاح المرسل تتعلق بطلب مختلف.'),
+                ]);
+            }
+
+            return $existing;
+
+
         }
 
-        return $transaction->fresh();
+        $overallDue = $this->resolveOverallDue($order);
+        $depositDue = $this->resolveDepositOutstanding($order);
+        $dueAmount = $this->resolveAmountDue($order, $overallDue, $depositDue);
+        $requestedAmount = isset($data['amount']) ? (float) $data['amount'] : null;
+
+        if ($requestedAmount !== null && $requestedAmount > 0) {
+            $amount = min($overallDue, round($requestedAmount, 2));
+        } else {
+            $amount = $dueAmount;
+        }
+
+        if ($amount <= 0) {
+            throw ValidationException::withMessages([
+                'amount' => __('لا يوجد رصيد مستحق على هذا الطلب.'),
+            ]);
+        }
+
+        $orderCurrency = $this->resolveOrderCurrency($order);
+        $transactionCurrency = strtoupper((string) ($data['currency'] ?? $orderCurrency));
+
+        if ($method === 'wallet') {
+            $transactionCurrency = $this->assertWalletCurrencyCompatibility($user, $order, $transactionCurrency, true);
+        }
+
+        $data['currency'] = $transactionCurrency;
+
+        $meta = $this->buildTransactionMeta('initiated', $data);
+        $meta = $this->mergeCurrencyMeta($meta, $order, $method, $amount, $data);
+
+        return PaymentTransaction::create([
+            'user_id' => $user->getKey(),
+            'amount' => $amount,
+            'currency' => $transactionCurrency,
+            'payment_gateway' => $method,
+            'order_id' => $order->order_number,
+            'payment_status' => 'pending',
+            'payable_type' => Order::class,
+            'payable_id' => $order->getKey(),
+            'idempotency_key' => $idempotencyKey,
+            'meta' => $meta,
+        ]);
     }
 
     private function resolveAmountDue(Order $order, ?float $overallDue = null, ?float $depositDue = null): float    {

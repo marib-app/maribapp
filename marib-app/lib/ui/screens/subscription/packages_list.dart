@@ -61,7 +61,9 @@ class SubscriptionPackageListScreen extends StatefulWidget {
 }
 
 class _SubscriptionPackageListScreenState
-    extends State<SubscriptionPackageListScreen> {
+    extends State<SubscriptionPackageListScreen>
+    with SingleTickerProviderStateMixin {
+
   bool isInterstitialAdShown = false;
 
   // Controllers
@@ -69,7 +71,7 @@ class _SubscriptionPackageListScreenState
   PageController(initialPage: 0, viewportFraction: 0.86);
   final PageController featuredPageController =
   PageController(initialPage: 0, viewportFraction: 0.86);
-  TabController? _tabController;
+  late final TabController _tabController;
 
   // Selection state per tab
   final ValueNotifier<SubscriptionPackageModel?> _selectedListing =
@@ -94,10 +96,8 @@ class _SubscriptionPackageListScreenState
     context.read<FetchAdsListingSubscriptionPackagesCubit>().fetchPackages();
     context.read<FetchFeaturedSubscriptionPackagesCubit>().fetchPackages();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _tabController = DefaultTabController.of(context);
-      _tabController?.addListener(_handleTabSelection);
-    });
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_handleTabSelection);
 
     if (Platform.isIOS) {
       InAppPurchaseManager.getPendings();
@@ -107,7 +107,9 @@ class _SubscriptionPackageListScreenState
 
   @override
   void dispose() {
-    _tabController?.removeListener(_handleTabSelection);
+    _tabController.removeListener(_handleTabSelection);
+    _tabController.dispose();
+
     adsPageController.dispose();
     featuredPageController.dispose();
     if (Platform.isIOS) {
@@ -117,7 +119,7 @@ class _SubscriptionPackageListScreenState
   }
 
   void _handleTabSelection() {
-    if (_tabController!.indexIsChanging) {
+    if (_tabController.indexIsChanging) {
       setState(() {
         // يُدار الفهرس عند onPageChanged لكل تبويب
       });
@@ -150,9 +152,7 @@ class _SubscriptionPackageListScreenState
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2, // Number of tabs
-      child: Scaffold(
+    return Scaffold(
         backgroundColor: context.color.backgroundColor,
         appBar: UiUtils.buildAppBar(
           context,
@@ -245,7 +245,7 @@ class _SubscriptionPackageListScreenState
             ],
           ),
         ),
-      ),
+
     );
   }
 

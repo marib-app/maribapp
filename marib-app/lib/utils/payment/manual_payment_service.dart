@@ -49,6 +49,21 @@ const Map<String, int> _currencyPrecisionOverrides = {
 
 String _normalizeCurrencyCode(String currency) => currency.trim().toUpperCase();
 
+
+String? _normalizePurposeForApi(String? purpose) {
+  if (purpose == null) {
+    return null;
+  }
+  final value = purpose.trim().toLowerCase();
+  if (value.isEmpty) {
+    return null;
+  }
+  if (value == 'order' || value == 'package') {
+    return value;
+  }
+  return null;
+}
+
 int _currencyPrecision(String currencyCode) {
   if (_zeroDecimalCurrencies.contains(currencyCode)) {
     return 0;
@@ -1131,6 +1146,9 @@ class ManualPaymentService {
     int? payableId,
     required double amount,
     required String currency,
+    String? purpose,
+    int? orderId,
+    int? packageId,
     String? reference,
     String? userNote,
     required DateTime transferredAt,
@@ -1146,6 +1164,9 @@ class ManualPaymentService {
       transactionId: transactionId,
       payableType: payableType,
       payableId: payableId,
+      purpose: purpose,
+      orderId: orderId,
+      packageId: packageId,
       amount: amount,
       currency: currency,
       reference: reference,
@@ -1167,6 +1188,9 @@ class ManualPaymentService {
     int? payableId,
     required double amount,
     required String currency,
+    String? purpose,
+    int? orderId,
+    int? packageId,
     String? reference,
     String? userNote,
     required DateTime transferredAt,
@@ -1176,6 +1200,7 @@ class ManualPaymentService {
     final referenceValue = reference?.trim();
     final userNoteValue = userNote?.trim();
     final payableTypeValue = payableType?.trim();
+    final normalizedPurpose = _normalizePurposeForApi(purpose);
     final normalizedCurrency = _normalizeCurrencyCode(currency);
     final formattedAmount =
     formatManualPaymentAmount(amount, normalizedCurrency);
@@ -1195,6 +1220,9 @@ class ManualPaymentService {
         'transaction_id': transactionId,
       if (transactionId != null && transactionId.isNotEmpty)
         'payment_transaction_id': transactionId,
+      if (normalizedPurpose != null) 'purpose': normalizedPurpose,
+      if (orderId != null) 'order_id': orderId,
+      if (packageId != null) 'package_id': packageId,
       'transferred_at': transferredAt.toIso8601String(),
       if (referenceValue != null && referenceValue.isNotEmpty)
 
@@ -1294,6 +1322,9 @@ class ManualPaymentService {
     String? transactionId,
     String? payableType,
     int? payableId,
+    String? purpose,
+    int? orderId,
+    int? packageId,
     required double amount,
     required String currency,
     String? reference,
@@ -1306,6 +1337,7 @@ class ManualPaymentService {
     final normalizedCurrency = _normalizeCurrencyCode(currency);
     final formattedAmount =
     formatManualPaymentAmount(amount, normalizedCurrency);
+    final normalizedPurpose = _normalizePurposeForApi(purpose);
     final String normalizedMethod =
 
     ManualPaymentService.paymentMethodForApi('east_yemen_bank');
@@ -1317,6 +1349,9 @@ class ManualPaymentService {
       'payment_intent_id': intentId,
       if (transactionId != null && transactionId.isNotEmpty)
         'transaction_id': transactionId,
+      if (normalizedPurpose != null) 'purpose': normalizedPurpose,
+      if (orderId != null) 'order_id': orderId,
+      if (packageId != null) 'package_id': packageId,
       if (transactionId != null && transactionId.isNotEmpty)
         'payment_transaction_id': transactionId,
       if (referenceValue != null && referenceValue.isNotEmpty)
@@ -1369,6 +1404,9 @@ class ManualPaymentService {
     required String intentId,
     String? transactionId,
     String? payableType,
+    String? purpose,
+    int? orderId,
+    int? packageId,
     int? payableId,
     required double amount,
     required String currency,
@@ -1380,6 +1418,7 @@ class ManualPaymentService {
     final normalizedCurrency = _normalizeCurrencyCode(currency);
     final formattedAmount =
     formatManualPaymentAmount(amount, normalizedCurrency);
+    final normalizedPurpose = _normalizePurposeForApi(purpose);
 
     final Map<String, dynamic> formMap = {
       'payment_method': 'wallet',
@@ -1391,6 +1430,9 @@ class ManualPaymentService {
         'transaction_id': transactionId,
       if (transactionId != null && transactionId.isNotEmpty)
         'payment_transaction_id': transactionId,
+      if (normalizedPurpose != null) 'purpose': normalizedPurpose,
+      if (orderId != null) 'order_id': orderId,
+      if (packageId != null) 'package_id': packageId,
       if (userNoteValue != null && userNoteValue.isNotEmpty)
         'notes': userNoteValue,
       if (payableTypeValue != null && payableTypeValue.isNotEmpty)

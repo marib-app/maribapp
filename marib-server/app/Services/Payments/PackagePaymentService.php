@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\WalletTransaction;
 use App\Services\PaymentFulfillmentService;
 use App\Services\WalletService;
+use App\Services\Payments\ManualPaymentRequestService;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
@@ -19,8 +20,10 @@ class PackagePaymentService
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly WalletService $walletService,
-        private readonly PaymentFulfillmentService $fulfillmentService
-    ) {
+        private readonly PaymentFulfillmentService $fulfillmentService,
+        private readonly ManualPaymentRequestService $manualPaymentRequestService
+        
+        ) {
     }
 
     /**
@@ -32,53 +35,8 @@ class PackagePaymentService
         $this->assertSupportedMethod($method);
 
         return $this->db->transaction(function () use ($user, $package, $method, $idempotencyKey, $data) {
-            $existing = PaymentTransaction::query()
-                ->where('user_id', $user->getKey())
-                ->where('payment_gateway', $method)
-                ->where('idempotency_key', $idempotencyKey)
-                ->lockForUpdate()
-                ->first();
+        return $this->findOrCreateTransaction($user, $package, $method, $idempotencyKey, $data);
 
-            if ($existing) {
-                if ($existing->payable_type !== Package::class || (int) $existing->payable_id !== $package->getKey()) {
-                    throw ValidationException::withMessages([
-                        'idempotency' => __('المعاملة المرتبطة بالمفتاح المرسل تتعلق بعملية مختلفة.'),
-                    ]);
-                }
-
-                return $existing;
-            }
-
-            $amount = $this->resolveAmount($package, $data);
-            $currency = strtoupper((string) ($data['currency'] ?? config('app.currency', 'SAR')));
-
-            $meta = $this->buildBaseMeta($package);
-
-            if (!empty($data['meta']) && is_array($data['meta'])) {
-                $meta = array_replace_recursive($meta, $data['meta']);
-            }
-
-            if ($method === 'wallet') {
-                $meta['wallet'] = array_replace_recursive($meta['wallet'] ?? [], [
-                    'idempotency_key' => $idempotencyKey,
-                ]);
-            }
-
-            if (!empty($data['reference'])) {
-                $meta['payment_reference'] = $data['reference'];
-            }
-
-            return PaymentTransaction::create([
-                'user_id' => $user->getKey(),
-                'amount' => $amount,
-                'currency' => $currency,
-                'payment_gateway' => $method,
-                'payment_status' => 'pending',
-                'payable_type' => Package::class,
-                'payable_id' => $package->getKey(),
-                'idempotency_key' => $idempotencyKey,
-                'meta' => $meta,
-            ]);
         });
     }
 
@@ -113,6 +71,13 @@ class PackagePaymentService
             'payment_reference' => $data['reference'] ?? null,
             'meta' => $this->buildMetaForConfirmation($transaction, $data),
         ];
+
+        $manualPaymentRequestId = $data['manual_payment_request_id'] ?? $transaction->manual_payment_request_id;
+
+        if ($manualPaymentRequestId) {
+            $options['manual_payment_request_id'] = $manualPaymentRequestId;
+        }
+
 
         if ($method === 'wallet') {
             $walletTransaction = $this->debitWallet($user, $transaction, $idempotencyKey, (float) $transaction->amount, [
@@ -157,24 +122,66 @@ class PackagePaymentService
      */
     public function createManual(User $user, Package $package, string $idempotencyKey, array $data = []): PaymentTransaction
     {
-        $transaction = $this->initiate($user, $package, 'manual', $idempotencyKey, $data);
+        return $this->db->transaction(function () use ($user, $package, $idempotencyKey, $data) {
+            $transaction = $this->findOrCreateTransaction($user, $package, 'manual', $idempotencyKey, $data);
 
-        $transaction->meta = array_replace_recursive($transaction->meta ?? [], [
-            'manual' => Arr::only($data, ['note', 'reference', 'attachments']),
-        ]);
+            $manualPaymentRequest = $this->manualPaymentRequestService->createOrUpdateForManualTransaction(
+                $user,
+                Package::class,
+                $package->getKey(),
+                $transaction,
+                $data
+            );
 
-        if (!empty($data['reference'])) {
-            $transaction->payment_id = $data['reference'];
-        }
+            $manualMeta = array_filter(
+                Arr::only($data, ['note', 'reference', 'attachments']),
+                static fn ($value) => $value !== null && $value !== ''
+            );
 
-        $transaction->payment_status = Arr::get($data, 'auto_confirm') ? 'succeed' : 'pending';
-        $transaction->save();
+            if (!empty($data['bank_id']) || !empty($data['bank_account_id'])) {
+                $manualMeta['bank'] = array_filter([
+                    'id' => $data['bank_id'] ?? null,
+                    'account_id' => $data['bank_account_id'] ?? null,
+                ], static fn ($value) => $value !== null && $value !== '');
+            }
 
-        if (Arr::get($data, 'auto_confirm')) {
-            return $this->confirm($user, $transaction->fresh(), $idempotencyKey, $data);
-        }
 
-        return $transaction->fresh();
+            $metadata = Arr::get($data, 'metadata');
+            if (is_array($metadata) && ! empty($metadata)) {
+                $manualMeta['metadata'] = $metadata;
+            }
+
+
+            $manualMeta['idempotency_key'] = $transaction->idempotency_key;
+
+
+            $transaction->manual_payment_request_id = $manualPaymentRequest->getKey();
+            $transaction->payment_status = Arr::get($data, 'auto_confirm') ? 'succeed' : 'pending';
+            $transaction->payment_id = $data['reference'] ?? $transaction->payment_id;
+            $transaction->meta = array_replace_recursive($transaction->meta ?? [], [
+                'manual' => $manualMeta,
+                'manual_payment_request' => [
+                    'id' => $manualPaymentRequest->getKey(),
+                    'status' => $manualPaymentRequest->status,
+                ],
+            ]);
+            $transaction->save();
+
+
+
+            $transaction->setRelation('manualPaymentRequest', $manualPaymentRequest->fresh(['manualBank']));
+
+
+            if (Arr::get($data, 'auto_confirm')) {
+                $dataWithManualRequest = $data;
+                $dataWithManualRequest['manual_payment_request_id'] = $manualPaymentRequest->getKey();
+
+                return $this->confirm($user, $transaction->fresh(), $idempotencyKey, $dataWithManualRequest);
+            }
+
+            return $transaction->fresh();
+        });
+    
     }
 
     /**
@@ -281,6 +288,66 @@ class PackagePaymentService
         }
     }
 
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function findOrCreateTransaction(
+        User $user,
+        Package $package,
+        string $method,
+        string $idempotencyKey,
+        array $data = []
+    ): PaymentTransaction {
+        $existing = PaymentTransaction::query()
+            ->where('user_id', $user->getKey())
+            ->where('payment_gateway', $method)
+            ->where('idempotency_key', $idempotencyKey)
+            ->lockForUpdate()
+            ->first();
+
+        if ($existing) {
+            if ($existing->payable_type !== Package::class || (int) $existing->payable_id !== $package->getKey()) {
+                throw ValidationException::withMessages([
+                    'idempotency' => __('المعاملة المرتبطة بالمفتاح المرسل تتعلق بعملية مختلفة.'),
+                ]);
+            }
+
+            return $existing;
+        }
+
+        $amount = $this->resolveAmount($package, $data);
+        $currency = strtoupper((string) ($data['currency'] ?? config('app.currency', 'SAR')));
+
+        $meta = $this->buildBaseMeta($package);
+
+        if (!empty($data['meta']) && is_array($data['meta'])) {
+            $meta = array_replace_recursive($meta, $data['meta']);
+        }
+
+        if ($method === 'wallet') {
+            $meta['wallet'] = array_replace_recursive($meta['wallet'] ?? [], [
+                'idempotency_key' => $idempotencyKey,
+            ]);
+        }
+
+        if (!empty($data['reference'])) {
+            $meta['payment_reference'] = $data['reference'];
+        }
+
+        return PaymentTransaction::create([
+            'user_id' => $user->getKey(),
+            'amount' => $amount,
+            'currency' => $currency,
+            'payment_gateway' => $method,
+            'payment_status' => 'pending',
+            'payable_type' => Package::class,
+            'payable_id' => $package->getKey(),
+            'idempotency_key' => $idempotencyKey,
+            'meta' => $meta,
+        ]);
+    }
+    
     /**
      * @return array<string, mixed>
      */

@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 use App\Models\Package;
-
+use App\Http\Resources\ManualPaymentRequestResource;
+use App\Http\Resources\PaymentTransactionResource;
 use App\Models\Order;
 use App\Models\PaymentTransaction;
 use App\Services\Payments\OrderPaymentService;
@@ -31,11 +32,24 @@ class PaymentController extends Controller
             $request->merge(['package_id' => $request->input('order_id')]);
         }
 
+        if ($request->filled('manual_bank_id') && ! $request->filled('bank_id')) {
+            $request->merge(['bank_id' => $request->input('manual_bank_id')]);
+        }
+
+        $normalizedMethod = strtolower((string) $request->input('payment_method', 'manual'));
+        $request->merge(['payment_method' => $normalizedMethod]);
+
         $rules = [
             'purpose' => ['nullable', 'string', Rule::in(['order', 'package'])],
+            'payment_method' => ['nullable', 'string', 'max:191', Rule::in(['manual', 'manual_bank'])],
 
 
             'payment_method' => ['required', 'string', 'max:191'],
+            'notes' => ['nullable', 'string'],
+            'metadata' => ['nullable', 'array'],
+            'bank_id' => ['required_if:payment_method,manual,manual_bank', 'nullable', 'integer', 'exists:manual_banks,id'],
+            'bank_account_id' => ['nullable', 'string', 'max:191'],
+
             'amount' => ['nullable', 'numeric', 'min:0'],
             'currency' => ['nullable', 'string', 'size:3'],
         ];
@@ -47,6 +61,16 @@ class PaymentController extends Controller
         }
 
         $validated = $request->validate($rules);
+
+
+        if (!isset($validated['note']) && $request->filled('notes')) {
+            $validated['note'] = $request->input('notes');
+        }
+
+        if (!isset($validated['metadata']) && $request->has('metadata') && is_array($request->input('metadata'))) {
+            $validated['metadata'] = $request->input('metadata');
+        }
+
 
         if ($purpose === 'package') {
             $package = Package::findOrFail($validated['package_id']);
@@ -161,9 +185,21 @@ class PaymentController extends Controller
                 $validated
             );
 
+            $transaction->loadMissing('manualPaymentRequest.manualBank');
+
+            $manualRequest = $transaction->manualPaymentRequest?->loadMissing('paymentTransaction.order', 'payable');
+
+            $transactionResource = PaymentTransactionResource::make($transaction)->resolve();
+            $manualRequestResource = $manualRequest
+                ? ManualPaymentRequestResource::make($manualRequest)->resolve()
+                : null;
+
+
             return response()->json([
                 'message' => __('تم تسجيل الدفع اليدوي.'),
-                'transaction' => $transaction,
+                'transaction' => $transactionResource,
+                'payment_transaction' => $transactionResource,
+                'manual_payment_request' => $manualRequestResource,
             ], $transaction->payment_status === 'succeed' ? 200 : 202);
         }
 
@@ -178,9 +214,20 @@ class PaymentController extends Controller
             $validated
         );
 
+        $transaction->loadMissing('manualPaymentRequest.manualBank');
+
+        $manualRequest = $transaction->manualPaymentRequest?->loadMissing('paymentTransaction.order', 'payable');
+
+        $transactionResource = PaymentTransactionResource::make($transaction)->resolve();
+        $manualRequestResource = $manualRequest
+            ? ManualPaymentRequestResource::make($manualRequest)->resolve()
+            : null;
+
         return response()->json([
             'message' => __('تم تسجيل الدفع اليدوي.'),
-            'transaction' => $transaction,
+            'transaction' => $transactionResource,
+            'payment_transaction' => $transactionResource,
+            'manual_payment_request' => $manualRequestResource,
         ], $transaction->payment_status === 'succeed' ? 200 : 202);
     }
 

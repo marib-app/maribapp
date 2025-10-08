@@ -164,7 +164,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
 
                     _ServiceItemTile(
-                      title: "walletTitle".translate(context),
+                      title: "المحفظة".translate(context),
                       svg: AppIcons.wallet,
                       onTap: () {
                         UiUtils.checkUser(
@@ -316,6 +316,8 @@ class _ProfileScreenState extends State<ProfileScreen>
 /* =========================
  *  بطاقة البروفايل (كما هي)
  * ========================= */
+
+
 class _ProfileGlassCard extends StatelessWidget {
   final bool isDark;
   const _ProfileGlassCard({required this.isDark});

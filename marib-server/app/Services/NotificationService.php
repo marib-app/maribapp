@@ -135,7 +135,6 @@ class NotificationService {
 
             //TODO : Add this process to queue for better performance
 
-
             $notificationBody = is_string($message) ? trim($message) : $message;
             if (empty($notificationBody) && !empty($customBodyFields['message_preview'])) {
                 $notificationBody = $customBodyFields['message_preview'];
@@ -156,6 +155,8 @@ class NotificationService {
                 "body"  => $notificationBody,
                 "type"  => $type,
                 "notification_type" => $type,
+
+                
 
 
             ];
@@ -180,7 +181,6 @@ class NotificationService {
                     "title" => $title,
                     "body"  => $notificationBody,
                     "sound" => "default",
-                
                 ];
 
                 if (!empty($navigationPayload['click_action'])) {
@@ -193,7 +193,7 @@ class NotificationService {
                         "token"        => $registrationID,
                         "data"         => self::convertToStringRecursively($dataWithTitle),
                         "notification" => $notificationPayload,
-                                                "android"      => [
+                        "android"      => [
                             "priority"       => "HIGH",
                             "ttl"            => "0s",
                             "direct_boot_ok" => true,
@@ -203,6 +203,7 @@ class NotificationService {
                                 "sound" => "default",
                             ],
                         ],
+
                         "apns"         => [
                             "headers" => [
                                 "apns-priority" => "10",
@@ -252,7 +253,6 @@ class NotificationService {
                 if (is_string($platformType) && strcasecmp($platformType, 'Android') === 0) {
                     $data['message']['android']['notification']['title'] = $title;
                     $data['message']['android']['notification']['body'] = $notificationBody;
-
                 }
 
                 $encodedData = json_encode($data);
@@ -484,14 +484,27 @@ class NotificationService {
     }
 
 
-    public static function convertToStringRecursively($data, &$flattenedArray = []) {
+    public static function convertToStringRecursively($data, string $prefix = ''): array
+    {
+        $flattenedArray = [];
+        
         foreach ($data as $key => $value) {
+            $normalizedKey = $prefix === ''
+                ? (string) $key
+                : (string) $prefix . '_' . (string) $key;
+
             if (is_array($value)) {
-                self::convertToStringRecursively($value, $flattenedArray);
+                foreach (self::convertToStringRecursively($value, $normalizedKey) as $childKey => $childValue) {
+                    $flattenedArray[$childKey] = $childValue;
+                }
+            
             } elseif (is_null($value)) {
-                $flattenedArray[$key] = '';
+                $flattenedArray[$normalizedKey] = '';
+            } elseif (is_bool($value)) {
+                $flattenedArray[$normalizedKey] = $value ? '1' : '0';
+            
             } else {
-                $flattenedArray[$key] = (string)$value;
+                $flattenedArray[$normalizedKey] = (string) $value;
             }
         }
         return $flattenedArray;

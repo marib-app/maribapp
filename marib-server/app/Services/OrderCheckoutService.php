@@ -160,6 +160,13 @@ class OrderCheckoutService
 
 
             $this->shippingQuoteService->rememberDeliveryPaymentTiming($user, $department, $deliveryTiming);
+
+            $depositContext = $this->buildDepositContext($quote, $cartItems, $subTotal, $deliveryTotal);
+            $depositOrderFields = $depositContext['order_fields'];
+            $depositPayload = $depositContext['payload'];
+            $itemDepositPolicies = $depositContext['item_policies'];
+
+
             $deliveryPaymentSnapshot = $this->buildDeliveryPaymentSnapshot(
                 $quote,
                 $deliveryTiming,
@@ -170,16 +177,14 @@ class OrderCheckoutService
                 $subTotal,
                 $discountAmount,
                 $taxAmount,
+                $depositContext,
 
             );
 
             $quote = $this->appendDeliveryPaymentToQuote($quote, $deliveryPaymentSnapshot);
 
             $quoteReference = $this->extractQuoteReference($quote);
-            $depositContext = $this->buildDepositContext($quote, $cartItems, $subTotal, $deliveryTotal);
-            $depositOrderFields = $depositContext['order_fields'];
-            $depositPayload = $depositContext['payload'];
-            $itemDepositPolicies = $depositContext['item_policies'];
+
             $finalAmount = round($subTotal - $discountAmount + $taxAmount + $deliveryTotal, 2);
 
             $telemetryContext = $this->buildCheckoutTelemetryContext($user, $cartItems, [
@@ -1156,8 +1161,11 @@ class OrderCheckoutService
         User $user,
         float $subTotal,
         float $discountAmount,
-        float $taxAmount
-    ): array {
+        float $taxAmount,
+        ?array $depositContext = null
+        
+        
+        ): array {
         $normalizedTiming = $this->normalizeTiming($timing);
 
         if ($normalizedTiming === null && $availableTimings !== []) {
@@ -1167,9 +1175,42 @@ class OrderCheckoutService
         $deliveryAmount = round($deliveryTotal, 2);
         $codFee = $this->resolveCodFee($quote);
         $goodsPayable = max(round($subTotal - $discountAmount + $taxAmount, 2), 0.0);
+        $onlineGoodsPayable = $goodsPayable;
         $onlineDeliveryPayable = $normalizedTiming === self::DELIVERY_TIMING_PAY_NOW ? $deliveryAmount : 0.0;
         $onlineDeliveryPayable = round($onlineDeliveryPayable, 2);
-        $onlinePayable = round($goodsPayable + $onlineDeliveryPayable, 2);
+        if (is_array($depositContext)) {
+            $depositPayload = $depositContext['payload'] ?? null;
+            $depositOrderFields = $depositContext['order_fields'] ?? null;
+
+            if (is_array($depositPayload) && ($depositPayload['enabled'] ?? false)) {
+                $depositRequired = round((float) ($depositPayload['required_amount'] ?? 0.0), 2);
+
+                if ($depositRequired > 0.0) {
+                    $depositIncludesShipping = is_array($depositOrderFields)
+                        ? (bool) ($depositOrderFields['deposit_includes_shipping'] ?? false)
+                        : false;
+
+                    $goodsContribution = min($depositRequired, $onlineGoodsPayable);
+                    $deliveryContribution = 0.0;
+
+                    if ($depositIncludesShipping && $depositRequired > $goodsContribution) {
+                        $remainingForDelivery = round($depositRequired - $goodsContribution, 2);
+                        $deliveryCap = $onlineDeliveryPayable > 0.0 ? $onlineDeliveryPayable : $deliveryAmount;
+                        $deliveryContribution = min($remainingForDelivery, $deliveryCap);
+                    }
+
+                    $onlineGoodsPayable = round($goodsContribution, 2);
+
+                    if ($deliveryContribution > 0.0) {
+                        $onlineDeliveryPayable = round($deliveryContribution, 2);
+                    }
+                }
+            }
+        }
+
+        $onlinePayable = round($onlineGoodsPayable + $onlineDeliveryPayable, 2);
+        
+        
         $codDue = $normalizedTiming === self::DELIVERY_TIMING_PAY_ON_DELIVERY
             ? round($deliveryAmount + $codFee, 2)
             : 0.0;
@@ -1181,7 +1222,7 @@ class OrderCheckoutService
             'timing' => $normalizedTiming,
             'available_timings' => $availableTimings,
             'online_payable' => $onlinePayable,
-            'online_goods_payable' => $goodsPayable,
+            'online_goods_payable' => round($onlineGoodsPayable, 2),
             'online_delivery_payable' => $onlineDeliveryPayable,
 
             'cod_fee' => $codFee,

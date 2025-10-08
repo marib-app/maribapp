@@ -53,7 +53,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" href="{{ $favicon ?? url('assets/images/logo/favicon.png') }}" type="image/x-icon">
-    <title>@yield('title') || {{ config('app.name') }}</title>
+    <title>{{ trim($__env->yieldContent('title')) ?: config('app.name') }}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}"/>
 
     {{-- خطوط تدعم العربية + تثبيت للعناصر الرسومية --}}

@@ -239,11 +239,22 @@
     function sanitizeKey(label){
       label = (label || '').toString();
       if (label === '') return '';
-      const slug = label
-        .normalize('NFKD')
-        .replace(/[^\w\s-]/g, '')
+      let normalized = label.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+      let cleaned;
+      try {
+        cleaned = normalized.replace(/[^\p{L}\p{N}\s_-]+/gu, '');
+      } catch (err) {
+        cleaned = normalized.replace(/[^\w\s-\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]+/g, '');
+      }
+
+      const slug = cleaned
+
+
         .trim()
         .replace(/[\s-]+/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_+|_+$/g, '')
+
         .toLowerCase();
       return slug || '';
     }

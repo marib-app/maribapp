@@ -740,6 +740,7 @@ class Order extends Model
 
             ],
             self::STATUS_PROCESSING => [
+                self::STATUS_CONFIRMED,
                 self::STATUS_PREPARING,
                 self::STATUS_READY_FOR_DELIVERY,
                 self::STATUS_OUT_FOR_DELIVERY,

@@ -141,13 +141,11 @@ class ServiceCustomField extends Model
 
     public function setHandleAttribute($value): void
     {
-        if ($value === null || $value === '') {
-            $this->attributes['handle'] = null;
-            return;
-        }
+        $normalized = self::normalizeKey($value);
 
-        $slug = Str::snake(Str::slug((string) $value));
-        $this->attributes['handle'] = $slug !== '' ? $slug : null;
+
+        $this->attributes['handle'] = $normalized !== '' ? $normalized : null;
+
     }
 
     public function toSchemaPayload(): array
@@ -195,10 +193,10 @@ class ServiceCustomField extends Model
     protected function defaultHandle(): string
     {
         $base = $this->name ?: 'field';
-        $slug = Str::snake(Str::slug($base));
+        $slug = self::normalizeKey($base);
 
         if ($slug === '') {
-            $slug = 'field_' . $this->id;
+            $slug = $this->id ? 'field_' . $this->id : 'field';
         }
 
         return $slug;
@@ -221,9 +219,36 @@ class ServiceCustomField extends Model
 
     protected function sanitizeFormKey(?string $value): string
     {
-        $value = $value ?? '';
-        $slug = Str::snake(Str::slug($value));
-        return $slug ?? '';
+        return self::normalizeKey($value);
+
     }
 
+    public static function normalizeKey($value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return '';
+        }
+
+        if (class_exists('\Normalizer')) {
+            $normalized = \Normalizer::normalize($value, \Normalizer::FORM_KD);
+            if (is_string($normalized)) {
+                $value = $normalized;
+            }
+        }
+
+        $value = preg_replace('/[\x{0300}-\x{036f}]+/u', '', $value) ?? $value;
+        $value = preg_replace('/[^\p{L}\p{Nd}]+/u', '_', $value) ?? $value;
+        $value = trim($value, '_');
+        $value = preg_replace('/_+/', '_', $value) ?? $value;
+
+        $value = function_exists('mb_strtolower') ? mb_strtolower($value, 'UTF-8') : strtolower($value);
+
+        return $value;
+    }
 }

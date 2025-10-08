@@ -1001,17 +1001,8 @@ public function update(Request $request, Service $service)
 
     private function sanitizeFormKey(?string $value): string
     {
-        if ($value === null) {
-            return '';
-        }
+        return ServiceCustomField::normalizeKey($value);
 
-        $value = trim((string) $value);
-        if ($value === '') {
-            return '';
-        }
-
-        $slug = Str::snake(Str::slug($value));
-        return $slug === null ? '' : $slug;
     }
 
     private function normalizeFieldTypeName(?string $type): string
@@ -1560,14 +1551,22 @@ public function update(Request $request, Service $service)
             $note      = isset($field['note']) ? trim((string)$field['note']) : '';
 
 
-            $handle = $formKey !== ''
+            $handleSource = $formKey !== ''
                 ? $formKey
-                : (string)($field['handle'] ?? $field['name'] ?? $field['key'] ?? Str::snake($title));
+                : (string)($field['handle'] ?? $field['name'] ?? $field['key'] ?? $title);
 
-            $handle = Str::snake(Str::slug($handle));
+                        $handle = $this->sanitizeFormKey($handleSource);
 
             if ($handle === '') {
-                $handle = Str::snake(Str::slug($title)) ?: $formKey ?: Str::snake('field_' . $sequenceFallback);
+                $handle = $this->sanitizeFormKey($title);
+            }
+
+            if ($handle === '' && $formKey !== '') {
+                $handle = $formKey;
+            }
+
+            if ($handle === '') {
+                $handle = 'field_' . $sequenceFallback;
             }
 
             $meta = is_array($field['meta'] ?? null) ? $field['meta'] : [];

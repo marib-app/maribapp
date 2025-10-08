@@ -2,6 +2,7 @@ import 'package:marib/data/model/category_model.dart';
 import 'package:marib/data/model/custom_field/custom_field_model.dart';
 import 'package:marib/data/model/seller_ratings_model.dart';
 import 'package:marib/utils/currency_utils.dart';
+import 'package:marib/utils/delivery_department.dart';
 
 
 
@@ -143,6 +144,8 @@ extension ItemSummaryX on ItemSummary {
       isLike: isLike,
       created: created,
       itemType: itemType,
+      departmentSlug: normalizeDeliveryDepartment(itemType) ?? itemType,
+
       userId: userId,
       categoryId: categoryId,
       totalLikes: totalLikes,
@@ -194,6 +197,7 @@ class ItemModel {
   bool? isFeature;
   String? created;
   String? itemType;
+  String? departmentSlug;
   int? userId;
   int? categoryId;
   bool? isAlreadyOffered;
@@ -249,6 +253,7 @@ class ItemModel {
     this.itemOffers,
     this.customFields,
     this.isLike,
+    this.departmentSlug,
     this.isFeature,
     this.created,
     this.itemType,
@@ -287,6 +292,7 @@ class ItemModel {
     int? totalLikes,
     int? views,
     String? type,
+    String? departmentSlug,
     String? status,
     bool? active,
     String? videoLink,
@@ -361,6 +367,8 @@ class ItemModel {
       currencyCode: currencyCode ?? this.currencyCode,
       isPurchased: isPurchased ?? this.isPurchased,
       review: review ?? this.review,
+      departmentSlug: departmentSlug ?? this.departmentSlug,
+
     );
   }
 
@@ -410,6 +418,7 @@ class ItemModel {
     m.isFeature = _toBool(json['is_feature']);
     m.created = json['created_at'];
     m.itemType = json['item_type'];
+    m.departmentSlug = _parseDepartmentSlug(json);
     m.userId = _toInt(json['user_id']);
     m.categoryId = _toInt(json['category_id']);
     m.isAlreadyOffered = _toBool(json['is_already_offered']);
@@ -541,7 +550,50 @@ class ItemModel {
 
   @override
   String toString() {
-    return 'ItemModel{id: $id, name: $name, slug:$slug, description: $description, price: $price, image: $image, watermarkimage: $watermarkimage, latitude: $latitude, longitude: $longitude, address: $address, contact: $contact, total_likes: $totalLikes, isLiked: $isLike, isFeature: $isFeature, views: $views, type: $type, status: $status, active: $active, videoLink: $videoLink, reviewLink: $reviewLink, user: $user, galleryImages: $galleryImages, itemOffers:$itemOffers, category: $category, customFields: $customFields, createdAt:$created, itemType:$itemType, userId:$userId, categoryId:$categoryId, isAlreadyOffered:$isAlreadyOffered, isAlreadyReported:$isAlreadyReported, allCategoryId:$allCategoryIds, rejected_reason:$rejectedReason, area_id:$areaId, area:$area, city:$city, state:$state, country:$country, is_purchased:$isPurchased, review:$review}';
+    return 'ItemModel{id: $id, name: $name, slug:$slug, description: $description, price: $price, image: $image, watermarkimage: $watermarkimage, latitude: $latitude, longitude: $longitude, address: $address, contact: $contact, total_likes: $totalLikes, isLiked: $isLike, isFeature: $isFeature, views: $views, type: $type, status: $status, active: $active, videoLink: $videoLink, reviewLink: $reviewLink, user: $user, galleryImages: $galleryImages, itemOffers:$itemOffers, category: $category, customFields: $customFields, createdAt:$created, itemType:$itemType, departmentSlug:$departmentSlug, userId:$userId, categoryId:$categoryId, isAlreadyOffered:$isAlreadyOffered, isAlreadyReported:$isAlreadyReported, allCategoryId:$allCategoryIds, rejected_reason:$rejectedReason, area_id:$areaId, area:$area, city:$city, state:$state, country:$country, is_purchased:$isPurchased, review:$review}';
+  }
+
+  static String? _parseDepartmentSlug(Map<String, dynamic> json) {
+    final List<String> candidates = <String>[];
+
+    void addCandidate(dynamic value) {
+      if (value == null) {
+        return;
+      }
+      if (value is String) {
+        final String trimmed = value.trim();
+        if (trimmed.isNotEmpty) {
+          candidates.add(trimmed);
+        }
+        return;
+      }
+      if (value is Map<String, dynamic>) {
+        addCandidate(value['department']);
+        addCandidate(value['slug']);
+        addCandidate(value['section']);
+        addCandidate(value['name']);
+        return;
+      }
+      if (value is Iterable) {
+        for (final dynamic entry in value) {
+          addCandidate(entry);
+        }
+      }
+    }
+
+    addCandidate(json['department']);
+    addCandidate(json['department_slug']);
+    addCandidate(json['section']);
+    addCandidate(json['department_advertiser']);
+
+    for (final String candidate in candidates) {
+      final String? normalized = normalizeDeliveryDepartment(candidate);
+      if (normalized != null) {
+        return normalized;
+      }
+    }
+
+    return candidates.isNotEmpty ? candidates.first : null;
   }
 
   // ===== helpers =====

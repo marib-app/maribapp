@@ -122,7 +122,7 @@ class Cart extends ItemModel {
 
     final resolvedSection = _resolveSectionSlug(
       item,
-      explicitSection: item.itemType,
+      explicitSection: item.departmentSlug ?? item.itemType,
     );
 
 
@@ -413,6 +413,7 @@ class Cart extends ItemModel {
   static String _resolveSectionSlug(ItemModel item, {String? explicitSection}) {
     final List<String?> rawCandidates = <String?>[
       explicitSection,
+      item.departmentSlug,
       item.itemType,
       item.type,
       item.category?.description,

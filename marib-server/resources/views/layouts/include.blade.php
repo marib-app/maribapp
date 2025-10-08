@@ -83,40 +83,76 @@
 {{--<link rel="stylesheet" href="{{ url('assets/extensions/chosen.css') }}"/>--}}
 
 <script>
-    // Function to handle image errors
-    function handleImageError(image) {
-        image.classList.contains('custom-default-image')
-        if (image.getAttribute('data-custom-image') != null) {
-            image.src = image.getAttribute('data-custom-image');
-        } else {
-            image.src = "{{asset('/assets/images/no_image_available.png')}}";
+    const FALLBACK_IMAGE = "{{ asset('/assets/images/no_image_available.png') }}";
+
+    const setImageSource = (image, source) => {
+        if (image.dataset.fallbackApplied === source) {
+            return;
         }
-        // console.log('Image failed to load: ' + image.src);
-    }
+
+        image.dataset.fallbackApplied = source;
+        image.src = source;
+    };
+
+    const handleImageError = (image) => {
+        if (!(image instanceof HTMLImageElement)) {
+            return;
+        }
+
+        if (image.classList.contains('custom-default-image')) {
+            return;
+        }
+
+        const customImage = image.getAttribute('data-custom-image');
+        if (customImage && image.src !== customImage) {
+            setImageSource(image, customImage);
+            return;
+        }
+
+        if (!image.src.includes('no_image_available.png')) {
+            setImageSource(image, FALLBACK_IMAGE);
+        }
+    };
+
+    const onImageError = (event) => {
+        const target = event.currentTarget instanceof HTMLImageElement ? event.currentTarget : event.target;
+        handleImageError(target);
+    };
+
+    const registerImage = (image) => {
+        if (!(image instanceof HTMLImageElement)) {
+            return;
+        }
+
+        image.removeEventListener('error', onImageError);
+        image.addEventListener('error', onImageError);
+
+        if (image.complete && image.naturalWidth === 0) {
+            handleImageError(image);
+        }
+    };
+
+    document.querySelectorAll('img').forEach(registerImage);
 
     // Create a MutationObserver to watch for DOM changes
     const observer = new MutationObserver((mutationsList) => {
         mutationsList.forEach((mutation) => {
-            if (mutation.addedNodes) {
-                mutation.addedNodes.forEach((node) => {
-                    // Check if the added node is an image element
-                    if (node instanceof HTMLImageElement) {
-                        node.addEventListener('error', () => {
-                            handleImageError(node);
-                        });
-                    }
-                });
-            }
+            mutation.addedNodes?.forEach((node) => {
+                if (node instanceof HTMLImageElement) {
+                    registerImage(node);
+                } else if (node instanceof HTMLElement) {
+                    node.querySelectorAll?.('img').forEach(registerImage);
+                }
+            });
         });
     });
 
     // Start observing changes in the DOM
-    observer.observe(document, {childList: true, subtree: true});
+    observer.observe(document.body ?? document, {childList: true, subtree: true});
 
     const onErrorImage = (e) => {
-        if (!e.target.src.includes('no_image_available.png')) {
-            e.target.src = "{{asset('/assets/images/no_image_available.png')}}";
-        }
+        handleImageError(e.target);
+
     };
 
     {{--const onErrorImageSidebarHorizontalLogo = (e) => {--}}

@@ -246,7 +246,7 @@ class ServiceCustomFieldSubmissionService
         }
 
         if (!empty($field->name)) {
-            $aliases[] = Str::snake(Str::slug($field->name));
+            $aliases[] = ServiceCustomField::normalizeKey($field->name);
         }
 
         $aliases[] = (string) $field->id;

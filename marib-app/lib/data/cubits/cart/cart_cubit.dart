@@ -386,7 +386,23 @@ class CartCubit extends Cubit<CartState> {
     }
     _clearPendingAddition(clearSafetyTips: false);
 
-    final String? departmentRaw = _activeSection ?? cart.section;
+    final String? normalizedCartSection =
+        normalizeDeliveryDepartment(cart.section) ?? cart.section;
+    final String? normalizedActiveSection =
+        normalizeDeliveryDepartment(_activeSection) ?? _activeSection;
+
+    String? departmentRaw;
+
+    if (state.items.isNotEmpty && normalizedActiveSection != null) {
+      departmentRaw = normalizedActiveSection;
+    } else if (normalizedActiveSection != null &&
+        normalizedCartSection != null &&
+        normalizedActiveSection.toLowerCase().trim() ==
+            normalizedCartSection.toLowerCase().trim()) {
+      departmentRaw = normalizedActiveSection;
+    } else {
+      departmentRaw = normalizedCartSection ?? normalizedActiveSection;
+    }
     final String? normalizedDepartment =
         normalizeDeliveryDepartment(departmentRaw) ?? departmentRaw;
 

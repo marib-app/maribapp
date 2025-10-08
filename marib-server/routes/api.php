@@ -218,7 +218,6 @@ Route::post('user-signup', [ApiController::class, 'userSignup']);
 Route::post('user-login', [ApiController::class, 'userLogin']);
 Route::post('set-item-total-click', [ApiController::class, 'setItemTotalClick']);
 Route::get('get-system-settings', [ApiController::class, 'getSystemSettings']);
-Route::get('app-payment-status', [ApiController::class, 'appPaymentStatus']);
 Route::get('get-customfields', [ApiController::class, 'getCustomFields']);
 Route::get('get-item', [ApiController::class, 'getItem']);
 Route::get('get-slider', [ApiController::class, 'getSlider']);

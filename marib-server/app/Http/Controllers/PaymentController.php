@@ -157,6 +157,16 @@ class PaymentController extends Controller
             $request->merge(['package_id' => $request->input('order_id')]);
         }
 
+
+
+        if ($request->filled('manual_bank_id') && ! $request->filled('bank_id')) {
+            $request->merge(['bank_id' => $request->input('manual_bank_id')]);
+        }
+
+        if ($request->filled('bank_id') && ! $request->filled('manual_bank_id')) {
+            $request->merge(['manual_bank_id' => $request->input('bank_id')]);
+        }
+
         $rules = [
             'purpose' => ['nullable', 'string', Rule::in(['order', 'package'])],
 
@@ -164,6 +174,10 @@ class PaymentController extends Controller
             'amount' => ['nullable', 'numeric', 'min:0'],
             'reference' => ['nullable', 'string', 'max:191'],
             'note' => ['nullable', 'string'],
+            'manual_bank_id' => ['required', 'integer', 'exists:manual_banks,id'],
+            'bank_account_id' => ['nullable', 'string', 'max:191'],
+            'metadata' => ['nullable', 'array'],
+
             'auto_confirm' => ['sometimes', 'boolean'],
         ];
 
@@ -174,6 +188,17 @@ class PaymentController extends Controller
         }
 
         $validated = $request->validate($rules);
+
+        if (! isset($validated['note']) && $request->filled('notes')) {
+            $validated['note'] = $request->input('notes');
+        }
+
+        if (! isset($validated['metadata']) && $request->has('metadata') && is_array($request->input('metadata'))) {
+            $validated['metadata'] = $request->input('metadata');
+        }
+
+        $validated['bank_id'] = $validated['manual_bank_id'];
+
 
         if ($purpose === 'package') {
             $package = Package::findOrFail($validated['package_id']);

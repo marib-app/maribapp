@@ -7,6 +7,7 @@ use App\Models\ManualPaymentRequest;
 use App\Models\PaymentTransaction;
 use App\Models\User;
 use Illuminate\Support\Arr;
+use Illuminate\Validation\ValidationException;
 
 class ManualPaymentRequestService
 {
@@ -34,6 +35,14 @@ class ManualPaymentRequestService
         if ($manualBankId) {
             $manualBank = ManualBank::query()->find($manualBankId);
         }
+
+
+        if (! $manualBank) {
+            throw ValidationException::withMessages([
+                'manual_bank_id' => __('الرجاء اختيار الحساب البنكي للتحويل اليدوي.'),
+            ]);
+        }
+
 
         $metaUpdates = [
             'source' => 'payments.manual',

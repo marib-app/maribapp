@@ -325,7 +325,20 @@ class _ServiceAddMoreDetailsScreenState
 
     m['title'] = title;
     m['label'] = m['label'] ?? title;
-    m['name'] = m['name'] ?? title;
+    final rawName = _str(m['name']);
+    final keyCandidate = _str(m['key']) ??
+        _str(m['field_key']) ??
+        _str(m['slug']);
+    final shouldReplaceName = rawName == null ||
+        rawName.isEmpty ||
+        rawName == keyCandidate ||
+        (rawName.startsWith('field_') && rawName.length <= 12);
+
+    if (shouldReplaceName && title != null && title.trim().isNotEmpty) {
+      m['name'] = title;
+    } else if (rawName != null) {
+      m['name'] = rawName;
+    }
     m['placeholder'] = m['placeholder'] ?? title;
 
     // ===== المفتاح/المعرّف =====

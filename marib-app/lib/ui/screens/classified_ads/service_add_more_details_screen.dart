@@ -12,7 +12,7 @@ import 'package:marib/data/model/custom_field/custom_field_model.dart';
 
 // بناة الحقول الديناميكية (new_code)
 import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/custom_field.dart'
-    show CustomFieldBuilder;
+    show CustomField, CustomFieldBuilder;
 
 // مخزن القيم (الموجود في مشروعكم)
 import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart'
@@ -440,8 +440,178 @@ class _ServiceAddMoreDetailsScreenState
     try {
       dynamic_fields.AbstractField.fieldsData.clear();
       dynamic_fields.AbstractField.files.clear();
+      CustomField.fieldsData.clear();
+      CustomField.files.clear();
     } catch (_) {}
   }
+
+
+
+
+
+
+  String? _normalizeFieldKey(dynamic value) {
+    if (value == null) return null;
+    final key = value.toString().trim();
+    return key.isEmpty ? null : key;
+  }
+
+  Map<String, Map<String, dynamic>> _buildFieldLookup() {
+    final lookup = <String, Map<String, dynamic>>{};
+
+    for (final field in _fieldMaps) {
+      final candidates = <String?>{
+        _normalizeFieldKey(field['id']),
+        _normalizeFieldKey(field['key']),
+        _normalizeFieldKey(field['field_key']),
+        _normalizeFieldKey(field['slug']),
+        _normalizeFieldKey(field['name']),
+        _normalizeFieldKey(field['field_numeric_id']),
+      }..removeWhere((element) => element == null);
+
+      for (final key in candidates) {
+        if (key == null) continue;
+        lookup.putIfAbsent(key, () => field);
+      }
+    }
+
+    return lookup;
+  }
+
+  Map<String, dynamic> _collectRawCustomFieldValues() {
+    final merged = <String, dynamic>{};
+
+    void merge(Map<dynamic, dynamic> source) {
+      source.forEach((key, value) {
+        final normalizedKey = _normalizeFieldKey(key);
+        if (normalizedKey == null) {
+          return;
+        }
+        merged[normalizedKey] = value;
+      });
+    }
+
+    merge(dynamic_fields.AbstractField.fieldsData);
+    merge(CustomField.fieldsData);
+
+    return merged;
+  }
+
+  Map<String, dynamic> _collectAttachmentFiles() {
+    final merged = <String, dynamic>{};
+
+    void merge(Map<dynamic, dynamic> source) {
+      source.forEach((key, value) {
+        final normalizedKey = _normalizeFieldKey(key);
+        if (normalizedKey == null) {
+          return;
+        }
+        final effectiveKey = normalizedKey.contains('[')
+            ? normalizedKey
+            : 'custom_field_files[$normalizedKey]';
+        merged[effectiveKey] = value;
+      });
+    }
+
+    merge(dynamic_fields.AbstractField.files);
+    merge(CustomField.files);
+
+    return merged;
+  }
+
+  String? _stringifyFieldValue(dynamic value) {
+    if (value == null) return null;
+    if (value is String) {
+      final trimmed = value.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+    if (value is num) {
+      return value.toString();
+    }
+    if (value is bool) {
+      return value ? '1' : '0';
+    }
+    final text = value.toString().trim();
+    return text.isEmpty ? null : text;
+  }
+
+  dynamic _normalizeFieldValueForRequest(
+      String key,
+      dynamic raw,
+      Map<String, Map<String, dynamic>> lookup,
+      ) {
+    if (raw == null) return null;
+
+    final type = lookup[key]?['type']?.toString().toLowerCase();
+    final expectsList = type == 'checkbox';
+
+    dynamic candidate = raw;
+    if (candidate is Map) {
+      for (final mapKey in ['value', 'values', 'selected', 'checked']) {
+        if (candidate.containsKey(mapKey)) {
+          candidate = candidate[mapKey];
+          break;
+        }
+      }
+    }
+
+    if (candidate is Iterable && candidate is! String) {
+      final seen = <String>{};
+      final cleaned = <String>[];
+      for (final entry in candidate) {
+        final normalized = _stringifyFieldValue(entry);
+        if (normalized == null) continue;
+        if (seen.add(normalized)) {
+          cleaned.add(normalized);
+        }
+      }
+
+      if (expectsList) {
+        return cleaned.isEmpty ? null : cleaned;
+      }
+      if (cleaned.isEmpty) return null;
+      return cleaned.first;
+    }
+
+    final normalized = _stringifyFieldValue(candidate);
+    if (normalized == null) {
+      return null;
+    }
+
+    if (expectsList) {
+      return <String>[normalized];
+    }
+
+    return normalized;
+  }
+
+  Map<String, dynamic> _encodeCustomFieldsForRequest(
+      Map<String, dynamic> rawValues) {
+    if (rawValues.isEmpty) {
+      return const <String, dynamic>{};
+    }
+
+    final lookup = _buildFieldLookup();
+    final payload = <String, dynamic>{};
+
+    rawValues.forEach((rawKey, rawValue) {
+      final key = _normalizeFieldKey(rawKey);
+      if (key == null) {
+        return;
+      }
+
+      final normalizedValue =
+      _normalizeFieldValueForRequest(key, rawValue, lookup);
+      if (normalizedValue == null) {
+        return;
+      }
+
+      payload['custom_fields[$key]'] = normalizedValue;
+    });
+
+    return payload;
+  }
+
 
   @override
   void dispose() {
@@ -604,23 +774,19 @@ class _ServiceAddMoreDetailsScreenState
     }
 
 
-
-    final customFields = Map<String, dynamic>.from(
-      dynamic_fields.AbstractField.fieldsData,
-    );
-    final attachments = Map<String, dynamic>.from(
-      dynamic_fields.AbstractField.files,
-
-    );
+    final rawCustomFields = _collectRawCustomFieldValues();
+    final customFieldPayload =
+    _encodeCustomFieldsForRequest(rawCustomFields);
+    final attachmentPayload = _collectAttachmentFiles();
     setState(() => _submitting = true);
     try {
       final request = await _requestRepository.createRequest(
         serviceId: _serviceId!,
         serviceUid: _serviceUid,
-
-
-        customFields: customFields.isEmpty ? null : customFields,
-        attachments: attachments.isEmpty ? null : attachments,
+        customFields:
+        customFieldPayload.isEmpty ? null : customFieldPayload,
+        attachments:
+        attachmentPayload.isEmpty ? null : attachmentPayload,
       );
 
       final pendingRequest = <String, dynamic>{
@@ -630,9 +796,9 @@ class _ServiceAddMoreDetailsScreenState
 
         if (request.customFields != null)
           'custom_fields': request.customFields,
-        if (customFields.isNotEmpty && request.customFields == null)
-          'custom_fields': customFields,
-        if (attachments.isNotEmpty) 'attachments': attachments,
+        if (rawCustomFields.isNotEmpty && request.customFields == null)
+          'custom_fields': rawCustomFields,
+        if (attachmentPayload.isNotEmpty) 'attachments': attachmentPayload,
       };
 
       if (!mounted) return;

@@ -1,4 +1,5 @@
-import 'dart:convert';
+import 'package:dio/dio.dart';
+
 
 import 'package:marib/data/model/service_request_model.dart';
 import 'package:marib/utils/api.dart';
@@ -51,22 +52,20 @@ class ServiceRequestRepository {
     Map<String, dynamic>? attachments,
   }) async {
 
-    String? _encodeCustomFields(Map<String, dynamic>? fields) {
-      if (fields == null || fields.isEmpty) {
-        return null;
-      }
-      final normalized = <String, dynamic>{};
-      fields.forEach((key, value) {
-        normalized[key.toString()] = value;
-      });
-      return jsonEncode(normalized);
-    }
 
     final String? normalizedUid =
     serviceUid != null && serviceUid.trim().isNotEmpty ? serviceUid.trim() : null;
     final String? normalizedNote =
     note != null && note.trim().isNotEmpty ? note.trim() : null;
-    final String? encodedCustomFields = _encodeCustomFields(customFields);
+    dynamic _cloneAttachmentValue(dynamic value) {
+      if (value is MultipartFile) {
+        return value.clone();
+      }
+      if (value is List) {
+        return value.map(_cloneAttachmentValue).toList();
+      }
+      return value;
+    }
 
     Map<String, dynamic> _buildPayload() {
       final map = <String, dynamic>{
@@ -81,11 +80,29 @@ class ServiceRequestRepository {
         map['note'] = normalizedNote;
       }
 
-      if (encodedCustomFields != null) {
-        map['custom_fields'] = encodedCustomFields;
+      if (customFields != null && customFields.isNotEmpty) {
+        customFields.forEach((rawKey, rawValue) {
+          final key = rawKey?.toString().trim();
+          if (key == null || key.isEmpty) {
+            return;
+          }
+          if (rawValue == null) {
+            return;
+          }
+          map[key] = rawValue;
+        });
       }
       if (attachments != null && attachments!.isNotEmpty) {
-        map.addAll(attachments!);
+        attachments!.forEach((rawKey, rawValue) {
+          final key = rawKey?.toString().trim();
+          if (key == null || key.isEmpty) {
+            return;
+          }
+          if (rawValue == null) {
+            return;
+          }
+          map[key] = _cloneAttachmentValue(rawValue);
+        });
       }
 
       return map;

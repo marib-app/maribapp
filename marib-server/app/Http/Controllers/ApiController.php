@@ -1318,12 +1318,12 @@ class ApiController extends Controller {
             $categoryInput = $request->input('category_id');
             $categoryId = is_numeric($categoryInput) ? (int) $categoryInput : null;
 
-            if ($categoryId !== null && in_array($categoryId, $this->geoDisabledCategoryIds(), true)) {
-                $validationRules['latitude'] = 'nullable';
-                $validationRules['longitude'] = 'nullable';
+            if ($categoryId !== null && $this->isGeoDisabledCategory($categoryId)) {
+                foreach (['latitude', 'longitude', 'city', 'area_id'] as $geoField) {
+                    $validationRules[$geoField] = 'nullable';
+                }
                 $validationRules['address'] = 'nullable';
-                $validationRules['city'] = 'nullable';
-                $validationRules['area_id'] = 'nullable';
+
             }
 
             $validator = Validator::make($request->all(), $validationRules);
@@ -8528,6 +8528,13 @@ public function storeRequestDevice(Request $request)
     }
 
 
+    private function isGeoDisabledCategory(int $categoryId): bool
+    {
+        return in_array($categoryId, $this->geoDisabledCategoryIds(), true);
+    }
+
+
+
     private function geoDisabledCategoryIds(): array
     {
         if ($this->geoDisabledCategoryCache !== null) {
@@ -8545,6 +8552,10 @@ public function storeRequestDevice(Request $request)
                 $departmentService->resolveCategoryIds(DepartmentReportService::DEPARTMENT_STORE),
             );
         }
+
+        $ids = array_merge($ids, [295]);
+
+
 
         $ids = array_filter($ids, static fn ($id) => is_int($id) && $id > 0);
 

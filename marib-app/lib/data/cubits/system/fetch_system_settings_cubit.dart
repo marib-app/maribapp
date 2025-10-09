@@ -382,6 +382,9 @@ class FetchSystemSettingsCubit extends Cubit<FetchSystemSettingsState> {
     Constant.usageGuide = usageGuide ?? Constant.usageGuide;
     Constant.socialLinks = List.unmodifiable(socialLinks);
 
+    Constant.geoDisabledCategoryIds =
+        _parseGeoDisabledCategories(settings);
+
     _cacheDelegateSettings(settings);
 
     return FetchSystemSettingsSuccess(
@@ -539,6 +542,86 @@ class FetchSystemSettingsCubit extends Cubit<FetchSystemSettingsState> {
     consume(raw);
     return links;
   }
+
+
+
+
+  Set<int> _parseGeoDisabledCategories(Map settings) {
+    final Set<int> resolved = <int>{};
+    final dynamic raw =
+    _getSetting(settings, SystemSetting.geoDisabledCategories);
+
+    void consume(dynamic value) {
+      if (value == null) {
+        return;
+      }
+
+      if (value is int) {
+        if (value > 0) {
+          resolved.add(value);
+        }
+        return;
+      }
+
+      if (value is num) {
+        resolved.add(value.toInt());
+        return;
+      }
+
+      if (value is String) {
+        final String trimmed = value.trim();
+        if (trimmed.isEmpty) {
+          return;
+        }
+
+        try {
+          final dynamic decoded = json.decode(trimmed);
+          if (decoded != null && decoded != value) {
+            consume(decoded);
+            return;
+          }
+        } catch (_) {
+          // Not a JSON string, fall back to regex extraction.
+        }
+
+        for (final Match match in RegExp(r'\d+').allMatches(trimmed)) {
+          final int? parsed = int.tryParse(match.group(0) ?? '');
+          if (parsed != null && parsed > 0) {
+            resolved.add(parsed);
+          }
+        }
+        return;
+      }
+
+      if (value is Iterable) {
+        for (final element in value) {
+          consume(element);
+        }
+        return;
+      }
+
+      if (value is Map) {
+        for (final dynamic element in value.values) {
+          consume(element);
+        }
+      }
+    }
+
+    consume(raw);
+
+    if (resolved.isEmpty) {
+      resolved.addAll(<int>{
+        Constant.sheinRootCategoryId,
+        Constant.computerRootCategoryId,
+        Constant.storeRootCategoryId,
+      });
+    }
+
+    return resolved;
+  }
+
+
+
 
 /*  @override
   FetchSystemSettingsState? fromJson(Map<String, dynamic> json) {

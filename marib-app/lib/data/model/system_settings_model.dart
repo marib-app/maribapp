@@ -30,6 +30,7 @@ enum SystemSetting {
   appleAuthentication,
   emailAuthentication,
   usageGuide,
-  socialLinks
+  socialLinks,
+  geoDisabledCategories,
 }
 

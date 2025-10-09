@@ -49,6 +49,8 @@ class Constant {
   static String appleAuthentication = "";
   static String usageGuide = "";
   static List<SocialLink> socialLinks = const [];
+  static Set<int> geoDisabledCategoryIds = <int>{};
+
   //
   static int otpTimeOutSecond = AppSettings.otpTimeOutSecond; //otp time out
   static int otpResendSecond = AppSettings.otpResendSecond; // resend otp timer
@@ -107,6 +109,7 @@ class Constant {
   static const int sheinRootCategoryId = 4;
   static const int computerRootCategoryId = 5;
   static const int publicRootCategoryId = 6;
+  static const int storeRootCategoryId = 6;
 
   static List<int> delegatesShein = [];
   static List<int> delegatesComputer = [];
@@ -165,6 +168,8 @@ class Constant {
     SystemSetting.emailAuthentication: "email_authentication",
     SystemSetting.usageGuide: "usage_guide",
     SystemSetting.socialLinks: "social_links",
+    SystemSetting.geoDisabledCategories: "geo_disabled_categories",
+
   };
 
   ///This is limit of minimum chat messages load count , make sure you set it grater than 25;

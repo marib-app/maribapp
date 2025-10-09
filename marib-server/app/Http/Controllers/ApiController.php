@@ -315,6 +315,7 @@ class ApiController extends Controller {
 
     private string $uploadFolder;
     private array $departmentCategoryMap = [];
+    private ?array $geoDisabledCategoryCache = null;
 
 
 
@@ -1286,7 +1287,8 @@ class ApiController extends Controller {
 
      public function addItem(Request $request) {
         try {
-            $validator = Validator::make($request->all(), [
+            $validationRules = [
+
                 'name'                 => 'required',
                 'category_id'          => 'required|integer',
                 'price'                => 'required',
@@ -1303,6 +1305,7 @@ class ApiController extends Controller {
                 'country'              => 'required',
                 'state'                => 'nullable',
                 'city'                 => 'required',
+                'area_id'              => 'nullable',
                 'custom_field_files'   => 'nullable|array',
                 'custom_field_files.*' => 'nullable|mimes:jpeg,png,jpg,pdf,doc|max:4096',
                 'slug'                 => 'nullable|regex:/^[a-z0-9-]+$/',
@@ -1310,7 +1313,20 @@ class ApiController extends Controller {
                 'product_link'         => 'nullable|url|max:2048',
                 'review_link'          => 'nullable|url|max:2048'
 
-            ]);
+            ];
+
+            $categoryInput = $request->input('category_id');
+            $categoryId = is_numeric($categoryInput) ? (int) $categoryInput : null;
+
+            if ($categoryId !== null && in_array($categoryId, $this->geoDisabledCategoryIds(), true)) {
+                $validationRules['latitude'] = 'nullable';
+                $validationRules['longitude'] = 'nullable';
+                $validationRules['address'] = 'nullable';
+                $validationRules['city'] = 'nullable';
+                $validationRules['area_id'] = 'nullable';
+            }
+
+            $validator = Validator::make($request->all(), $validationRules);
 
 
             $validator->after(function ($validator) use ($request) {
@@ -8510,6 +8526,90 @@ public function storeRequestDevice(Request $request)
 
         return $messages->values();
     }
+
+
+    private function geoDisabledCategoryIds(): array
+    {
+        if ($this->geoDisabledCategoryCache !== null) {
+            return $this->geoDisabledCategoryCache;
+        }
+
+        $raw = CachingService::getSystemSettings('geo_disabled_categories');
+        $ids = $this->parseCategoryIdList($raw);
+
+        if ($ids === []) {
+            $departmentService = app(DepartmentReportService::class);
+            $ids = array_merge(
+                $departmentService->resolveCategoryIds(DepartmentReportService::DEPARTMENT_SHEIN),
+                $departmentService->resolveCategoryIds(DepartmentReportService::DEPARTMENT_COMPUTER),
+                $departmentService->resolveCategoryIds(DepartmentReportService::DEPARTMENT_STORE),
+            );
+        }
+
+        $ids = array_filter($ids, static fn ($id) => is_int($id) && $id > 0);
+
+        return $this->geoDisabledCategoryCache = array_values(array_unique($ids));
+    }
+
+    private function parseCategoryIdList(mixed $raw): array
+    {
+        $resolved = [];
+
+        $consume = function (mixed $value) use (&$resolved, &$consume): void {
+            if ($value === null) {
+                return;
+            }
+
+            if (is_int($value) || is_float($value)) {
+                $int = (int) $value;
+                if ($int > 0) {
+                    $resolved[] = $int;
+                }
+                return;
+            }
+
+            if (is_string($value)) {
+                $trimmed = trim($value);
+                if ($trimmed === '') {
+                    return;
+                }
+
+                try {
+                    $decoded = json_decode($trimmed, true, 512, JSON_THROW_ON_ERROR);
+                    if ($decoded !== null && $decoded !== $trimmed) {
+                        $consume($decoded);
+                        return;
+                    }
+                } catch (Throwable) {
+                    // ignore malformed JSON strings
+                }
+
+                if (preg_match_all('/\d+/', $trimmed, $matches)) {
+                    foreach ($matches[0] as $match) {
+                        $int = (int) $match;
+                        if ($int > 0) {
+                            $resolved[] = $int;
+                        }
+                    }
+                }
+                return;
+            }
+
+            if (is_iterable($value)) {
+                foreach ($value as $entry) {
+                    $consume($entry);
+                }
+            }
+        };
+
+        $consume($raw);
+
+        return array_values(array_unique(array_filter(
+            $resolved,
+            static fn ($id) => is_int($id) && $id > 0
+        )));
+    }
+
 
     private function resolveSectionByCategoryId(?int $categoryId): ?string
     {

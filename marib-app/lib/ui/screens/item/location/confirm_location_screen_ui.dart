@@ -355,7 +355,11 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
     }
     if (state is ManageItemSuccess) {
       Widgets.hideLoder(context);
-      myAdsCubitReference[getCloudData("edit_from")]?.edit(state.model);
+      final dynamic editKey = getCloudData('edit_from');
+      if (editKey is String && editKey.isNotEmpty) {
+        myAdsCubitReference[editKey]?.edit(state.model);
+      }
+
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
           Navigator.pushNamed(

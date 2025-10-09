@@ -35,6 +35,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html;
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dotted_border/dotted_border.dart';
@@ -49,12 +50,15 @@ import 'package:path_provider/path_provider.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/custom_field/fetch_custom_fields_cubit.dart';
 import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart';
+import 'package:marib/data/cubits/item/manage_item_cubit.dart';
+import 'package:marib/data/helper/widgets.dart';
 import 'package:marib/data/model/category_model.dart';
 import 'package:marib/data/model/custom_field/custom_field_model.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/ui/screens/item/add_item_screen/image_section.dart';
 import 'package:marib/ui/screens/item/add_item_screen/select_category.dart';
 import 'package:marib/ui/screens/item/add_item_screen/shein_grabber_page.dart';
+import 'package:marib/ui/screens/user_profile/my_item_tab.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:marib/ui/screens/widgets/custom_text_form_field.dart';
@@ -66,8 +70,10 @@ import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/cloudState/cloud_state.dart';
 import 'package:marib/utils/constant.dart';
+import 'package:marib/utils/errorFilter.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/data/model/item/item_model.dart';
+import 'package:marib/utils/geo_rules.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/imagePicker.dart';
@@ -122,8 +128,11 @@ class AddItemDetails extends StatefulWidget {
     settings.arguments as Map<String, dynamic>?;
     return BlurredRouter(
       builder: (context) {
-        return BlocProvider(
-          create: (_) => FetchCustomFieldsCubit(),
+        return MultiBlocProvider(
+          providers: [
+            BlocProvider(create: (_) => FetchCustomFieldsCubit()),
+            BlocProvider(create: (_) => ManageItemCubit()),
+          ],
           child: AddItemDetails(
             breadCrumbItems: arguments?['breadCrumbItems'],
             isEdit: arguments?['isEdit'],
@@ -179,6 +188,7 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
   ItemModel? item;
   List<CustomFieldModel> customFields = <CustomFieldModel>[];
   bool isLoadingCustomFields = false;
+  bool _isSubmittingWithoutLocation = false;
 
   double? latitude;
   double? longitude;
@@ -1076,6 +1086,34 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
     return type == 'textarea' || type == 'long_text';
   }
 
+
+  String? _normalizeString(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is String) {
+      final trimmed = value.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+    final trimmed = value.toString().trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  int? _normalizeInt(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is int) {
+      return value > 0 ? value : null;
+    }
+    if (value is num) {
+      final int parsed = value.toInt();
+      return parsed > 0 ? parsed : null;
+    }
+    return int.tryParse(value.toString());
+  }
+
+
   String _initialCustomFieldValue(CustomFieldModel field) {
     final dynamic stored =
         AbstractField.fieldsData[field.id.toString()] ?? field.value;
@@ -1175,9 +1213,10 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
       return;
     }
 
-    final Iterable<int> categoryIds = _currentCategoryIds();
+    final List<int> categoryIds = _currentCategoryIds().toList(growable: false);
     _updateSheinCategoryFlag(categoryIds, notify: false);
     final bool isShein = _isSheinCategory;
+    final bool disableLocation = GeoRules.isDisabled(categoryIds: categoryIds);
 
     final Map<String, dynamic> data = <String, dynamic>{
       'name': adTitleController.text.trim(),
@@ -1226,6 +1265,16 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
     addCloudData('item_details', data);
     addCloudData('with_more_details', data);
 
+
+    if (disableLocation) {
+      _submitWithoutLocation(
+        context,
+        mainImageFile,
+        galleryFiles,
+      );
+      return;
+    }
+
     screenStack++;
     Navigator.pushNamed(
       context,
@@ -1247,6 +1296,114 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
     });
   }
 
+
+
+  void _submitWithoutLocation(
+      BuildContext context,
+      File? mainImageFile,
+      List<File> galleryFiles,
+      ) {
+    final Map<String, dynamic> stored =
+        (getCloudData('with_more_details') as Map<String, dynamic>?) ??
+            <String, dynamic>{};
+    final Map<String, dynamic> payload = Map<String, dynamic>.from(stored);
+
+    payload.removeWhere((key, value) =>
+    value == null || (value is String && value.trim().isEmpty));
+
+    for (final String key in const <String>[
+      'latitude',
+      'longitude',
+      'location_latitude',
+      'location_longitude',
+    ]) {
+      payload.remove(key);
+    }
+
+    payload['address'] =
+        _normalizeString(payload['address']) ?? 'المتجر الإلكتروني';
+
+    final String? fallbackCity = _normalizeString(HiveUtils.getCityName());
+    if (fallbackCity != null) {
+      payload['city'] = fallbackCity;
+    } else {
+      payload.remove('city');
+    }
+
+    final int? fallbackAreaId = _normalizeInt(HiveUtils.getAreaId());
+    if (fallbackAreaId != null) {
+      payload['area_id'] = fallbackAreaId;
+    } else {
+      payload.remove('area_id');
+    }
+
+    final String? fallbackState = _normalizeString(HiveUtils.getStateName());
+    if (fallbackState != null) {
+      payload['state'] = fallbackState;
+    } else {
+      payload.remove('state');
+    }
+
+    payload['country'] =
+        _normalizeString(HiveUtils.getCountryName()) ?? 'اليمن';
+
+    _isSubmittingWithoutLocation = true;
+
+    final ManageItemCubit manage = context.read<ManageItemCubit>();
+
+    if (widget.isEdit == true) {
+      manage.manage(ManageItemType.edit, payload, mainImageFile, galleryFiles);
+    } else {
+      if (mainImageFile == null) {
+        _isSubmittingWithoutLocation = false;
+        HelperUtils.showSnackBarMessage(context, 'الصورة مطلوبة');
+        return;
+      }
+      manage.manage(ManageItemType.add, payload, mainImageFile, galleryFiles);
+    }
+  }
+
+  void _handleManageItemState(
+      BuildContext context, ManageItemState state) {
+    if (!_isSubmittingWithoutLocation) {
+      return;
+    }
+
+    if (state is ManageItemInProgress) {
+      Widgets.showLoader(context);
+      return;
+    }
+
+    if (state is ManageItemSuccess) {
+      Widgets.hideLoder(context);
+      _isSubmittingWithoutLocation = false;
+      final dynamic editKey = getCloudData('edit_from');
+      if (editKey is String && editKey.isNotEmpty) {
+        myAdsCubitReference[editKey]?.edit(state.model);
+      }
+      Future.microtask(() {
+        if (!mounted) {
+          return;
+        }
+        Navigator.pushNamed(
+          context,
+          Routes.successItemScreen,
+          arguments: {'model': state.model, 'isEdit': widget.isEdit},
+        );
+      });
+      return;
+    }
+
+    if (state is ManageItemFail) {
+      Widgets.hideLoder(context);
+      _isSubmittingWithoutLocation = false;
+      final dynamic filteredError = ErrorFilter.check(state.error).error;
+      final String message = filteredError is String
+          ? filteredError
+          : filteredError.toString();
+      HelperUtils.showSnackBarMessage(context, message);
+    }
+  }
 
   Iterable<int> _currentCategoryIds() {
 
@@ -1456,20 +1613,28 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
               buttonTitle: 'متابعة',
             ),
           ),
-          body: BlocListener<FetchCustomFieldsCubit, FetchCustomFieldState>(
-            listener: (context, state) {
-              if (state is FetchCustomFieldInProgress) {
-                setState(() => isLoadingCustomFields = true);
-              } else if (state is FetchCustomFieldSuccess) {
-                setState(() {
-                  isLoadingCustomFields = false;
-                  customFields = state.fields;
-                });
-              } else if (state is FetchCustomFieldFail) {
-                setState(() => isLoadingCustomFields = false);
-                HelperUtils.showSnackBarMessage(context, state.error.toString());
-              }
-            },
+          body: MultiBlocListener(
+            listeners: [
+              BlocListener<FetchCustomFieldsCubit, FetchCustomFieldState>(
+                listener: (context, state) {
+                  if (state is FetchCustomFieldInProgress) {
+                    setState(() => isLoadingCustomFields = true);
+                  } else if (state is FetchCustomFieldSuccess) {
+                    setState(() {
+                      isLoadingCustomFields = false;
+                      customFields = state.fields;
+                    });
+                  } else if (state is FetchCustomFieldFail) {
+                    setState(() => isLoadingCustomFields = false);
+                    HelperUtils.showSnackBarMessage(
+                        context, state.error.toString());
+                  }
+                },
+              ),
+              BlocListener<ManageItemCubit, ManageItemState>(
+                listener: _handleManageItemState,
+              ),
+            ],
             child: Form(
               key: _formKey,
               child: SingleChildScrollView(

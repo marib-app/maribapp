@@ -38,6 +38,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'AdImagesHeader.dart';
 
 import 'ad_details_screen.dart';
+import 'package:marib/utils/geo_rules.dart';
 
 
 
@@ -312,6 +313,7 @@ class OwnerAdDetailsBody extends StatelessWidget {
     final adInfo = AdInfoSection(context: context, model: model, isAddedByMe: true);
     final views    = model.views ?? 0;
     final likes    = model.totalLikes ?? 0;
+    final bool hideLocation = GeoRules.isDisabledForItem(model);
 
     // شريط الإحصائيات بعرض كامل
     Widget _statsBar(BuildContext context) {
@@ -417,8 +419,8 @@ class OwnerAdDetailsBody extends StatelessWidget {
                 if (model.rejectedReason?.isNotEmpty == true)
                   RejectedReasonCard(reason: model.rejectedReason!),
 
-                if (model.address != null) adInfo.titleAndDate(isDate: true),
-
+                if (!hideLocation && model.address != null)
+                  adInfo.titleAndDate(isDate: true),
                 // قسم إضافات المالك (إن وجد)
                 OwnerExtrasSection(featuredSection: featuredSection),
 
@@ -435,7 +437,10 @@ class OwnerAdDetailsBody extends StatelessWidget {
                 Divider(thickness: 1, color: context.color.textDefaultColor.withOpacity(0.1)),
 
                 // الخريطة
-                if (model.latitude != null && model.longitude != null)
+                if (!hideLocation &&
+                    model.latitude != null &&
+                    model.longitude != null)
+
                   MapPreviewBox(
                     latitude: model.latitude!,
                     longitude: model.longitude!,

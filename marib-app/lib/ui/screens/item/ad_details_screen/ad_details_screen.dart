@@ -7,6 +7,7 @@ import 'package:marib/data/cubits/report/fetch_item_report_reason_list.dart';
 import 'package:marib/data/cubits/subscription/fetch_ads_listing_subscription_packages_cubit.dart';
 import 'package:marib/data/model/custom_field/custom_field_model.dart';
 import 'package:marib/ui/screens/home_screen/home_screen.dart';
+import 'package:marib/utils/geo_rules.dart';
 import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/custom_field.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
@@ -1328,6 +1329,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       model: item,
       isAddedByMe: false,
     );
+    final bool hideLocation = GeoRules.isDisabledForItem(item);
+
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(
@@ -1405,8 +1408,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                 adInfo.priceAndStatus(),
 
                 // العنوان والتاريخ (لو فيه عنوان)
-                if (item.address != null) adInfo.titleAndDate(isDate: true),
-
+                if (!hideLocation && item.address != null)
+                  adInfo.titleAndDate(isDate: true),
                 // الحقول المخصصة
                 AdCustomFieldsSection(
                   fields: item.customFields ?? const <CustomFieldModel>[],
@@ -1429,7 +1432,10 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                   setSellerDetails(context, item),
 
                 // الخريطة (لو الإحداثيات متوفرة)
-                if (item.latitude != null && item.longitude != null)
+                if (!hideLocation &&
+                    item.latitude != null &&
+                    item.longitude != null)
+
                   MapPreviewBox(
                     latitude: item.latitude!,
                     longitude: item.longitude!,

@@ -17,6 +17,7 @@ import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/utils/geo_rules.dart';
 
 
 
@@ -286,6 +287,7 @@ class ItemDetailsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final String? address =
     (item.address?.trim().isNotEmpty ?? false) ? item.address : null;
+    final bool hideLocation = GeoRules.isDisabledForItem(item);
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -351,7 +353,7 @@ class ItemDetailsSection extends StatelessWidget {
         ),
 
         // 📍 الموقع (إن وُجد)
-        if (address != null)
+        if (!hideLocation && address != null)
           Padding(
             padding: const EdgeInsets.only(top: 2.0),
             child: Row(

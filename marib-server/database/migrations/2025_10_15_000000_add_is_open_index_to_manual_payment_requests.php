@@ -23,6 +23,17 @@ return new class extends Migration {
                     ->storedAs("(status in ('pending','under_review'))")
                     ->after('status');
             }
+
+            if (! Schema::hasColumn('manual_payment_requests', 'open_unique_key')) {
+                $table->string('open_unique_key', 512)
+                    ->storedAs(
+                        "case when status in ('pending','under_review') " .
+                        "and payable_type is not null and payable_id is not null " .
+                        "then concat(payable_type, '#', payable_id) else null end"
+                    )
+                    ->after('is_open');
+            }
+
         });
 
         $now = Carbon::now()->toDateTimeString();
@@ -39,6 +50,7 @@ return new class extends Migration {
 
         foreach ($duplicateGroups as $group) {
             $idToKeepOpen = DB::table('manual_payment_requests')
+
                 ->where('payable_type', $group->payable_type)
                 ->where('payable_id', $group->payable_id)
                 ->whereIn('status', $openStatuses)
@@ -54,8 +66,6 @@ return new class extends Migration {
                 ->where('payable_id', $group->payable_id)
                 ->whereIn('status', $openStatuses)
                 ->where('id', '!=', $idToKeepOpen)
-
-                
                 ->pluck('id');
 
             foreach ($idsToClose as $requestId) {
@@ -80,13 +90,13 @@ return new class extends Migration {
         }
 
         Schema::table('manual_payment_requests', static function (Blueprint $table): void {
-            if (! Schema::hasColumn('manual_payment_requests', 'is_open')) {
+            if (! Schema::hasColumn('manual_payment_requests', 'open_unique_key')) {
                 return;
             }
 
             $table->unique(
-                ['payable_type', 'payable_id', 'is_open'],
-                'manual_payment_requests_payable_open_unique'
+                'open_unique_key',
+                'manual_payment_requests_open_unique_key_unique'
             );
         });
     }
@@ -98,8 +108,12 @@ return new class extends Migration {
         }
 
         Schema::table('manual_payment_requests', static function (Blueprint $table): void {
+            if (Schema::hasColumn('manual_payment_requests', 'open_unique_key')) {
+                $table->dropUnique('manual_payment_requests_open_unique_key_unique');
+                $table->dropColumn('open_unique_key');
+            }
+
             if (Schema::hasColumn('manual_payment_requests', 'is_open')) {
-                $table->dropUnique('manual_payment_requests_payable_open_unique');
                 $table->dropColumn('is_open');
             }
         });

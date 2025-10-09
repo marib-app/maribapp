@@ -89,6 +89,7 @@ return [
         ['name' => 'default_latitude', 'value' => '-23.2420', 'type' => 'string'],
         ['name' => 'default_longitude', 'value' => '-69.6669', 'type' => 'string'],
         ['name' => 'geo_disabled_categories', 'value' => '[4,5,6,295]', 'type' => 'json'],
+        ['name' => 'product_link_required_categories', 'value' => '[]', 'type' => 'json'],
         ['name' => 'file_manager', 'value' => 'public', 'type' => 'string'],
         ['name' => 'show_landing_page', 'value' => '1', 'type' => 'boolean'],
         ['name' => 'mobile_authentication', 'value' => '1', 'type' => 'boolean'],

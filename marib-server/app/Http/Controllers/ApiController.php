@@ -316,6 +316,7 @@ class ApiController extends Controller {
     private string $uploadFolder;
     private array $departmentCategoryMap = [];
     private ?array $geoDisabledCategoryCache = null;
+    private ?array $productLinkRequiredCategoryCache = null;
 
 
 
@@ -1311,6 +1312,10 @@ class ApiController extends Controller {
                 $request->merge(['custom_fields' => $decodedCustomFields]);
             }
 
+            $categoryInput = $request->input('category_id');
+            $categoryId = is_numeric($categoryInput) ? (int) $categoryInput : null;
+            $requiresProductLink = $categoryId !== null && $this->isProductLinkRequiredCategory($categoryId);
+
             $validationRules = [
 
                 'name'                 => 'required',
@@ -1336,13 +1341,11 @@ class ApiController extends Controller {
                 'custom_fields.*'      => 'nullable',
                 'slug'                 => 'nullable|regex:/^[a-z0-9-]+$/',
                 'currency'             => 'required',
-                'product_link'         => 'nullable|url|max:2048',
+
+                'product_link'         => ($requiresProductLink ? 'required' : 'nullable') . '|url|max:2048',
                 'review_link'          => 'nullable|url|max:2048'
 
             ];
-
-            $categoryInput = $request->input('category_id');
-            $categoryId = is_numeric($categoryInput) ? (int) $categoryInput : null;
 
             if ($categoryId !== null && $this->isGeoDisabledCategory($categoryId)) {
                 foreach (['latitude', 'longitude', 'city', 'area_id', 'address', 'country', 'state'] as $geoField) {
@@ -1354,13 +1357,7 @@ class ApiController extends Controller {
             $validator = Validator::make($request->all(), $validationRules);
 
 
-            $validator->after(function ($validator) use ($request) {
-                $section = $this->resolveSectionByCategoryId((int) $request->category_id);
 
-                if ($section === DepartmentReportService::DEPARTMENT_SHEIN && ! $request->filled('product_link')) {
-                    $validator->errors()->add('product_link', __('validation.required', ['attribute' => __('Product Link')]));
-                }
-            });
 
 
             if ($validator->fails()) {
@@ -1788,6 +1785,17 @@ class ApiController extends Controller {
 
 
     public function updateItem(Request $request) {
+
+        $categoryInput = $request->input('category_id');
+
+        if (! is_numeric($categoryInput) && $request->filled('id')) {
+            $existingItem = Item::select('category_id')->find($request->input('id'));
+            $categoryInput = $existingItem?->category_id;
+        }
+
+        $categoryId = is_numeric($categoryInput) ? (int) $categoryInput : null;
+        $requiresProductLink = $categoryId !== null && $this->isProductLinkRequiredCategory($categoryId);
+
         $validator = Validator::make($request->all(), [
             'id'                   => 'required',
             'name'                 => 'nullable',
@@ -1804,32 +1812,14 @@ class ApiController extends Controller {
             'custom_field_files.*' => 'nullable|mimes:jpeg,png,jpg,pdf,doc|max:4096',
             'gallery_images'       => 'nullable|array',
             'currency'             => 'required',
-            'product_link'         => 'nullable|url|max:2048',
+            'product_link'         => ($requiresProductLink ? 'required' : 'nullable') . '|url|max:2048',
             'review_link'          => 'nullable|url|max:2048'
         
-        ]);
-
-        $validator->after(function ($validator) use ($request) {
-            $categoryId = $request->input('category_id');
-
-            if (empty($categoryId) && $request->filled('id')) {
-                $existingItem = Item::select('category_id')->find($request->input('id'));
-                $categoryId = $existingItem?->category_id;
-            }
-
-            if (! $categoryId) {
-                return;
-            }
-
-            $section = $this->resolveSectionByCategoryId((int) $categoryId);
-
-            if ($section === DepartmentReportService::DEPARTMENT_SHEIN && ! $request->filled('product_link')) {
-                $validator->errors()->add('product_link', __('validation.required', ['attribute' => __('Product Link')]));
-            }
-        });
+         ]);
 
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            ResponseService::validationErrors($validator->errors());
+
         }
 
         DB::beginTransaction();
@@ -8552,11 +8542,16 @@ public function storeRequestDevice(Request $request)
         return $messages->values();
     }
 
+
     private function isGeoDisabledCategory(int $categoryId): bool
     {
         return in_array($categoryId, $this->geoDisabledCategoryIds(), true);
     }
 
+    private function isProductLinkRequiredCategory(int $categoryId): bool
+    {
+        return in_array($categoryId, $this->productLinkRequiredCategoryIds(), true);
+    }
 
 
     private function geoDisabledCategoryIds(): array
@@ -8576,16 +8571,33 @@ public function storeRequestDevice(Request $request)
                 $departmentService->resolveCategoryIds(DepartmentReportService::DEPARTMENT_STORE),
             );
         }
-
-
         $ids = array_merge($ids, [295]);
-
-
 
         $ids = array_filter($ids, static fn ($id) => is_int($id) && $id > 0);
 
         return $this->geoDisabledCategoryCache = array_values(array_unique($ids));
     }
+
+
+    private function productLinkRequiredCategoryIds(): array
+    {
+        if ($this->productLinkRequiredCategoryCache !== null) {
+            return $this->productLinkRequiredCategoryCache;
+        }
+
+        $raw = CachingService::getSystemSettings('product_link_required_categories');
+        $ids = $this->parseCategoryIdList($raw);
+
+        if ($ids === []) {
+            $ids = app(DepartmentReportService::class)
+                ->resolveCategoryIds(DepartmentReportService::DEPARTMENT_SHEIN);
+        }
+
+        $ids = array_filter($ids, static fn ($id) => is_int($id) && $id > 0);
+
+        return $this->productLinkRequiredCategoryCache = array_values(array_unique($ids));
+    }
+
 
     private function parseCategoryIdList(mixed $raw): array
     {

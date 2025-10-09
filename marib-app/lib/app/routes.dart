@@ -115,6 +115,7 @@ import 'package:marib/ui/screens/classified_ads/service_requests_screen.dart';
 import 'package:marib/ui/screens/home_screen/section/section_screen/widgets/map_search/map_search_screen.dart'; // عدّل المسار حسب موقع الملف الفعلي
 import 'package:marib/ui/screens/wallet/wallet_screen.dart';
 import 'package:marib/ui/screens/cart/orders_list_screen.dart';
+import 'package:marib/ui/screens/item/purchase_options/product_purchase_options_screen.dart';
 
 
 
@@ -273,6 +274,7 @@ class Routes {
   static const setItemParametersScreen = '/setItemParametersScreen';
   static const selectOutdoorFacility = '/selectOutdoorFacility';
   static const adDetailsScreen = '/adDetailsScreen';
+  static const productOptions = '/product-options';
   static const successItemScreen = '/successItemScreen';
 
   ///Add item screens
@@ -573,6 +575,8 @@ class Routes {
 
       case adDetailsScreen:
         return AdDetailsScreen.route(routeSettings);
+      case productOptions:
+        return ProductPurchaseOptionsScreen.route(routeSettings);
 
       case pdfViewerScreen:
         return PdfViewer.route(routeSettings);

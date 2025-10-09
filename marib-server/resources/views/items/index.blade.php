@@ -16,7 +16,7 @@
 
 
 @section('page-title')
-    <div class="page-title">
+    <div class="page-title page-title--items-index">
         <div class="row">
             <div class="col-12 col-md-6 order-md-1 order-last">
                 <h4>@yield('title')</h4>
@@ -27,7 +27,7 @@
 @endsection
 
 @section('content')
-    <section class="section" data-page="items-index">
+    <section class="section section--items-index" data-page="items-index">
         <div class="items-index container-fluid px-0">
 
             <div class="items-index__layout">

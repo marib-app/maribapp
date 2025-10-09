@@ -54,6 +54,19 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/utils/notification/notification_service.dart';
 import 'cart_field_helpers.dart';
 
+typedef CartItemBuilder = Cart Function({
+List<Map<String, dynamic>>? selectedCustomFields,
+});
+
+class CartBuildException implements Exception {
+  CartBuildException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 
 class BottomButtonsShimmer extends StatelessWidget {
   final bool isOwner;
@@ -201,7 +214,7 @@ Widget bottomButtonWidget({
 
   // 👇 جديد لاستخدامه كبديل زر "إبلاغ"
   VoidCallback? onMakeOffer,
-
+  CartItemBuilder? cartBuilder,
   // ✅ هوكات اختيارية لنداءات API
   Future<bool> Function()? onPausePressed,
   Future<bool> Function()? onResumePressed,
@@ -471,6 +484,8 @@ Widget bottomButtonWidget({
     moreDetailDynamicFields: moreDetailDynamicFields,
     onUpdateFields: onUpdateFields,
     onMakeOffer: onMakeOffer, // 👈 هنا الربط
+    cartBuilder: cartBuilder,
+
   );
 }
 
@@ -568,6 +583,7 @@ class AdDetailsBottomBar extends StatefulWidget {
   final List<CustomFieldBuilder> moreDetailDynamicFields;
   final void Function(List<CustomFieldBuilder>) onUpdateFields;
   final VoidCallback? onMakeOffer;
+  final CartItemBuilder? cartBuilder;
 
 
 
@@ -577,6 +593,7 @@ class AdDetailsBottomBar extends StatefulWidget {
 
     super.key,
     this.onMakeOffer,
+    this.cartBuilder,
     required this.model,
     required this.moreDetailDynamicFields,
     required this.onUpdateFields,
@@ -596,6 +613,7 @@ class _AdDetailsBottomBarState extends State<AdDetailsBottomBar> {
   void Function(List<CustomFieldBuilder>) get onUpdateFields =>
       widget.onUpdateFields;
   VoidCallback? get onMakeOffer => widget.onMakeOffer;
+  CartItemBuilder? get cartBuilder => widget.cartBuilder;
 
   // --------------------------------------------
   // 📨 فتح الدردشة (يعتمد على منطقك الحالي في المشروع)
@@ -799,6 +817,8 @@ class _AdDetailsBottomBarState extends State<AdDetailsBottomBar> {
 
         final List<Map<String, dynamic>> selectedCustomFields =
         buildSelectedCustomFieldsPayload();
+        final List<Map<String, dynamic>>? selectedCustomFieldsPayload =
+        selectedCustomFields.isEmpty ? null : selectedCustomFields;
 
         if (model.id == null) {
           HelperUtils.showSnackBarMessage(
@@ -811,12 +831,29 @@ class _AdDetailsBottomBarState extends State<AdDetailsBottomBar> {
 
 
 
-        final cartItem = Cart.fromItemModel(
-          model,
-          quantity: 1,
-          selectedCustomFields:
-          selectedCustomFields.isEmpty ? null : selectedCustomFields,
-        );
+        late final Cart cartItem;
+        try {
+          if (cartBuilder != null) {
+            cartItem = cartBuilder!(
+              selectedCustomFields: selectedCustomFieldsPayload,
+            );
+          } else {
+            cartItem = Cart.fromItemModel(
+              model,
+              quantity: 1,
+              selectedCustomFields: selectedCustomFieldsPayload,
+            );
+          }
+        } on CartBuildException catch (error) {
+          HelperUtils.showSnackBarMessage(context, error.message);
+          return;
+        } catch (_) {
+          HelperUtils.showSnackBarMessage(
+            context,
+            'تعذر تجهيز هذا المنتج للسلة. حاول مرة أخرى لاحقاً.',
+          );
+          return;
+        }
 
         final cartCubit = context.read<CartCubit>();
         final existingItems = cartCubit.state.items;

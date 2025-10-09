@@ -23,6 +23,7 @@ import 'package:marib/ui/screens/Transaction_screen.dart';
 import 'package:marib/ui/screens/chat/chat_list_screen.dart';
 import 'package:marib/ui/screens/home_screen/home_screen.dart';
 import 'package:marib/ui/screens/user_profile/profile_screen.dart';
+import 'package:marib/ui/screens/wallet/wallet_screen.dart';
 
 import 'package:marib/ui/screens/widgets/maintenance_mode.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';

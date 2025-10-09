@@ -1,3 +1,33 @@
+#main #main-content .page-title--items-index,
+#main #main-content .section--items-index {
+    margin-left: -2rem;
+    margin-right: -2rem;
+}
+
+#main #main-content .page-title--items-index {
+    padding-left: 2rem;
+    padding-right: 2rem;
+}
+
+#main #main-content .section--items-index {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+@media (max-width: 767.98px) {
+    #main #main-content .page-title--items-index,
+    #main #main-content .section--items-index {
+        margin-left: -1rem;
+        margin-right: -1rem;
+    }
+
+    #main #main-content .page-title--items-index {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}
+
+
 .items-index {
     display: flex;
     flex-direction: column;

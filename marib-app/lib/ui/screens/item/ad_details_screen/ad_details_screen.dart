@@ -95,6 +95,13 @@ import 'fetch_item_details_cubit.dart';
 import 'package:marib/data/repositories/item/item_repository.dart';
 import 'package:marib/ui/screens/item/ad_details_screen/fetch_item_details_cubit.dart'
     as details;
+import 'package:marib/data/cubits/item/fetch_item_purchase_options_cubit.dart';
+import 'package:marib/data/model/item/cart_model.dart';
+import 'package:marib/data/model/item/purchase_options.dart';
+import 'package:marib/data/repositories/item/item_purchase_options_repository.dart';
+
+
+
 
 class _AdItemDetailsRepository implements details.ItemDetailsRepository {
   _AdItemDetailsRepository(this._itemRepository, {this.fallbackSlug});
@@ -243,6 +250,11 @@ class AdDetailsScreen extends StatefulWidget {
                 initialItem: config.initialModel,
               ),
             ),
+          ),
+
+          BlocProvider(
+            create: (context) =>
+                FetchItemPurchaseOptionsCubit(ItemPurchaseOptionsRepository()),
           ),
         ],
         child: AdDetailsScreen(
@@ -402,6 +414,13 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   List<CustomFieldBuilder> moreDetailDynamicFields = [];
   late ItemModel _currentItem;
   CartSafetyTipsPayload? _lastCartSafetyTips;
+  ItemPurchaseOptions? _purchaseOptions;
+  bool _purchaseOptionsLoading = false;
+  String? _purchaseOptionsError;
+  Map<String, String> _selectedAttributes = <String, String>{};
+  String? _selectedVariantKey;
+  ItemVariantStockOption? _selectedVariantStock;
+  int? _lastPurchaseOptionsItemId;
 
   bool get isAddedByMe =>
       (_currentItem.user?.id != null
@@ -489,6 +508,228 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
           .fetchCustomFields(categoryIds: categoryIds);
     }
   }
+
+
+
+
+
+  void _fetchPurchaseOptionsForCurrentItem({bool forceRefresh = false}) {
+    final int? itemId = _currentItem.id ?? widget.model.id;
+    if (itemId == null) {
+      return;
+    }
+
+    if (!forceRefresh &&
+        _lastPurchaseOptionsItemId == itemId &&
+        _purchaseOptions != null) {
+      return;
+    }
+
+    _lastPurchaseOptionsItemId = itemId;
+
+    void updateState() {
+      _purchaseOptionsLoading = true;
+      if (forceRefresh) {
+        _purchaseOptionsError = null;
+      }
+    }
+
+    if (mounted) {
+      setState(updateState);
+    } else {
+      updateState();
+    }
+
+    context
+        .read<FetchItemPurchaseOptionsCubit>()
+        .fetch(itemId: itemId, forceRefresh: forceRefresh);
+  }
+
+  void _handlePurchaseOptionsState(
+      BuildContext context,
+      FetchItemPurchaseOptionsState state,
+      ) {
+    if (state is FetchItemPurchaseOptionsInProgress) {
+      void update() {
+        _purchaseOptionsLoading = true;
+        _purchaseOptionsError = null;
+      }
+
+      if (mounted) {
+        setState(update);
+      } else {
+        update();
+      }
+      return;
+    }
+
+    if (state is FetchItemPurchaseOptionsSuccess) {
+      _applyPurchaseOptions(state.options);
+      return;
+    }
+
+    if (state is FetchItemPurchaseOptionsFailure) {
+      void update() {
+        _purchaseOptionsLoading = false;
+        _purchaseOptionsError = state.message;
+      }
+
+      if (mounted) {
+        setState(update);
+      } else {
+        update();
+      }
+    }
+  }
+
+  void _applyPurchaseOptions(ItemPurchaseOptions options) {
+    final Map<String, String> sanitized = _sanitizeSelections(options);
+
+    void update() {
+      _purchaseOptions = options;
+      _purchaseOptionsLoading = false;
+      _purchaseOptionsError = null;
+      _selectedAttributes = sanitized;
+      _selectedVariantKey = _computeVariantKey(options, sanitized);
+      _selectedVariantStock = _findVariantStock(_selectedVariantKey);
+      _currentItem = _currentItem.copyWith(
+        price: options.basePrice,
+        finalPrice: options.finalPrice,
+        discount: options.discount ?? _currentItem.discount,
+      );
+    }
+
+    if (mounted) {
+      setState(update);
+    } else {
+      update();
+    }
+  }
+
+  Map<String, String> _sanitizeSelections(
+      ItemPurchaseOptions options, {
+        Map<String, String>? seed,
+      }) {
+    final Map<String, String> source =
+    seed != null ? Map<String, String>.from(seed) : Map<String, String>.from(_selectedAttributes);
+    final Map<String, String> sanitized = <String, String>{};
+
+    for (final ItemPurchaseAttributeOption attribute in options.attributes) {
+      final List<String> allowed = attribute.allowedValues.isNotEmpty
+          ? attribute.allowedValues
+          : attribute.values;
+      final String key = attribute.key;
+      final String? rawValue = source[key]?.trim();
+
+      if (rawValue != null &&
+          rawValue.isNotEmpty &&
+          (allowed.isEmpty || allowed.contains(rawValue))) {
+        sanitized[key] = rawValue;
+        continue;
+      }
+
+      final String? defaultValue = attribute.defaultValue?.trim();
+      if (defaultValue != null &&
+          defaultValue.isNotEmpty &&
+          (allowed.isEmpty || allowed.contains(defaultValue))) {
+        sanitized[key] = defaultValue;
+        continue;
+      }
+
+      if (attribute.requiredForCheckout && allowed.isNotEmpty) {
+        sanitized[key] = allowed.first;
+      }
+    }
+
+    return sanitized;
+  }
+
+  String? _computeVariantKey(
+      ItemPurchaseOptions options,
+      Map<String, String> selections,
+      ) {
+    final List<MapEntry<String, String>> affecting = <MapEntry<String, String>>[];
+
+    for (final ItemPurchaseAttributeOption attribute in options.attributes) {
+      if (!attribute.affectsStock) {
+        continue;
+      }
+
+      final String? value = selections[attribute.key]?.trim();
+      if (value != null && value.isNotEmpty) {
+        affecting.add(MapEntry(attribute.key.trim(), value));
+      }
+    }
+
+    if (affecting.isEmpty) {
+      return null;
+    }
+
+    affecting.sort(
+          (MapEntry<String, String> a, MapEntry<String, String> b) =>
+          a.key.toLowerCase().compareTo(b.key.toLowerCase()),
+    );
+
+    return affecting
+        .map(
+          (MapEntry<String, String> entry) =>
+      '${Uri.encodeComponent(entry.key)}=${Uri.encodeComponent(entry.value)}',
+    )
+        .join('|');
+  }
+
+  ItemVariantStockOption? _findVariantStock(String? variantKey) {
+    if (variantKey == null || variantKey.isEmpty) {
+      return null;
+    }
+
+    final ItemPurchaseOptions? options = _purchaseOptions;
+    if (options == null) {
+      return null;
+    }
+
+    for (final ItemVariantStockOption stock in options.variantStocks) {
+      if (stock.variantKey == variantKey) {
+        return stock;
+      }
+    }
+
+    return null;
+  }
+
+  void _onAttributeSelectionChanged(String key, String? value) {
+    final ItemPurchaseOptions? options = _purchaseOptions;
+    if (options == null) {
+      return;
+    }
+
+    final String normalizedKey = key.trim();
+    final String? normalizedValue = value?.trim();
+    final Map<String, String> nextSelections =
+    Map<String, String>.from(_selectedAttributes);
+
+    if (normalizedValue == null || normalizedValue.isEmpty) {
+      nextSelections.remove(normalizedKey);
+    } else {
+      nextSelections[normalizedKey] = normalizedValue;
+    }
+
+    final Map<String, String> sanitized =
+    _sanitizeSelections(options, seed: nextSelections);
+
+    void update() {
+      _selectedAttributes = sanitized;
+      _selectedVariantKey = _computeVariantKey(options, sanitized);
+      _selectedVariantStock = _findVariantStock(_selectedVariantKey);
+    }
+
+    if (mounted) {
+      setState(update);
+    } else {
+      update();
+    }
+  }
+
 
   int? _resolveSellerId(ItemModel item) {
     if (item.user?.id != null) {
@@ -985,6 +1226,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
     if (triggerDependentFetches) {
       _fetchCustomFieldsForCurrentItem();
+      _fetchPurchaseOptionsForCurrentItem(forceRefresh: true);
       _fetchAuxiliaryDataForCurrentItem();
       setItemClick();
     }
@@ -1098,21 +1340,357 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     }
   }
 
+  Widget _buildPurchaseOptionsSection() {
+    if (_purchaseOptionsLoading && _purchaseOptions == null) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_purchaseOptionsError != null && _purchaseOptions == null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'تعذر تحميل خيارات المنتج حالياً.',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: Theme.of(context).colorScheme.error),
+            ),
+            TextButton(
+              onPressed: () =>
+                  _fetchPurchaseOptionsForCurrentItem(forceRefresh: true),
+              child: const Text('إعادة المحاولة'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final ItemPurchaseOptions? options = _purchaseOptions;
+    if (options == null) {
+      return const SizedBox.shrink();
+    }
+
+    final List<Widget> children = <Widget>[];
+
+    if (_purchaseOptionsLoading) {
+      children.add(const LinearProgressIndicator());
+      children.add(const SizedBox(height: 12));
+    }
+
+    if (options.attributes.isNotEmpty) {
+      children.add(
+        Text(
+          'خيارات الشراء',
+          style: Theme.of(context)
+              .textTheme
+              .titleMedium
+              ?.copyWith(fontWeight: FontWeight.w600),
+        ),
+      );
+      children.add(const SizedBox(height: 12));
+
+      for (final ItemPurchaseAttributeOption attribute in options.attributes) {
+        children.add(_buildAttributeSelector(attribute));
+        children.add(const SizedBox(height: 12));
+      }
+
+      if (_selectedVariantStock != null) {
+        final ItemVariantStockOption stock = _selectedVariantStock!;
+        children.add(
+          Text(
+            'الكمية المتاحة: ${stock.availableStock}',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: stock.availableStock > 0 ? Colors.green : Colors.red,
+            ),
+          ),
+        );
+      } else if (options.variantStocks.isNotEmpty) {
+        children.add(
+          Text(
+            'اختر التوليفة المناسبة لمعرفة الكمية المتوفرة في المخزون.',
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: Theme.of(context).hintColor),
+          ),
+        );
+      }
+    }
+
+    final ItemDiscount? discount = options.discount;
+    if (discount != null) {
+      if (children.isNotEmpty) {
+        children.add(const SizedBox(height: 20));
+      }
+      final bool active =
+          discount.isActive || options.finalPrice < options.basePrice;
+      children.add(
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceVariant,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'تفاصيل الخصم',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'السعر بعد الخصم: ${_formatPrice(options.finalPrice)}',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              Text(
+                'السعر الأساسي: ${_formatPrice(options.basePrice)}',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: Theme.of(context).hintColor),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                active
+                    ? 'الخصم مفعل حالياً.'
+                    : 'الخصم غير مفعل في الوقت الحالي.',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(
+                  color:
+                  active ? Colors.green : Theme.of(context).hintColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (children.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
+      ),
+    );
+  }
+
+  Widget _buildAttributeSelector(ItemPurchaseAttributeOption attribute) {
+    final ThemeData theme = Theme.of(context);
+    final List<String> values = attribute.allowedValues.isNotEmpty
+        ? attribute.allowedValues
+        : attribute.values;
+
+    if (values.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${attribute.name}${attribute.requiredForCheckout ? ' *' : ''}',
+            style:
+            theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'لا توجد قيم محددة لهذه السمة.',
+            style:
+            theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+          ),
+        ],
+      );
+    }
+
+    final bool isRequired = attribute.requiredForCheckout;
+    final List<DropdownMenuItem<String>> items = <DropdownMenuItem<String>>[
+      if (!isRequired)
+        const DropdownMenuItem<String>(
+          value: '',
+          child: Text('بدون اختيار'),
+        ),
+      ...values.map(
+            (String value) => DropdownMenuItem<String>(
+          value: value,
+          child: Text(value),
+        ),
+      ),
+    ];
+
+    final String? currentValue = _selectedAttributes[attribute.key];
+    final String? dropdownValue = isRequired
+        ? (currentValue ?? values.first)
+        : (currentValue ?? '');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '${attribute.name}${isRequired ? ' *' : ''}',
+          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          value: dropdownValue,
+          items: items,
+          onChanged: (String? value) =>
+              _onAttributeSelectionChanged(attribute.key, value),
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            contentPadding:
+            EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatPrice(double value) {
+    final NumberFormat formatter = NumberFormat.currency(
+      locale: 'ar',
+      symbol: '',
+      decimalDigits: 2,
+    );
+    final String formatted = formatter.format(value).trim();
+    final String? currency = _currentItem.currency?.trim();
+    if (currency == null || currency.isEmpty) {
+      return formatted;
+    }
+    return '$formatted $currency';
+  }
+
+  Cart _buildCartItemForCurrentSelection({
+    List<Map<String, dynamic>>? selectedCustomFields,
+  }) {
+    final ItemModel item = _currentItem;
+    if (item.id == null) {
+      throw CartBuildException('لا يمكن إضافة هذا المنتج إلى السلة حالياً.');
+    }
+
+    final ItemPurchaseOptions? options = _purchaseOptions;
+    if (_purchaseOptionsLoading && options == null) {
+      throw CartBuildException(
+          'يتم تحميل خيارات المنتج، يرجى الانتظار قليلاً قبل الإضافة.');
+    }
+
+    final Map<String, String> selections = options != null
+        ? _sanitizeSelections(options, seed: _selectedAttributes)
+        : Map<String, String>.from(_selectedAttributes);
+
+    if (options != null) {
+      for (final ItemPurchaseAttributeOption attribute in options.attributes) {
+        final String key = attribute.key;
+        final String displayName =
+        attribute.name.isNotEmpty ? attribute.name : key;
+        final String value = selections[key]?.trim() ?? '';
+
+        if (attribute.requiredForCheckout && value.isEmpty) {
+          throw CartBuildException(
+            'الرجاء اختيار قيمة للسمة "$displayName" قبل المتابعة.',
+          );
+
+        }
+        if (attribute.affectsStock && options.variantStocks.isNotEmpty) {
+          if (value.isEmpty) {
+            throw CartBuildException(
+              'اختر قيمة للسمة "$displayName" لتحديد التوليفة المتاحة في المخزون.',
+            );
+          }
+        }
+      }
+    }
+
+    final String? variantKey = options != null
+        ? _computeVariantKey(options, selections)
+        : _selectedVariantKey;
+
+    final ItemVariantStockOption? stockOption =
+    options != null ? _findVariantStock(variantKey) : _selectedVariantStock;
+
+    if (stockOption != null && stockOption.availableStock <= 0) {
+      throw CartBuildException('التوليفة المحددة غير متوفرة حالياً في المخزون.');
+    }
+
+    if (variantKey != null && options != null &&
+        options.variantStocks.isNotEmpty && stockOption == null) {
+      throw CartBuildException('لم يتم العثور على مخزون للتوليفة المحددة.');
+    }
+
+    final double unitPrice = options?.finalPrice ??
+        item.finalPrice ??
+        item.price ??
+        0.0;
+
+    final Map<String, dynamic>? variantAttributes = selections.isEmpty
+        ? null
+        : Map<String, dynamic>.from(selections);
+
+    final Map<String, dynamic>? stockSnapshot = stockOption != null
+        ? <String, dynamic>{
+      'variant_key': stockOption.variantKey,
+      'stock': stockOption.stock,
+      'reserved_stock': stockOption.reservedStock,
+      'available_stock': stockOption.availableStock,
+    }
+        : null;
+
+    final List<Map<String, dynamic>>? customFields =
+    (selectedCustomFields == null || selectedCustomFields.isEmpty)
+        ? null
+        : selectedCustomFields;
+
+    return Cart.fromItemModel(
+      item,
+      quantity: 1,
+      selectedCustomFields: customFields,
+      variantKey: variantKey,
+      variantAttributes: variantAttributes,
+      stockSnapshot: stockSnapshot,
+      unitPrice: unitPrice,
+      unitPriceLocked: unitPrice,
+      currency: item.currency,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BlocListener<FetchItemDetailsCubit, FetchItemDetailsState>(
-      listener: (context, state) {
-        if (state is FetchItemDetailsSuccess) {
-          _setCurrentItem(
-            state.item,
-            triggerDependentFetches: true,
-          );
-        } else if (state is FetchItemDetailsFailure &&
-            isAddedByMe &&
-            _hasLocalItemDetails) {
-          context.read<FetchItemDetailsCubit>().seed(_currentItem);
-        }
-      },
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<FetchItemDetailsCubit, FetchItemDetailsState>(
+          listener: (context, state) {
+            if (state is FetchItemDetailsSuccess) {
+              _setCurrentItem(
+                state.item,
+                triggerDependentFetches: true,
+              );
+              _fetchPurchaseOptionsForCurrentItem(forceRefresh: true);
+            } else if (state is FetchItemDetailsFailure &&
+                isAddedByMe &&
+                _hasLocalItemDetails) {
+              context.read<FetchItemDetailsCubit>().seed(_currentItem);
+            }
+          },
+        ),
+        BlocListener<FetchItemPurchaseOptionsCubit,
+            FetchItemPurchaseOptionsState>(
+          listener: _handlePurchaseOptionsState,
+        ),
+      ],
       child: BlocBuilder<FetchItemDetailsCubit, FetchItemDetailsState>(
         builder: (context, state) {
           return _buildContentForState(context, state);
@@ -1212,6 +1790,11 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
         // 👇 هذا الجديد
         onMakeOffer: () => makeOfferBottomSheet(_currentItem),
+
+        cartBuilder: ({List<Map<String, dynamic>>? selectedCustomFields}) =>
+            _buildCartItemForCurrentSelection(
+              selectedCustomFields: selectedCustomFields,
+            ),
 
         onUpdateFields: (newFields) {
           setState(() {
@@ -1406,6 +1989,9 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
                 // السعر والحالة
                 adInfo.priceAndStatus(),
+
+                _buildPurchaseOptionsSection(),
+
 
                 // العنوان والتاريخ (لو فيه عنوان)
                 if (!hideLocation && item.address != null)

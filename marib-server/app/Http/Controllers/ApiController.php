@@ -2718,10 +2718,7 @@ class ApiController extends Controller {
 
     public function getPaymentTransactions(Request $request) {
     
-        ResponseService::errorResponse('Online payment gateways are no longer supported.');
-
-
-                try {
+        try {
             $transactions = PaymentTransaction::with([
                 'manualPaymentRequest.manualBank',
                 'order',

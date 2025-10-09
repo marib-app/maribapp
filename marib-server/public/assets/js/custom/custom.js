@@ -205,157 +205,30 @@ $('input[type="radio"][name="item_limit_type"]').on('click', function () {
 });
 
 $('#filter').change(function () {
-
+    let selectedValue = $(this).val();
+    // Hide all criteria elements initially
+    $('#category_criteria, #price_criteria').hide();
+    // Show the relevant criteria based on the selected option
+    if (selectedValue === "category_criteria") {
+        $('#category_criteria').show();
+    } else if (selectedValue === "price_criteria") {
+        $('#price_criteria').show();
+    }
 });
 
 $('#edit_filter').change(function () {
-
-});
-
-
-
-
-
-const featureSectionDefaultType = (function () {
-    if (typeof window.featureSectionDefaultType === 'string') {
-        const trimmed = window.featureSectionDefaultType.trim();
-
-        if (trimmed !== '') {
-            return trimmed;
-        }
-    }
-
-    return null;
-})();
-
-
-
-window.loadFeatureSectionCategories = function (sectionType, $select, selectedValues = []) {
-    if (!$select || !$select.length) {
-        return $.Deferred().resolve().promise();
-    }
-
-    const url = window.featureSectionCategoriesUrl;
-    const normalizedValues = Array.isArray(selectedValues)
-        ? selectedValues.filter(function (value) {
-            return value !== null && value !== '' && typeof value !== 'undefined';
-        }).map(String)
-        : [];
-    const placeholder = $select.data('placeholder') || '';
-    const hasSelect2 = typeof $.fn.select2 === 'function';
-    const wasSelect2 = hasSelect2 && $select.hasClass('select2-hidden-accessible');
-
-    if (wasSelect2) {
-        $select.select2('destroy');
-    }
-
-    $select.prop('disabled', true);
-
-    if (!url) {
-        $select.html('');
-        if (hasSelect2) {
-            $select.select2({
-                placeholder: placeholder,
-                width: '100%'
-            });
-        }
-
-        if (normalizedValues.length) {
-            $select.val(normalizedValues).trigger('change');
-        } else {
-            $select.val(null).trigger('change');
-        }
-
-        $select.prop('disabled', false);
-
-        return $.Deferred().resolve().promise();
-    }
-
-    const request = $.ajax({
-        url: url,
-        method: 'GET',
-        data: {
-            
-            section_type: sectionType || featureSectionDefaultType || null
-
-        }
-    });
-
-    request.done(function (response) {
-        const options = response && response.options ? response.options : '';
-        $select.html(options);
-
-        if (hasSelect2) {
-            $select.select2({
-                placeholder: placeholder,
-                width: '100%'
-            });
-        }
-
-        if (normalizedValues.length) {
-            $select.val(normalizedValues).trigger('change');
-        } else {
-            $select.val(null).trigger('change');
-        }
-    });
-
-    request.fail(function () {
-        $select.html('');
-
-        if (hasSelect2) {
-            $select.select2({
-                placeholder: placeholder,
-                width: '100%'
-            });
-        }
-
-        $select.val(null).trigger('change');
-    });
-
-    request.always(function () {
-        $select.prop('disabled', false);
-    });
-
-    return request;
-};
-
-$(document).on('change', '#section_type', function () {
-    if (typeof window.loadFeatureSectionCategories !== 'function') {
-        return;
-    }
-
-    const $categorySelect = $('#category_id');
-    const request = window.loadFeatureSectionCategories($(this).val(), $categorySelect);
-
-    if (request && typeof request.always === 'function') {
-        request.always(function () {
-            $categorySelect.removeData('selected');
-        });
+    let selectedValue = $(this).val();
+    $('#edit_min_price').val("");
+    $('#edit_max_price').val("");
+    // Hide all criteria elements initially
+    $('#edit_category_criteria, #edit_price_criteria').hide();
+    // Show the relevant criteria based on the selected option
+    if (selectedValue === "category_criteria") {
+        $('#edit_category_criteria').show();
+    } else if (selectedValue === "price_criteria") {
+        $('#edit_price_criteria').show();
     }
 });
-
-$(document).on('change', '#edit_section_type', function () {
-    if (typeof window.loadFeatureSectionCategories !== 'function') {
-        return;
-    }
-
-    const $categorySelect = $('#edit_category_id');
-    const selected = $categorySelect.data('selected');
-    const request = window.loadFeatureSectionCategories($(this).val(), $categorySelect, Array.isArray(selected) ? selected : []);
-
-    if (request && typeof request.always === 'function') {
-        request.always(function () {
-            $categorySelect.removeData('selected');
-        });
-    } else {
-        $categorySelect.removeData('selected');
-    }
-});
-
-
-
-
-
 
 $("#include_image").change(function () {
     if (this.checked) {
@@ -504,7 +377,7 @@ $('#edit_final_price').on('input', function () {
     $('#edit_discount_in_percentage').val(discount);
 })
 $('#slug').bind('keyup blur', function () {
-    $(this).val($(this).val().replace(/[^A-Za-z0-9_-]/g, ''))
+    $(this).val($(this).val().replace(/[^A-Za-z0-9-]/g, ''))
 });
 
 function toggleRejectedReasonVisibility() {
@@ -769,17 +642,18 @@ $('#category_name').on('input', function () {
     $('#category_slug').val(slug);
 });
 
+$('.feature-section-name').on('input', function () {
+    let slug = generateSlug($(this).val());
+    $('.feature-section-slug').val(slug);
+});
 
+$('.edit-feature-section-name').on('input', function () {
+    let slug = generateSlug($(this).val());
+    $('.edit-feature-section-slug').val(slug);
+});
 $('#title').on('input', function () {
     let slug = generateSlug($(this).val())
-    const $slugInput = $('#slug');
-
-    if (!$slugInput.length || $slugInput.hasClass('feature-section-slug')) {
-        return;
-    }
-
-    $slugInput.val(slug);
-
+    $('#slug').val(slug);
 });
 function descriptionFormatter(value, row, index) {
     if (value.length > 100) {
@@ -941,50 +815,21 @@ $('#verification_status').change(function () {
     }
 });
 function customValidation() {
-    if (typeof window.updateSliderTargetId === 'function') {
-        window.updateSliderTargetId();
-    }
-
-    const targetType = $('#target_type').val();
-    const targetId = $('#slider_target_id').val();
-    const actionType = $('#action_type').val();
-    const linkValue = ($('input[name="action_link_url"]').val() || $('input[name="link"]').val() || '').trim();
-    const couponCode = ($('#action_coupon_code').val() || '').trim();
-    const chatUser = $('#action_chat_user_id').val();
-
-    const hasTarget = targetType && targetType !== 'none' && targetId && targetId !== '';
-    const hasAction = actionType && actionType !== 'none';
-    const hasLink = linkValue.length > 0;
-
-    if (targetType && targetType !== 'none' && !hasTarget) {
-        $('.invalid-form-error-message').html('يرجى اختيار عنصر مرتبط بالوجهة المحددة.').addClass('text-danger');
+    let item = $("select[name=item]").val();
+    let category = $("select[name=category_id]").val();
+    let link = $("input[name=link]").val();
+    if (item == "" && category == "" && link == "") {
+        // Display an error message
+        $('.invalid-form-error-message').html("Please select either Item, Category, or Add Link").addClass("text-danger");
         return false;
     }
 
-    if (!hasTarget && !hasAction && !hasLink) {
-        $('.invalid-form-error-message').html('يرجى اختيار وجهة أو إجراء أو إدخال رابط صالح.').addClass('text-danger');
+    if ((item != "" && category != "") || (item != "" && link != "") || (category != "" && link != "")) {
+        $('.invalid-form-error-message').html("Please select only one field: Item, Category, or Link").addClass("text-danger");
         return false;
     }
 
-    if (actionType === 'open_chat' && targetType !== 'user' && !chatUser) {
-        $('.invalid-form-error-message').html('يرجى اختيار مستخدم لبدء الدردشة أو تحديد الوجهة من نوع مستخدم.').addClass('text-danger');
-        return false;
-    }
-
-    if (actionType === 'apply_coupon' && couponCode === '') {
-        $('.invalid-form-error-message').html('يرجى إدخال رمز الكوبون للإجراء المحدد.').addClass('text-danger');
-
-
-        return false;
-    }
-
-    if (actionType === 'open_link' && linkValue === '') {
-        $('.invalid-form-error-message').html('يرجى إدخال رابط صالح لفتح الرابط.').addClass('text-danger');
-
-        return false;
-    }
-
-    $('.invalid-form-error-message').removeClass('text-danger').html('');
+    $('.invalid-form-error-message').html('');
 
     return true;
 }

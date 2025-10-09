@@ -81,15 +81,6 @@ span.mySpanClass {
 }
 
 /*# Custom CSS Start*/
-
-.table-item-thumb {
-    width: 60px !important;
-    height: 60px !important;
-    object-fit: cover;
-    display: inline-block;
-}
-
-
 .style_image {
     width: 100%;
     filter: grayscale(80%);
@@ -197,100 +188,6 @@ span.mySpanClass {
     position: relative;
     cursor: default !important;
 }
-
-
-
-
-.custom-field-grid .custom-field-card {
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 0.75rem;
-    padding: 1rem;
-    background-color: #fff;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.custom-field-grid .custom-field-heading {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
-}
-
-.custom-field-grid .custom-field-icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 0.5rem;
-    object-fit: cover;
-    flex-shrink: 0;
-}
-
-.custom-field-grid .custom-field-name {
-    font-size: 1rem;
-    font-weight: 600;
-}
-
-.custom-field-grid .custom-field-description {
-    max-width: 65%;
-    line-height: 1.2;
-    font-size: 0.8rem;
-}
-
-.custom-field-grid .custom-field-body {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.custom-field-grid .custom-field-value {
-    font-size: 0.95rem;
-    line-height: 1.4;
-}
-
-.custom-field-grid .custom-field-files {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-}
-
-.custom-field-grid .custom-field-file-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.35rem 0.65rem;
-    border-radius: 999px;
-    border: 1px solid var(--bs-primary);
-    background-color: rgba(var(--bs-primary-rgb), 0.08);
-    color: var(--bs-primary);
-    font-size: 0.85rem;
-    text-decoration: none;
-    transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.custom-field-grid .custom-field-file-link:hover {
-    background-color: var(--bs-primary);
-    color: #fff;
-}
-
-
-
-.active-column-header,
-.active-column-cell {
-    max-width: 100px;
-    width: 100px;
-    text-align: center;
-    white-space: nowrap;
-}
-
-
-.active-column-cell .form-check {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding-left: 0;
-}
-
-
 
 .delete_icon {
     color: #BB2D3B;

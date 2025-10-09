@@ -192,19 +192,8 @@ class ManualPaymentRequestController extends Controller
 
         $search = trim((string) $request->get('search', ''));
 
-        $payableTypeMap = [
-            'order' => Order::class,
-            'package' => Package::class,
-            'item' => Item::class,
-            ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP => ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP,
-        ];
+        $payableTypeAliases = $this->expandManualPaymentPayableTypeAliases($request->get('payable_type'));
 
-        $payableTypeFilter = $request->get('payable_type');
-        if ($payableTypeFilter !== null && $payableTypeFilter !== '') {
-            $payableTypeFilter = $payableTypeMap[$payableTypeFilter] ?? $payableTypeFilter;
-        } else {
-            $payableTypeFilter = null;
-        }
 
 
 
@@ -228,7 +217,7 @@ class ManualPaymentRequestController extends Controller
             ])
             ->when($search !== '', fn($q) => $q->search($search))
             ->when($request->filled('status'), fn($q) => $q->status($request->input('status')))
-            ->when($payableTypeFilter, fn($q) => $q->payableType($payableTypeFilter))
+            ->when($payableTypeAliases !== [], fn($q) => $q->whereIn('payable_type', $payableTypeAliases))
             ->when($request->filled('payment_gateway'), fn($q) => $q->paymentGateway($request->input('payment_gateway')))
             ->when($departmentFilter !== null, function ($q) use ($departmentFilter) {
                 $q->where(function ($inner) use ($departmentFilter) {
@@ -310,7 +299,7 @@ class ManualPaymentRequestController extends Controller
 
         $statusFilter = $this->normalizeManualPaymentStatus($request->input('status'));
         $gatewayFilter = $this->normalizeManualPaymentGateway($request->input('payment_gateway'));
-        $payableTypeFilter = $this->normalizeManualPaymentPayableType($request->input('payable_type'));
+        $payableTypeAliases = $this->expandManualPaymentPayableTypeAliases($request->input('payable_type'));
         $departmentFilter = $this->normalizeManualPaymentDepartment($request->input('department'));
         $from = $this->normalizeManualPaymentDate($request->input('from'), true);
         $to = $this->normalizeManualPaymentDate($request->input('to'), false);
@@ -321,7 +310,7 @@ class ManualPaymentRequestController extends Controller
                 'manualBank',
                 'user',
                 'payable',
-                'paymentTransaction',
+                'paymentTransaction.order',
             ]);
 
         $recordsTotal = (clone $baseQuery)->count();
@@ -329,7 +318,10 @@ class ManualPaymentRequestController extends Controller
         $filteredQuery = (clone $baseQuery)
             ->when($searchValue !== '', fn(Builder $query) => $query->search($searchValue))
             ->when($statusFilter, fn(Builder $query) => $query->where('status', $statusFilter))
-            ->when($payableTypeFilter, fn(Builder $query) => $query->where('payable_type', $payableTypeFilter))
+            ->when($payableTypeAliases !== [], function (Builder $query) use ($payableTypeAliases) {
+                $query->whereIn('payable_type', $payableTypeAliases);
+            })
+            
             ->when($gatewayFilter, function (Builder $query) use ($gatewayFilter) {
                 if ($gatewayFilter === 'manual_bank') {
                     $query->where(function (Builder $inner) {
@@ -1184,13 +1176,61 @@ class ManualPaymentRequestController extends Controller
         }
 
         return match ($normalized) {
-            'order', 'app\\models\\order' => Order::class,
-            'package', 'app\\models\\package' => Package::class,
-            'item', 'app\\models\\item' => Item::class,
+            'order', 'orders', 'cart_order', 'cart-orders', 'app\\order', 'app\\models\\order' => Order::class,
+            'package', 'packages', 'app\\package', 'app\\models\\package' => Package::class,
+            'item', 'items', 'advertisement', 'advertisements', 'app\\item', 'app\\models\\item' => Item::class,
             ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP,
-            'wallet-top-up' => ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP,
-
+            'wallet',
+            'wallet-top-up',
+            'wallet_top_up',
+            'wallettopup' => ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP,
             default => $type,
+        };
+    }
+
+
+    private function expandManualPaymentPayableTypeAliases($type): array
+    {
+        $canonical = $this->normalizeManualPaymentPayableType($type);
+
+        if ($canonical === null) {
+            return [];
+        }
+
+        return match ($canonical) {
+            Order::class => [
+                Order::class,
+                'order',
+                'orders',
+                'App\\Models\\Order',
+                'App\\Order',
+                'cart_order',
+                'cart-orders',
+            ],
+            Package::class => [
+                Package::class,
+                'package',
+                'packages',
+                'App\\Models\\Package',
+                'App\\Package',
+            ],
+            Item::class => [
+                Item::class,
+                'item',
+                'items',
+                'advertisement',
+                'advertisements',
+                'App\\Models\\Item',
+                'App\\Item',
+            ],
+            ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP => [
+                ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP,
+                'wallet_top_up',
+                'wallet-top-up',
+                'wallettopup',
+                'wallet',
+            ],
+            default => [$canonical, $type],
         };
     }
 
@@ -1357,7 +1397,9 @@ class ManualPaymentRequestController extends Controller
 
     private function manualPaymentPayableTypeLabel(?string $type): string
     {
-        return match ($type) {
+        $canonical = $this->normalizeManualPaymentPayableType($type);
+
+        return match ($canonical) {
             Order::class => trans('Orders'),
             Package::class => trans('Packages'),
             Item::class => trans('Advertisements'),
@@ -1365,7 +1407,12 @@ class ManualPaymentRequestController extends Controller
             ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP => trans('Wallet Top-up'),
 
 
-            default => $type ? class_basename($type) : '—',
+            default => $type
+                ? Str::of(class_basename((string) $type))
+                    ->replace('_', ' ')
+                    ->headline()
+                    ->value()
+                : '—',
         };
     }
 

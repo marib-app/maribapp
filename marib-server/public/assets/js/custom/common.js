@@ -12,107 +12,6 @@ $(document).ready(function () {
         $('[data-toggle="tooltip"]').tooltip()
     })
 
-
-
-    function refreshBootstrapTable($table) {
-        const tableState = $table.data('bootstrap.table');
-
-        if (!tableState || !tableState.options) {
-            window.requestAnimationFrame(function () {
-                refreshBootstrapTable($table);
-            });
-            return;
-        }
-
-        const hasRemoteSource = Boolean(tableState.options.url) || typeof tableState.options.ajax === 'function';
-        if (!hasRemoteSource) {
-            return;
-        }
-
-        if (tableState.options.pageNumber && tableState.options.pageNumber !== 1) {
-            $table.bootstrapTable('refreshOptions', {
-                pageNumber: 1
-            });
-        }
-
-        $table.bootstrapTable('refresh', {
-            silent: true
-        });
-    }
-
-    function initializeBootstrapTables() {
-        const $bootstrapTables = $('table[data-toggle="table"]');
-
-        if (!$bootstrapTables.length) {
-            return;
-        }
-
-
-
-        $bootstrapTables.each(function () {
-            const $table = $(this);
-
-            if ($table.data('autoLoadInitialized')) {
-                return;
-            }
-
-            if (typeof $.fn.bootstrapTable !== 'function') {
-                return;
-            }
-
-            $table.data('autoLoadInitialized', true);
-
-            if (!$table.data('bootstrap.table')) {
-                $table.bootstrapTable();
-            }
-
-            window.requestAnimationFrame(function () {
-                refreshBootstrapTable($table);
-            });
-        });
-    }
-
-    function whenBootstrapTableReady(callback) {
-        if (typeof $.fn.bootstrapTable === 'function') {
-            callback();
-            return;
-        }
-
-        let attempts = 0;
-        const maxAttempts = 20;
-        const intervalId = window.setInterval(function () {
-            if (typeof $.fn.bootstrapTable === 'function') {
-                window.clearInterval(intervalId);
-                callback();
-                return;
-            }
-
-            attempts += 1;
-
-
-            if (attempts >= maxAttempts) {
-                window.clearInterval(intervalId);
-            }
-        }, 100);
-    }
-
-
-    whenBootstrapTableReady(function () {
-        initializeBootstrapTables();
-
-        if (typeof MutationObserver === 'function') {
-            const observer = new MutationObserver(function () {
-                initializeBootstrapTables();
-            });
-
-            observer.observe(document.body || document.documentElement, {
-                childList: true,
-                subtree: true
-            });
-        }
-    });
-
-
     if ($('.permission-tree').length > 0) {
         $(function () {
             $('.permission-tree').on('changed.jstree', function (e, data) {
@@ -144,6 +43,7 @@ $('#create-form,.create-form,.create-form-without-reset').on('submit', function 
     let submitButtonElement = $(this).find(':submit');
     let url = $(this).attr('action');
 
+    let data = new FormData(this);
     let preSubmitFunction = $(this).data('pre-submit-function');
     if (preSubmitFunction) {
         //If custom function name is set in the Form tag then call that function using eval
@@ -151,31 +51,10 @@ $('#create-form,.create-form,.create-form-without-reset').on('submit', function 
             return false;
         }
     }
-
-    const beforeAjaxEvent = $.Event('form:beforeAjax');
-    formElement.trigger(beforeAjaxEvent, [formElement, submitButtonElement]);
-    if (beforeAjaxEvent.isDefaultPrevented()) {
-        return false;
-    }
-
-    // [SCHEMA SYNC] اجمع سكيمة الحقول قبل إنشاء الـFormData
-    if (document.getElementById('service_fields_schema')) {
-        const schemaInput = $('#service_fields_schema');
-        if (!schemaInput.val() && window.ServiceFields && typeof ServiceFields.toJSON === 'function') {
-            schemaInput.val(JSON.stringify(ServiceFields.toJSON()));
-        }
-    }
-
-    let data = new FormData(this);
-
-    // [SCHEMA SYNC] ضمّن السكيمة داخل الـFormData حتى لو لم تُلتقط تلقائياً
-    if (document.getElementById('service_fields_schema')) {
-        data.set('service_fields_schema', $('#service_fields_schema').val() || '[]');
-    }
-
     let customSuccessFunction = $(this).data('success-function');
 
     // noinspection JSUnusedLocalSymbols
+
     function successCallback(response) {
         if (!$(formElement).hasClass('create-form-without-reset')) {
             formElement[0].reset();
@@ -196,6 +75,7 @@ $('#edit-form,.edit-form').on('submit', function (e) {
     e.preventDefault();
     let formElement = $(this);
     let submitButtonElement = $(this).find(':submit');
+    let data = new FormData(this);
     $(formElement).parents('modal').modal('hide');
     // let url = $(this).attr('action') + "/" + data.get('edit_id');
     let url = $(this).attr('action');
@@ -204,28 +84,6 @@ $('#edit-form,.edit-form').on('submit', function (e) {
         //If custom function name is set in the Form tag then call that function using eval
         eval(preSubmitFunction + "()");
     }
-
-    const beforeAjaxEvent = $.Event('form:beforeAjax');
-    formElement.trigger(beforeAjaxEvent, [formElement, submitButtonElement]);
-    if (beforeAjaxEvent.isDefaultPrevented()) {
-        return false;
-    }
-
-    // [SCHEMA SYNC] اجمع سكيمة الحقول قبل إنشاء الـFormData (نفس منطق الإنشاء)
-    if (document.getElementById('service_fields_schema')) {
-        const schemaInput = $('#service_fields_schema');
-        if (!schemaInput.val() && window.ServiceFields && typeof ServiceFields.toJSON === 'function') {
-            schemaInput.val(JSON.stringify(ServiceFields.toJSON()));
-        }
-    }
-
-    let data = new FormData(this);
-
-    // [SCHEMA SYNC] ضمّن السكيمة داخل الـFormData
-    if (document.getElementById('service_fields_schema')) {
-        data.set('service_fields_schema', $('#service_fields_schema').val() || '[]');
-    }
-
     let customSuccessFunction = $(this).data('success-function');
 
     // noinspection JSUnusedLocalSymbols
@@ -348,22 +206,7 @@ $('#editlanguage-form,.editlanguage-form').on('submit', function (e) {
     e.preventDefault();
     let formElement = $(this);
     let submitButtonElement = $(this).find(':submit');
-
-    // [SCHEMA SYNC] احترازياً (لن يؤثر إن لم تكن صفحة الخدمة)
-    if (document.getElementById('service_fields_schema')) {
-        const schemaInput = $('#service_fields_schema');
-        if (!schemaInput.val() && window.ServiceFields && typeof ServiceFields.toJSON === 'function') {
-            schemaInput.val(JSON.stringify(ServiceFields.toJSON()));
-        }
-    }
-
     let data = new FormData(this);
-
-    // [SCHEMA SYNC]
-    if (document.getElementById('service_fields_schema')) {
-        data.set('service_fields_schema', $('#service_fields_schema').val() || '[]');
-    }
-
     $(formElement).parents('modal').modal('hide');
     // let url = $(this).attr('action') + "/" + data.get('edit_id');
     let url = $(this).attr('action');
@@ -376,9 +219,9 @@ $('#editlanguage-form,.editlanguage-form').on('submit', function (e) {
 
     // noinspection JSUnusedLocalSymbols
     function successCallback(response) {
-        setTimeout(() => {
-            window.location.reload();
-        }, 1000);
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
     }
     formAjaxRequest('PUT', url, data, formElement, submitButtonElement, successCallback);
 })

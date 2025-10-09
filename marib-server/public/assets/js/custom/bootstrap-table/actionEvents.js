@@ -36,13 +36,51 @@ window.verificationFieldValueEvents = {
 
 
 window.itemEvents = {
+    'click .editdata': function (e, value, row) {
+        let html = `<table class="table">
+            <tr>
+                <th width="10%">${trans("No.")}</th>
+                <th width="25%" class="text-center">${trans("Image")}</th>
+                <th width="25%">${trans("Name")}</th>
+                <th width="40%">${trans("Value")}</th>
+            </tr>`;
+        $.each(row.custom_fields, function (key, value) {
+            html += `<tr class="mb-2">
+                <td>${key + 1}</td>
+                <td class="text-center">
+                <a class="image-popup-no-margins" href="${value.image}" >
+                <img src=${value.image} height="30px" width="30px" style="border-radius:8px;" alt="" onerror="onErrorImage(event)">
+                </a>
+                </td>
+                <td>${value.name}</td>`;
 
+            if (value.type == "fileinput") {
+                if (value.value != undefined) {
+                    if (value.value?.value.match(/\.(jpg|jpeg|png|svg)$/i)) {
+                        html += `<td><img src="${value.value?.value}" alt="Custom Field Files" class="w-25" onerror="onErrorImage(event)"></td>`
+                    } else {
+                        html += `<td><a target="_blank" href="${value.value?.value}">View File</a></td>`
+                    }
+
+                } else {
+                    html += `<td></td>`
+                }
+            } else {
+                html += `<td class="text-break">${value.value?.value || ''}</td>`
+            }
+
+            html += `</tr>`;
+        });
+
+        html += "</table>";
+        $('#custom_fields').html(html)
+    },
 
     'click .edit-status': function (e, value, row) {
         $('#status').val(row.status).trigger('change');
         $('#rejected_reason').val(row.rejected_reason);
     }
-};
+}
 
 window.packageEvents = {
     'click .edit_btn': function (e, value, row) {
@@ -105,183 +143,39 @@ window.reportReasonEvents = {
     }
 }
 
-
-const FEATURE_SECTION_TYPE_ALIAS_MAP = {
-    real_estate_services: 'real_estate',
-    realestateservices: 'real_estate',
-    itemslistrealestate: 'real_estate',
-    tourism_services: 'tourism',
-    tourismservices: 'tourism',
-    itemslisttourism: 'tourism',
-    e_store: 'merchants',
-    estore: 'merchants',
-    itemslistseller: 'merchants',
-    shein_products: 'shein',
-    sheinproducts: 'shein',
-    itemslistshein: 'shein',
-    computer_section: 'computer',
-    computersection: 'computer',
-    itemslistcomputer: 'computer',
-    public_ads: 'public',
-    publicads: 'public',
-    itemslistpublic: 'public',
-    homepage: 'public',
-    home_page: 'public',
-
-};
-
-
-
-
-const FEATURE_SECTION_DEFAULT_TYPE = (function () {
-    if (typeof window.featureSectionDefaultType === 'string') {
-        const trimmed = window.featureSectionDefaultType.trim();
-
-        if (trimmed !== '') {
-            return trimmed;
-        }
-    }
-
-    return null;
-})();
-
-
-
-function normalizeFeatureSectionTypeValue(value) {
-    if (typeof value !== 'string' || value.trim() === '') {
-        return value;
-    }
-
-    const original = value.trim();
-    const lower = original.toLowerCase();
-    const aliasMap = window.featureSectionTypeAliasMap || {};
-
-    if (Object.prototype.hasOwnProperty.call(aliasMap, lower)) {
-        return aliasMap[lower];
-    }
-
-    if (Object.prototype.hasOwnProperty.call(FEATURE_SECTION_TYPE_ALIAS_MAP, lower)) {
-        return FEATURE_SECTION_TYPE_ALIAS_MAP[lower];
-    }
-
-    return lower;
-}
-
-
 window.featuredSectionEvents = {
     'click .edit_btn': function (e, value, row) {
         $('#edit_title').val(row.title);
         $('#edit_description').val(row.description);
-        const $editSlug = $('#edit_slug');
-        if ($editSlug.length) {
-            const slugValue = (row.slug || '').toString();
-            $editSlug.data('featureSectionCurrentSlug', slugValue);
-            $editSlug.data('featureSectionPreferredSlug', slugValue);
-        }
-
-
-        const sectionType = normalizeFeatureSectionTypeValue(row.section_type || FEATURE_SECTION_DEFAULT_TYPE || '');
-        const $editSectionType = $('#edit_section_type');
-
-
-        if ($editSectionType.length) {
-            const effectiveSectionType = sectionType || FEATURE_SECTION_DEFAULT_TYPE || null;
-            if (effectiveSectionType !== null) {
-                $editSectionType.val(effectiveSectionType).trigger('change');
-            } else {
-                $editSectionType.val(null).trigger('change');
-            }
-        
-        }
-
-
+        $('#edit_slug').val(row.slug);
         $('#edit_filter').val(row.filter).trigger('change');
+        $('input[name="edit_style_app"][value="' + row.style + '"]').prop('checked', true);
 
-
-        const $editModal = $('#editModal');
-        const $styleInputs = $editModal.find('input[name="style"]');
-        $styleInputs.prop('checked', false);
-
-        const $styleInput = $styleInputs.filter('[value="' + row.style + '"]');
-        $styleInput.prop('checked', true);
-
-        $editModal.find('.radio-img').removeClass('selected');
-        if ($styleInput.length) {
-            $styleInput.closest('.radio-img').addClass('selected');
+        if (row.filter === "price_criteria") {
+            $('.price_criteria').show();
+            $('#edit_min_price').val(row.min_price);
+            $('#edit_max_price').val(row.max_price);
+        } else {
+            $('.price_criteria').hide();
+            $('#edit_min_price').val();
+            $('#edit_max_price').val();
+        }
+        if (row.filter == "category_criteria") {
+            $('.category_criteria').show();
+            if (row.value != '') {
+                $('#edit_category_id').val(row.value.split(',')).trigger('change');
+            } else {
+                $('#edit_category_id').val('').trigger('change');
+            }
+        } else {
+            $('.category_criteria').hide();
+            $('#edit_category_id').val('').trigger('change');
         }
 
-        
-        const $editIsActive = $('#edit_is_active');
-        if ($editIsActive.length) {
-            $editIsActive.prop('checked', Boolean(row.is_active));
-        }
-
+        $('input[name="style"]').attr('checked', false);
+        $('input[name="style"][value="' + row.style + '"]').attr('checked', true);
     }
 };
-
-
-
-
-
-
-window.featureSectionStatusEvents = {
-    'change .feature-section-status-toggle': function (e, value, row, index) {
-        const $toggle = $(e.currentTarget);
-        const isChecked = $toggle.is(':checked');
-        const previousState = Boolean(row.is_active);
-        const csrfToken = $('meta[name="csrf-token"]').attr('content');
-        const template = typeof window.featureSectionStatusRouteTemplate === 'string'
-            ? window.featureSectionStatusRouteTemplate
-            : null;
-        const url = row.status_update_url || (template ? template.replace('__ID__', row.id) : null);
-
-        if (!url || !csrfToken) {
-            $toggle.prop('checked', previousState);
-            return;
-        }
-
-        $toggle.prop('disabled', true);
-
-        $.ajax({
-            url,
-            method: 'PATCH',
-            data: {
-                _token: csrfToken,
-                is_active: isChecked ? 1 : 0,
-            },
-            success(response) {
-                const message = response?.message || (window.featureSectionStatusMessages?.success ?? trans('Status updated.'));
-                if (typeof showSuccessToast === 'function') {
-                    showSuccessToast(message);
-                }
-
-                const updatedRow = response?.data;
-                const $table = $('#table_list');
-
-                if ($table.length && typeof $table.bootstrapTable === 'function' && updatedRow) {
-                    $table.bootstrapTable('updateRow', {
-                        index,
-                        row: updatedRow,
-                    });
-                } else {
-                    row.is_active = isChecked;
-                }
-            },
-            error(xhr) {
-                const message = xhr?.responseJSON?.message || (window.featureSectionStatusMessages?.error ?? trans('Error Occurred'));
-                if (typeof showErrorToast === 'function') {
-                    showErrorToast(message);
-                }
-                $toggle.prop('checked', previousState);
-            },
-            complete() {
-                $toggle.prop('disabled', false);
-            },
-        });
-    },
-};
-
-
 
 window.staffEvents = {
     'click .edit_btn': function (e, value, row) {

@@ -1,7 +1,7 @@
 function imageFormatter(value) {
     if (value) {
         return '<a class="image-popup-no-margins one-image" href="' + value + '">' +
-            '<img class="rounded avatar-md shadow img-fluid table-item-thumb" alt="" src="' + value + '" onerror="onErrorImage(event)">' +
+            '<img class="rounded avatar-md shadow img-fluid " alt="" src="' + value + '" width="55" onerror="onErrorImage(event)">' +
             '</a>'
     } else {
         return '-'
@@ -12,7 +12,7 @@ function galleryImageFormatter(value) {
     if (value) {
         let html = '<div class="gallery">';
         $.each(value, function (index, data) {
-            html += '<a href="' + data.image + '"><img class="rounded avatar-md shadow img-fluid m-1 table-item-thumb" alt="" src="' + data.image + '" onerror="onErrorImage(event)"></a>';
+            html += '<a href="' + data.image + '"><img class="rounded avatar-md shadow img-fluid m-1" alt="" src="' + data.image + '" width="55" onerror="onErrorImage(event)"></a>';
         })
         html += "</div>"
         return html;
@@ -33,7 +33,7 @@ function customFieldFormatter(value, row) {
 }
 
 function statusSwitchFormatter(value, row) {
-    return `<div class="form-check form-switch d-flex justify-content-center align-items-center gap-2 m-0 ps-0">
+    return `<div class="form-check form-switch">
         <input class = "form-check-input switch1 update-status" id="${row.id}" type = "checkbox" role = "switch${status}" ${value ? 'checked' : ''}>
     </div>`
 }
@@ -107,83 +107,18 @@ function styleImageFormatter(value, row) {
 }
 
 function filterTextFormatter(value) {
-
-    if (typeof value !== 'string' || value.trim() === '') {
-        return value;
-
+    let filter;
+    if (value == "most_liked") {
+        filter = "Most Liked";
+    } else if (value == "price_criteria") {
+        filter = "Price Criteria";
+    } else if (value == "category_criteria") {
+        filter = "Category Criteria";
+    } else if (value == "most_viewed") {
+        filter = "Most Viewed";
     }
-
-    const normalized = value.trim().toLowerCase();
-    const labelMap = window.featureSectionFilterLabels || {};
-
-    if (Object.prototype.hasOwnProperty.call(labelMap, normalized)) {
-        return labelMap[normalized];
-    }
-
-    if (normalized === 'most_viewed') {
-        return 'Most Viewed';
-    }
-
-    if (normalized === 'latest') {
-        return 'Newest';
-
-
-
-
-    }
-    return value.replace(/_/g, ' ');
+    return filter;
 }
-
-
-function featureSectionTypeFormatter(value) {
-    if (typeof value !== 'string' || value.trim() === '') {
-        return value || '-';
-    }
-
-    const normalized = value.trim().toLowerCase();
-    const aliasMap = window.featureSectionTypeAliasMap || {};
-    const labels = window.featureSectionTypeLabels || {};
-    const canonical = Object.prototype.hasOwnProperty.call(aliasMap, normalized)
-        ? aliasMap[normalized]
-        : normalized;
-
-    if (Object.prototype.hasOwnProperty.call(labels, canonical)) {
-        return labels[canonical];
-    }
-
-    return canonical.replace(/_/g, ' ');
-}
-
-
-
-
-
-
-function featureSectionStatusFormatter(value, row) {
-    const isActive = Boolean(value);
-    const labels = window.featureSectionStatusLabels || {};
-    const activeLabel = labels.active || trans('Active');
-    const inactiveLabel = labels.inactive || trans('Inactive');
-    const statusLabel = isActive ? activeLabel : inactiveLabel;
-    const badgeClass = isActive ? 'bg-success' : 'bg-secondary';
-    const checkedAttribute = isActive ? 'checked' : '';
-    const identifier = row && row.id ? row.id : Math.random().toString(36).slice(2);
-    const inputId = `feature-section-status-${identifier}`;
-
-    return `
-        <div class="d-inline-flex align-items-center gap-2 flex-wrap">
-            <span class="badge ${badgeClass}">${statusLabel}</span>
-            <div class="form-check form-switch m-0">
-                <input class="form-check-input feature-section-status-toggle" type="checkbox" id="${inputId}" data-id="${identifier}" ${checkedAttribute}>
-            </div>
-        </div>
-    `;
-}
-
-
-
-
-
 
 function adminFile(value, row) {
     return "<a href='languages/" + row.code + ".json ' )+' > View File < /a>";
@@ -369,114 +304,73 @@ function typeFormatter(value, row) {
     return '-';
 }
 
-
-
-const FEATURE_SECTION_TYPE_LABELS = {
-    all: { class: 'secondary', text: 'الكل' },
-    real_estate: { class: 'info', text: 'الخدمات العقارية' },
-    tourism: { class: 'success', text: 'الخدمات السياحية' },
-    merchants: { class: 'warning', text: 'المتجر الإلكتروني' },
-    shein: { class: 'danger', text: 'منتجات شي إن' },
-    computer: { class: 'info', text: 'قسم الكمبيوتر' },
-    public: { class: 'success', text: 'إعلانات الجمهور' },
-    services_all: { class: 'secondary', text: 'كل الخدمات' },
-    services_local: { class: 'warning', text: 'خدمات محلية' },
-    services_medical: { class: 'danger', text: 'خدمات طبية' },
-    services_jobs: { class: 'primary', text: 'وظائف' },
-    services_events_offers: { class: 'secondary', text: 'فعاليات وعروض' },
-    services_marib_lost: { class: 'dark', text: 'مفقودات مارب' },
-    services_student: { class: 'info', text: 'خدمات طلابية' },
-    services_marib_guide: { class: 'success', text: 'دليل مارب' },
-    local_services: { class: 'warning', text: 'خدمات محلية' },
-    medical_services: { class: 'danger', text: 'خدمات طبية' },
-    jobs: { class: 'primary', text: 'وظائف' },
-    events_offers: { class: 'secondary', text: 'فعاليات وعروض' },
-    marib_lost: { class: 'dark', text: 'مفقودات مارب' },
-    student_services: { class: 'info', text: 'خدمات طلابية' },
-    marib_guide: { class: 'success', text: 'دليل مارب' },
-};
-
-const FEATURE_SECTION_TYPE_ALIAS_FALLBACK = {
-    real_estate_services: 'real_estate',
-    realestateservices: 'real_estate',
-    itemslistrealestate: 'real_estate',
-    tourism_services: 'tourism',
-    tourismservices: 'tourism',
-    itemslisttourism: 'tourism',
-    e_store: 'merchants',
-    estore: 'merchants',
-    itemslistseller: 'merchants',
-    shein_products: 'shein',
-    sheinproducts: 'shein',
-    itemslistshein: 'shein',
-    computer_section: 'computer',
-    computersection: 'computer',
-    itemslistcomputer: 'computer',
-    public_ads: 'public',
-    publicads: 'public',
-    itemslistpublic: 'public',
-    homepage: 'public',
-    home_page: 'public',
-
-};
-
-
-const FEATURE_SECTION_DEFAULT_TYPE = (function () {
-    if (typeof window.featureSectionDefaultType === 'string') {
-        const trimmed = window.featureSectionDefaultType.trim();
-
-        if (trimmed !== '') {
-            return trimmed;
-        }
-    }
-
-    return null;
-})();
-
-
-function normalizeFeatureSectionType(value) {
-    if (typeof value !== 'string' || value.trim() === '') {
-        return '';
-    }
-
-    const original = value.trim();
-    const lower = original.toLowerCase();
-    const aliasMap = window.featureSectionTypeAliasMap || {};
-
-    if (Object.prototype.hasOwnProperty.call(aliasMap, lower)) {
-        return aliasMap[lower];
-    }
-
-    if (Object.prototype.hasOwnProperty.call(FEATURE_SECTION_TYPE_ALIAS_FALLBACK, lower)) {
-        return FEATURE_SECTION_TYPE_ALIAS_FALLBACK[lower];
-    }
-
-    return lower;
-}
-
-
-
-
-
 function interfaceTypeFormatter(value, row) {
-
-    
-    const normalized = normalizeFeatureSectionType(value);
-    const lookupKey = (value && value.trim() !== '') ? normalized : (FEATURE_SECTION_DEFAULT_TYPE || null);
-    const labelInfo = (lookupKey && FEATURE_SECTION_TYPE_LABELS[lookupKey])
-        || (value && FEATURE_SECTION_TYPE_LABELS[value])
-        || null;
-
-
-    if (labelInfo) {
-        return '<span class="badge bg-' + labelInfo.class + '">' + labelInfo.text + '</span>';
-    }
-    
-
     if (!value) {
-        return '-';
+        return '<span class="badge bg-secondary">الصفحة الرئيسية</span>';
     }
-
-    const fallbackClass = 'primary';
-    return '<span class="badge bg-' + fallbackClass + '">' + value + '</span>';
+    
+    let badgeClass, badgeText;
+    switch(value) {
+        case 'homepage':
+            badgeClass = 'primary';
+            badgeText = 'الصفحة الرئيسية';
+            break;
+        case 'real_estate_services':
+            badgeClass = 'info';
+            badgeText = 'الخدمات العقارية';
+            break;
+        case 'tourism_services':
+            badgeClass = 'success';
+            badgeText = 'الخدمات السياحية';
+            break;
+        case 'e_store':
+            badgeClass = 'warning';
+            badgeText = 'المتجر الإلكتروني';
+            break;
+        case 'shein_products':
+            badgeClass = 'danger';
+            badgeText = 'منتجات شي إن';
+            break;
+        case 'computer_section':
+            badgeClass = 'info';
+            badgeText = 'قسم الكمبيوتر';
+            break;
+        case 'public_ads':
+            badgeClass = 'success';
+            badgeText = 'إعلانات الجمهور';
+            break;
+        case 'local_services':
+            badgeClass = 'warning';
+            badgeText = 'خدمات محلية';
+            break;
+        case 'medical_services':
+            badgeClass = 'danger';
+            badgeText = 'خدمات طبية';
+            break;
+        case 'jobs':
+            badgeClass = 'primary';
+            badgeText = 'وظائف';
+            break;
+        case 'events_offers':
+            badgeClass = 'secondary';
+            badgeText = 'فعاليات وعروض';
+            break;
+        case 'marib_lost':
+            badgeClass = 'dark';
+            badgeText = 'مفقودات مارب';
+            break;
+        case 'student_services':
+            badgeClass = 'info';
+            badgeText = 'خدمات طلابية';
+            break;
+        case 'marib_guide':
+            badgeClass = 'success';
+            badgeText = 'دليل مارب';
+            break;
+        default:
+            badgeClass = 'secondary';
+            badgeText = value;
+    }
+    
+    return '<span class="badge bg-' + badgeClass + '">' + badgeText + '</span>';
 }

@@ -32,7 +32,7 @@
 
 
                     <div class="row">
-                        <div class="col-md-12">
+                        <div class="col-md-6">
                             <div class="form-group mb-3">
                                 <label for="product_link" class="form-label mandatory">{{ __('Product Link') }}</label>
                                 <input type="url" id="product_link" name="product_link" class="form-control @error('product_link') is-invalid @enderror" value="{{ old('product_link', $item->product_link) }}" required maxlength="2048">
@@ -41,6 +41,18 @@
                                 @enderror
                             </div>
                         </div>
+
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="review_link" class="form-label">{{ __('Review Link') }}</label>
+                                <input type="url" id="review_link" name="review_link" class="form-control @error('review_link') is-invalid @enderror" value="{{ old('review_link', $item->review_link) }}" maxlength="2048">
+                                @error('review_link')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <small class="form-text text-muted">{{ __('Provide a trusted external review URL (optional).') }}</small>
+                            </div>
+                        </div>
+
                     </div>
 
 

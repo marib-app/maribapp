@@ -271,9 +271,9 @@ class ChatRepostiory {
       if (itemOfferId != null && itemOfferId > 0) 'item_offer_id': itemOfferId,
     };
 
-    await Api.post(
+    await Api.postJson(
       url: Api.markMessageDeliveredApi,
-      parameter: payload,
+      data: payload,
     );
   }
 
@@ -302,9 +302,9 @@ class ChatRepostiory {
       if (itemOfferId != null && itemOfferId > 0) 'item_offer_id': itemOfferId,
     };
 
-    await Api.post(
+    await Api.postJson(
       url: Api.markMessageReadApi,
-      parameter: payload,
+      data: payload,
     );
   }
 

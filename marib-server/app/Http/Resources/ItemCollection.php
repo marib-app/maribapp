@@ -38,6 +38,9 @@ class ItemCollection extends ResourceCollection {
                 /* NOTE : This code can be improved */
                 $response[$key] = $collection->toArray();
                 $response[$key]['product_link'] = $collection->product_link;
+                $response[$key]['review_link'] = $collection->review_link;
+
+
                 if ($collection->status == "approved" && $collection->relationLoaded('featured_items')) {
                     $response[$key]['is_feature'] = count($collection->featured_items) > 0;
                 }else{

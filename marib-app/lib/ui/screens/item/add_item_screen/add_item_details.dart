@@ -157,6 +157,10 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
   final TextEditingController reviewLinkController = TextEditingController();
   final TextEditingController adProductLinkController = TextEditingController();
 
+  late final List<CategoryModel> _breadcrumbItems;
+  late final bool _enableTitleAutofocus;
+
+
   String _selectedCurrency = 'YER';
   String _selectedCountryCode = '+967';
   String coverImageUrl = '';
@@ -188,6 +192,10 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
 
   @override
   void initState() {
+    _breadcrumbItems = List<CategoryModel>.from(
+      widget.breadCrumbItems ?? const <CategoryModel>[],
+    );
+    _enableTitleAutofocus = widget.isEdit != true;
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     AbstractField.fieldsData.clear();
@@ -289,12 +297,13 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
   }
 
   void _initForCreate() {
-    final breadCrumbs = widget.breadCrumbItems ?? const <CategoryModel>[];
-    if (breadCrumbs.isEmpty) {
+    if (_breadcrumbItems.isEmpty) {
+
       return;
     }
 
-    final ids = breadCrumbs.map((e) => e.id!).toList(growable: false);
+    final ids = _breadcrumbItems.map((e) => e.id!).toList(growable: false);
+
     selectedCategoryIds
       ..clear()
       ..addAll(ids);
@@ -497,28 +506,87 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
 
 
   Widget _buildBreadcrumbs(BuildContext context) {
-    final crumbs = widget.breadCrumbItems ?? const <CategoryModel>[];
-    if (crumbs.isEmpty) {
+    if (_breadcrumbItems.isEmpty) {
+
       return const SizedBox.shrink();
     }
 
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: List<Widget>.generate(
-        crumbs.length,
-            (index) {
-          final item = crumbs[index];
-          final bool isLast = index == crumbs.length - 1;
-          return ActionChip(
-            label: Text(item.name ?? ''),
-            avatar: Icon(
-              isLast ? Icons.category_rounded : Icons.chevron_left,
-              size: 18,
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colors = theme.colorScheme;
+    final bool isDark = theme.brightness == Brightness.dark;
+    final Color inactiveBorder =
+    isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.08);
+    final Color activeBorder = colors.territoryColor.withOpacity(0.55);
+    final Color activeBackground = colors.territoryColor.withOpacity(0.12);
+    final TextStyle labelStyle = theme.textTheme.bodyMedium?.copyWith(
+      fontWeight: FontWeight.w600,
+    ) ??
+        const TextStyle(fontWeight: FontWeight.w600);
+    final Color baseLabelColor = labelStyle.color ?? colors.onSurface;
+
+    final int total = _breadcrumbItems.length + 1;
+    final int activeIndex = _breadcrumbItems.length;
+
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.zero,
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
+        itemCount: total,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (BuildContext context, int index) {
+          final bool isHome = index == 0;
+          final bool isActive = index == activeIndex;
+          final String label = isHome
+              ? 'Home'.translate(context)
+              : (_breadcrumbItems[index - 1].name ?? '');
+          final IconData icon = isHome
+              ? Icons.home_outlined
+              : (isActive ? Icons.label_important : Icons.chevron_right);
+
+          return InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: isActive
+                ? null
+                : () {
+              if (isHome) {
+                _onBreadCrumbTap(0);
+              } else {
+                _onBreadCrumbTap(index - 1);
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: isActive ? activeBackground : colors.secondaryColor,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isActive ? activeBorder : inactiveBorder,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    icon,
+                    size: 18,
+                    color: isActive ? colors.territoryColor : baseLabelColor,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    label,
+                    style: labelStyle.copyWith(
+                      color:
+                      isActive ? colors.territoryColor : baseLabelColor,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            onPressed: isLast ? null : () => _onBreadCrumbTap(index),
-            backgroundColor:
-            isLast ? Theme.of(context).colorScheme.territoryColor.withOpacity(0.12) : null,
+
           );
         },
       ),
@@ -526,25 +594,22 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
   }
 
   void _onBreadCrumbTap(int index) {
-    final crumbs = widget.breadCrumbItems;
-    if (crumbs == null || crumbs.isEmpty) {
+    if (_breadcrumbItems.isEmpty) {
+
       return;
     }
 
-
-    final int popTimes = (crumbs.length - 1) - index;
-    final int length = crumbs.length;
-
-    for (int i = length - 1; i >= index + 1; i--) {
-      crumbs.removeAt(i);
-    }
-
-
-    for (int i = 0; i < popTimes; i++) {
+    final int safeIndex = index.clamp(0, _breadcrumbItems.length - 1);
+    final int popTimes = (_breadcrumbItems.length - 1) - safeIndex;
+    final int totalPops = popTimes <= 0 ? 1 : popTimes;
+    for (int i = 0; i < totalPops; i++) {
+      if (!Navigator.of(context).canPop()) {
+        break;
+      }
       Navigator.of(context).pop();
     }
 
-    setState(() {});
+
   }
 
   Widget _buildCoverImageCard(BuildContext context) {
@@ -703,6 +768,7 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
             action: TextInputAction.next,
             capitalization: TextCapitalization.sentences,
             maxLength: 120,
+            autofocus: _enableTitleAutofocus,
           ),
         ),
         const SizedBox(height: 12),
@@ -782,51 +848,55 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
         Text('معلومات التواصل', style: theme.textTheme.titleMedium),
     const SizedBox(height: 12),
     Row(
-    children: [
-    SizedBox(
-    width: 140,
-    child: DropdownButtonFormField<String>(
-    value: _selectedCountryCode,
-    decoration: InputDecoration(
-    labelText: 'المقدمة',
-    border: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(10),
-    ),
-    isDense: true,
-    contentPadding:
-    const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-    ),
-    items: arabCountries
-        .map(
-    (country) => DropdownMenuItem<String>(
-    value: country['code'],
-    child: Text(
-    '${country['code']} (${country['name']})',
-    ),
-    ),
-    )
-        .toList(),
-    onChanged: (value) {
-    if (value == null) return;
-    setState(() => _selectedCountryCode = value);
-    },
-    ),
-    ),
-    const SizedBox(width: 12),
-    Expanded(
-    child: _buildKeyboardAwareField(
-    child: CustomTextFormField(
-    controller: adPhoneNumberController,
-    hintText: 'رقم الهاتف',
-    keyboard: TextInputType.phone,
-    validator: CustomTextFieldValidator.phoneNumber,
-    isMobileRequired: true,
-    formaters: [FilteringTextInputFormatter.digitsOnly],
-    action: TextInputAction.next,
-    ),
-    ),
-    ),
-    ],
+      children: [
+        Flexible(
+          flex: 3,
+          child: DropdownButtonFormField<String>(
+            value: _selectedCountryCode,
+            decoration: InputDecoration(
+              labelText: 'المقدمة',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              isDense: true,
+              contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            ),
+            isExpanded: true,
+            items: arabCountries
+                .map(
+                  (country) => DropdownMenuItem<String>(
+                value: country['code'],
+                child: Text(
+                  '${country['code']} (${country['name']})',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            )
+                .toList(),
+            onChanged: (value) {
+              if (value == null) return;
+              FocusScope.of(context).unfocus();
+              setState(() => _selectedCountryCode = value);
+            },
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 5,
+          child: _buildKeyboardAwareField(
+            child: CustomTextFormField(
+              controller: adPhoneNumberController,
+              hintText: 'رقم الهاتف',
+              keyboard: TextInputType.phone,
+              validator: CustomTextFieldValidator.phoneNumber,
+              isMobileRequired: true,
+              formaters: [FilteringTextInputFormatter.digitsOnly],
+              action: TextInputAction.next,
+            ),
+          ),
+        ),
+      ],
     ),
     const SizedBox(height: 12),
     _buildKeyboardAwareField(

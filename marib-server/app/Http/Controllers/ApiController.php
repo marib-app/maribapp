@@ -119,6 +119,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 
 
 use Illuminate\Support\Facades\Validator;
@@ -1152,6 +1153,7 @@ class ApiController extends Controller {
 
         $itemDepartment = null;
         $productLink = null;
+        $reviewLink = null;
 
         if ($request->filled('item_id')) {
             $item = Item::select([
@@ -1160,11 +1162,15 @@ class ApiController extends Controller {
                 'interface_type',
                 'category_id',
                 'all_category_ids',
+
+
             ])->find($request->integer('item_id'));
 
             if ($item !== null) {
                 $itemDepartment = $departmentResolver->resolveDepartmentForItem($item);
                 $productLink = $item->product_link;
+                $reviewLink = $item->review_link;
+
             }
         }
 
@@ -1209,25 +1215,40 @@ class ApiController extends Controller {
             'tips' => $tipsPayload,
             'product_link' => null,
             'actions' => [],
+            'review_link' => null,
+
+
             'presentation' => DepartmentReportService::DEPARTMENT_SHEIN === $departmentKey ? 'modal' : 'banner',
 
 
         ];
 
-        if ($departmentKey === DepartmentReportService::DEPARTMENT_SHEIN && ! empty($productLink)) {
+        if ($departmentKey === DepartmentReportService::DEPARTMENT_SHEIN) {
             $response['product_link'] = $productLink;
-            $response['actions'] = [
+            $response['review_link'] = $reviewLink;
+
+            $verificationLink = $reviewLink ?: $productLink;
+
+            $response['actions'] = array_values(array_filter([
+
+
                 [
                     'type' => 'navigate',
                     'target' => 'cart',
                     'label' => __('Continue Purchase'),
                 ],
-                [
+                $verificationLink ? [
+
                     'type' => 'open_url',
-                    'url' => $productLink,
+                    'url' => $verificationLink,
+
                     'label' => __('Verify Product'),
-                ],
-            ];
+                    'payload' => array_filter([
+                        'review_link' => $reviewLink,
+                        'product_link' => $productLink,
+                    ]),
+                ] : null,
+            ])); 
         }
 
 
@@ -1239,6 +1260,9 @@ class ApiController extends Controller {
             'tips_count' => $tipsPayload->count(),
             'actions_count' => count($response['actions']),
             'has_product_link' => $response['product_link'] !== null,
+            'has_review_link' => $response['review_link'] !== null,
+
+
         ]);
 
         Log::info('tips.response_payload', [
@@ -1247,6 +1271,9 @@ class ApiController extends Controller {
             'tips_count' => $tipsPayload->count(),
             'actions_count' => count($response['actions']),
             'product_link' => $response['product_link'],
+            'review_link' => $response['review_link'],
+
+
         ]);
 
 
@@ -1279,8 +1306,10 @@ class ApiController extends Controller {
                 'custom_field_files'   => 'nullable|array',
                 'custom_field_files.*' => 'nullable|mimes:jpeg,png,jpg,pdf,doc|max:4096',
                 'slug'                 => 'nullable|regex:/^[a-z0-9-]+$/',
-                'currency'             =>'required',
-                'product_link'         => 'nullable|url|max:2048'   
+                'currency'             => 'required',
+                'product_link'         => 'nullable|url|max:2048',
+                'review_link'          => 'nullable|url|max:2048'
+
             ]);
 
 
@@ -1358,7 +1387,8 @@ class ApiController extends Controller {
                 'product_link' => $request->filled('product_link') ? $request->input('product_link') : null,
             
             
-            
+                'review_link' => $request->filled('review_link') ? $request->input('review_link') : null,
+
             
             ];
 
@@ -1733,7 +1763,9 @@ class ApiController extends Controller {
             'custom_field_files.*' => 'nullable|mimes:jpeg,png,jpg,pdf,doc|max:4096',
             'gallery_images'       => 'nullable|array',
             'currency'             => 'required',
-            'product_link'         => 'nullable|url|max:2048'
+            'product_link'         => 'nullable|url|max:2048',
+            'review_link'          => 'nullable|url|max:2048'
+        
         ]);
 
         $validator->after(function ($validator) use ($request) {
@@ -1770,6 +1802,7 @@ class ApiController extends Controller {
 
             $data = $request->all();
             $data['product_link'] = $request->filled('product_link') ? $request->input('product_link') : null;
+            $data['review_link'] = $request->filled('review_link') ? $request->input('review_link') : null;
 
 
             // $data['slug'] = $uniqueSlug;
@@ -3684,51 +3717,83 @@ class ApiController extends Controller {
     public function markMessageDelivered(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'message_id' => 'required|integer|exists:chat_messages,id',
+            'message_id'    => 'sometimes|integer|exists:chat_messages,id',
+            'message_ids'   => 'sometimes|array|min:1',
+            'message_ids.*' => 'integer|distinct|exists:chat_messages,id',
+            'conversation_id' => 'sometimes|integer|exists:chat_conversations,id',
+        
         ]);
 
         if ($validator->fails()) {
             ResponseService::validationError($validator->errors()->first());
         }
 
+
+        $messageIds = $this->extractMessageIdsFromRequest($request);
+
+        if ($messageIds->isEmpty()) {
+            ResponseService::validationError('message_id or message_ids is required.');
+        }
+
         try {
             $user = Auth::user();
-            $message = ChatMessage::with('conversation')->findOrFail($request->message_id);
-            $conversation = $message->conversation;
+            $conversationId = $request->filled('conversation_id')
+                ? (int) $request->input('conversation_id')
+                : null;
 
-            if (!$conversation) {
-                ResponseService::errorResponse('Conversation not found for the message', null, 404);
-            }
+            $messages = $this->resolveAuthorizedMessages($messageIds, $user, $conversationId);
 
-            if (!$conversation->participants()->where('users.id', $user->id)->exists()) {
-                ResponseService::errorResponse('You are not allowed to update this message', null, 403);
-            }
 
             $timestamp = Carbon::now();
+            $updatedMessages = collect();
 
-            if (is_null($message->delivered_at)) {
-                $message->delivered_at = $timestamp;
+            foreach ($messageIds as $messageId) {
+                /** @var ChatMessage|null $message */
+                $message = $messages->get($messageId);
+
+                if (!$message) {
+                    continue;
+                }
+
+                $conversation = $message->conversation;
+
+
+                if (!$conversation) {
+                    ResponseService::errorResponse('Conversation not found for the message', null, 404);
+                }
+
+                if (is_null($message->delivered_at)) {
+                    $message->delivered_at = $timestamp;
+                }
+
+                if ($message->status !== ChatMessage::STATUS_READ) {
+                    $message->status = ChatMessage::STATUS_DELIVERED;
+                }
+
+                $message->save();
+
+                $message->refresh()->load('sender');
+
+                try {
+                    broadcast(new MessageDelivered($conversation, $message))->toOthers();
+                } catch (Throwable $broadcastException) {
+                    \Log::warning('Broadcast message delivered failed', [
+                        'conversation_id' => $conversation->id,
+                        'message_id' => $message->id,
+                        'error' => $broadcastException->getMessage(),
+                    ]);
+                }
+
+                $updatedMessages->push($message);
             }
 
-            if ($message->status !== ChatMessage::STATUS_READ) {
-                $message->status = ChatMessage::STATUS_DELIVERED;
-            }
+            $responseMessage = $updatedMessages->count() > 1
+                ? 'Messages marked as delivered successfully'
+                : 'Message marked as delivered successfully';
 
-            $message->save();
+            ResponseService::successResponse($responseMessage, $this->formatMessageUpdateResponse($updatedMessages));
 
-            $message->refresh()->load('sender');
 
-            try {
-                broadcast(new MessageDelivered($conversation, $message))->toOthers();
-            } catch (Throwable $broadcastException) {
-                \Log::warning('Broadcast message delivered failed', [
-                    'conversation_id' => $conversation->id,
-                    'message_id' => $message->id,
-                    'error' => $broadcastException->getMessage(),
-                ]);
-            }
-
-            ResponseService::successResponse('Message marked as delivered successfully', $message);
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, 'API Controller -> markMessageDelivered');
             ResponseService::errorResponse();
@@ -3738,50 +3803,80 @@ class ApiController extends Controller {
     public function markMessageRead(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'message_id' => 'required|integer|exists:chat_messages,id',
+            'message_id'    => 'sometimes|integer|exists:chat_messages,id',
+            'message_ids'   => 'sometimes|array|min:1',
+            'message_ids.*' => 'integer|distinct|exists:chat_messages,id',
+            'conversation_id' => 'sometimes|integer|exists:chat_conversations,id',
         ]);
 
         if ($validator->fails()) {
             ResponseService::validationError($validator->errors()->first());
         }
 
+
+        $messageIds = $this->extractMessageIdsFromRequest($request);
+
+        if ($messageIds->isEmpty()) {
+            ResponseService::validationError('message_id or message_ids is required.');
+        }
+
         try {
             $user = Auth::user();
-            $message = ChatMessage::with('conversation')->findOrFail($request->message_id);
-            $conversation = $message->conversation;
+            $conversationId = $request->filled('conversation_id')
+                ? (int) $request->input('conversation_id')
+                : null;
 
-            if (!$conversation) {
-                ResponseService::errorResponse('Conversation not found for the message', null, 404);
-            }
+            $messages = $this->resolveAuthorizedMessages($messageIds, $user, $conversationId);
 
-            if (!$conversation->participants()->where('users.id', $user->id)->exists()) {
-                ResponseService::errorResponse('You are not allowed to update this message', null, 403);
-            }
 
             $timestamp = Carbon::now();
+            $updatedMessages = collect();
 
-            if (is_null($message->delivered_at)) {
-                $message->delivered_at = $timestamp;
+            foreach ($messageIds as $messageId) {
+                /** @var ChatMessage|null $message */
+                $message = $messages->get($messageId);
+
+                if (!$message) {
+                    continue;
+                }
+
+                $conversation = $message->conversation;
+
+
+                if (!$conversation) {
+                    ResponseService::errorResponse('Conversation not found for the message', null, 404);
+                }
+
+                if (is_null($message->delivered_at)) {
+                    $message->delivered_at = $timestamp;
+                }
+
+                $message->status = ChatMessage::STATUS_READ;
+                $message->read_at = $timestamp;
+
+                $message->save();
+
+                $message->refresh()->load('sender');
+
+                try {
+                    broadcast(new MessageRead($conversation, $message))->toOthers();
+                } catch (Throwable $broadcastException) {
+                    \Log::warning('Broadcast message read failed', [
+                        'conversation_id' => $conversation->id,
+                        'message_id' => $message->id,
+                        'error' => $broadcastException->getMessage(),
+                    ]);
+                }
+
+                $updatedMessages->push($message);
             }
 
-            $message->status = ChatMessage::STATUS_READ;
-            $message->read_at = $timestamp;
+            $responseMessage = $updatedMessages->count() > 1
+                ? 'Messages marked as read successfully'
+                : 'Message marked as read successfully';
 
-            $message->save();
+            ResponseService::successResponse($responseMessage, $this->formatMessageUpdateResponse($updatedMessages));
 
-            $message->refresh()->load('sender');
-
-            try {
-                broadcast(new MessageRead($conversation, $message))->toOthers();
-            } catch (Throwable $broadcastException) {
-                \Log::warning('Broadcast message read failed', [
-                    'conversation_id' => $conversation->id,
-                    'message_id' => $message->id,
-                    'error' => $broadcastException->getMessage(),
-                ]);
-            }
-
-            ResponseService::successResponse('Message marked as read successfully', $message);
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, 'API Controller -> markMessageRead');
             ResponseService::errorResponse();
@@ -8285,6 +8380,86 @@ public function storeRequestDevice(Request $request)
     }
 
 
+    private function extractMessageIdsFromRequest(Request $request): Collection
+    {
+        $ids = collect();
+
+        $bulkIds = $request->input('message_ids');
+
+        if (is_array($bulkIds)) {
+            foreach ($bulkIds as $id) {
+                if (is_numeric($id)) {
+                    $ids->push((int) $id);
+                }
+            }
+        }
+
+        if ($request->filled('message_id') && is_numeric($request->input('message_id'))) {
+            $ids->push((int) $request->input('message_id'));
+        }
+
+        return $ids
+            ->filter(static fn ($id) => is_int($id) && $id > 0)
+            ->unique()
+            ->values();
+    }
+
+    private function resolveAuthorizedMessages(Collection $messageIds, User $user, ?int $conversationId = null): Collection
+    {
+        if ($messageIds->isEmpty()) {
+            return collect();
+        }
+
+        $messages = ChatMessage::with('conversation')
+            ->whereIn('id', $messageIds->all())
+            ->get()
+            ->keyBy(static fn (ChatMessage $message) => (int) $message->id);
+
+        if ($messages->count() !== $messageIds->count()) {
+            ResponseService::errorResponse('One or more messages not found', null, 404);
+        }
+
+        if ($conversationId !== null) {
+            $mismatched = $messages->first(static function (ChatMessage $message) use ($conversationId) {
+                return (int) $message->conversation_id !== $conversationId;
+            });
+
+            if ($mismatched) {
+                ResponseService::validationError('One or more messages do not belong to the provided conversation.');
+            }
+        }
+
+        $conversationIds = $messages->pluck('conversation_id')
+            ->filter()
+            ->map(static fn ($id) => (int) $id)
+            ->unique();
+
+        if ($conversationIds->isNotEmpty()) {
+            $authorizedConversationIds = Chat::whereIn('id', $conversationIds->all())
+                ->whereHas('participants', function ($query) use ($user) {
+                    $query->where('users.id', $user->id);
+                })
+                ->pluck('id')
+                ->map(static fn ($id) => (int) $id);
+
+            $unauthorized = $conversationIds->diff($authorizedConversationIds);
+
+            if ($unauthorized->isNotEmpty()) {
+                ResponseService::errorResponse('You are not allowed to update this message', null, 403);
+            }
+        }
+
+        return $messages;
+    }
+
+    private function formatMessageUpdateResponse(Collection $messages)
+    {
+        if ($messages->count() <= 1) {
+            return $messages->first();
+        }
+
+        return $messages->values();
+    }
 
     private function resolveSectionByCategoryId(?int $categoryId): ?string
     {

@@ -64,6 +64,17 @@ class CartSafetyTipsPayload {
     return const <CartSafetyTipAction>[];
   }
 
+
+  String? get fallbackReviewLink {
+    final dynamic link = raw?['review_link'] ?? raw?['reviewLink'];
+    if (link == null) return null;
+    if (link is String) {
+      final String trimmed = link.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+    return link.toString();
+  }
+
   String? get fallbackProductLink {
     final dynamic link = raw?['product_link'] ?? raw?['productLink'];
     if (link == null) return null;
@@ -73,6 +84,11 @@ class CartSafetyTipsPayload {
     }
     return link.toString();
   }
+
+
+  String? get fallbackVerificationLink =>
+      fallbackReviewLink ?? fallbackProductLink;
+
 
   List<CartSafetyTipAction> get fallbackActions {
     if (primaryTip?.actions.isNotEmpty ?? false) {
@@ -88,20 +104,30 @@ class CartSafetyTipsPayload {
       return const <CartSafetyTipAction>[];
     }
 
-    final String? productLink = fallbackProductLink;
-    if (productLink == null) {
+    final String? verificationLink = fallbackVerificationLink;
+    if (verificationLink == null) {
       return const <CartSafetyTipAction>[];
     }
+
+
+    final Map<String, dynamic> fallbackPayload = <String, dynamic>{
+      if (fallbackReviewLink != null) 'review_link': fallbackReviewLink,
+      if (fallbackProductLink != null) 'product_link': fallbackProductLink,
+    };
+
 
     return <CartSafetyTipAction>[
       CartSafetyTipAction(
         type: 'open_url',
         label: 'تحقق من المنتج',
-        productLink: productLink,
+        productLink: verificationLink,
+        payload: fallbackPayload.isEmpty ? null : fallbackPayload,
         raw: <String, dynamic>{
           'type': 'open_url',
           'label': 'Verify Product',
-          'product_link': productLink,
+          if (fallbackReviewLink != null) 'review_link': fallbackReviewLink,
+          'product_link': fallbackProductLink ?? verificationLink,
+          'url': verificationLink,
         },
       ),
     ];
@@ -138,8 +164,9 @@ class CartSafetyTipsPayload {
     return null;
   }
 
-  bool get hasDisplayableContent =>
-      hasTips || rawActions.isNotEmpty || fallbackProductLink != null;
+  bool get hasDisplayableContent => hasTips ||
+      rawActions.isNotEmpty ||
+      fallbackVerificationLink != null;
 
   bool get requiresConfirmation {
     if (showAsModal && hasDisplayableContent) {
@@ -409,7 +436,9 @@ class CartSafetyTipAction {
 
   String? get resolvedProductLink {
     final dynamic candidate = productLink ??
+        payload?['review_link'] ??
         payload?['product_link'] ??
+        payload?['verification_link'] ??
         payload?['url'] ??
         payload?['link'] ??
         payload?['href'];

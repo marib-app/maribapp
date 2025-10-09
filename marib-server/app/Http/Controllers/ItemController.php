@@ -226,9 +226,15 @@ class ItemController extends Controller {
                 'section_root_id' => 4,
                 'validation_rules' => array_merge($validationRules, [
                     'product_link' => ['required', 'url', 'max:2048'],
+                    'review_link' => ['nullable', 'url', 'max:2048'],
+
+
                 ]),
                 'additional_attributes' => [
                     'product_link' => $request->input('product_link'),
+                    'review_link' => $request->input('review_link'),
+
+
                 ],
 
 
@@ -352,6 +358,7 @@ class ItemController extends Controller {
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
                 'gallery_images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
                 'product_link' => ['required', 'url', 'max:2048'],
+                'review_link' => ['nullable', 'url', 'max:2048'],
 
 
             ]);
@@ -380,6 +387,7 @@ class ItemController extends Controller {
             $item->address = $request->address ?? '';
             $item->contact = $request->contact ?? '';            
             $item->product_link = $request->input('product_link');
+            $item->review_link = $request->input('review_link');
 
             // Update status and rejection reason
             $item->status = $request->status;

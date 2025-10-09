@@ -156,14 +156,15 @@ class NotificationService {
                 $notificationBody = $customBodyFields['message'];
             }
 
+            $sanitizedBodyFields = self::sanitizeDataPayload($customBodyFields);
 
             $navigationPayload = [
-                'deeplink' => $customBodyFields['deeplink'] ?? null,
-                'click_action' => $customBodyFields['click_action'] ?? null,
+                'deeplink' => $sanitizedBodyFields['deeplink'] ?? $customBodyFields['deeplink'] ?? null,
+                'click_action' => $sanitizedBodyFields['click_action'] ?? $customBodyFields['click_action'] ?? null,
             ];
 
             $dataWithTitle = [
-                ...$customBodyFields,
+                ...$sanitizedBodyFields,
                 "title" => $title,
                 "body"  => $notificationBody,
                 "type"  => $type,
@@ -193,12 +194,9 @@ class NotificationService {
                 $notificationPayload = [
                     "title" => $title,
                     "body"  => $notificationBody,
-                    "sound" => "default",
                 ];
 
-                if (!empty($navigationPayload['click_action'])) {
-                    $notificationPayload['click_action'] = $navigationPayload['click_action'];
-                }
+
 
 
                 $data = [
@@ -213,7 +211,7 @@ class NotificationService {
                             "notification"   => [
                                 "title" => $title,
                                 "body"  => $notificationBody,
-                                "sound" => "default",
+            
                             ],
                         ],
 
@@ -246,7 +244,6 @@ class NotificationService {
                     ],
                 ];
                 if (!empty($navigationPayload['deeplink'])) {
-                    $data['message']['notification']['deeplink'] = $navigationPayload['deeplink'];
                     $data['message']['apns']['payload']['deeplink'] = $navigationPayload['deeplink'];
                     $data['message']['fcm_options']['link'] = $navigationPayload['deeplink'];
                     $data['message']['webpush']['fcm_options']['link'] = $navigationPayload['deeplink'];
@@ -513,6 +510,31 @@ class NotificationService {
 
         self::sendFcmNotification($tokens, $title, $message, 'wifi_sale', $data);
     }
+
+
+
+    protected static function sanitizeDataPayload(array $payload): array
+    {
+        $reservedKeys = [
+            'message_type' => 'msg_type',
+        ];
+
+        $sanitized = [];
+
+        foreach ($payload as $key => $value) {
+            $normalizedKey = $reservedKeys[$key] ?? $key;
+
+            if (is_array($value)) {
+                $sanitized[$normalizedKey] = self::sanitizeDataPayload($value);
+                continue;
+            }
+
+            $sanitized[$normalizedKey] = $value;
+        }
+
+        return $sanitized;
+    }
+
 
 
     public static function convertToStringRecursively($data, string $prefix = ''): array

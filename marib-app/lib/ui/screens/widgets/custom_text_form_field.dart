@@ -46,7 +46,8 @@ class CustomTextFormField extends StatelessWidget {
   final bool isCustomStyle;
   final TextAlign? textAlign;
   final EdgeInsetsGeometry? contentPadding;
-
+  final bool autofocus;
+  final FocusNode? focusNode;
 
   const CustomTextFormField({
     super.key,
@@ -56,7 +57,8 @@ class CustomTextFormField extends StatelessWidget {
     this.maxLine,
     this.formaters,
     this.formatters,
-
+    this.autofocus = false,
+    this.focusNode,
     this.isReadOnly,
     this.validator,
     this.fillColor,
@@ -85,6 +87,8 @@ class CustomTextFormField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TextFormField(
+      autofocus: autofocus,
+      focusNode: focusNode,
       controller: controller,
       inputFormatters: formatters ?? formaters,
       obscureText: obscureText ?? false,

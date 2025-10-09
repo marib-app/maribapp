@@ -44,7 +44,8 @@ class Item extends Model {
         'currency',
 
         'interface_type',
-        'product_link'    
+        'product_link',
+        'review_link'   
     ];
 
     // Relationships

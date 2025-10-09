@@ -450,9 +450,16 @@ class NotificationService {
       final String itemOfferIdStr = itemOfferIdInt?.toString() ?? '';
       final Map<String, dynamic> chatData =
       Map<String, dynamic>.from(message?.data ?? const {});
+
+      if (!chatData.containsKey('message_type') &&
+          chatData.containsKey('msg_type')) {
+        chatData['message_type'] = chatData['msg_type'];
+      }
+
       _cacheParticipantsFromData(chatData);
       final String? chatMessageType =
           _normalizeNotificationValue(message?.data['chat_message_type']) ??
+              _normalizeNotificationValue(message?.data['msg_type']) ??
               _normalizeNotificationValue(message?.data['message_type']) ??
               _normalizeNotificationValue(message?.data['message_type_temp']);
       final bool isConversationMatch = conversationIdStr.isNotEmpty

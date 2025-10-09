@@ -317,6 +317,7 @@ class ApiController extends Controller {
     private array $departmentCategoryMap = [];
     private ?array $geoDisabledCategoryCache = null;
     private ?array $productLinkRequiredCategoryCache = null;
+    private ?array $productLinkRequiredSectionCache = null;
 
 
 
@@ -1314,7 +1315,7 @@ class ApiController extends Controller {
 
             $categoryInput = $request->input('category_id');
             $categoryId = is_numeric($categoryInput) ? (int) $categoryInput : null;
-            $productLinkRequiredCategoryIds = $this->productLinkRequiredCategoryIds();
+            $requiresProductLink = $this->shouldRequireProductLink($categoryId);
 
             $validationRules = [
 
@@ -1342,12 +1343,13 @@ class ApiController extends Controller {
                 'slug'                 => 'nullable|regex:/^[a-z0-9-]+$/',
                 'currency'             => 'required',
 
-                'product_link'         => 'nullable|url|max:2048' . ($productLinkRequiredCategoryIds !== []
-                        ? '|required_if:category_id,' . implode(',', $productLinkRequiredCategoryIds)
-                        : ''),
-                        
-                        
-                        'review_link'          => 'nullable|url|max:2048'
+                'product_link'         => [
+                    'nullable',
+                    'url',
+                    'max:2048',
+                    Rule::requiredIf($requiresProductLink),
+                ],
+                'review_link'          => 'nullable|url|max:2048',
 
             ];
 
@@ -1798,7 +1800,7 @@ class ApiController extends Controller {
         }
 
         $categoryId = is_numeric($categoryInput) ? (int) $categoryInput : null;
-        $productLinkRequiredCategoryIds = $this->productLinkRequiredCategoryIds();
+        $requiresProductLink = $this->shouldRequireProductLink($categoryId);
 
         $validator = Validator::make($request->all(), [
             'id'                   => 'required',
@@ -1816,11 +1818,13 @@ class ApiController extends Controller {
             'custom_field_files.*' => 'nullable|mimes:jpeg,png,jpg,pdf,doc|max:4096',
             'gallery_images'       => 'nullable|array',
             'currency'             => 'required',
-            'product_link'         => 'nullable|url|max:2048' . ($productLinkRequiredCategoryIds !== []
-                    ? '|required_if:category_id,' . implode(',', $productLinkRequiredCategoryIds)
-                    : ''),
-                    
-                    'review_link'          => 'nullable|url|max:2048'
+            'product_link'         => [
+                'nullable',
+                'url',
+                'max:2048',
+                Rule::requiredIf($requiresProductLink),
+            ],
+            'review_link'          => 'nullable|url|max:2048',
         
          ]);
 
@@ -8557,7 +8561,7 @@ public function storeRequestDevice(Request $request)
 
     private function isProductLinkRequiredCategory(int $categoryId): bool
     {
-        return in_array($categoryId, $this->productLinkRequiredCategoryIds(), true);
+        return $this->shouldRequireProductLink($categoryId);
     }
 
 
@@ -8592,23 +8596,129 @@ public function storeRequestDevice(Request $request)
             return $this->productLinkRequiredCategoryCache;
         }
 
-        $raw = CachingService::getSystemSettings('product_link_required_categories');
-        $ids = $this->parseCategoryIdList($raw);
-
-        $sheinCategoryIds = $this->departmentReportService
-            ->resolveCategoryIds(DepartmentReportService::DEPARTMENT_SHEIN);
+        $sections = $this->productLinkRequiredSections();
 
 
-        if ($ids === []) {
-            $ids = $sheinCategoryIds;
-        } else {
-            $ids = array_values(array_intersect($ids, $sheinCategoryIds));
+        if ($sections === []) {
+            return $this->productLinkRequiredCategoryCache = [];
+        }
+
+        $ids = [];
+
+
+        foreach ($sections as $section) {
+            $ids = array_merge(
+                $ids,
+                $this->departmentReportService->resolveCategoryIds($section)
+            );
         }
 
         $ids = array_filter($ids, static fn ($id) => is_int($id) && $id > 0);
 
         return $this->productLinkRequiredCategoryCache = array_values(array_unique($ids));
     }
+
+
+    private function shouldRequireProductLink(?int $categoryId): bool
+    {
+        if ($categoryId === null) {
+            return false;
+        }
+
+        $section = $this->resolveSectionByCategoryId($categoryId);
+
+        if ($section === null) {
+            return false;
+        }
+
+        return in_array(strtolower($section), $this->productLinkRequiredSections(), true);
+    }
+
+
+    private function productLinkRequiredSections(): array
+    {
+        if ($this->productLinkRequiredSectionCache !== null) {
+            return $this->productLinkRequiredSectionCache;
+        }
+
+        $raw = CachingService::getSystemSettings('product_link_required_categories');
+        $sections = [];
+
+        $interfaceMap = array_change_key_case(config('cart.interface_map', []), CASE_LOWER);
+        $interfaceMap = array_map(
+            static fn ($value) => is_string($value) ? strtolower($value) : $value,
+            $interfaceMap
+        );
+        $validSections = array_map('strtolower', config('cart.departments', []));
+
+        $consume = function (mixed $value) use (&$sections, &$consume, $interfaceMap, $validSections): void {
+            if ($value === null) {
+                return;
+            }
+
+            if (is_int($value) || is_float($value)) {
+                $section = $this->resolveSectionByCategoryId((int) $value);
+                if ($section !== null && strtolower($section) === DepartmentReportService::DEPARTMENT_SHEIN) {
+                    $sections[] = DepartmentReportService::DEPARTMENT_SHEIN;
+                }
+                return;
+            }
+
+            if (is_string($value)) {
+                $trimmed = trim($value);
+                if ($trimmed === '') {
+                    return;
+                }
+
+                try {
+                    $decoded = json_decode($trimmed, true, 512, JSON_THROW_ON_ERROR);
+                    if ($decoded !== null && $decoded !== $trimmed) {
+                        $consume($decoded);
+                        return;
+                    }
+                } catch (Throwable) {
+                    // ignore malformed JSON strings
+                }
+
+                if (preg_match_all('/\d+/', $trimmed, $matches) && isset($matches[0])) {
+                    foreach ($matches[0] as $match) {
+                        $consume((int) $match);
+                    }
+                }
+
+                $normalized = strtolower($trimmed);
+                if (isset($interfaceMap[$normalized]) && is_string($interfaceMap[$normalized])) {
+                    $normalized = strtolower($interfaceMap[$normalized]);
+                }
+
+                if (in_array($normalized, $validSections, true)) {
+                    $sections[] = $normalized;
+                }
+                return;
+            }
+
+            if (is_iterable($value)) {
+                foreach ($value as $entry) {
+                    $consume($entry);
+                }
+            }
+        };
+
+        $consume($raw);
+
+        $sections = array_values(array_unique(array_filter(
+            $sections,
+            static fn ($section) => is_string($section) && in_array($section, $validSections, true)
+        )));
+
+        if ($sections === []) {
+            $sections = [DepartmentReportService::DEPARTMENT_SHEIN];
+        }
+
+        return $this->productLinkRequiredSectionCache = $sections;
+    }
+
+
 
 
     private function parseCategoryIdList(mixed $raw): array

@@ -14,11 +14,19 @@ class GeoRules {
     'e_store',
   };
 
+  static const Set<int> _defaultDisabledRoots = <int>{
+    Constant.sheinRootCategoryId,
+    Constant.computerRootCategoryId,
+    Constant.storeRootCategoryId,
+  };
+
+
   static bool isDisabled({Iterable<int>? categoryIds, String? interfaceType}) {
     final Set<int> disabledCategories = Constant.geoDisabledCategoryIds;
     if (categoryIds != null) {
       for (final int id in categoryIds) {
-        if (disabledCategories.contains(id)) {
+        if (disabledCategories.contains(id) ||
+            _defaultDisabledRoots.contains(id)) {
           return true;
         }
       }
@@ -62,6 +70,8 @@ class GeoRules {
       return false;
     }
     final Set<int> disabled = Constant.geoDisabledCategoryIds;
-    return categoryIds.any((int id) => disabled.contains(id));
+    return categoryIds.any(
+          (int id) => disabled.contains(id) || _defaultDisabledRoots.contains(id),
+    );
   }
 }

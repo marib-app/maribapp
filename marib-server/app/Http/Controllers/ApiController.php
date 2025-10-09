@@ -8584,7 +8584,27 @@ public function storeRequestDevice(Request $request)
         }
         $ids = array_merge($ids, [295]);
 
-        $ids = array_filter($ids, static fn ($id) => is_int($id) && $id > 0);
+        $ids = array_filter($ids, function ($id) {
+            if (! is_int($id) || $id <= 0) {
+                return false;
+            }
+
+            if ($this->isGeoDisabledCategory($id)) {
+                return false;
+            }
+
+            $section = $this->resolveSectionByCategoryId($id);
+
+            if ($section !== null && in_array($section, [
+                DepartmentReportService::DEPARTMENT_SHEIN,
+                DepartmentReportService::DEPARTMENT_COMPUTER,
+                DepartmentReportService::DEPARTMENT_STORE,
+            ], true)) {
+                return false;
+            }
+
+            return true;
+        });
 
         return $this->geoDisabledCategoryCache = array_values(array_unique($ids));
     }
@@ -8625,13 +8645,29 @@ public function storeRequestDevice(Request $request)
             return false;
         }
 
+        if ($this->isGeoDisabledCategory($categoryId)) {
+            return false;
+        }
+
+
         $section = $this->resolveSectionByCategoryId($categoryId);
 
         if ($section === null) {
             return false;
         }
 
-        return in_array(strtolower($section), $this->productLinkRequiredSections(), true);
+        $normalizedSection = strtolower($section);
+
+        if (in_array($normalizedSection, [
+            DepartmentReportService::DEPARTMENT_SHEIN,
+            DepartmentReportService::DEPARTMENT_COMPUTER,
+            DepartmentReportService::DEPARTMENT_STORE,
+        ], true)) {
+            return false;
+        }
+
+        return in_array($normalizedSection, $this->productLinkRequiredSections(), true);
+    
     }
 
 

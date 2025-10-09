@@ -1269,7 +1269,25 @@ class ManualPaymentRequestController extends Controller
         $gateway = $manualPaymentRequest->paymentTransaction?->payment_gateway;
         $normalized = $this->normalizeManualPaymentGateway($gateway);
 
-        return $normalized ?? 'manual_bank';
+        if ($normalized !== null) {
+            return $normalized;
+        }
+
+        $metaGateway = $this->normalizeManualPaymentGateway(data_get($manualPaymentRequest->meta, 'gateway'));
+        if ($metaGateway !== null) {
+            return $metaGateway;
+        }
+
+        if (
+            $manualPaymentRequest->isWalletTopUp()
+            || data_get($manualPaymentRequest->meta, 'wallet.transaction_id')
+        ) {
+            return 'wallet';
+        }
+
+        return 'manual_bank';
+
+        
     }
 
     private function manualPaymentStatusLabel(?string $status): string

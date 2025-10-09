@@ -23,12 +23,7 @@ use Illuminate\Support\Facades\Route;
 class OrderController extends Controller
 {
 
-    /**
-     * حالات الدفع التي تعتبر الطلب مدفوعاً.
-     *
-     * @var array<int, string>
-     */
-    private const PAID_PAYMENT_STATUSES = ['paid', 'partial', 'payment_partial'];
+
 
 
     /**
@@ -740,7 +735,6 @@ class OrderController extends Controller
         // التحقق من البيانات
         $request->validate([
             'order_status' => ['required', 'string', Rule::in(Order::statusValues())],
-            'payment_status' => ['required', 'string', Rule::in(Order::paymentStatusValues())],
             'shipping_address' => 'nullable|string',
             'billing_address' => 'nullable|string',
             'notes' => 'nullable|string',
@@ -772,13 +766,13 @@ class OrderController extends Controller
 
             if (
                 $pendingManualPaymentRequest
-                && $request->payment_status !== $order->payment_status
+                && $request->order_status !== $order->order_status
             ) {
                 DB::rollBack();
 
                 $reviewUrl = route('manual-payments.review', $pendingManualPaymentRequest->getKey());
                 $message = sprintf(
-                    'لا يمكن تغيير حالة الدفع لوجود طلب دفع يدوي #%d قيد المراجعة. يرجى إتمام المراجعة عبر %s.',
+                    'لا يمكن تعديل حالة الطلب لوجود طلب دفع يدوي #%d قيد المراجعة. يرجى إتمام المراجعة عبر %s.',
                     $pendingManualPaymentRequest->getKey(),
                     $reviewUrl
                 );
@@ -799,7 +793,6 @@ class OrderController extends Controller
 
 
                 'order_status' => $request->order_status,
-                'payment_status' => $request->payment_status,
                 'shipping_address' => $request->shipping_address,
                 'billing_address' => $request->billing_address,
                 'notes' => $request->notes,

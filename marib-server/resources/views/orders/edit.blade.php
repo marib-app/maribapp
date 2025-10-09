@@ -103,7 +103,7 @@
             <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
                 <div>
                     <strong>يوجد طلب دفع يدوي قيد المراجعة.</strong>
-                    <p class="mb-0">لا يمكن تعديل حالة الدفع حتى يتم البت في الطلب رقم #{{ $pendingManualPaymentRequest->id }} بمبلغ
+                    <p class="mb-0">لا يمكن تعديل حالة الدفع أو حالة الطلب حتى يتم البت في الطلب رقم #{{ $pendingManualPaymentRequest->id }} بمبلغ
                         {{ number_format((float) $pendingManualPaymentRequest->amount, 2) }}
                         {{ $pendingManualPaymentRequest->currency ?? 'ريال' }}.</p>
                 </div>
@@ -127,7 +127,9 @@
                 \App\Models\Order::STATUS_DELIVERED,
             ], true);
             $showDeliveryProofFields = $selectedStatus === \App\Models\Order::STATUS_DELIVERED;
-            $paymentStatusLocked = $pendingManualPaymentRequest !== null;
+            $paymentStatusLocked = true;
+            $orderStatusLocked = $pendingManualPaymentRequest !== null;
+            $paymentStatusLabel = $paymentStatusOptions[$order->payment_status] ?? $order->payment_status;
 
 
         @endphp
@@ -142,7 +144,7 @@
                     <div class="card-body">
                         <div class="form-group">
                             <label for="order_status">حالة الطلب</label>
-                            <select class="form-control" id="order_status" name="order_status" required>
+                            <select class="form-control" id="order_status" name="order_status" required {{ $orderStatusLocked ? 'disabled' : '' }}>
                                 @foreach($orderStatuses as $status)
                                     @php
                                         $statusCode = (string) $status->code;
@@ -175,6 +177,14 @@
                                 @endforeach
                             </select>
 
+
+                            @if($orderStatusLocked)
+                                <input type="hidden" name="order_status" value="{{ $order->order_status }}">
+                                <small class="text-muted d-block mt-2">
+                                    لا يمكن تعديل حالة الطلب حتى يتم اعتماد الدفعة من خلال فريق المدفوعات.
+                                </small>
+                            @endif
+
                             <div class="form-check mt-2">
                                 <input class="form-check-input" type="checkbox" id="enable_reserve_statuses">
                                 <label class="form-check-label" for="enable_reserve_statuses">
@@ -189,23 +199,11 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="payment_status">حالة الدفع</label>
-                            <select class="form-control" id="payment_status" name="payment_status" required {{ $paymentStatusLocked ? 'disabled' : '' }}>
-                                @foreach($paymentStatusOptions as $value => $label)
-                                    <option value="{{ $value }}" {{ old('payment_status', $order->payment_status) == $value ? 'selected' : '' }}>
-                                        {{ $label }}
-                                    </option>
-                                @endforeach
-                            </select>
-
-                            @if($paymentStatusLocked)
-                                <input type="hidden" name="payment_status" value="{{ $order->payment_status }}">
-                                <small class="text-muted d-block mt-2">يتم التحكم في حالة الدفع من خلال فريق المدفوعات بعد مراجعة الطلب اليدوي.</small>
-                            @endif
-
-                            @error('payment_status')
-                                <span class="text-danger">{{ $message }}</span>
-                            @enderror
+                            <label class="form-label">حالة الدفع</label>
+                            <div class="form-control-plaintext border rounded bg-light px-3 py-2">
+                                {{ $paymentStatusLabel ?? '—' }}
+                            </div>
+                            <small class="text-muted d-block mt-2">يتم تحديث حالة الدفع حصراً من خلال واجهة طلبات الدفع اليدوية.</small>
                         </div>
 
                         <div class="form-group">

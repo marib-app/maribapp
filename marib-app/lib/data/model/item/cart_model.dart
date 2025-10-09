@@ -75,6 +75,10 @@ class Cart extends ItemModel {
   /// الإجمالي الفرعي المحسوب في الخادم (قبل الضريبة/الرسوم).
   final double? subtotalOverride;
 
+
+  /// المعرف الداخلي للتنويعة كما يعيده الخادم (إن وجد).
+  final String? variantId;
+
   /// المفتاح المحسوب للتنويعة (attr=value|...).
   final String? variantKey;
 

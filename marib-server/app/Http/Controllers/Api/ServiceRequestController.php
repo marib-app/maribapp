@@ -202,16 +202,6 @@ class ServiceRequestController extends Controller
 
 
 
-        $deeplink = url(sprintf('/service-requests/show/%d', $serviceRequest->getKey()));
-        $notificationPayload = [
-            'service_request_id' => $serviceRequest->getKey(),
-            'status' => $serviceRequest->status,
-            'service_id' => $serviceRequest->service_id,
-        ];
-
-
-
-
         try {
             $tokens = UserFcmToken::query()
                 ->where('user_id', $user->id)

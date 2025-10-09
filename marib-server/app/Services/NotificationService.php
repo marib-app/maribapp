@@ -110,13 +110,22 @@ class NotificationService {
             // ]);
             
             //TODO : Use this from caching
-            $project_id = Setting::select('value')->where('name', 'firebase_project_id')->first();
-            // \Log::info('NotificationService: Firebase project ID check', [
-            //     'project_id_exists' => !empty($project_id),
-            //     'project_id_value' => $project_id->value ?? 'NULL'
-            // ]);
-            
-            if (empty($project_id->value)) {
+
+            $configurationState = self::validateHttpV1Configuration();
+
+            if ($configurationState['error']) {
+                \Log::error('NotificationService: Invalid FCM configuration detected', [
+                    'message' => $configurationState['message'] ?? null,
+                ]);
+
+                return $configurationState;
+            }
+
+            $project_id = Setting::where('name', 'firebase_project_id')->value('value');
+
+            if (empty($project_id)) {
+
+
                 \Log::error('NotificationService: Firebase project ID is not configured');
                 return [
                     'error'   => true,
@@ -124,7 +133,6 @@ class NotificationService {
                 ];
             }
 
-            $project_id = $project_id->value;
             $url = 'https://fcm.googleapis.com/v1/projects/' . $project_id . '/messages:send';
 
 //            $registrationIDs_chunks = array_chunk($registrationIDs, 1000);
@@ -178,6 +186,10 @@ class NotificationService {
             //     'total_devices' => count($registrationIDs)
             // ]);
             
+
+            $failedDeliveries = [];
+            $successfulDeliveries = 0;
+
             foreach ($registrationIDs as $index => $registrationID) {
                 // \Log::info('NotificationService: Processing device', [
                 //     'device_index' => $index + 1,
@@ -306,6 +318,10 @@ class NotificationService {
                 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 $curlError = curl_error($ch);
                 
+
+                curl_close($ch);
+
+
                 // \Log::info('NotificationService: FCM API response', [
                 //     'device_index' => $index + 1,
                 //     'http_code' => $httpCode,
@@ -313,21 +329,84 @@ class NotificationService {
                 //     'response_preview' => substr($result, 0, 200)
                 // ]);
 
-                if (!$result) {
+                if ($result === false) {
+
                     \Log::error('NotificationService: Curl failed', [
                         'error' => $curlError,
-                        'device_index' => $index + 1
+                        'device_index' => $index + 1,
+                        'token' => $registrationID,
                     ]);
-                    curl_close($ch);
+
+                    $failedDeliveries[] = [
+                        'token' => $registrationID,
+                        'http_code' => $httpCode,
+                        'message' => $curlError ?: 'Curl request failed.',
+                    ];
+
                     continue;
                 }
-                curl_close($ch);
+
+                $decodedResponse = json_decode($result, true);
+                $hasResponseError = $httpCode >= 400 || (is_array($decodedResponse) && isset($decodedResponse['error']));
+
+                if ($hasResponseError) {
+                    $errorStatus = data_get($decodedResponse, 'error.status');
+                    $errorMessage = data_get($decodedResponse, 'error.message', 'FCM request failed.');
+                    $errorCode = self::extractFcmErrorCode(is_array($decodedResponse) ? $decodedResponse : []);
+
+                    \Log::warning('NotificationService: FCM request failed', [
+                        'token' => $registrationID,
+                        'http_code' => $httpCode,
+                        'status' => $errorStatus,
+                        'error_code' => $errorCode,
+                        'message' => $errorMessage,
+                    ]);
+
+                    if (self::shouldRemoveFcmToken($errorCode, $errorStatus)) {
+                        self::removeInvalidFcmToken($registrationID);
+                    }
+
+                    $failedDeliveries[] = [
+                        'token' => $registrationID,
+                        'http_code' => $httpCode,
+                        'status' => $errorStatus,
+                        'error_code' => $errorCode,
+                        'message' => $errorMessage,
+                        'response' => $decodedResponse,
+                    ];
+
+                    continue;
+                }
+                $successfulDeliveries++;
+
             }
+
+            $hasFailures = count($failedDeliveries) > 0;
+
+            if ($hasFailures) {
+                return [
+                    'error' => true,
+                    'message' => 'One or more notifications failed to send.',
+                    'code' => $failedDeliveries[0]['http_code'] ?? null,
+                    'details' => $failedDeliveries,
+                    'data' => [
+                        'success' => $successfulDeliveries,
+                        'failure' => count($failedDeliveries),
+                        'failures' => $failedDeliveries,
+                    ],
+                ];
+            }
+
+
             \Log::info('NotificationService: FCM notification process completed successfully');
             return [
                 'error'   => false,
                 'message' => "Success",
-                'data'    => $result
+                'code'    => 200,
+                'data'    => [
+                    'success' => $successfulDeliveries,
+                    'failure' => 0,
+                ],
             ];
         } catch (Throwable $th) {
             \Log::error('NotificationService: Exception in sendFcmNotification', [
@@ -512,7 +591,48 @@ class NotificationService {
     }
 
 
+    protected static function extractFcmErrorCode(array $response): ?string
+    {
+        $details = data_get($response, 'error.details');
 
+        if (!is_array($details)) {
+            return null;
+        }
+
+        foreach ($details as $detail) {
+            if (!is_array($detail)) {
+                continue;
+            }
+
+            $errorCode = $detail['errorCode'] ?? null;
+
+            if (!empty($errorCode)) {
+                return (string) $errorCode;
+            }
+        }
+
+        return null;
+    }
+
+    protected static function shouldRemoveFcmToken(?string $errorCode, ?string $status): bool
+    {
+        if ($errorCode && in_array($errorCode, ['UNREGISTERED'], true)) {
+            return true;
+        }
+
+        if ($status && in_array($status, ['NOT_FOUND'], true)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    protected static function removeInvalidFcmToken(string $token): void
+    {
+        UserFcmToken::where('fcm_token', $token)->delete();
+    }
+
+    
     protected static function sanitizeDataPayload(array $payload): array
     {
         $reservedKeys = [

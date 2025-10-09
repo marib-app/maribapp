@@ -114,6 +114,25 @@ class _SuccessItemScreenState extends State<SuccessItemScreen>
     );
   }
 
+
+  void _navigateToPurchaseOptionsScreen() {
+    final ItemModel item = widget.model;
+    if (item.id == null) {
+      return;
+    }
+
+    Navigator.popUntil(context, (route) => route.isFirst);
+    Navigator.pushNamed(
+      context,
+      Routes.productPurchaseOptionsScreen,
+      arguments: {
+        'model': item,
+      },
+    );
+  }
+
+
+
   void _navigateBackToHome() {
     if (mounted)
       Future.delayed(
@@ -158,6 +177,30 @@ class _SuccessItemScreenState extends State<SuccessItemScreen>
                                     .color(context.color.territoryColor)
                                     .bold(weight: FontWeight.w600),
                               SizedBox(height: 18),
+                              if (widget.model.id != null) ...[
+                                InkWell(
+                                  onTap: _navigateToPurchaseOptionsScreen,
+                                  child: Container(
+                                    height: 48,
+                                    alignment: AlignmentDirectional.center,
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 65, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12),
+                                      color: context.color.territoryColor,
+                                    ),
+                                    child: Text(
+                                      "managePurchaseOptions"
+                                          .translate(context),
+                                    )
+                                        .centerAlign()
+                                        .size(context.font.larger)
+                                        .color(context.color.secondaryColor),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                              ],
+
                               Text(widget.isEdit
                                       ? 'updatedSuccess'.translate(context)
                                       : 'submittedSuccess'.translate(context))

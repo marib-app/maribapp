@@ -83,7 +83,7 @@ import 'package:marib/ui/screens/home_screen/section/section_screen/section_scre
 
 
 
-
+import 'package:marib/ui/screens/item/purchase_options/product_purchase_options_screen.dart';
 import 'package:marib/ui/screens/item/promo/promote_ad_screen.dart';
 import 'package:marib/ui/screens/settings/main_activity.dart';
 import 'package:marib/ui/screens/settings/splash_screen.dart';
@@ -274,6 +274,7 @@ class Routes {
   static const selectOutdoorFacility = '/selectOutdoorFacility';
   static const adDetailsScreen = '/adDetailsScreen';
   static const successItemScreen = '/successItemScreen';
+  static const productPurchaseOptionsScreen = '/productPurchaseOptionsScreen';
 
   ///Add item screens
   static const selectCategoryScreen = '/selectCategoryScreen';
@@ -505,6 +506,10 @@ class Routes {
 
       case successItemScreen:
         return SuccessItemScreen.route(routeSettings);
+
+
+      case productPurchaseOptionsScreen:
+        return ProductPurchaseOptionsScreen.route(routeSettings);
 
       case classifiedDetailsScreenRoute:
         return ClassifiedDetails.route(routeSettings);

@@ -6571,25 +6571,46 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
 
 
     public function getUsersByAccountType(Request $request) {
-    try {
+        try {
+            $accountType = $request->integer('account_type');
+            if ($accountType === null) {
+                $accountType = User::ACCOUNT_TYPE_SELLER;
+            }
 
         
-        $query =User::where('account_type', 2);
+            if (! in_array($accountType, [User::ACCOUNT_TYPE_CUSTOMER, User::ACCOUNT_TYPE_SELLER], true)) {
+                return response()->json([
+                    'error' => true,
+                    'message' => __('نوع الحساب المطلوب غير صالح.'),
+                ], 422);
+            }
 
-        $perPage = $request->per_page ?? 10;
-        $users = $query->paginate($perPage);
 
-        return response()->json([
-            'success' => true,
-            'data' => $users
-        ]);
-    } catch (\Throwable $th) {
-        return response()->json([
-            'success' => false,
-            'message' => $th->getMessage()
-        ], 500);
+            $perPage = $request->integer('per_page');
+            if ($perPage === null || $perPage <= 0) {
+                $perPage = 10;
+            }
+
+            $perPage = (int) min($perPage, 50);
+
+            $users = User::query()
+                ->where('account_type', $accountType)
+                ->orderByDesc('updated_at')
+                ->paginate($perPage);
+
+            return response()->json([
+                'error' => false,
+                'message' => __('تم جلب الحسابات بنجاح.'),
+                'data' => $users,
+            ]);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'error' => true,
+                'message' => $th->getMessage(),
+            ], 500);
+        }
     }
-}
+
 
 
 public function storeRequestDevice(Request $request)

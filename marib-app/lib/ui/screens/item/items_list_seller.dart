@@ -99,7 +99,7 @@ class ItemsListListState extends State<ItemsListSeller> {
       searchbody[Api.categoryId] = widget.categoryId;
       setState(() {});
     });
-    context.read<FetchSellersCubit>().fetchSellers(accountType: 2);
+    context.read<FetchSellersCubit>().fetchSellers(accountType: 3);
   }
 
   @override

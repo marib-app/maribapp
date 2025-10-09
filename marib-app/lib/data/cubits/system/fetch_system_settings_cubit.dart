@@ -609,13 +609,11 @@ class FetchSystemSettingsCubit extends Cubit<FetchSystemSettingsState> {
 
     consume(raw);
 
-    if (resolved.isEmpty) {
-      resolved.addAll(<int>{
-        Constant.sheinRootCategoryId,
-        Constant.computerRootCategoryId,
-        Constant.storeRootCategoryId,
-      });
-    }
+    resolved.addAll(<int>{
+      Constant.sheinRootCategoryId,
+      Constant.computerRootCategoryId,
+      Constant.storeRootCategoryId,
+    });
 
     return resolved;
   }

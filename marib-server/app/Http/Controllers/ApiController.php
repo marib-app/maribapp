@@ -8574,39 +8574,33 @@ public function storeRequestDevice(Request $request)
         $raw = CachingService::getSystemSettings('geo_disabled_categories');
         $ids = $this->parseCategoryIdList($raw);
 
-        if ($ids === []) {
-            $departmentService = app(DepartmentReportService::class);
-            $ids = array_merge(
-                $departmentService->resolveCategoryIds(DepartmentReportService::DEPARTMENT_SHEIN),
-                $departmentService->resolveCategoryIds(DepartmentReportService::DEPARTMENT_COMPUTER),
-                $departmentService->resolveCategoryIds(DepartmentReportService::DEPARTMENT_STORE),
-            );
+        $departmentService = app(DepartmentReportService::class);
+        $alwaysDisabled = array_merge(
+            $departmentService->resolveCategoryIds(DepartmentReportService::DEPARTMENT_SHEIN),
+            $departmentService->resolveCategoryIds(DepartmentReportService::DEPARTMENT_COMPUTER),
+            $departmentService->resolveCategoryIds(DepartmentReportService::DEPARTMENT_STORE),
+        );
+
+        $normalized = [];
+
+
+        foreach (array_merge($ids, $alwaysDisabled, [295]) as $value) {
+            if (! is_int($value)) {
+                if (is_numeric($value)) {
+                    $value = (int) $value;
+                } else {
+                    continue;
+                }
+
+
+            }
+
+             if ($value > 0) {
+                $normalized[$value] = $value;
+            }
         }
-        $ids = array_merge($ids, [295]);
+        return $this->geoDisabledCategoryCache = array_values($normalized);
 
-        $ids = array_filter($ids, function ($id) {
-            if (! is_int($id) || $id <= 0) {
-                return false;
-            }
-
-            if ($this->isGeoDisabledCategory($id)) {
-                return false;
-            }
-
-            $section = $this->resolveSectionByCategoryId($id);
-
-            if ($section !== null && in_array($section, [
-                DepartmentReportService::DEPARTMENT_SHEIN,
-                DepartmentReportService::DEPARTMENT_COMPUTER,
-                DepartmentReportService::DEPARTMENT_STORE,
-            ], true)) {
-                return false;
-            }
-
-            return true;
-        });
-
-        return $this->geoDisabledCategoryCache = array_values(array_unique($ids));
     }
 
 

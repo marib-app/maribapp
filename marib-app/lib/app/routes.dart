@@ -78,7 +78,6 @@ import 'package:marib/ui/screens/classified_ads/details.dart';
 import 'package:marib/ui/screens/classified_ads/classified_screen.dart';
 import 'package:marib/ui/screens/classified_ads/classified_screen2.dart';
 import 'package:marib/ui/screens/classified_ads/classified_screen3.dart';
-import 'package:marib/ui/screens/classified_ads/units/service_payment_page.dart';
 import 'package:marib/ui/screens/home_screen/section/section_screen/section_screen.dart';
 
 
@@ -132,7 +131,6 @@ class Routes {
   static const classifiedScreenRoute = 'classifiedScreenRoute';
   static const classifiedScreenRoute2 = 'classifiedScreen2Route';
   static const classifiedScreenRoute3 = 'classifiedScreen3Route';
-  static const servicePaymentPage = '/service-payment';
   static const myReviewsScreen = '/myReviewsScreenRoute';
   static const serviceAddMoreDetails = '/service-add-more-details';
   static const String serviceRequestsPage  = '/service-requests';
@@ -389,9 +387,7 @@ class Routes {
 
 
 
-    // الدفع
-      case Routes.servicePaymentPage:
-        return ServicePaymentPage.route(routeSettings);
+
 
       case Routes.section_screen:                // 👈 مسارك الجديد
         return Section_screen.route(routeSettings);

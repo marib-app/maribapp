@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\MessageBag;
 
 use Throwable;
 
@@ -243,7 +244,24 @@ class ResponseService
         self::errorResponse($message, $data, config('constants.RESPONSE_CODE.VALIDATION_ERROR'));
     }
 
+    /**
+     * @param MessageBag|array $errors
+     * @return void
+     */
+    public static function validationErrors(MessageBag|array $errors)
+    {
+        if ($errors instanceof MessageBag) {
+            $errors = $errors->toArray();
+        }
 
+        $response = response()->json([
+            'error'  => true,
+            'code'   => config('constants.RESPONSE_CODE.VALIDATION_ERROR'),
+            'errors' => $errors,
+        ]);
+
+        self::finalizeResponse($response);
+    }
     protected static function finalizeResponse(Response|JsonResponse $response): void
     {
         if (App::runningUnitTests()) {

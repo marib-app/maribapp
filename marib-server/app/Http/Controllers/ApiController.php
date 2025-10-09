@@ -133,7 +133,7 @@ use Illuminate\Support\Facades\Hash;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
-
+use JsonException;
 
 
 
@@ -1287,6 +1287,30 @@ class ApiController extends Controller {
 
      public function addItem(Request $request) {
         try {
+
+
+            if ($request->filled('custom_fields') && is_string($request->input('custom_fields'))) {
+                try {
+                    $decodedCustomFields = json_decode($request->input('custom_fields'), true, 512, JSON_THROW_ON_ERROR);
+                } catch (JsonException $exception) {
+                    ResponseService::validationErrors([
+                        'custom_fields' => [
+                            __('validation.json', ['attribute' => __('Custom Fields')]),
+                        ],
+                    ]);
+                }
+
+                if (! is_array($decodedCustomFields)) {
+                    ResponseService::validationErrors([
+                        'custom_fields' => [
+                            __('validation.array', ['attribute' => __('Custom Fields')]),
+                        ],
+                    ]);
+                }
+
+                $request->merge(['custom_fields' => $decodedCustomFields]);
+            }
+
             $validationRules = [
 
                 'name'                 => 'required',
@@ -1308,6 +1332,8 @@ class ApiController extends Controller {
                 'area_id'              => 'nullable',
                 'custom_field_files'   => 'nullable|array',
                 'custom_field_files.*' => 'nullable|mimes:jpeg,png,jpg,pdf,doc|max:4096',
+                'custom_fields'        => 'nullable|array',
+                'custom_fields.*'      => 'nullable',
                 'slug'                 => 'nullable|regex:/^[a-z0-9-]+$/',
                 'currency'             => 'required',
                 'product_link'         => 'nullable|url|max:2048',
@@ -1319,11 +1345,10 @@ class ApiController extends Controller {
             $categoryId = is_numeric($categoryInput) ? (int) $categoryInput : null;
 
             if ($categoryId !== null && $this->isGeoDisabledCategory($categoryId)) {
-                foreach (['latitude', 'longitude', 'city', 'area_id'] as $geoField) {
+                foreach (['latitude', 'longitude', 'city', 'area_id', 'address', 'country', 'state'] as $geoField) {
                     $validationRules[$geoField] = 'nullable';
                 }
-                $validationRules['address'] = 'nullable';
-
+                $validationRules['image'] = 'nullable|mimes:jpeg,png,jpg|max:4096';
             }
 
             $validator = Validator::make($request->all(), $validationRules);
@@ -1339,7 +1364,7 @@ class ApiController extends Controller {
 
 
             if ($validator->fails()) {
-                ResponseService::validationError($validator->errors()->first());
+                ResponseService::validationErrors($validator->errors());
             }
 
             DB::beginTransaction();
@@ -8527,7 +8552,6 @@ public function storeRequestDevice(Request $request)
         return $messages->values();
     }
 
-
     private function isGeoDisabledCategory(int $categoryId): bool
     {
         return in_array($categoryId, $this->geoDisabledCategoryIds(), true);
@@ -8552,6 +8576,7 @@ public function storeRequestDevice(Request $request)
                 $departmentService->resolveCategoryIds(DepartmentReportService::DEPARTMENT_STORE),
             );
         }
+
 
         $ids = array_merge($ids, [295]);
 

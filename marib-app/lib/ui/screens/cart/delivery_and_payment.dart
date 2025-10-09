@@ -1618,6 +1618,17 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
 
   String? _resolveDepositCurrency(Map<String, dynamic>? info) {
 
+    final String? orderCurrencyLabel = _orderCurrencyLabel;
+    if (orderCurrencyLabel != null && orderCurrencyLabel.trim().isNotEmpty) {
+      return orderCurrencyLabel.trim();
+    }
+
+    final String? orderCurrencyCode = _orderCurrencyCode;
+    if (orderCurrencyCode != null && orderCurrencyCode.trim().isNotEmpty) {
+      return orderCurrencyCode.trim();
+    }
+
+
     final String? fromInfo = _stringValue(info?['currency']);
     if (fromInfo != null && fromInfo.trim().isNotEmpty) {
       return fromInfo.trim();
@@ -1630,14 +1641,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     if (fromDelivery != null && fromDelivery.isNotEmpty) {
       return fromDelivery;
     }
-    final String? orderCurrencyLabel = _orderCurrencyLabel;
-    if (orderCurrencyLabel != null && orderCurrencyLabel.trim().isNotEmpty) {
-      return orderCurrencyLabel.trim();
-    }
-    final String? orderCurrencyCode = _orderCurrencyCode;
-    if (orderCurrencyCode != null && orderCurrencyCode.trim().isNotEmpty) {
-      return orderCurrencyCode.trim();
-    }
+
     return null;
 
   }
@@ -1660,13 +1664,17 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     final bool applied = _isDepositApplied;
     final String? currency = _resolveDepositCurrency(info);
 
-    final double? goodsValue = info['goodsValueValue'] is num
+    final double? goodsValueExplicit = info['goodsValueValue'] is num
         ? (info['goodsValueValue'] as num).toDouble()
         : _numericValue(info['goodsValueValue']);
-    final double? shippingValue = info['shippingFeeValue'] is num
+    final double? goodsValue =
+        goodsValueExplicit ?? _numericValue(info['goodsValue']);
+    final double? shippingValueExplicit = info['shippingFeeValue'] is num
+
         ? (info['shippingFeeValue'] as num).toDouble()
         : _numericValue(info['shippingFeeValue']);
-
+    final double? shippingValue =
+        shippingValueExplicit ?? _numericValue(info['shippingFee']);
     final double? totalValue = _resolveTotalAmountValue(info) ??
         ((goodsValue ?? _subtotal) + (shippingValue ?? 0));
 
@@ -1689,45 +1697,77 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
 
     String? totalDisplay = _stringValue(info['totalAmount']) ??
         _stringValue(info['goodsValue']);
-    if ((totalDisplay == null || totalDisplay.trim().isEmpty) &&
-        totalValue != null) {
-      totalDisplay = _formatCurrencyAmount(totalValue, currency: currency);
+    final double? resolvedTotalForDisplay =
+        totalValue ?? _numericValue(totalDisplay);
+    if (resolvedTotalForDisplay != null) {
+      totalDisplay =
+          _formatCurrencyAmount(resolvedTotalForDisplay, currency: currency);
     } else {
       totalDisplay = totalDisplay?.trim();
     }
 
     String? dueDisplay = _stringValue(info['amountDueNow']);
-    if ((dueDisplay == null || dueDisplay.trim().isEmpty) &&
-        depositDueValue != null) {
-      dueDisplay = _formatCurrencyAmount(depositDueValue, currency: currency);
+    final double? dueNumeric = depositDueValue ??
+        _numericValue(info['amountDueNowValue']) ??
+        _numericValue(dueDisplay) ??
+        resolvedTotalForDisplay;
+    if (dueNumeric != null) {
+      resolvedDueValue = dueNumeric;
+      dueDisplay = _formatCurrencyAmount(dueNumeric, currency: currency);
     } else if (dueDisplay == null || dueDisplay.trim().isEmpty) {
 
 
       dueDisplay = totalDisplay;
 
     } else {
-      dueDisplay = dueDisplay?.trim();
+      dueDisplay = dueDisplay.trim();
     }
 
     String? remainingDisplay = _stringValue(info['remainingBalance']);
-    if ((remainingDisplay == null || remainingDisplay.trim().isEmpty) &&
-        remainingValue != null && remainingValue > 0.009) {
+    final double? remainingNumeric = remainingValue ??
+        _numericValue(info['remainingBalanceValue']) ??
+        _numericValue(remainingDisplay);
+    if (remainingNumeric != null && remainingNumeric > 0.009) {
+      remainingValue ??= remainingNumeric;
       remainingDisplay =
-          _formatCurrencyAmount(remainingValue, currency: currency);
+          _formatCurrencyAmount(remainingNumeric, currency: currency);
     } else {
       remainingDisplay = remainingDisplay?.trim();
     }
 
-    if (!viewModel.containsKey('goodsValue') || viewModel['goodsValue'] == null) {
-      if (goodsValue != null) {
+    if (goodsValue != null) {
+      viewModel['goodsValue'] =
+          _formatCurrencyAmount(goodsValue, currency: currency);
+      viewModel['goodsValueValue'] = goodsValue;
+    } else if (viewModel.containsKey('goodsValue')) {
+      final dynamic rawGoods = viewModel['goodsValue'];
+      final double? parsedGoods = _numericValue(rawGoods);
+      if (parsedGoods != null) {
+
         viewModel['goodsValue'] =
-            _formatCurrencyAmount(goodsValue, currency: currency);
+            _formatCurrencyAmount(parsedGoods, currency: currency);
+        viewModel['goodsValueValue'] = parsedGoods;
+      } else {
+        final String? sanitizedGoods = _stringValue(rawGoods);
+        viewModel['goodsValue'] = sanitizedGoods;
       }
     }
-    if (!viewModel.containsKey('shippingFee') || viewModel['shippingFee'] == null) {
-      if (shippingValue != null) {
+    if (shippingValue != null) {
+      viewModel['shippingFee'] =
+          _formatCurrencyAmount(shippingValue, currency: currency);
+      viewModel['shippingFeeValue'] = shippingValue;
+    } else if (viewModel.containsKey('shippingFee')) {
+      final dynamic rawShipping = viewModel['shippingFee'];
+      final double? parsedShipping = _numericValue(rawShipping);
+      if (parsedShipping != null) {
+
+
         viewModel['shippingFee'] =
-            _formatCurrencyAmount(shippingValue, currency: currency);
+            _formatCurrencyAmount(parsedShipping, currency: currency);
+        viewModel['shippingFeeValue'] = parsedShipping;
+      } else {
+        final String? sanitizedShipping = _stringValue(rawShipping);
+        viewModel['shippingFee'] = sanitizedShipping;
       }
     }
 
@@ -1739,14 +1779,26 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     viewModel['toggleValue'] =
     _depositToggleAllowed ? _depositToggleValue : applied;
     viewModel['toggleRequired'] = _depositRequired;
-    viewModel['effectiveTotalValue'] = totalValue;
+    final double? effectiveTotalValue = totalValue ?? resolvedTotalForDisplay;
+    viewModel['effectiveTotalValue'] = effectiveTotalValue;
     viewModel['effectiveTotalDisplay'] = totalDisplay;
     viewModel['effectiveAmountDueValue'] = resolvedDueValue;
     viewModel['effectiveAmountDueDisplay'] = dueDisplay;
-    viewModel['effectiveRemainingValue'] = remainingValue ?? 0;
+    viewModel['effectiveRemainingValue'] = remainingValue ?? remainingNumeric ?? 0;
     viewModel['effectiveRemainingDisplay'] = remainingDisplay;
     viewModel['previewAmountDueDisplay'] ??= dueDisplay;
     viewModel['previewRemainingDisplay'] ??= remainingDisplay;
+
+
+    if (totalDisplay != null) {
+      viewModel['totalAmount'] = totalDisplay;
+    }
+    if (dueDisplay != null) {
+      viewModel['amountDueNow'] = dueDisplay;
+    }
+    if (remainingDisplay != null) {
+      viewModel['remainingBalance'] = remainingDisplay;
+    }
 
     return viewModel;
   }
@@ -2877,11 +2929,11 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         return true;
       }
 
+
       if (requiresPurchaseCodeGateway(bank.paymentMethod) ||
           isManualBankGateway(bank.paymentMethod)) {
         return true;
       }
-
 
       final Set<String> allowedCodes = <String>{};
       final Set<String> allowedTokens = <String>{};
@@ -3073,7 +3125,10 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       considerDisplay(info.display);
       considerCode(info.code);
     }
+
+
     final List<CurrencyParseResult> itemCandidates = <CurrencyParseResult>[];
+
 
     void considerCartItem(Cart item) {
       considerDisplay(item.currency);
@@ -3104,7 +3159,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
 
     for (final Cart item in _latestCartState.items) {
       considerCartItem(item);
-
     }
 
     if (itemCandidates.isNotEmpty) {
@@ -3157,6 +3211,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     }
 
     return CurrencyParseResult(code: code, display: display?.trim());
+
   }
 
   String? get _orderCurrencyCode => _orderCurrencyInfo.code;

@@ -89,6 +89,19 @@ class NotificationService {
      */
     public static function sendFcmNotification(array $registrationIDs, string|null $title = '', string|null $message = '', string $type = "default", array $customBodyFields = []): string|array|bool {
         try {
+
+            if (empty($registrationIDs)) {
+                \Log::info('NotificationService: No registration IDs provided, skipping FCM notification dispatch.', [
+                    'type' => $type,
+                ]);
+
+                return [
+                    'error'   => false,
+                    'message' => 'No registration tokens supplied.',
+                    'data'    => [],
+                ];
+            }
+
             // \Log::info('NotificationService: Starting FCM notification process', [
             //     'tokens_count' => count($registrationIDs),
             //     'title' => $title,
@@ -266,11 +279,29 @@ class NotificationService {
                 curl_setopt($ch, CURLOPT_POST, true);
                 curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
                 curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
 
-                // Disabling SSL Certificate support temporarily
-                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+                $verifySsl = (bool) config('services.fcm.verify_ssl', true);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $verifySsl ? 2 : 0);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $verifySsl);
+
+                if ($verifySsl) {
+                    $caBundlePath = config('services.fcm.ca_path');
+
+                    if (!empty($caBundlePath)) {
+                        $resolvedCaBundlePath = self::resolveAbsolutePath($caBundlePath);
+
+                        if (is_file($resolvedCaBundlePath) && is_readable($resolvedCaBundlePath)) {
+                            curl_setopt($ch, CURLOPT_CAINFO, $resolvedCaBundlePath);
+                        } else {
+                            \Log::warning('NotificationService: FCM CA bundle missing or unreadable for curl.', [
+                                'path' => $resolvedCaBundlePath,
+                            ]);
+                        }
+                    }
+                }
+
+                
                 curl_setopt($ch, CURLOPT_POSTFIELDS, $encodedData);
 
                 // Execute post

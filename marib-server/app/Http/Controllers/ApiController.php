@@ -923,6 +923,7 @@ class ApiController extends Controller {
                 'email'                 => 'nullable|email|unique:users,email,' . Auth::user()->id,
                 'mobile'                => 'nullable|unique:users,mobile,' . Auth::user()->id,
                 'fcm_id'                => 'nullable',
+                'platform_type'         => 'nullable|in:android,ios',
                 'address'               => 'nullable',
                 'show_personal_details' => 'boolean',
                 'country_code'          => 'nullable|string',
@@ -942,7 +943,15 @@ class ApiController extends Controller {
             }
 
             if (!empty($request->fcm_id)) {
-                UserFcmToken::updateOrCreate(['fcm_token' => $request->fcm_id], ['user_id' => $app_user->id, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()]);
+                UserFcmToken::updateOrCreate(
+                    ['fcm_token' => $request->fcm_id],
+                    [
+                        'user_id'       => $app_user->id,
+                        'platform_type' => $request->platform_type,
+                        'created_at'    => Carbon::now(),
+                        'updated_at'    => Carbon::now(),
+                    ]
+                );
             }
             $data['show_personal_details'] = $request->show_personal_details;
 
@@ -3445,9 +3454,13 @@ class ApiController extends Controller {
             }
 
             $notificationPayload = $chatMessage->toArray();
+            $messageType = $notificationPayload['message_type'] ?? null;
             $notificationPayload['item_offer_id'] = $conversation->item_offer_id;
             $notificationPayload['conversation_id'] = $conversation->id;
             $messagePreview = $request->message ?? $chatMessage->message ?? '';
+
+
+            
 
             $fcmMsg = [
                 ...$notificationPayload,
@@ -3467,12 +3480,37 @@ class ApiController extends Controller {
                 'message_preview'     => $messagePreview,
             ];
 
-            if (array_key_exists('message_type', $fcmMsg)) {
-                unset($fcmMsg['message_type']);
+            $receiverFCMTokens = UserFcmToken::where('user_id', $receiver_id)
+                ->pluck('fcm_token')
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+
+            if (empty($receiverFCMTokens)) {
+                \Log::info('ApiController: No FCM tokens found for chat receiver.', [
+                    'conversation_id' => $conversation->id,
+                    'receiver_id' => $receiver_id,
+                ]);
+
+                $notification = [
+                    'error' => false,
+                    'message' => 'Receiver has no notification tokens.',
+                    'data' => [],
+                ];
+            } else {
+                $notification = NotificationService::sendFcmNotification(
+                    $receiverFCMTokens,
+                    'Message',
+                    $request->message,
+                    'chat',
+                    $fcmMsg
+                );
+
+
             }
             
-            $receiverFCMTokens = UserFcmToken::where('user_id', $receiver_id)->pluck('fcm_token')->toArray();
-            $notification = NotificationService::sendFcmNotification($receiverFCMTokens, 'Message', $request->message, "chat", $fcmMsg);
+
 
             if (is_array($notification) && ($notification['error'] ?? false)) {
                 \Log::warning('ApiController: Failed to send chat notification', $notification);

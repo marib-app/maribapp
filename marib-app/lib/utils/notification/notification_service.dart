@@ -561,9 +561,10 @@ class NotificationService {
     _handleMessageStatusNotification(Map<String, dynamic>.from(data));
   }
 
-  static init(context) {
+  static Future<void> init(BuildContext context) async {
     requestPermission();
-    registerListeners(context);
+    await _ensureInitialTokenSynced();
+    await registerListeners(context);
     _registerTokenRefreshListener();
   }
 
@@ -874,6 +875,36 @@ class NotificationService {
           await _handleTokenRefresh(token);
         });
   }
+
+
+
+  static Future<void> _ensureInitialTokenSynced() async {
+    try {
+      final String? currentToken =
+      (await FirebaseMessaging.instance.getToken())?.trim();
+      if (currentToken == null || currentToken.isEmpty) {
+        return;
+      }
+
+      final String? storedToken =
+      HiveUtils.getUserDetail<String>(key: Api.fcmId)?.trim();
+
+      if (storedToken == currentToken) {
+        await HiveUtils.setUserDetail(key: Api.fcmId, value: currentToken);
+
+        if (HiveUtils.isUserAuthenticated()) {
+          await _updateTokenOnServer(currentToken);
+        }
+
+        return;
+      }
+
+      await _handleTokenRefresh(currentToken);
+    } catch (e) {
+      debugPrint('Failed to sync initial FCM token: $e');
+    }
+  }
+
 
   static Future<void> _handleTokenRefresh(String? token) async {
     final String refreshedToken = (token ?? '').trim();

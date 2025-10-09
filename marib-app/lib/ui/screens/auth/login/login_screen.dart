@@ -30,6 +30,7 @@ import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 
 // واجهة منفصلة بالكامل
 import 'login_screen_ui.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class LoginScreen extends StatefulWidget {
   final bool? isDeleteAccount;
@@ -170,6 +171,35 @@ class LoginScreenState extends State<LoginScreen> {
         // success handled below in BlocConsumer listener
       }
     });
+  }
+
+
+  Future<String?> _resolveFcmToken() async {
+    final List<String?> candidates = <String?>[
+      HiveUtils.getUserDetails().fcmId,
+      HiveUtils.getUserDetail<String>(key: Api.fcmId),
+    ];
+
+    for (final String? candidate in candidates) {
+      final String normalized = (candidate ?? '').trim();
+      if (normalized.isNotEmpty) {
+        return normalized;
+      }
+    }
+
+    try {
+      final String? fetched = await FirebaseMessaging.instance.getToken();
+      final String normalized = (fetched ?? '').trim();
+      if (normalized.isEmpty) {
+        return null;
+      }
+
+      await HiveUtils.setUserDetail(key: Api.fcmId, value: normalized);
+      return normalized;
+    } catch (e) {
+      debugPrint('Failed to resolve FCM token: $e');
+      return null;
+    }
   }
 
   Future<Country> _getSimCountry() async {
@@ -383,9 +413,9 @@ class LoginScreenState extends State<LoginScreen> {
           "platform_type": Platform.isAndroid ? "android" : "ios",
         };
 
-        final userDetails = HiveUtils.getUserDetails();
-        if (userDetails.fcmId != null) {
-          payload["fcm_id"] = userDetails.fcmId!;
+        final String? fcmToken = await _resolveFcmToken();
+        if (fcmToken != null && fcmToken.isNotEmpty) {
+          payload["fcm_id"] = fcmToken;
         }
 
         final response = await Api.post(url: "user-login", parameter: payload);
@@ -427,6 +457,13 @@ class LoginScreenState extends State<LoginScreen> {
           "type": state.type.name,
           "platform_type": Platform.isAndroid ? "android" : "ios",
         };
+
+
+        final String? fcmToken = await _resolveFcmToken();
+        if (fcmToken != null && fcmToken.isNotEmpty) {
+          payload["fcm_id"] = fcmToken;
+        }
+
 
         final response = await Api.post(url: "user-signup", parameter: payload);
 

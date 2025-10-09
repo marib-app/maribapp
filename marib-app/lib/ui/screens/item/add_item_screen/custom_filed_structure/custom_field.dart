@@ -2,7 +2,56 @@
 
 import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/register.dart';
 import 'package:flutter/material.dart';
+import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/register.dart';
 
+String resolveFieldLabel(BuildContext context, Map<String, dynamic> j) {
+  final locale = Localizations.localeOf(context).languageCode;
+  final translations = j['translations'];
+  String? translated;
+
+  if (translations is Map) {
+    dynamic localeEntry = translations[locale];
+
+    if (localeEntry == null && locale.contains('-')) {
+      localeEntry = translations[locale.split('-').first];
+    }
+
+    if (localeEntry == null && locale.contains('_')) {
+      localeEntry = translations[locale.split('_').first];
+    }
+
+    if (localeEntry is Map) {
+      translated = (localeEntry['label'] ??
+          localeEntry['name'] ??
+          localeEntry['title'])
+          ?.toString();
+    } else if (localeEntry != null) {
+      translated = localeEntry.toString();
+    }
+  }
+
+  String? pick(List<dynamic> values) {
+    for (final value in values) {
+      if (value is String) {
+        final trimmed = value.trim();
+        if (trimmed.isNotEmpty) {
+          return trimmed;
+        }
+      }
+    }
+    return null;
+  }
+
+  return pick([
+    translated,
+    j['display_name'],
+    j['label'],
+    j['name'],
+    j['title'],
+    j['key'],
+  ]) ??
+      '';
+}
 ///Structure
 abstract class CustomField {
   abstract String type;

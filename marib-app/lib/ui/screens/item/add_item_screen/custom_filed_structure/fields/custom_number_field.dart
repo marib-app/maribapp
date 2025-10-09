@@ -54,12 +54,37 @@ class CustomNumberField extends CustomField {
 
   @override
   Widget render() {
+
+    Map<String, dynamic> params;
+    try {
+      params = Map<String, dynamic>.from(parameters);
+    } catch (_) {
+      params = <String, dynamic>{};
+    }
+
+    String effectiveTitle = _title;
+    final dynamic rawName = params['name'] ?? params['title'];
+    if (rawName is String && rawName.trim().isNotEmpty) {
+      effectiveTitle = rawName.trim();
+    }
+
+    String? effectiveNotes = _notes;
+    final dynamic rawNotes = params['notes'];
+    if (rawNotes is String && rawNotes.trim().isNotEmpty) {
+      effectiveNotes = rawNotes.trim();
+    }
+
+    dynamic effectiveImage = _image;
+    if (params.containsKey('image')) {
+      effectiveImage = params['image'];
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 0),
       child: CustomNumberFieldView(
-        title: _title,
-        notes: _notes,
-        image: _image,
+        title: effectiveTitle,
+        notes: effectiveNotes,
+        image: effectiveImage,
         value: _initialValue,
         maxLen: _maxLen,
         minLen: _minLen,

@@ -12,7 +12,7 @@ import 'package:marib/data/model/custom_field/custom_field_model.dart';
 
 // بناة الحقول الديناميكية (new_code)
 import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/custom_field.dart'
-    show CustomField, CustomFieldBuilder;
+    show CustomField, CustomFieldBuilder, resolveFieldLabel;
 
 // مخزن القيم (الموجود في مشروعكم)
 import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart'
@@ -64,6 +64,29 @@ class _ServiceAddMoreDetailsScreenState
   bool _navigatedOnEmpty = false;
 
   final ServiceRequestRepository _requestRepository = ServiceRequestRepository();
+
+  static const List<String> _numericMaxKeys = <String>[
+    'max',
+    'maximum',
+    'max_value',
+    'maxvalue',
+    'max_num',
+    'maxnumber',
+    'upper',
+    'upper_bound',
+  ];
+
+  static const List<String> _numericMinKeys = <String>[
+    'min',
+    'minimum',
+    'min_value',
+    'minvalue',
+    'min_num',
+    'minnumber',
+    'lower',
+    'lower_bound',
+  ];
+
   // ===================== Helpers =====================
 
   List<Map<String, dynamic>> _parseSchema(dynamic raw) {
@@ -519,6 +542,275 @@ class _ServiceAddMoreDetailsScreenState
     return merged;
   }
 
+
+
+
+  bool _isNumericFieldType(String? type) {
+    if (type == null) return false;
+    switch (type.toLowerCase()) {
+      case 'number':
+      case 'numeric':
+      case 'integer':
+      case 'int':
+      case 'double':
+      case 'float':
+      case 'decimal':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  String? _fieldTypeOf(Map<String, dynamic> field) {
+    final candidates = <String>[];
+    for (final key in ['type', 'input_type', 'field_type']) {
+      final value = field[key];
+      if (value is String && value.trim().isNotEmpty) {
+        candidates.add(value.trim().toLowerCase());
+      }
+    }
+    if (candidates.isEmpty) {
+      return null;
+    }
+
+    for (final candidate in candidates) {
+      if (_isNumericFieldType(candidate)) {
+        return candidate;
+      }
+    }
+
+    return candidates.first;
+  }
+
+  num? _coerceToNum(dynamic value) {
+    if (value == null) return null;
+    if (value is num) {
+      return value;
+    }
+    if (value is String) {
+      final trimmed = value.trim();
+      if (trimmed.isEmpty) return null;
+      return num.tryParse(trimmed);
+    }
+    if (value is Iterable) {
+      for (final element in value) {
+        final coerced = _coerceToNum(element);
+        if (coerced != null) {
+          return coerced;
+        }
+      }
+      return null;
+    }
+    if (value is Map) {
+      for (final element in value.values) {
+        final coerced = _coerceToNum(element);
+        if (coerced != null) {
+          return coerced;
+        }
+      }
+    }
+    return null;
+  }
+
+  num? _parseConstraintFromString(String source, List<String> keys) {
+    final normalized = source.trim().toLowerCase();
+    if (normalized.isEmpty) return null;
+
+    final parts = normalized.split(RegExp(r'[|,\s]+'));
+    for (final part in parts) {
+      final segment = part.trim();
+      if (segment.isEmpty) continue;
+
+      for (final separator in [':', '=', '>=', '<=']) {
+        final index = segment.indexOf(separator);
+        if (index <= 0) {
+          continue;
+        }
+        final key = segment.substring(0, index).trim();
+        if (!keys.contains(key)) {
+          continue;
+        }
+        final valuePart = segment.substring(index + separator.length).trim();
+        if (valuePart.isEmpty) {
+          continue;
+        }
+        final parsed = num.tryParse(valuePart);
+        if (parsed != null) {
+          return parsed;
+        }
+      }
+    }
+
+    for (final key in keys) {
+      if (normalized.startsWith(key)) {
+        final remainder = normalized.substring(key.length).trim();
+        if (remainder.startsWith(':') || remainder.startsWith('=')) {
+          final parsed = num.tryParse(remainder.substring(1).trim());
+          if (parsed != null) {
+            return parsed;
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  num? _extractConstraint(
+      Map<String, dynamic> field,
+      List<String> keys,
+      ) {
+    final lowerCaseKeys = keys.map((k) => k.toLowerCase()).toSet();
+    final keysList = lowerCaseKeys.toList();
+    final visitedMaps = <int>{};
+    final visitedIterables = <int>{};
+    final stack = <dynamic>[field];
+
+    while (stack.isNotEmpty) {
+      final current = stack.removeLast();
+
+      if (current is Map) {
+        final id = identityHashCode(current);
+        if (!visitedMaps.add(id)) {
+          continue;
+        }
+
+        for (final entry in current.entries) {
+          final key = entry.key.toString().toLowerCase();
+          final value = entry.value;
+          if (lowerCaseKeys.contains(key)) {
+            if (value is String) {
+              final parsed = _parseConstraintFromString(value, keysList);
+              if (parsed != null) return parsed;
+            } else {
+              final parsed = _coerceToNum(value);
+              if (parsed != null) {
+                return parsed;
+              }
+            }
+          }
+
+          if (value is Map || value is Iterable) {
+            stack.add(value);
+          } else if (value is String) {
+            final parsed = _parseConstraintFromString(value, keysList);
+            if (parsed != null) {
+              return parsed;
+            }
+          }
+        }
+      } else if (current is Iterable) {
+        final id = identityHashCode(current);
+        if (!visitedIterables.add(id)) {
+          continue;
+        }
+
+        for (final element in current) {
+          if (element is Map || element is Iterable) {
+            stack.add(element);
+          } else if (element is String) {
+            final parsed = _parseConstraintFromString(element, keysList);
+            if (parsed != null) {
+              return parsed;
+            }
+          }
+        }
+      } else if (current is String) {
+        final parsed = _parseConstraintFromString(current, keysList);
+        if (parsed != null) {
+          return parsed;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  String _formatConstraint(num value) {
+    if (value is int || value == value.roundToDouble()) {
+      return value.toInt().toString();
+    }
+    return value.toString();
+  }
+
+  String _fieldLabelForError(
+      BuildContext context,
+      Map<String, dynamic> field,
+      String fallback,
+      ) {
+    try {
+      final resolved = resolveFieldLabel(
+        context,
+        Map<String, dynamic>.from(field),
+      );
+      if (resolved.trim().isNotEmpty) {
+        return resolved.trim();
+      }
+    } catch (_) {}
+
+    for (final key in ['title', 'label', 'display_name', 'name']) {
+      final value = field[key];
+      if (value is String && value.trim().isNotEmpty) {
+        return value.trim();
+      }
+    }
+
+    return fallback;
+  }
+
+  String? _validateAndNormalizeCustomFieldValues(
+      BuildContext context,
+      Map<String, dynamic> rawValues,
+      Map<String, Map<String, dynamic>> lookup,
+      Map<String, dynamic> normalizedOut,
+      ) {
+    for (final entry in rawValues.entries) {
+      final key = _normalizeFieldKey(entry.key);
+      if (key == null) {
+        continue;
+      }
+
+      final normalizedValue =
+      _normalizeFieldValueForRequest(key, entry.value, lookup);
+      if (normalizedValue == null) {
+        continue;
+      }
+
+      normalizedOut[key] = normalizedValue;
+
+      final field = lookup[key];
+      if (field == null) {
+        continue;
+      }
+
+      final type = _fieldTypeOf(field);
+      if (!_isNumericFieldType(type)) {
+        continue;
+      }
+
+      final numericValue = _coerceToNum(normalizedValue);
+      if (numericValue == null) {
+        final label = _fieldLabelForError(context, field, key);
+        return 'الرجاء إدخال رقم صحيح في الحقل "$label".';
+      }
+
+      final maxConstraint = _extractConstraint(field, _numericMaxKeys);
+      if (maxConstraint != null && numericValue > maxConstraint) {
+        final label = _fieldLabelForError(context, field, key);
+        return 'الحد الأقصى المسموح به للحقل "$label" هو ${_formatConstraint(maxConstraint)}.';
+      }
+
+      final minConstraint = _extractConstraint(field, _numericMinKeys);
+      if (minConstraint != null && numericValue < minConstraint) {
+        final label = _fieldLabelForError(context, field, key);
+        return 'الحد الأدنى المسموح به للحقل "$label" هو ${_formatConstraint(minConstraint)}.';
+      }
+    }
+
+    return null;
+  }
+
+
   String? _stringifyFieldValue(dynamic value) {
     if (value == null) return null;
     if (value is String) {
@@ -542,7 +834,8 @@ class _ServiceAddMoreDetailsScreenState
       ) {
     if (raw == null) return null;
 
-    final type = lookup[key]?['type']?.toString().toLowerCase();
+    final fieldMeta = lookup[key];
+    final type = _fieldTypeOf(fieldMeta ?? const <String, dynamic>{});
     final expectsList = type == 'checkbox';
 
     dynamic candidate = raw;
@@ -582,31 +875,30 @@ class _ServiceAddMoreDetailsScreenState
       return <String>[normalized];
     }
 
+
+    if (_isNumericFieldType(type)) {
+      final parsed = num.tryParse(normalized);
+      if (parsed != null) {
+        return parsed;
+      }
+    }
+
+
+
     return normalized;
   }
 
   Map<String, dynamic> _encodeCustomFieldsForRequest(
-      Map<String, dynamic> rawValues) {
-    if (rawValues.isEmpty) {
+      Map<String, dynamic> normalizedValues,
+      ) {
+    if (normalizedValues.isEmpty) {
       return const <String, dynamic>{};
     }
 
-    final lookup = _buildFieldLookup();
     final payload = <String, dynamic>{};
 
-    rawValues.forEach((rawKey, rawValue) {
-      final key = _normalizeFieldKey(rawKey);
-      if (key == null) {
-        return;
-      }
-
-      final normalizedValue =
-      _normalizeFieldValueForRequest(key, rawValue, lookup);
-      if (normalizedValue == null) {
-        return;
-      }
-
-      payload['custom_fields[$key]'] = normalizedValue;
+    normalizedValues.forEach((key, value) {
+      payload['custom_fields[$key]'] = value;
     });
 
     return payload;
@@ -775,8 +1067,22 @@ class _ServiceAddMoreDetailsScreenState
 
 
     final rawCustomFields = _collectRawCustomFieldValues();
+    final lookup = _buildFieldLookup();
+    final normalizedCustomFields = <String, dynamic>{};
+    final validationError = _validateAndNormalizeCustomFieldValues(
+      context,
+      rawCustomFields,
+      lookup,
+      normalizedCustomFields,
+    );
+
+    if (validationError != null) {
+      HelperUtils.showSnackBarMessage(context, validationError);
+      return;
+    }
+
     final customFieldPayload =
-    _encodeCustomFieldsForRequest(rawCustomFields);
+    _encodeCustomFieldsForRequest(normalizedCustomFields);
     final attachmentPayload = _collectAttachmentFiles();
     setState(() => _submitting = true);
     try {
@@ -796,8 +1102,8 @@ class _ServiceAddMoreDetailsScreenState
 
         if (request.customFields != null)
           'custom_fields': request.customFields,
-        if (rawCustomFields.isNotEmpty && request.customFields == null)
-          'custom_fields': rawCustomFields,
+        if (normalizedCustomFields.isNotEmpty && request.customFields == null)
+          'custom_fields': normalizedCustomFields,
         if (attachmentPayload.isNotEmpty) 'attachments': attachmentPayload,
       };
 

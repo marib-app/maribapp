@@ -199,56 +199,6 @@ span.mySpanClass {
 }
 
 
-.bootstrap-table {
-    position: relative;
-}
-
-.bootstrap-table .table-loading-overlay {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1.5rem;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s ease-in-out;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.7) 100%);
-    backdrop-filter: blur(1px);
-    z-index: 5;
-}
-
-.bootstrap-table .table-loading-overlay.is-visible {
-    opacity: 1;
-}
-
-.table-loading-shimmer-group {
-    width: 100%;
-    max-width: 320px;
-    display: grid;
-    gap: 0.75rem;
-}
-
-.table-loading-shimmer {
-    height: 0.875rem;
-    border-radius: 999px;
-    background: linear-gradient(90deg, rgba(203, 213, 225, 0.35) 0%, rgba(203, 213, 225, 0.75) 50%, rgba(203, 213, 225, 0.35) 100%);
-    background-size: 200% 100%;
-    animation: table-loading-shimmer 1.2s ease-in-out infinite;
-}
-
-@keyframes table-loading-shimmer {
-    0% {
-        background-position: 200% 0;
-    }
-    100% {
-        background-position: -200% 0;
-    }
-}
-
-.bootstrap-table.is-loading .fixed-table-body .no-records-found {
-    display: none !important;
-}
 
 
 .custom-field-grid .custom-field-card {

@@ -13,79 +13,6 @@ $(document).ready(function () {
     })
 
 
-    function getBootstrapWrapper($table) {
-        if (!$table || !$table.length) {
-            return null;
-        }
-
-        const $wrapper = $table.closest('.bootstrap-table');
-
-        if ($wrapper.length) {
-            return $wrapper;
-        }
-
-        return null;
-    }
-
-    function ensureTableLoadingOverlay($table) {
-        const $wrapper = getBootstrapWrapper($table);
-
-        if (!$wrapper) {
-            return null;
-        }
-
-        let $overlay = $wrapper.children('.table-loading-overlay');
-
-        if (!$overlay.length) {
-            const shimmerGroup = $('<div class="table-loading-shimmer-group" />')
-                .append('<div class="table-loading-shimmer"></div>')
-                .append('<div class="table-loading-shimmer"></div>')
-                .append('<div class="table-loading-shimmer"></div>');
-
-            $overlay = $('<div class="table-loading-overlay" role="status" aria-live="polite"></div>').append(shimmerGroup);
-            $wrapper.append($overlay);
-        }
-
-        return $overlay;
-    }
-
-    function showTableLoading($table) {
-        const $wrapper = getBootstrapWrapper($table);
-
-        if (!$wrapper) {
-            window.requestAnimationFrame(function () {
-                showTableLoading($table);
-            });
-            return;
-        }
-
-        const $overlay = ensureTableLoadingOverlay($table);
-
-        if ($overlay) {
-            $wrapper.addClass('is-loading');
-            window.requestAnimationFrame(function () {
-                $overlay.addClass('is-visible');
-            });
-        }
-    }
-
-    function hideTableLoading($table) {
-        const $wrapper = getBootstrapWrapper($table);
-
-        if (!$wrapper) {
-            return;
-        }
-
-        const $overlay = $wrapper.children('.table-loading-overlay');
-
-        if ($overlay.length) {
-            $overlay.removeClass('is-visible');
-        }
-
-        $wrapper.removeClass('is-loading');
-        $table.data('tableInitialLoadComplete', true);
-    }
-
 
     function refreshBootstrapTable($table) {
         const tableState = $table.data('bootstrap.table');
@@ -107,7 +34,6 @@ $(document).ready(function () {
                 pageNumber: 1
             });
         }
-        showTableLoading($table);
 
         $table.bootstrapTable('refresh', {
             silent: true
@@ -139,21 +65,6 @@ $(document).ready(function () {
             if (!$table.data('bootstrap.table')) {
                 $table.bootstrapTable();
             }
-
-            if (!$table.data('tableLoadingEventsBound')) {
-                $table.data('tableLoadingEventsBound', true);
-
-                $table.on('load-success.bs.table load-error.bs.table post-body.bs.table', function () {
-                    hideTableLoading($table);
-                });
-
-                $table.on('refresh.bs.table page-change.bs.table search.bs.table column-switch.bs.table', function () {
-                    showTableLoading($table);
-                });
-            }
-
-            showTableLoading($table);
-
 
             window.requestAnimationFrame(function () {
                 refreshBootstrapTable($table);

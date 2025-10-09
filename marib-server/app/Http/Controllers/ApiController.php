@@ -1314,7 +1314,7 @@ class ApiController extends Controller {
 
             $categoryInput = $request->input('category_id');
             $categoryId = is_numeric($categoryInput) ? (int) $categoryInput : null;
-            $requiresProductLink = $categoryId !== null && $this->isProductLinkRequiredCategory($categoryId);
+            $productLinkRequiredCategoryIds = $this->productLinkRequiredCategoryIds();
 
             $validationRules = [
 
@@ -1342,8 +1342,12 @@ class ApiController extends Controller {
                 'slug'                 => 'nullable|regex:/^[a-z0-9-]+$/',
                 'currency'             => 'required',
 
-                'product_link'         => ($requiresProductLink ? 'required' : 'nullable') . '|url|max:2048',
-                'review_link'          => 'nullable|url|max:2048'
+                'product_link'         => 'nullable|url|max:2048' . ($productLinkRequiredCategoryIds !== []
+                        ? '|required_if:category_id,' . implode(',', $productLinkRequiredCategoryIds)
+                        : ''),
+                        
+                        
+                        'review_link'          => 'nullable|url|max:2048'
 
             ];
 
@@ -1794,7 +1798,7 @@ class ApiController extends Controller {
         }
 
         $categoryId = is_numeric($categoryInput) ? (int) $categoryInput : null;
-        $requiresProductLink = $categoryId !== null && $this->isProductLinkRequiredCategory($categoryId);
+        $productLinkRequiredCategoryIds = $this->productLinkRequiredCategoryIds();
 
         $validator = Validator::make($request->all(), [
             'id'                   => 'required',
@@ -1812,8 +1816,11 @@ class ApiController extends Controller {
             'custom_field_files.*' => 'nullable|mimes:jpeg,png,jpg,pdf,doc|max:4096',
             'gallery_images'       => 'nullable|array',
             'currency'             => 'required',
-            'product_link'         => ($requiresProductLink ? 'required' : 'nullable') . '|url|max:2048',
-            'review_link'          => 'nullable|url|max:2048'
+            'product_link'         => 'nullable|url|max:2048' . ($productLinkRequiredCategoryIds !== []
+                    ? '|required_if:category_id,' . implode(',', $productLinkRequiredCategoryIds)
+                    : ''),
+                    
+                    'review_link'          => 'nullable|url|max:2048'
         
          ]);
 
@@ -8588,9 +8595,14 @@ public function storeRequestDevice(Request $request)
         $raw = CachingService::getSystemSettings('product_link_required_categories');
         $ids = $this->parseCategoryIdList($raw);
 
+        $sheinCategoryIds = $this->departmentReportService
+            ->resolveCategoryIds(DepartmentReportService::DEPARTMENT_SHEIN);
+
+
         if ($ids === []) {
-            $ids = app(DepartmentReportService::class)
-                ->resolveCategoryIds(DepartmentReportService::DEPARTMENT_SHEIN);
+            $ids = $sheinCategoryIds;
+        } else {
+            $ids = array_values(array_intersect($ids, $sheinCategoryIds));
         }
 
         $ids = array_filter($ids, static fn ($id) => is_int($id) && $id > 0);

@@ -5,6 +5,7 @@ namespace Database\Seeders;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use App\Models\Setting;
 use Illuminate\Database\Seeder;
+use App\Services\DepartmentReportService;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -108,6 +109,20 @@ class SystemUpgradeSeeder extends Seeder {
 
         /*Create Settings which are new & ignore the old values*/
         Setting::insertOrIgnore(config('constants.DEFAULT_SETTINGS'));
+
+        $sheinCategoryIds = app(DepartmentReportService::class)
+            ->resolveCategoryIds(DepartmentReportService::DEPARTMENT_SHEIN);
+
+        if ($sheinCategoryIds !== []) {
+            Setting::updateOrCreate(
+                ['name' => 'product_link_required_categories'],
+                [
+                    'value' => json_encode(array_values($sheinCategoryIds)),
+                    'type'  => 'json',
+                ]
+            );
+        }
+
     }
 
     /**

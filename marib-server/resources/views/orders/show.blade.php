@@ -1150,6 +1150,10 @@
                     <h4 class="card-title">تحديث حالة الطلب</h4>
                 </div>
                 <div class="card-body">
+                    @php
+                        $paymentStatusLocked = isset($pendingManualPaymentRequest) && $pendingManualPaymentRequest;
+                    @endphp
+
                     <form action="{{ route('orders.update', $order->id) }}" method="POST">
                         @csrf
                         @method('PUT')
@@ -1166,14 +1170,23 @@
                         </div>
                         <div class="form-group">
                             <label for="payment_status">حالة الدفع</label>
-                            <select class="form-control" id="payment_status" name="payment_status" required>
-                                @foreach($paymentStatusOptions as $value => $label)
+                            <select class="form-control" id="payment_status" name="payment_status" required {{ $paymentStatusLocked ? 'disabled' : '' }}>                                @foreach($paymentStatusOptions as $value => $label)
                                     <option value="{{ $value }}" {{ old('payment_status', $order->payment_status) == $value ? 'selected' : '' }}>
                                         {{ $label }}
                                     </option>
                                 @endforeach
                                 
                             </select>
+
+                            @if($paymentStatusLocked)
+                                <input type="hidden" name="payment_status" value="{{ $order->payment_status }}">
+                                <small class="form-text text-muted mt-2">
+                                    لا يمكن تعديل حالة الدفع أثناء مراجعة طلب الدفع اليدوي رقم #{{ $pendingManualPaymentRequest->id }}.
+                                    يرجى إكمال المراجعة عبر
+                                    <a href="{{ route('manual-payments.review', $pendingManualPaymentRequest->id) }}" target="_blank" rel="noopener noreferrer">رابط المراجعة</a>.
+                                </small>
+                            @endif
+
                         </div>
                         <div class="form-group">
                             <label for="comment">ملاحظات التحديث</label>

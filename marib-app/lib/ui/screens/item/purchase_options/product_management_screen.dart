@@ -568,7 +568,13 @@ class _DiscountTabState extends State<_DiscountTab> {
             DropdownMenuItem(value: 'percent', child: Text('نسبة مئوية')),
             DropdownMenuItem(value: 'fixed', child: Text('قيمة ثابتة')),
           ],
-          onChanged: state.discountEnabled ? cubit.setDiscountType : null,
+          onChanged: state.discountEnabled
+              ? (String? value) {
+            if (value != null) {
+              cubit.setDiscountType(value);
+            }
+          }
+              : null,
         ),
         const SizedBox(height: 12),
         TextField(

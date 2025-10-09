@@ -41,20 +41,16 @@ class SoonScreenState extends State<SoonScreen> with TickerProviderStateMixin {
       return;
     }
 
-    final result = await Navigator.of(context).push(
-      BankTransferScreen.route(
-        RouteSettings(
-          name: '/bank-transfer',
-          arguments: BankTransferArgs(
-            token: token,
-            packageId: packageId,
-            amount: amount,
-            currency: currency,
-            packageType: packageType,
-            purpose: 'package',
-            itemId: itemId,
-          ),
-        ),
+    final result = await BankTransferScreen.show(
+      context,
+      BankTransferArgs(
+        token: token,
+        packageId: packageId,
+        amount: amount,
+        currency: currency,
+        packageType: packageType,
+        purpose: 'package',
+        itemId: itemId,
       ),
     );
 

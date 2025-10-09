@@ -542,7 +542,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
 
     final bool hasVariants = options.attributes.any((ItemPurchaseAttributeOption attribute) => attribute.affectsStock);
 
-    final ItemVariantStockOption? generalStockOption = options.variantStocks.firstWhere(
+    final ItemVariantStockOption generalStockOption = options.variantStocks.firstWhere(
           (ItemVariantStockOption element) => element.variantKey.trim().isEmpty,
       orElse: () => const ItemVariantStockOption(
         variantKey: '',
@@ -605,7 +605,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     }
 
     if (!targetOptions.attributes.any((ItemPurchaseAttributeOption attribute) => attribute.affectsStock)) {
-      final ItemVariantStockOption? generalStockOption = targetOptions.variantStocks.firstWhere(
+      final ItemVariantStockOption generalStockOption = targetOptions.variantStocks.firstWhere(
             (ItemVariantStockOption element) => element.variantKey.trim().isEmpty,
         orElse: () => const ItemVariantStockOption(
           variantKey: '',

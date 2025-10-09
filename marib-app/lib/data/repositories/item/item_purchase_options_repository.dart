@@ -69,9 +69,11 @@ class ItemPurchaseOptionsRepository {
     required int itemId,
     required Map<String, dynamic> payload,
   }) async {
-    final Map<String, dynamic> response = await Api.patch(
+    final Map<String, dynamic> response = await Api.requestJson(
+
       url: Api.itemDiscountApi(itemId),
-      parameter: payload,
+      method: 'PATCH',
+      data: payload,
     );
 
     return _parseUpdateResponse(response);

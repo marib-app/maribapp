@@ -15,6 +15,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use App\Exceptions\PaymentUnderReviewException;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -376,6 +377,15 @@ class Order extends Model
             ->where('payable_type', self::class)
             ->orderByDesc('id');
     }
+
+
+    public function latestManualPaymentRequest(): HasOne
+    {
+        return $this->hasOne(ManualPaymentRequest::class, 'payable_id')
+            ->where('payable_type', self::class)
+            ->latestOfMany('id');
+    }
+
 
     public function openManualPaymentRequests(): HasMany
     {

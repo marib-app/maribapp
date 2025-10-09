@@ -98,6 +98,31 @@ class ManualPaymentRequestService
                 ->find($transaction->manual_payment_request_id);
         }
 
+
+
+        $duplicateRequest = null;
+
+        if ($payableId !== null && $payableType !== '') {
+            $duplicateRequest = ManualPaymentRequest::query()
+                ->lockForUpdate()
+                ->where('payable_type', $payableType)
+                ->where('payable_id', $payableId)
+                ->whereIn('status', ManualPaymentRequest::OPEN_STATUSES)
+                ->when(
+                    $existingRequest,
+                    static fn ($query) => $query->whereKeyNot($existingRequest->getKey())
+                )
+                ->first();
+        }
+
+        if ($duplicateRequest !== null) {
+            throw ValidationException::withMessages([
+                'manual_payment_request' => trans('manual_payment_request_already_open', [
+                    'id' => $duplicateRequest->getKey(),
+                ]),
+            ]);
+        }
+
         if ($existingRequest) {
             $mergedMeta = $existingRequest->meta ?? [];
             if (! is_array($mergedMeta)) {

@@ -1,5 +1,10 @@
 @extends('layouts.main')
 
+
+@php
+    use App\Models\ManualPaymentRequest;
+@endphp
+
 @section('title', 'إدارة طلبات شي ان')
 
 @section('styles')
@@ -76,6 +81,21 @@
 
     @php
         $statusDisplayMap = \App\Models\Order::statusDisplayMap();
+
+
+        $manualPaymentStatusLabels = [
+            ManualPaymentRequest::STATUS_PENDING => 'قيد المراجعة',
+            ManualPaymentRequest::STATUS_UNDER_REVIEW => 'قيد المراجعة',
+            ManualPaymentRequest::STATUS_APPROVED => 'مدفوع (يدوي)',
+            ManualPaymentRequest::STATUS_REJECTED => 'مرفوض',
+        ];
+        $manualPaymentStatusBadgeClasses = [
+            ManualPaymentRequest::STATUS_PENDING => 'bg-warning text-dark',
+            ManualPaymentRequest::STATUS_UNDER_REVIEW => 'bg-warning text-dark',
+            ManualPaymentRequest::STATUS_APPROVED => 'bg-success',
+            ManualPaymentRequest::STATUS_REJECTED => 'bg-danger',
+        ];
+
     @endphp
 
     <div class="row">
@@ -401,11 +421,25 @@
                                             @php
                                                 $pendingManualPayments = (int) ($order->pending_manual_payment_requests_count ?? 0);
 
+                                                $latestManualPaymentRequest = $order->latestManualPaymentRequest;
+                                                $manualPaymentStatus = $latestManualPaymentRequest?->status;
+                                                $manualPaymentStatusLabel = $manualPaymentStatus
+                                                    ? ($manualPaymentStatusLabels[$manualPaymentStatus] ?? 'غير محدد')
+                                                    : null;
+                                                $manualPaymentStatusClass = $manualPaymentStatus
+                                                    ? ($manualPaymentStatusBadgeClasses[$manualPaymentStatus] ?? 'bg-secondary')
+                                                    : null;
+                                                $manualPaymentLocked = $manualPaymentStatus !== null
+                                                    && in_array($manualPaymentStatus, ManualPaymentRequest::OPEN_STATUSES, true);
+                                                $manualPaymentReviewUrl = $latestManualPaymentRequest
+                                                    ? route('manual-payments.review', $latestManualPaymentRequest->id)
+                                                    : null;
+
 
                                                 $paymentStatusValue = $order->payment_status;
-                                                if ($pendingManualPayments > 0) {
-                                                    $paymentStatusLabel = 'قيد المراجعة';
-                                                    $paymentStatusClass = 'bg-warning text-dark';
+                                                if ($manualPaymentStatusLabel !== null) {
+                                                    $paymentStatusLabel = $manualPaymentStatusLabel;
+                                                    $paymentStatusClass = $manualPaymentStatusClass ?? 'bg-secondary';
                                                 } else {
                                                     $paymentStatusLabel = $paymentStatusValue
                                                         ? ($paymentStatusLabels[$paymentStatusValue] ?? 'غير معروف')
@@ -416,8 +450,23 @@
                                                 }
                                             @endphp
                                             <span class="badge {{ $paymentStatusClass }}">{{ $paymentStatusLabel }}</span>
-                                            @if($pendingManualPayments > 0)
-                                                <div class="small text-muted mt-1">هناك {{ $pendingManualPayments }} دفعة قيد المراجعة</div>
+                                            @if($manualPaymentLocked && $latestManualPaymentRequest)
+                                                <div class="small text-muted mt-1">
+                                                    يوجد طلب دفع يدوي رقم #{{ $latestManualPaymentRequest->id }} قيد المراجعة
+                                                    @if($manualPaymentReviewUrl)
+                                                        — <a href="{{ $manualPaymentReviewUrl }}" target="_blank" rel="noopener noreferrer">عرض الطلب</a>
+                                                    @endif
+                                                    @if($pendingManualPayments > 1)
+                                                        <span class="ms-1">(إجمالي {{ $pendingManualPayments }} طلبات مفتوحة)</span>
+                                                    @endif
+                                                </div>
+                                            @elseif($latestManualPaymentRequest && $manualPaymentStatusLabel)
+                                                <div class="small text-muted mt-1">
+                                                    آخر طلب دفع يدوي رقم #{{ $latestManualPaymentRequest->id }}: {{ $manualPaymentStatusLabel }}
+                                                    @if($manualPaymentReviewUrl)
+                                                        — <a href="{{ $manualPaymentReviewUrl }}" target="_blank" rel="noopener noreferrer">عرض الطلب</a>
+                                                    @endif
+                                                </div>
                                             @endif
 
                                         </td>
@@ -474,12 +523,24 @@
                                                 <a href="{{ route('orders.show', $order->id) }}" class="btn btn-sm btn-info">
                                                     <i class="fa fa-eye"></i>
                                                 </a>
-                                                <a href="{{ route('orders.edit', $order->id) }}" class="btn btn-sm btn-primary">
-                                                    <i class="fa fa-edit"></i>
-                                                </a>
-                                                <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ $order->id }}">
-                                                    <i class="fa fa-trash"></i>
-                                                </button>
+                                                @if($manualPaymentLocked)
+                                                    <span class="btn btn-sm btn-primary disabled" title="لا يمكن تعديل الطلب أثناء مراجعة الدفع" aria-disabled="true">
+                                                        <i class="fa fa-edit"></i>
+                                                    </span>
+                                                @else
+                                                    <a href="{{ route('orders.edit', $order->id) }}" class="btn btn-sm btn-primary">
+                                                        <i class="fa fa-edit"></i>
+                                                    </a>
+                                                @endif
+                                                @if($manualPaymentLocked)
+                                                    <span class="btn btn-sm btn-danger disabled" title="لا يمكن حذف الطلب أثناء مراجعة الدفع" aria-disabled="true">
+                                                        <i class="fa fa-trash"></i>
+                                                    </span>
+                                                @else
+                                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ $order->id }}">
+                                                        <i class="fa fa-trash"></i>
+                                                    </button>
+                                                @endif
                                             </div>
 
                                             <!-- Modal for delete confirmation -->

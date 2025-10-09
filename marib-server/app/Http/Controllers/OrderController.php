@@ -43,8 +43,25 @@ class OrderController extends Controller
     {
         ResponseService::noAnyPermissionThenRedirect(['orders-list']);
         
-        $query = Order::with(['user', 'seller', 'items.item.category'])
-            ->withCount(['openManualPaymentRequests as pending_manual_payment_requests_count'])
+        $query = Order::with([
+            'user',
+            'seller',
+            'items.item.category',
+            'latestManualPaymentRequest' => static function ($query) {
+                $query->select([
+                    'id',
+                    'payable_id',
+                    'payable_type',
+                    'status',
+                    'amount',
+                    'currency',
+                    'created_at',
+                    'reviewed_at',
+                ]);
+            },
+        ])
+        
+        ->withCount(['openManualPaymentRequests as pending_manual_payment_requests_count'])
 
         
             ->where(function ($query) {
@@ -91,7 +108,7 @@ class OrderController extends Controller
         $orders = $query->paginate(15);
 
    
-        $orderStatuses = $this->allowedOrderStatuses($order);
+        $orderStatuses = $this->allowedOrderStatuses();
 
    
         $users = User::customers()->orWhereNull('account_type')->orderBy('name')->get();
@@ -124,8 +141,25 @@ class OrderController extends Controller
         $department = DepartmentReportService::DEPARTMENT_SHEIN;
         $categoryIds = app(DepartmentReportService::class)->resolveCategoryIds($department);
 
-        $query = Order::with(['user', 'seller', 'items.item.category'])
-            ->withCount(['openManualPaymentRequests as pending_manual_payment_requests_count'])
+        $query = Order::with([
+            'user',
+            'seller',
+            'items.item.category',
+            'latestManualPaymentRequest' => static function ($query) {
+                $query->select([
+                    'id',
+                    'payable_id',
+                    'payable_type',
+                    'status',
+                    'amount',
+                    'currency',
+                    'created_at',
+                    'reviewed_at',
+                ]);
+            },
+        ])
+        
+        ->withCount(['openManualPaymentRequests as pending_manual_payment_requests_count'])
             ->where(function ($query) use ($department, $categoryIds) {
                 $query->where('department', $department);
 
@@ -219,9 +253,27 @@ class OrderController extends Controller
         $categoryIds = app(DepartmentReportService::class)->resolveCategoryIds($department);
 
 
-        $query = Order::with(['user', 'seller', 'items.item.category'])
-        ->withCount(['openManualPaymentRequests as pending_manual_payment_requests_count'])
-        ->where(function ($query) use ($department, $categoryIds) {
+        $query = Order::with([
+            'user',
+            'seller',
+            'items.item.category',
+            'latestManualPaymentRequest' => static function ($query) {
+                $query->select([
+                    'id',
+                    'payable_id',
+                    'payable_type',
+                    'status',
+                    'amount',
+                    'currency',
+                    'created_at',
+                    'reviewed_at',
+                ]);
+            },
+        ])
+            ->withCount(['openManualPaymentRequests as pending_manual_payment_requests_count'])
+            ->where(function ($query) use ($department, $categoryIds) {
+
+                
                 $query->where('department', $department);
 
                 if ($categoryIds !== []) {

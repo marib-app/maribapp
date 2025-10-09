@@ -1,5 +1,9 @@
 @extends('layouts.main')
 
+@php
+    use App\Models\ManualPaymentRequest;
+@endphp
+
 @section('title', 'تعديل الطلب #' . $order->order_number)
 
 @section('content')
@@ -7,6 +11,19 @@
 
     @php
         $statusDisplayMap = \App\Models\Order::statusDisplayMap();
+        $manualPaymentStatusLabels = [
+            ManualPaymentRequest::STATUS_PENDING => 'قيد المراجعة',
+            ManualPaymentRequest::STATUS_UNDER_REVIEW => 'قيد المراجعة',
+            ManualPaymentRequest::STATUS_APPROVED => 'مدفوع (يدوي)',
+            ManualPaymentRequest::STATUS_REJECTED => 'مرفوض',
+        ];
+        $manualPaymentStatusBadgeClasses = [
+            ManualPaymentRequest::STATUS_PENDING => 'bg-warning text-dark',
+            ManualPaymentRequest::STATUS_UNDER_REVIEW => 'bg-warning text-dark',
+            ManualPaymentRequest::STATUS_APPROVED => 'bg-success',
+            ManualPaymentRequest::STATUS_REJECTED => 'bg-danger',
+        ];
+
     @endphp
 
     <div class="row">
@@ -129,8 +146,19 @@
             $showDeliveryProofFields = $selectedStatus === \App\Models\Order::STATUS_DELIVERED;
             $paymentStatusLocked = true;
             $orderStatusLocked = $pendingManualPaymentRequest !== null;
-            $paymentStatusLabel = $paymentStatusOptions[$order->payment_status] ?? $order->payment_status;
-
+            $latestManualPaymentRequest = $order->manualPaymentRequests->first();
+            $manualPaymentStatus = $latestManualPaymentRequest?->status;
+            $manualPaymentStatusLabelValue = $manualPaymentStatus
+                ? ($manualPaymentStatusLabels[$manualPaymentStatus] ?? $manualPaymentStatus)
+                : null;
+            $manualPaymentBadgeClass = $manualPaymentStatus
+                ? ($manualPaymentStatusBadgeClasses[$manualPaymentStatus] ?? 'bg-secondary')
+                : null;
+            $manualPaymentReviewUrl = $latestManualPaymentRequest
+                ? route('manual-payments.review', $latestManualPaymentRequest->id)
+                : null;
+            $paymentStatusLabel = $manualPaymentStatusLabelValue
+                ?? ($paymentStatusOptions[$order->payment_status] ?? ($order->payment_status ?: 'غير محدد'));
 
         @endphp
 
@@ -201,9 +229,24 @@
                         <div class="form-group">
                             <label class="form-label">حالة الدفع</label>
                             <div class="form-control-plaintext border rounded bg-light px-3 py-2">
-                                {{ $paymentStatusLabel ?? '—' }}
+                                @if($manualPaymentStatusLabelValue)
+                                    <span class="badge {{ $manualPaymentBadgeClass ?? 'bg-secondary' }}">{{ $manualPaymentStatusLabelValue }}</span>
+                                @else
+                                    {{ $paymentStatusLabel ?? '—' }}
+                                @endif
+                            
                             </div>
                             <small class="text-muted d-block mt-2">يتم تحديث حالة الدفع حصراً من خلال واجهة طلبات الدفع اليدوية.</small>
+                            @if($latestManualPaymentRequest)
+                                <small class="text-muted d-block">
+                                    آخر طلب دفع يدوي رقم #{{ $latestManualPaymentRequest->id }}:
+                                    {{ $manualPaymentStatusLabelValue ?? ($paymentStatusLabel ?? 'غير محدد') }}
+                                    @if($manualPaymentReviewUrl)
+                                        — <a href="{{ $manualPaymentReviewUrl }}" target="_blank" rel="noopener noreferrer">عرض الطلب</a>
+                                    @endif
+                                </small>
+                            @endif
+
                         </div>
 
                         <div class="form-group">

@@ -1,5 +1,12 @@
 @extends('layouts.main')
 
+
+@php
+    use App\Models\ManualPaymentRequest;
+@endphp
+
+
+
 @section('title', 'تفاصيل الطلب #' . $order->order_number)
 
 @section('content')
@@ -7,6 +14,20 @@
     @php
         $deliverySummary = $order->delivery_payment_summary ?? [];
         $paymentSummary = $order->payment_summary ?? [];
+        $manualPaymentStatusLabels = [
+            ManualPaymentRequest::STATUS_PENDING => 'قيد المراجعة',
+            ManualPaymentRequest::STATUS_UNDER_REVIEW => 'قيد المراجعة',
+            ManualPaymentRequest::STATUS_APPROVED => 'مدفوع (يدوي)',
+            ManualPaymentRequest::STATUS_REJECTED => 'مرفوض',
+        ];
+        $manualPaymentStatusBadgeClasses = [
+            ManualPaymentRequest::STATUS_PENDING => 'bg-warning text-dark',
+            ManualPaymentRequest::STATUS_UNDER_REVIEW => 'bg-warning text-dark',
+            ManualPaymentRequest::STATUS_APPROVED => 'bg-success',
+            ManualPaymentRequest::STATUS_REJECTED => 'bg-danger',
+        ];
+        $manualPaymentLocked = $pendingManualPaymentRequest !== null;
+
         $pricingSnapshot = is_array($order->pricing_snapshot) ? $order->pricing_snapshot : [];
         $policyData = data_get($pricingSnapshot, 'policy');
         $policyId = data_get($pricingSnapshot, 'policy_id', data_get($policyData, 'id'));
@@ -249,13 +270,25 @@
                     <div class="tab-content mt-3" id="orderActionsTabsContent">
                         <div class="tab-pane fade show active" id="orderActionsPayments" role="tabpanel" aria-labelledby="orderActionsPaymentsTab">
                             <div class="d-flex flex-wrap align-items-center gap-2">
-                                <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#addOrderToGroupModal" data-testid="add-to-payment-group-button">
-                                    <i class="fa fa-layer-group"></i> إضافة الطلب إلى مجموعة
-                                </button>
+                                @if($manualPaymentLocked)
+                                    <span class="btn btn-outline-success disabled" aria-disabled="true" title="لا يمكن إضافة الطلب إلى مجموعة أثناء مراجعة الدفع" data-testid="add-to-payment-group-button">
+                                        <i class="fa fa-layer-group"></i> إضافة الطلب إلى مجموعة
+                                    </span>
+                                @else
+                                    <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#addOrderToGroupModal" data-testid="add-to-payment-group-button">
+                                        <i class="fa fa-layer-group"></i> إضافة الطلب إلى مجموعة
+                                    </button>
+                                @endif
 
-                                <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#instantNotificationModal" data-testid="instant-notification-button">
-                                    <i class="fa fa-bell"></i> إرسال إشعار فوري
-                                </button>
+                                @if($manualPaymentLocked)
+                                    <span class="btn btn-outline-warning disabled" aria-disabled="true" title="لا يمكن إرسال إشعار فوري أثناء مراجعة الدفع" data-testid="instant-notification-button">
+                                        <i class="fa fa-bell"></i> إرسال إشعار فوري
+                                    </span>
+                                @else
+                                    <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#instantNotificationModal" data-testid="instant-notification-button">
+                                        <i class="fa fa-bell"></i> إرسال إشعار فوري
+                                    </button>
+                                @endif
                             </div>
                         </div>
 
@@ -376,19 +409,37 @@
                         $deliveryPriceDisplay = $order->delivery_price ? number_format($order->delivery_price, 2) . ' ريال' : 'غير محدد';
                         $completedAtDisplay = $order->completed_at ? $order->completed_at->format('Y-m-d H:i') : 'غير مكتمل';
 
+                        $latestManualPaymentRequest = $order->manualPaymentRequests->first();
+                        $manualPaymentStatus = $latestManualPaymentRequest?->status;
+                        $manualPaymentStatusLabel = $manualPaymentStatus
+                            ? ($manualPaymentStatusLabels[$manualPaymentStatus] ?? 'غير محدد')
+                            : null;
+                        $manualPaymentBadgeClass = $manualPaymentStatus
+                            ? ($manualPaymentStatusBadgeClasses[$manualPaymentStatus] ?? 'bg-secondary')
+                            : null;
+                        $manualPaymentReviewUrl = $latestManualPaymentRequest
+                            ? route('manual-payments.review', $latestManualPaymentRequest->id)
+                            : null;
+
+
                         $paymentStatusValue = $order->payment_status;
-                        $paymentStatusLabel = 'غير محدد';
-                        $paymentStatusBadgeClass = 'bg-secondary';
-                        if ($paymentStatusValue === 'pending') {
-                            $paymentStatusLabel = 'قيد الانتظار';
-                        } elseif ($paymentStatusValue === 'paid') {
-                            $paymentStatusLabel = 'مدفوع';
-                            $paymentStatusBadgeClass = 'bg-success';
-                        } elseif ($paymentStatusValue === 'refunded') {
-                            $paymentStatusLabel = 'مسترجع';
-                            $paymentStatusBadgeClass = 'bg-warning';
-                        } elseif (! empty($paymentStatusValue)) {
-                            $paymentStatusLabel = $paymentStatusValue;
+                        if ($manualPaymentStatusLabel !== null) {
+                            $paymentStatusLabel = $manualPaymentStatusLabel;
+                            $paymentStatusBadgeClass = $manualPaymentBadgeClass ?? 'bg-secondary';
+                        } else {
+                            $paymentStatusLabel = 'غير محدد';
+                            $paymentStatusBadgeClass = 'bg-secondary';
+                            if ($paymentStatusValue === 'pending') {
+                                $paymentStatusLabel = 'قيد الانتظار';
+                            } elseif ($paymentStatusValue === 'paid') {
+                                $paymentStatusLabel = 'مدفوع';
+                                $paymentStatusBadgeClass = 'bg-success';
+                            } elseif ($paymentStatusValue === 'refunded') {
+                                $paymentStatusLabel = 'مسترجع';
+                                $paymentStatusBadgeClass = 'bg-warning';
+                            } elseif (! empty($paymentStatusValue)) {
+                                $paymentStatusLabel = $paymentStatusValue;
+                            }
                         }
 
 
@@ -470,6 +521,17 @@
                                     <span class="order-summary-label">حالة الدفع</span>
                                     <span class="order-summary-value">
                                         <span class="badge {{ $paymentStatusBadgeClass }}">{{ $paymentStatusLabel }}</span>
+
+                                        @if($latestManualPaymentRequest)
+                                            <span class="d-block small text-muted mt-1">
+                                                آخر طلب دفع يدوي رقم #{{ $latestManualPaymentRequest->id }}:
+                                                {{ $manualPaymentStatusLabel ?? $paymentStatusLabel }}
+                                                @if($manualPaymentReviewUrl)
+                                                    — <a href="{{ $manualPaymentReviewUrl }}" target="_blank" rel="noopener noreferrer">عرض الطلب</a>
+                                                @endif
+                                            </span>
+                                        @endif
+
                                     </span>
                                 </li>
                                 <li>

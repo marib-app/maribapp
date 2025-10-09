@@ -49,14 +49,14 @@ class OrderController extends Controller
             'items.item.category',
             'latestManualPaymentRequest' => static function ($query) {
                 $query->select([
-                    'id',
-                    'payable_id',
-                    'payable_type',
-                    'status',
-                    'amount',
-                    'currency',
-                    'created_at',
-                    'reviewed_at',
+                    'manual_payment_requests.id',
+                    'manual_payment_requests.payable_id',
+                    'manual_payment_requests.payable_type',
+                    'manual_payment_requests.status',
+                    'manual_payment_requests.amount',
+                    'manual_payment_requests.currency',
+                    'manual_payment_requests.created_at',
+                    'manual_payment_requests.reviewed_at',
                 ]);
             },
         ])
@@ -147,14 +147,14 @@ class OrderController extends Controller
             'items.item.category',
             'latestManualPaymentRequest' => static function ($query) {
                 $query->select([
-                    'id',
-                    'payable_id',
-                    'payable_type',
-                    'status',
-                    'amount',
-                    'currency',
-                    'created_at',
-                    'reviewed_at',
+                    'manual_payment_requests.id',
+                    'manual_payment_requests.payable_id',
+                    'manual_payment_requests.payable_type',
+                    'manual_payment_requests.status',
+                    'manual_payment_requests.amount',
+                    'manual_payment_requests.currency',
+                    'manual_payment_requests.created_at',
+                    'manual_payment_requests.reviewed_at',
                 ]);
             },
         ])
@@ -259,14 +259,14 @@ class OrderController extends Controller
             'items.item.category',
             'latestManualPaymentRequest' => static function ($query) {
                 $query->select([
-                    'id',
-                    'payable_id',
-                    'payable_type',
-                    'status',
-                    'amount',
-                    'currency',
-                    'created_at',
-                    'reviewed_at',
+                    'manual_payment_requests.id',
+                    'manual_payment_requests.payable_id',
+                    'manual_payment_requests.payable_type',
+                    'manual_payment_requests.status',
+                    'manual_payment_requests.amount',
+                    'manual_payment_requests.currency',
+                    'manual_payment_requests.created_at',
+                    'manual_payment_requests.reviewed_at',
                 ]);
             },
         ])

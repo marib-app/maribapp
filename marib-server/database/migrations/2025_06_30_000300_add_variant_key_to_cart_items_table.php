@@ -17,6 +17,23 @@ return new class extends Migration {
         DB::table('cart_items')->update(['variant_key' => DB::raw("COALESCE(variant_key, '')")]);
 
         Schema::table('cart_items', static function (Blueprint $table) {
+            if (Schema::hasColumn('cart_items', 'user_id')) {
+                try {
+                    $table->dropForeign(['user_id']);
+                } catch (\Throwable $exception) {
+                    // ignore missing foreign key
+                }
+            }
+
+            if (Schema::hasColumn('cart_items', 'item_id')) {
+                try {
+                    $table->dropForeign(['item_id']);
+                } catch (\Throwable $exception) {
+                    // ignore missing foreign key
+                }
+            }
+
+
             try {
                 $table->dropUnique('cart_items_user_item_variant_department_unique');
             } catch (\Throwable $exception) {
@@ -24,12 +41,37 @@ return new class extends Migration {
             }
 
             $table->unique(['user_id', 'item_id', 'variant_key', 'department'], 'cart_items_user_item_variantkey_department_unique');
+            if (Schema::hasColumn('cart_items', 'user_id')) {
+                $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            }
+
+            if (Schema::hasColumn('cart_items', 'item_id')) {
+                $table->foreign('item_id')->references('id')->on('items')->cascadeOnDelete();
+            }
+
         });
     }
 
     public function down(): void
     {
         Schema::table('cart_items', static function (Blueprint $table) {
+
+            if (Schema::hasColumn('cart_items', 'user_id')) {
+                try {
+                    $table->dropForeign(['user_id']);
+                } catch (\Throwable $exception) {
+                    // ignore missing foreign key
+                }
+            }
+
+            if (Schema::hasColumn('cart_items', 'item_id')) {
+                try {
+                    $table->dropForeign(['item_id']);
+                } catch (\Throwable $exception) {
+                    // ignore missing foreign key
+                }
+            }
+
             try {
                 $table->dropUnique('cart_items_user_item_variantkey_department_unique');
             } catch (\Throwable $exception) {
@@ -41,6 +83,15 @@ return new class extends Migration {
             }
 
             $table->unique(['user_id', 'item_id', 'variant_id', 'department'], 'cart_items_user_item_variant_department_unique');
+
+            if (Schema::hasColumn('cart_items', 'user_id')) {
+                $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            }
+
+            if (Schema::hasColumn('cart_items', 'item_id')) {
+                $table->foreign('item_id')->references('id')->on('items')->cascadeOnDelete();
+            }
+
         });
     }
 };

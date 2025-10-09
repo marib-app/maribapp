@@ -20,13 +20,49 @@ class ManualPaymentRequestResource extends JsonResource
         $manualBank = $this->whenLoaded('manualBank');
         $payable = $this->whenLoaded('payable');
 
+        if ($paymentTransaction instanceof EloquentModel && ! $paymentTransaction->relationLoaded('walletTransaction')) {
+            $paymentTransaction->load('walletTransaction');
+        }
+
+
+
         $order = $paymentTransaction?->order;
+        $walletTransaction = $paymentTransaction?->walletTransaction;
         $gatewayKey = $paymentTransaction?->payment_gateway
             ?? data_get($this->meta, 'gateway')
             ?? 'manual_bank';
 
+
+        $paymentStatus = $this->normalizePaymentStatus($paymentTransaction?->payment_status);
+        $manualReference = $this->reference
+            ?? data_get($this->meta, 'reference')
+            ?? data_get($paymentTransaction?->meta, 'manual.reference');
+        $walletMeta = $paymentTransaction?->meta ?? [];
+        if (empty($walletMeta)) {
+            $walletMeta = is_array($this->meta) ? $this->meta : [];
+        }
+
+        $walletSnapshot = array_filter([
+            'transaction_id' => data_get($walletMeta, 'wallet.transaction_id'),
+            'idempotency_key' => data_get($walletMeta, 'wallet.idempotency_key'),
+            'balance_after' => data_get($walletMeta, 'wallet.balance_after'),
+        ], static fn ($value) => $value !== null && $value !== '');
+
+        if ($walletTransaction) {
+            $walletSnapshot = array_merge([
+                'transaction_id' => $walletTransaction->getKey(),
+                'wallet_account_id' => $walletTransaction->wallet_account_id,
+                'amount' => (float) $walletTransaction->amount,
+                'currency' => $walletTransaction->currency,
+            ], $walletSnapshot);
+        }
+
+
         return [
             'id' => $this->id,
+            'manual_payment_id' => (string) $this->id,
+
+
             'user_id' => $this->user_id,
             'manual_bank' => $manualBank ? array_merge($manualBank->toArray(), [
                 'logo_url' => $this->generateSignedUrl($manualBank->logo ?? null),
@@ -38,11 +74,12 @@ class ManualPaymentRequestResource extends JsonResource
 
 
             'reference' => $this->reference,
+            'manual_reference' => $manualReference,
             'user_note' => $this->user_note,
             'admin_note' => $this->admin_note,
             'status' => $this->status,
-            'transaction_status' => $this->normalizePaymentStatus($paymentTransaction?->payment_status),
-
+            'payment_status' => $paymentStatus,
+            'transaction_status' => $paymentStatus,
 
             'receipt_url' => $this->generateSignedUrl($this->receipt_path),
             'payable' => $payable ? [
@@ -55,7 +92,7 @@ class ManualPaymentRequestResource extends JsonResource
             ] : null),
             'payment_transaction' => $paymentTransaction ? [
                 'id' => $paymentTransaction->id,
-                'status' => $this->normalizePaymentStatus($paymentTransaction->payment_status),
+                'status' => $paymentStatus,
                 'amount' => (float) $paymentTransaction->amount,
                 'currency' => $paymentTransaction->currency,
                 'receipt_url' => $this->generateSignedUrl($paymentTransaction->receipt_path ?? $this->receipt_path),
@@ -66,7 +103,16 @@ class ManualPaymentRequestResource extends JsonResource
                     'payment_status' => $order->payment_status,
                 ] : null,
 
+                'wallet_transaction' => $walletTransaction ? [
+                    'id' => $walletTransaction->getKey(),
+                    'wallet_account_id' => $walletTransaction->wallet_account_id,
+                    'amount' => (float) $walletTransaction->amount,
+                    'currency' => $walletTransaction->currency,
+                ] : null,
+
+
             ] : null,
+            'wallet' => empty($walletSnapshot) ? null : $walletSnapshot,
             'reviewed_by' => $this->reviewed_by,
             'reviewed_at' => optional($this->reviewed_at)->toIso8601String(),
             'created_at' => optional($this->created_at)->toIso8601String(),

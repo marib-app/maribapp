@@ -8143,18 +8143,19 @@ public function storeRequestDevice(Request $request)
 
             $requests = ManualPaymentRequestResource::collection(collect($paginator->items()))->resolve();
 
-
+            $meta = [
+                'total' => (int) $paginator->total(),
+                'current_page' => (int) $paginator->currentPage(),
+                'last_page' => (int) max($paginator->lastPage(), 1),
+                'per_page' => (int) $paginator->perPage(),
+            ];
 
             ResponseService::successResponse(
                 'تم جلب طلبات الدفع اليدوي بنجاح',
                 [
-                    'data' => $requests,
-                    'meta' => [
-                        'total' => (int) $paginator->total(),
-                        'current_page' => (int) $paginator->currentPage(),
-                        'last_page' => (int) max($paginator->lastPage(), 1),
-                        'per_page' => (int) $paginator->perPage(),
-                    ],
+                    'manual_payment_requests' => $requests,
+                    'items' => $requests,
+                    'meta' => $meta,
                 ]
             );
         } catch (Throwable $th) {

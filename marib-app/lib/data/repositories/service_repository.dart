@@ -16,9 +16,26 @@ class ServiceRepository {
         return ClassifiedSummary.fromJson(Map<String, dynamic>.from(element));
       }).toList();
 
+
+
+      int? _asInt(dynamic value) {
+        if (value == null) return null;
+        if (value is int) return value;
+        if (value is double) return value.toInt();
+        if (value is String) return int.tryParse(value);
+        return null;
+      }
+
+      int? total = _asInt(result['total']);
+      final meta = result['meta'];
+      if (meta is Map) {
+        total ??= _asInt(meta['total']);
+      }
+
       return {
         'services': summaryList,
-        'total': result['total'] ?? summaryList.length,
+        'total': total ?? summaryList.length,
+
       };
     } catch (e) {
       throw e.toString();

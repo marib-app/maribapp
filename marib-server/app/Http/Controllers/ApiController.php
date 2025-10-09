@@ -5459,6 +5459,10 @@ class ApiController extends Controller {
             'is_main'     => 'nullable|boolean',
             'service_type'=> 'nullable|string',
             'per_page'    => 'nullable|integer|min:1|max:100',
+            'limit'       => 'nullable|integer|min:1|max:100',
+            'offset'      => 'nullable|integer|min:0',
+            'page'        => 'nullable|integer|min:1',
+
 
 
         ]);
@@ -5518,15 +5522,29 @@ class ApiController extends Controller {
             $query->where('service_type', $request->service_type);
         }
 
-        $perPage = (int) $request->input('per_page', 15);
+        $perPageInput = $request->input('per_page', $request->input('limit'));
+        $perPage = is_numeric($perPageInput) ? (int) $perPageInput : 15;
+
         if ($perPage <= 0) {
             $perPage = 15;
         }
 
+        if ($perPage > 100) {
+            $perPage = 100;
+        }
 
+        $pageInput = $request->input('page');
+        $page = is_numeric($pageInput) ? max((int) $pageInput, 1) : null;
+
+        if ($page === null && $request->filled('offset')) {
+            $offsetRaw = $request->input('offset');
+            $offset = is_numeric($offsetRaw) ? max((int) $offsetRaw, 0) : 0;
+            $page = intdiv($offset, $perPage) + 1;
+        }
 
         $services = $query
-            ->paginate($perPage)
+            ->paginate($perPage, ['*'], 'page', $page)
+
             ->through(fn(Service $service) => $this->mapService($service));
 
         $paginationLinks = [
@@ -5552,6 +5570,9 @@ class ApiController extends Controller {
             [
                 'links' => $paginationLinks,
                 'meta'  => $paginationMeta,
+                'total' => $services->total(),
+
+
             ]
         );
     

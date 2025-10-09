@@ -59,7 +59,9 @@ class OrderPaymentGroupController extends Controller
                     'items' => static function ($itemQuery) {
                         $itemQuery->select('order_items.id', 'order_items.order_id', 'order_items.quantity');
                     },
-                ])->select('orders.*');
+                ])
+                ->withCount(['pendingManualPaymentRequests as pending_manual_payment_requests_count'])
+                ->select('orders.*');
             },
         ]);
 

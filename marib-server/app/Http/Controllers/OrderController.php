@@ -44,6 +44,9 @@ class OrderController extends Controller
         ResponseService::noAnyPermissionThenRedirect(['orders-list']);
         
         $query = Order::with(['user', 'seller', 'items.item.category'])
+            ->withCount(['pendingManualPaymentRequests as pending_manual_payment_requests_count'])
+
+        
             ->where(function ($query) {
                 $query->whereNull('department')
                     ->orWhereNotIn('department', [
@@ -122,6 +125,7 @@ class OrderController extends Controller
         $categoryIds = app(DepartmentReportService::class)->resolveCategoryIds($department);
 
         $query = Order::with(['user', 'seller', 'items.item.category'])
+            ->withCount(['pendingManualPaymentRequests as pending_manual_payment_requests_count'])
             ->where(function ($query) use ($department, $categoryIds) {
                 $query->where('department', $department);
 
@@ -216,7 +220,8 @@ class OrderController extends Controller
 
 
         $query = Order::with(['user', 'seller', 'items.item.category'])
-            ->where(function ($query) use ($department, $categoryIds) {
+        ->withCount(['pendingManualPaymentRequests as pending_manual_payment_requests_count'])
+        ->where(function ($query) use ($department, $categoryIds) {
                 $query->where('department', $department);
 
                 if ($categoryIds !== []) {

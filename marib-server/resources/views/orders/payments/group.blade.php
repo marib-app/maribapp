@@ -170,8 +170,14 @@
                                         $statusConfig = $statusLabels[$order->order_status] ?? [];
                                         $statusLabel = $statusConfig['label'] ?? $order->order_status;
                                         $statusIcon = $statusConfig['icon'] ?? null;
-                                        $paymentLabel = $paymentStatusLabels[$order->payment_status] ?? $order->payment_status;
-                                    @endphp
+                                        $pendingManualPayments = (int) ($order->pending_manual_payment_requests_count ?? 0);
+                                        if ($pendingManualPayments > 0) {
+                                            $paymentLabel = 'قيد المراجعة';
+                                        } else {
+                                            $paymentLabel = $paymentStatusLabels[$order->payment_status] ?? $order->payment_status;
+                                        }
+                                        
+                                        @endphp
                                     <tr>
                                         <td>
                                             <a href="{{ route('orders.show', $order) }}" class="text-decoration-none">
@@ -187,7 +193,14 @@
                                                 <span>{{ $statusLabel }}</span>
                                             </span>
                                         </td>
-                                        <td>{{ $paymentLabel ?: 'غير محدد' }}</td>
+                                        <td>
+                                            {{ $paymentLabel ?: 'غير محدد' }}
+                                            @if($pendingManualPayments > 0)
+                                                <div class="small text-muted">{{ $pendingManualPayments }} دفعة قيد المراجعة</div>
+                                            @endif
+                                        </td>
+
+                                        
                                         <td>{{ number_format($order->final_amount ?? 0, 2) }}</td>
                                         <td>{{ optional($order->updated_at)->format('Y-m-d H:i') ?? '—' }}</td>
                                     </tr>

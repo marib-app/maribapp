@@ -160,7 +160,9 @@ class OrderPaymentGroupService
     public function bulkUpdate(OrderPaymentGroup $group, array $payload, int $userId): int
     {
         /** @var EloquentCollection<int, Order> $orders */
-        $orders = $group->orders()->with('user')->get();
+        $orders = $group->orders()
+            ->with(['user', 'manualPaymentRequests'])
+            ->get();
 
         if ($orders->isEmpty()) {
             return 0;
@@ -176,6 +178,29 @@ class OrderPaymentGroupService
             $updates['order_status'] = $normalizedStatus;
             $fillableUpdates['order_status'] = $normalizedStatus;
         
+
+
+            $blockedOrders = $orders->filter(static function (Order $order): bool {
+                return $order->latestPendingManualPaymentRequest() !== null;
+            });
+
+            if ($blockedOrders->isNotEmpty()) {
+                $orderIdentifiers = $blockedOrders
+                    ->map(static function (Order $order) {
+                        return $order->order_number ?? $order->getKey();
+                    })
+                    ->unique()
+                    ->values()
+                    ->implode('، ');
+
+                throw ValidationException::withMessages([
+                    'order_status' => __('لا يمكن تحديث حالة الطلب للطلبات التالية بسبب وجود دفعات قيد المراجعة: :orders.', [
+                        'orders' => $orderIdentifiers,
+                    ]),
+                ]);
+            }
+
+
         }
 
         if (array_key_exists('notes', $payload)) {

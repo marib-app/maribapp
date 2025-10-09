@@ -7697,9 +7697,33 @@ public function storeRequestDevice(Request $request)
             ];
 
             if ($existingManualPaymentRequest) {
+
+
+                if (
+                    $resolvedPayableType === Order::class
+                    && $payableId
+                    && Schema::hasColumn('manual_payment_requests', 'department')
+                ) {
+                    $manualPaymentAttributes['department'] = Order::query()
+                        ->whereKey($payableId)
+                        ->value('department');
+                }
+
                 $existingManualPaymentRequest->forceFill($manualPaymentAttributes)->save();
                 $manualPaymentRequest = $existingManualPaymentRequest->fresh();
             } else {
+
+
+                if (
+                    $resolvedPayableType === Order::class
+                    && $payableId
+                    && Schema::hasColumn('manual_payment_requests', 'department')
+                ) {
+                    $manualPaymentAttributes['department'] = Order::query()
+                        ->whereKey($payableId)
+                        ->value('department');
+                }
+
                 $manualPaymentRequest = ManualPaymentRequest::create($manualPaymentAttributes);
             }
 

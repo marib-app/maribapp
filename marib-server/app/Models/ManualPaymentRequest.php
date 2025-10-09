@@ -37,6 +37,7 @@ class ManualPaymentRequest extends Model
         'payable_id',
         'amount',
         'currency',
+        'department',
         'bank_name',
         'bank_account_name',
         'bank_account_number',
@@ -207,8 +208,30 @@ class ManualPaymentRequest extends Model
             return $query;
         }
 
-        return $query->whereHas('paymentTransaction', function ($transactionQuery) use ($gateway) {
-            $transactionQuery->where('payment_gateway', $gateway);
+        return $query->where(function ($builder) use ($gateway) {
+            if ($gateway === 'manual_bank') {
+                $builder->whereDoesntHave('paymentTransaction')
+                    ->orWhereHas('paymentTransaction', function ($transactionQuery) {
+                        $transactionQuery->where('payment_gateway', 'manual_bank');
+                    });
+
+                return;
+            }
+
+            $builder->whereHas('paymentTransaction', function ($transactionQuery) use ($gateway) {
+                $transactionQuery->where('payment_gateway', $gateway);
+            });
+
+            if ($gateway === 'wallet') {
+                $builder->orWhere(function ($inner) {
+                    $inner->whereDoesntHave('paymentTransaction')
+                        ->where(function ($metaQuery) {
+                            $metaQuery->where('payable_type', self::PAYABLE_TYPE_WALLET_TOP_UP)
+                                ->orWhereNotNull('meta->wallet');
+                        });
+                });
+            }
+            
         });
     }
 

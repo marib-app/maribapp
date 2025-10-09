@@ -399,15 +399,27 @@
                                         <td>{{ $order->payment_method ?: 'غير محدد' }}</td>
                                         <td>
                                             @php
+                                                $pendingManualPayments = (int) ($order->pending_manual_payment_requests_count ?? 0);
+
+
                                                 $paymentStatusValue = $order->payment_status;
-                                                $paymentStatusLabel = $paymentStatusValue
-                                                    ? ($paymentStatusLabels[$paymentStatusValue] ?? 'غير معروف')
-                                                    : 'غير محدد';
-                                                $paymentStatusClass = $paymentStatusValue
-                                                    ? ($paymentStatusBadgeClasses[$paymentStatusValue] ?? 'bg-secondary')
-                                                    : 'bg-secondary';
+                                                if ($pendingManualPayments > 0) {
+                                                    $paymentStatusLabel = 'قيد المراجعة';
+                                                    $paymentStatusClass = 'bg-warning text-dark';
+                                                } else {
+                                                    $paymentStatusLabel = $paymentStatusValue
+                                                        ? ($paymentStatusLabels[$paymentStatusValue] ?? 'غير معروف')
+                                                        : 'غير محدد';
+                                                    $paymentStatusClass = $paymentStatusValue
+                                                        ? ($paymentStatusBadgeClasses[$paymentStatusValue] ?? 'bg-secondary')
+                                                        : 'bg-secondary';
+                                                }
                                             @endphp
                                             <span class="badge {{ $paymentStatusClass }}">{{ $paymentStatusLabel }}</span>
+                                            @if($pendingManualPayments > 0)
+                                                <div class="small text-muted mt-1">هناك {{ $pendingManualPayments }} دفعة قيد المراجعة</div>
+                                            @endif
+
                                         </td>
                                         <td>
                                             @php

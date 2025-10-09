@@ -4,27 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\OrderHistory;
-use App\Models\PaymentTransaction;
 use App\Models\UserFcmToken;
 use App\Services\NotificationService;
-use App\Services\PaymentFulfillmentService;
 use App\Notifications\SettlementReminderNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
-use RuntimeException;
 use Throwable;
 
 class OrderPaymentActionController extends Controller
 {
-    public function __construct(private readonly PaymentFulfillmentService $paymentFulfillmentService)
-    {
-    }
 
     public function storeManualPayment(Request $request, Order $order): RedirectResponse
     {
@@ -41,8 +34,11 @@ class OrderPaymentActionController extends Controller
         ]);
 
         if ($validated['type'] === 'payment') {
-            return $this->handleManualPayment($request, $order, $validated);
-        }
+            return redirect()
+                ->route('orders.show', $order)
+                ->with('error', __('لا يمكن تعديل حالة الدفع من خلال هذه الصفحة. يرجى معالجة الدفعات عبر واجهة طلبات الدفع اليدوية.'));
+            
+            }
 
         return $this->handleManualReminder($request, $order, $validated);
     }
@@ -104,86 +100,6 @@ class OrderPaymentActionController extends Controller
             ->with('success', __('تم إرسال الإشعار بنجاح.'));
     }
 
-    private function handleManualPayment(Request $request, Order $order, array $validated): RedirectResponse
-    {
-        $currency = $order->currency ?? config('app.currency', 'SAR');
-        $amountValue = round((float) $validated['amount'], 2);
-
-        $commentParts = [__('تم تسجيل دفعة يدوية')];
-        $commentParts[] = __('المبلغ: :amount :currency', [
-            'amount' => number_format($amountValue, 2),
-            'currency' => $currency,
-        ]);
-
-        if (! empty($validated['note'])) {
-            $commentParts[] = __('ملاحظة: :note', ['note' => $validated['note']]);
-        }
-
-        $historyComment = implode(' — ', $commentParts);
-        $transactionUserId = $order->user_id ?? $request->user()->getKey();
-
-        if (! $transactionUserId) {
-            return redirect()
-                ->route('orders.show', $order)
-                ->with('error', __('لا يمكن تسجيل الدفعة اليدوية لعدم وجود عميل مرتبط بالطلب.'));
-        }
-
-        $manualMeta = [
-            'manual_payment' => [
-                'recorded_by' => $request->user()->getKey(),
-                'recorded_at' => now()->toIso8601String(),
-                'amount' => $amountValue,
-            ],
-        ];
-
-        if (! empty($validated['note'])) {
-            $manualMeta['manual_payment']['note'] = $validated['note'];
-        }
-
-        try {
-            DB::transaction(function () use ($order, $transactionUserId, $amountValue, $currency, $manualMeta, $historyComment) {
-                $transaction = PaymentTransaction::create([
-                    'user_id' => $transactionUserId,
-                    'amount' => $amountValue,
-                    'currency' => $currency,
-                    'payment_gateway' => 'manual',
-                    'payment_status' => 'pending',
-                    'meta' => $manualMeta,
-                ]);
-
-                $result = $this->paymentFulfillmentService->fulfill(
-                    $transaction,
-                    Order::class,
-                    $order->getKey(),
-                    $transactionUserId,
-                    [
-                        'payment_gateway' => 'manual',
-                        'order_payment_method' => 'manual',
-                        'meta' => $manualMeta,
-                        'notify' => false,
-                        'order_history_comment' => $historyComment,
-                    ]
-                );
-
-                if (($result['error'] ?? false) === true) {
-                    throw new RuntimeException($result['message'] ?? 'Unable to process manual payment.');
-                }
-            });
-        } catch (Throwable $throwable) {
-            Log::error('OrderPaymentActionController: failed to record manual payment', [
-                'order_id' => $order->getKey(),
-                'error' => $throwable->getMessage(),
-            ]);
-
-            return redirect()
-                ->route('orders.show', $order)
-                ->with('error', __('تعذّر تسجيل الدفعة اليدوية. الرجاء المحاولة لاحقاً.'));
-        }
-
-        return redirect()
-            ->route('orders.show', $order)
-            ->with('success', __('تم حفظ الإجراء على الطلب بنجاح.'));
-    }
 
     private function handleManualReminder(Request $request, Order $order, array $validated): RedirectResponse
     {

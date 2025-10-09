@@ -375,14 +375,22 @@
                                                 ? ($deliveryStatusBadgeClasses[$deliveryStatusValue] ?? 'bg-secondary')
                                                 : 'bg-secondary';
 
+
+                                            $pendingManualPayments = (int) ($order->pending_manual_payment_requests_count ?? 0);
+
                                             $paymentStatusValue = $order->payment_status ?: null;
-                                            $paymentStatusLabel = $paymentStatusValue
-                                                ? ($paymentStatusLabels[$paymentStatusValue]
-                                                    ?? \Illuminate\Support\Str::of($paymentStatusValue)->replace('_', ' ')->headline())
-                                                : 'غير محدد';
-                                            $paymentStatusClass = $paymentStatusValue
-                                                ? ($paymentStatusBadgeClasses[$paymentStatusValue] ?? 'bg-secondary')
-                                                : 'bg-secondary';
+                                            if ($pendingManualPayments > 0) {
+                                                $paymentStatusLabel = 'قيد المراجعة';
+                                                $paymentStatusClass = 'bg-warning text-dark';
+                                            } else {
+                                                $paymentStatusLabel = $paymentStatusValue
+                                                    ? ($paymentStatusLabels[$paymentStatusValue]
+                                                        ?? \Illuminate\Support\Str::of($paymentStatusValue)->replace('_', ' ')->headline())
+                                                    : 'غير محدد';
+                                                $paymentStatusClass = $paymentStatusValue
+                                                    ? ($paymentStatusBadgeClasses[$paymentStatusValue] ?? 'bg-secondary')
+                                                    : 'bg-secondary';
+                                            }
 
                                             $statusCollection = $orderStatuses instanceof \Illuminate\Support\Collection
                                                 ? $orderStatuses
@@ -426,6 +434,11 @@
                                         </td>
                                         <td>
                                             <span class="badge {{ $paymentStatusClass }}">{{ $paymentStatusLabel }}</span>
+
+                                            @if($pendingManualPayments > 0)
+                                                <div class="small text-muted mt-1">هناك {{ $pendingManualPayments }} دفعة قيد المراجعة</div>
+                                            @endif
+
 
                                         </td>
                                         <td>

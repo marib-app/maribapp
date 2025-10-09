@@ -5,9 +5,11 @@ namespace App\Services\Payments;
 use App\Models\ManualBank;
 use App\Models\ManualPaymentRequest;
 use App\Models\PaymentTransaction;
+use App\Models\Order;
 use App\Models\User;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Schema;
 
 class ManualPaymentRequestService
 {
@@ -78,6 +80,18 @@ class ManualPaymentRequestService
 
         $existingRequest = null;
 
+
+        $department = null;
+
+        if ($payableType === Order::class && $payableId) {
+            $department = Order::query()->whereKey($payableId)->value('department');
+        }
+
+        $canAssignDepartment = $department !== null
+            && Schema::hasColumn('manual_payment_requests', 'department');
+
+
+
         if ($transaction->manual_payment_request_id) {
             $existingRequest = ManualPaymentRequest::query()
                 ->lockForUpdate()
@@ -103,6 +117,12 @@ class ManualPaymentRequestService
                 'status' => ManualPaymentRequest::STATUS_PENDING,
             ]);
 
+
+            if ($canAssignDepartment) {
+                $existingRequest->department = $department;
+            }
+
+
             if ($manualBank) {
                 $existingRequest->bank_name = $manualBank->name;
                 $existingRequest->bank_account_name = $manualBank->beneficiary_name;
@@ -126,6 +146,13 @@ class ManualPaymentRequestService
             'status' => ManualPaymentRequest::STATUS_PENDING,
             'meta' => empty($metaUpdates) ? null : $metaUpdates,
         ];
+
+
+
+        if ($canAssignDepartment) {
+            $attributes['department'] = $department;
+        }
+
 
         if ($manualBank) {
             $attributes['bank_name'] = $manualBank->name;

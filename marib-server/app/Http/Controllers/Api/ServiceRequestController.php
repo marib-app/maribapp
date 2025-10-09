@@ -193,6 +193,25 @@ class ServiceRequestController extends Controller
         $serviceRequest->save();
 
 
+        $deeplink = url(sprintf('/service-requests/show/%d', $serviceRequest->getKey()));
+        $notificationPayload = [
+            'service_request_id' => $serviceRequest->getKey(),
+            'status' => $serviceRequest->status,
+            'service_id' => $serviceRequest->service_id,
+        ];
+
+
+
+        $deeplink = url(sprintf('/service-requests/show/%d', $serviceRequest->getKey()));
+        $notificationPayload = [
+            'service_request_id' => $serviceRequest->getKey(),
+            'status' => $serviceRequest->status,
+            'service_id' => $serviceRequest->service_id,
+        ];
+
+
+
+
         try {
             $tokens = UserFcmToken::query()
                 ->where('user_id', $user->id)
@@ -203,19 +222,14 @@ class ServiceRequestController extends Controller
                 ->all();
 
             if (!empty($tokens)) {
-                $deeplink = url(sprintf('/service-requests/show/%d', $serviceRequest->getKey()));
-
                 $notificationResponse = NotificationService::sendFcmNotification(
                     $tokens,
-                    'تم إرسال طلبك',
-                    'تم إرسال طلبك بنجاح وهو قيد المراجعة.',
+                    'طلبك قيد المراجعة',
+                    'تم إرسال طلبك بنجاح. طلبك الآن قيد المراجعة وسيتم التواصل معك فور مراجعة الطلب، وستصلك إشعارات بأي تحديث.',
                     'service-request-created',
                     [
-                        'data' => json_encode([
-                            'service_request_id' => $serviceRequest->getKey(),
-                            'status' => $serviceRequest->status,
-                            'service_id' => $serviceRequest->service_id,
-                        ], JSON_UNESCAPED_UNICODE),
+                        'data' => json_encode($notificationPayload, JSON_UNESCAPED_UNICODE),
+
                         'deeplink' => $deeplink,
                         'click_action' => $deeplink,
                     ]
@@ -235,6 +249,65 @@ class ServiceRequestController extends Controller
             Log::error('service_requests.create_notification_exception', [
                 'service_request_id' => $serviceRequest->getKey(),
                 'user_id' => $user->id,
+                'error' => $exception->getMessage(),
+                'exception_class' => get_class($exception),
+            ]);
+        }
+
+
+
+        $providerIds = null;
+
+        try {
+            $providerIds = collect([
+                $service->owner_id,
+                $service->direct_to_user ? $service->direct_user_id : null,
+            ])
+                ->filter(fn($id) => $id !== null)
+                ->map(fn($id) => (int) $id)
+                ->unique()
+                ->reject(fn(int $id) => $id === (int) $user->id)
+                ->values();
+
+            if ($providerIds->isNotEmpty()) {
+                $providerTokens = UserFcmToken::query()
+                    ->whereIn('user_id', $providerIds->all())
+                    ->pluck('fcm_token')
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                if (!empty($providerTokens)) {
+                    $providerResponse = NotificationService::sendFcmNotification(
+                        $providerTokens,
+                        'طلب خدمة جديد',
+                        'تم تقديم طلب خدمة جديد وهو قيد المراجعة. يرجى متابعة الطلب والتواصل مع العميل بعد المراجعة.',
+                        'service-request-created-provider',
+                        [
+                            'data' => json_encode(array_merge($notificationPayload, [
+                                'submitted_by' => $user->getKey(),
+                            ]), JSON_UNESCAPED_UNICODE),
+                            'deeplink' => $deeplink,
+                            'click_action' => $deeplink,
+                        ]
+                    );
+
+                    if (is_array($providerResponse) && ($providerResponse['error'] ?? false)) {
+                        Log::warning('service_requests.create_provider_notification_failed', [
+                            'service_request_id' => $serviceRequest->getKey(),
+                            'provider_ids' => $providerIds->all(),
+                            'response_message' => $providerResponse['message'] ?? null,
+                            'response_details' => $providerResponse['details'] ?? null,
+                            'response_code' => $providerResponse['code'] ?? null,
+                        ]);
+                    }
+                }
+            }
+        } catch (\Throwable $exception) {
+            Log::error('service_requests.create_provider_notification_exception', [
+                'service_request_id' => $serviceRequest->getKey(),
+                'provider_ids' => $providerIds instanceof \Illuminate\Support\Collection ? $providerIds->all() : $providerIds,
                 'error' => $exception->getMessage(),
                 'exception_class' => get_class($exception),
             ]);

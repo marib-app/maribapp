@@ -309,6 +309,16 @@ class _ServiceAddMoreDetailsScreenState
     m['field_type'] = m['field_type'] ?? t;
     m['input_type'] = m['input_type'] ?? t;
 
+
+    final String? noteText = _str(m['notes']) ??
+        _str(m['note']) ??
+        _str(m['description']) ??
+        _str(m['hint']) ??
+        _str(m['help_text']) ??
+        _str(m['helper_text']) ??
+        _str(m['info']);
+
+
     // ===== العنوان (نوسع المرادفات + منع أرقام صِرفة) =====
     String? title = _str(m['label']) ??
         _str(m['title']) ??
@@ -320,11 +330,21 @@ class _ServiceAddMoreDetailsScreenState
 
     if (title == null || _isDigits(title)) {
       // لو جتنا “2” مثل حالتك، لا نستخدمها عنوانًا
-      title = _str(m['notes']) ?? _str(m['hint']) ?? '—';
+      title = noteText ?? '—';
     }
 
     m['title'] = title;
     m['label'] = m['label'] ?? title;
+
+    if (noteText != null) {
+      m['notes'] = noteText;
+      m['note'] = m['note'] ?? noteText;
+      m['hint'] = m['hint'] ?? noteText;
+      m['description'] = m['description'] ?? noteText;
+    } else {
+      m.remove('notes');
+    }
+
     final rawName = _str(m['name']);
     final keyCandidate = _str(m['key']) ??
         _str(m['field_key']) ??
@@ -339,6 +359,7 @@ class _ServiceAddMoreDetailsScreenState
     } else if (rawName != null) {
       m['name'] = rawName;
     }
+
     m['placeholder'] = m['placeholder'] ?? title;
 
     // ===== المفتاح/المعرّف =====
@@ -1122,14 +1143,14 @@ class _ServiceAddMoreDetailsScreenState
 
       if (!mounted) return;
       _clearStores();
-      Navigator.pushNamed(
+      HelperUtils.showSnackBarMessage(
+
         context,
-        Routes.serviceRequestsPage,
-        arguments: {
-          'pendingRequest': pendingRequest,
-          if (_categoryId != null) 'categoryId': _categoryId,
-        },
+        'تم ارسال طلبك بنجاح',
       );
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(pendingRequest);
+      }
     } catch (e) {
       if (!mounted) return;
       HelperUtils.showSnackBarMessage(context, '$e');

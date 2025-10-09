@@ -38,12 +38,24 @@ return new class extends Migration {
             ->get();
 
         foreach ($duplicateGroups as $group) {
-            $idsToClose = DB::table('manual_payment_requests')
+            $idToKeepOpen = DB::table('manual_payment_requests')
                 ->where('payable_type', $group->payable_type)
                 ->where('payable_id', $group->payable_id)
                 ->whereIn('status', $openStatuses)
                 ->orderByDesc('id')
-                ->skip(1)
+                ->value('id');
+
+            if ($idToKeepOpen === null) {
+                continue;
+            }
+
+            $idsToClose = DB::table('manual_payment_requests')
+                ->where('payable_type', $group->payable_type)
+                ->where('payable_id', $group->payable_id)
+                ->whereIn('status', $openStatuses)
+                ->where('id', '!=', $idToKeepOpen)
+
+                
                 ->pluck('id');
 
             foreach ($idsToClose as $requestId) {

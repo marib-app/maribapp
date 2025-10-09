@@ -20,6 +20,7 @@ use App\Services\TelemetryService;
 use App\Support\OrderNumberGenerator;
 use App\Support\DepositCalculator;
 use App\Services\LegalNumberingService;
+use App\Services\ItemPurchaseOptionsService;
 
 
 use Throwable;
@@ -68,6 +69,7 @@ class OrderCheckoutService
         private readonly DatabaseManager $db,
         private readonly TelemetryService $telemetry,
         private readonly LegalNumberingService $legalNumbering,
+        private readonly ItemPurchaseOptionsService $itemPurchaseOptionsService,
 
 
     ) {
@@ -217,6 +219,32 @@ class OrderCheckoutService
                 'icon' => Order::statusIcon(Order::STATUS_PROCESSING),
 
             ]];
+
+            foreach ($cartItems as $cartItem) {
+                $itemModel = $cartItem->item;
+
+                if (! $itemModel instanceof Item) {
+                    continue;
+                }
+
+                $attributes = is_array($cartItem->attributes) ? $cartItem->attributes : [];
+                $variantKey = $cartItem->variant_key ?? '';
+
+                if ($variantKey === '' && $attributes !== []) {
+                    $variantKey = $this->itemPurchaseOptionsService->generateVariantKey($itemModel, $attributes);
+                }
+
+                try {
+                    $this->itemPurchaseOptionsService->reserveStock($itemModel, $variantKey, (int) $cartItem->quantity);
+                } catch (ValidationException $exception) {
+                    throw new CheckoutValidationException(
+                        __('الكمية المطلوبة غير متوفرة حالياً لأحد عناصر السلة.'),
+                        'out_of_stock',
+                        $exception
+                    );
+                }
+            }
+
 
             $order = Order::create([
                 'user_id' => $user->getKey(),
@@ -790,11 +818,8 @@ class OrderCheckoutService
         $item = $cartItem->item;
 
         if ($item instanceof Item) {
-            $price = $item->price;
+            return $item->calculateDiscountedPrice();
 
-            if ($price !== null) {
-                return (float) $price;
-            }
         }
 
         $snapshot = is_array($cartItem->stock_snapshot) ? $cartItem->stock_snapshot : [];
@@ -821,6 +846,25 @@ class OrderCheckoutService
 
     private function resolveCartItemAvailableQuantity(CartItem $cartItem): ?int
     {
+
+        $item = $cartItem->item;
+
+        if ($item instanceof Item) {
+            $attributes = is_array($cartItem->attributes) ? $cartItem->attributes : [];
+            $variantKey = $cartItem->variant_key ?? '';
+
+            if ($variantKey === '' && $attributes !== []) {
+                $variantKey = $this->itemPurchaseOptionsService->generateVariantKey($item, $attributes);
+            }
+
+            $stock = $this->itemPurchaseOptionsService->resolveAvailableStock($item, $variantKey);
+
+            if ($stock !== null) {
+                return $stock;
+            }
+        }
+
+
         $snapshot = is_array($cartItem->stock_snapshot) ? $cartItem->stock_snapshot : [];
         $quantityKeys = [
             'available_quantity',
@@ -843,7 +887,7 @@ class OrderCheckoutService
             }
         }
 
-        $item = $cartItem->item;
+
 
         if ($item instanceof Item) {
             $attributes = $item->getAttributes();

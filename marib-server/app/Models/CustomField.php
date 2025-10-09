@@ -16,9 +16,12 @@ class CustomField extends Model
         'type',
         'image',
         'required',
+        'required_for_checkout',
         'is_customer_option',
         'status',
         'values',
+        'allowed_values',
+        'affects_stock',
         'min_length',
         'max_length',
         'notes',
@@ -41,6 +44,9 @@ class CustomField extends Model
         'sequence'    => 'integer',
         'min_length'  => 'integer',
         'max_length'  => 'integer',
+        'required_for_checkout' => 'boolean',
+        'affects_stock' => 'boolean',
+
         // اترك values بدون cast لأننا نضمن النوع في Accessor/Mutator
     ];
 
@@ -150,6 +156,77 @@ class CustomField extends Model
 
         // أي نوع آخر: حوله لنص داخل Array
         $this->attributes['values'] = json_encode([strval($val)], JSON_UNESCAPED_UNICODE);
+    }
+
+
+    public function getAllowedValuesAttribute($value): array
+    {
+        if ($value === null) {
+            return [];
+        }
+
+        if (is_string($value)) {
+            $trimmed = trim($value);
+
+            if ($trimmed === '' || $trimmed === 'null') {
+                return [];
+            }
+
+            try {
+                $decoded = json_decode($trimmed, true, 512, JSON_THROW_ON_ERROR);
+                if (is_array($decoded)) {
+                    return array_values($decoded);
+                }
+
+                return [$decoded];
+            } catch (Throwable) {
+                return [$trimmed];
+            }
+        }
+
+        if (is_array($value)) {
+            return array_values($value);
+        }
+
+        return [];
+    }
+
+    public function setAllowedValuesAttribute($val): void
+    {
+        if ($val === null) {
+            $this->attributes['allowed_values'] = null;
+            return;
+        }
+
+        if (is_array($val)) {
+            $normalized = array_values(array_filter($val, static fn ($v) => $v !== null && $v !== ''));
+            $this->attributes['allowed_values'] = json_encode($normalized, JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        if (is_string($val)) {
+            $trimmed = trim($val);
+
+            if ($trimmed === '') {
+                $this->attributes['allowed_values'] = null;
+                return;
+            }
+
+            try {
+                $decoded = json_decode($trimmed, true, 512, JSON_THROW_ON_ERROR);
+                if (is_array($decoded)) {
+                    $this->attributes['allowed_values'] = json_encode(array_values($decoded), JSON_UNESCAPED_UNICODE);
+                    return;
+                }
+            } catch (Throwable) {
+                // fall through and store raw string
+            }
+
+            $this->attributes['allowed_values'] = json_encode([$trimmed], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $this->attributes['allowed_values'] = json_encode([strval($val)], JSON_UNESCAPED_UNICODE);
     }
 
     // قيمة مشتقة لأوّل عنصر (لو واجهتك تعتمد عليه)

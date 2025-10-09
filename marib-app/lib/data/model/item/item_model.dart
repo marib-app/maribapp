@@ -14,6 +14,7 @@ class ItemSummary {
   final String? slug;
   final String? description;
   final double? price;
+  final double? finalPrice;
   final String? image;
   final String? productLink;
   final dynamic watermarkImage;
@@ -34,6 +35,9 @@ class ItemSummary {
   final String? city;
   final String? state;
   final String? country;
+  final ItemDiscount? discount;
+
+
 
   const ItemSummary({
     this.id,
@@ -41,6 +45,7 @@ class ItemSummary {
     this.slug,
     this.description,
     this.price,
+    this.finalPrice,
     this.image,
     this.productLink,
     this.watermarkImage,
@@ -61,6 +66,7 @@ class ItemSummary {
     this.city,
     this.state,
     this.country,
+    this.discount,
   });
 
   factory ItemSummary.fromJson(Map<String, dynamic> json) {
@@ -70,6 +76,7 @@ class ItemSummary {
       slug: json['slug'],
       description: json['description'],
       price: ItemModel._toDouble(json['price']),
+      finalPrice: ItemModel._toDouble(json['final_price']) ?? ItemModel._toDouble(json['price']),
       image: json['image'],
       productLink: json['product_link'],
       watermarkImage: json['watermark_image'],
@@ -90,6 +97,7 @@ class ItemSummary {
       city: json['city'],
       state: json['state'],
       country: json['country'],
+      discount: ItemDiscount.fromJson(json['discount']),
     );
   }
 
@@ -100,6 +108,7 @@ class ItemSummary {
       'slug': slug,
       'description': description,
       'price': price,
+      'final_price': finalPrice,
       'image': image,
       'product_link': productLink,
       'watermark_image': watermarkImage,
@@ -120,6 +129,7 @@ class ItemSummary {
       'city': city,
       'state': state,
       'country': country,
+      'discount': discount?.toJson(),
     };
   }
 }
@@ -154,6 +164,8 @@ extension ItemSummaryX on ItemSummary {
       city: city,
       state: state,
       country: country,
+      finalPrice: finalPrice ?? price,
+      discount: discount,
     );
   }
 }
@@ -170,6 +182,7 @@ class ItemModel {
   String? slug;
   String? description;
   double? price;
+  double? finalPrice;
   String? image;
   dynamic watermarkimage;
 
@@ -186,7 +199,7 @@ class ItemModel {
   String? videoLink;
   String? reviewLink;
   String? productLink;
-
+  ItemDiscount? discount;
   User? user;
   List<GalleryImages>? galleryImages;
   List<ItemOffers>? itemOffers;
@@ -233,6 +246,7 @@ class ItemModel {
     this.category,
     this.description,
     this.price,
+    this.finalPrice,
     this.image,
     this.watermarkimage,
     dynamic latitude,
@@ -243,6 +257,7 @@ class ItemModel {
     this.status,
     this.active,
     this.totalLikes,
+    this.discount,
     this.currencyCode,
     this.views,
     this.videoLink,
@@ -282,6 +297,7 @@ class ItemModel {
     String? slug,
     String? description,
     double? price,
+    double? finalPrice,
     String? image,
     dynamic watermarkimage,
     String? currencyCode,
@@ -298,6 +314,7 @@ class ItemModel {
     String? videoLink,
     String? reviewLink,
     String? productLink,
+    ItemDiscount? discount,
 
     User? user,
     List<GalleryImages>? galleryImages,
@@ -329,6 +346,7 @@ class ItemModel {
       category: category ?? this.category,
       description: description ?? this.description,
       price: price ?? this.price,
+      finalPrice: finalPrice ?? this.finalPrice,
       image: image ?? this.image,
       watermarkimage: watermarkimage ?? this.watermarkimage,
       latitude: latitude ?? this.latitude,
@@ -343,7 +361,7 @@ class ItemModel {
       videoLink: videoLink ?? this.videoLink,
       reviewLink: reviewLink ?? this.reviewLink,
       productLink: productLink ?? this.productLink,
-
+      discount: discount ?? this.discount,
       user: user ?? this.user,
       galleryImages: galleryImages ?? this.galleryImages,
       itemOffers: itemOffers ?? this.itemOffers,
@@ -384,6 +402,7 @@ class ItemModel {
 
     // price يدعم int/double/String
     m.price = _toDouble(json['price']);
+    m.finalPrice = _toDouble(json['final_price']) ?? m.price;
 
     m.id = json['id'];
     m.name = json['name'];
@@ -413,6 +432,7 @@ class ItemModel {
     m.videoLink = json['video_link'];
     m.reviewLink = json['review_link'];
     m.productLink = json['product_link'];
+    m.discount = ItemDiscount.fromJson(json['discount']);
 
     m.isLike = _toBool(json['is_liked']);
     m.isFeature = _toBool(json['is_feature']);
@@ -489,6 +509,7 @@ class ItemModel {
     data['slug'] = slug;
     data['description'] = description;
     data['price'] = price;
+    data['final_price'] = finalPrice;
     data['total_likes'] = totalLikes;
     data['clicks'] = views;
     data['image'] = image;
@@ -503,6 +524,9 @@ class ItemModel {
     data['video_link'] = videoLink;
     data['review_link'] = reviewLink;
     data['product_link'] = productLink;
+    if (discount != null) {
+      data['discount'] = discount!.toJson();
+    }
     data['is_liked'] = isLike;
     data['is_feature'] = isFeature;
     data['created_at'] = created;
@@ -621,6 +645,62 @@ class ItemModel {
       if (s == 'true' || s == '1') return true;
       if (s == 'false' || s == '0') return false;
     }
+    return null;
+  }
+}
+
+
+
+class ItemDiscount {
+  final String? type;
+  final double? value;
+  final DateTime? start;
+  final DateTime? end;
+  final bool isActive;
+
+  const ItemDiscount({
+    this.type,
+    this.value,
+    this.start,
+    this.end,
+    this.isActive = false,
+  });
+
+  static ItemDiscount? fromJson(dynamic json) {
+    if (json == null) {
+      return null;
+    }
+
+    if (json is! Map) {
+      return null;
+    }
+
+    final Map<String, dynamic> map = Map<String, dynamic>.from(json);
+
+    return ItemDiscount(
+      type: map['type'] as String?,
+      value: ItemModel._toDouble(map['value']),
+      start: _parseDate(map['start']),
+      end: _parseDate(map['end']),
+      isActive: ItemModel._toBool(map['is_active']) ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'type': type,
+      'value': value,
+      'start': start?.toIso8601String(),
+      'end': end?.toIso8601String(),
+      'is_active': isActive,
+    };
+  }
+
+  static DateTime? _parseDate(dynamic value) {
+    if (value is String && value.isNotEmpty) {
+      return DateTime.tryParse(value);
+    }
+
     return null;
   }
 }

@@ -39,7 +39,9 @@ class ItemCollection extends ResourceCollection {
                 $response[$key] = $collection->toArray();
                 $response[$key]['product_link'] = $collection->product_link;
                 $response[$key]['review_link'] = $collection->review_link;
-
+                $response[$key]['base_price'] = (float) ($collection->price ?? 0.0);
+                $response[$key]['final_price'] = $collection->calculateDiscountedPrice();
+                $response[$key]['discount'] = $collection->discount_snapshot;
 
                 if ($collection->status == "approved" && $collection->relationLoaded('featured_items')) {
                     $response[$key]['is_feature'] = count($collection->featured_items) > 0;

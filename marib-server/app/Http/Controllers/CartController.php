@@ -13,6 +13,7 @@ use App\Services\TelemetryService;
 use App\Models\CartCouponSelection;
 use App\Services\DepartmentNoticeService;
 use App\Services\DepartmentSupportService;
+use App\Services\ItemPurchaseOptionsService;
 use Illuminate\Support\Arr;
 use App\Services\DepartmentPolicyService;
 
@@ -38,7 +39,8 @@ class CartController extends Controller
         private readonly DepartmentNoticeService $departmentNoticeService,
         private readonly DepartmentPolicyService $departmentPolicyService,
 
-        private readonly DepartmentSupportService $departmentSupportService,
+        private readonly DepartmentSupportService $departmentSupportService,        
+        private readonly ItemPurchaseOptionsService $itemPurchaseOptionsService,
     ) {
 
 
@@ -115,12 +117,51 @@ class CartController extends Controller
 
         $quantity = (int) $validated['quantity'];
 
+
+        $rawAttributes = $validated['attributes'] ?? [];
+        if (is_string($rawAttributes)) {
+            $decoded = json_decode($rawAttributes, true);
+            $rawAttributes = is_array($decoded) ? $decoded : [];
+        }
+
+        if (is_string($rawAttributes)) {
+            $decoded = json_decode($rawAttributes, true);
+            $rawAttributes = is_array($decoded) ? $decoded : [];
+        }
+
+        if (! is_array($rawAttributes)) {
+            $rawAttributes = [];
+        }
+
+        try {
+            $normalizedAttributes = $this->itemPurchaseOptionsService->sanitizeAttributes($item, $rawAttributes);
+        } catch (ValidationException $exception) {
+            return $this->validationError($exception->getMessage(), 422);
+        }
+
+        $variantKey = $this->itemPurchaseOptionsService->generateVariantKey($item, $normalizedAttributes);
+
+        if (array_key_exists('variant_key', $validated)) {
+            $expectedVariantKey = trim((string) ($validated['variant_key'] ?? ''));
+
+            if ($expectedVariantKey !== $variantKey) {
+                return $this->validationError(
+                    __('تم تغيير خيارات المنتج بطريقة غير صالحة. يرجى إعادة المحاولة.'),
+                    422,
+                    'invalid_variant_key'
+                );
+            }
+        }
+
+
+
         $cartItem = CartItem::firstOrNew([
             'user_id' => $user->id,
             'item_id' => $item->id,
             
 
             'variant_id' => $validated['variant_id'] ?? null,
+            'variant_key' => $variantKey,
 
             'department' => $department,
         ]);
@@ -176,14 +217,18 @@ class CartController extends Controller
 
         }
 
-        $cartItem->unit_price = (float) ($validated['unit_price'] ?? $item->price);
+        $effectiveUnitPrice = array_key_exists('unit_price', $validated)
+            ? (float) $validated['unit_price']
+            : $item->calculateDiscountedPrice();
+
+        $cartItem->unit_price = $effectiveUnitPrice;
 
         if (array_key_exists('unit_price_locked', $validated)) {
             $cartItem->unit_price_locked = $validated['unit_price_locked'] !== null
                 ? (float) $validated['unit_price_locked']
                 : null;
         } elseif (! $cartItem->unit_price_locked) {
-            $cartItem->unit_price_locked = (float) $cartItem->unit_price;
+            $cartItem->unit_price_locked = $effectiveUnitPrice;
         }
 
         if ($normalizedCurrency !== $currentCurrency) {
@@ -192,12 +237,29 @@ class CartController extends Controller
 
         }
 
-        if (array_key_exists('attributes', $validated)) {
-            $cartItem->attributes = $validated['attributes'];
+        $cartItem->variant_key = $variantKey;
+        $cartItem->variant_id = $validated['variant_id'] ?? $cartItem->variant_id;
+        $cartItem->attributes = $normalizedAttributes;
+
+        $availableStock = $this->itemPurchaseOptionsService->resolveAvailableStock($item, $variantKey);
+        if ($availableStock !== null) {
+            $snapshot = is_array($cartItem->stock_snapshot) ? $cartItem->stock_snapshot : [];
+            $snapshot['variant_key'] = $variantKey;
+            $snapshot['available_quantity'] = $availableStock;
+            $cartItem->stock_snapshot = $snapshot;
+
+
         }
 
         if (array_key_exists('stock_snapshot', $validated)) {
-            $cartItem->stock_snapshot = $validated['stock_snapshot'];
+            $incomingSnapshot = $validated['stock_snapshot'];
+            if (is_array($incomingSnapshot)) {
+                $snapshot = is_array($cartItem->stock_snapshot) ? $cartItem->stock_snapshot : [];
+                $cartItem->stock_snapshot = array_merge($snapshot, $incomingSnapshot);
+            } else {
+                $cartItem->stock_snapshot = $incomingSnapshot;
+            }
+        
         }
 
 
@@ -229,6 +291,7 @@ class CartController extends Controller
         $validated = $request->validate([
             'quantity' => ['required', 'integer', 'min:1'],
             'variant_id' => ['nullable', 'integer'],
+            'variant_key' => ['nullable', 'string', 'max:512'],
             'attributes' => ['nullable', 'array'],
             'stock_snapshot' => ['nullable', 'array'],
             'unit_price' => ['nullable', 'numeric', 'min:0'],
@@ -239,7 +302,7 @@ class CartController extends Controller
 
         $user = $request->user();
         $cartItem = CartItem::query()
-            ->with(['item' => static fn ($query) => $query->select(['id', 'currency'])])
+            ->with('item')
             ->where('user_id', $user->id)
             ->whereKey($cartItemId)
             ->first();
@@ -290,32 +353,85 @@ class CartController extends Controller
 
 
 
-        if (array_key_exists('variant_id', $validated) && $validated['variant_id'] !== $cartItem->variant_id) {
-            $conflict = CartItem::query()
-                ->where('user_id', $user->id)
-                ->where('item_id', $cartItem->item_id)
-                ->where('department', $cartItem->department)
-                ->where('variant_id', $validated['variant_id'])
-                ->where('id', '!=', $cartItem->id)
-                ->exists();
+        $itemModel = $cartItem->item;
 
-            if ($conflict) {
-                return $this->validationError(__('لا يمكن تحديث المتغير المحدد لأنه موجود بالفعل في السلة.'), 409);
+
+        $rawAttributes = array_key_exists('attributes', $validated)
+            ? $validated['attributes']
+            : ($cartItem->attributes ?? []);
+
+        if (! is_array($rawAttributes)) {
+            $rawAttributes = [];
+        
+        }
+        $normalizedAttributes = is_array($cartItem->attributes) ? $cartItem->attributes : [];
+        $variantKey = $cartItem->variant_key ?? '';
+
+        if ($itemModel instanceof Item) {
+            try {
+                $normalizedAttributes = $this->itemPurchaseOptionsService->sanitizeAttributes($itemModel, $rawAttributes);
+            } catch (ValidationException $exception) {
+                return $this->validationError($exception->getMessage(), 422);
             }
 
-            $cartItem->variant_id = $validated['variant_id'];
+            $variantKey = $this->itemPurchaseOptionsService->generateVariantKey($itemModel, $normalizedAttributes);
+
+            if (array_key_exists('variant_key', $validated)) {
+                $expectedVariantKey = trim((string) ($validated['variant_key'] ?? ''));
+                if ($expectedVariantKey !== $variantKey) {
+                    return $this->validationError(
+                        __('تم تغيير خيارات المنتج بطريقة غير صالحة. يرجى إعادة المحاولة.'),
+                        422,
+                        'invalid_variant_key'
+                    );
+                }
+            }
+
+            if ($variantKey !== ($cartItem->variant_key ?? '')) {
+                $conflict = CartItem::query()
+                    ->where('user_id', $user->id)
+                    ->where('item_id', $cartItem->item_id)
+                    ->where('department', $cartItem->department)
+                    ->where('variant_key', $variantKey)
+                    ->where('id', '!=', $cartItem->id)
+                    ->exists();
+
+                if ($conflict) {
+                    return $this->validationError(__('لا يمكن تحديث المتغير المحدد لأنه موجود بالفعل في السلة.'), 409);
+                }
+
+
+
+                $cartItem->variant_key = $variantKey;
+            }
+
+            $availableStock = $this->itemPurchaseOptionsService->resolveAvailableStock($itemModel, $variantKey);
+            if ($availableStock !== null) {
+                $snapshot = is_array($cartItem->stock_snapshot) ? $cartItem->stock_snapshot : [];
+                $snapshot['variant_key'] = $variantKey;
+                $snapshot['available_quantity'] = $availableStock;
+                $cartItem->stock_snapshot = $snapshot;
+            }
         }
 
+        if (array_key_exists('variant_id', $validated)) {
+            $cartItem->variant_id = $validated['variant_id'] ?? null;
+
+        }
+
+        $cartItem->attributes = $normalizedAttributes;
 
         $cartItem->quantity = (int) $validated['quantity'];
 
-
-        if (array_key_exists('attributes', $validated)) {
-            $cartItem->attributes = $validated['attributes'];
-        }
-
         if (array_key_exists('stock_snapshot', $validated)) {
-            $cartItem->stock_snapshot = $validated['stock_snapshot'];
+            $incomingSnapshot = $validated['stock_snapshot'];
+            if (is_array($incomingSnapshot)) {
+                $snapshot = is_array($cartItem->stock_snapshot) ? $cartItem->stock_snapshot : [];
+                $cartItem->stock_snapshot = array_merge($snapshot, $incomingSnapshot);
+            } else {
+                $cartItem->stock_snapshot = $incomingSnapshot;
+            }
+        
         }
 
         if (array_key_exists('unit_price', $validated)) {
@@ -780,10 +896,12 @@ class CartController extends Controller
                 'quantity' => $cartItem->quantity,
                 'department' => $cartItem->department,
                 'variant_id' => $cartItem->variant_id,
+                'variant_key' => $cartItem->variant_key,
                 'attributes' => $cartItem->attributes ?? [],
                 'stock_snapshot' => $cartItem->stock_snapshot ?? [],
                 'unit_price' => $cartItem->unit_price !== null ? (float) $cartItem->unit_price : null,
                 'unit_price_locked' => (float) $cartItem->getLockedUnitPrice(),
+                'final_unit_price' => (float) $cartItem->getLockedUnitPrice(),
                 'currency' => $currency,
                 'subtotal' => (float) $cartItem->subtotal,
             ];
@@ -1076,6 +1194,7 @@ class CartController extends Controller
             'section' => ['nullable', 'string', Rule::in($departments)],
             'category_id' => ['nullable', 'integer', 'exists:categories,id'],
             'variant_id' => ['nullable', 'integer'],
+            'variant_key' => ['nullable', 'string', 'max:512'],
             'attributes' => ['nullable', 'array'],
             'stock_snapshot' => ['nullable', 'array'],
             'unit_price' => ['nullable', 'numeric', 'min:0'],

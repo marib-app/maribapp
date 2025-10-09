@@ -15,6 +15,7 @@ use App\Http\Controllers\WifiCodeBatchController;
 use App\Http\Controllers\WifiNetworkController;
 use App\Http\Controllers\WifiPlanController;
 use App\Http\Controllers\WifiPurchaseController;
+use App\Http\Controllers\ProductPurchaseOptionsController;
 
 
 
@@ -30,7 +31,10 @@ use App\Http\Controllers\WifiPurchaseController;
 */
 Route::any('delivery-prices/calculate', fn() => response()->json(['ok'=>true]))->name('delivery-prices.calculate.test');
 
+Route::get('products/{item}/purchase-options', [ProductPurchaseOptionsController::class, 'show'])
+    ->whereNumber('item');
 
+    
 Route::prefix('wifi-cabin')
     ->middleware(['auth:sanctum', 'permission:wifi-cabin-manage'])
     ->group(function () {

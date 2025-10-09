@@ -4,6 +4,7 @@ namespace App\Models;
 use App\Models\AdminNotification;
 use App\Models\Concerns\NotifiesAdminOnApprovalStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\ItemStock;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -45,7 +46,19 @@ class Item extends Model {
 
         'interface_type',
         'product_link',
-        'review_link'   
+        'review_link',
+
+        'discount_type',
+        'discount_value',
+        'discount_start',
+        'discount_end',
+    ];
+
+    protected $casts = [
+        'discount_value' => 'float',
+        'discount_start' => 'datetime',
+        'discount_end' => 'datetime',
+    
     ];
 
     // Relationships
@@ -89,7 +102,10 @@ class Item extends Model {
     {
         return $this->hasMany(CartItem::class);
     }
-
+    public function stocks(): HasMany
+    {
+        return $this->hasMany(ItemStock::class);
+    }
     public function user_reports() {
         return $this->hasMany(UserReports::class);
     }
@@ -200,6 +216,67 @@ class Item extends Model {
         return $query;
     }
 
+    public function hasActiveDiscount(?Carbon $now = null): bool
+    {
+        if (! $this->discount_type || $this->discount_value === null) {
+            return false;
+        }
+
+        $now ??= Carbon::now();
+
+        if ($this->discount_start instanceof Carbon && $now->lt($this->discount_start)) {
+            return false;
+        }
+
+        if ($this->discount_end instanceof Carbon && $now->gt($this->discount_end)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public function calculateDiscountedPrice(?Carbon $now = null): float
+    {
+        $basePrice = (float) ($this->price ?? 0.0);
+
+        if (! $this->hasActiveDiscount($now)) {
+            return round($basePrice, 2);
+        }
+
+        $value = (float) $this->discount_value;
+        $type = strtolower((string) $this->discount_type);
+
+        $discountAmount = match ($type) {
+            'percentage', 'percent' => $basePrice * ($value / 100),
+            'fixed', 'amount', 'flat' => $value,
+            default => $value,
+        };
+
+        $final = max(0.0, $basePrice - $discountAmount);
+
+        return round($final, 2);
+    }
+
+    public function getFinalPriceAttribute(): float
+    {
+        return $this->calculateDiscountedPrice();
+    }
+
+    public function getDiscountSnapshotAttribute(): ?array
+    {
+        if ($this->discount_type === null && $this->discount_value === null) {
+            return null;
+        }
+
+        return [
+            'type' => $this->discount_type,
+            'value' => $this->discount_value !== null ? (float) $this->discount_value : null,
+            'start' => $this->discount_start?->toIso8601String(),
+            'end' => $this->discount_end?->toIso8601String(),
+            'is_active' => $this->hasActiveDiscount(),
+        ];
+    }
+    
     public function scopeApproved($query) {
         return $query->where('status', 'approved');
     }

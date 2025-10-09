@@ -14,6 +14,7 @@ class CartItem extends Model
         'user_id',
         'item_id',
         'variant_id',
+        'variant_key',
         'department',
         'quantity',
         'unit_price',
@@ -26,7 +27,7 @@ class CartItem extends Model
 
     protected $casts = [
         'variant_id' => 'integer',
-
+        'variant_key' => 'string',
         'quantity' => 'integer',
         'unit_price' => 'float',
         'unit_price_locked' => 'float',

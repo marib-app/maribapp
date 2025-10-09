@@ -18,6 +18,7 @@ class CartItemFactory extends Factory
             'item_id' => Item::factory(),
             'variant_id' => null,
             'department' => 'general',
+            'variant_key' => '',
             'quantity' => $this->faker->numberBetween(1, 3),
             'unit_price' => $this->faker->randomFloat(2, 10, 100),
             'unit_price_locked' => null,

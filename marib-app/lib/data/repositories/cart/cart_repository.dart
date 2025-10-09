@@ -281,10 +281,11 @@ class CartRepository {
     double? vendorLng,
     Object? selectedCustomFields,
     Object? variantId,
+    String? variantKey,
     Object? attributes,
     Object? stockSnapshot,
     double? unitPrice,
-    bool? unitPriceLocked,
+    double? unitPriceLocked,
     String? currency,
   }) async {
     final String? sectionValue =
@@ -309,7 +310,9 @@ class CartRepository {
     if (variantId != null) {
       parameters['variant_id'] = variantId;
     }
-
+    if (variantKey != null && variantKey.trim().isNotEmpty) {
+      parameters['variant_key'] = variantKey.trim();
+    }
     final dynamic encodedAttributes = _encodePayload(attributes);
     if (encodedAttributes != null) {
       parameters['attributes'] = encodedAttributes;
@@ -346,9 +349,11 @@ class CartRepository {
     required int quantity,
     int? cartItemId,
     Object? variantId,
+    String? variantKey,
     Object? attributes,
     Object? stockSnapshot,
     double? unitPrice,
+    double? unitPriceLocked,
     String? currency,
   }) async {
     Map<String, dynamic>? response;
@@ -361,7 +366,9 @@ class CartRepository {
       if (variantId != null) {
         payload['variant_id'] = variantId;
       }
-
+      if (variantKey != null && variantKey.trim().isNotEmpty) {
+        payload['variant_key'] = variantKey.trim();
+      }
       final dynamic encodedAttributes = _encodePayload(attributes);
       if (encodedAttributes != null) {
         payload['attributes'] = encodedAttributes;
@@ -374,6 +381,9 @@ class CartRepository {
 
       if (unitPrice != null) {
         payload['unit_price'] = unitPrice;
+      }
+      if (unitPriceLocked != null) {
+        payload['unit_price_locked'] = unitPriceLocked;
       }
 
       if (currency != null) {
@@ -462,6 +472,7 @@ class CartRepository {
   Future<CartSummary> removeItem({
     required int itemId,
     int? cartItemId,
+    String? variantKey,
   }) async {
     Map<String, dynamic>? response;
 
@@ -482,6 +493,8 @@ class CartRepository {
       _cartRemoveEndpointCandidates,
       <String, dynamic>{
         'item_id': itemId,
+        if (variantKey != null && variantKey.trim().isNotEmpty)
+          'variant_key': variantKey.trim(),
       },
     );
 

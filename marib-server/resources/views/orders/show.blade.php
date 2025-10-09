@@ -1186,7 +1186,7 @@
                                 {{ $paymentStatusLabel ?? '—' }}
                             </div>
                             <small class="text-muted d-block mt-2">يتم تحديث حالة الدفع حصراً من خلال واجهة طلبات الدفع اليدوية.</small>
-                            
+                                
                         </div>
                         <div class="form-group">
                             <label for="comment">ملاحظات التحديث</label>

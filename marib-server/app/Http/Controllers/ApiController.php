@@ -6578,7 +6578,14 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
             }
 
         
-            if (! in_array($accountType, [User::ACCOUNT_TYPE_CUSTOMER, User::ACCOUNT_TYPE_SELLER], true)) {
+            $allowedAccountTypes = [
+                User::ACCOUNT_TYPE_CUSTOMER,
+                User::ACCOUNT_TYPE_REAL_ESTATE,
+                User::ACCOUNT_TYPE_SELLER,
+            ];
+
+            if (! in_array($accountType, $allowedAccountTypes, true)) {
+                
                 return response()->json([
                     'error' => true,
                     'message' => __('نوع الحساب المطلوب غير صالح.'),

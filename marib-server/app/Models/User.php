@@ -27,7 +27,8 @@ class User extends Authenticatable {
     /**
      * ثوابت أنواع الحسابات
      */
-    const ACCOUNT_TYPE_CUSTOMER = 1;
+    const ACCOUNT_TYPE_CUSTOMER = 1;    
+    const ACCOUNT_TYPE_REAL_ESTATE = 2;
     const ACCOUNT_TYPE_SELLER = 3;
 
 
@@ -146,6 +147,8 @@ class User extends Authenticatable {
         switch ($this->account_type) {
             case self::ACCOUNT_TYPE_CUSTOMER:
                 return 'عميل';
+            case self::ACCOUNT_TYPE_REAL_ESTATE:
+                return 'عقاري';
             case self::ACCOUNT_TYPE_SELLER:
                 return 'تاجر';
             default:

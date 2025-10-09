@@ -1415,12 +1415,13 @@ class ApiController extends Controller {
                 $slug = HelperService::generateRandomSlug();
             }
             $uniqueSlug = HelperService::generateUniqueSlug(new Item(), $slug);
+            $status = $this->shouldAutoApproveSection($section) ? 'approved' : 'review';
 
             $data = [
                 ...$request->all(),
                 'name'        => strtoupper($request->name), // Store name in uppercase
                 'slug'        => $uniqueSlug,
-                'status'      => "review", // تعيين الحالة إلى قيد المراجعة
+                'status'      => $status,
                 'active'      => "active", // تفعيل الإعلان مباشرة
                 'user_id'     => $user->id,
                 'package_id'  => null, // إزالة ربط الباقة
@@ -1996,7 +1997,10 @@ class ApiController extends Controller {
                 $item->delete();
             } else if ($request->status == "active") {
                 $item->restore();
-                $item->update(['status' => 'review']);
+                $section = $this->resolveSectionByCategoryId($item->category_id);
+                $status = $this->shouldAutoApproveSection($section) ? 'approved' : 'review';
+                $item->update(['status' => $status]);
+
             } else if ($request->status == "sold out") {
                 $item->update([
                     'status'  => 'sold out',
@@ -3232,22 +3236,30 @@ class ApiController extends Controller {
 
     public function getChatList(Request $request) {
         $validator = Validator::make($request->all(), [
-            'type' => 'required|in:seller,buyer'
+            'type' => 'sometimes|in:seller,buyer',
+            'conversation_id' => 'sometimes|integer|exists:chat_conversations,id',
+            'item_offer_id' => 'sometimes|integer|exists:item_offers,id',
+            'page' => 'sometimes|integer|min:1',
         ]);
         if ($validator->fails()) {
             ResponseService::validationError($validator->errors()->first());
         }
+
+        if (!$request->filled('type') && !$request->filled('conversation_id') && !$request->filled('item_offer_id')) {
+            ResponseService::validationError('type is required when conversation_id or item_offer_id is not provided.');
+        }
+
         try {
-            //List of Blocked Users by Auth Users
-            $authUserBlockList = BlockUser::where('user_id', Auth::user()->id)->pluck('blocked_user_id');
 
-
-            $otherUserBlockList = BlockUser::where('blocked_user_id', Auth::user()->id)->pluck('user_id');
 
 
             $user = Auth::user();
+            $authUserBlockList = BlockUser::where('user_id', $user->id)->pluck('blocked_user_id');
+            $otherUserBlockList = BlockUser::where('blocked_user_id', $user->id)->pluck('user_id');
+    
+            $baseRelations = [
 
-            $itemOffer = ItemOffer::with([
+
                 'seller' => function ($query) {
                     $query->withTrashed()->select('id', 'name', 'profile');
                 },
@@ -3258,102 +3270,132 @@ class ApiController extends Controller {
                 'item.review' => function ($q) use ($user) {
                     $q->where('buyer_id', $user->id);
                 },
-            ])
-                ->with([
-                    'chat' => function ($query) {
-                        $query->latest('updated_at')->select('id', 'item_offer_id', 'updated_at');
-                    },
-                ])
+                'chat' => function ($query) use ($user) {
+                    $query->latest('updated_at')
+                        ->select('id', 'item_offer_id', 'updated_at')
+                        ->with([
+                            'participants' => function ($participantQuery) {
+                                $participantQuery->withTrashed()->select('users.id', 'users.name', 'users.profile');
+                            },
+                            'latestMessage' => function ($messageQuery) {
+                                $messageQuery->with([
+                                    'sender:id,name,profile',
+                                    'conversation:id,item_offer_id',
+                                ]);
+                            },
+                        ])
+                        ->withCount([
+                            'messages as unread_messages_count' => function ($messageQuery) use ($user) {
+                                $messageQuery->whereNull('read_at')
+                                    ->where(function ($subQuery) use ($user) {
+                                        $subQuery->whereNull('sender_id')
+                                            ->orWhere('sender_id', '!=', $user->id);
+                                    });
+                            },
+                        ]);
+                },
+            ];
+    
+            if ($request->filled('conversation_id') || $request->filled('item_offer_id')) {
+                $offerRelations = $baseRelations;
+                unset($offerRelations['chat']);
+    
+                if ($request->filled('conversation_id')) {
+                    $conversation = Chat::with(['itemOffer' => function ($query) use ($offerRelations) {
+                        $query->with($offerRelations);
+                    }])->findOrFail($request->conversation_id);
+    
+                    if (!$conversation->participants()->where('users.id', $user->id)->exists()) {
+                        ResponseService::errorResponse('You are not allowed to view this conversation', null, 403);
+                    }
+                    $itemOffer = $conversation->itemOffer;
+                    if (!$itemOffer) {
+                        ResponseService::errorResponse('Conversation is missing item offer reference');
+                    }
+                    $itemOffer->loadMissing($offerRelations);
+    
+                    $legacyTimes = $this->resolveLegacyLastMessageTimes(collect([$itemOffer->id]));
+                    $type = $itemOffer->seller_id === $user->id ? 'seller' : 'buyer';
+                    $payload = $this->enrichOfferWithChatData(
+                        $itemOffer,
+                        $user,
+                        $authUserBlockList,
+                        $otherUserBlockList,
+                        $legacyTimes,
+                        $type,
+                        $conversation
+                    );
+    
+                    ResponseService::successResponse('Chat conversation fetched successfully', [
+                        'conversation' => $payload->toArray(),
+                    ]);
+                    return;
+
+                }
+
+                $itemOffer = ItemOffer::with($baseRelations)
+                    ->owner()
+                    ->findOrFail($request->item_offer_id);
+    
+                $legacyTimes = $this->resolveLegacyLastMessageTimes(collect([$itemOffer->id]));
+                $type = $request->input('type');
+                if (!$type) {
+                    $type = $itemOffer->seller_id === $user->id ? 'seller' : 'buyer';
+                }
+
+                $payload = $this->enrichOfferWithChatData(
+                    $itemOffer,
+                    $user,
+                    $authUserBlockList,
+                    $otherUserBlockList,
+                    $legacyTimes,
+                    $type
+                );
+    
+                ResponseService::successResponse('Chat conversation fetched successfully', [
+                    'conversation' => $payload->toArray(),
+                ]);
+                return;
+            }
+    
+            $itemOffer = ItemOffer::with($baseRelations)
                 ->orderBy('id', 'DESC');
-
-
-
-
-
-
-            if ($request->type == "seller") {
-                $itemOffer = $itemOffer->where('seller_id', $user->id);
-            } elseif ($request->type == "buyer") {
-                $itemOffer = $itemOffer->where('buyer_id', $user->id);
+    
+            if ($request->type === 'seller') {
+                $itemOffer->where('seller_id', $user->id);
+            } elseif ($request->type === 'buyer') {
+                $itemOffer->where('buyer_id', $user->id);
             }
+    
             $itemOffer = $itemOffer->paginate();
-
-
-            $itemOffer->getCollection()->transform(function ($value) use ($request, $authUserBlockList, $otherUserBlockList) {
-                // Your code here
-                if ($request->type == "seller") {
-                    $userBlocked = $authUserBlockList->contains($value->buyer_id) || $otherUserBlockList->contains($value->seller_id);
-                } elseif ($request->type == "buyer") {
-                    $userBlocked = $authUserBlockList->contains($value->seller_id) || $otherUserBlockList->contains($value->buyer_id);
-                }
-                
-                // Fix: Get the item object and modify it directly
-                $item = $value->item;
-                if ($item) {
-                    $item->is_purchased = 0;
-                    if ($item->sold_to == Auth::user()->id) {
-                        $item->is_purchased = 1;
-                    }
-                    $tempReview = $item->review;
-
-                    unset($item->review);
-                    $item->review = $tempReview[0] ?? null;
-                    
-                    // Reassign the modified item back to the value
-                    $value->item = $item;
-                }
-                $value->user_blocked = $userBlocked ?? false;
-                return $value;
-            });
-
+    
             $offerIds = $itemOffer->getCollection()->pluck('id')->filter()->values();
-
-            $legacyLastMessageTimes = collect();
-            if ($offerIds->isNotEmpty() && Schema::hasTable('chats')) {
-                $legacyLastMessageTimes = DB::table('chats')
-                    ->whereIn('item_offer_id', $offerIds)
-                    ->select('item_offer_id', DB::raw('MAX(updated_at) as last_message_time'))
-                    ->groupBy('item_offer_id')
-                    ->pluck('last_message_time', 'item_offer_id');
-            }
-
-            $itemOffer->getCollection()->transform(function ($offer) use ($legacyLastMessageTimes) {
-                $chat = $offer->chat;
-                $chatNeedsHydration = !$chat;
-
-                if (!$chatNeedsHydration && $chat->relationLoaded('messages')) {
-                    $chatNeedsHydration = $chat->messages->isEmpty();
-                } elseif (!$chatNeedsHydration) {
-                    $chatNeedsHydration = !$chat->messages()->exists();
-                }
-
-                if ($chatNeedsHydration && $legacyLastMessageTimes->has($offer->id)) {
-                    $chat = $this->hydrateLegacyChatConversation($offer, $chat);
-
-                    if ($chat) {
-                        $offer->setRelation('chat', $chat);
-                    }
-                }
-
-                $chat = $offer->chat;
-                $lastMessageTime = optional($chat)->updated_at;
-
-                if (empty($lastMessageTime) && $legacyLastMessageTimes->has($offer->id)) {
-                    $legacyTime = $legacyLastMessageTimes->get($offer->id);
-                    $lastMessageTime = $legacyTime ? Carbon::parse($legacyTime) : null;
-                }
-
-                $offer['conversation_id'] = $chat?->id;
-                $offer['last_message_time'] = $lastMessageTime ? $lastMessageTime->toDateTimeString() : null;
+            $legacyLastMessageTimes = $this->resolveLegacyLastMessageTimes($offerIds);
+    
+            $itemOffer->getCollection()->transform(function (ItemOffer $offer) use (
+                $user,
+                $authUserBlockList,
+                $otherUserBlockList,
+                $legacyLastMessageTimes,
+                $request
+            ) {
+                return $this->enrichOfferWithChatData(
+                    $offer,
+                    $user,
+                    $authUserBlockList,
+                    $otherUserBlockList,
+                    $legacyLastMessageTimes,
+                    $request->type
+                );
 
 
-
-                return $offer;
             });
 
-            ResponseService::successResponse("Chat List Fetched Successfully", $itemOffer);
+            ResponseService::successResponse('Chat List Fetched Successfully', $itemOffer);
+
+
         } catch (Throwable $th) {
-            ResponseService::logErrorResponse($th, "API Controller -> getChatList");
+            ResponseService::logErrorResponse($th, 'API Controller -> getChatList');
             ResponseService::errorResponse();
         }
     }
@@ -3600,50 +3642,290 @@ class ApiController extends Controller {
 
     public function getChatMessages(Request $request) {
         $validator = Validator::make($request->all(), [
-            'item_offer_id' => 'required',
+            'item_offer_id' => 'sometimes|integer|exists:item_offers,id',
+            'conversation_id' => 'sometimes|integer|exists:chat_conversations,id',
+            'page' => 'sometimes|integer|min:1',
+            'per_page' => 'sometimes|integer|min:1|max:100',
         ]);
         if ($validator->fails()) {
             ResponseService::validationError($validator->errors()->first());
         }
+
+                
+        if (!$request->filled('item_offer_id') && !$request->filled('conversation_id')) {
+            ResponseService::validationError('item_offer_id or conversation_id is required.');
+        }
         try {
-            $itemOffer = ItemOffer::owner()->findOrFail($request->item_offer_id);
-            $conversation = Chat::where('item_offer_id', $itemOffer->id)->first();
+
+            $user = Auth::user();
+            $conversation = null;
+            $itemOffer = null;
+        
+            if ($request->filled('conversation_id')) {
+                $conversation = Chat::with('itemOffer')->findOrFail($request->conversation_id);
+        
+                if (!$conversation->participants()->where('users.id', $user->id)->exists()) {
+                    ResponseService::errorResponse('You are not allowed to view this conversation', null, 403);
+                }
+        
+                $itemOffer = $conversation->itemOffer;
+                if ($itemOffer && $itemOffer->seller_id !== $user->id && $itemOffer->buyer_id !== $user->id) {
+                    ResponseService::errorResponse('You are not allowed to view this conversation', null, 403);
+                }
+            }
+        
+            if (!$itemOffer && $request->filled('item_offer_id')) {
+                $itemOffer = ItemOffer::owner()->findOrFail($request->item_offer_id);
+            }
+        
+            if ($conversation && $itemOffer && $conversation->item_offer_id !== $itemOffer->id) {
+                ResponseService::errorResponse('Conversation does not belong to the supplied item offer.');
+            }
+        
+            if (!$conversation && $itemOffer) {
+                $conversation = Chat::where('item_offer_id', $itemOffer->id)->first();
+            }
+        
+            $perPage = (int) $request->input('per_page', 15);
+
 
             $chatMessages = null;
 
             if ($conversation) {
-                $chatMessages = ChatMessage::where('conversation_id', $conversation->id)
+                $chatMessages = ChatMessage::with(['sender:id,name,profile', 'conversation:id,item_offer_id'])
+                    ->where('conversation_id', $conversation->id)
+                    
                     ->orderBy('created_at', 'DESC')
-                    ->paginate();
+                    ->paginate($perPage);
             }
 
             if (!$conversation || ($chatMessages && $chatMessages->total() === 0)) {
-                $conversation = $this->hydrateLegacyChatConversation($itemOffer, $conversation);
+                if ($itemOffer) {
+                    $conversation = $this->hydrateLegacyChatConversation($itemOffer, $conversation);
 
-                if ($conversation) {
-                    $chatMessages = ChatMessage::where('conversation_id', $conversation->id)
-                        ->orderBy('created_at', 'DESC')
-                        ->paginate();
+                    if ($conversation) {
+                        $chatMessages = ChatMessage::with(['sender:id,name,profile', 'conversation:id,item_offer_id'])
+                            ->where('conversation_id', $conversation->id)
+                            ->orderBy('created_at', 'DESC')
+                            ->paginate($perPage);
+                    }
                 }
             }
 
             if (!$conversation) {
-                $empty = ChatMessage::whereRaw('1 = 0')->paginate();
-                ResponseService::successResponse("Messages Fetched Successfully", $empty);
+
+
+                $empty = ChatMessage::whereRaw('1 = 0')->paginate($perPage);
+                ResponseService::successResponse('Messages Fetched Successfully', $empty);
+                return;
             }
 
             if (!$chatMessages) {
-                $chatMessages = ChatMessage::whereRaw('1 = 0')->paginate();
+                $chatMessages = ChatMessage::whereRaw('1 = 0')->paginate($perPage);
             }
 
-            ResponseService::successResponse("Messages Fetched Successfully", $chatMessages);
+            ResponseService::successResponse('Messages Fetched Successfully', $chatMessages);
         
         
         
         } catch (Throwable $th) {
-            ResponseService::logErrorResponse($th, "API Controller -> getChatMessages");
+            ResponseService::logErrorResponse($th, 'API Controller -> getChatMessages');
             ResponseService::errorResponse();
         }
+    }
+
+
+
+
+   private function resolveLegacyLastMessageTimes(Collection $offerIds): Collection
+    {
+        if ($offerIds->isEmpty() || !Schema::hasTable('chats')) {
+            return collect();
+        }
+    
+        return DB::table('chats')
+            ->whereIn('item_offer_id', $offerIds)
+            ->select('item_offer_id', DB::raw('MAX(updated_at) as last_message_time'))
+            ->groupBy('item_offer_id')
+            ->pluck('last_message_time', 'item_offer_id');
+    }
+    
+    private function enrichOfferWithChatData(
+        ItemOffer $offer,
+        User $user,
+        Collection $authUserBlockList,
+        Collection $otherUserBlockList,
+        Collection $legacyLastMessageTimes,
+        ?string $type = null,
+        ?Chat $conversation = null
+    ): ItemOffer {
+        $type = $type ?: ($offer->seller_id === $user->id ? 'seller' : 'buyer');
+    
+        $userBlocked = false;
+        if ($type === 'seller') {
+            $userBlocked = $authUserBlockList->contains($offer->buyer_id)
+                || $otherUserBlockList->contains($offer->seller_id);
+        } else {
+            $userBlocked = $authUserBlockList->contains($offer->seller_id)
+                || $otherUserBlockList->contains($offer->buyer_id);
+        }
+    
+        $offer->setAttribute('user_blocked', (bool) $userBlocked);
+    
+        $item = $offer->item;
+        if ($item) {
+            $item->is_purchased = 0;
+            if ($item->sold_to == $user->id) {
+                $item->is_purchased = 1;
+            }
+            $tempReview = $item->review;
+            unset($item->review);
+            $item->review = $tempReview[0] ?? null;
+            $offer->setRelation('item', $item);
+        }
+    
+        $chat = $conversation ?: $offer->chat;
+    
+        $needsHydration = false;
+        if (!$chat) {
+            $needsHydration = true;
+        } elseif ($chat->relationLoaded('messages')) {
+            $needsHydration = $chat->messages->isEmpty();
+        } elseif (!$chat->messages()->exists()) {
+            $needsHydration = true;
+        }
+    
+        if ($needsHydration && $legacyLastMessageTimes->has($offer->id)) {
+            $chat = $this->hydrateLegacyChatConversation($offer, $chat);
+        }
+    
+        if ($chat) {
+            $chat->loadMissing([
+                'participants' => function ($participantQuery) {
+                    $participantQuery->withTrashed()->select('users.id', 'users.name', 'users.profile');
+                },
+                'latestMessage' => function ($messageQuery) {
+                    $messageQuery->with(['sender:id,name,profile', 'conversation:id,item_offer_id']);
+                },
+            ]);
+        }
+    
+        $offer->setRelation('chat', $chat);
+    
+        $lastMessageTime = optional($chat)->updated_at;
+        if (empty($lastMessageTime) && $legacyLastMessageTimes->has($offer->id)) {
+            $legacyTime = $legacyLastMessageTimes->get($offer->id);
+            $lastMessageTime = $legacyTime ? Carbon::parse($legacyTime) : null;
+        }
+    
+        $offer->setAttribute('conversation_id', $chat?->id);
+        $offer->setAttribute('last_message_time', $lastMessageTime ? $lastMessageTime->toDateTimeString() : null);
+        $offer->setAttribute(
+            'participants',
+            $this->buildParticipantsPayload($offer, $chat, $user, $authUserBlockList, $otherUserBlockList)
+        );
+        $offer->setAttribute('last_message', $chat?->latestMessage ? $chat->latestMessage->toArray() : null);
+    
+        $unread = 0;
+        if ($chat) {
+            if (isset($chat->unread_messages_count)) {
+                $unread = (int) $chat->unread_messages_count;
+            } else {
+                $unread = $chat->messages()
+                    ->whereNull('read_at')
+                    ->where(function ($query) use ($user) {
+                        $query->whereNull('sender_id')
+                            ->orWhere('sender_id', '!=', $user->id);
+                    })->count();
+            }
+        }
+        $offer->setAttribute('unread_messages_count', $unread);
+    
+        return $offer;
+    }
+    
+    private function buildParticipantsPayload(
+        ItemOffer $offer,
+        ?Chat $conversation,
+        User $user,
+        Collection $authUserBlockList,
+        Collection $otherUserBlockList
+    ): array {
+        $participants = collect();
+    
+        if ($conversation && $conversation->relationLoaded('participants')) {
+            $participants = $conversation->participants->map(function (User $participant) use (
+                $offer,
+                $authUserBlockList,
+                $otherUserBlockList
+            ) {
+                $role = $participant->id === $offer->seller_id
+                    ? 'seller'
+                    : ($participant->id === $offer->buyer_id ? 'buyer' : 'participant');
+    
+                $status = [
+                    'is_online' => (bool) $participant->pivot->is_online,
+                    'is_typing' => (bool) $participant->pivot->is_typing,
+                    'last_seen' => optional($participant->pivot->last_seen_at)->toIso8601String(),
+                    'last_typing_at' => optional($participant->pivot->last_typing_at)->toIso8601String(),
+                    'is_blocked' => $authUserBlockList->contains($participant->id)
+                        || $otherUserBlockList->contains($participant->id),
+                ];
+    
+                return [
+                    'user_id' => $participant->id,
+                    'id' => $participant->id,
+                    'name' => $participant->name,
+                    'profile' => $participant->profile,
+                    'role' => $role,
+                    'status' => array_filter($status, function ($value) {
+                        return $value !== null && $value !== '';
+                    }),
+                ];
+            });
+        }
+    
+        if ($participants->isEmpty()) {
+            $fallback = collect();
+    
+            if ($offer->seller) {
+                $fallback->push([
+                    'user_id' => $offer->seller->id,
+                    'id' => $offer->seller->id,
+                    'name' => $offer->seller->name,
+                    'profile' => $offer->seller->profile,
+                    'role' => 'seller',
+                    'status' => [
+                        'is_online' => false,
+                        'is_typing' => false,
+                        'last_seen' => null,
+                        'is_blocked' => $authUserBlockList->contains($offer->seller->id)
+                            || $otherUserBlockList->contains($offer->seller->id),
+                    ],
+                ]);
+            }
+    
+            if ($offer->buyer) {
+                $fallback->push([
+                    'user_id' => $offer->buyer->id,
+                    'id' => $offer->buyer->id,
+                    'name' => $offer->buyer->name,
+                    'profile' => $offer->buyer->profile,
+                    'role' => 'buyer',
+                    'status' => [
+                        'is_online' => false,
+                        'is_typing' => false,
+                        'last_seen' => null,
+                        'is_blocked' => $authUserBlockList->contains($offer->buyer->id)
+                            || $otherUserBlockList->contains($offer->buyer->id),
+                    ],
+                ]);
+            }
+    
+            $participants = $fallback;
+        }
+    
+        return $participants->values()->toArray();
     }
 
 
@@ -8851,6 +9133,20 @@ public function storeRequestDevice(Request $request)
 
         return null;
     }
+
+
+    private function shouldAutoApproveSection(?string $section): bool
+    {
+        if ($section === null) {
+            return false;
+        }
+
+        return in_array($section, [
+            DepartmentReportService::DEPARTMENT_SHEIN,
+            DepartmentReportService::DEPARTMENT_COMPUTER,
+        ], true);
+    }
+
 
     private function getDepartmentCategoryMap(): array
     {

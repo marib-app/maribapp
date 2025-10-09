@@ -15,6 +15,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'package:marib/data/cubits/system/language_cubit.dart';
+import 'dart:async';
+import 'package:marib/ui/screens/chat/chat_badge_controller.dart';
 
 
 
@@ -42,6 +44,7 @@ class EntryPointState extends State<EntryPoint> {
         NotificationService.onBackgroundMessageHandler);
     //ChatMessageHandler.handle();
     ChatGlobals.init();
+    unawaited(ChatBadgeController.init(userId: HiveUtils.getUserId()));
   }
 
   @override

@@ -25,6 +25,100 @@ extension _ChatTileUi on ChatTile {
     return candidates.any((ext) => cleanPath.endsWith(ext));
   }
 
+
+  ParticipantStatus? _otherParticipantStatus() {
+    if (participants == null || participants!.isEmpty) {
+      return null;
+    }
+
+    final String currentId = HiveUtils.getUserId() ?? '';
+    for (final participant in participants!) {
+      final String participantId = participant.userId?.toString() ??
+          participant.additionalData?['id']?.toString() ?? '';
+      if (participantId.isEmpty || participantId == currentId) {
+        continue;
+      }
+      final ParticipantStatus? status = participant.status;
+      if (status != null) {
+        return status;
+      }
+    }
+    return null;
+  }
+
+  String? _presenceLabel(BuildContext context, ParticipantStatus? status) {
+    if (status == null) {
+      return null;
+    }
+    if (status.isTyping == true) {
+      return "typingNow".translate(context);
+    }
+    if (status.isOnline == true) {
+      return "onlineNow".translate(context);
+    }
+    final String? lastSeen = status.lastSeen;
+    if (lastSeen != null && lastSeen.isNotEmpty) {
+      try {
+        final String formatted = lastSeen.formatDate();
+        final String template = "lastSeenAt".translate(context);
+        return template.contains('%s')
+            ? template.replaceFirst('%s', formatted)
+            : "$template $formatted";
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  Widget? _buildPresenceBadge(
+      BuildContext context, ParticipantStatus? status) {
+    final String? label = _presenceLabel(context, status);
+    if (label == null) {
+      return null;
+    }
+
+    final bool isTyping = status?.isTyping == true;
+    final bool isOnline = status?.isOnline == true;
+
+    final Color foreground = isTyping
+        ? context.color.territoryColor
+        : (isOnline
+        ? context.color.territoryColor
+        : context.color.textLightColor);
+
+    final Color background = isTyping
+        ? context.color.territoryColor.withOpacity(0.12)
+        : context.color.secondaryColor;
+
+    final IconData icon = isTyping
+        ? Icons.edit_note_rounded
+        : (isOnline ? Icons.circle : Icons.access_time);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: foreground),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: context.font.smaller,
+              color: foreground,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _previewText(BuildContext context) {
     final msg = lastMessage;
     if (msg == null) {
@@ -53,6 +147,11 @@ extension _ChatTileUi on ChatTile {
 
 
   Widget buildChatTile(BuildContext context) {
+
+    final ParticipantStatus? presenceStatus = _otherParticipantStatus();
+    final bool showOnlineIndicator = presenceStatus?.isOnline == true;
+    final Widget? presenceBadge =
+    _buildPresenceBadge(context, presenceStatus);
     return GestureDetector(
       onTap: () {
         Navigator.push(context, BlurredRouter(
@@ -146,6 +245,23 @@ extension _ChatTileUi on ChatTile {
                         ),
                       ),
                     ),
+                    if (showOnlineIndicator)
+                      PositionedDirectional(
+                        bottom: 2,
+                        end: 6,
+                        child: Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: context.color.territoryColor,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: context.color.secondaryColor,
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                      ),
                     PositionedDirectional(
                       end: 4,
                       bottom: -2,
@@ -227,7 +343,10 @@ extension _ChatTileUi on ChatTile {
 
 
 
-
+                      if (presenceBadge != null) ...[
+                        presenceBadge,
+                        const SizedBox(height: 6),
+                      ],
                       Text(
                         itemName,
                         softWrap: true,

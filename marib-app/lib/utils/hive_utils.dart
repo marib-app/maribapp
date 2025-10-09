@@ -11,6 +11,8 @@ import 'package:marib/data/model/user_model.dart';
 import 'helper_utils.dart';
 import 'package:marib/utils/hive_keys.dart';
 import 'dart:math';
+import 'dart:async';
+import 'package:marib/ui/screens/chat/chat_badge_controller.dart';
 
 
 
@@ -394,6 +396,7 @@ class HiveUtils {
         await _resetDelegateHistory();
       }
     }
+    await ChatBadgeController.handleUserChanged(incomingId);
 
   }
 
@@ -404,6 +407,7 @@ class HiveUtils {
 
     await Hive.box(HiveKeys.historyBox).clear();
     HiveUtils.setUserIsAuthenticated(false);
+    await ChatBadgeController.handleUserChanged(null);
   }
 
   /// تسجيل الخروج + تنظيف + إعادة التوجيه (إن لزم)

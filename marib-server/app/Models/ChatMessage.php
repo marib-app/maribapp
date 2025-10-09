@@ -30,7 +30,7 @@ class ChatMessage extends Model
         'read_at',
     ];
 
-    protected $appends = ['message_type'];
+    protected $appends = ['message_type', 'item_offer_id'];
 
 
         /**
@@ -99,5 +99,9 @@ class ChatMessage extends Model
         }
 
         return 'text';
+    }
+    public function getItemOfferIdAttribute(): ?int
+    {
+        return $this->conversation?->item_offer_id;
     }
 }

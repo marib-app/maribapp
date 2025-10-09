@@ -224,6 +224,7 @@ class ItemController extends Controller {
                 'allowed_category_ids' => $allowedCategoryIds,
                 'default_category_id' => 4,
                 'section_root_id' => 4,
+                'section' => DepartmentReportService::DEPARTMENT_SHEIN,
                 'validation_rules' => array_merge($validationRules, [
                     'product_link' => ['required', 'url', 'max:2048'],
                     'review_link' => ['nullable', 'url', 'max:2048'],
@@ -286,6 +287,9 @@ class ItemController extends Controller {
                 'default_category_id' => $sectionRootId,
                 'section_root_id' => $sectionRootId,
                 'interface_type' => $interfaceType,
+                'section' => DepartmentReportService::DEPARTMENT_COMPUTER,
+
+
             ]);
 
 
@@ -1105,6 +1109,15 @@ class ItemController extends Controller {
 
         $imagePath = FileService::upload($request->file('image'), 'items');
 
+        $section = $context['section'] ?? null;
+        $status = $context['status'] ?? 'review';
+
+        if ($this->shouldAutoApproveSection($section)) {
+            $status = 'approved';
+        }
+
+
+
         $itemData = [
             'name' => $request->name,
             'description' => $request->description,
@@ -1118,7 +1131,8 @@ class ItemController extends Controller {
             'city' => $request->city ?? '',
             'address' => $request->address ?? '',
             'contact' => $request->contact ?? '',
-            'status' => $context['status'] ?? 'review',
+            'status' => $status,
+
         ];
 
         if (! empty($context['interface_type'])) {
@@ -1195,7 +1209,17 @@ class ItemController extends Controller {
     }
 
 
+    private function shouldAutoApproveSection(?string $section): bool
+    {
+        if ($section === null) {
+            return false;
+        }
 
+        return in_array($section, [
+            DepartmentReportService::DEPARTMENT_SHEIN,
+            DepartmentReportService::DEPARTMENT_COMPUTER,
+        ], true);
+    }
 
 
     private function getCategoryPool(): Collection

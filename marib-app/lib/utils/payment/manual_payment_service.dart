@@ -1463,6 +1463,37 @@ class ManualPaymentService {
   final seen = <String>{};
 
   /// GET /api/manual-payment-requests
+
+
+  String _normalizeGatewayKey(String? value) {
+    if (value == null) {
+      return 'manual_bank';
+    }
+
+    final normalized = value.trim().toLowerCase();
+
+    if (normalized.isEmpty || normalized == 'null') {
+      return 'manual_bank';
+    }
+
+    switch (normalized) {
+      case 'manual':
+      case 'manual-bank':
+      case 'manual_bank':
+      case 'manualbank':
+        return 'manual_bank';
+      case 'east':
+      case 'east_yemen_bank':
+      case 'east-yemen-bank':
+      case 'eastyemenbank':
+        return 'east_yemen_bank';
+      case 'wallet':
+        return 'wallet';
+      default:
+        return normalized;
+    }
+  }
+
   Future<List<ManualPayment>> fetchMyManualPayments({
     bool latestOnly = true,
     Set<String> paymentGateways = const {'manual_bank', 'east_yemen_bank'},
@@ -1472,7 +1503,7 @@ class ManualPaymentService {
       if (token == null || token.isEmpty) return [];
 
       final normalizedGateways = paymentGateways
-          .map((e) => e.trim().toLowerCase())
+          .map(_normalizeGatewayKey)
           .where((e) => e.isNotEmpty)
           .toSet();
 
@@ -1520,8 +1551,14 @@ class ManualPaymentService {
           m = Map<String, dynamic>.from(m['payment_transaction'] as Map);
         }
         // تطبيع أسماء الحقول
-        m.putIfAbsent('payment_gateway',
-                () => m['payment_method'] ?? m['gateway'] ?? 'manual_bank');
+        final gatewayValue = m.containsKey('payment_gateway')
+            ? m['payment_gateway']
+            : (m['payment_method'] ?? m['gateway']);
+
+        m['payment_gateway'] = _normalizeGatewayKey(
+          gatewayValue is String ? gatewayValue : gatewayValue?.toString(),
+        );
+
         if (!m.containsKey('receipt_url') && m['receipt'] is String) {
           m['receipt_url'] = m['receipt'];
         }
@@ -1540,8 +1577,11 @@ class ManualPaymentService {
         try {
           final mp = ManualPayment.fromJson(_normalize(
               row is Map<String, dynamic> ? row : Map<String, dynamic>.from(row)));
+          final gatewayKey = _normalizeGatewayKey(mp.paymentGateway);
+
           if (normalizedGateways.isEmpty ||
-              normalizedGateways.contains(mp.paymentGateway.toLowerCase())) {
+              normalizedGateways.contains(gatewayKey)) {
+
             out.add(mp);
           }
         } catch (_) {

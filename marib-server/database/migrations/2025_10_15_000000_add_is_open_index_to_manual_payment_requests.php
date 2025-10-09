@@ -1,0 +1,99 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Carbon;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        if (! Schema::hasTable('manual_payment_requests')) {
+            return;
+        }
+
+        if (Schema::hasColumn('manual_payment_requests', 'status')) {
+            DB::statement("ALTER TABLE manual_payment_requests MODIFY COLUMN status ENUM('pending','under_review','approved','rejected') NOT NULL DEFAULT 'pending'");
+        }
+
+        Schema::table('manual_payment_requests', static function (Blueprint $table): void {
+            if (! Schema::hasColumn('manual_payment_requests', 'is_open')) {
+                $table->boolean('is_open')
+                    ->storedAs("(status in ('pending','under_review'))")
+                    ->after('status');
+            }
+        });
+
+        $now = Carbon::now()->toDateTimeString();
+        $openStatuses = ['pending', 'under_review'];
+
+        $duplicateGroups = DB::table('manual_payment_requests')
+            ->select('payable_type', 'payable_id')
+            ->whereIn('status', $openStatuses)
+            ->whereNotNull('payable_type')
+            ->whereNotNull('payable_id')
+            ->groupBy('payable_type', 'payable_id')
+            ->havingRaw('COUNT(*) > 1')
+            ->get();
+
+        foreach ($duplicateGroups as $group) {
+            $idsToClose = DB::table('manual_payment_requests')
+                ->where('payable_type', $group->payable_type)
+                ->where('payable_id', $group->payable_id)
+                ->whereIn('status', $openStatuses)
+                ->orderByDesc('id')
+                ->skip(1)
+                ->pluck('id');
+
+            foreach ($idsToClose as $requestId) {
+                $existingNote = DB::table('manual_payment_requests')
+                    ->where('id', $requestId)
+                    ->value('admin_note');
+
+                $note = trim((string) $existingNote);
+                $note = $note !== '' ? ($note . ' — ') : '';
+                $note .= sprintf(
+                    'Auto-closed on %s due to duplicate open manual payment request enforcement.',
+                    $now
+                );
+
+                DB::table('manual_payment_requests')
+                    ->where('id', $requestId)
+                    ->update([
+                        'status' => 'rejected',
+                        'admin_note' => $note,
+                    ]);
+            }
+        }
+
+        Schema::table('manual_payment_requests', static function (Blueprint $table): void {
+            if (! Schema::hasColumn('manual_payment_requests', 'is_open')) {
+                return;
+            }
+
+            $table->unique(
+                ['payable_type', 'payable_id', 'is_open'],
+                'manual_payment_requests_payable_open_unique'
+            );
+        });
+    }
+
+    public function down(): void
+    {
+        if (! Schema::hasTable('manual_payment_requests')) {
+            return;
+        }
+
+        Schema::table('manual_payment_requests', static function (Blueprint $table): void {
+            if (Schema::hasColumn('manual_payment_requests', 'is_open')) {
+                $table->dropUnique('manual_payment_requests_payable_open_unique');
+                $table->dropColumn('is_open');
+            }
+        });
+
+        if (Schema::hasColumn('manual_payment_requests', 'status')) {
+            DB::statement("ALTER TABLE manual_payment_requests MODIFY COLUMN status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending'");
+        }
+    }
+};

@@ -599,5 +599,8 @@
     "cart.delivery_payment_timing.pay_on_delivery": "الدفع عند الاستلام",
         "cart.delivery_payment_timing.fetched": "تم جلب خيار دفع التوصيل.",
     "cart.delivery_payment_timing.updated": "تم تحديث خيار دفع التوصيل.",
-    "cart.currency_not_specified": "غير محددة"
+    "cart.currency_not_specified": "غير محددة",
+    "payment_under_review": "الدفع قيد المراجعة.",
+    "payment_under_review_with_reference": "لا يمكن تحديث الطلب لوجود طلب دفع يدوي رقم #:id قيد المراجعة. يرجى إتمام المراجعة عبر الرابط: :url",
+    "manual_payment.decide.only_pending": "يمكن معالجة الطلبات المفتوحة فقط."
 }

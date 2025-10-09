@@ -8029,6 +8029,7 @@ public function storeRequestDevice(Request $request)
         $validator = Validator::make($filters, [
             'status' => ['nullable', Rule::in([
                 ManualPaymentRequest::STATUS_PENDING,
+                ManualPaymentRequest::STATUS_UNDER_REVIEW,
                 ManualPaymentRequest::STATUS_APPROVED,
                 ManualPaymentRequest::STATUS_REJECTED,
             ])],
@@ -8180,9 +8181,12 @@ public function storeRequestDevice(Request $request)
 
         $map = [
             'pending' => ManualPaymentRequest::STATUS_PENDING,
-            'in_review' => ManualPaymentRequest::STATUS_PENDING,
-            'in-review' => ManualPaymentRequest::STATUS_PENDING,
-            'review' => ManualPaymentRequest::STATUS_PENDING,
+            'in_review' => ManualPaymentRequest::STATUS_UNDER_REVIEW,
+            'in-review' => ManualPaymentRequest::STATUS_UNDER_REVIEW,
+            'review' => ManualPaymentRequest::STATUS_UNDER_REVIEW,
+            'reviewing' => ManualPaymentRequest::STATUS_UNDER_REVIEW,
+            'under_review' => ManualPaymentRequest::STATUS_UNDER_REVIEW,
+            'under-review' => ManualPaymentRequest::STATUS_UNDER_REVIEW,
             'approved' => ManualPaymentRequest::STATUS_APPROVED,
             'accepted' => ManualPaymentRequest::STATUS_APPROVED,
             'completed' => ManualPaymentRequest::STATUS_APPROVED,
@@ -8191,6 +8195,7 @@ public function storeRequestDevice(Request $request)
         ];
 
         return $map[$normalized] ?? ($normalized === ManualPaymentRequest::STATUS_PENDING
+            || $normalized === ManualPaymentRequest::STATUS_UNDER_REVIEW
             || $normalized === ManualPaymentRequest::STATUS_APPROVED
             || $normalized === ManualPaymentRequest::STATUS_REJECTED
             ? $normalized

@@ -14,6 +14,7 @@ use App\Services\LegalNumberingService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Exceptions\PaymentUnderReviewException;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -238,6 +239,13 @@ class Order extends Model
                 throw new InvalidArgumentException(sprintf('Invalid order status [%s]', (string) $newStatus));
             }
 
+            $openManualPaymentRequest = $order->latestPendingManualPaymentRequest();
+
+            if ($openManualPaymentRequest !== null) {
+                throw PaymentUnderReviewException::forManualPayment($openManualPaymentRequest);
+            }
+
+
             $previousStatus = $order->getOriginal('order_status');
 
             if (! self::isValidStatusTransition($previousStatus, $newStatus)) {
@@ -369,31 +377,51 @@ class Order extends Model
             ->orderByDesc('id');
     }
 
+    public function openManualPaymentRequests(): HasMany
+    {
+        return $this->manualPaymentRequests()->whereIn('status', ManualPaymentRequest::OPEN_STATUSES);
+    }
+
+
     public function pendingManualPaymentRequests(): HasMany
     {
-        return $this->manualPaymentRequests()->where('status', ManualPaymentRequest::STATUS_PENDING);
+        return $this->openManualPaymentRequests();
     }
 
     public function hasPendingManualPaymentRequests(): bool
     {
         if ($this->relationLoaded('manualPaymentRequests')) {
             return $this->manualPaymentRequests
-                ->contains(static fn (ManualPaymentRequest $request) => $request->status === ManualPaymentRequest::STATUS_PENDING);
+                ->contains(static fn (ManualPaymentRequest $request) => $request->isOpen());
         }
 
-        return $this->pendingManualPaymentRequests()->exists();
+        if ($this->relationLoaded('openManualPaymentRequests')) {
+            return $this->openManualPaymentRequests->isNotEmpty();
+        }
+
+        return $this->openManualPaymentRequests()->exists();
+    
     }
 
     public function latestPendingManualPaymentRequest(): ?ManualPaymentRequest
     {
         if ($this->relationLoaded('manualPaymentRequests')) {
             return $this->manualPaymentRequests
-                ->filter(static fn (ManualPaymentRequest $request) => $request->status === ManualPaymentRequest::STATUS_PENDING)
+                ->filter(static fn (ManualPaymentRequest $request) => $request->isOpen())
                 ->sortByDesc('id')
                 ->first();
         }
 
-        return $this->pendingManualPaymentRequests()->first();
+        if ($this->relationLoaded('openManualPaymentRequests')) {
+            return $this->openManualPaymentRequests
+            
+            
+            ->sortByDesc('id')
+                ->first();
+        }
+
+        return $this->openManualPaymentRequests()->first();
+
     }
 
 

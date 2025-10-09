@@ -26,9 +26,15 @@ class ManualPaymentRequest extends Model
 
     // حالات الطلب
     public const STATUS_PENDING = 'pending';
+    public const STATUS_UNDER_REVIEW = 'under_review';
     public const STATUS_APPROVED = 'approved';
     public const STATUS_REJECTED = 'rejected';
     public const PAYABLE_TYPE_WALLET_TOP_UP = 'wallet_top_up';
+
+    public const OPEN_STATUSES = [
+        self::STATUS_PENDING,
+        self::STATUS_UNDER_REVIEW,
+    ];
 
     protected $fillable = [
         'user_id',
@@ -57,6 +63,9 @@ class ManualPaymentRequest extends Model
         'amount' => 'decimal:2',
         'meta' => 'array',
         'reviewed_at' => 'datetime',
+        'is_open' => 'boolean',
+
+
     ];
 
     // ======== العلاقات ========
@@ -178,6 +187,18 @@ class ManualPaymentRequest extends Model
         return $this->status === self::STATUS_PENDING;
     }
 
+
+
+    public function isUnderReview(): bool
+    {
+        return $this->status === self::STATUS_UNDER_REVIEW;
+    }
+
+    public function isOpen(): bool
+    {
+        return in_array($this->status, self::OPEN_STATUSES, true);
+    }
+
     // ======== Scopes (تصفية سريعة) ========
 
 
@@ -194,6 +215,11 @@ class ManualPaymentRequest extends Model
     public function scopeStatus($query, ?string $status)
     {
         return !empty($status) ? $query->where('status', $status) : $query;
+    }
+
+    public function scopeOpen($query)
+    {
+        return $query->whereIn('status', self::OPEN_STATUSES);
     }
 
     public function scopePayableType($query, ?string $type)

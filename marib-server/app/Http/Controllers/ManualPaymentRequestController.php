@@ -59,6 +59,7 @@ class ManualPaymentRequestController extends Controller
 
         $statuses = [
             ManualPaymentRequest::STATUS_PENDING => trans('Pending'),
+            ManualPaymentRequest::STATUS_UNDER_REVIEW => trans('Under Review'),
             ManualPaymentRequest::STATUS_APPROVED => trans('Approved'),
             ManualPaymentRequest::STATUS_REJECTED => trans('Rejected'),
         ];
@@ -101,6 +102,7 @@ class ManualPaymentRequestController extends Controller
         $summary = [
             'total' => (int) $statusTotals->sum(),
             'pending' => (int) ($statusTotals[ManualPaymentRequest::STATUS_PENDING] ?? 0),
+            'under_review' => (int) ($statusTotals[ManualPaymentRequest::STATUS_UNDER_REVIEW] ?? 0),
             'approved' => (int) ($statusTotals[ManualPaymentRequest::STATUS_APPROVED] ?? 0),
             'rejected' => (int) ($statusTotals[ManualPaymentRequest::STATUS_REJECTED] ?? 0),
         ];
@@ -122,6 +124,7 @@ class ManualPaymentRequestController extends Controller
                         'label' => $label,
                         'total' => 0,
                         ManualPaymentRequest::STATUS_PENDING => 0,
+                        ManualPaymentRequest::STATUS_UNDER_REVIEW => 0,
                         ManualPaymentRequest::STATUS_APPROVED => 0,
                         ManualPaymentRequest::STATUS_REJECTED => 0,
                     ]];
@@ -193,6 +196,7 @@ class ManualPaymentRequestController extends Controller
             'order' => Order::class,
             'package' => Package::class,
             'item' => Item::class,
+            ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP => ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP,
         ];
 
         $payableTypeFilter = $request->get('payable_type');
@@ -397,7 +401,7 @@ class ManualPaymentRequestController extends Controller
         $manualPaymentRequest = $this->loadManualPaymentRequestRelations($manualPaymentRequest);
         return view('payments.manual.show', [
             'request' => $manualPaymentRequest,
-            'canReview' => Auth::user()->can('manual-payments-review') && $manualPaymentRequest->isPending(),
+            'canReview' => Auth::user()->can('manual-payments-review') && $manualPaymentRequest->isOpen(),
             'timelineData' => $this->manualPaymentTimelinePayload($manualPaymentRequest),
 
 
@@ -413,7 +417,7 @@ class ManualPaymentRequestController extends Controller
 
         return view('payments.manual.review', [
             'request' => $manualPaymentRequest,
-            'canReview' => Auth::user()->can('manual-payments-review') && $manualPaymentRequest->isPending(),
+            'canReview' => Auth::user()->can('manual-payments-review') && $manualPaymentRequest->isOpen(),
 
             'timelineData' => $this->manualPaymentTimelinePayload($manualPaymentRequest),
         ]);
@@ -581,6 +585,7 @@ class ManualPaymentRequestController extends Controller
         return match ($this->normalizeManualPaymentStatus($status)) {
             ManualPaymentRequest::STATUS_APPROVED => 'fa-solid fa-circle-check',
             ManualPaymentRequest::STATUS_REJECTED => 'fa-solid fa-circle-xmark',
+            ManualPaymentRequest::STATUS_UNDER_REVIEW => 'fa-solid fa-magnifying-glass',
             default => 'fa-solid fa-hourglass-half',
         };
     }
@@ -590,6 +595,7 @@ class ManualPaymentRequestController extends Controller
         return match ($this->normalizeManualPaymentStatus($status)) {
             ManualPaymentRequest::STATUS_APPROVED => 'bg-success',
             ManualPaymentRequest::STATUS_REJECTED => 'bg-danger',
+            ManualPaymentRequest::STATUS_UNDER_REVIEW => 'bg-info text-dark',
             default => 'bg-warning text-dark',
         };
     }
@@ -597,7 +603,8 @@ class ManualPaymentRequestController extends Controller
     private function manualPaymentStatusIconMap(): array
     {
         return [
-            ManualPaymentRequest::STATUS_PENDING => 'fa-solid fa-clock text-warning',
+            ManualPaymentRequest::STATUS_PENDING => 'fa-solid fa-clock text-warning',            
+            ManualPaymentRequest::STATUS_UNDER_REVIEW => 'fa-solid fa-magnifying-glass text-primary',
             ManualPaymentRequest::STATUS_APPROVED => 'fa-solid fa-circle-check text-success',
             ManualPaymentRequest::STATUS_REJECTED => 'fa-solid fa-circle-xmark text-danger',
             'submitted' => 'fa-solid fa-file-circle-plus text-primary',
@@ -683,7 +690,8 @@ class ManualPaymentRequestController extends Controller
     {
         ResponseService::noPermissionThenSendJson('manual-payments-review');
 
-        if (!$manualPaymentRequest->isPending()) {
+        if (!$manualPaymentRequest->isOpen()) {
+
             return ResponseService::errorResponse(trans('manual_payment.decide.only_pending'));
         }
 
@@ -1089,10 +1097,15 @@ class ManualPaymentRequestController extends Controller
 
     protected function statusBadge(?string $status): string
     {
-        return match ($status) {
+        $normalized = $this->normalizeManualPaymentStatus($status) ?? $status;
+
+        return match ($normalized) {
+
             ManualPaymentRequest::STATUS_APPROVED => '<span class="badge bg-success">' . trans('Approved') . '</span>',
             ManualPaymentRequest::STATUS_REJECTED => '<span class="badge bg-danger">' . trans('Rejected') . '</span>',
             default => '<span class="badge bg-warning text-dark">' . trans('Pending') . '</span>',
+            ManualPaymentRequest::STATUS_UNDER_REVIEW => '<span class="badge bg-info text-dark">' . trans('Under Review') . '</span>',
+
         };
     }
 
@@ -1127,11 +1140,14 @@ class ManualPaymentRequestController extends Controller
         return match ($normalized) {
             'approved', 'accepted', 'completed' => ManualPaymentRequest::STATUS_APPROVED,
             'rejected', 'declined' => ManualPaymentRequest::STATUS_REJECTED,
-            'in_review', 'in-review', 'review', 'pending' => ManualPaymentRequest::STATUS_PENDING,
+            'in_review', 'in-review', 'review', 'under_review', 'under-review', 'reviewing' => ManualPaymentRequest::STATUS_UNDER_REVIEW,
+            'pending' => ManualPaymentRequest::STATUS_PENDING,
+            
             default => in_array($normalized, [
                 ManualPaymentRequest::STATUS_PENDING,
                 ManualPaymentRequest::STATUS_APPROVED,
                 ManualPaymentRequest::STATUS_REJECTED,
+                ManualPaymentRequest::STATUS_UNDER_REVIEW,
             ], true) ? $normalized : null,
         };
     }
@@ -1295,6 +1311,7 @@ class ManualPaymentRequestController extends Controller
         return match ($this->normalizeManualPaymentStatus($status)) {
             ManualPaymentRequest::STATUS_APPROVED => trans('Approved'),
             ManualPaymentRequest::STATUS_REJECTED => trans('Rejected'),
+            ManualPaymentRequest::STATUS_UNDER_REVIEW => trans('Under Review'),
             default => trans('Pending'),
         };
     }

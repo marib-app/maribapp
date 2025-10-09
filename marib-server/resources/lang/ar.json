@@ -408,7 +408,7 @@
     "of": "من",
     "No manual payments found for the current filters.": "لا توجد طلبات دفع مطابقة للمرشحات الحالية.",
     "Unable to load manual payment requests. Please try again later.": "تعذّر تحميل طلبات الدفع اليدوي. يرجى المحاولة لاحقًا.",
-    "manual_payment.decide.only_pending": "يمكن الموافقة على الطلبات المعلقة فقط.",
+    "manual_payment.decide.only_pending": "يمكن معالجة الطلبات المفتوحة فقط.",
     "manual_payment.decide.unable_to_resolve_transaction": "تعذر تحديد معاملة الدفع للطلب اليدوي.",
     "manual_payment.decide.unable_to_process": "تعذر معالجة قرار الدفع اليدوي.",
     "manual_payment.decide.approved": "تمت الموافقة على طلب الدفع اليدوي بنجاح.",
@@ -640,5 +640,9 @@
     "Distribution of vouchers and balances for the cabin.": "توزيع القسائم والأرصدة الخاصة بالكبينة.",
     "Focused alerts related to this cabin and its operations.": "تنبيهات مركزة تخص هذه الكبينة وعملياتها.",
     "General": "عام",
-    "Service Requests": "طلبات الخدمات"
+    "Service Requests": "طلبات الخدمات",
+    "Requests Under Review": "الطلبات قيد المراجعة",
+    "View Under Review": "عرض الطلبات قيد المراجعة",
+    "payment_under_review": "الدفع قيد المراجعة.",
+    "payment_under_review_with_reference": "لا يمكن تحديث الطلب لوجود طلب دفع يدوي رقم #:id قيد المراجعة. يرجى إتمام المراجعة عبر الرابط: :url"
 }

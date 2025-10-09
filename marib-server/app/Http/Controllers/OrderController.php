@@ -44,7 +44,7 @@ class OrderController extends Controller
         ResponseService::noAnyPermissionThenRedirect(['orders-list']);
         
         $query = Order::with(['user', 'seller', 'items.item.category'])
-            ->withCount(['pendingManualPaymentRequests as pending_manual_payment_requests_count'])
+            ->withCount(['openManualPaymentRequests as pending_manual_payment_requests_count'])
 
         
             ->where(function ($query) {
@@ -125,7 +125,7 @@ class OrderController extends Controller
         $categoryIds = app(DepartmentReportService::class)->resolveCategoryIds($department);
 
         $query = Order::with(['user', 'seller', 'items.item.category'])
-            ->withCount(['pendingManualPaymentRequests as pending_manual_payment_requests_count'])
+            ->withCount(['openManualPaymentRequests as pending_manual_payment_requests_count'])
             ->where(function ($query) use ($department, $categoryIds) {
                 $query->where('department', $department);
 
@@ -220,7 +220,7 @@ class OrderController extends Controller
 
 
         $query = Order::with(['user', 'seller', 'items.item.category'])
-        ->withCount(['pendingManualPaymentRequests as pending_manual_payment_requests_count'])
+        ->withCount(['openManualPaymentRequests as pending_manual_payment_requests_count'])
         ->where(function ($query) use ($department, $categoryIds) {
                 $query->where('department', $department);
 
@@ -667,7 +667,7 @@ class OrderController extends Controller
 
 
         $pendingManualPaymentRequest = $order->manualPaymentRequests
-            ->firstWhere('status', ManualPaymentRequest::STATUS_PENDING);
+            ->first(static fn (ManualPaymentRequest $request) => $request->isOpen());
 
 
 
@@ -706,7 +706,7 @@ class OrderController extends Controller
             ->findOrFail($id);
 
         $pendingManualPaymentRequest = $order->manualPaymentRequests
-            ->firstWhere('status', ManualPaymentRequest::STATUS_PENDING);
+            ->first(static fn (ManualPaymentRequest $request) => $request->isOpen());
 
 
         // الحصول على قائمة المستخدمين

@@ -60,7 +60,7 @@ class OrderPaymentGroupController extends Controller
                         $itemQuery->select('order_items.id', 'order_items.order_id', 'order_items.quantity');
                     },
                 ])
-                ->withCount(['pendingManualPaymentRequests as pending_manual_payment_requests_count'])
+                ->withCount(['openManualPaymentRequests as pending_manual_payment_requests_count'])
                 ->select('orders.*');
             },
         ]);

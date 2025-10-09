@@ -63,6 +63,9 @@
                                             </div>
                                             <div class="d-flex flex-wrap gap-2">
                                                 <span class="badge bg-warning text-dark">{{ __('Pending') }}: {{ number_format($department[\App\Models\ManualPaymentRequest::STATUS_PENDING] ?? 0) }}</span>
+                                                <span class="badge bg-info text-dark">{{ __('Under Review') }}: {{ number_format($department[\App\Models\ManualPaymentRequest::STATUS_UNDER_REVIEW] ?? 0) }}</span>
+
+
                                                 <span class="badge bg-success">{{ __('Approved') }}: {{ number_format($department[\App\Models\ManualPaymentRequest::STATUS_APPROVED] ?? 0) }}</span>
                                                 <span class="badge bg-danger">{{ __('Rejected') }}: {{ number_format($department[\App\Models\ManualPaymentRequest::STATUS_REJECTED] ?? 0) }}</span>
                                             </div>
@@ -103,6 +106,19 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="col-lg-3 col-sm-6">
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <small class="text-muted fw-semibold">{{ __('Requests Under Review') }}</small>
+                                    <span class="badge bg-info text-dark">{{ __('Under Review') }}</span>
+                                </div>
+                                <h3 class="fw-bold mb-0">{{ number_format($summary['under_review'] ?? 0) }}</h3>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="col-lg-3 col-sm-6">
                         <div class="card shadow-sm border-0 h-100">
                             <div class="card-body">
@@ -198,6 +214,9 @@
                             <div class="d-flex flex-column flex-lg-row gap-2 w-100 justify-content-lg-end">
                                 <div class="btn-group" role="group">
                                     <button type="button" class="btn btn-outline-primary btn-sm" data-filter-status="pending">{{ __('View Pending') }}</button>
+                                    <button type="button" class="btn btn-outline-info btn-sm" data-filter-status="under_review">{{ __('View Under Review') }}</button>
+
+
                                     <button type="button" class="btn btn-outline-success btn-sm" data-filter-status="approved">{{ __('View Approved') }}</button>
                                     <button type="button" class="btn btn-outline-danger btn-sm" data-filter-status="rejected">{{ __('View Rejected') }}</button>
                                 </div>
@@ -385,9 +404,12 @@
 
         const MANUAL_PAYMENT_STATUS_MAP = {
             pending: 'pending',
-            in_review: 'pending',
-            'in-review': 'pending',
-            review: 'pending',
+            in_review: 'under_review',
+            'in-review': 'under_review',
+            review: 'under_review',
+            reviewing: 'under_review',
+            under_review: 'under_review',
+            'under-review': 'under_review',
             approved: 'approved',
             accepted: 'approved',
             completed: 'approved',
@@ -422,6 +444,7 @@
         const MANUAL_PAYMENT_STATUS_STYLES = {
             approved: 'bg-success',
             pending: 'bg-warning text-dark',
+            under_review: 'bg-info text-dark',
             rejected: 'bg-danger'
         };
 
@@ -480,7 +503,7 @@
                 return MANUAL_PAYMENT_STATUS_MAP[normalized];
             }
 
-            return ['pending', 'approved', 'rejected'].includes(normalized) ? normalized : null;
+            return ['pending', 'under_review', 'approved', 'rejected'].includes(normalized) ? normalized : null;
         }
 
         function normalizeManualPaymentGateway(value) {

@@ -715,6 +715,7 @@ class OrderReportController extends Controller
         return match ($status) {
             ManualPaymentRequest::STATUS_APPROVED => '<span class="badge bg-success">' . trans('Approved') . '</span>',
             ManualPaymentRequest::STATUS_REJECTED => '<span class="badge bg-danger">' . trans('Rejected') . '</span>',
+            ManualPaymentRequest::STATUS_UNDER_REVIEW => '<span class="badge bg-info text-dark">' . trans('Under Review') . '</span>',
             default => '<span class="badge bg-warning text-dark">' . trans('Pending') . '</span>',
         };
     }

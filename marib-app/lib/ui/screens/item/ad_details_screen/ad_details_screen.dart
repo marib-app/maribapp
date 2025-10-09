@@ -1294,15 +1294,28 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
   void combineImages() {
     final item = _currentItem;
-    images
-      ..clear()
-      ..add(item.image);
+    final List<String?> combined = <String?>[];
+
+    void addIfUnique(String? value) {
+      if (value == null || value.isEmpty) {
+        return;
+      }
+      if (!combined.contains(value)) {
+        combined.add(value);
+      }
+    }
+
+    addIfUnique(item.image);
 
     if (item.galleryImages != null && item.galleryImages!.isNotEmpty) {
       for (final element in item.galleryImages!) {
-        images.add(element.image);
+        addIfUnique(element.image);
       }
     }
+    images
+      ..clear()
+      ..addAll(combined.isEmpty ? <String?>[item.image] : combined);
+
 
     youtubeVideoThumbnail = "";
 

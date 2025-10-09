@@ -286,7 +286,10 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
 
     adTitleController.text = item?.name ?? '';
     adDescriptionController.text = item?.description ?? '';
-    //adPriceController.text = item?.price ?? '';
+    final String? initialPrice = _initialPriceText(item);
+    if (initialPrice != null) {
+      adPriceController.text = initialPrice;
+    }
     adPhoneNumberController.text = item?.contact ?? '';
     adAdditionalDetailsController.text = item?.videoLink ?? '';
     reviewLinkController.text = item?.reviewLink ?? '';
@@ -305,6 +308,30 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
       ..clear()
       ..addAll(_buildInitialGalleryItems(item));
   }
+
+
+  String? _initialPriceText(ItemModel? item) {
+    if (item == null) {
+      return null;
+    }
+
+    final num? rawPrice = item.price ?? item.finalPrice;
+    if (rawPrice == null) {
+      return null;
+    }
+
+    if (rawPrice is int) {
+      return rawPrice.toString();
+    }
+
+    final double parsed = rawPrice.toDouble();
+    if (parsed == parsed.roundToDouble()) {
+      return parsed.toInt().toString();
+    }
+
+    return parsed.toInt().toString();
+  }
+
 
   void _initForCreate() {
     if (_breadcrumbItems.isEmpty) {
@@ -1059,6 +1086,80 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
     );
   }
 
+  Widget _buildPurchaseOptionsShortcut(BuildContext context) {
+    final ItemModel? currentItem = item;
+    if (currentItem == null || currentItem.id == null) {
+      return const SizedBox.shrink();
+    }
+
+    final theme = Theme.of(context);
+    final color = theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 24),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.secondaryColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.borderColor.withOpacity(0.4)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.territoryColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.tune_rounded,
+                    color: color.territoryColor,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'إدارة خيارات المنتج',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'يمكنك ضبط المخزون أو إنشاء خصومات مخصصة لهذا الإعلان من خلال صفحة إدارة خيارات المنتج.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: color.textDefaultColor.withOpacity(0.75),
+              ),
+            ),
+            const SizedBox(height: 16),
+            UiUtils.buildButton(
+              context,
+              onPressed: () {
+                Navigator.pushNamed(
+                  context,
+                  Routes.productManagementScreen,
+                  arguments: {'model': currentItem},
+                );
+              },
+              buttonTitle: 'فتح إدارة خيارات المنتج',
+              height: 48.rh(context),
+              fontSize: context.font.large,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
   TextInputType? _keyboardTypeForField(CustomFieldModel field) {
     final type = (field.type ?? '').toLowerCase();
     if (type == 'number') {
@@ -1377,6 +1478,13 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
     if (state is ManageItemSuccess) {
       Widgets.hideLoder(context);
       _isSubmittingWithoutLocation = false;
+      if (mounted) {
+        setState(() {
+          item = state.model;
+        });
+      } else {
+        item = state.model;
+      }
       final dynamic editKey = getCloudData('edit_from');
       if (editKey is String && editKey.isNotEmpty) {
         myAdsCubitReference[editKey]?.edit(state.model);
@@ -1674,6 +1782,8 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
                     _buildContactSection(context),
                     _buildSheinSection(context),
                     _buildDynamicFields(context),
+                    if (widget.isEdit == true && (item?.id ?? 0) > 0)
+                      _buildPurchaseOptionsShortcut(context),
                     _buildLocationPreview(context),
                   ],
                 ),

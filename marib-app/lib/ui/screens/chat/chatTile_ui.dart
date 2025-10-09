@@ -200,7 +200,7 @@ extension _ChatTileUi on ChatTile {
       child: AbsorbPointer(
         absorbing: true,
         child: Container(
-          height: 90,
+          constraints: const BoxConstraints(minHeight: 90),
           decoration: BoxDecoration(
             color: context.color.secondaryColor,
             borderRadius: BorderRadius.circular(10),

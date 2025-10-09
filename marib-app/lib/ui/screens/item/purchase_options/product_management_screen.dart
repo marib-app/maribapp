@@ -7,6 +7,10 @@ import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/data/model/item/purchase_options.dart';
 import 'package:marib/data/repositories/item/item_purchase_options_repository.dart';
 import 'package:marib/utils/helper_utils.dart';
+import 'package:flutter/services.dart';
+import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/ui/theme/theme.dart';
 
 class ProductManagementScreen extends StatefulWidget {
   const ProductManagementScreen({super.key, required this.item});
@@ -81,26 +85,38 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
   Widget build(BuildContext context) {
     return BlocBuilder<ProductManagementCubit, ProductManagementState>(
       builder: (BuildContext context, ProductManagementState state) {
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('إدارة المنتج'),
-            bottom: TabBar(
-              controller: _tabController,
-              tabs: const <Tab>[
-                Tab(text: 'السمات'),
-                Tab(text: 'المخزون'),
-                Tab(text: 'الخصم'),
+        final color = context.color;
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: UiUtils.getSystemUiOverlayStyle(
+            context: context,
+            statusBarColor: color.secondaryColor,
+          ),
+          child: Scaffold(
+            backgroundColor: color.primaryColor,
+            appBar: UiUtils.buildAppBar(
+              context,
+              title: 'إدارة المنتج',
+              showBackButton: true,
+              bottomHeight: 72,
+              bottom: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  child: _buildTabBar(context),
+                ),
               ],
             ),
+            body: _buildBody(context, state),
+            bottomNavigationBar: _buildBottomBar(context, state),
           ),
-          body: _buildBody(context, state),
-          bottomNavigationBar: _buildBottomBar(context, state),
+
         );
       },
     );
   }
 
   Widget _buildBody(BuildContext context, ProductManagementState state) {
+    final color = context.color;
+
     if (state.loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -112,19 +128,56 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
       );
     }
 
-    return TabBarView(
-      controller: _tabController,
-      children: <Widget>[
-        _AttributesTab(
-          state: state,
-          textControllers: _textControllers,
+    return Container(
+      color: color.primaryColor,
+      child: TabBarView(
+        controller: _tabController,
+        physics: const BouncingScrollPhysics(),
+        children: <Widget>[
+          _AttributesTab(
+            state: state,
+            textControllers: _textControllers,
+          ),
+          _StockTab(
+            state: state,
+            stockControllers: _stockControllers,
+          ),
+          _DiscountTab(state: state),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabBar(BuildContext context) {
+    final color = context.color;
+    final TextStyle? labelStyle = Theme.of(context)
+        .textTheme
+        .bodyMedium
+        ?.copyWith(fontWeight: FontWeight.w700);
+
+    return Container(
+        decoration: BoxDecoration(
+          color: color.secondaryColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.borderColor.withOpacity(0.4)),
         ),
-        _StockTab(
-          state: state,
-          stockControllers: _stockControllers,
+        child: TabBar(
+          controller: _tabController,
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          indicator: BoxDecoration(
+            color: color.territoryColor.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(12),
         ),
-        _DiscountTab(state: state),
-      ],
+          indicatorSize: TabBarIndicatorSize.tab,
+          labelColor: color.territoryColor,
+          unselectedLabelColor: color.textDefaultColor.withOpacity(0.7),
+          labelStyle: labelStyle,
+          tabs: const <Tab>[
+            Tab(text: 'السمات'),
+            Tab(text: 'المخزون'),
+            Tab(text: 'الخصم'),
+          ],
+        ),
     );
   }
 
@@ -141,26 +194,34 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
 
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+
         child: Row(
           children: <Widget>[
             Expanded(
-              child: FilledButton(
-                onPressed: isSaving ? null : () => _onSavePressed(context, cubit),
-                child: isSaving
-                    ? const SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-                    : Text(saveLabel),
+              child: UiUtils.buildButton(
+                context,
+                onPressed: () => _onSavePressed(context, cubit),
+                buttonTitle: saveLabel,
+                titleWhenProgress: 'جارٍ الحفظ...',
+                isInProgress: isSaving,
+                height: 48.rh(context),
+                fontSize: context.font.large,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: OutlinedButton(
+              child: UiUtils.buildButton(
+                context,
                 onPressed: () => _finish(context),
-                child: const Text('إنهاء'),
+                buttonTitle: 'إنهاء',
+                height: 48.rh(context),
+                fontSize: context.font.large,
+                buttonColor: context.color.secondaryColor,
+                textColor: context.color.textDefaultColor,
+                border: BorderSide(
+                  color: context.color.borderColor.withOpacity(0.5),
+                ),
               ),
             ),
           ],
@@ -218,8 +279,13 @@ class _AttributesTab extends StatelessWidget {
       return const _EmptyState(message: 'لا توجد سمات لإدارتها لهذا المنتج.');
     }
 
+    final color = context.color;
+    final theme = Theme.of(context);
+
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      physics: const BouncingScrollPhysics(),
+
       itemCount: options.attributes.length,
       itemBuilder: (BuildContext context, int index) {
         final ItemPurchaseAttributeOption attribute = options.attributes[index];
@@ -229,9 +295,17 @@ class _AttributesTab extends StatelessWidget {
         final bool required = attribute.requiredForCheckout;
 
         return Card(
+          color: color.secondaryColor,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: color.borderColor.withOpacity(0.4)),
+          ),
+
           margin: const EdgeInsets.only(bottom: 16),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
+
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
@@ -240,10 +314,9 @@ class _AttributesTab extends StatelessWidget {
                     Expanded(
                       child: Text(
                         attribute.name.isEmpty ? 'سمة بدون اسم' : attribute.name,
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w600),
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                     if (required)
@@ -273,6 +346,23 @@ class _AttributesTab extends StatelessWidget {
                       return FilterChip(
                         label: Text(value),
                         selected: isSelected,
+                        labelStyle: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight:
+                          isSelected ? FontWeight.w700 : FontWeight.w500,
+                          color: isSelected
+                              ? color.territoryColor
+                              : color.textDefaultColor,
+                        ),
+                        selectedColor: color.territoryColor.withOpacity(0.12),
+                        backgroundColor: color.secondaryColor,
+                        side: BorderSide(
+                          color: isSelected
+                              ? color.territoryColor
+                              : color.borderColor.withOpacity(0.5),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         onSelected: (_) =>
                             cubit.toggleAttributeValue(attribute.key, value),
                       );
@@ -284,9 +374,9 @@ class _AttributesTab extends StatelessWidget {
                       attribute.key,
                       state.textInputs[attribute.key] ?? '',
                     ),
-                    decoration: const InputDecoration(
-                      labelText: 'قيمة السمة',
-                      border: OutlineInputBorder(),
+                    decoration: _themedInputDecoration(
+                      context,
+                      label: 'قيمة السمة',
                     ),
                     onChanged: (String value) =>
                         cubit.setTextAttribute(attribute.key, value),
@@ -322,6 +412,8 @@ class _StockTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final ProductManagementCubit cubit = context.read<ProductManagementCubit>();
     final ItemPurchaseOptions? options = state.options;
+    final theme = Theme.of(context);
+    final color = context.color;
     if (options == null) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -333,29 +425,39 @@ class _StockTab extends StatelessWidget {
       );
 
       return Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: color.secondaryColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: color.borderColor.withOpacity(0.4)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
             Text(
-              'المخزون الكلي للمنتج',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w600),
+            'المخزون الكلي للمنتج',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              keyboardType: const TextInputType.numberWithOptions(decimal: false),
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: '0',
               ),
-              onChanged: (String value) =>
-                  cubit.setGeneralStock(int.tryParse(value) ?? 0),
-            ),
-          ],
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                keyboardType:
+                const TextInputType.numberWithOptions(decimal: false),
+                decoration: _themedInputDecoration(
+                  context,
+                  label: 'الكمية المتوفرة',
+                  hint: '0',
+                ),
+                onChanged: (String value) =>
+                    cubit.setGeneralStock(int.tryParse(value) ?? 0),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -375,11 +477,19 @@ class _StockTab extends StatelessWidget {
           a.variantKey.compareTo(b.variantKey));
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      physics: const BouncingScrollPhysics(),
       children: <Widget>[
         Align(
           alignment: AlignmentDirectional.centerStart,
           child: TextButton.icon(
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              foregroundColor: color.territoryColor,
+              textStyle: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             onPressed: () => _showBulkFillDialog(context),
             icon: const Icon(Icons.playlist_add),
             label: const Text('تعبئة كمية موحدة'),
@@ -395,8 +505,15 @@ class _StockTab extends StatelessWidget {
 
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
+            color: color.secondaryColor,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: color.borderColor.withOpacity(0.4)),
+            ),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(18),
+
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
@@ -405,16 +522,17 @@ class _StockTab extends StatelessWidget {
                       Expanded(
                         child: Text(
                           title,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w600),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                       IconButton(
                         onPressed: () => cubit.toggleVariantVisibility(form.variantKey),
                         icon: Icon(
                           form.hidden ? Icons.visibility_off : Icons.visibility,
+                          color: color.territoryColor,
+
                         ),
                         tooltip: form.hidden ? 'إظهار التوليفة' : 'إخفاء التوليفة',
                       ),
@@ -426,9 +544,10 @@ class _StockTab extends StatelessWidget {
                     enabled: !form.hidden,
                     keyboardType:
                     const TextInputType.numberWithOptions(decimal: false),
-                    decoration: InputDecoration(
-                      border: const OutlineInputBorder(),
-                      hintText: '0',
+                    decoration: _themedInputDecoration(
+                      context,
+                      hint: '0',
+                    ).copyWith(
                       suffixText: form.hidden ? 'مخفي' : null,
                     ),
                     onChanged: (String value) =>
@@ -449,21 +568,41 @@ class _StockTab extends StatelessWidget {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('تعبئة كمية موحدة'),
+          backgroundColor: context.color.secondaryColor,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            'تعبئة كمية موحدة',
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontWeight: FontWeight.w600),
+          ),
           content: TextField(
             controller: controller,
             keyboardType: const TextInputType.numberWithOptions(decimal: false),
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              hintText: 'مثال: 10',
+            decoration: _themedInputDecoration(
+              context,
+              hint: 'مثال: 10',
             ),
           ),
           actions: <Widget>[
             TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: context.color.textDefaultColor,
+              ),
               onPressed: () => Navigator.pop(context),
               child: const Text('إلغاء'),
             ),
             FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: context.color.territoryColor,
+                foregroundColor: context.color.secondaryColor,
+                padding:
+                const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
               onPressed: () {
                 final int value = int.tryParse(controller.text) ?? 0;
                 context.read<ProductManagementCubit>().applyBulkStock(value);
@@ -548,21 +687,40 @@ class _DiscountTabState extends State<_DiscountTab> {
     final ProductManagementState state = widget.state;
     final ProductManagementCubit cubit = context.read<ProductManagementCubit>();
     final NumberFormat currencyFormatter = NumberFormat('#,##0.##', 'ar');
+    final theme = Theme.of(context);
+    final color = context.color;
+
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      physics: const BouncingScrollPhysics(),
       children: <Widget>[
-        SwitchListTile(
-          value: state.discountEnabled,
-          onChanged: cubit.setDiscountEnabled,
-          title: const Text('تفعيل الخصم'),
+        Container(
+          decoration: BoxDecoration(
+            color: color.secondaryColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: color.borderColor.withOpacity(0.4)),
+          ),
+          child: SwitchListTile(
+            value: state.discountEnabled,
+            onChanged: cubit.setDiscountEnabled,
+            contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            activeColor: color.territoryColor,
+            title: Text(
+              'تفعيل الخصم',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         DropdownButtonFormField<String>(
           value: state.discountType,
-          decoration: const InputDecoration(
-            labelText: 'نوع الخصم',
-            border: OutlineInputBorder(),
+          decoration: _themedInputDecoration(
+            context,
+            label: 'نوع الخصم',
           ),
           items: const <DropdownMenuItem<String>>[
             DropdownMenuItem(value: 'percent', child: Text('نسبة مئوية')),
@@ -576,25 +734,25 @@ class _DiscountTabState extends State<_DiscountTab> {
           }
               : null,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         TextField(
           controller: _controller,
           enabled: state.discountEnabled,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(
-            labelText: state.discountType == 'percent'
+          decoration: _themedInputDecoration(
+            context,
+            label: state.discountType == 'percent'
                 ? 'قيمة الخصم (%)'
                 : 'قيمة الخصم',
-            border: const OutlineInputBorder(),
-            helperText: state.discountType == 'percent'
-                ? 'الحد الأقصى 90%'
-                : null,
+            helperText:
+            state.discountType == 'percent' ? 'الحد الأقصى 90%' : null,
           ),
           onChanged: (String value) => cubit.setDiscountValue(
             double.tryParse(value.replaceAll(',', '.')),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
+
         _DatePickerField(
           label: 'بداية الخصم',
           value: state.discountStart,
@@ -641,19 +799,52 @@ class _DatePickerField extends StatelessWidget {
     final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm');
     final String displayValue = value == null ? 'غير محدد' : formatter.format(value!);
 
-    return InkWell(
-      onTap: enabled ? () => _pickDateTime(context) : null,
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-        ),
-        child: Row(
-          children: <Widget>[
-            const Icon(Icons.event),
-            const SizedBox(width: 12),
-            Expanded(child: Text(displayValue)),
-          ],
+    final color = context.color;
+    final theme = Theme.of(context);
+
+    return Opacity(
+      opacity: enabled ? 1.0 : 0.6,
+      child: GestureDetector(
+        onTap: enabled ? () => _pickDateTime(context) : null,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: color.secondaryColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: color.borderColor.withOpacity(0.4)),
+          ),
+          child: Row(
+            children: <Widget>[
+              Icon(Icons.event, color: color.territoryColor),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      label,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: color.textDefaultColor.withOpacity(0.7),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      displayValue,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_drop_down,
+                color: color.textDefaultColor.withOpacity(0.6),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -695,34 +886,72 @@ class _SummaryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final color = context.color;
+    final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: Theme.of(context).colorScheme.surfaceVariant,
+        borderRadius: BorderRadius.circular(16),
+        color: color.secondaryColor,
+        border: Border.all(color: color.borderColor.withOpacity(0.4)),
       ),
       child: Row(
         children: <Widget>[
           Expanded(
             child: Text(
               label,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyLarge
-                  ?.copyWith(fontWeight: FontWeight.w600),
+              style: theme.textTheme.bodyLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           Text(
             value,
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.bold),
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: color.territoryColor,
+            ),
           ),
         ],
       ),
     );
   }
+}
+
+
+
+
+InputDecoration _themedInputDecoration(
+    BuildContext context, {
+      String? label,
+      String? hint,
+      String? helperText,
+      Widget? prefixIcon,
+      Widget? suffixIcon,
+    }) {
+  final color = context.color;
+  return InputDecoration(
+    labelText: label,
+    hintText: hint,
+    helperText: helperText,
+    filled: true,
+    fillColor: color.secondaryColor,
+    prefixIcon: prefixIcon,
+    suffixIcon: suffixIcon,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: BorderSide(color: color.borderColor.withOpacity(0.5)),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: BorderSide(color: color.borderColor.withOpacity(0.5)),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: BorderSide(color: color.territoryColor),
+    ),
+  );
 }
 
 class _StatusChip extends StatelessWidget {
@@ -769,17 +998,33 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final color = context.color;
+    final theme = Theme.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            const Icon(Icons.info_outline, size: 48, color: Colors.grey),
-            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: color.territoryColor.withOpacity(0.12),
+              ),
+              child: Icon(
+                Icons.info_outline,
+                size: 36,
+                color: color.territoryColor,
+              ),
+            ),
+            const SizedBox(height: 16),
             Text(
               message,
               textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: color.textDefaultColor.withOpacity(0.8),
+              ),
             ),
           ],
         ),
@@ -796,20 +1041,42 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final color = context.color;
+    final theme = Theme.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
-            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: color.error.withOpacity(0.1),
+              ),
+              child: Icon(
+                Icons.error_outline,
+                size: 36,
+                color: color.error,
+              ),
+            ),
+            const SizedBox(height: 16),
             Text(
               message,
               textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: color.textDefaultColor.withOpacity(0.85),
+              ),
             ),
             const SizedBox(height: 16),
-            FilledButton(onPressed: onRetry, child: const Text('إعادة المحاولة')),
+            UiUtils.buildButton(
+              context,
+              onPressed: onRetry,
+              buttonTitle: 'إعادة المحاولة',
+              height: 44,
+              fontSize: context.font.large,
+            ),
           ],
         ),
       ),

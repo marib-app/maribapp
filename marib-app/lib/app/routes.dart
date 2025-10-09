@@ -78,6 +78,7 @@ import 'package:marib/ui/screens/classified_ads/details.dart';
 import 'package:marib/ui/screens/classified_ads/classified_screen.dart';
 import 'package:marib/ui/screens/classified_ads/classified_screen2.dart';
 import 'package:marib/ui/screens/classified_ads/classified_screen3.dart';
+import 'package:marib/ui/screens/classified_ads/units/service_payment_page.dart';
 import 'package:marib/ui/screens/home_screen/section/section_screen/section_screen.dart';
 
 
@@ -114,7 +115,6 @@ import 'package:marib/ui/screens/classified_ads/service_requests_screen.dart';
 import 'package:marib/ui/screens/home_screen/section/section_screen/widgets/map_search/map_search_screen.dart'; // عدّل المسار حسب موقع الملف الفعلي
 import 'package:marib/ui/screens/wallet/wallet_screen.dart';
 import 'package:marib/ui/screens/cart/orders_list_screen.dart';
-import 'package:marib/ui/screens/item/purchase_options/product_purchase_options_screen.dart';
 
 
 
@@ -131,6 +131,7 @@ class Routes {
   static const classifiedScreenRoute = 'classifiedScreenRoute';
   static const classifiedScreenRoute2 = 'classifiedScreen2Route';
   static const classifiedScreenRoute3 = 'classifiedScreen3Route';
+  static const servicePaymentPage = '/service-payment';
   static const myReviewsScreen = '/myReviewsScreenRoute';
   static const serviceAddMoreDetails = '/service-add-more-details';
   static const String serviceRequestsPage  = '/service-requests';
@@ -272,7 +273,6 @@ class Routes {
   static const setItemParametersScreen = '/setItemParametersScreen';
   static const selectOutdoorFacility = '/selectOutdoorFacility';
   static const adDetailsScreen = '/adDetailsScreen';
-  static const productOptions = '/product-options';
   static const successItemScreen = '/successItemScreen';
 
   ///Add item screens
@@ -387,7 +387,9 @@ class Routes {
 
 
 
-
+    // الدفع
+      case Routes.servicePaymentPage:
+        return ServicePaymentPage.route(routeSettings);
 
       case Routes.section_screen:                // 👈 مسارك الجديد
         return Section_screen.route(routeSettings);
@@ -571,8 +573,6 @@ class Routes {
 
       case adDetailsScreen:
         return AdDetailsScreen.route(routeSettings);
-      case productOptions:
-        return ProductPurchaseOptionsScreen.route(routeSettings);
 
       case pdfViewerScreen:
         return PdfViewer.route(routeSettings);

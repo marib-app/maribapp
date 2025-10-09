@@ -97,6 +97,24 @@
         </div>
     </div>
 
+
+    @if($pendingManualPaymentRequest)
+        <div class="alert alert-warning" role="alert">
+            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+                <div>
+                    <strong>يوجد طلب دفع يدوي قيد المراجعة.</strong>
+                    <p class="mb-0">لا يمكن تعديل حالة الدفع حتى يتم البت في الطلب رقم #{{ $pendingManualPaymentRequest->id }} بمبلغ
+                        {{ number_format((float) $pendingManualPaymentRequest->amount, 2) }}
+                        {{ $pendingManualPaymentRequest->currency ?? 'ريال' }}.</p>
+                </div>
+                <a href="{{ route('manual-payments.review', $pendingManualPaymentRequest->id) }}" class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer">
+                    <i class="fa fa-external-link-alt me-1"></i> عرض طلب الدفع اليدوي
+                </a>
+            </div>
+        </div>
+    @endif
+
+
     <form action="{{ route('orders.update', $order->id) }}" method="POST" id="orderForm">
         @csrf
         @method('PUT')
@@ -109,6 +127,9 @@
                 \App\Models\Order::STATUS_DELIVERED,
             ], true);
             $showDeliveryProofFields = $selectedStatus === \App\Models\Order::STATUS_DELIVERED;
+            $paymentStatusLocked = $pendingManualPaymentRequest !== null;
+
+
         @endphp
 
         <div class="row">
@@ -169,13 +190,19 @@
 
                         <div class="form-group">
                             <label for="payment_status">حالة الدفع</label>
-                            <select class="form-control" id="payment_status" name="payment_status" required>
+                            <select class="form-control" id="payment_status" name="payment_status" required {{ $paymentStatusLocked ? 'disabled' : '' }}>
                                 @foreach($paymentStatusOptions as $value => $label)
                                     <option value="{{ $value }}" {{ old('payment_status', $order->payment_status) == $value ? 'selected' : '' }}>
                                         {{ $label }}
                                     </option>
                                 @endforeach
                             </select>
+
+                            @if($paymentStatusLocked)
+                                <input type="hidden" name="payment_status" value="{{ $order->payment_status }}">
+                                <small class="text-muted d-block mt-2">يتم التحكم في حالة الدفع من خلال فريق المدفوعات بعد مراجعة الطلب اليدوي.</small>
+                            @endif
+
                             @error('payment_status')
                                 <span class="text-danger">{{ $message }}</span>
                             @enderror

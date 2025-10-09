@@ -31,20 +31,26 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema;
 
 use RuntimeException;
 use Throwable;
 
 class ManualPaymentRequestController extends Controller
 {
+
+    private array $manualPaymentColumnSupportCache = [];
+
+
     public function __construct(
         private readonly PaymentFulfillmentService $paymentFulfillmentService,
         private readonly DepartmentReportService $departmentReportService,
         private readonly WalletService $walletService
         
+
+
+
         ) {
-
-
     }
 
     public function index()
@@ -105,10 +111,56 @@ class ManualPaymentRequestController extends Controller
             'wallet' => (int) ($gatewayTotals['wallet'] ?? 0),
         ];
 
+
+        $departmentSummary = [];
+
+        if ($departments !== [] && $this->manualPaymentRequestsSupportsColumn('department')) {
+            $departmentSummary = collect($departments)
+                ->mapWithKeys(static function (string $label, string $key) {
+                    return [$key => [
+                        'key' => $key,
+                        'label' => $label,
+                        'total' => 0,
+                        ManualPaymentRequest::STATUS_PENDING => 0,
+                        ManualPaymentRequest::STATUS_APPROVED => 0,
+                        ManualPaymentRequest::STATUS_REJECTED => 0,
+                    ]];
+                })
+                ->all();
+
+            if ($departmentSummary !== []) {
+                $departmentStats = ManualPaymentRequest::query()
+                    ->select('department', 'status')
+                    ->selectRaw('COUNT(*) as aggregate_total')
+                    ->whereIn('department', array_keys($departmentSummary))
+                    ->groupBy('department', 'status')
+                    ->get();
+
+                foreach ($departmentStats as $stat) {
+                    $departmentKey = $stat->department;
+                    $status = $stat->status;
+                    $total = (int) ($stat->aggregate_total ?? 0);
+
+                    if (!isset($departmentSummary[$departmentKey])) {
+                        continue;
+                    }
+
+                    $departmentSummary[$departmentKey]['total'] += $total;
+
+                    if (array_key_exists($status, $departmentSummary[$departmentKey])) {
+                        $departmentSummary[$departmentKey][$status] += $total;
+                    }
+                }
+
+                $departmentSummary = array_values($departmentSummary);
+            }
+        }
+
+
         return view(
             'payments.manual.index',
-            compact('statuses', 'payableTypes', 'paymentGateways', 'summary', 'gatewaySummary', 'departments')
-        );    
+            compact('statuses', 'payableTypes', 'paymentGateways', 'summary', 'gatewaySummary', 'departments', 'departmentSummary')
+        );
     }
 
     public function list(Request $request)
@@ -1228,6 +1280,18 @@ class ManualPaymentRequestController extends Controller
             default => trans('Pending'),
         };
     }
+
+
+    private function manualPaymentRequestsSupportsColumn(string $column): bool
+    {
+        if (!array_key_exists($column, $this->manualPaymentColumnSupportCache)) {
+            $this->manualPaymentColumnSupportCache[$column] = Schema::hasTable('manual_payment_requests')
+                && Schema::hasColumn('manual_payment_requests', $column);
+        }
+
+        return $this->manualPaymentColumnSupportCache[$column];
+    }
+
 
     private function manualPaymentPayableLabel(ManualPaymentRequest $manualPaymentRequest): string
     {

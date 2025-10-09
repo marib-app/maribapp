@@ -36,6 +36,46 @@
 
 
         <div class="row g-3">
+
+
+            @if(!empty($departmentSummary))
+                <div class="col-12">
+                    <div class="card shadow-sm border-0 mb-4">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                                <div>
+                                    <h5 class="card-title mb-1">{{ __('Department Performance') }}</h5>
+                                    <p class="text-muted small mb-0">{{ __('Review manual payment progress per department at a glance.') }}</p>
+                                </div>
+                            </div>
+                            <div class="row g-3">
+                                @foreach($departmentSummary as $department)
+                                    <div class="col-xl-4 col-lg-6">
+                                        <div class="border rounded-3 p-3 h-100">
+                                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                                <div>
+                                                    <h6 class="mb-1">{{ $department['label'] }}</h6>
+                                                    <span class="text-muted small">{{ __('Total Requests') }}: {{ number_format($department['total'] ?? 0) }}</span>
+                                                </div>
+                                                <button type="button" class="btn btn-outline-primary btn-sm" data-filter-department="{{ $department['key'] }}">
+                                                    <i class="fa fa-filter me-1"></i>{{ __('Filter') }}
+                                                </button>
+                                            </div>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                <span class="badge bg-warning text-dark">{{ __('Pending') }}: {{ number_format($department[\App\Models\ManualPaymentRequest::STATUS_PENDING] ?? 0) }}</span>
+                                                <span class="badge bg-success">{{ __('Approved') }}: {{ number_format($department[\App\Models\ManualPaymentRequest::STATUS_APPROVED] ?? 0) }}</span>
+                                                <span class="badge bg-danger">{{ __('Rejected') }}: {{ number_format($department[\App\Models\ManualPaymentRequest::STATUS_REJECTED] ?? 0) }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+
             <div class="col-12">
                 <div class="row g-3 mb-4">
                     <div class="col-12">
@@ -166,6 +206,19 @@
                                     <button type="button" class="btn btn-outline-success btn-sm" data-filter-gateway="east_yemen_bank">{{ __('View East Yemen Bank') }}</button>
                                     <button type="button" class="btn btn-outline-warning btn-sm" data-filter-gateway="wallet">{{ __('View Wallet') }}</button>
                                 </div>
+
+
+                                @if(!empty($departmentSummary))
+                                    <div class="btn-group" role="group">
+                                        @foreach($departmentSummary as $department)
+                                            <button type="button" class="btn btn-outline-dark btn-sm d-flex align-items-center gap-2" data-filter-department="{{ $department['key'] }}">
+                                                <span>{{ $department['label'] }}</span>
+                                                <span class="badge bg-secondary text-light">{{ number_format($department['total'] ?? 0) }}</span>
+                                            </button>
+                                        @endforeach
+                                    </div>
+                                @endif
+
                                 <button type="button" class="btn btn-outline-secondary btn-sm active" data-filter-reset>{{ __('Show All') }}</button>
                             </div>
                         </div>
@@ -552,6 +605,7 @@
         function updateQuickFilterButtons() {
             const status = normalizeManualPaymentStatus(manualPaymentFilters.status ?? '') ?? '';
             const gateway = normalizeManualPaymentGateway(manualPaymentFilters.payment_gateway ?? '') ?? '';
+            const department = normalizeManualPaymentFilterValue('department', manualPaymentFilters.department ?? '') ?? '';
             const search = normalizeManualPaymentFilterValue('search', manualPaymentFilters.search ?? '') ?? '';
 
 
@@ -571,9 +625,18 @@
             });
 
 
+            $('[data-filter-department]').each(function () {
+                const rawValue = $(this).data('filter-department');
+                const value = normalizeManualPaymentFilterValue(
+                    'department',
+                    typeof rawValue === 'string' ? rawValue : (rawValue ?? '')
+                ) ?? '';
 
+                $(this).toggleClass('active', value !== '' && value === department);
+            });
 
-           const hasActiveFilters = MANUAL_PAYMENT_FILTER_KEYS.some((key) => {
+            const hasActiveFilters = MANUAL_PAYMENT_FILTER_KEYS.some((key) => {
+
                 if (key === 'status') {
                     return status !== '';
                 }
@@ -581,6 +644,12 @@
                 if (key === 'payment_gateway') {
                     return gateway !== '';
                 }
+
+
+                if (key === 'department') {
+                    return department !== '';
+                }
+
 
                 if (key === 'search') {
                     return search !== '';
@@ -949,6 +1018,22 @@
 
                 applyManualPaymentFiltersFromForm($form, dataTable);
             });
+
+
+            $('[data-filter-department]').on('click', function () {
+                const rawValue = $(this).data('filter-department');
+                const normalized = normalizeManualPaymentFilterValue(
+                    'department',
+                    typeof rawValue === 'string' ? rawValue : (rawValue ?? '')
+                );
+                const current = normalizeManualPaymentFilterValue('department', $('#filter-department').val());
+
+                $('#filter-department').val(normalized && normalized === current ? '' : (normalized ?? ''));
+
+
+                applyManualPaymentFiltersFromForm($form, dataTable);
+            });
+
 
             $('[data-filter-reset]').on('click', function () {
                 $('#manual-payment-reset').trigger('click');

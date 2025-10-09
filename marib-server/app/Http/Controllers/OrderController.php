@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Events\OrderNoteUpdated;
 
 use App\Models\Order;
+use App\Models\ManualPaymentRequest;
 use App\Models\OrderHistory;
 use App\Models\OrderItem;
 use App\Models\OrderStatus;
@@ -647,6 +648,10 @@ class OrderController extends Controller
                         $itemQuery->select('order_items.id', 'order_items.order_id', 'order_items.quantity');
                     }]);
             },
+             'manualPaymentRequests' => static function ($query) {
+                $query->orderByDesc('id')
+                    ->with('paymentTransaction');
+            },
         ]);
 
         $paymentGroups = $order->paymentGroups;
@@ -661,6 +666,11 @@ class OrderController extends Controller
             ->get();
 
 
+        $pendingManualPaymentRequest = $order->manualPaymentRequests
+            ->firstWhere('status', ManualPaymentRequest::STATUS_PENDING);
+
+
+
         return view('orders.show', compact(
             'order',
             'orderStatuses',
@@ -671,7 +681,8 @@ class OrderController extends Controller
             'paymentStatusOptions',
             'orderItemsDisplayData',
             'paymentGroups',
-            'availablePaymentGroups'
+            'availablePaymentGroups',
+            'pendingManualPaymentRequest'
         
         ));
     }
@@ -685,8 +696,18 @@ class OrderController extends Controller
     public function edit($id)
     {
         // الحصول على الطلب مع العلاقات
-        $order = Order::with(['user', 'items', 'history.user'])
+        $order = Order::with([
+                'user',
+                'items',
+                'history.user',
+                'manualPaymentRequests.paymentTransaction',
+            ])
+            
             ->findOrFail($id);
+
+        $pendingManualPaymentRequest = $order->manualPaymentRequests
+            ->firstWhere('status', ManualPaymentRequest::STATUS_PENDING);
+
 
         // الحصول على قائمة المستخدمين
         $users = User::orderBy('name')->get();
@@ -696,7 +717,12 @@ class OrderController extends Controller
 
         $paymentStatusOptions = Order::paymentStatusLabels();
 
-        return view('orders.edit', compact('order', 'users', 'orderStatuses', 'paymentStatusOptions'));
+        return view(
+            'orders.edit',
+            compact('order', 'users', 'orderStatuses', 'paymentStatusOptions', 'pendingManualPaymentRequest')
+        );
+
+
     
     }
 
@@ -735,6 +761,33 @@ class OrderController extends Controller
 
             // الحصول على الطلب
             $order = Order::findOrFail($id);
+
+
+
+
+
+
+
+            $pendingManualPaymentRequest = $order->latestPendingManualPaymentRequest();
+
+            if (
+                $pendingManualPaymentRequest
+                && $request->payment_status !== $order->payment_status
+            ) {
+                DB::rollBack();
+
+                $reviewUrl = route('manual-payments.review', $pendingManualPaymentRequest->getKey());
+                $message = sprintf(
+                    'لا يمكن تغيير حالة الدفع لوجود طلب دفع يدوي #%d قيد المراجعة. يرجى إتمام المراجعة عبر %s.',
+                    $pendingManualPaymentRequest->getKey(),
+                    $reviewUrl
+                );
+
+                return redirect()->back()
+                    ->with('error', $message)
+                    ->withInput();
+            }
+
             
             // حفظ الحالة السابقة
             $previousStatus = $order->order_status;

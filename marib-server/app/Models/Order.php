@@ -361,6 +361,42 @@ class Order extends Model
             ->where('payable_type', Order::class);
     }
 
+
+    public function manualPaymentRequests(): HasMany
+    {
+        return $this->hasMany(ManualPaymentRequest::class, 'payable_id')
+            ->where('payable_type', self::class)
+            ->orderByDesc('id');
+    }
+
+    public function pendingManualPaymentRequests(): HasMany
+    {
+        return $this->manualPaymentRequests()->where('status', ManualPaymentRequest::STATUS_PENDING);
+    }
+
+    public function hasPendingManualPaymentRequests(): bool
+    {
+        if ($this->relationLoaded('manualPaymentRequests')) {
+            return $this->manualPaymentRequests
+                ->contains(static fn (ManualPaymentRequest $request) => $request->status === ManualPaymentRequest::STATUS_PENDING);
+        }
+
+        return $this->pendingManualPaymentRequests()->exists();
+    }
+
+    public function latestPendingManualPaymentRequest(): ?ManualPaymentRequest
+    {
+        if ($this->relationLoaded('manualPaymentRequests')) {
+            return $this->manualPaymentRequests
+                ->filter(static fn (ManualPaymentRequest $request) => $request->status === ManualPaymentRequest::STATUS_PENDING)
+                ->sortByDesc('id')
+                ->first();
+        }
+
+        return $this->pendingManualPaymentRequests()->first();
+    }
+
+
     /**
      * نطاق البحث
      *

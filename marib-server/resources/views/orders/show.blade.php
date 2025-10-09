@@ -163,6 +163,28 @@
     @endif
 
 
+
+    @if(isset($pendingManualPaymentRequest) && $pendingManualPaymentRequest)
+        <div class="alert alert-warning alert-dismissible fade show" role="alert" data-testid="order-manual-payment-alert">
+            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+                <div>
+                    <strong>طلب دفع يدوي قيد المراجعة.</strong>
+                    <p class="mb-0">هناك طلب دفع يدوي رقم #{{ $pendingManualPaymentRequest->id }} مرتبط بهذا الطلب بمبلغ
+                        {{ number_format((float) $pendingManualPaymentRequest->amount, 2) }}
+                        {{ $pendingManualPaymentRequest->currency ?? 'ريال' }}. لا يمكن تعديل حالة الدفع حتى يتم اعتماد أو رفض هذا الطلب.</p>
+                </div>
+                <a href="{{ route('manual-payments.review', $pendingManualPaymentRequest->id) }}" class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer">
+                    <i class="fa fa-external-link-alt me-1"></i> فتح طلب الدفع اليدوي
+                </a>
+            </div>
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    @endif
+
+
+
     <div class="row">
         <div class="col-md-12 mb-3">
             <div class="d-flex justify-content-between align-items-center">

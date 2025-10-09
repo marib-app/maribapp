@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/responsiveSize.dart';
 
 class ProductManagementScreen extends StatefulWidget {
   const ProductManagementScreen({super.key, required this.item});

@@ -1844,6 +1844,30 @@ class ApiController extends Controller {
             // $uniqueSlug = HelperService::generateUniqueSlug(new Item(), $slug,$request->id);
 
             $data = $request->all();
+
+
+           if (array_key_exists('price', $data)) {
+                $priceInput = $data['price'];
+                if ($priceInput === null || $priceInput === '') {
+                    unset($data['price']);
+                } else {
+                    $normalizedPrice = $priceInput;
+                    if (is_string($priceInput)) {
+                        $normalizedPrice = preg_replace(
+                            '/[^0-9.]/',
+                            '',
+                            str_replace(',', '', $priceInput)
+                        );
+                    }
+
+                    if ($normalizedPrice === null || $normalizedPrice === '') {
+                        unset($data['price']);
+                    } else {
+                        $data['price'] = (float) $normalizedPrice;
+                    }
+                }
+            }
+
             $data['product_link'] = $request->filled('product_link') ? $request->input('product_link') : null;
             $data['review_link'] = $request->filled('review_link') ? $request->input('review_link') : null;
 

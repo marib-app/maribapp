@@ -40,11 +40,18 @@ class BankTransferScreen extends StatefulWidget {
   final BankTransferArgs args;
   const BankTransferScreen({super.key, required this.args});
 
-  static Route route(RouteSettings settings) {
-    final args = settings.arguments as BankTransferArgs;
-    return MaterialPageRoute(
-      settings: settings,
-      builder: (_) => BankTransferScreen(args: args),
+  /// يعرض نافذة التحويل البنكي كنافذة سفلية احترافية.
+  static Future<T?> show<T>(BuildContext context, BankTransferArgs args) {
+    return showModalBottomSheet<T>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return BankTransferScreen(args: args);
+      },
     );
   }
 
@@ -92,6 +99,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
   // الحقول
   final _senderCtrl = TextEditingController(); // اسم المرسل
   final _notesCtrl = TextEditingController(); // ملاحظات
+  bool _allowRoutePop = false; // للسماح بإغلاق النافذة عند التأكيد فقط
 
   File? _receiptFile;
   String? _receiptName;
@@ -759,26 +767,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
         Future.microtask(() {
           if (!mounted) return;
-          final bool isOrderPurpose = _resolvedPurpose() == 'order';
+          _closeWithResult(result);
 
-          if (isOrderPurpose) {
-            Navigator.of(context).pushAndRemoveUntil(
-              OrderStepsScreen.route(
-                RouteSettings(
-                  name: 'order-step',
-                  arguments: {'order_id': widget.args.packageId},
-                ),
-              ),
-                  (route) => route.isFirst,
-            );
-          } else {
-            Navigator.of(context).pushAndRemoveUntil(
-              TransactionScreen.route(
-                const RouteSettings(name: 'transactions'),
-              ),
-                  (route) => route.isFirst,
-            );
-          }
 
         });
       }
@@ -979,10 +969,80 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
 
   @override
-  Widget build(BuildContext context) => BlocProvider.value(
-    value: _walletSummaryCubit,
-    child: buildBankTransferScreen(context),
-  );
+  Future<bool> _onWillPop() async {
+    if (_allowRoutePop) {
+      return true;
+    }
+    await _showCloseConfirmation();
+    return false;
+  }
+
+  void _closeWithResult([Object? result]) {
+    _allowRoutePop = true;
+    if (mounted) {
+      Navigator.of(context).pop(result);
+    }
+  }
+
+  Future<void> _showCloseConfirmation() async {
+    if (!mounted) return;
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'تأكيد الإغلاق',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: onSurface,
+            ),
+          ),
+          content: const Text('هل أنت متأكد من رغبتك في إغلاق نافذة الدفع؟'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('متابعة'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('إغلاق'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      _closeWithResult(false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final viewInsets = MediaQuery.of(context).viewInsets;
+    return BlocProvider.value(
+      value: _walletSummaryCubit,
+      child: WillPopScope(
+        onWillPop: _onWillPop,
+        child: AnimatedPadding(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          padding: EdgeInsets.only(bottom: viewInsets.bottom),
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: FractionallySizedBox(
+              heightFactor: 0.95,
+              child: buildBankTransferScreen(context),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 

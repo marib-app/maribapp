@@ -325,9 +325,8 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     );
 
     if (!mounted) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => BankTransferScreen(args: args)),
-    );
+    await BankTransferScreen.show(context, args);
+
   }
 
   Future<double?> _promptForAmount() async {

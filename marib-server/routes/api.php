@@ -16,6 +16,7 @@ use App\Http\Controllers\WifiNetworkController;
 use App\Http\Controllers\WifiPlanController;
 use App\Http\Controllers\WifiPurchaseController;
 use App\Http\Controllers\ProductPurchaseOptionsController;
+use App\Http\Controllers\ItemPurchaseManagementController;
 
 
 
@@ -52,8 +53,15 @@ Route::prefix('wifi-cabin')
 
 
 /* Authenticated Routes */
-Route::group(['middleware' => ['auth:sanctum']], static function () {
+    Route::group(['middleware' => ['auth:sanctum']], static function () {
 
+
+    Route::post('items/{item}/attributes', [ItemPurchaseManagementController::class, 'updateAttributes'])
+        ->whereNumber('item');
+    Route::post('admin/items/{item}/stock/bulk-set', [ItemPurchaseManagementController::class, 'bulkSetStock'])
+        ->whereNumber('item');
+    Route::patch('items/{item}/discount', [ItemPurchaseManagementController::class, 'updateDiscount'])
+        ->whereNumber('item');
 
 
     Route::prefix('wifi')->group(function () {

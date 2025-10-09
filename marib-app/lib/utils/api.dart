@@ -331,6 +331,9 @@ class Api {
   static String getCategoriesApi = "get-categories";
   static String getItemApi = "get-item";
   static String productPurchaseOptionsApi(int itemId) => "products/$itemId/purchase-options";
+  static String itemAttributesApi(int itemId) => "items/$itemId/attributes";
+  static String itemStockBulkSetApi(int itemId) => "admin/items/$itemId/stock/bulk-set";
+  static String itemDiscountApi(int itemId) => "items/$itemId/discount";
   static String getMyItemApi = "my-items";
   static String getNotificationListApi = "get-notification-list";
   static String deleteUserApi = "delete-user";

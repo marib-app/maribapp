@@ -11,6 +11,8 @@ class ItemPurchaseAttributeOption {
     this.allowedValues = const <String>[],
     this.values = const <String>[],
     this.defaultValue,
+    this.selectedValues = const <String>[],
+    this.uiType,
   });
 
   factory ItemPurchaseAttributeOption.fromJson(Map<String, dynamic> json) {
@@ -54,6 +56,8 @@ class ItemPurchaseAttributeOption {
       allowedValues: _stringList(json['allowed_values']),
       values: _stringList(json['values']),
       defaultValue: _normalizeString(json['default_value']),
+      selectedValues: _stringList(json['selected_values']),
+      uiType: _normalizeString(json['ui_type']),
     );
   }
 
@@ -66,6 +70,8 @@ class ItemPurchaseAttributeOption {
   final List<String> allowedValues;
   final List<String> values;
   final String? defaultValue;
+  final List<String> selectedValues;
+  final String? uiType;
 }
 
 class ItemVariantStockOption {

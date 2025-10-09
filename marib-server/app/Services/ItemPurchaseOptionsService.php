@@ -33,6 +33,9 @@ class ItemPurchaseOptionsService
             ->values()
             ->map(function ($field) use ($values) {
                 $customValue = $values->get($field->id);
+                $selectedValues = $this->resolveSelectedValues($customValue);
+
+
                 return [
                     'id' => $field->id,
                     'key' => $this->attributeKey($field->id),
@@ -43,6 +46,9 @@ class ItemPurchaseOptionsService
                     'allowed_values' => $this->normalizeAllowedValues($field->allowed_values ?? $field->values ?? []),
                     'values' => $this->normalizeAllowedValues($field->values ?? []),
                     'default_value' => $this->resolveCustomFieldValue($customValue),
+                    'selected_values' => $selectedValues,
+                    'ui_type' => $field->type ?? null,
+
                 ];
             });
     }
@@ -197,6 +203,9 @@ class ItemPurchaseOptionsService
                 'allowed_values' => $definition['allowed_values'],
                 'values' => $definition['values'],
                 'default_value' => $definition['default_value'],
+                'selected_values' => $definition['selected_values'] ?? [],
+                'ui_type' => $definition['ui_type'] ?? null,
+
             ];
         })->values()->all();
 
@@ -320,6 +329,34 @@ class ItemPurchaseOptionsService
 
         return $this->stringifyValue($raw);
     }
+
+    private function resolveSelectedValues(?ItemCustomFieldValue $value): array
+    {
+        if (! $value) {
+            return [];
+        }
+
+        $raw = $value->value;
+
+        if (is_array($raw)) {
+            $normalized = [];
+            foreach ($raw as $entry) {
+                $stringValue = $this->stringifyValue($entry);
+                if ($stringValue === '') {
+                    continue;
+                }
+
+                $normalized[] = $stringValue;
+            }
+
+            return array_values(array_unique($normalized));
+        }
+
+        $stringValue = $this->stringifyValue($raw);
+
+        return $stringValue === '' ? [] : [$stringValue];
+    }
+
 
     private function findStockRecord(Item $item, string $variantKey): ?ItemStock
     {

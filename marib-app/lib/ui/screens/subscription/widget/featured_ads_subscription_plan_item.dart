@@ -145,14 +145,8 @@ class _FeaturedAdsSubscriptionPlansItemState
                 itemId: null,
               );
 
-              final ok = await Navigator.of(buttonContext).push(
-                BankTransferScreen.route(
-                  RouteSettings(
-                    name: '/bank-transfer',
-                    arguments: args,
-                  ),
-                ),
-              );
+              final ok = await BankTransferScreen.show(buttonContext, args);
+
 
               if (!mounted) {
                 return;

@@ -362,11 +362,19 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
 
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
-          Navigator.pushNamed(
-            context,
-            Routes.successItemScreen,
-            arguments: {'model': state.model, 'isEdit': widget.isEdit},
-          );
+          if (state.type == ManageItemType.add) {
+            Navigator.pushNamed(
+              context,
+              Routes.productManagementScreen,
+              arguments: {'model': state.model},
+            );
+          } else {
+            Navigator.pushNamed(
+              context,
+              Routes.successItemScreen,
+              arguments: {'model': state.model, 'isEdit': widget.isEdit},
+            );
+          }
         }
       });
     }

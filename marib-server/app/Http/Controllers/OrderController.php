@@ -44,8 +44,8 @@ class OrderController extends Controller
         ResponseService::noAnyPermissionThenRedirect(['orders-list']);
         
         $query = Order::with([
-            'user',
-            'seller',
+            'user' => static fn ($query) => $query->withTrashed(),
+            'seller' => static fn ($query) => $query->withTrashed(),
             'items.item.category',
             'latestManualPaymentRequest' => static function ($query) {
                 $query->select([
@@ -142,8 +142,8 @@ class OrderController extends Controller
         $categoryIds = app(DepartmentReportService::class)->resolveCategoryIds($department);
 
         $query = Order::with([
-            'user',
-            'seller',
+            'user' => static fn ($query) => $query->withTrashed(),
+            'seller' => static fn ($query) => $query->withTrashed(),
             'items.item.category',
             'latestManualPaymentRequest' => static function ($query) {
                 $query->select([
@@ -254,8 +254,8 @@ class OrderController extends Controller
 
 
         $query = Order::with([
-            'user',
-            'seller',
+            'user' => static fn ($query) => $query->withTrashed(),
+            'seller' => static fn ($query) => $query->withTrashed(),
             'items.item.category',
             'latestManualPaymentRequest' => static function ($query) {
                 $query->select([
@@ -451,8 +451,14 @@ class OrderController extends Controller
     public function show($id)
     {
         // الحصول على الطلب مع العلاقات
-        $order = Order::with(['user', 'seller', 'items', 'history.user'])
-            ->findOrFail($id);
+        $order = Order::with([
+            'user' => static fn ($query) => $query->withTrashed(),
+            'seller' => static fn ($query) => $query->withTrashed(),
+            'items',
+            'history.user' => static fn ($query) => $query->withTrashed(),
+        ])
+        
+        ->findOrFail($id);
 
         // الحصول على حالات الطلبات
         $orderStatuses = $this->allowedOrderStatuses();
@@ -690,7 +696,7 @@ class OrderController extends Controller
 
         $statusHistoryUsers = $statusHistoryUserIds->isEmpty()
             ? collect()
-            : User::whereIn('id', $statusHistoryUserIds)->get()->keyBy('id');
+            : User::withTrashed()->whereIn('id', $statusHistoryUserIds)->get()->keyBy('id');
 
 
         $order->load([
@@ -749,9 +755,9 @@ class OrderController extends Controller
     {
         // الحصول على الطلب مع العلاقات
         $order = Order::with([
-                'user',
+                'user' => static fn ($query) => $query->withTrashed(),
                 'items',
-                'history.user',
+                'history.user' => static fn ($query) => $query->withTrashed(),
                 'manualPaymentRequests.paymentTransaction',
             ])
             

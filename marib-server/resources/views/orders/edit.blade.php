@@ -24,6 +24,15 @@
             ManualPaymentRequest::STATUS_REJECTED => 'bg-danger',
         ];
 
+
+        $orderUser = $order->user;
+        $orderUserFallbackLabel = $order->user_id ? ('مستخدم #' . $order->user_id) : 'غير متوفر';
+        $orderUserName = $orderUser?->name ?? $orderUserFallbackLabel;
+        $orderUserEmail = $orderUser?->email;
+        $orderUserMobile = $orderUser?->mobile;
+        $orderUserProfileUrl = $orderUser ? route('customer.show', $orderUser->getKey()) : null;
+
+
     @endphp
 
     <div class="row">
@@ -340,18 +349,23 @@
                             <tr>
                                 <th style="width: 30%">الاسم</th>
                                 <td>
-                                    <a href="{{ route('customer.show', $order->user_id) }}">
-                                        {{ $order->user->name }}
-                                    </a>
+                                    @if($orderUserProfileUrl)
+                                        <a href="{{ $orderUserProfileUrl }}">
+                                            {{ $orderUserName }}
+                                        </a>
+                                    @else
+                                        {{ $orderUserName }}
+                                    @endif
+
                                 </td>
                             </tr>
                             <tr>
                                 <th>البريد الإلكتروني</th>
-                                <td>{{ $order->user->email }}</td>
+                                <td>{{ $orderUserEmail ?? 'غير متوفر' }}</td>
                             </tr>
                             <tr>
                                 <th>رقم الهاتف</th>
-                                <td>{{ $order->user->mobile  ?? 'غير متوفر' }}</td>
+                                <td>{{ $orderUserMobile ?? 'غير متوفر' }}</td>
                             </tr>
                         </table>
                     </div>

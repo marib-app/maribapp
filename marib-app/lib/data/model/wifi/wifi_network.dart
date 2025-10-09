@@ -62,17 +62,45 @@ class WifiNetwork extends Equatable {
       return const [];
     }
 
+
+    String? resolveIconUrl(Map<String, dynamic> source) {
+      final List<String> keys = <String>[
+        'icon',
+        'icon_url',
+        'iconUrl',
+        'logo_url',
+        'logo',
+        'logo_path',
+      ];
+
+      for (final String key in keys) {
+        final dynamic value = source[key];
+        if (value == null) continue;
+        final String text = value.toString().trim();
+        if (text.isEmpty) continue;
+        return text;
+      }
+
+      return null;
+    }
+
+    final double? coverage = parseDouble(json['radius']) ??
+        parseDouble(json['radius_km']) ??
+        parseDouble(json['coverage_radius_km']) ??
+        parseDouble(json['coverage_km']);
+
+
     return WifiNetwork(
       id: parseInt(json['id']) ?? 0,
       name: json['name']?.toString() ?? '',
       latitude: parseDouble(json['latitude']) ?? 0,
       longitude: parseDouble(json['longitude']) ?? 0,
       description: json['description']?.toString(),
-      iconUrl: json['icon']?.toString() ?? json['icon_url']?.toString(),
-      coverageKm: parseDouble(json['radius']) ?? parseDouble(json['radius_km']),
+      iconUrl: resolveIconUrl(json),
+      coverageKm: coverage,
       rating: parseDouble(json['rating']),
       distanceKm: parseDouble(json['distance']) ?? parseDouble(json['distance_km']),
-      address: json['address']?.toString(),
+      address: json['address']?.toString() ?? json['location_name']?.toString(),
       plans: parsePlans(json['plans'] ?? json['wifi_plans'] ?? json['available_plans']),
     );
   }
@@ -114,6 +142,7 @@ class WifiNetwork extends Equatable {
       if (description != null) 'description': description,
       if (iconUrl != null) 'icon_url': iconUrl,
       if (coverageKm != null) 'radius_km': coverageKm,
+      if (coverageKm != null) 'coverage_radius_km': coverageKm,
       if (rating != null) 'rating': rating,
       if (distanceKm != null) 'distance_km': distanceKm,
       if (address != null) 'address': address,

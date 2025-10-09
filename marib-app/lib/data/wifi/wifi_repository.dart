@@ -191,7 +191,7 @@ class WifiRepository {
       'name': name,
       'latitude': latitude,
       'longitude': longitude,
-      'coverage_km': coverageKm,
+      'coverage_radius_km': coverageKm,
     };
 
     return Api.postJson(
@@ -210,11 +210,17 @@ class WifiRepository {
       'name': name,
       'latitude': latitude,
       'longitude': longitude,
-      'coverage_km': coverageKm,
+      'coverage_radius_km': coverageKm,
+      'is_active': false,
+      'meta': <String, dynamic>{
+        'source': 'mobile_app',
+        'request_type': 'owner_network',
+      },
+
     };
 
     return Api.postJson(
-      url: 'wifi-cabin/owner-requests',
+      url: 'wifi/networks',
       data: payload,
     );
   }

@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
+use App\Support\ColorFieldParser;
 
 class ItemPurchaseManagementController extends Controller
 {
@@ -50,6 +51,25 @@ class ItemPurchaseManagementController extends Controller
             $required = (bool) ($definition['required_for_checkout'] ?? false);
             $affectsStock = (bool) ($definition['affects_stock'] ?? false);
 
+            $fieldType = strtolower((string) ($definition['type'] ?? ''));
+
+            if ($fieldType === 'color' && $allowed !== []) {
+                $incoming = $payload[$key] ?? [];
+                $colorSelections = $this->normalizeColorSelections($incoming);
+
+                if ($colorSelections === [] && ($required || $affectsStock)) {
+                    throw ValidationException::withMessages([
+                        'selected_values' => [
+                            __('يجب اختيار لون واحد على الأقل لحقل :name.', ['name' => $definition['name']]),
+                        ],
+                    ]);
+                }
+
+                $updates[$definition['id']] = $colorSelections;
+                return;
+            }
+
+
             if ($allowed !== []) {
                 $incoming = $payload[$key] ?? [];
                 $normalized = $this->normalizeSelectionArray($incoming);
@@ -78,6 +98,24 @@ class ItemPurchaseManagementController extends Controller
                 }
 
                 $updates[$definition['id']] = $selected;
+                return;
+            }
+
+
+
+            if ($fieldType === 'color') {
+                $incoming = $payload[$key] ?? $textInputs[$key] ?? [];
+                $colorSelections = $this->normalizeColorSelections($incoming);
+
+                if ($colorSelections === [] && ($required || $affectsStock)) {
+                    throw ValidationException::withMessages([
+                        'selected_values' => [
+                            __('يجب اختيار لون واحد على الأقل لحقل :name.', ['name' => $definition['name']]),
+                        ],
+                    ]);
+                }
+
+                $updates[$definition['id']] = $colorSelections;
                 return;
             }
 
@@ -312,4 +350,45 @@ class ItemPurchaseManagementController extends Controller
 
         return trim((string) $value);
     }
+
+
+    private function normalizeColorSelections(mixed $value): array
+    {
+        $parsed = ColorFieldParser::parse($value);
+
+        if ($parsed === []) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($parsed as $entry) {
+            if (! is_array($entry)) {
+                $code = ColorFieldParser::normalizeCode($entry);
+                if ($code === null) {
+                    continue;
+                }
+                $normalized[$code] = ['code' => $code];
+                continue;
+            }
+
+            $code = ColorFieldParser::normalizeCode($entry['code'] ?? $entry);
+            if ($code === null) {
+                continue;
+            }
+
+            $quantity = $entry['quantity'] ?? null;
+            if ($quantity !== null) {
+                $quantity = is_numeric($quantity)
+                    ? max(0, (int) $quantity)
+                    : null;
+            }
+
+            $normalized[$code] = $quantity !== null
+                ? ['code' => $code, 'quantity' => $quantity]
+                : ['code' => $code];
+        }
+
+        return array_values($normalized);
+    }
+
 }

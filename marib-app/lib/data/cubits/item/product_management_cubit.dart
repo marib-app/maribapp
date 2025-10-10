@@ -1,5 +1,6 @@
 import 'dart:collection';
 import 'dart:math' as math;
+import 'package:marib/data/model/custom_field/custom_field_model.dart';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -66,6 +67,7 @@ class ProductManagementState extends Equatable {
     required this.error,
     required this.options,
     required this.attributeSelections,
+    required this.colorSelections,
     required this.textInputs,
     required this.attributesSaving,
     required this.stockSaving,
@@ -92,6 +94,7 @@ class ProductManagementState extends Equatable {
       attributeSelections: const <String, List<String>>{},
       textInputs: const <String, String>{},
       attributesSaving: false,
+      colorSelections: const <String, List<CustomFieldColorEntry>>{},
       stockSaving: false,
       discountSaving: false,
       variantForms: const <String, VariantStockFormState>{},
@@ -116,6 +119,7 @@ class ProductManagementState extends Equatable {
   final Map<String, String> textInputs;
   final bool attributesSaving;
   final bool stockSaving;
+  final Map<String, List<CustomFieldColorEntry>> colorSelections;
   final bool discountSaving;
   final Map<String, VariantStockFormState> variantForms;
   final bool hasStockVariants;
@@ -160,6 +164,7 @@ class ProductManagementState extends Equatable {
     Map<String, String>? textInputs,
     bool? attributesSaving,
     bool? stockSaving,
+    Map<String, List<CustomFieldColorEntry>>? colorSelections,
     bool? discountSaving,
     Map<String, VariantStockFormState>? variantForms,
     bool? hasStockVariants,
@@ -186,6 +191,7 @@ class ProductManagementState extends Equatable {
       textInputs: textInputs ?? this.textInputs,
       attributesSaving: attributesSaving ?? this.attributesSaving,
       stockSaving: stockSaving ?? this.stockSaving,
+      colorSelections: colorSelections ?? this.colorSelections,
       discountSaving: discountSaving ?? this.discountSaving,
       variantForms: variantForms ?? this.variantForms,
       hasStockVariants: hasStockVariants ?? this.hasStockVariants,
@@ -212,6 +218,16 @@ class ProductManagementState extends Equatable {
     attributeSelections.entries
         .map((MapEntry<String, List<String>> entry) =>
     '${entry.key}:${entry.value.join(',')}')
+        .toList(),
+    colorSelections.entries
+        .map((MapEntry<String, List<CustomFieldColorEntry>> entry) {
+      final Iterable<String> encoded = entry.value.map((CustomFieldColorEntry e) {
+        final String quantity = e.quantity?.toString() ?? '';
+        return '${e.code}:$quantity';
+      });
+      return '${entry.key}:${encoded.join('|')}';
+    })
+
         .toList(),
     textInputs,
     attributesSaving,
@@ -261,8 +277,30 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
   }
 
   void toggleAttributeValue(String key, String value) {
+
+    final ItemPurchaseAttributeOption? attribute = state.options?.attributeByKey(key);
+    final bool isColor = attribute != null && _looksLikeColorAttribute(attribute);
+
+    if (isColor) {
+      final List<CustomFieldColorEntry> currentEntries =
+      List<CustomFieldColorEntry>.from(state.colorSelections[key] ?? const <CustomFieldColorEntry>[]);
+      final String normalized = value.toUpperCase();
+      final int index =
+      currentEntries.indexWhere((CustomFieldColorEntry entry) => entry.code.toUpperCase() == normalized);
+
+      if (index >= 0) {
+        currentEntries.removeAt(index);
+      } else {
+        currentEntries.add(CustomFieldColorEntry(code: normalized));
+      }
+
+      setColorAttributeEntries(key, currentEntries);
+      return;
+    }
+
     final Map<String, List<String>> nextSelections =
     Map<String, List<String>>.from(state.attributeSelections);
+
     final List<String> current = List<String>.from(nextSelections[key] ?? const <String>[]);
 
     if (current.contains(value)) {
@@ -275,7 +313,11 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       ..removeWhere((String element) => element.trim().isEmpty)
       ..sort();
 
-    nextSelections[key] = current;
+    if (current.isEmpty) {
+      nextSelections.remove(key);
+    } else {
+      nextSelections[key] = current;
+    }
 
     emit(state.copyWith(
       attributeSelections: nextSelections,
@@ -292,6 +334,69 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     emit(state.copyWith(textInputs: next, error: null));
   }
 
+
+
+  void setColorAttributeEntries(String key, List<CustomFieldColorEntry> entries) {
+    final Map<String, List<CustomFieldColorEntry>> nextColorSelections =
+    Map<String, List<CustomFieldColorEntry>>.from(state.colorSelections);
+    final Map<String, List<String>> nextSelections =
+    Map<String, List<String>>.from(state.attributeSelections);
+
+    final LinkedHashMap<String, CustomFieldColorEntry> normalized =
+    LinkedHashMap<String, CustomFieldColorEntry>();
+    for (final CustomFieldColorEntry entry in entries) {
+      final String code = entry.code.toUpperCase().trim();
+      if (code.isEmpty || !RegExp(r'^[0-9A-F]{6}$').hasMatch(code)) {
+        continue;
+      }
+      final int? quantity = entry.quantity;
+      normalized[code] = quantity != null && quantity >= 0
+          ? CustomFieldColorEntry(code: code, quantity: quantity)
+          : CustomFieldColorEntry(code: code, quantity: null);
+    }
+
+    if (normalized.isEmpty) {
+      nextColorSelections.remove(key);
+      nextSelections.remove(key);
+    } else {
+      nextColorSelections[key] = normalized.values.toList(growable: false);
+      final List<String> codes =
+      normalized.keys.map((String code) => code).toList(growable: false)
+        ..sort();
+      nextSelections[key] = codes;
+    }
+
+    emit(state.copyWith(
+      colorSelections: nextColorSelections,
+      attributeSelections: nextSelections,
+      error: null,
+    ));
+
+    _recomputeVariantState();
+  }
+
+  bool _looksLikeColorAttribute(ItemPurchaseAttributeOption attribute) {
+    final String? type = attribute.type?.toLowerCase();
+    final String? uiType = attribute.uiType?.toLowerCase();
+    if (type == 'color' || uiType == 'color') {
+      return true;
+    }
+
+    if (attribute.colorEntries.isNotEmpty) {
+      return true;
+    }
+
+    final String normalizedKey = attribute.key.toLowerCase();
+    final String normalizedName = attribute.name.toLowerCase();
+
+    return normalizedKey.contains('color') ||
+        normalizedKey.contains('colour') ||
+        normalizedKey.contains('اللون') ||
+        normalizedName.contains('color') ||
+        normalizedName.contains('colour') ||
+        normalizedName.contains('اللون');
+  }
+
   Future<SubmissionOutcome> saveAttributes() async {
     if (state.options == null || item.id == null) {
       return const SubmissionOutcome(
@@ -303,13 +408,22 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     emit(state.copyWith(attributesSaving: true, error: null));
 
     try {
-      final Map<String, List<String>> selectedValues = <String, List<String>>{};
+      final Map<String, dynamic> selectedValues = <String, dynamic>{};
+
       final Map<String, String> textValues = <String, String>{};
 
       for (final ItemPurchaseAttributeOption attribute in state.options!.attributes) {
         final List<String> selected = state.attributeSelections[attribute.key] ?? const <String>[];
         if (attribute.allowedValues.isNotEmpty) {
-          selectedValues[attribute.key] = selected;
+          if (_looksLikeColorAttribute(attribute)) {
+            final List<CustomFieldColorEntry> entries =
+                state.colorSelections[attribute.key] ?? const <CustomFieldColorEntry>[];
+            selectedValues[attribute.key] =
+                entries.map((CustomFieldColorEntry entry) => entry.toJson()).toList();
+          } else {
+            selectedValues[attribute.key] = selected;
+          }
+
         } else {
           textValues[attribute.key] = state.textInputs[attribute.key]?.trim() ?? '';
         }
@@ -529,12 +643,62 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
   void _applyOptions(ItemPurchaseOptions options, {double? finalPrice}) {
     final Map<String, List<String>> selections = <String, List<String>>{};
     final Map<String, String> textInputs = <String, String>{};
+    final Map<String, List<CustomFieldColorEntry>> colorSelections =
+    <String, List<CustomFieldColorEntry>>{};
 
     for (final ItemPurchaseAttributeOption attribute in options.attributes) {
       if (attribute.allowedValues.isNotEmpty) {
-        final List<String> selected = List<String>.from(attribute.selectedValues);
-        selected.sort();
-        selections[attribute.key] = selected;
+        if (_looksLikeColorAttribute(attribute)) {
+          final Map<String, CustomFieldColorEntry> entriesByCode = {
+            for (final CustomFieldColorEntry entry in attribute.colorEntries)
+              entry.code: entry,
+          };
+          final List<String> selectedCodes =
+          List<String>.from(attribute.selectedValues);
+
+          final List<CustomFieldColorEntry> selectedEntries =
+          <CustomFieldColorEntry>[];
+          final Set<String> seen = <String>{};
+
+          void addEntry(String code) {
+            final String normalized = code.toUpperCase();
+            if (!seen.add(normalized)) {
+              return;
+            }
+            final CustomFieldColorEntry? entry = entriesByCode[normalized];
+            if (entry != null) {
+              selectedEntries.add(entry);
+            } else {
+              selectedEntries
+                  .add(CustomFieldColorEntry(code: normalized, quantity: null));
+            }
+          }
+
+          if (selectedCodes.isNotEmpty) {
+            for (final String code in selectedCodes) {
+              addEntry(code);
+            }
+          } else if (entriesByCode.isNotEmpty) {
+            for (final CustomFieldColorEntry entry in entriesByCode.values) {
+              addEntry(entry.code);
+            }
+          } else if (attribute.allowedValues.isNotEmpty) {
+            for (final String value in attribute.allowedValues) {
+              addEntry(value);
+            }
+          }
+
+          final List<String> codes =
+          selectedEntries.map((CustomFieldColorEntry entry) => entry.code).toList();
+          codes.sort();
+          selections[attribute.key] = codes;
+          colorSelections[attribute.key] = selectedEntries;
+        } else {
+          final List<String> selected =
+          List<String>.from(attribute.selectedValues);
+          selected.sort();
+          selections[attribute.key] = selected;
+        }
       } else {
         textInputs[attribute.key] = attribute.defaultValue ?? '';
       }
@@ -581,6 +745,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       error: null,
       options: options,
       attributeSelections: selections,
+      colorSelections: colorSelections,
       textInputs: textInputs,
       hasStockVariants: hasVariants,
       generalStock: hasVariants ? null : generalStockOption.stock,

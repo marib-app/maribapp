@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:collection';
+import 'package:marib/data/constants/color_catalog.dart';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:marib/app/routes.dart';
@@ -296,30 +299,108 @@ class _AttributesTab extends StatelessWidget {
       itemBuilder: (BuildContext context, int index) {
         final ItemPurchaseAttributeOption attribute = options.attributes[index];
         final bool isColor = _isColorAttribute(attribute);
-        final List<String> selected =
-            state.attributeSelections[attribute.key] ?? const <String>[];
-        final Set<String> normalizedSelected = <String>{
-          for (final String value in selected)
-            if (isColor)
-              _normalizeColorValue(value) ?? ''
-            else
-              value,
-        }..removeWhere((String value) => value.isEmpty);
 
-        final List<String> optionValues = attribute.allowedValues.isNotEmpty
-            ? attribute.allowedValues
-            : (attribute.colorEntries.isNotEmpty
-            ? attribute.colorEntries
-            .map((CustomFieldColorEntry entry) => entry.code)
-            .toList(growable: false)
-            : attribute.values);
-
-        final bool hasValues = optionValues.isNotEmpty;
-        final Map<String, CustomFieldColorEntry> colorEntriesByCode = {
-          for (final CustomFieldColorEntry entry in attribute.colorEntries)
-            entry.code: entry,
-        };
         final bool required = attribute.requiredForCheckout;
+        late final Widget content;
+
+        if (isColor) {
+          final List<CustomFieldColorEntry> activeEntries = (() {
+            final List<CustomFieldColorEntry> current =
+                state.colorSelections[attribute.key] ?? const <CustomFieldColorEntry>[];
+            if (current.isNotEmpty) {
+              return List<CustomFieldColorEntry>.from(current);
+            }
+            if (attribute.colorEntries.isNotEmpty) {
+              return List<CustomFieldColorEntry>.from(attribute.colorEntries);
+            }
+
+            final LinkedHashSet<String> codes = LinkedHashSet<String>();
+            for (final String value in attribute.allowedValues) {
+              final String? normalized = _normalizeColorValue(value);
+              if (normalized != null) {
+                codes.add(normalized);
+              }
+            }
+            if (codes.isEmpty) {
+              for (final String value in attribute.values) {
+                final String? normalized = _normalizeColorValue(value);
+                if (normalized != null) {
+                  codes.add(normalized);
+                }
+              }
+            }
+            return codes
+                .map((String code) => CustomFieldColorEntry(code: code))
+                .toList(growable: false);
+          })();
+
+          final Set<String> suggestedCodes = <String>{
+            for (final String value in attribute.allowedValues)
+              if (_normalizeColorValue(value) != null)
+                _normalizeColorValue(value)!,
+            for (final String value in attribute.values)
+              if (_normalizeColorValue(value) != null)
+                _normalizeColorValue(value)!,
+            for (final CustomFieldColorEntry entry in attribute.colorEntries)
+              entry.code,
+            for (final CustomFieldColorEntry entry in activeEntries)
+              entry.code,
+          }..removeWhere((String value) => value.isEmpty);
+
+          content = _ColorAttributeManager(
+            entries: activeEntries,
+            onManage: () => _openColorAttributeEditor(
+              context: context,
+              attribute: attribute,
+              currentEntries: activeEntries,
+              suggestedCodes: suggestedCodes,
+            ),
+          );
+        } else {
+          final List<String> optionValues = attribute.allowedValues.isNotEmpty
+              ? attribute.allowedValues
+              : attribute.values;
+          final bool hasValues = optionValues.isNotEmpty;
+          final List<String> selected =
+              state.attributeSelections[attribute.key] ?? const <String>[];
+
+          if (hasValues) {
+            final Set<String> normalizedSelected = <String>{
+              for (final String value in selected) value,
+            }..removeWhere((String value) => value.isEmpty);
+
+            content = Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: optionValues
+                  .map<Widget>((String value) {
+                final bool isSelected = normalizedSelected.contains(value);
+                return _buildTextAttributeChip(
+                  context: context,
+                  theme: theme,
+                  color: color,
+                  label: value,
+                  isSelected: isSelected,
+                  onSelected: () => cubit.toggleAttributeValue(attribute.key, value),
+                );
+              })
+                  .toList(growable: false),
+            );
+          } else {
+            content = TextField(
+              controller: _ensureTextController(
+                attribute.key,
+                state.textInputs[attribute.key] ?? '',
+              ),
+              decoration: _themedInputDecoration(
+                context,
+                label: 'قيمة السمة',
+              ),
+              onChanged: (String value) =>
+                  cubit.setTextAttribute(attribute.key, value),
+            );
+          }
+        }
 
         return Card(
           color: color.secondaryColor,
@@ -364,59 +445,8 @@ class _AttributesTab extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
-                if (hasValues)
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: optionValues.map<Widget?>(
-                            (String value) {
-                          if (isColor) {
-                            final String? normalized = _normalizeColorValue(value);
-                            if (normalized == null) {
-                              return null;
-                            }
-                            final bool isSelected =
-                            normalizedSelected.contains(normalized);
-                            final CustomFieldColorEntry? entry =
-                            colorEntriesByCode[normalized];
-                            return _ColorAttributeChip(
-                              code: normalized,
-                              entry: entry,
-                              isSelected: isSelected,
-                              onSelected: () => cubit.toggleAttributeValue(
-                                attribute.key,
-                                normalized,
-                              ),
-                            );
-                          }
+                content,
 
-                          final bool isSelected =
-                          normalizedSelected.contains(value);
-                          return _buildTextAttributeChip(
-                            context: context,
-                            theme: theme,
-                            color: color,
-                            label: value,
-                            isSelected: isSelected,
-                            onSelected: () =>
-                            cubit.toggleAttributeValue(attribute.key, value),
-                      );
-                            }).whereType<Widget>().toList(),
-
-                  )
-                else
-                  TextField(
-                    controller: _ensureTextController(
-                      attribute.key,
-                      state.textInputs[attribute.key] ?? '',
-                    ),
-                    decoration: _themedInputDecoration(
-                      context,
-                      label: 'قيمة السمة',
-                    ),
-                    onChanged: (String value) =>
-                        cubit.setTextAttribute(attribute.key, value),
-                  ),
               ],
             ),
           ),
@@ -436,6 +466,41 @@ class _AttributesTab extends StatelessWidget {
     }
     return controller;
   }
+}
+
+
+void _openColorAttributeEditor({
+  required BuildContext context,
+  required ItemPurchaseAttributeOption attribute,
+  required List<CustomFieldColorEntry> currentEntries,
+  required Set<String> suggestedCodes,
+}) {
+  final String title = attribute.name.isEmpty
+      ? 'إدارة ألوان السمة'
+      : 'إدارة ألوان ${attribute.name}';
+
+  final List<CustomFieldColorEntry> initial = currentEntries
+      .map((CustomFieldColorEntry entry) =>
+      CustomFieldColorEntry(code: entry.code, quantity: entry.quantity))
+      .toList(growable: false);
+
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (BuildContext sheetContext) {
+      return _ColorAttributeEditorSheet(
+        title: title,
+        entries: initial,
+        suggestedCodes: suggestedCodes,
+        onSave: (List<CustomFieldColorEntry> entries) {
+          context
+              .read<ProductManagementCubit>()
+              .setColorAttributeEntries(attribute.key, entries);
+        },
+      );
+    },
+  );
 }
 
 
@@ -467,6 +532,555 @@ Widget _buildTextAttributeChip({
     onSelected: (_) => onSelected(),
   );
 }
+
+
+
+
+
+
+
+
+
+class _ColorAttributeManager extends StatelessWidget {
+  const _ColorAttributeManager({
+    required this.entries,
+    required this.onManage,
+  });
+
+  final List<CustomFieldColorEntry> entries;
+  final VoidCallback onManage;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme palette = context.color;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        if (entries.isEmpty)
+          Text(
+            'لم يتم اختيار ألوان بعد.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: palette.textDefaultColor.withOpacity(0.6),
+            ),
+          )
+        else
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: entries
+                .map((CustomFieldColorEntry entry) =>
+                _ColorSelectionChip(entry: entry))
+                .toList(growable: false),
+          ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: onManage,
+          icon: const Icon(Icons.palette_outlined),
+          label: Text(entries.isEmpty ? 'اختيار الألوان' : 'تعديل الألوان'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: palette.territoryColor,
+            side: BorderSide(color: palette.territoryColor),
+            textStyle: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ColorSelectionChip extends StatelessWidget {
+  const _ColorSelectionChip({required this.entry});
+
+  final CustomFieldColorEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme palette = context.color;
+    final Color color = _colorFromHex(entry.code) ?? palette.borderColor;
+    final int? quantity = entry.quantity;
+
+    final String quantityLabel =
+    quantity != null && quantity > 0 ? ' × $quantity' : '';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: palette.secondaryColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: palette.borderColor.withOpacity(0.45)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Container(
+            width: 18,
+            height: 18,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: color,
+              border: Border.all(color: Colors.black.withOpacity(0.18), width: 1),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '#${entry.code}$quantityLabel',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: palette.textDefaultColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ColorAttributeEditorSheet extends StatefulWidget {
+  const _ColorAttributeEditorSheet({
+    required this.title,
+    required this.entries,
+    required this.suggestedCodes,
+    required this.onSave,
+  });
+
+  final String title;
+  final List<CustomFieldColorEntry> entries;
+  final Set<String> suggestedCodes;
+  final ValueChanged<List<CustomFieldColorEntry>> onSave;
+
+  @override
+  State<_ColorAttributeEditorSheet> createState() =>
+      _ColorAttributeEditorSheetState();
+}
+
+class _ColorAttributeEditorSheetState extends State<_ColorAttributeEditorSheet> {
+  late LinkedHashMap<String, CustomFieldColorEntry> _entries;
+  late Map<String, TextEditingController> _controllers;
+  late TextEditingController _hexController;
+
+  @override
+  void initState() {
+    super.initState();
+    _entries = LinkedHashMap<String, CustomFieldColorEntry>();
+    _controllers = <String, TextEditingController>{};
+    for (final CustomFieldColorEntry entry in widget.entries) {
+      final String code = entry.code.toUpperCase();
+      _entries[code] = CustomFieldColorEntry(code: code, quantity: entry.quantity);
+      _controllers[code] =
+          TextEditingController(text: entry.quantity?.toString() ?? '');
+    }
+    _hexController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    for (final TextEditingController controller in _controllers.values) {
+      controller.dispose();
+    }
+    _hexController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme palette = context.color;
+    final List<String> suggested = widget.suggestedCodes
+        .map((String code) => code.toUpperCase())
+        .toSet()
+        .toList(growable: false)
+      ..sort();
+
+    final Set<String> recommendedSet = suggested.toSet();
+
+    final List<Map<String, String>> paletteEntries = ColorCatalog.basePalette;
+
+    final double bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return FractionallySizedBox(
+      heightFactor: 0.92,
+      child: Container(
+        decoration: BoxDecoration(
+          color: palette.secondaryColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            children: <Widget>[
+              const SizedBox(height: 12),
+              Container(
+                width: 48,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: palette.borderColor.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        widget.title,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'الألوان المحددة',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      if (_entries.isEmpty)
+                        Text(
+                          'لم يتم اختيار أي لون بعد. اختر لونًا من اللوحات أو أضف لونًا مخصصًا.',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: palette.textDefaultColor.withOpacity(0.7),
+                          ),
+                        )
+                      else
+                        Column(
+                          children: _entries.values
+                              .map((CustomFieldColorEntry entry) =>
+                              _buildSelectedColorTile(context, entry))
+                              .toList(growable: false),
+                        ),
+                      const SizedBox(height: 24),
+                      if (suggested.isNotEmpty) ...<Widget>[
+                        Text(
+                          'الألوان المقترحة',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: suggested
+                              .map((String code) => _ColorChoiceChip(
+                            code: code,
+                            label: '#$code',
+                            selected: _entries.containsKey(code),
+                            onTap: () => _toggleColor(code),
+                          ))
+                              .toList(growable: false),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                      Text(
+                        'الألوان الشائعة',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: paletteEntries.map((Map<String, String> entry) {
+                          final String? rawHex = entry['hex'];
+                          final String? normalized = _normalizeColorValue(rawHex);
+                          if (normalized == null) {
+                            return const SizedBox.shrink();
+                          }
+                          final bool selected = _entries.containsKey(normalized);
+                          final bool isRecommended = recommendedSet.contains(normalized);
+                          final String label =
+                              entry['name'] ?? '#$normalized';
+                          return _ColorChoiceChip(
+                            code: normalized,
+                            label: label,
+                            selected: selected,
+                            onTap: () => _toggleColor(normalized),
+                            muted: isRecommended,
+                          );
+                        }).toList(growable: false),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'إضافة لون مخصص',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: TextField(
+                              controller: _hexController,
+                              textCapitalization: TextCapitalization.characters,
+                              decoration: _themedInputDecoration(
+                                context,
+                                hint: '#AABBCC',
+                                label: 'كود اللون',
+                              ),
+                              inputFormatters: <TextInputFormatter>[
+                                FilteringTextInputFormatter.allow(
+                                    RegExp(r'[0-9a-fA-F#]')),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          FilledButton(
+                            onPressed: _addCustomColor,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: palette.territoryColor,
+                              foregroundColor: palette.secondaryColor,
+                            ),
+                            child: const Text('إضافة'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + bottomInset),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('إلغاء'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: _save,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: palette.territoryColor,
+                          foregroundColor: palette.secondaryColor,
+                        ),
+                        child: const Text('حفظ الألوان'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSelectedColorTile(
+      BuildContext context, CustomFieldColorEntry entry) {
+    final ColorScheme palette = context.color;
+    final ThemeData theme = Theme.of(context);
+    final String code = entry.code.toUpperCase();
+    final TextEditingController controller = _controllers.putIfAbsent(
+      code,
+          () => TextEditingController(text: entry.quantity?.toString() ?? ''),
+    );
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: palette.primaryColor.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: palette.borderColor.withOpacity(0.4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _colorFromHex(code) ?? palette.borderColor,
+              border: Border.all(color: Colors.black.withOpacity(0.18), width: 1),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  '#$code',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: controller,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: false),
+                  inputFormatters: <TextInputFormatter>[
+                    FilteringTextInputFormatter.digitsOnly,
+                  ],
+                  decoration: _themedInputDecoration(
+                    context,
+                    label: 'الكمية المتوفرة',
+                    hint: '0',
+                  ),
+                  onChanged: (String value) => _updateQuantity(code, value),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () => _removeColor(code),
+            icon: const Icon(Icons.delete_outline),
+            tooltip: 'إزالة اللون',
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _toggleColor(String code) {
+    final String? normalized = _normalizeColorValue(code);
+    if (normalized == null) {
+      return;
+    }
+
+    setState(() {
+      if (_entries.containsKey(normalized)) {
+        _entries.remove(normalized);
+        _controllers.remove(normalized)?.dispose();
+      } else {
+        _entries[normalized] = CustomFieldColorEntry(code: normalized, quantity: 0);
+        _controllers[normalized] = TextEditingController(text: '0');
+      }
+    });
+  }
+
+  void _addCustomColor() {
+    final String? normalized = _normalizeColorValue(_hexController.text);
+    if (normalized == null) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'يرجى إدخال كود لون صالح مكوَّن من 6 خانات.',
+      );
+      return;
+    }
+
+    setState(() {
+      if (!_entries.containsKey(normalized)) {
+        _entries[normalized] = CustomFieldColorEntry(code: normalized, quantity: 0);
+        _controllers[normalized] = TextEditingController(text: '0');
+      }
+      _hexController.clear();
+    });
+  }
+
+  void _removeColor(String code) {
+    setState(() {
+      _entries.remove(code);
+      _controllers.remove(code)?.dispose();
+    });
+  }
+
+  void _updateQuantity(String code, String raw) {
+    final int? parsed = int.tryParse(raw);
+    setState(() {
+      final CustomFieldColorEntry? current = _entries[code];
+      if (current == null) {
+        return;
+      }
+      final int? normalized = parsed == null ? null : parsed;
+      _entries[code] = CustomFieldColorEntry(
+        code: code,
+        quantity: normalized,
+      );
+    });
+  }
+
+  void _save() {
+    widget.onSave(_entries.values.toList(growable: false));
+    Navigator.of(context).pop();
+  }
+}
+
+class _ColorChoiceChip extends StatelessWidget {
+  const _ColorChoiceChip({
+    required this.code,
+    required this.selected,
+    required this.onTap,
+    this.label,
+    this.muted = false,
+  });
+
+  final String code;
+  final bool selected;
+  final VoidCallback onTap;
+  final String? label;
+  final bool muted;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme palette = context.color;
+    final Color color = _colorFromHex(code) ?? palette.borderColor;
+    final String displayLabel = label ?? '#$code';
+
+    return ChoiceChip(
+      label: Text(displayLabel),
+      avatar: Container(
+        width: 18,
+        height: 18,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: color,
+          border: Border.all(color: Colors.black.withOpacity(0.18), width: 1),
+        ),
+      ),
+      selected: selected,
+      showCheckmark: false,
+      onSelected: (_) => onTap(),
+      labelStyle: theme.textTheme.bodySmall?.copyWith(
+        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+        color: selected
+            ? palette.territoryColor
+            : (muted
+            ? palette.textDefaultColor.withOpacity(0.65)
+            : palette.textDefaultColor),
+      ),
+      selectedColor: palette.territoryColor.withOpacity(0.18),
+      backgroundColor: palette.secondaryColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    );
+  }
+}
+
+
+
+
+
+
+
+
 
 class _ColorAttributeChip extends StatelessWidget {
   const _ColorAttributeChip({

@@ -302,7 +302,7 @@ class StatesScreenState extends State<StatesScreen> {
               color: context.color.secondaryColor,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
+                mainAxisSize: MainAxisSize.max,
                 children: [
                   widget.from == "addItem"
                       ? Padding(

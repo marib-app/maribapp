@@ -283,6 +283,31 @@ class _AttributesTabState extends State<_AttributesTab> {
   final Map<String, List<TextEditingController>> _optionControllers =
   <String, List<TextEditingController>>{};
 
+  static const List<String> _defaultSizeCatalog = <String>[
+    'XS',
+    'S',
+    'M',
+    'L',
+    'XL',
+    '2XL',
+    '3XL',
+    '4XL',
+    '5XL',
+    '6XL',
+    '28',
+    '30',
+    '32',
+    '34',
+    '36',
+    '38',
+    '40',
+    '42',
+    '44',
+    '46',
+    '48',
+    '50',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -330,8 +355,9 @@ void _syncControllers() {
       for (final TextEditingController controller in controllers) {
         controller.dispose();
       }
+      }
     }
-  }
+
 
   for (final ManagedPurchaseAttribute attribute in widget.state.managedAttributes) {
     _ensureNameController(attribute.key, attribute.name);
@@ -345,8 +371,7 @@ void _syncControllers() {
         controller.dispose();
       }
       controllers.removeRange(optionsLength, controllers.length);
-    }
-
+      }
     while (controllers.length < optionsLength) {
       controllers.add(TextEditingController());
     }
@@ -360,10 +385,9 @@ void _syncControllers() {
           TextPosition(offset: controller.text.length),
           );
       }
+      }
     }
   }
-}
-
 TextEditingController _ensureNameController(String key, String value) {
   final TextEditingController controller =
   _nameControllers.putIfAbsent(key, () => TextEditingController(text: value));
@@ -374,8 +398,7 @@ TextEditingController _ensureNameController(String key, String value) {
     );
   }
   return controller;
-}
-
+  }
 @override
 Widget build(BuildContext context) {
   _syncControllers();

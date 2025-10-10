@@ -432,7 +432,7 @@ class ProductManagementState extends Equatable {
       loading: loading ?? this.loading,
       error: clearError ? null : (error ?? this.error),
       options: options ?? this.options,
-      List<ManagedPurchaseAttribute>? managedAttributes,
+      managedAttributes: managedAttributes ?? this.managedAttributes,
       attributeSelections: attributeSelections ?? this.attributeSelections,
       textInputs: textInputs ?? this.textInputs,
       attributesSaving: attributesSaving ?? this.attributesSaving,

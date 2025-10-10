@@ -372,15 +372,13 @@ class ManualPaymentRequestController extends Controller
         $rows = $orderedQuery->get();
 
 
-        $data = $        $data = $rows->map(function (object $row) {
+        $data = $rows->map(function (object $row) {
             $transactionId = $row->payment_transaction_id
                 ? (string) $row->payment_transaction_id
                 : ($row->wallet_transaction_id ? 'WT-' . $row->wallet_transaction_id : $row->reference);
                 
-                requests->map(function (ManualPaymentRequest $manualPaymentRequest) {
-            $gatewayKey = $this->resolveManualPaymentGatewayKey($manualPaymentRequest);
-            $status = $manualPaymentRequest->status ?? ManualPaymentRequest::STATUS_PENDING;
             $amount = (float) ($row->amount ?? 0);
+
 
 
             return [
@@ -969,7 +967,7 @@ class ManualPaymentRequestController extends Controller
 
 
 
-        public function eastYemenRequestPayment(Request $request, ManualPaymentRequest $manualPaymentRequest)
+    public function eastYemenRequestPayment(Request $request, ManualPaymentRequest $manualPaymentRequest)
     {
         ResponseService::noPermissionThenSendJson('manual-payments-review');
 
@@ -981,7 +979,7 @@ class ManualPaymentRequestController extends Controller
         ]);
 
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
 
         $data = $validator->validated();
@@ -1005,7 +1003,7 @@ class ManualPaymentRequestController extends Controller
                 $transaction->update(['order_id' => $response['voucher_number']]);
             }
 
-            ResponseService::successResponse('East Yemen Bank payment request sent successfully.', [
+            return ResponseService::successResponse('East Yemen Bank payment request sent successfully.', [
                 'response' => $response,
             ]);
         } catch (Throwable $throwable) {
@@ -1013,7 +1011,7 @@ class ManualPaymentRequestController extends Controller
                 'request_id' => $manualPaymentRequest->id,
             ]);
 
-            ResponseService::errorResponse('Unable to initiate payment with East Yemen Bank.');
+            return ResponseService::errorResponse('Unable to initiate payment with East Yemen Bank.');
         }
     }
 
@@ -1029,7 +1027,7 @@ class ManualPaymentRequestController extends Controller
         ]);
 
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
 
         $data = $validator->validated();
@@ -1054,7 +1052,7 @@ class ManualPaymentRequestController extends Controller
                 $transaction->save();
             }
 
-            ResponseService::successResponse('East Yemen Bank payment confirmation submitted successfully.', [
+            return ResponseService::successResponse('East Yemen Bank payment confirmation submitted successfully.', [
                 'response' => $response,
             ]);
         } catch (Throwable $throwable) {
@@ -1062,7 +1060,7 @@ class ManualPaymentRequestController extends Controller
                 'request_id' => $manualPaymentRequest->id,
             ]);
 
-            ResponseService::errorResponse('Unable to confirm payment with East Yemen Bank.');
+            return ResponseService::errorResponse('Unable to confirm payment with East Yemen Bank.');
         }
     }
 
@@ -1077,7 +1075,7 @@ class ManualPaymentRequestController extends Controller
         ]);
 
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
 
         $data = $validator->validated();
@@ -1095,7 +1093,7 @@ class ManualPaymentRequestController extends Controller
                 'voucher_number' => $data['voucher_number'],
             ], $payload), $response);
 
-            ResponseService::successResponse('East Yemen Bank voucher status fetched successfully.', [
+            return ResponseService::successResponse('East Yemen Bank voucher status fetched successfully.', [
                 'response' => $response,
             ]);
         } catch (Throwable $throwable) {
@@ -1103,7 +1101,7 @@ class ManualPaymentRequestController extends Controller
                 'request_id' => $manualPaymentRequest->id,
             ]);
 
-            ResponseService::errorResponse('Unable to check voucher with East Yemen Bank.');
+            return ResponseService::errorResponse('Unable to check voucher with East Yemen Bank.');
         }
     }
 
@@ -1126,8 +1124,8 @@ class ManualPaymentRequestController extends Controller
 
             ManualPaymentRequest::STATUS_APPROVED => '<span class="badge bg-success">' . trans('Approved') . '</span>',
             ManualPaymentRequest::STATUS_REJECTED => '<span class="badge bg-danger">' . trans('Rejected') . '</span>',
-            default => '<span class="badge bg-warning text-dark">' . trans('Pending') . '</span>',
             ManualPaymentRequest::STATUS_UNDER_REVIEW => '<span class="badge bg-info text-dark">' . trans('Under Review') . '</span>',
+            default => '<span class="badge bg-warning text-dark">' . trans('Pending') . '</span>',
 
         };
     }
@@ -1594,7 +1592,7 @@ class ManualPaymentRequestController extends Controller
 
 
 
-        private function ensureEastYemenTransaction(ManualPaymentRequest $manualPaymentRequest): PaymentTransaction
+    private function ensureEastYemenTransaction(ManualPaymentRequest $manualPaymentRequest): PaymentTransaction
     {
         $transaction = $this->resolveTransaction($manualPaymentRequest);
 
@@ -1733,8 +1731,8 @@ class ManualPaymentRequestController extends Controller
     }
 
 
+    private function gatewayLabel(string $gateway): string
 
-        private function gatewayLabel(string $gateway): string
     {
         return match ($gateway) {
             'manual_bank' => trans('Bank Transfer'),

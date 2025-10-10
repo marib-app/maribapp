@@ -74,8 +74,9 @@ class ManualPaymentRequestController extends Controller
         ];
 
         $paymentGateways = [
-            'bank' => trans('Bank Transfer'),
-            'manual' => trans('Manual'),
+            'east_yemen_bank' => trans('East Yemen Bank Gateway'),
+            'manual_banks' => trans('Manual Banks'),
+
             'wallet' => trans('Wallet'),
             'cash' => trans('Cash'),
 
@@ -85,95 +86,13 @@ class ManualPaymentRequestController extends Controller
         $departments = $this->departmentReportService->availableDepartments();
         $paymentRequestBase = DB::query()->fromSub(PaymentRequestTableQuery::make(), 'requests');
 
+        $summaryData = $this->summarizePaymentRequests($paymentRequestBase);
 
 
-        $summaryRow = (clone $paymentRequestBase)
-            ->selectRaw('COUNT(*) as total_requests, COALESCE(SUM(amount), 0) as total_amount')
-            ->first();
-
-        $statusTotals = (clone $paymentRequestBase)
-            ->select('status', DB::raw('COUNT(*) as total'))
-            ->groupBy('status')
-            ->pluck('total', 'status');
-
-        $gatewayTotals = (clone $paymentRequestBase)
-            ->select('channel', DB::raw('COUNT(*) as total'))
-            ->groupBy('channel')
-            ->pluck('total', 'channel');
-
-        $categoryTotals = (clone $paymentRequestBase)
-            ->select('category', DB::raw('COUNT(*) as total'))
-            ->groupBy('category')
-            ->pluck('total', 'category');
-
-        $summary = [
-            'total' => (int) ($summaryRow->total_requests ?? 0),
-            'pending' => (int) ($statusTotals['pending'] ?? 0),
-            'succeed' => (int) ($statusTotals['succeed'] ?? 0),
-            'failed' => (int) ($statusTotals['failed'] ?? 0),
-            'amount' => (float) ($summaryRow->total_amount ?? 0),
-        ];
-
-        $gatewaySummary = [
-            'bank' => (int) ($gatewayTotals['bank'] ?? 0),
-            'manual' => (int) ($gatewayTotals['manual'] ?? 0),
-            'wallet' => (int) ($gatewayTotals['wallet'] ?? 0),
-            'cash' => (int) ($gatewayTotals['cash'] ?? 0),
-        ];
-
-        $categorySummary = [
-            'orders' => (int) ($categoryTotals['orders'] ?? 0),
-            'packages' => (int) ($categoryTotals['packages'] ?? 0),
-            'top_ups' => (int) ($categoryTotals['top_ups'] ?? 0),
-            
-
-        ];
-
-
-        $departmentSummary = [];
-
-        if ($departments !== [] && $this->manualPaymentRequestsSupportsColumn('department')) {
-            $departmentSummary = collect($departments)
-                ->mapWithKeys(static function (string $label, string $key) {
-                    return [$key => [
-                        'key' => $key,
-                        'label' => $label,
-                        'total' => 0,
-                        ManualPaymentRequest::STATUS_PENDING => 0,
-                        ManualPaymentRequest::STATUS_UNDER_REVIEW => 0,
-                        ManualPaymentRequest::STATUS_APPROVED => 0,
-                        ManualPaymentRequest::STATUS_REJECTED => 0,
-                    ]];
-                })
-                ->all();
-
-            if ($departmentSummary !== []) {
-                $departmentStats = ManualPaymentRequest::query()
-                    ->select('department', 'status')
-                    ->selectRaw('COUNT(*) as aggregate_total')
-                    ->whereIn('department', array_keys($departmentSummary))
-                    ->groupBy('department', 'status')
-                    ->get();
-
-                foreach ($departmentStats as $stat) {
-                    $departmentKey = $stat->department;
-                    $status = $stat->status;
-                    $total = (int) ($stat->aggregate_total ?? 0);
-
-                    if (!isset($departmentSummary[$departmentKey])) {
-                        continue;
-                    }
-
-                    $departmentSummary[$departmentKey]['total'] += $total;
-
-                    if (array_key_exists($status, $departmentSummary[$departmentKey])) {
-                        $departmentSummary[$departmentKey][$status] += $total;
-                    }
-                }
-
-                $departmentSummary = array_values($departmentSummary);
-            }
-        }
+        $summary = $summaryData['summary'];
+        $gatewaySummary = $summaryData['gateway_summary'];
+        $categorySummary = $summaryData['category_summary'];
+        $departmentSummary = $summaryData['department_summary'];
 
 
         return view(
@@ -274,10 +193,14 @@ class ManualPaymentRequestController extends Controller
             $gateway = $requestRow->paymentTransaction?->payment_gateway;
 
 
-            $row['payment_gateway_key'] = $gateway ?? 'manual_bank';
-            $row['payment_gateway'] = $gateway
-                ? $this->gatewayLabel($gateway)
-                : $this->gatewayLabel('manual_bank');
+            $canonicalGateway = ManualPaymentRequest::canonicalGateway($gateway);
+            if ($canonicalGateway === 'manual_bank') {
+                $canonicalGateway = 'manual_banks';
+            }
+
+            $row['payment_gateway_key'] = $canonicalGateway ?? 'manual_banks';
+            $row['payment_gateway'] = $this->gatewayLabel($canonicalGateway ?? 'manual_banks');
+
             $row['formatted_amount'] = number_format($requestRow->amount, 2)
                 . ($requestRow->currency ? ' ' . $requestRow->currency : '');
             $row['submitted_at'] = $requestRow->created_at?->format('Y-m-d H:i');
@@ -359,6 +282,10 @@ class ManualPaymentRequestController extends Controller
             ->when($from, static fn (QueryBuilder $query, Carbon $date) => $query->where('created_at', '>=', $date))
             ->when($to, static fn (QueryBuilder $query, Carbon $date) => $query->where('created_at', '<=', $date));
 
+        $summaryData = $this->summarizePaymentRequests(clone $filteredQuery);
+
+
+
         $recordsFiltered = (clone $filteredQuery)->count();
 
         [$orderColumn, $orderDirection] = $this->resolvePaymentRequestOrder($request);
@@ -380,6 +307,10 @@ class ManualPaymentRequestController extends Controller
             $amount = (float) ($row->amount ?? 0);
 
 
+            $channel = ManualPaymentRequest::canonicalGateway($row->channel ?? null);
+            if ($channel === 'manual_bank') {
+                $channel = 'manual_banks';
+            }
 
             return [
                 'transaction_id' => $transactionId,
@@ -387,9 +318,11 @@ class ManualPaymentRequestController extends Controller
                 'user_mobile' => $row->user_mobile ?? '—',
                 'amount_fmt' => number_format($amount, 2, '.', ''),
                 'currency' => $row->currency ?? '',
-                'payment_gateway' => $row->channel,
-                'payment_gateway_label' => $this->paymentRequestChannelLabel($row->channel),
+                'payment_gateway' => $channel ?? $row->channel,
+                'payment_gateway_label' => $this->paymentRequestChannelLabel($channel ?? $row->channel),
                 'category' => $row->category,
+                'department' => $row->department ?? null,
+                'department_label' => $this->paymentRequestDepartmentLabel($row->department ?? null),
                 'payable_type' => $row->payable_type ?? null,
                 'payable_id' => $row->payable_id ?? null,
                 'payable_label' => $this->paymentRequestPayableLabel($row),
@@ -407,6 +340,11 @@ class ManualPaymentRequestController extends Controller
             'recordsTotal' => (int) $recordsTotal,
             'recordsFiltered' => (int) $recordsFiltered,
             'data' => $data,
+            'summary' => $summaryData['summary'],
+            'gateway_summary' => $summaryData['gateway_summary'],
+            'category_summary' => $summaryData['category_summary'],
+            'department_summary' => $summaryData['department_summary'],
+
         ]);
     }
 
@@ -587,6 +525,113 @@ class ManualPaymentRequestController extends Controller
             'error_message' => trans('Unable to refresh the status timeline right now.'),
         ];
     }
+
+
+    private function summarizePaymentRequests(QueryBuilder $query): array
+    {
+        $summaryRow = (clone $query)
+            ->selectRaw('COUNT(*) as total_requests, COALESCE(SUM(amount), 0) as total_amount')
+            ->first();
+
+        $statusTotals = (clone $query)
+            ->select('status', DB::raw('COUNT(*) as aggregate_total'))
+            ->groupBy('status')
+            ->pluck('aggregate_total', 'status');
+
+        $gatewayTotals = (clone $query)
+            ->select('channel', DB::raw('COUNT(*) as aggregate_total'))
+            ->groupBy('channel')
+            ->pluck('aggregate_total', 'channel');
+
+        $categoryTotals = (clone $query)
+            ->select('category', DB::raw('COUNT(*) as aggregate_total'))
+            ->groupBy('category')
+            ->pluck('aggregate_total', 'category');
+
+        $departments = $this->departmentReportService->availableDepartments();
+
+        $summary = [
+            'total' => (int) ($summaryRow->total_requests ?? 0),
+            'pending' => (int) ($statusTotals['pending'] ?? 0),
+            'succeed' => (int) ($statusTotals['succeed'] ?? 0),
+            'failed' => (int) ($statusTotals['failed'] ?? 0),
+            'amount' => (float) ($summaryRow->total_amount ?? 0),
+        ];
+
+        $gatewaySummary = [
+            'east_yemen_bank' => (int) ($gatewayTotals['east_yemen_bank'] ?? 0),
+            'manual_banks' => (int) ($gatewayTotals['manual_banks'] ?? 0),
+            'wallet' => (int) ($gatewayTotals['wallet'] ?? 0),
+            'cash' => (int) ($gatewayTotals['cash'] ?? 0),
+        ];
+
+        $categorySummary = [
+            'orders' => (int) ($categoryTotals['orders'] ?? 0),
+            'packages' => (int) ($categoryTotals['packages'] ?? 0),
+            'top_ups' => (int) ($categoryTotals['top_ups'] ?? 0),
+        ];
+
+        $departmentSummary = [];
+
+        if (
+            $departments !== []
+            && $this->manualPaymentRequestsSupportsColumn('department')
+        ) {
+            $departmentSummary = collect($departments)
+                ->mapWithKeys(static function (string $label, string $key) {
+                    return [$key => [
+                        'key' => $key,
+                        'label' => $label,
+                        'total' => 0,
+                        'pending' => 0,
+                        'succeed' => 0,
+                        'failed' => 0,
+                    ]];
+                })
+                ->all();
+
+            if ($departmentSummary !== []) {
+                $departmentStats = (clone $query)
+                    ->whereIn('department', array_keys($departmentSummary))
+                    ->select('department', 'status')
+                    ->selectRaw('COUNT(*) as aggregate_total')
+                    ->groupBy('department', 'status')
+                    ->get();
+
+                foreach ($departmentStats as $stat) {
+                    $departmentKey = $stat->department;
+
+                    if (!isset($departmentSummary[$departmentKey])) {
+                        continue;
+                    }
+
+                    $total = (int) ($stat->aggregate_total ?? 0);
+                    $status = is_string($stat->status) ? strtolower($stat->status) : '';
+
+                    $departmentSummary[$departmentKey]['total'] += $total;
+
+                    if ($status === 'succeed') {
+                        $departmentSummary[$departmentKey]['succeed'] += $total;
+                    } elseif ($status === 'failed') {
+                        $departmentSummary[$departmentKey]['failed'] += $total;
+                    } else {
+                        $departmentSummary[$departmentKey]['pending'] += $total;
+                    }
+                }
+
+                $departmentSummary = array_values($departmentSummary);
+            }
+        }
+
+        return [
+            'summary' => $summary,
+            'gateway_summary' => $gatewaySummary,
+            'category_summary' => $categorySummary,
+            'department_summary' => $departmentSummary,
+        ];
+    }
+
+
 
     private function parseDateOrNull($value): ?Carbon
     {
@@ -1159,24 +1204,19 @@ class ManualPaymentRequestController extends Controller
         }
 
 
-        if (ManualPaymentRequest::isOrderPayableType($normalized)) {
-            return Order::class;
+        $canonical = ManualPaymentRequest::normalizeStatus($normalized);
+
+        if ($canonical !== null) {
+            return $canonical;
         }
 
 
-        return match ($normalized) {
-            'approved', 'accepted', 'completed' => ManualPaymentRequest::STATUS_APPROVED,
-            'rejected', 'declined' => ManualPaymentRequest::STATUS_REJECTED,
-            'in_review', 'in-review', 'review', 'under_review', 'under-review', 'reviewing' => ManualPaymentRequest::STATUS_UNDER_REVIEW,
-            'pending' => ManualPaymentRequest::STATUS_PENDING,
-            
-            default => in_array($normalized, [
-                ManualPaymentRequest::STATUS_PENDING,
-                ManualPaymentRequest::STATUS_APPROVED,
-                ManualPaymentRequest::STATUS_REJECTED,
-                ManualPaymentRequest::STATUS_UNDER_REVIEW,
-            ], true) ? $normalized : null,
-        };
+        return in_array($normalized, [
+            ManualPaymentRequest::STATUS_PENDING,
+            ManualPaymentRequest::STATUS_APPROVED,
+            ManualPaymentRequest::STATUS_REJECTED,
+            ManualPaymentRequest::STATUS_UNDER_REVIEW,
+        ], true) ? $normalized : null;
     }
 
     private function normalizeManualPaymentGateway($gateway): ?string
@@ -1191,11 +1231,13 @@ class ManualPaymentRequestController extends Controller
             return null;
         }
 
-        return match ($normalized) {
-            'manual', 'manual-bank', 'manual_bank', 'manualbank' => 'manual_bank',
-            'east', 'east_yemen_bank', 'east-yemen-bank', 'eastyemenbank' => 'east_yemen_bank',
-            default => $normalized,
-        };
+        $canonical = ManualPaymentRequest::canonicalGateway($normalized);
+
+        if ($canonical === null) {
+            return null;
+        }
+
+        return $canonical === 'manual_bank' ? 'manual_banks' : $canonical;
     }
 
     private function normalizeManualPaymentPayableType($type): ?string
@@ -1333,12 +1375,18 @@ class ManualPaymentRequestController extends Controller
 
 
 
-        return match ($normalized) {
-            'manual_bank', 'bank', 'bank_transfer', 'banktransfer', 'bank_alsharq', 'east_yemen_bank', 'east' => 'bank',
-            'manual', 'manual_payment', 'offline', 'internal' => 'manual',
-            'wallet', 'wallet_balance', 'wallet_gateway', 'wallet_top_up', 'wallet-top-up', 'wallettopup' => 'wallet',
-            'cash', 'cod', 'cash_on_delivery', 'cashcollection', 'cash_collect' => 'cash',
-            default => in_array($normalized, ['bank', 'manual', 'wallet', 'cash'], true) ? $normalized : null,
+        $canonical = ManualPaymentRequest::canonicalGateway($normalized);
+
+        if ($canonical === null) {
+            return null;
+        }
+
+        return match ($canonical) {
+            'manual_bank' => 'manual_banks',
+            'east_yemen_bank', 'manual_banks', 'wallet', 'cash' => $canonical,
+            default => in_array($canonical, ['manual_banks', 'east_yemen_bank', 'wallet', 'cash'], true)
+                ? $canonical
+                : null,
         };
     }
 
@@ -1375,8 +1423,8 @@ class ManualPaymentRequestController extends Controller
     private function paymentRequestChannelLabel(?string $channel): string
     {
         return match ($this->normalizePaymentRequestChannel($channel) ?? '') {
-            'bank' => trans('Bank Transfer'),
-            'manual' => trans('Manual'),
+            'east_yemen_bank' => trans('East Yemen Bank Gateway'),
+            'manual_banks' => trans('Manual Banks'),
             'wallet' => trans('Wallet'),
             'cash' => trans('Cash'),
             default => '—',
@@ -1392,6 +1440,22 @@ class ManualPaymentRequestController extends Controller
             default => '—',
         };
     }
+
+
+    private function paymentRequestDepartmentLabel(?string $department): string
+    {
+        if (! is_string($department) || $department === '') {
+            return trans('Unknown Department');
+        }
+
+        return match ($department) {
+            DepartmentReportService::DEPARTMENT_SHEIN => trans('departments.shein'),
+            DepartmentReportService::DEPARTMENT_COMPUTER => trans('departments.computer'),
+            DepartmentReportService::DEPARTMENT_STORE => trans('departments.store'),
+            default => $department,
+        };
+    }
+
 
     private function paymentRequestPayableLabel(object $row): string
     {
@@ -1485,8 +1549,9 @@ class ManualPaymentRequestController extends Controller
             3 => 'currency',
             4 => 'channel',
             5 => 'category',
-            6 => 'status',
-            7 => 'created_at',
+            6 => 'department',
+            7 => 'status',
+            8 => 'created_at',
         ];
 
         return [$columns[$columnIndex] ?? 'created_at', $direction];
@@ -1495,15 +1560,18 @@ class ManualPaymentRequestController extends Controller
     private function resolveManualPaymentGatewayKey(ManualPaymentRequest $manualPaymentRequest): string
     {
         $gateway = $manualPaymentRequest->paymentTransaction?->payment_gateway;
-        $normalized = $this->normalizeManualPaymentGateway($gateway);
+        $normalized = ManualPaymentRequest::canonicalGateway($gateway);
 
         if ($normalized !== null) {
-            return $normalized;
+            return $normalized === 'manual_bank' ? 'manual_banks' : $normalized;
+
         }
 
-        $metaGateway = $this->normalizeManualPaymentGateway(data_get($manualPaymentRequest->meta, 'gateway'));
+        $metaGateway = ManualPaymentRequest::canonicalGateway(data_get($manualPaymentRequest->meta, 'gateway'));
+
         if ($metaGateway !== null) {
-            return $metaGateway;
+            return $metaGateway === 'manual_bank' ? 'manual_banks' : $metaGateway;
+
         }
 
         if (
@@ -1513,7 +1581,7 @@ class ManualPaymentRequestController extends Controller
             return 'wallet';
         }
 
-        return 'manual_bank';
+        return 'manual_banks';
 
         
     }
@@ -1734,10 +1802,20 @@ class ManualPaymentRequestController extends Controller
     private function gatewayLabel(string $gateway): string
 
     {
-        return match ($gateway) {
-            'manual_bank' => trans('Bank Transfer'),
-            'east_yemen_bank' => trans('East Yemen Bank'),
+        $canonical = ManualPaymentRequest::canonicalGateway($gateway);
+
+        if ($canonical === 'manual_bank') {
+            $canonical = 'manual_banks';
+        }
+
+        return match ($canonical) {
+            'east_yemen_bank' => trans('East Yemen Bank Gateway'),
+            'manual_banks' => trans('Manual Banks'),
+
             'wallet' => trans('Wallet'),
+            'cash' => trans('Cash'),
+
+
             default => ucwords(str_replace('_', ' ', $gateway)),
         };
     }

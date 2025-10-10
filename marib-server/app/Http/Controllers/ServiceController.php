@@ -19,6 +19,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Http\UploadedFile;
+use App\Services\DepartmentReportService;
+use App\Models\ServiceRequest;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -43,8 +45,10 @@ class ServiceController extends Controller
 {
 
 
-        public function __construct(private ServiceAuthorizationService $serviceAuthorizationService)
-    {
+    public function __construct(
+        private ServiceAuthorizationService $serviceAuthorizationService,
+        private DepartmentReportService $departmentReportService
+    ) {
     }
 
     /* =========================================================================
@@ -143,12 +147,23 @@ class ServiceController extends Controller
         }
 
 
+        $supportsRequests = $this->supportsServiceRequests();
+        $categoryDepartmentKey = $this->determineCategoryDepartment($category);
+        $categoryDepartmentLabel = $this->departmentLabel($categoryDepartmentKey);
+        $categoryRequestsStats = $supportsRequests
+            ? $this->buildCategoryRequestsStats($category)
+            : null;
+
+
+
         return view('services.category', [
             'category' => $category,
             'initialServices' => $services,
-            'supportsServiceRequests' => $this->supportsServiceRequests(),
+            'supportsServiceRequests' => $supportsRequests,
             'canManageCategoryRequests' => $canManageCategoryRequests,
-
+            'categoryDepartmentKey' => $categoryDepartmentKey,
+            'categoryDepartmentLabel' => $categoryDepartmentLabel,
+            'categoryRequestsStats' => $categoryRequestsStats,
 
         ]);
     
@@ -526,6 +541,60 @@ class ServiceController extends Controller
         return trim($normalizedWhitespace);
     }
 
+
+    private function determineCategoryDepartment(Category $category): ?string
+    {
+        foreach (array_keys($this->departmentReportService->availableDepartments()) as $department) {
+            $categoryIds = $this->departmentReportService->resolveCategoryIds($department);
+
+            if (in_array($category->id, $categoryIds, true)) {
+                return $department;
+            }
+        }
+
+        return null;
+    }
+
+    private function departmentLabel(?string $department): string
+    {
+        return match ($department) {
+            DepartmentReportService::DEPARTMENT_SHEIN => trans('departments.shein'),
+            DepartmentReportService::DEPARTMENT_COMPUTER => trans('departments.computer'),
+            DepartmentReportService::DEPARTMENT_STORE => trans('departments.store'),
+            default => trans('Unknown Department'),
+        };
+    }
+
+    private function buildCategoryRequestsStats(Category $category): array
+    {
+        $query = ServiceRequest::query()
+            ->whereHas('service', static function (Builder $builder) use ($category) {
+                $builder->where('category_id', $category->id);
+            });
+
+        if ($user = Auth::user()) {
+            $query = $this->serviceAuthorizationService->restrictServiceRequestQuery($query, $user);
+        }
+
+        $total = (clone $query)->count();
+
+        $statusCounts = (clone $query)
+            ->select('status', DB::raw('COUNT(*) as aggregate_total'))
+            ->groupBy('status')
+            ->pluck('aggregate_total', 'status');
+
+        $soldOutTotal = (int) (($statusCounts['sold out'] ?? 0)
+            + ($statusCounts['sold_out'] ?? 0)
+            + ($statusCounts['sold-out'] ?? 0));
+
+        return [
+            'total' => (int) $total,
+            'review' => (int) ($statusCounts['review'] ?? 0),
+            'approved' => (int) ($statusCounts['approved'] ?? 0),
+            'rejected' => (int) ($statusCounts['rejected'] ?? 0),
+            'sold_out' => $soldOutTotal,
+        ];
+    }
 
 
 

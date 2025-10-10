@@ -150,14 +150,24 @@ class PaymentRequestTableQuery
     {
         $gateway = self::gatewayExpression($alias);
 
-        $bankValues = self::sqlList([
+        $eastValues = self::sqlList([
+            'east_yemen_bank',
+            'east-yemen-bank',
+            'east',
+            'eastyemenbank',
+        ]);
+
+        $manualValues = self::sqlList([
+            
             'manual_bank',
             'bank',
             'bank_transfer',
             'banktransfer',
             'bank_alsharq',
-            'east_yemen_bank',
-            'east',
+            'manual',
+            'manual_payment',
+            'offline',
+            'internal',
         ]);
 
         $walletValues = self::sqlList([
@@ -175,20 +185,14 @@ class PaymentRequestTableQuery
             'cash_collect',
         ]);
 
-        $manualValues = self::sqlList([
-            'manual',
-            'manual_payment',
-            'offline',
-            'internal',
-        ]);
 
         return "CASE
-            WHEN {$gateway} IN {$bankValues} THEN 'bank'
+            WHEN {$gateway} IN {$eastValues} THEN 'east_yemen_bank'
+            WHEN {$gateway} IN {$manualValues} THEN 'manual_banks'
             WHEN {$gateway} IN {$walletValues} THEN 'wallet'
             WHEN {$gateway} IN {$cashValues} THEN 'cash'
-            WHEN {$gateway} IN {$manualValues} THEN 'manual'
             WHEN LOWER({$alias}.payable_type) LIKE '%wallet%' THEN 'wallet'
-            ELSE 'manual'
+            ELSE 'manual_banks'
         END";
     }
 

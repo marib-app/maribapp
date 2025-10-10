@@ -55,19 +55,25 @@
                                             <div class="d-flex justify-content-between align-items-start mb-3">
                                                 <div>
                                                     <h6 class="mb-1">{{ $department['label'] }}</h6>
-                                                    <span class="text-muted small">{{ __('Total Requests') }}: {{ number_format($department['total'] ?? 0) }}</span>
+                                                    <span class="text-muted small">{{ __('Total Requests') }}:
+                                                        <span data-summary-department-key="{{ $department['key'] }}" data-summary-department-field="total">{{ number_format($department['total'] ?? 0) }}</span>
+                                                    </span>
+                                                
                                                 </div>
                                                 <button type="button" class="btn btn-outline-primary btn-sm" data-filter-department="{{ $department['key'] }}">
                                                     <i class="fa fa-filter me-1"></i>{{ __('Filter') }}
                                                 </button>
                                             </div>
                                             <div class="d-flex flex-wrap gap-2">
-                                                <span class="badge bg-warning text-dark">{{ __('Pending') }}: {{ number_format($department[\App\Models\ManualPaymentRequest::STATUS_PENDING] ?? 0) }}</span>
-                                                <span class="badge bg-info text-dark">{{ __('Under Review') }}: {{ number_format($department[\App\Models\ManualPaymentRequest::STATUS_UNDER_REVIEW] ?? 0) }}</span>
-
-
-                                                <span class="badge bg-success">{{ __('Approved') }}: {{ number_format($department[\App\Models\ManualPaymentRequest::STATUS_APPROVED] ?? 0) }}</span>
-                                                <span class="badge bg-danger">{{ __('Rejected') }}: {{ number_format($department[\App\Models\ManualPaymentRequest::STATUS_REJECTED] ?? 0) }}</span>
+                                                <span class="badge bg-warning text-dark">{{ __('Pending') }}:
+                                                    <span data-summary-department-key="{{ $department['key'] }}" data-summary-department-field="pending">{{ number_format($department['pending'] ?? 0) }}</span>
+                                                </span>
+                                                <span class="badge bg-success">{{ __('Success') }}:
+                                                    <span data-summary-department-key="{{ $department['key'] }}" data-summary-department-field="succeed">{{ number_format($department['succeed'] ?? 0) }}</span>
+                                                </span>
+                                                <span class="badge bg-danger">{{ __('Failed') }}:
+                                                    <span data-summary-department-key="{{ $department['key'] }}" data-summary-department-field="failed">{{ number_format($department['failed'] ?? 0) }}</span>
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -91,7 +97,7 @@
                                     <small class="text-muted fw-semibold">{{ __('Total Requests') }}</small>
                                     <span class="badge bg-secondary-subtle text-secondary">{{ __('Requests') }}</span>
                                 </div>
-                                <h3 class="fw-bold mb-0">{{ number_format($summary['total'] ?? 0) }}</h3>
+                                <h3 class="fw-bold mb-0" data-summary-field="total">{{ number_format($summary['total'] ?? 0) }}</h3>
                             </div>
                         </div>
                     </div>
@@ -102,7 +108,7 @@
                                     <small class="text-muted fw-semibold">{{ __('Pending Requests') }}</small>
                                     <span class="badge bg-warning text-dark">{{ __('Pending') }}</span>
                                 </div>
-                                <h3 class="fw-bold mb-0">{{ number_format($summary['pending'] ?? 0) }}</h3>
+                                <h3 class="fw-bold mb-0" data-summary-field="pending">{{ number_format($summary['pending'] ?? 0) }}</h3>
                             </div>
                         </div>
                     </div>
@@ -114,7 +120,7 @@
                                     <small class="text-muted fw-semibold">{{ __('Successful Requests') }}</small>
                                     <span class="badge bg-success">{{ __('Success') }}</span>
                                 </div>
-                                <h3 class="fw-bold mb-0">{{ number_format($summary['succeed'] ?? 0) }}</h3>
+                                <h3 class="fw-bold mb-0" data-summary-field="succeed">{{ number_format($summary['succeed'] ?? 0) }}</h3>
 
                             </div>
                         </div>
@@ -127,7 +133,7 @@
                                     <small class="text-muted fw-semibold">{{ __('Failed Requests') }}</small>
                                     <span class="badge bg-danger">{{ __('Failed') }}</span>
                                 </div>
-                                <h3 class="fw-bold mb-0">{{ number_format($summary['failed'] ?? 0) }}</h3>
+                                <h3 class="fw-bold mb-0" data-summary-field="failed">{{ number_format($summary['failed'] ?? 0) }}</h3>
 
                             </div>
                         </div>
@@ -139,14 +145,14 @@
                                     <small class="text-muted fw-semibold">{{ __('Total Amount') }}</small>
                                     <span class="badge bg-dark text-white">{{ __('Value') }}</span>
                                 </div>
-                                <h3 class="fw-bold mb-0">{{ number_format($summary['amount'] ?? 0, 2) }}</h3>
+                                <h3 class="fw-bold mb-0" data-summary-field="amount">{{ number_format($summary['amount'] ?? 0, 2) }}</h3>
                             </div>
                         </div>
                     </div>
 
 
                     <div class="col-12">
-                        <p class="text-muted small mb-0">{{ __('Totals shown reflect the entire system (unfiltered).') }}</p>
+                        <p class="text-muted small mb-0" data-summary-note>{{ __('Totals shown reflect the entire system (unfiltered).') }}</p>
                     </div>
 
                 </div>
@@ -158,10 +164,10 @@
                         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
                             <h5 class="card-title mb-0">{{ __('Gateway Breakdown') }}</h5>
                             <div class="d-flex flex-wrap gap-2">
-                                <span class="badge bg-primary">{{ __('Bank Transfer') }}: {{ number_format($gatewaySummary['bank'] ?? 0) }}</span>
-                                <span class="badge bg-dark text-white">{{ __('Manual') }}: {{ number_format($gatewaySummary['manual'] ?? 0) }}</span>
-                                <span class="badge bg-warning text-dark">{{ __('Wallet') }}: {{ number_format($gatewaySummary['wallet'] ?? 0) }}</span>
-                                <span class="badge bg-success">{{ __('Cash') }}: {{ number_format($gatewaySummary['cash'] ?? 0) }}</span>
+                                <span class="badge bg-primary">{{ __('East Yemen Bank Gateway') }}: <span data-summary-gateway="east_yemen_bank">{{ number_format($gatewaySummary['east_yemen_bank'] ?? 0) }}</span></span>
+                                <span class="badge bg-dark text-white">{{ __('Manual Banks') }}: <span data-summary-gateway="manual_banks">{{ number_format($gatewaySummary['manual_banks'] ?? 0) }}</span></span>
+                                <span class="badge bg-warning text-dark">{{ __('Wallet') }}: <span data-summary-gateway="wallet">{{ number_format($gatewaySummary['wallet'] ?? 0) }}</span></span>
+                                <span class="badge bg-success">{{ __('Cash') }}: <span data-summary-gateway="cash">{{ number_format($gatewaySummary['cash'] ?? 0) }}</span></span>
 
 
                             </div>
@@ -171,11 +177,12 @@
 
                                 <div class="border border-primary border-2 rounded-3 p-3 h-100">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span class="fw-semibold text-primary">{{ __('Bank Transfer') }}</span>
+                                        <span class="fw-semibold text-primary">{{ __('East Yemen Bank Gateway') }}</span>
                                         <span class="badge bg-primary"><i class="fa fa-university"></i></span>
                                     </div>
                                     <div class="d-flex align-items-baseline gap-2">
-                                        <h4 class="fw-bold mb-0">{{ number_format($gatewaySummary['bank'] ?? 0) }}</h4>
+                                        <h4 class="fw-bold mb-0" data-summary-gateway="east_yemen_bank">{{ number_format($gatewaySummary['east_yemen_bank'] ?? 0) }}</h4>
+
                                         <span class="text-muted small">{{ __('Requests') }}</span>
                                     </div>
                                 </div>
@@ -183,11 +190,11 @@
                             <div class="col-md-3 col-sm-6">
                                 <div class="border border-dark border-2 rounded-3 p-3 h-100">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span class="fw-semibold text-dark">{{ __('Manual') }}</span>
+                                        <span class="fw-semibold text-dark">{{ __('Manual Banks') }}</span>
                                         <span class="badge bg-dark text-white"><i class="fa fa-user-cog"></i></span>
                                     </div>
                                     <div class="d-flex align-items-baseline gap-2">
-                                        <h4 class="fw-bold mb-0">{{ number_format($gatewaySummary['manual'] ?? 0) }}</h4>
+                                        <h4 class="fw-bold mb-0" data-summary-gateway="wallet">{{ number_format($gatewaySummary['wallet'] ?? 0) }}</h4>
                                         <span class="text-muted small">{{ __('Requests') }}</span>
                                     </div>
                                 </div>
@@ -213,7 +220,7 @@
                                         <span class="badge bg-success"><i class="fa fa-money-bill-wave"></i></span>
                                     </div>
                                     <div class="d-flex align-items-baseline gap-2">
-                                        <h4 class="fw-bold mb-0">{{ number_format($gatewaySummary['cash'] ?? 0) }}</h4>
+                                        <h4 class="fw-bold mb-0" data-summary-gateway="cash">{{ number_format($gatewaySummary['cash'] ?? 0) }}</h4>
                                         <span class="text-muted small">{{ __('Requests') }}</span>
                                     </div>
                                 </div>
@@ -236,7 +243,7 @@
                                         <span class="badge bg-secondary"><i class="fa fa-shopping-cart"></i></span>
                                     </div>
                                     <div class="d-flex align-items-baseline gap-2">
-                                        <h4 class="fw-bold mb-0">{{ number_format($categorySummary['orders'] ?? 0) }}</h4>
+                                        <h4 class="fw-bold mb-0" data-summary-category="orders">{{ number_format($categorySummary['orders'] ?? 0) }}</h4>
                                         <span class="text-muted small">{{ __('Requests') }}</span>
                                     </div>
                                 </div>
@@ -248,7 +255,7 @@
                                         <span class="badge bg-info text-dark"><i class="fa fa-box"></i></span>
                                     </div>
                                     <div class="d-flex align-items-baseline gap-2">
-                                        <h4 class="fw-bold mb-0">{{ number_format($categorySummary['packages'] ?? 0) }}</h4>
+                                        <h4 class="fw-bold mb-0" data-summary-category="top_ups">{{ number_format($categorySummary['top_ups'] ?? 0) }}</h4>
                                         <span class="text-muted small">{{ __('Requests') }}</span>
                                     </div>
                                 </div>
@@ -286,8 +293,8 @@
                                       <button type="button" class="btn btn-outline-danger btn-sm" data-filter-status="failed">{{ __('View Failed') }}</button>
                                   </div>
                                   <div class="btn-group" role="group">
-                                      <button type="button" class="btn btn-outline-primary btn-sm" data-filter-gateway="bank">{{ __('View Bank Transfers') }}</button>
-                                      <button type="button" class="btn btn-outline-dark btn-sm" data-filter-gateway="manual">{{ __('View Manual') }}</button>
+                                      <button type="button" class="btn btn-outline-primary btn-sm" data-filter-gateway="east_yemen_bank">{{ __('View East Yemen Bank') }}</button>
+                                      <button type="button" class="btn btn-outline-dark btn-sm" data-filter-gateway="manual_banks">{{ __('View Manual Banks') }}</button>
                                       <button type="button" class="btn btn-outline-warning btn-sm" data-filter-gateway="wallet">{{ __('View Wallet') }}</button>
                                       <button type="button" class="btn btn-outline-success btn-sm" data-filter-gateway="cash">{{ __('View Cash') }}</button>
                                   </div>
@@ -302,7 +309,9 @@
                                           @foreach($departmentSummary as $department)
                                               <button type="button" class="btn btn-outline-dark btn-sm d-flex align-items-center gap-2" data-filter-department="{{ $department['key'] }}">
                                                   <span>{{ $department['label'] }}</span>
-                                                  <span class="badge bg-secondary text-light">{{ number_format($department['total'] ?? 0) }}</span>
+                                                  <span class="badge bg-secondary text-light">
+                                                      <span data-summary-department-key="{{ $department['key'] }}" data-summary-department-field="total">{{ number_format($department['total'] ?? 0) }}</span>
+                                                  </span>
                                               </button>
                                           @endforeach
                                       </div>
@@ -503,21 +512,21 @@
 
 
         const MANUAL_PAYMENT_GATEWAY_MAP = {
-            manual: 'manual',
-            manual_payment: 'manual',
-            offline: 'manual',
-            internal: 'manual',
-            manual_bank: 'bank',
-            'manual-bank': 'bank',
-            manualbank: 'bank',
-            bank: 'bank',
-            bank_transfer: 'bank',
-            banktransfer: 'bank',
-            bank_alsharq: 'bank',
-            east: 'bank',
-            east_yemen_bank: 'bank',
-            'east-yemen-bank': 'bank',
-            eastyemenbank: 'bank',
+            manual: 'manual_banks',
+            manual_payment: 'manual_banks',
+            offline: 'manual_banks',
+            internal: 'manual_banks',
+            manual_bank: 'manual_banks',
+            'manual-bank': 'manual_banks',
+            manualbank: 'manual_banks',
+            bank: 'manual_banks',
+            bank_transfer: 'manual_banks',
+            banktransfer: 'manual_banks',
+            bank_alsharq: 'manual_banks',
+            east: 'east_yemen_bank',
+            east_yemen_bank: 'east_yemen_bank',
+            'east-yemen-bank': 'east_yemen_bank',
+            eastyemenbank: 'east_yemen_bank',
             wallet: 'wallet',
             wallet_balance: 'wallet',
             wallet_gateway: 'wallet',
@@ -556,10 +565,17 @@
 
 
         const MANUAL_PAYMENT_GATEWAY_STYLES = {
-            bank: 'bg-primary',
-            manual: 'bg-dark text-white',
+            east_yemen_bank: 'bg-primary',
+            manual_banks: 'bg-dark text-white',
             wallet: 'bg-warning text-dark',
             cash: 'bg-success'
+        };
+
+
+        const MANUAL_PAYMENT_DEPARTMENT_STYLES = {
+            shein: 'bg-info text-dark',
+            computer: 'bg-secondary text-white',
+            store: 'bg-primary text-white'
         };
 
         const MANUAL_PAYMENT_STATUS_STYLES = {
@@ -584,6 +600,25 @@
 
             return (value) => String(Number(value) || 0);
         })();
+
+
+        const manualPaymentCurrencyFormatter = (function () {
+            if (typeof Intl !== 'undefined' && typeof Intl.NumberFormat === 'function') {
+                const formatter = new Intl.NumberFormat('ar-EG', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                });
+
+                return (value) => formatter.format(Number(value) || 0);
+            }
+
+            return (value) => {
+                const numericValue = Number(value);
+                return Number.isFinite(numericValue) ? numericValue.toFixed(2) : '0.00';
+            };
+        })();
+
+        let manualPaymentHasActiveFilters = false;
 
         let manualPaymentFilters = loadInitialManualPaymentFilters();
 
@@ -857,6 +892,25 @@
 
             $('[data-filter-reset]').toggleClass('active', !hasActiveFilters);
 
+            manualPaymentHasActiveFilters = hasActiveFilters;
+            updateManualPaymentSummaryNote();
+
+        }
+
+        function updateManualPaymentSummaryNote() {
+            const noteElement = document.querySelector('[data-summary-note]');
+
+            if (!noteElement) {
+                return;
+            }
+
+            const message = manualPaymentHasActiveFilters
+                ? '{{ __('Totals shown reflect the applied filters.') }}'
+                : '{{ __('Totals shown reflect the entire system (unfiltered).') }}';
+
+            noteElement.textContent = message;
+
+
         }
 
 
@@ -913,6 +967,106 @@
 
             $meta.text(parts.join(' • '));
         }
+
+
+
+
+
+
+        function updateManualPaymentSummary(data = {}) {
+            const summary = data && typeof data.summary === 'object' ? data.summary : {};
+            const gatewaySummary = data && typeof data.gateway_summary === 'object' ? data.gateway_summary : {};
+            const categorySummary = data && typeof data.category_summary === 'object' ? data.category_summary : {};
+            const departmentSummary = Array.isArray(data?.department_summary) ? data.department_summary : [];
+
+            const summaryFields = {
+                total: Number(summary.total ?? summary.total_requests ?? 0),
+                pending: Number(summary.pending ?? 0),
+                succeed: Number(summary.succeed ?? 0),
+                failed: Number(summary.failed ?? 0),
+                amount: Number(summary.amount ?? summary.total_amount ?? 0),
+            };
+
+            document.querySelectorAll('[data-summary-field]').forEach((element) => {
+                if (!(element instanceof HTMLElement)) {
+                    return;
+                }
+
+                const field = element.getAttribute('data-summary-field');
+
+                if (!field || !(field in summaryFields)) {
+                    return;
+                }
+
+                const value = summaryFields[field] ?? 0;
+
+                if (field === 'amount') {
+                    element.textContent = manualPaymentCurrencyFormatter(value);
+                } else {
+                    element.textContent = manualPaymentNumberFormatter(value);
+                }
+            });
+
+            document.querySelectorAll('[data-summary-gateway]').forEach((element) => {
+                if (!(element instanceof HTMLElement)) {
+                    return;
+                }
+
+                const key = element.getAttribute('data-summary-gateway');
+
+                if (!key) {
+                    return;
+                }
+
+                const value = Number(gatewaySummary[key] ?? 0);
+                element.textContent = manualPaymentNumberFormatter(value);
+            });
+
+            document.querySelectorAll('[data-summary-category]').forEach((element) => {
+                if (!(element instanceof HTMLElement)) {
+                    return;
+                }
+
+                const key = element.getAttribute('data-summary-category');
+
+                if (!key) {
+                    return;
+                }
+
+                const value = Number(categorySummary[key] ?? 0);
+                element.textContent = manualPaymentNumberFormatter(value);
+            });
+
+            const departmentMap = departmentSummary.reduce((carry, entry) => {
+                if (entry && typeof entry.key === 'string') {
+                    carry[entry.key] = entry;
+                }
+
+                return carry;
+            }, {});
+
+            document.querySelectorAll('[data-summary-department-key]').forEach((element) => {
+                if (!(element instanceof HTMLElement)) {
+                    return;
+                }
+
+                const key = element.getAttribute('data-summary-department-key');
+                const field = element.getAttribute('data-summary-department-field');
+
+                if (!key || !field) {
+                    return;
+                }
+
+                const entry = departmentMap[key] ?? null;
+                const value = entry && Object.prototype.hasOwnProperty.call(entry, field)
+                    ? Number(entry[field] ?? 0)
+                    : 0;
+
+                element.textContent = manualPaymentNumberFormatter(value);
+            });
+        }
+
+
 
         function syncManualPaymentQueryString(info) {
             try {
@@ -1041,7 +1195,7 @@
                         setManualPaymentFeedback('{{ __('Unable to load manual payment requests. Please try again later.') }}', 'danger');
                     }
                 },
-                order: [[7, 'desc']],
+                order: [[8, 'desc']],
                 columns: [
                     {
                         data: 'transaction_id',
@@ -1068,6 +1222,25 @@
                             return '<span class="badge ' + classes + '">' + label + '</span>';
                         }
                     },
+
+
+                    {
+                        data: 'department_label',
+                        defaultContent: '—',
+                        render: function (data, type, row) {
+                            if (type !== 'display') {
+                                return data ?? '';
+                            }
+
+                            const key = (row?.department ?? '').toString().toLowerCase();
+                            const classes = MANUAL_PAYMENT_DEPARTMENT_STYLES[key] ?? 'bg-secondary';
+                            const label = data ?? '—';
+
+                            return '<span class="badge ' + classes + '">' + label + '</span>';
+                        }
+                    },
+
+
                     {
                         data: 'payable_label',
                         defaultContent: '—',
@@ -1162,6 +1335,7 @@
                 const rows = Array.isArray(json?.data) ? json.data : [];
                 const filtered = Number(json?.recordsFiltered ?? 0);
 
+                updateManualPaymentSummary(json || {});
 
 
                 if (!manualPaymentForceFirstPage && rows.length === 0 && filtered > 0 && manualPaymentLastRequestStart > 0) {

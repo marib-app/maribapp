@@ -35,6 +35,133 @@ class ManualPaymentRequest extends Model
         self::STATUS_UNDER_REVIEW,
     ];
  
+
+
+
+
+    /**
+     * Canonical representation of supported gateways.
+     */
+    private const GATEWAY_ALIASES = [
+        'east_yemen_bank' => [
+            'east',
+            'east_yemen_bank',
+            'east-yemen-bank',
+            'eastyemenbank',
+        ],
+        'manual_banks' => [
+            'manual',
+            'manual-bank',
+            'manual_bank',
+            'manualbank',
+            'manual_payment',
+            'offline',
+            'internal',
+            'bank',
+            'bank_transfer',
+            'banktransfer',
+            'bank_alsharq',
+        ],
+        'wallet' => [
+            'wallet',
+            'wallet_balance',
+            'wallet_gateway',
+            'wallet_top_up',
+            'wallet-top-up',
+            'wallettopup',
+        ],
+        'cash' => [
+            'cash',
+            'cod',
+            'cash_on_delivery',
+            'cashcollection',
+            'cash_collect',
+        ],
+    ];
+
+    /**
+     * Canonical mapping for the different status variations we might receive.
+     */
+    private const STATUS_ALIASES = [
+        self::STATUS_PENDING => [
+            self::STATUS_PENDING,
+            'processing',
+            'initiated',
+            'open',
+            'waiting',
+        ],
+        self::STATUS_UNDER_REVIEW => [
+            self::STATUS_UNDER_REVIEW,
+            'in_review',
+            'in-review',
+            'review',
+            'reviewing',
+            'under-review',
+        ],
+        self::STATUS_APPROVED => [
+            self::STATUS_APPROVED,
+            'accepted',
+            'completed',
+            'done',
+            'settled',
+            'paid',
+        ],
+        self::STATUS_REJECTED => [
+            self::STATUS_REJECTED,
+            'declined',
+            'canceled',
+            'cancelled',
+            'void',
+        ],
+    ];
+
+    public static function normalizeStatus(?string $status): ?string
+    {
+        if (! is_string($status)) {
+            return null;
+        }
+
+        $normalized = strtolower(trim($status));
+
+        if ($normalized === '' || $normalized === 'null') {
+            return null;
+        }
+
+        foreach (self::STATUS_ALIASES as $canonical => $aliases) {
+            if (in_array($normalized, $aliases, true)) {
+                return $canonical;
+            }
+        }
+
+        return in_array($normalized, [
+            self::STATUS_PENDING,
+            self::STATUS_UNDER_REVIEW,
+            self::STATUS_APPROVED,
+            self::STATUS_REJECTED,
+        ], true) ? $normalized : null;
+    }
+
+    public static function canonicalGateway(?string $gateway): ?string
+    {
+        if (! is_string($gateway)) {
+            return null;
+        }
+
+        $normalized = strtolower(trim($gateway));
+
+        if ($normalized === '' || $normalized === 'null') {
+            return null;
+        }
+
+        foreach (self::GATEWAY_ALIASES as $canonical => $aliases) {
+            if (in_array($normalized, $aliases, true)) {
+                return $canonical;
+            }
+        }
+
+        return $normalized;
+    }
+
      /**
      * @var array<int, string>
      */
@@ -397,6 +524,14 @@ class ManualPaymentRequest extends Model
     public function isOpen(): bool
 
     {
+
+
+        $normalized = self::normalizeStatus($this->status);
+
+        if ($normalized !== null) {
+            return in_array($normalized, self::OPEN_STATUSES, true);
+        }
+
         return in_array($this->status, self::OPEN_STATUSES, true);
     }
 
@@ -431,27 +566,50 @@ class ManualPaymentRequest extends Model
             return $query;
         }
 
-        return $query->where(function (Builder $builder) use ($gateway): void {
-            if ($gateway === 'manual_bank') {
+        $canonical = self::canonicalGateway($gateway);
+
+        if ($canonical === null) {
+            return $query;
+        }
+
+        return $query->where(function (Builder $builder) use ($canonical): void {
+            if ($canonical === 'manual_banks') {
+
+
                 $builder->whereDoesntHave('paymentTransaction')
                     ->orWhereHas('paymentTransaction', static function (Builder $transactionQuery): void {
 
-                        $transactionQuery->where('payment_gateway', 'manual_bank');
+                        $transactionQuery->whereIn('payment_gateway', [
+                            'manual_bank',
+                            'manual',
+                            'manual_payment',
+                            'offline',
+                            'internal',
+                            'bank',
+                            'bank_transfer',
+                            'banktransfer',
+                            'bank_alsharq',
+                        ]);
+
+
                     });
 
                 return;
             }
 
-            $builder->whereHas('paymentTransaction', static function (Builder $transactionQuery) use ($gateway): void {
+            $builder->whereHas('paymentTransaction', static function (Builder $transactionQuery) use ($canonical): void {
+                $target = $canonical === 'east_yemen_bank' ? 'east_yemen_bank' : $canonical;
 
-                $transactionQuery->where('payment_gateway', $gateway);
+
+                $transactionQuery->where('payment_gateway', $target);
             });
 
-            if ($gateway === 'wallet') {
+            if ($canonical === 'wallet') {
+
                 $builder->orWhere(static function (Builder $inner): void {
 
                     $inner->whereDoesntHave('paymentTransaction')
-                          ->where(static function (Builder $metaQuery): void {
+                        ->where(static function (Builder $metaQuery): void {
 
                             $metaQuery->where('payable_type', self::PAYABLE_TYPE_WALLET_TOP_UP)
                                 ->orWhereNotNull('meta->wallet');

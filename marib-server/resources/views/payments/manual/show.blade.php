@@ -9,9 +9,29 @@
 
         $paymentTransaction = $request->paymentTransaction;
     $paymentGatewayKey = $paymentTransaction?->payment_gateway;
-    $paymentGatewayLabel = $paymentGatewayKey
-        ? ucwords(str_replace('_', ' ', $paymentGatewayKey))
-        : __('Manual Bank');
+    $paymentGatewayCanonical = \App\Models\ManualPaymentRequest::canonicalGateway($paymentGatewayKey);
+    if ($paymentGatewayCanonical === 'manual_bank') {
+        $paymentGatewayCanonical = 'manual_banks';
+    }
+
+    $paymentGatewayLabel = match ($paymentGatewayCanonical) {
+        'east_yemen_bank' => __('East Yemen Bank Gateway'),
+        'manual_banks' => __('Manual Banks'),
+        'wallet' => __('Wallet'),
+        'cash' => __('Cash'),
+        default => $paymentGatewayKey
+            ? ucwords(str_replace('_', ' ', $paymentGatewayKey))
+            : __('Manual Banks'),
+    };
+
+    $department = $request->department;
+    $departmentLabel = match ($department) {
+        \App\Services\DepartmentReportService::DEPARTMENT_SHEIN => __('departments.shein'),
+        \App\Services\DepartmentReportService::DEPARTMENT_COMPUTER => __('departments.computer'),
+        \App\Services\DepartmentReportService::DEPARTMENT_STORE => __('departments.store'),
+        default => $department ? ucfirst($department) : __('Unknown Department'),
+    };
+
 
     $eastYemenMeta = data_get($request->meta, 'east_yemen_bank', []);
     $defaultVoucherNumber = data_get($eastYemenMeta, 'request_payment.response.voucher_number')
@@ -71,6 +91,11 @@
 
                         <dt class="col-5 text-muted">{{ __('Payment Gateway') }}</dt>
                         <dd class="col-7">{{ $paymentGatewayLabel }}</dd>
+
+
+                        <dt class="col-5 text-muted">{{ __('Department') }}</dt>
+                        <dd class="col-7">{{ $departmentLabel }}</dd>
+
 
                         <dt class="col-5 text-muted">{{ __('Transaction ID') }}</dt>
                         <dd class="col-7">{{ $request->paymentTransaction?->id ?? __('Not generated') }}</dd>

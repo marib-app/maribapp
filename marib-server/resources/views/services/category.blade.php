@@ -244,6 +244,61 @@
 
                     @if ($supportsRequestsTab)
                         <div class="tab-pane fade" id="requests-pane" role="tabpanel" aria-labelledby="requests-tab">
+
+
+                            <div class="row g-3 mb-4">
+                                <div class="col-12 col-md-3 col-sm-6">
+                                    <div class="card h-100 shadow-sm border-0 bg-light">
+                                        <div class="card-body">
+                                            <div class="text-muted small">{{ __('Department') }}</div>
+                                            <div class="fw-semibold">{{ $categoryDepartmentLabel }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                @if(!empty($categoryRequestsStats))
+                                    <div class="col-12 col-md-3 col-sm-6">
+                                        <div class="card h-100 shadow-sm border-0">
+                                            <div class="card-body">
+                                                <div class="text-muted small">{{ __('Total Requests') }}</div>
+                                                <div class="fw-bold">{{ number_format($categoryRequestsStats['total'] ?? 0) }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-3 col-sm-6">
+                                        <div class="card h-100 shadow-sm border-0">
+                                            <div class="card-body">
+                                                <div class="text-muted small">{{ __('Under Review') }}</div>
+                                                <div class="fw-bold">{{ number_format($categoryRequestsStats['review'] ?? 0) }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-3 col-sm-6">
+                                        <div class="card h-100 shadow-sm border-0">
+                                            <div class="card-body">
+                                                <div class="text-muted small">{{ __('Approved') }}</div>
+                                                <div class="fw-bold">{{ number_format($categoryRequestsStats['approved'] ?? 0) }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-3 col-sm-6">
+                                        <div class="card h-100 shadow-sm border-0">
+                                            <div class="card-body">
+                                                <div class="text-muted small">{{ __('Rejected') }}</div>
+                                                <div class="fw-bold">{{ number_format($categoryRequestsStats['rejected'] ?? 0) }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-3 col-sm-6">
+                                        <div class="card h-100 shadow-sm border-0">
+                                            <div class="card-body">
+                                                <div class="text-muted small">{{ __('Sold Out') }}</div>
+                                                <div class="fw-bold">{{ number_format($categoryRequestsStats['sold_out'] ?? 0) }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+
                             <div id="requestsFilters" class="row g-3 align-items-end mb-3">
                                 <div class="col-12 col-md-4 col-lg-3">
                                     <label for="requests_status_filter" class="form-label">{{ __('Status') }}</label>

@@ -150,10 +150,49 @@ class ManualPaymentRequest extends Model
 
     protected static function booted(): void
     {
-        Relation::morphMap([
+        $map = [
             self::PAYABLE_TYPE_WALLET_TOP_UP => WalletAccount::class,
-        ], true);
-    }
+        ];
+
+        foreach ([
+            'wallet',
+            'wallet-top-up',
+            'wallet_top_up',
+            'wallettopup',
+        ] as $alias) {
+            $map[$alias] = WalletAccount::class;
+        }
+
+        foreach (static::orderPayableTypeAliases() as $alias) {
+            $map[$alias] = Order::class;
+        }
+
+        foreach ([
+            Package::class,
+            '\\' . Package::class,
+            'package',
+            'packages',
+            'app\\package',
+            'app\\models\\package',
+        ] as $alias) {
+            $map[$alias] = Package::class;
+        }
+
+        foreach ([
+            Item::class,
+            '\\' . Item::class,
+            'item',
+            'items',
+            'advertisement',
+            'advertisements',
+            'app\\item',
+            'app\\models\\item',
+        ] as $alias) {
+            $map[$alias] = Item::class;
+        }
+
+        Relation::morphMap($map, true);
+        }
 
 
 

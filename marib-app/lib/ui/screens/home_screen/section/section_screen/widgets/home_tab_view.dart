@@ -337,24 +337,8 @@ class _HomeTabViewState extends State<HomeTabView> {
 
 
   }) {
-    String? resolved = requestedRootIdentifier?.trim();
-    if (resolved == null || resolved.isEmpty) {
-      for (final HomeScreenSection section in sections) {
-        final String? sectionRoot = section.rootIdentifier?.trim();
-        if (sectionRoot != null && sectionRoot.isNotEmpty) {
-          resolved = sectionRoot;
-          break;
-        }
-      }
-    }
-
-
-
-    if (rootId != null && rootId > 0 && resolved != null && resolved.isNotEmpty) {
-      _rootIdentifierByCategoryId[rootId] = resolved;
-    }
-
-
+    final String? requested = requestedRootIdentifier?.trim();
+    String? canonicalRoot;
 
 
     for (final HomeScreenSection section in sections) {
@@ -364,10 +348,13 @@ class _HomeTabViewState extends State<HomeTabView> {
       if (sectionRoot == null || sectionRoot.isEmpty) {
         continue;
       }
+      canonicalRoot ??= sectionRoot;
 
       if (sectionSlug != null) {
         _slugByRootIdentifier[sectionRoot] = sectionSlug;
-
+        if (requested != null && requested.isNotEmpty) {
+          _slugByRootIdentifier.putIfAbsent(requested, () => sectionSlug);
+        }
         if (rootId != null && rootId > 0) {
           final String? existingRootSlug = _slugByCategoryId[rootId];
           if (existingRootSlug == null || existingRootSlug.isEmpty) {
@@ -380,8 +367,9 @@ class _HomeTabViewState extends State<HomeTabView> {
         final String? existingRootIdentifier =
         _rootIdentifierByCategoryId[rootId];
         if (existingRootIdentifier == null ||
-            existingRootIdentifier.isEmpty ||
-            existingRootIdentifier == rootId.toString()) {
+            existingRootIdentifier.trim().isEmpty ||
+            existingRootIdentifier == rootId.toString() ||
+            existingRootIdentifier.trim() != sectionRoot) {
           _rootIdentifierByCategoryId[rootId] = sectionRoot;
         }
       }
@@ -400,8 +388,9 @@ class _HomeTabViewState extends State<HomeTabView> {
 
         final String? existing = _rootIdentifierByCategoryId[categoryId];
         if (existing == null ||
-            existing.isEmpty ||
-            existing == categoryId.toString()) {
+            existing.trim().isEmpty ||
+            existing == categoryId.toString() ||
+            existing.trim() != sectionRoot) {
           _rootIdentifierByCategoryId[categoryId] = sectionRoot;
         }
         if (sectionSlug != null) {
@@ -410,6 +399,15 @@ class _HomeTabViewState extends State<HomeTabView> {
             _slugByCategoryId[categoryId] = sectionSlug;
           }
         }
+      }
+    }
+    final String? resolvedRoot =
+        canonicalRoot ?? (requested != null && requested.isNotEmpty ? requested : null);
+
+    if (rootId != null && rootId > 0 && resolvedRoot != null) {
+      final String trimmed = resolvedRoot.trim();
+      if (trimmed.isNotEmpty) {
+        _rootIdentifierByCategoryId[rootId] = trimmed;
       }
     }
   }

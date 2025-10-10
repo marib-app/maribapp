@@ -802,7 +802,7 @@ class _StockTab extends StatelessWidget {
       if (attribute != null && _isColorAttribute(attribute)) {
         final String? normalized = _normalizeColorValue(value);
         if (normalized != null) {
-          final CustomFieldColorEntry? entry = attribute.colorEntries
+          final CustomFieldColorEntry entry = attribute.colorEntries
               .firstWhere(
                   (CustomFieldColorEntry element) => element.code == normalized,
               orElse: () => CustomFieldColorEntry(code: normalized));

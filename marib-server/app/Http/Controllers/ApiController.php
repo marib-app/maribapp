@@ -7850,18 +7850,72 @@ public function storeRequestDevice(Request $request)
 
         $normalized = strtolower($type);
 
-        return match ($normalized) {
-            'package', 'packages', 'app\\models\\package' => Package::class,
-            'order', 'orders', 'app\\models\\order' => Order::class,
-            'item', 'items', 'ad', 'ads', 'listing', 'listings', 'app\\models\\item' => Item::class,
-            'service', 'services', 'app\\models\\service' => Service::class,
+        $orderAliases = array_map(
+            static fn (string $alias): string => strtolower(trim($alias)),
+            ManualPaymentRequest::orderPayableTypeAliases()
+        );
+
+        if (in_array($normalized, $orderAliases, true)) {
+            return Order::class;
+        }
+
+        $packageAliases = [
+            'package',
+            'packages',
+            'app\\package',
+            'app\\models\\package',
+        ];
+
+        if (in_array($normalized, $packageAliases, true)) {
+            return Package::class;
+        }
+
+        $itemAliases = [
+            'item',
+            'items',
+            'ad',
+            'ads',
+            'advertisement',
+            'advertisements',
+            'listing',
+            'listings',
+            'app\\item',
+            'app\\models\\item',
+        ];
+
+        if (in_array($normalized, $itemAliases, true)) {
+            return Item::class;
+        }
+
+        $serviceAliases = [
+            'service',
+            'services',
+            'app\\models\\service',
+        ];
+
+        if (in_array($normalized, $serviceAliases, true)) {
+            return Service::class;
+        }
+
+        $walletAliases = [
+            
+
+
+
             
             ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP,
-            'wallet-top-up' => ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP,
+            'wallet-top-up',
+            'wallet_top_up',
+            'wallet',
+            'wallettopup',
+        ];
+
+        if (in_array($normalized, $walletAliases, true)) {
+            return ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP;
+        }
 
 
-            default => null,
-        };
+        return null;
     }
 
     private function getDefaultCurrencyCode(): ?string {

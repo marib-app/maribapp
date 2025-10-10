@@ -334,151 +334,153 @@ class _AttributesTabState extends State<_AttributesTab> {
     }
     super.dispose();
   }
-  }
 
-void _syncControllers() {
-  final Set<String> keys = widget.state.managedAttributes
-      .map((ManagedPurchaseAttribute attribute) => attribute.key)
-      .toSet();
 
-  final List<String> removedNameKeys =
-  _nameControllers.keys.where((String key) => !keys.contains(key)).toList();
-  for (final String key in removedNameKeys) {
-    _nameControllers.remove(key)?.dispose();
-  }
+  void _syncControllers() {
+    final Set<String> keys = widget.state.managedAttributes
+        .map((ManagedPurchaseAttribute attribute) => attribute.key)
+        .toSet();
 
-  final List<String> removedOptionKeys =
-  _optionControllers.keys.where((String key) => !keys.contains(key)).toList();
-  for (final String key in removedOptionKeys) {
-    final List<TextEditingController>? controllers = _optionControllers.remove(key);
-    if (controllers != null) {
-      for (final TextEditingController controller in controllers) {
-        controller.dispose();
-      }
+    final List<String> removedNameKeys =
+    _nameControllers.keys.where((String key) => !keys.contains(key)).toList();
+    for (final String key in removedNameKeys) {
+      _nameControllers.remove(key)?.dispose();
+    }
+
+    final List<String> removedOptionKeys =
+    _optionControllers.keys.where((String key) => !keys.contains(key)).toList();
+    for (final String key in removedOptionKeys) {
+      final List<TextEditingController>? controllers = _optionControllers.remove(key);
+      if (controllers != null) {
+        for (final TextEditingController controller in controllers) {
+          controller.dispose();
+        }
       }
     }
 
+    for (final ManagedPurchaseAttribute attribute in widget.state.managedAttributes) {
+      _ensureNameController(attribute.key, attribute.name);
+      final List<TextEditingController> controllers =
+      _optionControllers.putIfAbsent(attribute.key, () => <TextEditingController>[]);
+      final int optionsLength = attribute.options.length;
 
-  for (final ManagedPurchaseAttribute attribute in widget.state.managedAttributes) {
-    _ensureNameController(attribute.key, attribute.name);
-    final List<TextEditingController> controllers =
-    _optionControllers.putIfAbsent(attribute.key, () => <TextEditingController>[]);
-    final int optionsLength = attribute.options.length;
 
-    if (controllers.length > optionsLength) {
-      final Iterable<TextEditingController> toDispose = controllers.sublist(optionsLength);
-      for (final TextEditingController controller in toDispose) {
-        controller.dispose();
+
+      if (controllers.length > optionsLength) {
+        final Iterable<TextEditingController> toDispose = controllers.sublist(optionsLength);
+        for (final TextEditingController controller in toDispose) {
+          controller.dispose();
+        }
+        controllers.removeRange(optionsLength, controllers.length);
       }
-      controllers.removeRange(optionsLength, controllers.length);
+      while (controllers.length < optionsLength) {
+        controllers.add(TextEditingController());
       }
-    while (controllers.length < optionsLength) {
-      controllers.add(TextEditingController());
-    }
 
-    for (int index = 0; index < optionsLength; index++) {
-      final String value = attribute.options[index];
-      final TextEditingController controller = controllers[index];
-      if (controller.text != value) {
-        controller.text = value;
-        controller.selection = TextSelection.fromPosition(
-          TextPosition(offset: controller.text.length),
+
+      for (int index = 0; index < optionsLength; index++) {
+        final String value = attribute.options[index];
+        final TextEditingController controller = controllers[index];
+        if (controller.text != value) {
+          controller.text = value;
+          controller.selection = TextSelection.fromPosition(
+            TextPosition(offset: controller.text.length),
           );
-      }
+        }
       }
     }
   }
-TextEditingController _ensureNameController(String key, String value) {
-  final TextEditingController controller =
-  _nameControllers.putIfAbsent(key, () => TextEditingController(text: value));
-  if (controller.text != value) {
-    controller.text = value;
-    controller.selection = TextSelection.fromPosition(
-      TextPosition(offset: controller.text.length),
+  TextEditingController _ensureNameController(String key, String value) {
+    final TextEditingController controller =
+    _nameControllers.putIfAbsent(key, () => TextEditingController(text: value));
+    if (controller.text != value) {
+      controller.text = value;
+      controller.selection = TextSelection.fromPosition(
+        TextPosition(offset: controller.text.length),
+      );
+    }
+    return controller;
+  }
+  @override
+  Widget build(BuildContext context) {
+    _syncControllers();
+    final ProductManagementCubit cubit = context.read<ProductManagementCubit>();
+    final ProductManagementState state = widget.state;
+    final List<ManagedPurchaseAttribute> attributes = state.managedAttributes;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      physics: const BouncingScrollPhysics(),
+      children: <Widget>[
+    Align(
+    alignment: AlignmentDirectional.centerStart,
+      child: OutlinedButton.icon(
+        onPressed: () => _showAddAttributeMenu(context),
+        icon: const Icon(Icons.add),
+        label: const Text('إضافة سمة جديدة للمنتج'),
+      ),
+        ),
+        const SizedBox(height: 16),
+        if (attributes.isEmpty)
+          const _EmptyState(
+            message:
+            'لم يتم إضافة سمات بعد. استخدم زر "إضافة سمة جديدة للمنتج" لتخصيص المنتج.',
+          )
+        else
+          ...attributes
+              .map((ManagedPurchaseAttribute attribute) => Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: _buildAttributeCard(context, attribute, cubit),
+          ))
+              .toList(growable: false),
+      ],
     );
   }
-  return controller;
-  }
-@override
-Widget build(BuildContext context) {
-  _syncControllers();
-  final ProductManagementCubit cubit = context.read<ProductManagementCubit>();
-  final ProductManagementState state = widget.state;
-  final List<ManagedPurchaseAttribute> attributes = state.managedAttributes;
 
-  return ListView(
-    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-    physics: const BouncingScrollPhysics(),
-    children: <Widget>[
-      Align(
-        alignment: AlignmentDirectional.centerStart,
-        child: OutlinedButton.icon(
-          onPressed: () => _showAddAttributeMenu(context),
-          icon: const Icon(Icons.add),
-          label: const Text('إضافة سمة جديدة للمنتج'),
-        ),
-      ),
-      const SizedBox(height: 16),
-      if (attributes.isEmpty)
-        const _EmptyState(
-          message:
-          'لم يتم إضافة سمات بعد. استخدم زر "إضافة سمة جديدة للمنتج" لتخصيص المنتج.',
-        )
-      else
-        ...attributes
-            .map((ManagedPurchaseAttribute attribute) => Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: _buildAttributeCard(context, attribute, cubit),
-        ))
-            .toList(growable: false),
-    ],
-  );
-}
-
-Widget _buildAttributeCard(
+  Widget _buildAttributeCard(
     BuildContext context,
     ManagedPurchaseAttribute attribute,
     ProductManagementCubit cubit,
-    ) {
-  final ThemeData theme = Theme.of(context);
-  final ColorScheme palette = context.color;
-  final ProductManagementState state = widget.state;
+      ) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme palette = context.color;
+    final ProductManagementState state = widget.state;
 
-  final TextEditingController nameController =
-  _ensureNameController(attribute.key, attribute.name);
+    final TextEditingController nameController =
+    _ensureNameController(attribute.key, attribute.name);
 
-  late final Widget content;
-  switch (attribute.type) {
-    case ManagedAttributeType.color:
-      final List<CustomFieldColorEntry> entries =
-          state.colorSelections[attribute.key] ?? attribute.colorEntries;
-      final Set<String> suggestedCodes = <String>{
-        for (final CustomFieldColorEntry entry in entries) entry.code,
-        for (final String code in state.attributeSelections[attribute.key] ?? const <String>[]) code,
-      }..removeWhere((String code) => code.isEmpty);
+    late final Widget content;
+    switch (attribute.type) {
+      case ManagedAttributeType.color:
+        final List<CustomFieldColorEntry> entries =
+            state.colorSelections[attribute.key] ?? attribute.colorEntries;
+        final Set<String> suggestedCodes = <String>{
+          for (final CustomFieldColorEntry entry in entries) entry.code,
+          for (final String code in state.attributeSelections[attribute.key] ?? const <String>[]) code,
+        }..removeWhere((String code) => code.isEmpty);
 
-      content = _ColorAttributeManager(
-        entries: entries,
-        onManage: () => _openColorAttributeEditor(
-          context: context,
-          attributeKey: attribute.key,
-          attributeName: attribute.name,
-          currentEntries: entries,
-          suggestedCodes: suggestedCodes,
-        ),
-      );
-      break;
-    case ManagedAttributeType.size:
-      content = _SizeAttributeManager(
-        catalog: _defaultSizeCatalog,
-        selected: state.attributeSelections[attribute.key] ?? const <String>[],
-        onToggle: (String value) => cubit.toggleAttributeValue(attribute.key, value),
-      );
-      break;
-    case ManagedAttributeType.custom:
-      content = _buildCustomOptions(context, attribute, cubit);
-      break;
-  }
+        content = _ColorAttributeManager(
+          entries: entries,
+          onManage: () => _openColorAttributeEditor(
+            context: context,
+            attributeKey: attribute.key,
+            attributeName: attribute.name,
+            currentEntries: entries,
+            suggestedCodes: suggestedCodes,
+          ),
+        );
+        break;
+      case ManagedAttributeType.size:
+        content = _SizeAttributeManager(
+          catalog: _defaultSizeCatalog,
+          selected: state.attributeSelections[attribute.key] ?? const <String>[],
+          onToggle: (String value) => cubit.toggleAttributeValue(attribute.key, value),
+        );
+        break;
+      case ManagedAttributeType.custom:
+        content = _buildCustomOptions(context, attribute, cubit);
+        break;
+    }
 
   return Card(
       color: palette.secondaryColor,
@@ -488,12 +490,13 @@ Widget _buildAttributeCard(
         side: BorderSide(color: palette.borderColor.withOpacity(0.4)),
       ),
       child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
             TextField(
-            controller: nameController,
+              controller: nameController,
+
               decoration: _themedInputDecoration(
                 context,
                 label: 'اسم السمة',
@@ -501,139 +504,140 @@ Widget _buildAttributeCard(
               ),
               onChanged: (String value) => cubit.setAttributeName(attribute.key, value),
             ),
-              const SizedBox(height: 12),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: SwitchListTile(
-                      value: attribute.requiredForCheckout,
-                      onChanged: (bool value) => cubit.setAttributeRequired(attribute.key, value),
-                      title: const Text('مطلوب عند الشراء'),
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                    ),
+        const SizedBox(height: 12),
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: SwitchListTile(
+                value: attribute.requiredForCheckout,
+                onChanged: (bool value) => cubit.setAttributeRequired(attribute.key, value),
+                title: const Text('مطلوب عند الشراء'),
+                contentPadding: EdgeInsets.zero,
+                dense: true,
                   ),
-                  Expanded(
-                    child: SwitchListTile(
-                      value: attribute.affectsStock,
-                      onChanged: (bool value) => cubit.setAttributeAffectsStock(attribute.key, value),
-                      title: const Text('يؤثر على المخزون'),
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                    ),
+            ),
+            Expanded(
+              child: SwitchListTile(
+                value: attribute.affectsStock,
+                onChanged: (bool value) => cubit.setAttributeAffectsStock(attribute.key, value),
+                title: const Text('يؤثر على المخزون'),
+                contentPadding: EdgeInsets.zero,
+                dense: true,
                   ),
-                  IconButton(
-                    tooltip: 'حذف السمة',
-                    onPressed: () => cubit.removeAttribute(attribute.key),
-                    icon: const Icon(Icons.delete_outline),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              content,
-            ],
-          ),
+            ),
+            IconButton(
+              tooltip: 'حذف السمة',
+              onPressed: () => cubit.removeAttribute(attribute.key),
+              icon: const Icon(Icons.delete_outline),
+            ),
+          ],
+        ),
+            const SizedBox(height: 12),
+            content,
+          ],
+        ),
       ),
   );
-}
+  }
 
 
-Widget _buildCustomOptions(
+  Widget _buildCustomOptions(
     BuildContext context,
     ManagedPurchaseAttribute attribute,
     ProductManagementCubit cubit,
-    ) {
-  final ThemeData theme = Theme.of(context);
-  final List<String> options = attribute.options;
-  final List<TextEditingController> controllers =
-  _optionControllers.putIfAbsent(attribute.key, () => <TextEditingController>[]);
+      ) {
+    final ThemeData theme = Theme.of(context);
+    final List<String> options = attribute.options;
+    final List<TextEditingController> controllers =
+    _optionControllers.putIfAbsent(attribute.key, () => <TextEditingController>[]);
 
-  final List<Widget> children = <Widget>[];
+    final List<Widget> children = <Widget>[];
 
-  if (options.isEmpty) {
-    children.add(
-      Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(
-          'لم يتم إضافة خيارات بعد. أضف خيارات متعددة ليختار منها المشتري.',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
-          ),
-          ),
-      ),
-    );
-  }
-
-  for (int index = 0; index < options.length; index++) {
-    if (index >= controllers.length) {
-      controllers.add(TextEditingController(text: options[index]));
-    }
-    final TextEditingController controller = controllers[index];
-    final String optionValue = options[index];
-    if (controller.text != optionValue) {
-      controller.text = optionValue;
-      controller.selection = TextSelection.fromPosition(
-        TextPosition(offset: controller.text.length),
-      );
-    }
-    children.add(
-      Row(
-        children: <Widget>[
-          Expanded(
-            child: TextField(
-              controller: controller,
-              decoration: _themedInputDecoration(
-                context,
-                label: 'الخيار ${index + 1}',
-              ),
-              onChanged: (String value) =>
-                  cubit.updateAttributeOption(attribute.key, index, value),
+    if (options.isEmpty) {
+      children.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Text(
+            'لم يتم إضافة خيارات بعد. أضف خيارات متعددة ليختار منها المشتري.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
             ),
           ),
-          IconButton(
-            tooltip: 'حذف الخيار',
-            onPressed: () => cubit.removeAttributeOption(attribute.key, index),
-            icon: const Icon(Icons.delete_outline),
+        ),
+      );
+    }
+
+    for (int index = 0; index < options.length; index++) {
+      if (index >= controllers.length) {
+        controllers.add(TextEditingController(text: options[index]));
+      }
+      final TextEditingController controller = controllers[index];
+      final String optionValue = options[index];
+      if (controller.text != optionValue) {
+        controller.text = optionValue;
+        controller.selection = TextSelection.fromPosition(
+          TextPosition(offset: controller.text.length),
+        );
+      }
+      children.add(
+        Row(
+          children: <Widget>[
+        Expanded(
+        child: TextField(
+          controller: controller,
+          decoration: _themedInputDecoration(
+            context,
+            label: 'الخيار ${index + 1}',
           ),
-        ],
+          onChanged: (String value) =>
+              cubit.updateAttributeOption(attribute.key, index, value),
+              ),
+
+            ),
+            IconButton(
+              tooltip: 'حذف الخيار',
+              onPressed: () => cubit.removeAttributeOption(attribute.key, index),
+              icon: const Icon(Icons.delete_outline),
+            ),
+          ],
+        ),
+      );
+      if (index != options.length - 1) {
+        children.add(const SizedBox(height: 12));
+      }
+    }
+    children.add(
+      Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: TextButton.icon(
+          onPressed: () => cubit.addAttributeOption(attribute.key),
+          icon: const Icon(Icons.add),
+          label: const Text('إضافة خيار'),
+        ),
       ),
     );
-    if (index != options.length - 1) {
-      children.add(const SizedBox(height: 12));
-    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    );
   }
-  children.add(
-    Align(
-      alignment: AlignmentDirectional.centerStart,
-      child: TextButton.icon(
-        onPressed: () => cubit.addAttributeOption(attribute.key),
-        icon: const Icon(Icons.add),
-        label: const Text('إضافة خيار'),
-      ),
-    ),
-  );
 
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: children,
-  );
-}
-
-void _showAddAttributeMenu(BuildContext context) {
-  final ProductManagementCubit cubit = context.read<ProductManagementCubit>();
-  showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Colors.transparent,
-    builder: (BuildContext sheetContext) {
-      final ColorScheme palette = context.color;
-      final ThemeData theme = Theme.of(context);
-      return SafeArea(
-        child: Container(
-          margin: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: palette.secondaryColor,
-            borderRadius: BorderRadius.circular(20),
-          ),
+  void _showAddAttributeMenu(BuildContext context) {
+    final ProductManagementCubit cubit = context.read<ProductManagementCubit>();
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext sheetContext) {
+        final ColorScheme palette = context.color;
+        final ThemeData theme = Theme.of(context);
+        return SafeArea(
+          child: Container(
+            margin: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: palette.secondaryColor,
+              borderRadius: BorderRadius.circular(20),
+            ),
 
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -672,7 +676,7 @@ void _showAddAttributeMenu(BuildContext context) {
       },
     );
   }
-
+}
 
 
 void _openColorAttributeEditor({

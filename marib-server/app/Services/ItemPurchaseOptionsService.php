@@ -22,15 +22,51 @@ class ItemPurchaseOptionsService
      */
     public function collectAttributes(Item $item): Collection
     {
-        $item->loadMissing(['item_custom_field_values', 'custom_fields']);
+        $item->loadMissing([
+            'custom_fields',
+            'item_custom_field_values',
+            'item_custom_field_values.custom_field',
+        ]);
 
-        $fields = $item->custom_fields ?? collect();
+        $fields = $item->custom_fields instanceof Collection
+            ? $item->custom_fields
+            : collect($item->custom_fields ?? []);
+
         $values = $item->item_custom_field_values instanceof Collection
             ? $item->item_custom_field_values->keyBy('custom_field_id')
             : collect();
 
+        if ($values->isNotEmpty()) {
+            $valueFields = $values
+                ->map(static function (ItemCustomFieldValue $value) {
+                    return $value->custom_field;
+                })
+                ->filter();
+
+            if ($valueFields->isNotEmpty()) {
+                $fields = $fields
+                    ->concat($valueFields)
+                    ->filter(static function ($field) {
+                        return $field !== null && $field->id;
+                    })
+                    ->unique(fn ($field) => $field->id)
+                    ->values();
+            }
+        }
+
+
         return $fields
-            ->filter(static fn ($field) => (bool) ($field->required_for_checkout ?? false) || (bool) ($field->affects_stock ?? false))
+            ->filter(static function ($field) {
+                $required = (bool) ($field->required_for_checkout ?? false);
+                $affectsStock = (bool) ($field->affects_stock ?? false);
+                $type = strtolower((string) ($field->type ?? ''));
+
+                if ($type === 'color') {
+                    return true;
+                }
+
+                return $required || $affectsStock;
+            })
             ->values()
             ->map(function ($field) use ($values) {
                 $customValue = $values->get($field->id);
@@ -65,6 +101,7 @@ class ItemPurchaseOptionsService
                     'selected_values' => $selectedValues,
                     'ui_type' => $field->type ?? null,
                     'color_entries' => $colorEntries,
+                    'is_customer_option' => (bool) ($field->is_customer_option ?? false),
 
                 ];
             });

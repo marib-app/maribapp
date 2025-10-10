@@ -7850,12 +7850,8 @@ public function storeRequestDevice(Request $request)
 
         $normalized = strtolower($type);
 
-        $orderAliases = array_map(
-            static fn (string $alias): string => strtolower(trim($alias)),
-            ManualPaymentRequest::orderPayableTypeAliases()
-        );
+        if (ManualPaymentRequest::isOrderPayableType($type) || ManualPaymentRequest::isOrderPayableType($normalized)) {
 
-        if (in_array($normalized, $orderAliases, true)) {
             return Order::class;
         }
 

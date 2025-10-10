@@ -1129,6 +1129,12 @@ class ManualPaymentRequestController extends Controller
             return null;
         }
 
+
+        if (ManualPaymentRequest::isOrderPayableType($normalized)) {
+            return Order::class;
+        }
+
+
         return match ($normalized) {
             'approved', 'accepted', 'completed' => ManualPaymentRequest::STATUS_APPROVED,
             'rejected', 'declined' => ManualPaymentRequest::STATUS_REJECTED,
@@ -1176,7 +1182,6 @@ class ManualPaymentRequestController extends Controller
         }
 
         return match ($normalized) {
-            'order', 'orders', 'cart_order', 'cart-orders', 'app\\order', 'app\\models\\order' => Order::class,
             'package', 'packages', 'app\\package', 'app\\models\\package' => Package::class,
             'item', 'items', 'advertisement', 'advertisements', 'app\\item', 'app\\models\\item' => Item::class,
             ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP,
@@ -1197,16 +1202,14 @@ class ManualPaymentRequestController extends Controller
             return [];
         }
 
+
+        if (ManualPaymentRequest::isOrderPayableType($canonical)) {
+            return ManualPaymentRequest::orderPayableTypeAliases();
+        }
+
+
         return match ($canonical) {
-            Order::class => [
-                Order::class,
-                'order',
-                'orders',
-                'App\\Models\\Order',
-                'App\\Order',
-                'cart_order',
-                'cart-orders',
-            ],
+
             Package::class => [
                 Package::class,
                 'package',

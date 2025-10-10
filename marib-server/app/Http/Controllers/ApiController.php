@@ -4605,7 +4605,7 @@ class ApiController extends Controller {
         };
     }
 
-    
+
     private function performWalletTransfer(
         User $sender,
         User $recipient,
@@ -8122,7 +8122,7 @@ public function storeRequestDevice(Request $request)
 
 
                 if (
-                    $resolvedPayableType === Order::class
+                    ManualPaymentRequest::isOrderPayableType($resolvedPayableType)
                     && $payableId
                     && Schema::hasColumn('manual_payment_requests', 'department')
                 ) {
@@ -8137,7 +8137,7 @@ public function storeRequestDevice(Request $request)
 
 
                 if (
-                    $resolvedPayableType === Order::class
+                    ManualPaymentRequest::isOrderPayableType($resolvedPayableType)
                     && $payableId
                     && Schema::hasColumn('manual_payment_requests', 'department')
                 ) {
@@ -8671,11 +8671,15 @@ public function storeRequestDevice(Request $request)
 
     private function applyManualPaymentRequestVisibilityScope(Builder $query, int $userId): Builder
     {
-        return $query->where(static function (Builder $builder) use ($userId) {
+        $orderPayableTypes = ManualPaymentRequest::orderPayableTypeAliases();
+
+        return $query->where(static function (Builder $builder) use ($userId, $orderPayableTypes) {
+            
             $builder->where('manual_payment_requests.user_id', $userId)
-                ->orWhere(static function (Builder $ordersScope) use ($userId) {
+                ->orWhere(static function (Builder $ordersScope) use ($userId, $orderPayableTypes) {
                     $ordersScope
-                        ->where('manual_payment_requests.payable_type', Order::class)
+                        ->whereIn('manual_payment_requests.payable_type', $orderPayableTypes)
+
                         ->whereExists(static function ($subQuery) use ($userId) {
                             $subQuery
                                 ->select(DB::raw('1'))
@@ -8688,14 +8692,16 @@ public function storeRequestDevice(Request $request)
                                 });
                         });
                 })
-                ->orWhereExists(static function ($subQuery) use ($userId) {
+                ->orWhereExists(static function ($subQuery) use ($userId, $orderPayableTypes) {
                     $subQuery
                         ->select(DB::raw('1'))
                         ->from('payment_transactions')
-                        ->join('orders', static function ($join) {
+                        ->join('orders', static function ($join) use ($orderPayableTypes) {
+
                             $join
                                 ->on('orders.id', '=', 'payment_transactions.payable_id')
-                                ->where('payment_transactions.payable_type', Order::class);
+                                ->whereIn('payment_transactions.payable_type', $orderPayableTypes);
+
                         })
                         ->whereColumn('payment_transactions.manual_payment_request_id', 'manual_payment_requests.id')
                         ->where(static function ($orderVisibility) use ($userId) {

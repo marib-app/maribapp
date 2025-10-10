@@ -83,7 +83,7 @@ class ManualPaymentRequestService
 
         $department = null;
 
-        if ($payableType === Order::class && $payableId) {
+        if (ManualPaymentRequest::isOrderPayableType($payableType) && $payableId) {
             $department = Order::query()->whereKey($payableId)->value('department');
         }
 

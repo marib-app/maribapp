@@ -36,6 +36,71 @@ class ManualPaymentRequest extends Model
         self::STATUS_UNDER_REVIEW,
     ];
 
+    /**
+     * Canonical and legacy values stored for order payable types.
+     *
+     * @return array<int, string>
+     */
+    public static function orderPayableTypeAliases(): array
+    {
+        $aliases = [
+            Order::class,
+            '\\' . Order::class,
+            'order',
+            'orders',
+            'cart_order',
+            'cart-orders',
+            'App\\Order',
+            '\\App\\Order',
+            'app\\order',
+            'App\\Models\\Order',
+            'app\\models\\order',
+        ];
+
+        $normalized = [];
+
+        foreach ($aliases as $alias) {
+            if (! is_string($alias)) {
+                continue;
+            }
+
+            $trimmed = trim($alias);
+
+            if ($trimmed === '') {
+                continue;
+            }
+
+            $normalized[$trimmed] = true;
+        }
+
+        return array_keys($normalized);
+    }
+
+    /**
+     * Determine if the provided value represents an order payable type.
+     */
+    public static function isOrderPayableType(mixed $value): bool
+    {
+        if (! is_string($value)) {
+            return false;
+        }
+
+        $normalizedValue = strtolower(trim($value, " \\t\\n\\r\\0\\x0B\\"'"));
+
+        foreach (self::orderPayableTypeAliases() as $alias) {
+            $normalizedAlias = strtolower(trim($alias, " \\t\\n\\r\\0\\x0B\\"'"));
+
+            if ($normalizedAlias === $normalizedValue) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+
+
+    
     protected $fillable = [
         'user_id',
         'manual_bank_id',

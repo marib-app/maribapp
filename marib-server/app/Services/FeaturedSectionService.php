@@ -273,6 +273,10 @@ class FeaturedSectionService
 
         $sectionPayload = $section->toArray();
         $sectionPayload['section_type'] = $canonicalSectionType;
+        $sectionPayload['root_identifier'] = $this->stringifyRootIdentifier(
+            FeatureSectionCategoryService::rootIdentifiers()[$canonicalSectionType] ?? null
+        ) ?? $canonicalSectionType;
+
         $sectionPayload['total_data'] = $items->count();
         $sectionPayload['section_data'] = $items->count() > 0
             ? new ItemCollection($items)
@@ -346,6 +350,47 @@ class FeaturedSectionService
 
         return $this->resolvedDefaultLimit;
     }
+
+
+    private function stringifyRootIdentifier(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $trimmed = trim($value);
+
+            return $trimmed === '' ? null : $trimmed;
+        }
+
+        if (is_numeric($value)) {
+            return (string) $value;
+        }
+
+        if (is_array($value)) {
+            $parts = [];
+
+            foreach ($value as $part) {
+                if (is_numeric($part) || is_string($part)) {
+                    $parts[] = trim((string) $part);
+                }
+            }
+
+            $parts = array_filter($parts, static function ($part) {
+                return $part !== '';
+            });
+
+            if ($parts === []) {
+                return null;
+            }
+
+            return implode(',', $parts);
+        }
+
+        return trim((string) $value) ?: null;
+    }
+
 
     private function positiveIntOrNull(mixed $value): ?int
     {

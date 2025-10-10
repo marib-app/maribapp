@@ -367,14 +367,14 @@ class Order extends Model
     public function paymentTransactions()
     {
         return $this->hasMany(PaymentTransaction::class, 'payable_id')
-            ->where('payable_type', Order::class);
+            ->whereIn('payable_type', ManualPaymentRequest::orderPayableTypeAliases());
     }
 
 
     public function manualPaymentRequests(): HasMany
     {
         return $this->hasMany(ManualPaymentRequest::class, 'payable_id')
-            ->where('payable_type', self::class)
+            ->whereIn('payable_type', ManualPaymentRequest::orderPayableTypeAliases())
             ->orderByDesc('id');
     }
 
@@ -382,7 +382,7 @@ class Order extends Model
     public function latestManualPaymentRequest(): HasOne
     {
         return $this->hasOne(ManualPaymentRequest::class, 'payable_id')
-            ->where('payable_type', self::class)
+            ->whereIn('payable_type', ManualPaymentRequest::orderPayableTypeAliases())
             ->latestOfMany('id');
     }
 

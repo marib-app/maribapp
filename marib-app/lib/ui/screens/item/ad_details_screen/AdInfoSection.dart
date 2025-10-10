@@ -314,11 +314,15 @@ class AdInfoSection {
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         /// 💵 السعر (يختفي إن كان 0)
-        buildPriceWidget(),
+        Expanded(child: buildPriceWidget()),
         // 🏷️ حالة الإعلان (تظهر فقط لصاحب الإعلان)
-        if (hasStatus) _buildStatusChip(context, model.status),
+        if (hasStatus) ...[
+          const SizedBox(width: 12),
+          _buildStatusChip(context, model.status),
+        ],
       ],
     );
   }

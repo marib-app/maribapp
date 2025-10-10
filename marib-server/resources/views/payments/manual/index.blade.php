@@ -925,23 +925,55 @@
                 return [];
             }
 
-            if (Array.isArray(json.data)) {
-                return json.data;
-            }
+            const collectRows = (candidate, depth = 0) => {
+                if (!candidate || depth > 5) {
+                    return null;
+                }
 
-            if (Array.isArray(json.rows)) {
-                return json.rows;
-            }
+                if (Array.isArray(candidate)) {
+                    if (candidate.length === 0) {
+                        return [];
+                    }
 
-            if (json.data && typeof json.data === 'object') {
-                return Object.values(json.data).filter((row) => row && typeof row === 'object');
-            }
+                    const arePlainRows = candidate.every((entry) => entry && typeof entry === 'object' && !Array.isArray(entry));
 
-            if (json.rows && typeof json.rows === 'object') {
-                return Object.values(json.rows).filter((row) => row && typeof row === 'object');
-            }
 
-            return [];
+                    if (arePlainRows) {
+                        return candidate;
+                    }
+
+                    for (const entry of candidate) {
+                        const nested = collectRows(entry, depth + 1);
+                        if (Array.isArray(nested) && nested.length > 0) {
+                            return nested;
+                        }
+                    }
+
+                    return null;
+                }
+
+                if (candidate && typeof candidate === 'object') {
+                    if (Array.isArray(candidate.data)) {
+                        return collectRows(candidate.data, depth + 1);
+                    }
+
+                    if (Array.isArray(candidate.rows)) {
+                        return collectRows(candidate.rows, depth + 1);
+                    }
+
+                    for (const value of Object.values(candidate)) {
+                        const nested = collectRows(value, depth + 1);
+                        if (Array.isArray(nested) && nested.length > 0) {
+                            return nested;
+                        }
+                    }
+                }
+
+                return null;
+            };
+
+            const resolved = collectRows(json);
+            return Array.isArray(resolved) ? resolved : [];
         }
 
         function updateManualPaymentSummaryNote() {

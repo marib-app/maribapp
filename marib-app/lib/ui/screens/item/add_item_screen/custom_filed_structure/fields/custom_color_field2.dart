@@ -110,7 +110,8 @@ class CustomColorFieldAttributes extends CustomField {
   @override
   Widget render() {
     final ThemeData theme = Theme.of(context);
-    final ColorPalette colorPalette = context.color;
+    final ColorScheme colorPalette = context.color;
+
 
     final int selectedCount = _entries.length;
     final Iterable<CustomFieldColorEntry> entries = _entries.values;
@@ -372,7 +373,7 @@ class _ColorAttributeSheetState extends State<_ColorAttributeSheet> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final ColorPalette palette = context.color;
+    final ColorScheme palette = context.color;
 
     final List<Map<String, String>> paletteSource =
     widget.maxCount != null && _entries.length >= widget.maxCount!

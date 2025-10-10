@@ -96,8 +96,16 @@ class FeatureSection extends Model {
 
     public static function normalizeSlug(?string $value): string
     {
-        $normalized = Str::slug((string) $value, '_');
+        $value = (string) $value;
 
+        if ($value === '') {
+            return '';
+        }
+
+        $value = preg_replace('/([a-z\d])([A-Z])/', '$1_$2', $value) ?? $value;
+        $value = preg_replace('/([A-Z\d])([A-Z][a-z])/', '$1_$2', $value) ?? $value;
+
+        $normalized = Str::slug($value, '_');
         return $normalized === '' ? '' : $normalized;
     }
 
@@ -111,7 +119,7 @@ class FeatureSection extends Model {
         $allowedSlugs = self::allowedSlugsForFilter($filter);
 
         foreach ($allowedSlugs as $allowed) {
-            if ($normalizedSlug === $allowed || str_starts_with($normalizedSlug, $allowed . '_')) {
+            if ($normalizedSlug === $allowed) {
                 return true;
             }
         }

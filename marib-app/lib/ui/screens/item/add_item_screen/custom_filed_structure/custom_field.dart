@@ -106,7 +106,6 @@ class CustomFieldBuilder {
     customField?.context = context;
 
     //Calling render function so we can get widget
-    Widget? render = customField?.render();
     final Widget? render = customField?.render();
     return render ?? Container();
   }

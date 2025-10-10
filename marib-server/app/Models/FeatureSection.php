@@ -19,7 +19,15 @@ class FeatureSection extends Model {
         'most_viewed' => [
             'label'   => 'Most Viewed',
             'slug'    => 'most_viewed',
-            'aliases' => ['most_viewed', 'most_viewed_ads', 'most_viewed_items', 'top_viewed', 'top_viewed_items'],
+            'aliases' => [
+                'mostviewed',
+                'most_viewed_ads',
+                'most_viewed_items',
+                'top_viewed',
+                'top_viewed_ads',
+                'top_viewed_items',
+            ],
+        
         ],
 
 

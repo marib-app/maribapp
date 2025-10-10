@@ -74,8 +74,12 @@ class PaymentTransaction extends Model
 
     public function walletTransaction(): BelongsTo
     {
-        return $this->belongsTo(WalletTransaction::class, 'payable_id')
-            ->where('payable_type', WalletTransaction::class);
+        return $this->belongsTo(WalletTransaction::class, 'payable_id');
+    }
+
+    public function payableIsWalletTransaction(): bool
+    {
+        return $this->payable_type === WalletTransaction::class;
     }
 
     

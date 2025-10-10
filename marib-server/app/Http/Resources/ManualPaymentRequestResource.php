@@ -1,10 +1,11 @@
 <?php
 
 namespace App\Http\Resources;
+use App\Models\WalletTransaction;
 
 use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage; 
+use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class ManualPaymentRequestResource extends JsonResource
@@ -20,15 +21,24 @@ class ManualPaymentRequestResource extends JsonResource
         $manualBank = $this->whenLoaded('manualBank');
         $payable = $this->whenLoaded('payable');
 
-        if ($paymentTransaction instanceof EloquentModel && ! $paymentTransaction->relationLoaded('walletTransaction')) {
+        if (
+            $paymentTransaction instanceof EloquentModel
+            && $paymentTransaction->payableIsWalletTransaction()
+            && !$paymentTransaction->relationLoaded('walletTransaction')
+        ) {
+            
             $paymentTransaction->load('walletTransaction');
         }
 
 
 
         $order = $paymentTransaction?->order;
-        $walletTransaction = $paymentTransaction?->walletTransaction;
-        $gatewayKey = $paymentTransaction?->payment_gateway
+        $walletTransaction = ($paymentTransaction instanceof EloquentModel
+            && $paymentTransaction->payableIsWalletTransaction())
+            ? $paymentTransaction->walletTransaction
+            : null;
+            
+            $gatewayKey = $paymentTransaction?->payment_gateway
             ?? data_get($this->meta, 'gateway')
             ?? 'manual_bank';
 
@@ -48,7 +58,7 @@ class ManualPaymentRequestResource extends JsonResource
             'balance_after' => data_get($walletMeta, 'wallet.balance_after'),
         ], static fn ($value) => $value !== null && $value !== '');
 
-        if ($walletTransaction) {
+        if ($walletTransaction instanceof WalletTransaction) {
             $walletSnapshot = array_merge([
                 'transaction_id' => $walletTransaction->getKey(),
                 'wallet_account_id' => $walletTransaction->wallet_account_id,
@@ -103,7 +113,7 @@ class ManualPaymentRequestResource extends JsonResource
                     'payment_status' => $order->payment_status,
                 ] : null,
 
-                'wallet_transaction' => $walletTransaction ? [
+                'wallet_transaction' => $walletTransaction instanceof WalletTransaction ? [
                     'id' => $walletTransaction->getKey(),
                     'wallet_account_id' => $walletTransaction->wallet_account_id,
                     'amount' => (float) $walletTransaction->amount,

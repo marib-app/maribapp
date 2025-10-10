@@ -1777,10 +1777,15 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     );
 
     final int? stockLimit = _selectedVariantStock?.availableStock;
+    final bool isStockTracked = stockLimit != null;
+
     final bool canIncrement = stockLimit == null || stockLimit <= 0
         ? true
         : _selectedQuantity < stockLimit;
-
+    final bool isOutOfStock = stockLimit != null && stockLimit <= 0;
+    final int? remainingAfterSelection = stockLimit != null
+        ? (stockLimit - _selectedQuantity).clamp(-9999, 9999)
+        : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1810,21 +1815,60 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
             ],
           ),
         ),
-        if (stockLimit != null && stockLimit > 0)
+        if (isStockTracked)
           Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Text(
-              'الحد المتاح: $stockLimit',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.hintColor,
-              ),
+            padding: const EdgeInsets.only(top: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isOutOfStock ? Icons.error_outline : Icons.inventory_2,
+                      size: 16,
+                      color: isOutOfStock
+                          ? theme.colorScheme.error
+                          : theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      isOutOfStock
+                          ? 'هذه التوليفة غير متوفرة حالياً في المخزون.'
+                          : 'المتوفر حالياً: $stockLimit',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: isOutOfStock
+                            ? theme.colorScheme.error
+                            : theme.colorScheme.primary,
+                        fontWeight:
+                        isOutOfStock ? FontWeight.w600 : FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                if (!isOutOfStock && remainingAfterSelection != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      remainingAfterSelection <= 0
+                          ? 'لقد وصلت لأقصى كمية متاحة لهذه التوليفة.'
+                          : 'المتبقي بعد اختيارك: $remainingAfterSelection',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: remainingAfterSelection <= 0
+                            ? theme.colorScheme.error
+                            : theme.hintColor,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
-        if (stockLimit != null && stockLimit <= 0)
+        if (!canIncrement && !isOutOfStock)
+
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Text(
-              'هذه التوليفة غير متوفرة حالياً في المخزون.',
+              'لا يمكنك تجاوز الكمية المتاحة حالياً.',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.error,
               ),
@@ -2198,6 +2242,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       isAddedByMe: false,
     );
     final bool hideLocation = GeoRules.isDisabledForItem(item);
+    final List<Widget> statusAlerts = _buildStatusAlerts(item);
 
 
     return CustomScrollView(
@@ -2272,6 +2317,12 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                       .color(context.color.textDefaultColor),
                 ),
 
+                if (statusAlerts.isNotEmpty) ...<Widget>[
+                  ...statusAlerts,
+                  const SizedBox(height: 12),
+                ],
+
+
                 // السعر والحالة
                 adInfo.priceAndStatus(),
 
@@ -2319,6 +2370,15 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                     onTap: () => _navigateToGoogleMapScreen(context),
                   ),
 
+
+                if (item.tips?.returnPolicyText?.trim().isNotEmpty ?? false)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 18.0),
+                    child: _buildReturnPolicyCard(
+                      item.tips!.returnPolicyText!.trim(),
+                    ),
+                  ),
+
                 const SizedBox(height: 8),
 
                 // زر الإبلاغ
@@ -2347,6 +2407,169 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       ],
     );
   }
+
+
+
+  List<Widget> _buildStatusAlerts(ItemModel item) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colorScheme = theme.colorScheme;
+    final List<Widget> alerts = <Widget>[];
+
+    void addAlert({
+      required IconData icon,
+      required Color color,
+      required String message,
+    }) {
+      alerts.add(
+        Padding(
+          padding: EdgeInsets.only(top: alerts.isEmpty ? 0 : 6),
+          child: _buildStatusAlertBanner(
+            theme: theme,
+            icon: icon,
+            color: color,
+            message: message,
+          ),
+        ),
+      );
+    }
+
+    final String? normalizedStatus = item.status?.toLowerCase().trim();
+    switch (normalizedStatus) {
+      case 'sold out':
+      case 'sold_out':
+        addAlert(
+          icon: Icons.do_not_disturb_alt_rounded,
+          color: theme.colorScheme.error,
+          message: 'تم بيع هذا المنتج بالكامل ولم يعد متاحاً للطلب.',
+        );
+        break;
+      case 'inactive':
+        addAlert(
+          icon: Icons.pause_circle_outline,
+          color: colorScheme.tertiary,
+          message: 'الإعلان متوقف حالياً وقد لا تتوفر إمكانية الطلب حتى عودته.',
+        );
+        break;
+      case 'review':
+        addAlert(
+          icon: Icons.search_rounded,
+          color: colorScheme.primary,
+          message: 'الإعلان قيد المراجعة من فريقنا وقد يتغير توفره قريباً.',
+        );
+        break;
+      case 'rejected':
+        addAlert(
+          icon: Icons.report_gmailerrorred,
+          color: theme.colorScheme.error,
+          message: 'تم رفض هذا الإعلان ولا يمكن إكمال الطلب عليه حالياً.',
+        );
+        break;
+      default:
+        break;
+    }
+
+    if ((item.isPurchased ?? 0) == 1) {
+      addAlert(
+        icon: Icons.shopping_bag,
+        color: colorScheme.secondary,
+        message: 'لقد قمت بشراء هذا المنتج مسبقاً. تحقق من الطلبات لمتابعة التفاصيل.',
+      );
+    }
+
+    return alerts;
+  }
+
+  Widget _buildStatusAlertBanner({
+    required ThemeData theme,
+    required IconData icon,
+    required Color color,
+    required String message,
+  }) {
+    final Color background = color.withOpacity(
+      theme.brightness == Brightness.dark ? 0.18 : 0.12,
+    );
+
+    return Semantics(
+      container: true,
+      label: 'تنبيه مهم: $message',
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.4), width: 1),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReturnPolicyCard(String text) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colorScheme = theme.colorScheme;
+    final Color baseBackground = colorScheme.surfaceVariant;
+    final Color background = baseBackground.withOpacity(
+      theme.brightness == Brightness.dark ? 0.35 : 0.55,
+    );
+
+    return Semantics(
+      container: true,
+      label: 'سياسة الاسترجاع الخاصة بالقسم',
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: colorScheme.outline.withOpacity(0.35)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.assignment_return, color: colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'سياسة الاسترجاع',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              text,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color:
+                theme.textTheme.bodyMedium?.color ?? colorScheme.onSurface,
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 
   Widget reportedAdsWidget() {
     return BlocBuilder<UpdatedReportItemCubit, UpdatedReportItemState>(

@@ -191,6 +191,12 @@ class AdInfoSection {
         discountedPrice != null &&
         discountedPrice < basePrice;
 
+    final double? discountPercent = hasDiscount
+        ? (((basePrice! - discountedPrice!) / basePrice) * 100)
+        .clamp(0, 100)
+        : null;
+
+
     final double? priceValue = discountedPrice ?? basePrice;
     final bool showPrice = priceValue != null && priceValue > 0;
 
@@ -227,27 +233,57 @@ class AdInfoSection {
         ],
       );
 
-      final List<InlineSpan> spans = <InlineSpan>[
-        TextSpan(
-          text: '  $priceText ',
-          style: TextStyle(
-            fontSize: context.font.larger,
-            fontWeight: FontWeight.bold,
-            color: context.color.territoryColor,
+      final TextStyle valueStyle = TextStyle(
+        fontSize: context.font.larger + 1,
+        fontWeight: FontWeight.w700,
+        color: context.color.territoryColor,
+      );
+
+      final List<Widget> priceRowChildren = <Widget>[
+        if (hasDiscount && discountPercent != null)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: context.color.territoryColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: context.color.territoryColor.withOpacity(0.35),
+                width: 1,
+              ),
+            ),
+            child: Text(
+              '${discountPercent.toStringAsFixed(discountPercent >= 10 ? 0 : 1)}%',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: context.font.normal,
+                color: context.color.territoryColor,
+              ),
+            ),
+          ),
+        if (hasDiscount && discountPercent != null)
+          const SizedBox(width: 12),
+        RichText(
+          text: TextSpan(
+            children: <InlineSpan>[
+              TextSpan(text: priceText, style: valueStyle),
+              if (currencyText.isNotEmpty)
+                TextSpan(text: ' $currencyText', style: currencyStyle),
+            ],
           ),
         ),
       ];
 
-      if (currencyText.isNotEmpty) {
-        spans.add(TextSpan(text: currencyText, style: currencyStyle));
-      }
 
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 5),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            RichText(text: TextSpan(children: spans)),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: priceRowChildren,
+            ),
+
             if (basePriceText != null)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
@@ -257,10 +293,11 @@ class AdInfoSection {
                       : '$basePriceText $currencyText',
                   style: TextStyle(
                     fontSize: context.font.normal,
-                    color: context.color.textLightColor.withOpacity(0.8),
+                    color: context.color.textLightColor.withOpacity(0.75),
                     decoration: TextDecoration.lineThrough,
                     decorationColor:
-                        context.color.textLightColor.withOpacity(0.8),
+                    context.color.textLightColor.withOpacity(0.65),
+
                   ),
                 ),
               ),

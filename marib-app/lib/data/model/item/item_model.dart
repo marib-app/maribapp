@@ -205,6 +205,7 @@ class ItemModel {
   List<ItemOffers>? itemOffers;
   CategoryModel? category;
   List<CustomFieldModel>? customFields;
+  ItemTipsMetadata? tips;
 
   bool? isLike;
   bool? isFeature;
@@ -258,6 +259,7 @@ class ItemModel {
     this.active,
     this.totalLikes,
     this.discount,
+    this.tips,
     this.currencyCode,
     this.views,
     this.videoLink,
@@ -338,6 +340,7 @@ class ItemModel {
     int? isPurchased,
     String? currency,
     List<UserRatings>? review,
+    ItemTipsMetadata? tips,
   }) {
     return ItemModel(
       id: id ?? this.id,
@@ -386,6 +389,7 @@ class ItemModel {
       isPurchased: isPurchased ?? this.isPurchased,
       review: review ?? this.review,
       departmentSlug: departmentSlug ?? this.departmentSlug,
+      tips: tips ?? this.tips,
 
     );
   }
@@ -457,7 +461,14 @@ class ItemModel {
     m.state = json['state'];
     m.country = json['country'];
     m.isPurchased = _toInt(json['is_purchased']);
-
+    if (json['tips'] is Map<String, dynamic>) {
+      m.tips = ItemTipsMetadata.fromJson(
+          Map<String, dynamic>.from(json['tips'] as Map<String, dynamic>));
+    } else if (json['tips'] is Map) {
+      m.tips = ItemTipsMetadata.fromJson(
+          (json['tips'] as Map).map((dynamic key, dynamic value) =>
+              MapEntry(key.toString(), value)));
+    }
     // review أو seller_review (List أو Map)
     final reviewsRaw = json['review'] ?? json['seller_review'];
     if (reviewsRaw != null) {
@@ -568,6 +579,10 @@ class ItemModel {
     }
     if (customFields != null) {
       data['custom_fields'] = customFields!.map((v) => v.toMap()).toList();
+    }
+
+    if (tips != null) {
+      data['tips'] = tips!.toJson();
     }
     return data;
   }
@@ -704,6 +719,108 @@ class ItemDiscount {
     return null;
   }
 }
+
+
+
+class ItemTipsMetadata {
+  const ItemTipsMetadata({
+    this.returnPolicyText,
+    this.productLink,
+    this.actions = const <Map<String, dynamic>>[],
+    this.raw,
+  });
+
+  factory ItemTipsMetadata.fromJson(Map<String, dynamic> json) {
+    List<Map<String, dynamic>> _normalizeActions(dynamic value) {
+      if (value is List<Map<String, dynamic>>) {
+        return value;
+      }
+      if (value is List) {
+        return value
+            .whereType<Map>()
+            .map((Map entry) => entry.map(
+              (dynamic key, dynamic val) =>
+              MapEntry(key.toString(), val),
+        ))
+            .toList();
+      }
+      if (value is Map<String, dynamic>) {
+        return value.values
+            .whereType<Map>()
+            .map((Map entry) => entry.map(
+              (dynamic key, dynamic val) =>
+              MapEntry(key.toString(), val),
+        ))
+            .toList();
+      }
+      if (value is Map) {
+        return value.values
+            .whereType<Map>()
+            .map((Map entry) => entry.map(
+              (dynamic key, dynamic val) =>
+              MapEntry(key.toString(), val),
+        ))
+            .toList();
+      }
+      return const <Map<String, dynamic>>[];
+    }
+
+    String? _coerceString(dynamic value) {
+      if (value == null) return null;
+      if (value is String) {
+        final String trimmed = value.trim();
+        return trimmed.isEmpty ? null : trimmed;
+      }
+      return value.toString();
+    }
+
+    final String? returnPolicyText = _coerceString(
+      json['return_policy_text'] ?? json['returnPolicyText'],
+    );
+
+    final String? productLink = _coerceString(
+      json['product_link'] ?? json['productLink'],
+    );
+
+    return ItemTipsMetadata(
+      returnPolicyText: returnPolicyText,
+      productLink: productLink,
+      actions: _normalizeActions(json['actions']),
+      raw: json,
+    );
+  }
+
+  final String? returnPolicyText;
+  final String? productLink;
+  final List<Map<String, dynamic>> actions;
+  final Map<String, dynamic>? raw;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      if (returnPolicyText != null) 'return_policy_text': returnPolicyText,
+      if (productLink != null) 'product_link': productLink,
+      if (actions.isNotEmpty) 'actions': actions,
+      if (raw != null) ...raw!,
+    };
+  }
+
+  ItemTipsMetadata copyWith({
+    String? returnPolicyText,
+    String? productLink,
+    List<Map<String, dynamic>>? actions,
+    Map<String, dynamic>? raw,
+  }) {
+    return ItemTipsMetadata(
+      returnPolicyText: returnPolicyText ?? this.returnPolicyText,
+      productLink: productLink ?? this.productLink,
+      actions: actions ?? this.actions,
+      raw: raw ?? this.raw,
+    );
+  }
+}
+
+
+
 
 class User {
   int? id;

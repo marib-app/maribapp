@@ -752,8 +752,21 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
   void _incrementQuantity() {
     final int? limit = _selectedVariantStock?.availableStock;
-    if (limit != null && limit > 0 && _selectedQuantity >= limit) {
-      return;
+    if (limit != null) {
+      if (limit <= 0) {
+        _notifyQuantityRestriction(
+          'هذه التوليفة غير متوفرة حالياً في المخزون.',
+          color: Theme.of(context).colorScheme.error,
+        );
+        return;
+      }
+      if (_selectedQuantity >= limit) {
+        _notifyQuantityRestriction(
+          'لقد وصلت للكمية المتاحة لهذه التوليفة.',
+          color: Theme.of(context).colorScheme.primary,
+        );
+        return;
+      }
     }
 
     setState(() {
@@ -1408,24 +1421,53 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     }
 
     if (_purchaseOptionsError != null && _purchaseOptions == null) {
+      final ThemeData theme = Theme.of(context);
+      final ColorScheme colorScheme = theme.colorScheme;
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'تعذر تحميل خيارات المنتج حالياً.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: Theme.of(context).colorScheme.error),
-            ),
-            TextButton(
-              onPressed: () =>
-                  _fetchPurchaseOptionsForCurrentItem(forceRefresh: true),
-              child: const Text('إعادة المحاولة'),
-            ),
-          ],
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: colorScheme.error.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colorScheme.error.withOpacity(0.25), width: 1),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.error_outline, color: colorScheme.error, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'تعذر تحميل خيارات المنتج حالياً. تأكد من اتصالك بالإنترنت ثم أعد المحاولة.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.error,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('إعادة المحاولة'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: colorScheme.error,
+                    side: BorderSide(color: colorScheme.error.withOpacity(0.5)),
+                  ),
+                  onPressed: () =>
+                      _fetchPurchaseOptionsForCurrentItem(forceRefresh: true),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -1590,24 +1632,31 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     }
 
     final bool isRequired = attribute.requiredForCheckout;
-    final List<DropdownMenuItem<String>> items = <DropdownMenuItem<String>>[
+    final String? currentValueRaw = _selectedAttributes[attribute.key];
+    final String effectiveValue = currentValueRaw == null ||
+        (currentValueRaw.isEmpty && !isRequired)
+        ? (isRequired && values.isNotEmpty ? values.first : '')
+        : currentValueRaw;
+
+    final List<_AttributeValueDescriptor> descriptors = <_AttributeValueDescriptor>[
+
       if (!isRequired)
-        const DropdownMenuItem<String>(
+        const _AttributeValueDescriptor(
+
           value: '',
-          child: Text('بدون اختيار'),
+          label: 'بدون اختيار',
+          isOptional: true,
         ),
       ...values.map(
-            (String value) => DropdownMenuItem<String>(
-          value: value,
+            (String value) => _AttributeValueDescriptor(
+
+              label: value,
+              isOptional: false,
           child: Text(value),
         ),
       ),
     ];
 
-    final String? currentValue = _selectedAttributes[attribute.key];
-    final String? dropdownValue = isRequired
-        ? (currentValue ?? values.first)
-        : (currentValue ?? '');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1616,16 +1665,26 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
           '${attribute.name}${isRequired ? ' *' : ''}',
           style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
-        const SizedBox(height: 6),
-        DropdownButtonFormField<String>(
-          value: dropdownValue,
-          items: items,
-          onChanged: (String? value) =>
-              _onAttributeSelectionChanged(attribute.key, value),
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            contentPadding:
-            EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 56,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            padding: EdgeInsets.zero,
+            itemBuilder: (BuildContext context, int index) {
+              final _AttributeValueDescriptor descriptor = descriptors[index];
+              final bool selected = descriptor.value == effectiveValue;
+              return _AttributeChoiceChip(
+                label: descriptor.label,
+                selected: selected,
+                isOptional: descriptor.isOptional,
+                onTap: () =>
+                    _onAttributeSelectionChanged(attribute.key, descriptor.value),
+              );
+            },
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemCount: descriptors.length,
           ),
         ),
       ],
@@ -1661,7 +1720,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     final ThemeData theme = Theme.of(context);
     final TextStyle? labelStyle =
     theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600);
-    final TextStyle? chipTextStyle = theme.textTheme.bodyMedium;
+
     final String? currentValue = _selectedAttributes[attribute.key];
 
     final Set<String> seenValues = <String>{};
@@ -1700,67 +1759,27 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
             style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
           )
         else
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: descriptors.map((descriptor) {
-              final bool selected = currentValue == descriptor.rawValue;
-              final Color borderColor = selected
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.outline.withOpacity(0.35);
-              final Color backgroundColor = selected
-                  ? theme.colorScheme.primary.withOpacity(0.10)
-                  : theme.colorScheme.surface;
-              final Color textColor = selected
-                  ? theme.colorScheme.primary
-                  : chipTextStyle?.color ?? theme.colorScheme.onSurface;
-
-              return GestureDetector(
-                onTap: () => _onAttributeSelectionChanged(
-                  attribute.key,
-                  descriptor.rawValue,
-                ),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: backgroundColor,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: borderColor, width: 1.2),
+          SizedBox(
+            height: 88,
+            child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.zero,
+                itemBuilder: (BuildContext context, int index) {
+                  final _ColorChoiceDescriptor descriptor = descriptors[index];
+                  final bool selected = currentValue == descriptor.rawValue;
+                  return _ColorSwatchChip(
+                    descriptor: descriptor,
+                    selected: selected,
+                    onTap: () => _onAttributeSelectionChanged(
+                      attribute.key,
+                      descriptor.rawValue,
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 18,
-                        height: 18,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: descriptor.swatchColor ?? Colors.transparent,
-                          border: Border.all(
-                            color: descriptor.swatchColor == null
-                                ? theme.colorScheme.outline.withOpacity(0.4)
-                                : Colors.black.withOpacity(0.18),
-                          ),
-                        ),
-                        child: descriptor.swatchColor == null
-                            ? Icon(Icons.block, size: 12, color: theme.hintColor)
-                            : null,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        descriptor.displayLabel,
-                        style: chipTextStyle?.copyWith(
-                          color: textColor,
-                          fontWeight:
-                          selected ? FontWeight.w600 : chipTextStyle?.fontWeight,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(growable: false),
+                  );
+                },
+              separatorBuilder: (_, __) => const SizedBox(width: 14),
+              itemCount: descriptors.length,
+            ),
           ),
       ],
     );
@@ -1771,110 +1790,234 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     final ColorScheme colorScheme = theme.colorScheme;
     final TextStyle? labelStyle =
     theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600);
-    final TextStyle? valueStyle = theme.textTheme.titleMedium?.copyWith(
-      fontWeight: FontWeight.bold,
-      color: colorScheme.onSurface,
-    );
+
 
     final int? stockLimit = _selectedVariantStock?.availableStock;
     final bool isStockTracked = stockLimit != null;
 
-    final bool canIncrement = stockLimit == null || stockLimit <= 0
-        ? true
-        : _selectedQuantity < stockLimit;
+
     final bool isOutOfStock = stockLimit != null && stockLimit <= 0;
+
+    final bool canIncrement;
+    if (stockLimit == null) {
+      canIncrement = true;
+    } else if (stockLimit <= 0) {
+      canIncrement = false;
+    } else {
+      canIncrement = _selectedQuantity < stockLimit;
+    }
+
     final int? remainingAfterSelection = stockLimit != null
-        ? (stockLimit - _selectedQuantity).clamp(-9999, 9999)
+        ? (stockLimit - _selectedQuantity)
         : null;
+
+    final TextStyle valueStyle = (theme.textTheme.headlineSmall ??
+        theme.textTheme.titleLarge ??
+        theme.textTheme.titleMedium ??
+        const TextStyle(fontSize: 20))
+        .copyWith(
+      fontWeight: FontWeight.w700,
+      color: colorScheme.onSurface,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
         Text('الكمية', style: labelStyle),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: colorScheme.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: colorScheme.outline.withOpacity(0.35)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _QuantityActionButton(
-                icon: Icons.remove,
-                onTap: _selectedQuantity > 1 ? _decrementQuantity : null,
-              ),
-              const SizedBox(width: 16),
-              Text('$_selectedQuantity', style: valueStyle),
-              const SizedBox(width: 16),
-              _QuantityActionButton(
-                icon: Icons.add,
-                onTap: canIncrement ? _incrementQuantity : null,
+    if (isStockTracked) ...[
+    const SizedBox(width: 10),
+    _buildQuantityPill(
+    icon: Icons.inventory_2_rounded,
+    label: 'متاح: ${stockLimit!.clamp(0, 9999)}',
+    foreground:
+    isOutOfStock ? colorScheme.error : colorScheme.primary,
+    background: (isOutOfStock
+    ? colorScheme.error
+        : colorScheme.primary)
+        .withOpacity(0.12),
               ),
             ],
-          ),
+        ],
         ),
-        if (isStockTracked)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      isOutOfStock ? Icons.error_outline : Icons.inventory_2,
-                      size: 16,
-                      color: isOutOfStock
-                          ? theme.colorScheme.error
-                          : theme.colorScheme.primary,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      isOutOfStock
-                          ? 'هذه التوليفة غير متوفرة حالياً في المخزون.'
-                          : 'المتوفر حالياً: $stockLimit',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: isOutOfStock
-                            ? theme.colorScheme.error
-                            : theme.colorScheme.primary,
-                        fontWeight:
-                        isOutOfStock ? FontWeight.w600 : FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-                if (!isOutOfStock && remainingAfterSelection != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      remainingAfterSelection <= 0
-                          ? 'لقد وصلت لأقصى كمية متاحة لهذه التوليفة.'
-                          : 'المتبقي بعد اختيارك: $remainingAfterSelection',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: remainingAfterSelection <= 0
-                            ? theme.colorScheme.error
-                            : theme.hintColor,
+    const SizedBox(height: 12),
+    LayoutBuilder(
+    builder: (BuildContext context, BoxConstraints constraints) {
+    final bool compact = constraints.maxWidth < 320;
+    final double buttonSize = compact ? 44 : 48;
+
+    return Container(
+    width: double.infinity,
+    padding: EdgeInsets.symmetric(
+    horizontal: compact ? 12 : 16,
+    vertical: compact ? 10 : 14,
+    ),
+    decoration: BoxDecoration(
+    color: colorScheme.surface,
+    borderRadius: BorderRadius.circular(16),
+    border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+    boxShadow: [
+    BoxShadow(
+    color: colorScheme.primary.withOpacity(0.05),
+    blurRadius: 12,
+    offset: const Offset(0, 6),
+    ),
+    ],
+    ),
+    child: Row(
+    children: [
+    _QuantityActionButton(
+    icon: Icons.remove_rounded,
+    onTap: _selectedQuantity > 1 ? _decrementQuantity : null,
+    onDisabledTap: _selectedQuantity <= 1
+    ? () => _notifyQuantityRestriction(
+    'الحد الأدنى للشراء هو قطعة واحدة.',
+    color: colorScheme.primary,
+    )
+        : null,
+    dimension: buttonSize,
+    ),
+    Expanded(
+    child: Center(
+    child: AnimatedDefaultTextStyle(
+    duration: const Duration(milliseconds: 180),
+    style: valueStyle.copyWith(
+    fontSize: compact ? 20 : valueStyle.fontSize,
+    ),
+    child: Text('$_selectedQuantity'),
                       ),
                     ),
                   ),
-              ],
+      _QuantityActionButton(
+        icon: Icons.add_rounded,
+        onTap: canIncrement ? _incrementQuantity : null,
+        onDisabledTap: !canIncrement
+            ? () => _notifyQuantityRestriction(
+          isOutOfStock
+              ? 'هذه التوليفة غير متوفرة حالياً في المخزون.'
+              : 'لقد وصلت للكمية المتاحة لهذه التوليفة.',
+          color: isOutOfStock
+              ? colorScheme.error
+              : colorScheme.primary,
+        )
+            : null,
+        dimension: buttonSize,
+      ),
+    ],
+    ),
+    );
+    },
+    ),
+        if (!isOutOfStock &&
+            remainingAfterSelection != null &&
+            remainingAfterSelection > 0) ...[
+          const SizedBox(height: 10),
+          _buildQuantityPill(
+            icon: Icons.timelapse_rounded,
+            label: 'المتبقي بعد اختيارك: ${remainingAfterSelection.clamp(0, 9999)}',
+            foreground: theme.hintColor,
+            background: theme.hintColor.withOpacity(0.14),
+          ),
+        ],
+        if (isOutOfStock) ...[
+          const SizedBox(height: 10),
+          _buildInlineBanner(
+            icon: Icons.error_outline_rounded,
+            message:
+            'هذه التوليفة غير متوفرة حالياً في المخزون. الرجاء اختيار سمة مختلفة أو العودة لاحقاً.',
+            foreground: colorScheme.error,
+            background: colorScheme.error.withOpacity(0.12),
+          ),
+        ] else if (remainingAfterSelection != null &&
+            remainingAfterSelection <= 0) ...[
+          const SizedBox(height: 10),
+          _buildInlineBanner(
+            icon: Icons.info_rounded,
+            message: 'لا يمكنك تجاوز الكمية المتاحة حالياً لهذا المنتج.',
+            foreground: colorScheme.primary,
+            background: colorScheme.primary.withOpacity(0.10),
+          ),
+        ],
+      ],
+    );
+  }
+
+  void _notifyQuantityRestriction(String message, {Color? color}) {
+    if (!mounted) {
+      return;
+    }
+    final ThemeData theme = Theme.of(context);
+    UiUtils.showSoftSnackBar(
+      context,
+      message: message,
+      backgroundColor: (color ?? theme.colorScheme.error),
+      backgroundOpacity: 0.88,
+      textColor: Colors.white,
+    );
+  }
+
+  Widget _buildQuantityPill({
+    required IconData icon,
+    required String label,
+    required Color foreground,
+    required Color background,
+  }) {
+    final ThemeData theme = Theme.of(context);
+    return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: foreground),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: foreground,
+                fontWeight: FontWeight.w600,
             ),
           ),
-        if (!canIncrement && !isOutOfStock)
+          ],
+        ),
+    );
+  }
 
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
+  Widget _buildInlineBanner({
+    required IconData icon,
+    required String message,
+    required Color foreground,
+    required Color background,
+  }) {
+    final ThemeData theme = Theme.of(context);
+    return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 20, color: foreground),
+            const SizedBox(width: 10),
+            Expanded(
             child: Text(
-              'لا يمكنك تجاوز الكمية المتاحة حالياً.',
+              message,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.error,
+                color: foreground,
+                height: 1.4,
               ),
             ),
           ),
-      ],
+          ],
+        ),
     );
   }
 
@@ -4309,39 +4452,66 @@ class _QuantityActionButton extends StatelessWidget {
   const _QuantityActionButton({
     required this.icon,
     this.onTap,
+    this.onDisabledTap,
+    this.dimension,
   });
 
   final IconData icon;
   final VoidCallback? onTap;
+  final VoidCallback? onDisabledTap;
+  final double? dimension;
+
+
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme colorScheme = theme.colorScheme;
     final bool enabled = onTap != null;
+    final double size = dimension ?? 46;
 
     final Color backgroundColor = enabled
-        ? colorScheme.primary.withOpacity(0.08)
-        : theme.disabledColor.withOpacity(0.08);
+        ? colorScheme.primary.withOpacity(0.12)
+        : theme.disabledColor.withOpacity(0.06);
     final Color borderColor = enabled
-        ? colorScheme.primary
-        : colorScheme.outline.withOpacity(0.25);
+        ? colorScheme.primary.withOpacity(0.45)
+        : colorScheme.outline.withOpacity(0.35);
     final Color iconColor = enabled
         ? colorScheme.primary
         : theme.disabledColor.withOpacity(0.6);
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: enabled ? onTap : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: borderColor, width: 1),
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: enabled ? onTap : onDisabledTap,
+          customBorder: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: size,
+            height: size,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: borderColor, width: 1.2),
+              boxShadow: enabled
+                  ? [
+                BoxShadow(
+                  color: colorScheme.primary.withOpacity(0.1),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ]
+                  : null,
+            ),
+            child: Icon(icon, size: 20, color: iconColor),
+          ),
         ),
-        child: Icon(icon, size: 18, color: iconColor),
       ),
     );
   }
@@ -4445,6 +4615,219 @@ class _ColorChoiceDescriptor {
     );
   }
 }
+
+
+
+
+
+
+
+
+class _AttributeValueDescriptor {
+  const _AttributeValueDescriptor({
+    required this.value,
+    required this.label,
+    required this.isOptional,
+  });
+
+  final String value;
+  final String label;
+  final bool isOptional;
+}
+
+class _AttributeChoiceChip extends StatelessWidget {
+  const _AttributeChoiceChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    required this.isOptional,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final bool isOptional;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colorScheme = theme.colorScheme;
+    final Color baseTextColor =
+        theme.textTheme.bodyMedium?.color ?? colorScheme.onSurface;
+    final Color textColor = selected ? colorScheme.primary : baseTextColor;
+    final Color backgroundColor = selected
+        ? colorScheme.primary.withOpacity(0.12)
+        : theme.colorScheme.surface;
+    final Color borderColor = selected
+        ? colorScheme.primary
+        : colorScheme.outline.withOpacity(0.3);
+
+    final String semanticsLabel = label.isEmpty ? '—' : label;
+    final String semanticsText = isOptional
+        ? '$semanticsLabel (اختياري)'
+        : semanticsLabel;
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: semanticsText,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 170),
+            padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: borderColor, width: 1.2),
+              boxShadow: selected
+                  ? [
+                BoxShadow(
+                  color: colorScheme.primary.withOpacity(0.12),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+                  : null,
+            ),
+            child: Text(
+              label.isEmpty ? '—' : label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: textColor,
+                fontWeight:
+                selected ? FontWeight.w700 : FontWeight.w500,
+              ) ??
+                  TextStyle(
+                    color: textColor,
+                    fontWeight:
+                    selected ? FontWeight.w700 : FontWeight.w500,
+                  ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ColorSwatchChip extends StatelessWidget {
+  const _ColorSwatchChip({
+    required this.descriptor,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _ColorChoiceDescriptor descriptor;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colorScheme = theme.colorScheme;
+    final Color? swatchColor = descriptor.swatchColor;
+    final Color resolvedColor =
+        swatchColor ?? theme.colorScheme.surfaceVariant.withOpacity(0.9);
+    final Color borderColor = selected
+        ? colorScheme.primary
+        : theme.dividerColor.withOpacity(0.3);
+    final Color labelColor = selected
+        ? colorScheme.primary
+        : theme.textTheme.bodySmall?.color ??
+        colorScheme.onSurface.withOpacity(0.8);
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: descriptor.displayLabel.isEmpty
+          ? 'لون غير محدد'
+          : 'لون ${descriptor.displayLabel}',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(32),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: resolvedColor,
+                  border: Border.all(
+                    color: borderColor,
+                    width: selected ? 3 : 1.4,
+                  ),
+                  boxShadow: selected
+                      ? [
+                    BoxShadow(
+                      color: colorScheme.primary.withOpacity(0.18),
+                      blurRadius: 14,
+                      offset: const Offset(0, 6),
+                    ),
+                  ]
+                      : null,
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (swatchColor == null)
+                      Icon(Icons.block, size: 22, color: theme.hintColor),
+                    if (selected)
+                      Icon(
+                        Icons.check_rounded,
+                        size: 26,
+                        color: swatchColor == null
+                            ? theme.hintColor
+                            : _foregroundForSwatch(swatchColor),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (descriptor.displayLabel.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              width: 70,
+              child: Text(
+                descriptor.displayLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: labelColor,
+                  fontWeight:
+                  selected ? FontWeight.w700 : FontWeight.w500,
+                ) ??
+                    TextStyle(
+                      color: labelColor,
+                      fontWeight:
+                      selected ? FontWeight.w700 : FontWeight.w500,
+                    ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Color _foregroundForSwatch(Color color) {
+    return color.computeLuminance() > 0.5 ? Colors.black87 : Colors.white;
+  }
+}
+
+
+
+
 
 class _FetchErrorView extends StatelessWidget {
   const _FetchErrorView({

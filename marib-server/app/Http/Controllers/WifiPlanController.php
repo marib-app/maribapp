@@ -95,8 +95,16 @@ class WifiPlanController extends Controller
         }
 
         $user = $request->user();
-        $paymentGateway = (string) $request->input('payment_gateway', 'wallet');
+        $validated = $request->validate([
+            'payment_gateway' => ['sometimes', 'string', 'max:255'],
+            'terms_acknowledged' => ['accepted'],
+            'quantity' => ['sometimes', 'integer', 'min:1', 'max:1'],
+        ]);
 
+        $paymentGateway = (string) ($validated['payment_gateway'] ?? $request->input('payment_gateway', 'wallet'));
+        $quantity = (int) ($validated['quantity'] ?? 1);
+
+        
         $transaction = PaymentTransaction::create([
             'user_id' => $user->getKey(),
             'amount' => $plan->price,
@@ -110,7 +118,8 @@ class WifiPlanController extends Controller
                 'initiated_via' => 'wifi_plan_purchase',
                 'requested_via' => 'api',
                 'payment_gateway' => $paymentGateway,
-
+                'terms_acknowledged' => true,
+                'quantity' => $quantity,
             ],
         ]);
 

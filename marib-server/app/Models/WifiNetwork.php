@@ -8,7 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Arr;
-
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 class WifiNetwork extends Model
 {
     use HasFactory;
@@ -16,8 +17,7 @@ class WifiNetwork extends Model
     protected $fillable = [
         'user_id',
         'name',
-       'slug',
-
+        'slug',
         'description',
         'location_name',
         'latitude',
@@ -34,6 +34,18 @@ class WifiNetwork extends Model
         'is_active',
         'meta',
     ];
+
+
+    protected $hidden = [
+        'logo_path',
+        'login_screenshot_path',
+    ];
+
+    protected $appends = [
+        'logo_url',
+        'login_screenshot_url',
+    ];
+
 
     protected $casts = [
         'latitude' => 'float',
@@ -76,6 +88,23 @@ class WifiNetwork extends Model
         return $this->hasMany(WifiCode::class);
     }
 
+
+    protected function logoUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->resolveStorageUrl($this->logo_path)
+        );
+    }
+
+    protected function loginScreenshotUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->resolveStorageUrl($this->login_screenshot_path)
+        );
+    }
+
+
+
     public function effectiveCommissionRate(?WifiPlan $plan = null): float
     {
         if ($plan && $plan->commission_rate_override !== null) {
@@ -84,6 +113,25 @@ class WifiNetwork extends Model
 
         return (float) $this->commission_rate;
     }
+
+
+    private function resolveStorageUrl(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        if (Str::startsWith($path, ['http://', 'https://'])) {
+            return $path;
+        }
+
+        if (! Storage::disk('public')->exists($path)) {
+            return null;
+        }
+
+        return Storage::disk('public')->url($path);
+    }
+
 
     protected function contacts(): Attribute
     {

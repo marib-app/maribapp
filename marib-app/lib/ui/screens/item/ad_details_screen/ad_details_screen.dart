@@ -2454,7 +2454,18 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                 final slug = item.slug ?? "${item.id}";
                 HelperUtils.share(context, slug, model: item);
               },
-              onReport: () => _bottomSheet(item.id!),
+              onReport: () {
+                final int? itemId = item.id ?? widget.model.id;
+                if (itemId == null || itemId <= 0) {
+                  HelperUtils.showSnackBarMessage(
+                    context,
+                    'لا يمكن الإبلاغ عن هذا الإعلان حالياً. حاول لاحقاً.',
+                  );
+                  return;
+                }
+                _bottomSheet(itemId);
+              },
+
               // نفس دالتك الحالية
 
               // ✅ زر إعجاب احترافي متوافق مع الثيم
@@ -2472,12 +2483,11 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
         // =========================
         // 2️⃣ باقي محتوى الإعلان
         // =========================
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.all(13.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+        SliverPadding(
+          padding: const EdgeInsets.all(13.0),
+          sliver: SliverList(
+            delegate: SliverChildListDelegate(
+              [
                 // العنوان
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 10),

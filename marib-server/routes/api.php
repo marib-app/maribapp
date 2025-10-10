@@ -66,7 +66,6 @@ Route::prefix('wifi-cabin')
 
     Route::prefix('wifi')->group(function () {
         Route::get('networks', [WifiNetworkController::class, 'index']);
-        Route::get('networks/nearby', [WifiNetworkController::class, 'nearby']);
         Route::post('networks', [WifiNetworkController::class, 'store']);
         Route::put('networks/{network}', [WifiNetworkController::class, 'update'])->whereNumber('network');
         Route::get('networks/{network}/plans', [WifiPlanController::class, 'index'])->whereNumber('network');

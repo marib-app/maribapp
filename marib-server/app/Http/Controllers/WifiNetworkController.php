@@ -17,15 +17,36 @@ class WifiNetworkController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
+
+        $ownerOnly = $request->boolean('owner_only', ! $request->boolean('public'));
+
+        if (! $ownerOnly) {
+            return $this->searchCatalogNetworks($request);
+        }
+
+
         $query = WifiNetwork::query()->with('plans');
 
-        if ($request->boolean('owner_only', true) && $request->user()) {
+        if ($request->user()) {
             $query->where('user_id', $request->user()->getKey());
         }
 
         if ($request->filled('is_active')) {
             $query->where('is_active', $request->boolean('is_active'));
         }
+
+        if ($request->filled('q')) {
+            $search = trim((string) $request->input('q'));
+            if ($search !== '') {
+                $query->where(static function ($builder) use ($search) {
+                    $builder
+                        ->where('name', 'like', "%{$search}%")
+                        ->orWhere('slug', 'like', "%{$search}%");
+                });
+            }
+        }
+
+
 
         $networks = $query->orderByDesc('id')->paginate($request->integer('per_page', 15));
 
@@ -183,57 +204,80 @@ class WifiNetworkController extends Controller
         return response()->json(['data' => $network->fresh()]);
     }
 
-    public function nearby(Request $request): JsonResponse
+    private function searchCatalogNetworks(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
-            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
-            'radius' => ['nullable', 'numeric', 'min:0.1', 'max:100'],
+            'q' => ['nullable', 'string', 'max:255'],
+
             'limit' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $latitude = array_key_exists('latitude', $validated) ? (float) $validated['latitude'] : null;
-        $longitude = array_key_exists('longitude', $validated) ? (float) $validated['longitude'] : null;
-        $radius = (float) ($validated['radius'] ?? 5.0);
-        $limit = (int) ($validated['limit'] ?? 20);
+        $queryText = trim((string) ($validated['q'] ?? ''));
+        $limit = (int) ($validated['limit'] ?? 50);
 
-        $query = WifiNetwork::query()
+        $networksQuery = WifiNetwork::query()
+
             ->select('wifi_networks.*')
             ->where('is_active', true)
-            ->with('plans');
+            ->whereHas('plans', static function ($builder) {
+                $builder->where('is_active', true);
+            })
+            ->with(['plans' => static function ($builder) {
+                $builder->select([
+                    'id',
+                    'wifi_network_id',
+                    'name',
+                    'description',
+                    'duration_minutes',
+                    'data_allowance_mb',
+                    'data_allowance_gb',
+                    'data_allowance_label',
+                    'validity_days',
+                    'validity_label',
+                    'speed_mbps',
+                    'speed_label',
+                    'price',
+                    'currency',
+                    'meta',
+                    'is_active',
+                ])
+                ->where('is_active', true)
+                ->orderBy('price')
+                ->orderBy('id');
+            }])
+            ->orderBy('name')
+            ->orderBy('id');
 
-        if ($latitude !== null && $longitude !== null) {
-            $query->whereNotNull('latitude')->whereNotNull('longitude');
-
-            $haversine = '(6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude))))';
-
-            $query->selectRaw("{$haversine} as distance", [$latitude, $longitude, $latitude])
-            
-            
-            ->having('distance', '<=', $radius)
-                ->orderBy('distance');
-        } else {
-            $query->selectRaw('NULL as distance')->orderByDesc('id');
+        if ($queryText !== '') {
+            $networksQuery->where(static function ($builder) use ($queryText) {
+                $builder
+                    ->where('name', 'like', "%{$queryText}%")
+                    ->orWhere('slug', 'like', "%{$queryText}%");
+            });
         }
 
-        $networks = $query->limit($limit)->get();
+        $networks = $networksQuery->limit($limit)->get();
 
         $data = $networks->map(function (WifiNetwork $network) {
-            $networkData = Arr::only($network->toArray(), [
+
+            $base = Arr::only($network->toArray(), [
+
+ 
                 'id',
                 'name',
                 'slug',
                 'location_name',
-                'latitude',
-                'longitude',
+                'description',
                 'coverage_radius_km',
-                'is_active',
+                'logo_url',
+                'login_screenshot_url',
+                'contacts',
+                'notes',
                 'meta',
             ]);
 
-            $networkData['distance'] = $network->distance !== null ? (float) $network->distance : null;
-
-            $networkData['plans'] = $network->plans
+            $base['plan_count'] = $network->plans->count();
+            $base['plans'] = $network->plans
                 ->map(static function ($plan) {
                     return Arr::only($plan->toArray(), [
                         'id',
@@ -249,17 +293,33 @@ class WifiNetworkController extends Controller
                         'speed_label',
                         'price',
                         'currency',
-                        'is_active',
                         'meta',
                     ]);
                 })
                 ->values()
                 ->all();
 
-            return $networkData;
+            $base['currencies'] = $network->plans
+                ->pluck('currency')
+                ->filter()
+                ->map(static fn ($currency) => strtoupper((string) $currency))
+                ->unique()
+                ->values()
+                ->all();
+
+            return $base;
+
         })->values();
 
-        return response()->json(['data' => $data]);
+        return response()->json([
+            'data' => $data,
+            'meta' => [
+                'count' => $data->count(),
+                'query' => $queryText,
+                'limit' => $limit,
+            ],
+        ]);
+        
     }
 
     private function assertOwner(?int $userId, WifiNetwork $network): void

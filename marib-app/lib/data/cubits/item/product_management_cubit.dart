@@ -389,12 +389,26 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     final String normalizedKey = attribute.key.toLowerCase();
     final String normalizedName = attribute.name.toLowerCase();
 
+    const List<String> arabicColorKeywords = <String>['لون', 'اللون', 'الوان', 'ألوان', 'الالوان'];
+
+    bool containsArabicColorKeyword(String value) {
+      for (final String keyword in arabicColorKeywords) {
+        if (value.contains(keyword)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+
+
     return normalizedKey.contains('color') ||
         normalizedKey.contains('colour') ||
-        normalizedKey.contains('اللون') ||
+        containsArabicColorKeyword(normalizedKey) ||
         normalizedName.contains('color') ||
         normalizedName.contains('colour') ||
-        normalizedName.contains('اللون');
+        containsArabicColorKeyword(normalizedName);
+
   }
 
   Future<SubmissionOutcome> saveAttributes() async {

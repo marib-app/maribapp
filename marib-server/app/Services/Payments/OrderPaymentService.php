@@ -253,12 +253,21 @@ class OrderPaymentService
         $meta = $this->buildTransactionMeta('initiated', $data);
         $meta = $this->mergeCurrencyMeta($meta, $order, $method, $amount, $data);
 
+
+        $meta = array_replace_recursive($meta, [
+            'order' => [
+                'id' => $order->getKey(),
+                'order_number' => $order->order_number,
+            ],
+        ]);
+
         return PaymentTransaction::create([
             'user_id' => $user->getKey(),
             'amount' => $amount,
             'currency' => $transactionCurrency,
             'payment_gateway' => $method,
-            'order_id' => $order->order_number,
+             'order_id' => (string) $order->getKey(),
+
             'payment_status' => 'pending',
             'payable_type' => Order::class,
             'payable_id' => $order->getKey(),

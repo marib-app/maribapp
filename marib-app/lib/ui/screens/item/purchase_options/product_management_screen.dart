@@ -1146,15 +1146,29 @@ bool _isColorAttribute(ItemPurchaseAttributeOption attribute) {
     return true;
   }
 
+  const List<String> arabicColorKeywords = <String>['لون', 'اللون', 'الوان', 'ألوان', 'الالوان'];
+
+  bool containsArabicColorKeyword(String value) {
+    for (final String keyword in arabicColorKeywords) {
+      if (value.contains(keyword)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+
   if (normalizedKey.contains('color') ||
       normalizedKey.contains('colour') ||
-      normalizedKey.contains('اللون')) {
+      containsArabicColorKeyword(normalizedKey)) {
+
     return true;
   }
 
   if (normalizedName.contains('color') ||
       normalizedName.contains('colour') ||
-      normalizedName.contains('اللون')) {
+      containsArabicColorKeyword(normalizedName)) {
+
     return true;
   }
 

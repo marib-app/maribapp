@@ -202,6 +202,11 @@ class ItemPurchaseOptionsService
         $record = $this->findStockRecord($item, $variantKey);
 
         if (! $record) {
+
+            if (! $this->itemHasManagedStock($item)) {
+                return;
+            }
+
             throw ValidationException::withMessages([
                 'cart' => __('الكمية المطلوبة غير متاحة حالياً لهذا الخيار.'),
             ]);
@@ -229,6 +234,11 @@ class ItemPurchaseOptionsService
 
 
         if (! $record) {
+
+            if (! $this->itemHasManagedStock($item)) {
+                return;
+            }
+
             throw ValidationException::withMessages([
                 'cart' => __('الكمية المطلوبة غير متاحة حالياً لهذا الخيار.'),
             ]);
@@ -245,6 +255,23 @@ class ItemPurchaseOptionsService
         $record->reserved_stock += $quantity;
         $record->save();
     }
+
+
+    private function itemHasManagedStock(Item $item): bool
+    {
+        if (! $item->getKey()) {
+            return false;
+        }
+
+        if ($item->relationLoaded('stocks')) {
+            return $item->stocks->isNotEmpty();
+        }
+
+        return ItemStock::query()
+            ->where('item_id', $item->getKey())
+            ->exists();
+    }
+
 
     /**
      * @return array<string, mixed>

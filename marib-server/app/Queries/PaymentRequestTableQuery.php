@@ -6,6 +6,7 @@ use App\Models\ManualPaymentRequest;
 use App\Models\WalletTransaction;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class PaymentRequestTableQuery
 {
@@ -56,6 +57,15 @@ class PaymentRequestTableQuery
      */
     public static function make(): Builder
     {
+
+
+        $supportsDepartment = Schema::hasTable('manual_payment_requests')
+            && Schema::hasColumn('manual_payment_requests', 'department');
+
+        $departmentSelect = $supportsDepartment
+            ? 'mpr.department as department'
+            : "NULL as department";
+
         $paymentTransactions = DB::table('payment_transactions as pt')
             ->selectRaw("CONCAT('pt-', pt.id) as row_key")
             ->selectRaw('pt.id as payment_transaction_id')
@@ -83,7 +93,7 @@ class PaymentRequestTableQuery
             )
             ->selectRaw("COALESCE(mpr.reference, CONCAT('TX-', pt.id)) as reference")
             ->selectRaw('pt.created_at')
-            ->selectRaw('mpr.department as department')
+            ->selectRaw($departmentSelect)
             ->selectRaw("'payment_transactions' as source")
             ->leftJoin('users', 'users.id', '=', 'pt.user_id')
             ->leftJoin('manual_payment_requests as mpr', 'mpr.id', '=', 'pt.manual_payment_request_id');
@@ -113,7 +123,7 @@ class PaymentRequestTableQuery
             )
             ->selectRaw("COALESCE(mpr.reference, CONCAT('WT-', wt.id)) as reference")
             ->selectRaw('wt.created_at')
-            ->selectRaw('mpr.department as department')
+            ->selectRaw($departmentSelect)
             ->selectRaw("'wallet_transactions' as source")
             ->join('wallet_accounts as wa', 'wa.id', '=', 'wt.wallet_account_id')
             ->leftJoin('users', 'users.id', '=', 'wa.user_id')

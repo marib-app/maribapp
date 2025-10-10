@@ -1535,26 +1535,64 @@ class ManualPaymentRequestController extends Controller
 
     private function resolvePaymentRequestOrder(Request $request): array
     {
-        $order = $request->input('order', []);
-        $order = is_array($order) ? $order : [];
+        $orderInput = $request->input('order', []);
+        $order = is_array($orderInput) ? $orderInput : [];
 
-        $columnIndex = (int) ($order[0]['column'] ?? 7);
-        $direction = strtolower((string) ($order[0]['dir'] ?? 'desc'));
-        $direction = in_array($direction, ['asc', 'desc'], true) ? $direction : 'desc';
+        $firstOrder = $order[0] ?? [];
+        $columnIndex = (int) ($firstOrder['column'] ?? 8);
+        $directionInput = strtolower((string) ($firstOrder['dir'] ?? 'desc'));
+        $direction = in_array($directionInput, ['asc', 'desc'], true) ? $directionInput : 'desc';
 
-        $columns = [
-            0 => 'reference',
-            1 => 'user_name',
-            2 => 'amount',
-            3 => 'currency',
-            4 => 'channel',
-            5 => 'category',
-            6 => 'department',
-            7 => 'status',
-            8 => 'created_at',
+        $columnDefinitions = $request->input('columns', []);
+        $columnDefinitions = is_array($columnDefinitions) ? $columnDefinitions : [];
+
+        $columnMap = [
+            'transaction_id' => 'reference',
+            'reference' => 'reference',
+            'user_name' => 'user_name',
+            'amount_fmt' => 'amount',
+            'amount' => 'amount',
+            'currency' => 'currency',
+            'payment_gateway_label' => 'channel',
+            'payment_gateway' => 'channel',
+            'department_label' => 'department',
+            'department' => 'department',
+            'payable_label' => 'category',
+            'payable_type' => 'category',
+            'category' => 'category',
+            'status_label' => 'status',
+            'status' => 'status',
+            'created_at_human' => 'created_at',
+            'created_at' => 'created_at',
         ];
 
-        return [$columns[$columnIndex] ?? 'created_at', $direction];
+        $columnKey = null;
+
+        if (isset($columnDefinitions[$columnIndex]) && is_array($columnDefinitions[$columnIndex])) {
+            $dataKey = $columnDefinitions[$columnIndex]['data'] ?? null;
+            if (is_string($dataKey) && $dataKey !== '') {
+                $columnKey = $columnMap[$dataKey] ?? null;
+            }
+        }
+
+        if ($columnKey === null) {
+            $fallbackColumns = [
+                0 => 'reference',
+                1 => 'user_name',
+                2 => 'amount',
+                3 => 'currency',
+                4 => 'channel',
+                5 => 'department',
+                6 => 'category',
+                7 => 'status',
+                8 => 'created_at',
+            ];
+
+            $columnKey = $fallbackColumns[$columnIndex] ?? 'created_at';
+        }
+
+        return [$columnKey, $direction];
+    
     }
 
     private function resolveManualPaymentGatewayKey(ManualPaymentRequest $manualPaymentRequest): string

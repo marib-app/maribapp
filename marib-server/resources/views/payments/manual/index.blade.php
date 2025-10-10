@@ -619,10 +619,8 @@
             };
         })();
 
-        let manualPaymentHasActiveFilters = false;
-
-        let manualPaymentFilters = loadInitialManualPaymentFilters();
-
+        let manualPaymentInitialDrawTriggered = false;
+        let manualPaymentOriginalErrMode = null;
 
         function safeManualPaymentStorageGet(key) {
             try {
@@ -643,6 +641,30 @@
                 }
             } catch (error) {
                 console.warn('Failed to persist manual payment storage', error);
+            }
+        }
+
+
+
+        function enableManualPaymentDebugErrors() {
+            if (!window.jQuery || !$.fn.dataTable || !$.fn.dataTable.ext) {
+                return;
+            }
+
+            if (manualPaymentOriginalErrMode === null) {
+                manualPaymentOriginalErrMode = $.fn.dataTable.ext.errMode;
+            }
+
+            $.fn.dataTable.ext.errMode = 'alert';
+        }
+
+        function restoreManualPaymentErrorMode() {
+            if (!window.jQuery || !$.fn.dataTable || !$.fn.dataTable.ext) {
+                return;
+            }
+
+            if (manualPaymentOriginalErrMode !== null) {
+                $.fn.dataTable.ext.errMode = manualPaymentOriginalErrMode;
             }
         }
 
@@ -815,6 +837,47 @@
             );
         }
 
+
+
+        function applyManualPaymentFiltersToParams(params) {
+            if (!params || typeof params !== 'object') {
+                return params;
+            }
+
+            const filters = { ...manualPaymentFilters };
+            const normalizedSearch = normalizeManualPaymentFilterValue('search', filters.search ?? '');
+            const searchValue = normalizedSearch === null ? '' : normalizedSearch;
+
+            if (!params.search || typeof params.search !== 'object') {
+                params.search = { value: '', regex: false };
+            }
+
+            params.search.value = searchValue;
+
+            MANUAL_PAYMENT_FILTER_KEYS.forEach((key) => {
+                if (key === 'search') {
+                    return;
+                }
+
+                const value = filters[key];
+
+                if (value !== undefined && value !== null && value !== '') {
+                    params[key] = value;
+                } else {
+                    delete params[key];
+                }
+            });
+
+            if (filters.payable_type !== undefined && filters.payable_type !== null && filters.payable_type !== '') {
+                params.payable_type = filters.payable_type;
+                params.category = filters.payable_type;
+            } else {
+                delete params.payable_type;
+                delete params.category;
+            }
+
+            return params;
+        }
 
         function hydrateManualPaymentFilters($form) {
 
@@ -1257,44 +1320,40 @@
 
         $(function () {
             const $table = $('#manual-payments-table');
+
+
+            if (!$table.length) {
+                return;
+            }
+
+
             const $form = $('#manual-payment-filters');
 
-            hydrateManualPaymentFilters($form);
+            if ($form.length) {
+                hydrateManualPaymentFilters($form);
+            }
+
             updateQuickFilterButtons();
+            enableManualPaymentDebugErrors();
 
             const dataTable = $table.DataTable({
                 processing: true,
                 serverSide: true,
                 searching: false,
                 lengthMenu: [10, 20, 50, 100],
+                pageLength: 10,
+                stateSave: true,
+                stateDuration: 0,
+                stateLoadParams: function (settings, data) {
+                    if (!data || typeof data.length !== 'number' || data.length <= 0) {
+                        data.length = 10;
+                    }
+                },
+
                 ajax: {
                     url: '{{ route('manual-payments.table') }}',
                     data: function (params) {
-                        const filters = { ...manualPaymentFilters };
-                        const searchValue = filters.search ?? '';
-
-                        if (!params.search) {
-                            params.search = { value: '', regex: false };
-                        }
-
-                        params.search.value = searchValue;
-
-                        MANUAL_PAYMENT_FILTER_KEYS.forEach((key) => {
-                            if (key === 'search') {
-                                return;
-                            }
-
-                            if (filters[key] !== undefined) {
-                                params[key] = filters[key];
-                            } else {
-                                delete params[key];
-                            }
-                        });
-
-                        if (filters.payable_type !== undefined) {
-                            params.payable_type = filters.payable_type;
-                            params.category = filters.payable_type;
-                        }
+                        applyManualPaymentFiltersToParams(params);
 
                     },
                     dataSrc: function (json) {
@@ -1323,6 +1382,10 @@
                     },
                     error: function () {
                         setManualPaymentFeedback('{{ __('Unable to load manual payment requests. Please try again later.') }}', 'danger');
+                        restoreManualPaymentErrorMode();
+
+
+
                     }
                 },
                 order: [[8, 'desc']],
@@ -1424,9 +1487,22 @@
                 ],
                 language: {
                     emptyTable: '{{ __('No manual payments found for the current filters.') }}'
+
+                },
+                initComplete: function () {
+                    restoreManualPaymentErrorMode();
+
+                    if (!manualPaymentInitialDrawTriggered) {
+                        manualPaymentInitialDrawTriggered = true;
+                        this.api().draw(false);
+                    }
+
                 }
             });
 
+            dataTable.on('destroy.dt', function () {
+                restoreManualPaymentErrorMode();
+            });
 
             const $transactionSearch = $('#manual-payment-transaction-search');
             if ($transactionSearch.length) {
@@ -1457,6 +1533,9 @@
 
 
             dataTable.on('preXhr.dt', function (event, settings, params) {
+                applyManualPaymentFiltersToParams(params);
+
+
                 manualPaymentLastRequestStart = params.start || 0;
             });
 
@@ -1502,6 +1581,9 @@
             });
             dataTable.on('error.dt', function () {
                 setManualPaymentFeedback('{{ __('Unable to load manual payment requests. Please try again later.') }}', 'danger');
+                restoreManualPaymentErrorMode();
+
+
             });
 
 
@@ -1520,6 +1602,10 @@
 
 
                 $form[0].reset();
+                if ($form.length) {
+                    $form[0].reset();
+                }
+
                 $('#manual-payment-transaction-search').val('');
 
 
@@ -1583,6 +1669,20 @@
             $('[data-filter-reset]').on('click', function () {
                 $('#manual-payment-reset').trigger('click');
             });
+
+
+            $(document).on('shown.bs.tab', 'a[data-bs-toggle="tab"]', function (event) {
+                const targetSelector = $(event.target).attr('data-bs-target') || $(event.target).attr('href');
+                if (!targetSelector) {
+                    return;
+                }
+
+                const targetElement = document.querySelector(targetSelector);
+                if (targetElement && targetElement.contains($table[0])) {
+                    dataTable.columns.adjust().draw(false);
+                }
+            });
+
 
             window.addEventListener('manual-payment-refresh', function () {
                 dataTable.draw(false);

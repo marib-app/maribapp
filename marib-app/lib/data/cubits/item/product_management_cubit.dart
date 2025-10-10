@@ -11,17 +11,7 @@ import 'package:marib/data/repositories/item/item_purchase_options_repository.da
 import 'package:marib/utils/errorFilter.dart';
 
 
-import 'dart:collection';
-import 'dart:math' as math;
-import 'package:marib/data/model/custom_field/custom_field_model.dart';
 
-import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart';
-import 'package:marib/data/model/item/item_model.dart';
-import 'package:marib/data/model/item/purchase_options.dart';
-import 'package:marib/data/repositories/item/item_purchase_options_repository.dart';
-import 'package:marib/utils/errorFilter.dart';
 
 const List<String> _defaultSizeCatalog = <String>[
   'XS',

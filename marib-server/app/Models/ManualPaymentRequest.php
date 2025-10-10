@@ -1,10 +1,11 @@
 <?php
 
 namespace App\Models;
-use App\Models\WalletAccount;
-use App\Models\AdminNotification;
-use App\Models\Concerns\NotifiesAdminOnApprovalStatus;
+
+
+
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,16 +14,14 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use function __;
-use function url;
+
 
 
 class ManualPaymentRequest extends Model
 {
     use HasFactory;
-    use NotifiesAdminOnApprovalStatus;
+    use Concerns\NotifiesAdminOnApprovalStatus;
 
-    protected $table = 'manual_payment_requests';
 
     // حالات الطلب
     public const STATUS_PENDING = 'pending';
@@ -35,6 +34,11 @@ class ManualPaymentRequest extends Model
         self::STATUS_PENDING,
         self::STATUS_UNDER_REVIEW,
     ];
+ 
+     /**
+     * @var array<int, string>
+     */
+
 
     /**
      * Canonical and legacy values stored for order payable types.
@@ -124,6 +128,12 @@ class ManualPaymentRequest extends Model
         'meta',
     ];
 
+
+    /**
+     * @var array<string, string>
+     */
+
+
     protected $casts = [
         'amount' => 'decimal:2',
         'meta' => 'array',
@@ -134,6 +144,17 @@ class ManualPaymentRequest extends Model
     ];
 
     // ======== العلاقات ========
+
+
+
+    protected static function booted(): void
+    {
+        Relation::morphMap([
+            self::PAYABLE_TYPE_WALLET_TOP_UP => WalletAccount::class,
+        ], true);
+    }
+
+
 
     public function user(): BelongsTo
     {
@@ -164,15 +185,15 @@ class ManualPaymentRequest extends Model
     }
 
 
-    protected static function booted(): void
+    public function payable(): MorphTo
     {
-        Relation::morphMap([
-            self::PAYABLE_TYPE_WALLET_TOP_UP => WalletAccount::class,
-        ], true);
+        return $this->morphTo()->withTrashed();
+
     }
 
 
-   protected function getAdminNotificationType(): string
+    protected function getAdminNotificationType(): string
+
     {
         return AdminNotification::TYPE_MANUAL_PAYMENT_REQUEST;
     }
@@ -214,20 +235,6 @@ class ManualPaymentRequest extends Model
 
 
 
-    public function payable(): MorphTo
-    {
-        return $this->morphTo()->withTrashed();
-    }
-
-
-    public function isWalletTopUp(): bool
-    {
-        return $this->payable_type === self::PAYABLE_TYPE_WALLET_TOP_UP;
-    }
-
-    // ======== Accessors / Helpers ========
-
-    /** رابط مرفق الإيصال (يدعم مسار التخزين أو رابط كامل) */
     public function getReceiptUrlAttribute(): ?string
     {
         if (empty($this->receipt_path)) {
@@ -238,11 +245,17 @@ class ManualPaymentRequest extends Model
             return $this->receipt_path;
         }
 
-        return Storage::exists($this->receipt_path)
-            ? url(Storage::url($this->receipt_path))
-            : $this->receipt_path;
+        if (Storage::exists($this->receipt_path)) {
+            return url(Storage::url($this->receipt_path));
+        }
+
+        return $this->receipt_path;
     }
 
+    public function isWalletTopUp(): bool
+    {
+        return $this->payable_type === self::PAYABLE_TYPE_WALLET_TOP_UP;
+    }
 
 
 
@@ -259,15 +272,8 @@ class ManualPaymentRequest extends Model
         return $this->status === self::STATUS_UNDER_REVIEW;
     }
 
-    public function isOpen(): bool
-    {
-        return in_array($this->status, self::OPEN_STATUSES, true);
-    }
+    public function isApproved(): bool
 
-    // ======== Scopes (تصفية سريعة) ========
-
-
-        public function isApproved(): bool
     {
         return $this->status === self::STATUS_APPROVED;
     }
@@ -277,46 +283,65 @@ class ManualPaymentRequest extends Model
         return $this->status === self::STATUS_REJECTED;
     }
 
-    public function scopeStatus($query, ?string $status)
+    public function isOpen(): bool
+
     {
-        return !empty($status) ? $query->where('status', $status) : $query;
+        return in_array($this->status, self::OPEN_STATUSES, true);
     }
 
-    public function scopeOpen($query)
+    public function scopeStatus(Builder $query, ?string $status): Builder
+    {
+        if (empty($status)) {
+            return $query;
+        }
+
+        return $query->where('status', $status);
+    }
+
+    public function scopeOpen(Builder $query): Builder
     {
         return $query->whereIn('status', self::OPEN_STATUSES);
     }
 
-    public function scopePayableType($query, ?string $type)
+    public function scopePayableType(Builder $query, ?string $type): Builder
     {
-        return !empty($type) ? $query->where('payable_type', $type) : $query;
+        if (empty($type)) {
+            return $query;
+        }
+
+        return $query->where('payable_type', $type);
     }
 
 
-    public function scopePaymentGateway($query, ?string $gateway)
+    public function scopePaymentGateway(Builder $query, ?string $gateway): Builder
+
     {
         if (empty($gateway)) {
             return $query;
         }
 
-        return $query->where(function ($builder) use ($gateway) {
+        return $query->where(function (Builder $builder) use ($gateway): void {
             if ($gateway === 'manual_bank') {
                 $builder->whereDoesntHave('paymentTransaction')
-                    ->orWhereHas('paymentTransaction', function ($transactionQuery) {
+                    ->orWhereHas('paymentTransaction', static function (Builder $transactionQuery): void {
+
                         $transactionQuery->where('payment_gateway', 'manual_bank');
                     });
 
                 return;
             }
 
-            $builder->whereHas('paymentTransaction', function ($transactionQuery) use ($gateway) {
+            $builder->whereHas('paymentTransaction', static function (Builder $transactionQuery) use ($gateway): void {
+
                 $transactionQuery->where('payment_gateway', $gateway);
             });
 
             if ($gateway === 'wallet') {
-                $builder->orWhere(function ($inner) {
+                $builder->orWhere(static function (Builder $inner): void {
+
                     $inner->whereDoesntHave('paymentTransaction')
-                        ->where(function ($metaQuery) {
+                          ->where(static function (Builder $metaQuery): void {
+
                             $metaQuery->where('payable_type', self::PAYABLE_TYPE_WALLET_TOP_UP)
                                 ->orWhereNotNull('meta->wallet');
                         });
@@ -327,7 +352,7 @@ class ManualPaymentRequest extends Model
     }
 
 
-    public function scopeDateBetween($query, ?string $from, ?string $to)
+    public function scopeDateBetween(Builder $query, ?string $from, ?string $to): Builder
     {
         if ($from) {
             $query->whereDate('created_at', '>=', Carbon::parse($from)->toDateString());
@@ -338,33 +363,34 @@ class ManualPaymentRequest extends Model
         return $query;
     }
 
-    public function scopeSearch($query, ?string $term)
+    public function scopeSearch(Builder $query, ?string $term): Builder
+
     {
+        $term = trim((string) $term);
 
 
-        if (!filled($term) || trim($term) === '') {
+        if ($term === '') {
             return $query;
         }
 
 
 
-        $term = trim($term);
+
 
         $like = "%{$term}%";
 
-        return $query->where(function ($q) use ($like) {
-            $q->where('reference', 'LIKE', $like)
-
-              ->orWhere('amount', 'LIKE', $like)
-              ->orWhereHas('user', function ($uq) use ($like) {
-                  $uq->where('name', 'LIKE', $like)
-                     ->orWhere('email', 'LIKE', $like)
-                     ->orWhere('mobile', 'LIKE', $like);
-              })
-              ->orWhereHas('paymentTransaction', function ($tq) use ($like) {
-                  $tq->where('id', 'LIKE', $like)
-                     ->orWhere('payment_gateway', 'LIKE', $like);
-              });
+        return $query->where(static function (Builder $builder) use ($like): void {
+            $builder->where('reference', 'LIKE', $like)
+                ->orWhere('amount', 'LIKE', $like)
+                ->orWhereHas('user', static function (Builder $userQuery) use ($like): void {
+                    $userQuery->where('name', 'LIKE', $like)
+                        ->orWhere('email', 'LIKE', $like)
+                        ->orWhere('mobile', 'LIKE', $like);
+                })
+                ->orWhereHas('paymentTransaction', static function (Builder $transactionQuery) use ($like): void {
+                    $transactionQuery->where('id', 'LIKE', $like)
+                        ->orWhere('payment_gateway', 'LIKE', $like);
+                });
         });
     }
 }

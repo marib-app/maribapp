@@ -642,18 +642,55 @@ $('#category_name').on('input', function () {
     $('#category_slug').val(slug);
 });
 
+
+const shouldLockSlugField = ($field) => {
+    if (!$field || !$field.length) {
+        return false;
+    }
+
+    return $field.is('[data-enforce-filter-slug="true"]');
+};
+
 $('.feature-section-name').on('input', function () {
-    let slug = generateSlug($(this).val());
-    $('.feature-section-slug').val(slug);
+    const $form = $(this).closest('form');
+    let $slugField = $form.find('.feature-section-slug');
+
+    if (!$slugField.length) {
+        $slugField = $('.feature-section-slug');
+    }
+
+    if (shouldLockSlugField($slugField)) {
+        return;
+    }
+
+    const slug = generateSlug($(this).val());
+    $slugField.val(slug);
 });
 
 $('.edit-feature-section-name').on('input', function () {
-    let slug = generateSlug($(this).val());
-    $('.edit-feature-section-slug').val(slug);
+    const $form = $(this).closest('form');
+    let $slugField = $form.find('.edit-feature-section-slug');
+
+    if (!$slugField.length) {
+        $slugField = $('.edit-feature-section-slug');
+    }
+
+    if (shouldLockSlugField($slugField)) {
+        return;
+    }
+
+    const slug = generateSlug($(this).val());
+    $slugField.val(slug);
 });
 $('#title').on('input', function () {
-    let slug = generateSlug($(this).val())
-    $('#slug').val(slug);
+    const $slugField = $('#slug');
+
+    if (shouldLockSlugField($slugField)) {
+        return;
+    }
+
+    const slug = generateSlug($(this).val());
+    $slugField.val(slug);
 });
 function descriptionFormatter(value, row, index) {
     if (value.length > 100) {

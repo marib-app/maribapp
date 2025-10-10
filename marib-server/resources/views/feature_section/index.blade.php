@@ -166,7 +166,7 @@
                                     <div class="col-md-6">
                                         <div class="col-md-12 form-group mandatory">
                                             <label for="slug" class="mandatory form-label">{{ __('Slug') }}</label>
-                                            <input type="text" name="slug" id="slug" class="form-control feature-section-slug" data-parsley-required="true" data-initial-slug="{{ old("slug") }}" readonly>
+                                            <input type="text" name="slug" id="slug" class="form-control feature-section-slug" data-parsley-required="true" data-initial-slug="{{ old("slug") }}" data-enforce-filter-slug="true" readonly>
 
 
                                             <small class="form-text text-muted" id="slug_filter_hint" data-template="{{ __('Allowed slugs for this filter: :list') }}">{{ __('Allowed slugs for this filter: :list', ['list' => $defaultFilterHint ?: __('N/A')]) }}</small>
@@ -416,7 +416,7 @@
                                                 <div class="form-group mb-3">
                                                     <label for="edit_slug" class="form-label fw-bold">{{ __('Slug') }} <span class="text-danger">*</span></label>
 
-                                                    <input type="text" name="slug" id="edit_slug" class="form-control edit-feature-section-slug" data-parsley-required="true" readonly>
+                                                    <input type="text" name="slug" id="edit_slug" class="form-control edit-feature-section-slug" data-parsley-required="true" data-enforce-filter-slug="true" readonly>
 
                                                     <small class="form-text text-muted" id="edit_slug_filter_hint" data-template="{{ __('Allowed slugs for this filter: :list') }}">{{ __('Allowed slugs for this filter: :list', ['list' => $defaultFilterHint?: __('N/A')]) }}</small>
                                                     <small class="form-text text-muted">{{ __('The slug is generated automatically from the selected filter. It is different from the root_categories setting, which only controls the default category tree.')}}</small>
@@ -734,6 +734,79 @@
 
             const usedSlugMap = window.featureSectionUsedSlugsMap || {};
             const filterLabelsMap = window.featureSectionFilterLabels || {};
+
+
+
+
+
+            const getFilterLabel = (filter) => {
+                const key = (filter || '').toString();
+
+                if (!key) {
+                    return '';
+                }
+
+                const label = filterLabelsMap[key];
+
+                if (typeof label === 'string' && label.trim() !== '') {
+                    return label.trim();
+                }
+
+                return key;
+            };
+
+            const $createTitle = $('#title');
+            const $editTitle = $('#edit_title');
+
+            const markTitleField = ($input) => {
+                if (!$input.length) {
+                    return;
+                }
+
+                $input.each(function() {
+                    const $field = $(this);
+                    $field.on('input', function() {
+                        const currentValue = ($field.val() || '').toString().trim();
+                        const autoValue = ($field.data('featureSectionAutoTitle') || '').toString().trim();
+                        $field.data('featureSectionUserEdited', currentValue !== '' && currentValue !== autoValue);
+                    });
+                });
+            };
+
+            const autoFillTitleField = ($input, filter, options = {}) => {
+                if (!$input.length) {
+                    return;
+                }
+
+                const settings = { force: false, ...options };
+                const label = getFilterLabel(filter);
+
+                if (!label) {
+                    return;
+                }
+
+                const previousAuto = ($input.data('featureSectionAutoTitle') || '').toString().trim();
+                const currentValue = ($input.val() || '').toString().trim();
+                const userEdited = $input.data('featureSectionUserEdited') === true;
+
+                const shouldUpdate = settings.force
+                    || !currentValue
+                    || currentValue === previousAuto
+                    || (!userEdited && currentValue === '');
+
+                if (shouldUpdate) {
+                    $input.val(label);
+                    $input.data('featureSectionUserEdited', false);
+                } else {
+                    $input.data('featureSectionUserEdited', currentValue !== '' && currentValue !== label);
+                }
+
+                $input.data('featureSectionAutoTitle', label);
+            };
+
+            markTitleField($createTitle);
+            markTitleField($editTitle);
+
 
 
             const filterTakenMessage = window.featureSectionFilterTakenMessage || '{{ __('This filter is already used for the selected section type. Please edit the existing feature section instead.') }}';
@@ -1156,6 +1229,10 @@
                 if (initialSlug) {
                     $createSlug.removeData('initialSlug');
                 }
+
+                autoFillTitleField($createTitle, filterValue);
+
+
                 const $selectedOption = $createFilter.find('option:selected');
                 const filterUnavailable = $selectedOption.is('[data-filter-unavailable]');
                 const disableSubmit = !filterValue || filterUnavailable;
@@ -1194,6 +1271,7 @@
                 if (preferredSlug) {
                     $editSlug.removeData('featureSectionPreferredSlug');
                 }
+                autoFillTitleField($editTitle, filterValue, { force: autoFill });
 
                 const $selectedOption = $editFilter.find('option:selected');
                 const filterUnavailable = $selectedOption.is('[data-filter-unavailable]');

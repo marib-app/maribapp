@@ -102,6 +102,9 @@ class FeatureSectionController extends Controller {
             $request->merge(['filter' => $request->input('filter_type')]);
         }
 
+        $this->ensureTitleFromFilter($request);
+
+
         $normalizedInputSlug = FeatureSection::normalizeSlug($request->input('slug'));
 
         $expectedSlug = $this->resolveSlugFromRequest($request);
@@ -340,6 +343,7 @@ class FeatureSectionController extends Controller {
             $request->merge(['filter' => $request->input('filter_type')]);
         }
 
+        $this->ensureTitleFromFilter($request);
 
         $normalizedInputSlug = FeatureSection::normalizeSlug($request->input('slug'));
 
@@ -726,7 +730,36 @@ class FeatureSectionController extends Controller {
     }
 
 
+    private function ensureTitleFromFilter(Request $request): void
+    {
+        $rawTitle = $request->input('title');
 
+        if (is_string($rawTitle) && trim($rawTitle) !== '') {
+            return;
+        }
+
+        $filter = $request->input('filter');
+
+        if (! is_string($filter) || trim($filter) === '') {
+            return;
+        }
+
+        $labels = FeatureSection::filterLabels();
+        $label = $labels[$filter] ?? null;
+
+        $resolved = is_string($label) && trim($label) !== ''
+            ? trim((string) $label)
+            : trim($filter);
+
+        if ($resolved === '') {
+            return;
+        }
+
+        $request->merge(['title' => $resolved]);
+    }
+
+
+    
     private function transformSectionResponse(FeatureSection $section, bool $includeActions = false): array
     {
         $data = $section->toArray();

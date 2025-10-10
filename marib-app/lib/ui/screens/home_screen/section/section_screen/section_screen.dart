@@ -222,6 +222,14 @@ class Section_screenState extends State<Section_screen> {
       ),
     );
 
+
+    // لضمان توفر البيانات قبل بناء HomeTabView.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _requestFeaturedSections();
+    });
+
+
     _hasAdSlider = widget.interfaceType?.trim().isNotEmpty ?? false;
 
     final String? interfaceType = widget.interfaceType?.trim();
@@ -296,7 +304,8 @@ class Section_screenState extends State<Section_screen> {
         filter: filter?.copyWith(categoryId: widget.categoryId),
       );
 
-
+      // إعادة تحميل أقسام الإعلانات المميزة عند السحب للتحديث
+      _requestFeaturedSections();
 
 
       // (اختياري)

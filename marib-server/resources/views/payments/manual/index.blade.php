@@ -194,7 +194,8 @@
                                         <span class="badge bg-dark text-white"><i class="fa fa-user-cog"></i></span>
                                     </div>
                                     <div class="d-flex align-items-baseline gap-2">
-                                        <h4 class="fw-bold mb-0" data-summary-gateway="wallet">{{ number_format($gatewaySummary['wallet'] ?? 0) }}</h4>
+                                        <h4 class="fw-bold mb-0" data-summary-gateway="manual_banks">{{ number_format($gatewaySummary['manual_banks'] ?? 0) }}</h4>
+
                                         <span class="text-muted small">{{ __('Requests') }}</span>
                                     </div>
                                 </div>
@@ -255,7 +256,7 @@
                                         <span class="badge bg-info text-dark"><i class="fa fa-box"></i></span>
                                     </div>
                                     <div class="d-flex align-items-baseline gap-2">
-                                        <h4 class="fw-bold mb-0" data-summary-category="top_ups">{{ number_format($categorySummary['top_ups'] ?? 0) }}</h4>
+                                        <h4 class="fw-bold mb-0" data-summary-category="packages">{{ number_format($categorySummary['packages'] ?? 0) }}</h4>
                                         <span class="text-muted small">{{ __('Requests') }}</span>
                                     </div>
                                 </div>
@@ -268,7 +269,7 @@
                                         <span class="badge bg-warning text-dark"><i class="fa fa-arrow-up"></i></span>
                                     </div>
                                     <div class="d-flex align-items-baseline gap-2">
-                                        <h4 class="fw-bold mb-0">{{ number_format($categorySummary['top_ups'] ?? 0) }}</h4>
+                                        <h4 class="fw-bold mb-0" data-summary-category="top_ups">{{ number_format($categorySummary['top_ups'] ?? 0) }}</h4>
                                         <span class="text-muted small">{{ __('Requests') }}</span>
                                     </div>
                                 </div>
@@ -1264,7 +1265,6 @@
             const dataTable = $table.DataTable({
                 processing: true,
                 serverSide: true,
-                deferLoading: 0,
                 searching: false,
                 lengthMenu: [10, 20, 50, 100],
                 ajax: {

@@ -185,10 +185,40 @@ class AdImageHeader extends StatefulWidget {
 class _AdImageHeaderState extends State<AdImageHeader> {
   late int currentImageIndex;
 
+  bool get _hasImages => widget.images.isNotEmpty;
+
+
+
   @override
   void initState() {
     super.initState();
     currentImageIndex = widget.currentImageIndex;
+  }
+  @override
+  void didUpdateWidget(covariant AdImageHeader oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final int normalizedIndex = _normalizeIndex(
+      widget.currentImageIndex,
+      widget.images.length,
+    );
+    if (normalizedIndex != currentImageIndex) {
+      setState(() {
+        currentImageIndex = normalizedIndex;
+      });
+    }
+  }
+
+  int _normalizeIndex(int index, int itemCount) {
+    if (itemCount <= 0) {
+      return 0;
+    }
+    if (index < 0) {
+      return 0;
+    }
+    if (index >= itemCount) {
+      return itemCount - 1;
+    }
+    return index;
   }
 
   @override
@@ -199,20 +229,20 @@ class _AdImageHeaderState extends State<AdImageHeader> {
         fit: StackFit.expand,
         children: [
           GestureDetector(
-            onTap: () {
+            onTap: !_hasImages
+                ? null
+                : () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      FullscreenGalleryPage(
-                        images: widget.images,
-                        initialIndex: currentImageIndex,
-                        heroTagBuilder: (index) =>
-                        widget.modelId != null
-                            ? 'ad-image-${widget.modelId}-$index'
-                            : 'ad-image-$index',
+                  builder: (context) => FullscreenGalleryPage(
+                    images: widget.images,
+                    initialIndex: currentImageIndex,
+                    heroTagBuilder: (index) => widget.modelId != null
+                        ? 'ad-image-${widget.modelId}-$index'
+                        : 'ad-image-$index',
+                  ),
                       ),
-                ),
               );
             },
             child: _buildImageSlider(),
@@ -286,6 +316,9 @@ class _AdImageHeaderState extends State<AdImageHeader> {
   }
 
   Widget _buildImageSlider() {
+    if (!_hasImages) {
+      return _buildPlaceholder();
+    }
     return PageView.builder(
       controller: widget.pageController,
       itemCount: widget.images.length,
@@ -311,6 +344,30 @@ class _AdImageHeaderState extends State<AdImageHeader> {
           ),
         );
       },
+    );
+  }
+
+
+  Widget _buildPlaceholder() {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colorScheme = theme.colorScheme;
+    final bool isDark = theme.brightness == Brightness.dark;
+    final Color background = colorScheme.surfaceVariant.withOpacity(
+      isDark ? 0.35 : 0.8,
+    );
+    final Color iconColor = colorScheme.onSurface.withOpacity(0.6);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: background,
+      ),
+      child: Center(
+        child: Icon(
+          Icons.image_not_supported_outlined,
+          size: 48,
+          color: iconColor,
+        ),
+      ),
     );
   }
 

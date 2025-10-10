@@ -1267,10 +1267,21 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     void updateState() {
       categoryId = _currentItem.category?.id ?? _currentItem.categoryId;
       combineImages();
+      currentPage = 0;
+      currentIndex = 0;
       _selectedQuantity = 1;
       _selectedAttributes = <String, String>{};
       _selectedVariantKey = null;
       _selectedVariantStock = null;
+      if (pageController.hasClients) {
+        pageController.jumpToPage(0);
+      } else {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (pageController.hasClients) {
+            pageController.jumpToPage(0);
+          }
+        });
+      }
     }
 
     if (fromInit) {

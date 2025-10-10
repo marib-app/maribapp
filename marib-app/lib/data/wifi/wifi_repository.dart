@@ -66,21 +66,19 @@ class WifiRepository {
 
 
 
-  Future<List<WifiNetwork>> fetchNearbyNetworks({
-    required double latitude,
-    required double longitude,
-    required double radiusKm,
+  Future<List<WifiNetwork>> searchNetworks({
+    String? query,
     int? limit,
   }) async {
-    final queryParameters = <String, dynamic>{
-      'latitude': latitude,
-      'longitude': longitude,
-      'radius': radiusKm,
+    final Map<String, dynamic> queryParameters = <String, dynamic>{
+      'owner_only': false,
+      'public': true,
+      if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
       if (limit != null) 'limit': limit,
     };
 
     final response = await Api.get(
-      url: Api.wifiNearbyNetworksApi,
+      url: Api.wifiNetworksApi,
       queryParameters: queryParameters,
     );
 
@@ -195,7 +193,7 @@ class WifiRepository {
     };
 
     return Api.postJson(
-      url: 'wifi/networks',
+      url: Api.wifiNetworksApi,
       data: payload,
     );
   }
@@ -220,7 +218,7 @@ class WifiRepository {
     };
 
     return Api.postJson(
-      url: 'wifi/networks',
+      url: Api.wifiNetworksApi,
       data: payload,
     );
   }
@@ -451,10 +449,12 @@ class WifiRepository {
     required int planId,
     int quantity = 1,
     String paymentGateway = 'wallet',
+    required bool termsAcknowledged,
   }) async {
     final Map<String, dynamic> payload = <String, dynamic>{
       'quantity': quantity,
       'payment_gateway': paymentGateway,
+      'terms_acknowledged': termsAcknowledged,
     };
 
     final Map<String, dynamic> response = await Api.postJson(

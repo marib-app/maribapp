@@ -217,6 +217,12 @@ class _PlansSheetState extends State<_PlansSheet> {
                                 ],
                               ),
                             ),
+                          if (widget.network.loginScreenshotUrl != null) ...[
+                            _LoginScreenshotPreview(
+                              imageUrl: widget.network.loginScreenshotUrl!,
+                            ),
+                            const SizedBox(height: 12),
+                          ],
                           for (int i = 0; i < _plans.length; i++) ...[
                             if (i > 0) const SizedBox(height: 10),
                             _PlanTile(
@@ -338,4 +344,206 @@ class _PlanTile extends StatelessWidget {
       ),
     );
   }
+
+  @@ -195,50 +195,56 @@ class _PlansSheetState extends State<_PlansSheet> {
+  padding: const EdgeInsets.all(12),
+  margin: const EdgeInsets.only(bottom: 12),
+  decoration: BoxDecoration(
+  color: color.error.withOpacity(0.1),
+  borderRadius: BorderRadius.circular(12),
+  ),
+  child: Row(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+  Expanded(
+  child: Text(
+  _error!,
+  style: TextStyle(
+  color: color.error,
+  fontSize: 13,
+  ),
+  ),
+  ),
+  TextButton(
+  onPressed: () => _fetchPlans(force: true),
+  child: const Text('تحديث'),
+  ),
+  ],
+  ),
+  ),
+  if (widget.network.loginScreenshotUrl != null) ...[
+  _LoginScreenshotPreview(
+  imageUrl: widget.network.loginScreenshotUrl!,
+  ),
+  const SizedBox(height: 12),
+  ],
+  for (int i = 0; i < _plans.length; i++) ...[
+  if (i > 0) const SizedBox(height: 10),
+  _PlanTile(
+  plan: _plans[i],
+  onSelect: () => _openCheckout(context, _plans[i]),
+  ),
+  ],
+  const SizedBox(height: 16),
+  ],
+  ),
+  );
+  },
+  ),
+  ),
+  ],
+  ),
+  );
+},
+);
+}
+
+Future<void> _openCheckout(BuildContext context, WifiPlan plan) async {
+  final result = await showModalBottomSheet<WifiPurchaseResult>(
+      context: context,
+      isScrollControlled: true,
+      @@ -316,26 +322,143 @@ class _PlanTile extends StatelessWidget {
+  plan.description ?? 'تفاصيل الخطة ستظهر هنا.',
+  style: TextStyle(
+  color: color.textDefaultColor.withOpacity(0.75),
+  fontSize: 12,
+  ),
+  ),
+  const SizedBox(height: 12),
+  Row(
+  children: [
+  Text(
+  '${plan.price.toStringAsFixed(2)} ${plan.currency ?? 'ريال'}',
+  style: TextStyle(
+  color: color.textDefaultColor,
+  fontWeight: FontWeight.w600,
+  ),
+  ),
+  const Spacer(),
+  const Icon(Icons.arrow_forward_ios, size: 16),
+  ],
+  ),
+  ],
+  ),
+  ),
+  );
+  }
+  }
+
+class _LoginScreenshotPreview extends StatelessWidget {
+  const _LoginScreenshotPreview({required this.imageUrl});
+
+  final String imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.color;
+
+    return GestureDetector(
+      onTap: () => _showFullScreen(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+                  return Container(
+                    color: color.secondaryColor.withOpacity(0.2),
+                    alignment: Alignment.center,
+                    child: const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2.4),
+                    ),
+                  );
+                },
+                errorBuilder: (context, _, __) {
+                  return Container(
+                    color: color.secondaryColor.withOpacity(0.2),
+                    alignment: Alignment.center,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.image_not_supported,
+                          color: color.textDefaultColor.withOpacity(0.6),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'تعذّر تحميل صورة صفحة الدخول',
+                          style: TextStyle(
+                            color: color.textDefaultColor.withOpacity(0.7),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'تأكد من تطابق صفحة الدخول قبل الشراء',
+            style: TextStyle(
+              color: color.textDefaultColor,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'اضغط على الصورة لعرضها بالحجم الكامل والتحقق من هوية الشبكة.',
+            style: TextStyle(
+              color: color.textDefaultColor.withOpacity(0.75),
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFullScreen(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.black,
+          insetPadding: const EdgeInsets.all(16),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: InteractiveViewer(
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, _, __) => const Center(
+                      child: Icon(Icons.broken_image, color: Colors.white70),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
 }

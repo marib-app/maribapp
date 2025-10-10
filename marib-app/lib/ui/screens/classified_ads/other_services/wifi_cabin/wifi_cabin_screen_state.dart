@@ -4,6 +4,8 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
   late final WifiCabinController _controller;
   final WifiRepository _repository = const WifiRepository();
   late final WifiPurchasesManager _purchasesManager;
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -20,6 +22,8 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
   void dispose() {
     _purchasesManager.dispose();
     _controller.dispose();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -32,6 +36,16 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
       animation: _controller,
       builder: (context, _) {
         final state = _controller.viewState;
+
+        if (_searchController.text != _controller.query) {
+          _searchController.value = _searchController.value.copyWith(
+            text: _controller.query,
+            selection: TextSelection.collapsed(
+              offset: _controller.query.length,
+            ),
+          );
+        }
+
 
         return Scaffold(
           backgroundColor: context.color.backgroundColor,
@@ -55,11 +69,16 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: Column(
               children: [
-                _HeaderFilterBar(
-                  locDenied: _controller.locationDenied,
-                  maxKm: _controller.maxKm,
-                  onEnableLocation: () => _controller.enableLocation(),
-                  onKmChanged: _controller.updateMaxKm,
+                _SearchHeaderBar(
+                  controller: _searchController,
+                  focusNode: _searchFocusNode,
+                  isLoading: state.status == WifiCabinLoadStatus.loading &&
+                      !state.hasData,
+                  onChanged: (value) => _controller.updateQuery(value),
+                  onSubmitted: (value) =>
+                      _controller.updateQuery(value, immediate: true),
+                  onClear: _controller.clearQuery,
+                  onRefresh: () => _controller.refreshNetworks(force: true),
                 ),
                 const SizedBox(height: 12),
                 const _ServiceOverview(),
@@ -138,8 +157,8 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
       key: key,
       networks: state.networks,
       onSelect: (network) => _openPlansSheet(context, network),
-      locationDenied: _controller.locationDenied,
-      onEnableLocation: () => _controller.enableLocation(),
+      onRefresh: () => _controller.refreshNetworks(force: true),
+      searchQuery: _controller.query,
     );
   }
 
@@ -280,7 +299,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
     final dynamic result = await Navigator.of(context).push<dynamic>(
       MaterialPageRoute(
         builder: (_) => _AddNetworkScreen(
-          userLatLng: _controller.currentCenter,
+          userLatLng: null,
           repository: _repository,
         ),
       ),
@@ -297,7 +316,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
       backgroundColor: context.color.backgroundColor,
       builder: (_) => _AddNetworkSheet(
         repository: _repository,
-        userLatLng: _controller.currentCenter,
+        userLatLng: null,
       ),
     );
 
@@ -310,8 +329,8 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
       return;
     }
 
-    await _controller.refreshNetworks();
-    if (!mounted) return;
+    await _controller.refreshNetworks(force: true);
+    marib-app/lib/utils/api.dart    if (!mounted) return;
 
     final String? message = _formatNetworkResultMessage(result);
     if (message == null) {

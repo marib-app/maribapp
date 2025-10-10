@@ -279,64 +279,59 @@ extension _ChatTileUi on ChatTile {
 
     final String? price = _priceLabel();
     final bool hasImage = itemPicture.trim().isNotEmpty;
-    final Widget imagePreview = hasImage
-        ? GestureDetector(
-            onTap: () {
-              UiUtils.showFullScreenImage(
-                context,
-                provider: CachedNetworkImageProvider(itemPicture),
-              );
-            },
-            child: _buildAdImage(context),
-          )
-        : _buildAdImage(context);
+    Widget preview = _buildAdImage(context);
+    if (hasImage) {
+      preview = GestureDetector(
+        onTap: () {
+          UiUtils.showFullScreenImage(
+            context,
+            provider: CachedNetworkImageProvider(itemPicture),
+          );
+        },
+        child: preview,
+      );
+    }
 
-    return Align(
-      alignment: AlignmentDirectional.centerEnd,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: context.color.secondaryColor,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: context.color.borderColor.withOpacity(0.6),
-            width: 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: context.color.textDefaultColor.withOpacity(0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
+    return Container(
+      padding: const EdgeInsetsDirectional.fromSTEB(8, 8, 12, 8),
+      decoration: BoxDecoration(
+        color: context.color.territoryColor.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: context.color.territoryColor.withOpacity(0.15),
+          width: 1,
         ),
-        child: Row(
+      ),
+      child: Row(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            imagePreview,
-            const SizedBox(width: 10),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 180),
+          preview,
+          const SizedBox(width: 10),
+          ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 140),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    itemName,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ).bold().color(context.color.textColorDark),
-                  if (price != null) ...[
-                    const SizedBox(height: 6),
-                    Text(price)
-                        .size(context.font.smaller)
-                        .color(context.color.textLightColor),
-                  ],
+                Text(
+                itemName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              )
+                  .bold()
+                  .size(context.font.small)
+                  .color(context.color.textColorDark),
+              if (price != null) ...[
+          const SizedBox(height: 4),
+      Text(price)
+          .size(context.font.smaller)
+          .color(context.color.textLightColor),
+                ],
                 ],
               ),
-            )
+          )
           ],
-        ),
       ),
     );
   }
@@ -370,6 +365,7 @@ extension _ChatTileUi on ChatTile {
     final Widget? presenceBadge = _buildPresenceBadge(context, presenceStatus);
     final Widget? unreadBadge = _buildUnreadBadge(context);
     final Widget? adCard = _buildAdCard(context);
+    final String timeLabel = _timeLabel();
     return GestureDetector(
       onTap: () {
         Navigator.push(context, BlurredRouter(
@@ -418,15 +414,23 @@ extension _ChatTileUi on ChatTile {
           constraints: const BoxConstraints(minHeight: 120),
           decoration: BoxDecoration(
             color: context.color.secondaryColor,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: context.color.borderColor,
-              width: 1.5,
-            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: context.color.textDefaultColor.withOpacity(0.06),
+                blurRadius: 14,
+                offset: const Offset(0, 8),
+              ),
+              BoxShadow(
+                color: context.color.textDefaultColor.withOpacity(0.02),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           width: MediaQuery.of(context).size.width,
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(18.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -447,34 +451,10 @@ extension _ChatTileUi on ChatTile {
                                   userName,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                ).bold().color(context.color.textColorDark),
-                              ),
-                              const SizedBox(width: 6),
-                              Builder(builder: (context) {
-                                final label = _timeLabel();
-                                if (label.isEmpty) {
-                                  return const SizedBox.shrink();
-                                }
-                                return Text(label)
-                                    .size(context.font.smaller)
-                                    .color(context.color.textLightColor);
-                              }),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          if (presenceBadge != null) ...[
-                            presenceBadge,
-                            const SizedBox(height: 6),
-                          ],
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  _previewText(context),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ).color(context.color.textLightColor),
+                                )
+                                    .bold()
+                                    .size(context.font.large)
+                                    .color(context.color.textColorDark),
                               ),
                               if (unreadBadge != null) ...[
                                 const SizedBox(width: 8),
@@ -482,15 +462,46 @@ extension _ChatTileUi on ChatTile {
                               ],
                             ],
                           ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _previewText(context),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          )
+                              .size(context.font.normal)
+                              .color(context.color.textLightColor),
                         ],
                       ),
                     ),
                   ],
                 ),
-                if (adCard != null) ...[
-                  const SizedBox(height: 14),
-                  adCard,
-                ],
+                const SizedBox(height: 14),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    if (presenceBadge != null) ...[
+                      Flexible(child: presenceBadge),
+                      if (timeLabel.isNotEmpty || adCard != null)
+                        const SizedBox(width: 12),
+                    ],
+                    if (timeLabel.isNotEmpty || adCard != null)
+                      const Spacer(),
+                    if (timeLabel.isNotEmpty) ...[
+                      Text(timeLabel)
+                          .size(context.font.smaller)
+                          .color(context.color.textLightColor),
+                      if (adCard != null) const SizedBox(width: 12),
+                    ],
+                    if (adCard != null)
+                      Flexible(
+                        fit: FlexFit.loose,
+                        child: Align(
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: adCard,
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),

@@ -101,6 +101,8 @@ class Section_screenState extends State<Section_screen> {
   bool _sawLoading = false;
   DateTime? _loadingStart;
   static const Duration _minShimmer = Duration(milliseconds: 350);
+  late final String _sliderInterfaceType;
+
   late final bool _hasAdSlider;
 
   bool _showAdSlider = false;
@@ -252,10 +254,15 @@ class Section_screenState extends State<Section_screen> {
     });
 
 
-    _hasAdSlider = widget.interfaceType?.trim().isNotEmpty ?? false;
-
-    final String? interfaceType = widget.interfaceType?.trim();
-    if (interfaceType != null && interfaceType.isNotEmpty) {
+    final String? normalizedInterfaceType =
+        SliderInterfaceMapper.normalize(widget.interfaceType) ??
+            widget.interfaceType?.trim();
+    _sliderInterfaceType =
+    (normalizedInterfaceType == null || normalizedInterfaceType.isEmpty)
+        ? 'homepage'
+        : normalizedInterfaceType;
+    _hasAdSlider = _sliderInterfaceType.isNotEmpty;
+    if (_hasAdSlider) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || _requestedSlider) {
           return;
@@ -265,7 +272,7 @@ class Section_screenState extends State<Section_screen> {
           context.read<SliderCubit>().fetchSlider(
             context,
             forceRefresh: true,
-            interfaceType: interfaceType,
+            interfaceType: _sliderInterfaceType,
           ),
         );
       });
@@ -309,15 +316,15 @@ class Section_screenState extends State<Section_screen> {
       setState(() => showShimmer = true);
 
 
-      final String? normalizedInterfaceType =
-      SliderInterfaceMapper.normalize(widget.interfaceType);
-      unawaited(
-        context.read<SliderCubit>().fetchSlider(
-          context,
-          forceRefresh: true,
-          interfaceType: normalizedInterfaceType ?? widget.interfaceType,
-        ),
-      );
+      if (_hasAdSlider) {
+        unawaited(
+          context.read<SliderCubit>().fetchSlider(
+            context,
+            forceRefresh: true,
+            interfaceType: _sliderInterfaceType,
+          ),
+        );
+      }
 
       await context.read<FetchItemSummaryCubit>().fetchSummaries(
         categoryId: _catId,
@@ -462,7 +469,7 @@ class Section_screenState extends State<Section_screen> {
                         searchController: searchController,
                         enableTopBar: _showSlider,
                         enableAdSlider: _showAdSlider,        // إن كانت موجودة عندك
-                        adInterfaceType: widget.interfaceType, // إن كانت موجودة عندك
+                        adInterfaceType: _sliderInterfaceType, // ← تمرير الواجهة المعتمدة دائمًا
                         sortBy: sortBy,                       // ← جديد
                         filter: filter,                       // ← جديد
                         enableSubcats: _showSlider,           // ← نفس منطق التأجيل (أظهر بعد Success)

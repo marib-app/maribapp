@@ -18,7 +18,11 @@ class WalletManualPaymentsSection extends StatelessWidget {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => const ManualPaymentRequestsSheet(),
+      builder: (sheetContext) => BlocProvider.value(
+        value: context.read<ManualPaymentRequestsCubit>(),
+        child: const ManualPaymentRequestsSheet(),
+      ),
+
     );
   }
 

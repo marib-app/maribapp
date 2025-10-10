@@ -740,15 +740,14 @@ class _HomeTabViewState extends State<HomeTabView> {
       valueListenable: widget.viewModeListenable,
       builder: (context, mode, _) {
         final bool isList = (mode == ViewMode.list);
-        final String? interfaceType =
+        final String? resolvedInterfaceType =
             SliderInterfaceMapper.normalize(widget.adInterfaceType) ??
-                widget.adInterfaceType;
-        final String? sliderInterfaceType =
-        (interfaceType != null && interfaceType.isNotEmpty)
-            ? interfaceType
-            : null;
-        final bool showAdSlider =
-            widget.enableAdSlider && sliderInterfaceType != null;
+                widget.adInterfaceType?.trim();
+        final String sliderInterfaceType =
+        (resolvedInterfaceType == null || resolvedInterfaceType.isEmpty)
+            ? 'homepage'
+            : resolvedInterfaceType;
+        final bool showAdSlider = widget.enableAdSlider;
 
         // ✅ استمع للتمرير هنا (بدل بعثرة المنطق داخل عناصر داخلية)
         return NotificationListener<ScrollNotification>(
@@ -770,25 +769,27 @@ class _HomeTabViewState extends State<HomeTabView> {
               SliverToBoxAdapter(
                 child: showAdSlider
                     ? Padding(
-          padding:
-          EdgeInsets.symmetric(horizontal: kAdSliderHPad),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(kAdSliderRadius),
-            child: SizedBox(
-              height: _adSliderTotalHeight(context),
-              // صورة + دوتس (نفس الإجمالي)
-              width: double.infinity,
-              child: RepaintBoundary(
-                child: SliderWidget(
-                  key: ValueKey(
-                      'slider_${sliderInterfaceType ?? 'default'}'),
-                  interfaceType: sliderInterfaceType!,
-                ),
-              ),
-            ),
+                  padding:
+                  EdgeInsets.symmetric(horizontal: kAdSliderHPad),
+                  child: ClipRRect(
+                    borderRadius:
+                    BorderRadius.circular(kAdSliderRadius),
+                    child: SizedBox(
+                      height: _adSliderTotalHeight(context),
+                      // صورة + دوتس (نفس الإجمالي)
+                      width: double.infinity,
+                      child: RepaintBoundary(
+                        child: SliderWidget(
+                          key: ValueKey(
+                              'slider_$sliderInterfaceType'),
+                          interfaceType: sliderInterfaceType,
+                        ),
+                      ),
+                    ),
                         ),
                 )
                     : (widget.enableAdSlider
+
                     ? _buildAdSliderShimmer()
                     : const SizedBox.shrink()),
 

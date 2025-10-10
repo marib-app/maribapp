@@ -24,10 +24,6 @@ import 'package:marib/ui/screens/wallet/wallet_manual_payments_section.dart';
 import 'package:marib/utils/currency_utils.dart';
 import 'package:marib/data/model/wallet/wallet_summary.dart';
 
-
-
-
-
 class WalletScreenUI extends StatefulWidget {
   const WalletScreenUI({super.key});
 
@@ -39,9 +35,9 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
   final PageController _pageController = PageController();
 
   final ScrollController _scrollController = ScrollController();
-  final NumberFormat _numberFormat = NumberFormat.currency(decimalDigits: 2, symbol: '');
+  final NumberFormat _numberFormat =
+      NumberFormat.currency(decimalDigits: 2, symbol: '');
   final DateFormat _dateTimeFormat = DateFormat('dd MMM yyyy, HH:mm');
-
 
   @override
   void initState() {
@@ -83,7 +79,8 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     String? code;
 
     if (summary != null) {
-      display = (display != null && display.isNotEmpty) ? display : summary.currency;
+      display =
+          (display != null && display.isNotEmpty) ? display : summary.currency;
       code = summary.currencyCode ??
           CurrencyUtils.normalizeCurrencyCode(summary.currency);
     } else {
@@ -97,7 +94,6 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     );
 
     return resolved == null || resolved.isEmpty
-
         ? withSign
         : '$withSign $resolved';
   }
@@ -114,8 +110,8 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     );
   }
 
-
-  String _localizedFilterLabel(BuildContext context, String value, String fallback) {
+  String _localizedFilterLabel(
+      BuildContext context, String value, String fallback) {
     final normalized = value.toLowerCase().trim();
     switch (normalized) {
       case 'top-ups':
@@ -141,7 +137,6 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     return value.isNotEmpty ? value : 'walletFilterAll'.translate(context);
   }
 
-
   WalletSummary? _activeSummary() {
     final state = context.read<WalletSummaryCubit>().state;
     if (state is WalletSummaryLoadSuccess) {
@@ -152,7 +147,6 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     }
     return null;
   }
-
 
   double? _currentBalance() {
     final state = context.read<WalletSummaryCubit>().state;
@@ -169,7 +163,9 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     if (raw is List) {
       return raw
           .whereType<dynamic>()
-          .map((e) => e is Map<String, dynamic> ? e : Map<String, dynamic>.from(e as Map))
+          .map((e) => e is Map<String, dynamic>
+              ? e
+              : Map<String, dynamic>.from(e as Map))
           .toList();
     }
     if (raw is Map<String, dynamic>) {
@@ -178,19 +174,24 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
       }
       return raw.values
           .whereType<dynamic>()
-          .map((e) => e is Map<String, dynamic> ? e : Map<String, dynamic>.from(e as Map))
+          .map((e) => e is Map<String, dynamic>
+              ? e
+              : Map<String, dynamic>.from(e as Map))
           .toList();
     }
     if (raw is Map) {
       return raw.values
           .whereType<dynamic>()
-          .map((e) => e is Map<String, dynamic> ? e : Map<String, dynamic>.from(e as Map))
+          .map((e) => e is Map<String, dynamic>
+              ? e
+              : Map<String, dynamic>.from(e as Map))
           .toList();
     }
     return const [];
   }
 
-  WalletOperationOptions? _extractTransferOptions(WalletOperationOptions? base) {
+  WalletOperationOptions? _extractTransferOptions(
+      WalletOperationOptions? base) {
     if (base == null) return null;
 
     WalletOperationOptions mergeOptions(WalletOperationOptions source) {
@@ -227,7 +228,8 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
         return mergeOptions(transferOptions);
       }
       if (candidate is Map) {
-        final map = candidate.map((key, value) => MapEntry(key.toString(), value));
+        final map =
+            candidate.map((key, value) => MapEntry(key.toString(), value));
         final transferOptions = WalletOperationOptions.fromMap(map);
         return mergeOptions(transferOptions);
       }
@@ -245,7 +247,8 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
 
     WalletOperationOptions? options;
     final currentState = withdrawalsCubit.state;
-    if (currentState is WalletWithdrawalsSuccess && currentState.options != null) {
+    if (currentState is WalletWithdrawalsSuccess &&
+        currentState.options != null) {
       options = currentState.options;
     } else {
       options = await withdrawalsCubit.loadOptions();
@@ -253,27 +256,26 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
 
     options ??= await withdrawalsCubit.loadOptions(force: true);
 
-
-
     if (!mounted) return;
 
     if (options == null || options.fields.isEmpty) {
-      HelperUtils.showSnackBarMessage(context, 'تعذر تحميل نموذج السحب حالياً.');
+      HelperUtils.showSnackBarMessage(
+          context, 'تعذر تحميل نموذج السحب حالياً.');
       return;
     }
     final WalletOperationOptions sheetOptions = options;
 
     final result = await showModalBottomSheet<WalletWithdrawal>(
-        context: context,
-        isScrollControlled: true,
-        builder: (_) => BlocProvider.value(
-          value: withdrawalsCubit,
-          child: WalletWithdrawalSheet(
-            options: sheetOptions,
-            balance: _currentBalance(),
-            currency: _summaryCurrency(),
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => BlocProvider.value(
+        value: withdrawalsCubit,
+        child: WalletWithdrawalSheet(
+          options: sheetOptions,
+          balance: _currentBalance(),
+          currency: _summaryCurrency(),
         ),
-        ),
+      ),
     );
 
     if (result != null && mounted) {
@@ -290,7 +292,8 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
 
     WalletOperationOptions? baseOptions;
     final currentState = withdrawalsCubit.state;
-    if (currentState is WalletWithdrawalsSuccess && currentState.options != null) {
+    if (currentState is WalletWithdrawalsSuccess &&
+        currentState.options != null) {
       baseOptions = currentState.options;
     } else {
       baseOptions = await withdrawalsCubit.loadOptions();
@@ -302,7 +305,8 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
 
     final transferOptions = _extractTransferOptions(baseOptions);
     if (transferOptions == null || transferOptions.fields.isEmpty) {
-      HelperUtils.showSnackBarMessage(context, 'لا توجد حقول متاحة لعملية التحويل حالياً.');
+      HelperUtils.showSnackBarMessage(
+          context, 'لا توجد حقول متاحة لعملية التحويل حالياً.');
       return;
     }
 
@@ -325,7 +329,6 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
       context.read<WalletTransfersCubit>().refresh();
     }
   }
-
 
   Future<void> _startTopUp({String gateway = 'manual_bank'}) async {
     if (!HiveUtils.isUserAuthenticated()) {
@@ -354,7 +357,6 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
 
     if (!mounted) return;
     await BankTransferScreen.show(context, args);
-
   }
 
   Future<double?> _promptForAmount() async {
@@ -379,7 +381,8 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
             ),
             TextButton(
               onPressed: () {
-                final value = double.tryParse(controller.text.replaceAll(',', '.'));
+                final value =
+                    double.tryParse(controller.text.replaceAll(',', '.'));
                 if (value == null || value <= 0) {
                   HelperUtils.showSnackBarMessage(
                     context,
@@ -423,12 +426,12 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
       onRefresh: _onRefresh,
       child: CustomScrollView(
         controller: _scrollController,
-        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+        physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics()),
         slivers: [
           SliverToBoxAdapter(child: _buildSummarySection()),
           SliverToBoxAdapter(child: _buildWithdrawalsSection()),
           SliverToBoxAdapter(child: _buildFiltersSection()),
-
           BlocBuilder<WalletTransactionsCubit, WalletTransactionsState>(
             builder: (context, state) {
               return SliverList(
@@ -456,8 +459,9 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
         if (state is WalletWithdrawalsFailure) {
           return _WithdrawalsErrorCard(
             message: state.error.toString(),
-            onRetry: () =>
-                context.read<WalletWithdrawalsCubit>().loadInitial(includeOptions: true),
+            onRetry: () => context
+                .read<WalletWithdrawalsCubit>()
+                .loadInitial(includeOptions: true),
           );
         }
 
@@ -481,7 +485,6 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
       },
     );
   }
-
 
   Widget _buildActionsPage() {
     return SafeArea(
@@ -514,14 +517,16 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
       builder: (context, state) {
         if (state is WalletSummaryLoading && state.previous != null) {
           return _SummaryCard(
-            balanceText: _formatAmount(state.previous!.summary.balance, state.previous!.summary.currency),
+            balanceText: _formatAmount(state.previous!.summary.balance,
+                state.previous!.summary.currency),
             lastUpdated: state.previous!.summary.lastUpdatedAt,
             isLoading: true,
           );
         }
         if (state is WalletSummaryLoadSuccess) {
           return _SummaryCard(
-            balanceText: _formatAmount(state.summary.balance, state.summary.currency),
+            balanceText:
+                _formatAmount(state.summary.balance, state.summary.currency),
             lastUpdated: state.summary.lastUpdatedAt,
           );
         }
@@ -539,7 +544,9 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
                 Text(state.error.toString()),
                 const SizedBox(height: 12),
                 OutlinedButton(
-                  onPressed: () => context.read<WalletSummaryCubit>().fetchSummary(forceReload: true),
+                  onPressed: () => context
+                      .read<WalletSummaryCubit>()
+                      .fetchSummary(forceReload: true),
                   child: Text('retry'.translate(context)),
                 ),
               ],
@@ -567,23 +574,27 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
         return SizedBox(
           height: 64,
           child: ListView(
-            padding: const EdgeInsetsDirectional.only(start: 16, end: 16, top: 12, bottom: 12),
+            padding: const EdgeInsetsDirectional.only(
+                start: 16, end: 16, top: 12, bottom: 12),
             scrollDirection: Axis.horizontal,
             children: [
               _FilterChip(
                 label: 'walletFilterAll'.translate(context),
                 selected: activeFilter == null || activeFilter == 'all',
-                onSelected: (_) => context.read<WalletTransactionsCubit>().clearFilters(),
+                onSelected: (_) =>
+                    context.read<WalletTransactionsCubit>().clearFilters(),
               ),
               const SizedBox(width: 8),
               ...filters.map(
-                    (filter) => Padding(
+                (filter) => Padding(
                   padding: const EdgeInsetsDirectional.only(end: 8),
                   child: _FilterChip(
-                    label: _localizedFilterLabel(context, filter.value, filter.label),
+                    label: _localizedFilterLabel(
+                        context, filter.value, filter.label),
                     selected: activeFilter == filter.value,
-                    onSelected: (_) =>
-                        context.read<WalletTransactionsCubit>().applyFilter(filter.value),
+                    onSelected: (_) => context
+                        .read<WalletTransactionsCubit>()
+                        .applyFilter(filter.value),
                   ),
                 ),
               ),
@@ -639,10 +650,6 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     );
   }
 
-
-
-
-
   List<Widget> _buildTransactionsContent(WalletTransactionsState state) {
     if (state is WalletTransactionsLoading) {
       return [
@@ -668,7 +675,8 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
               Text(state.error.toString()),
               const SizedBox(height: 12),
               OutlinedButton(
-                onPressed: () => context.read<WalletTransactionsCubit>().loadInitial(),
+                onPressed: () =>
+                    context.read<WalletTransactionsCubit>().loadInitial(),
                 child: Text('retry'.translate(context)),
               ),
             ],
@@ -690,7 +698,8 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton(
-                  onPressed: () => context.read<WalletTransactionsCubit>().refresh(),
+                  onPressed: () =>
+                      context.read<WalletTransactionsCubit>().refresh(),
                   child: Text('retry'.translate(context)),
                 ),
               ],
@@ -722,10 +731,6 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     return const [];
   }
 }
-
-
-
-
 
 class _WithdrawalsCard extends StatelessWidget {
   const _WithdrawalsCard({
@@ -774,10 +779,10 @@ class _WithdrawalsCard extends StatelessWidget {
                   onPressed: isRefreshing ? null : onRefresh,
                   child: isRefreshing
                       ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Text('تحديث'),
                 ),
               ],
@@ -813,13 +818,16 @@ class _WithdrawalsCard extends StatelessWidget {
                     Align(
                       alignment: AlignmentDirectional.centerStart,
                       child: TextButton(
-                        onPressed: isLoadingMore || onLoadMore == null ? null : onLoadMore,
+                        onPressed: isLoadingMore || onLoadMore == null
+                            ? null
+                            : onLoadMore,
                         child: isLoadingMore
                             ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
+                                width: 16,
+                                height: 16,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
                             : const Text('تحميل المزيد'),
                       ),
                     ),
@@ -851,11 +859,13 @@ class _WithdrawalTile extends StatelessWidget {
         : '#${withdrawal.id}';
     final amountValue = withdrawal.amount;
     final amountText = amountValue != null
-        ? formatAmount(amountValue > 0 ? -amountValue : amountValue, withdrawal.currency)
+        ? formatAmount(
+            amountValue > 0 ? -amountValue : amountValue, withdrawal.currency)
         : '--';
     final status = withdrawal.status?.capitalize() ?? 'غير معروف';
     final timestamp = withdrawal.updatedAt ?? withdrawal.createdAt;
-    final subtitleText = timestamp != null ? dateFormat.format(timestamp.toLocal()) : null;
+    final subtitleText =
+        timestamp != null ? dateFormat.format(timestamp.toLocal()) : null;
     final statusColor = _statusColor(context, withdrawal.status);
 
     return ListTile(
@@ -884,7 +894,8 @@ class _WithdrawalTile extends StatelessWidget {
         children: [
           Text(
             amountText,
-            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 6),
           Container(
@@ -905,10 +916,14 @@ class _WithdrawalTile extends StatelessWidget {
 
   Color _statusColor(BuildContext context, String? status) {
     final normalized = status?.toLowerCase() ?? '';
-    if (normalized.contains('fail') || normalized.contains('reject') || normalized.contains('cancel')) {
+    if (normalized.contains('fail') ||
+        normalized.contains('reject') ||
+        normalized.contains('cancel')) {
       return Colors.redAccent;
     }
-    if (normalized.contains('complete') || normalized.contains('success') || normalized.contains('paid')) {
+    if (normalized.contains('complete') ||
+        normalized.contains('success') ||
+        normalized.contains('paid')) {
       return Colors.green;
     }
     if (normalized.contains('pending') || normalized.contains('process')) {
@@ -978,9 +993,9 @@ class _WalletPrimaryButton extends StatelessWidget {
     final onBackground = theme.colorScheme.onPrimary;
 
     final textStyle = theme.textTheme.titleMedium?.copyWith(
-      color: onBackground,
-      fontWeight: FontWeight.w700,
-    ) ??
+          color: onBackground,
+          fontWeight: FontWeight.w700,
+        ) ??
         TextStyle(
           color: onBackground,
           fontWeight: FontWeight.w700,
@@ -1025,9 +1040,6 @@ class _WalletPrimaryButton extends StatelessWidget {
   }
 }
 
-
-
-
 class _SummaryCard extends StatelessWidget {
   const _SummaryCard({
     this.balanceText,
@@ -1046,7 +1058,6 @@ class _SummaryCard extends StatelessWidget {
     final accent = context.color.territoryColor;
     final secondaryAccent = context.color.forthColor.withOpacity(0.9);
     final captionColor = onPrimary.withOpacity(0.75);
-
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
@@ -1068,7 +1079,6 @@ class _SummaryCard extends StatelessWidget {
           ],
         ),
         child: Stack(
-
           children: [
             Positioned(
               top: -30,
@@ -1094,90 +1104,96 @@ class _SummaryCard extends StatelessWidget {
                 ),
               ),
             ),
-        Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-          Row(
-          children: [
-          Container(
-          decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.18),
-          borderRadius: BorderRadius.circular(18),
-        ),
-        padding: const EdgeInsets.all(12),
-        child: Icon(
-          Icons.account_balance_wallet_outlined,
-          size: 24,
-          color: onPrimary,
-        ),
-      ),
-      const SizedBox(width: 12),
-      Expanded(
-        child: Text(
-          'walletBalance'.translate(context),
-          style: theme.textTheme.titleMedium?.copyWith(
-            color: onPrimary,
-            fontWeight: FontWeight.w600,
-          ) ??
-              TextStyle(
-                color: onPrimary,
-                fontSize: theme.textTheme.titleMedium?.fontSize ?? 18,
-                fontWeight: FontWeight.w600,
-              ),
-        ),
-      ),
-      ],
-                  ),
-                const SizedBox(height: 20),
-                if (isLoading)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: LinearProgressIndicator(
-                      minHeight: 10,
-                      backgroundColor: Colors.white.withOpacity(0.2),
-                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                else
-                  Text(
-                    balanceText ?? '--',
-                    style: theme.textTheme.displaySmall?.copyWith(
-                      color: onPrimary,
-                      fontWeight: FontWeight.w800,
-                    ) ??
-                        TextStyle(
-                          color: onPrimary,
-                          fontSize: theme.textTheme.displaySmall?.fontSize ?? 36,
-                          fontWeight: FontWeight.w800,
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.18),
+                          borderRadius: BorderRadius.circular(18),
                         ),
-                  ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Icon(Icons.schedule_rounded, size: 18, color: captionColor),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        lastUpdated == null
-                            ? 'walletLastUpdatedUnknown'.translate(context)
-                            : UiUtils.formatDate(lastUpdated!.toIso8601String()),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: captionColor,
-                          fontWeight: FontWeight.w500,
-                        ) ??
-                            TextStyle(
-                              color: captionColor,
-                              fontSize: theme.textTheme.bodySmall?.fontSize ?? 12,
-                              fontWeight: FontWeight.w500,
-                            ),
+                        padding: const EdgeInsets.all(12),
+                        child: Icon(
+                          Icons.account_balance_wallet_outlined,
+                          size: 24,
+                          color: onPrimary,
+                        ),
                       ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'walletBalance'.translate(context),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                                color: onPrimary,
+                                fontWeight: FontWeight.w600,
+                              ) ??
+                              TextStyle(
+                                color: onPrimary,
+                                fontSize:
+                                    theme.textTheme.titleMedium?.fontSize ?? 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  if (isLoading)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        minHeight: 10,
+                        backgroundColor: Colors.white.withOpacity(0.2),
+                        valueColor:
+                            const AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  else
+                    Text(
+                      balanceText ?? '--',
+                      style: theme.textTheme.displaySmall?.copyWith(
+                            color: onPrimary,
+                            fontWeight: FontWeight.w800,
+                          ) ??
+                          TextStyle(
+                            color: onPrimary,
+                            fontSize:
+                                theme.textTheme.displaySmall?.fontSize ?? 36,
+                            fontWeight: FontWeight.w800,
+                          ),
                     ),
-                  ],
-                ),
-              ],
-          ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Icon(Icons.schedule_rounded,
+                          size: 18, color: captionColor),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          lastUpdated == null
+                              ? 'walletLastUpdatedUnknown'.translate(context)
+                              : UiUtils.formatDate(
+                                  lastUpdated!.toIso8601String()),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                                color: captionColor,
+                                fontWeight: FontWeight.w500,
+                              ) ??
+                              TextStyle(
+                                color: captionColor,
+                                fontSize:
+                                    theme.textTheme.bodySmall?.fontSize ?? 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -1213,7 +1229,9 @@ class _FilterChip extends StatelessWidget {
       selectedColor: selectedColor,
       elevation: 0,
       labelStyle: theme.textTheme.bodyMedium?.copyWith(
-        color: selected ? context.color.territoryColor : theme.colorScheme.onSurface,
+        color: selected
+            ? context.color.territoryColor
+            : theme.colorScheme.onSurface,
         fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
       ),
     );
@@ -1241,145 +1259,152 @@ class _TransactionTile extends StatelessWidget {
         ? 'walletUnknownDate'.translate(context)
         : dateFormat.format(transaction.createdAt!.toLocal());
     final subtitle = _resolveSubtitle();
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        decoration: BoxDecoration(
-          color: context.color.secondaryColor,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(
-            color: transaction.highlighted
-                ? accent
-                : context.color.borderColor.withOpacity(0.45),
-            width: transaction.highlighted ? 1.4 : 1,
-          ),
-          boxShadow: [
+    final statusLabel = _statusLabel();
+    final referenceValues = _referenceValues();
 
-            BoxShadow(
-              color: transaction.highlighted
-                  ? accent.withOpacity(0.25)
-                  : Colors.black.withOpacity(0.04),
-              blurRadius: transaction.highlighted ? 28 : 16,
-              offset: const Offset(0, 12),
-            ),
-          ],
+    return Card(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      color: context.color.secondaryColor,
+      elevation: transaction.highlighted ? 6 : 0,
+      shadowColor: accent.withOpacity(transaction.highlighted ? 0.25 : 0.08),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(
+          color: transaction.highlighted
+              ? accent
+              : context.color.borderColor.withOpacity(0.35),
+          width: transaction.highlighted ? 1.4 : 1,
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-
-                    decoration: BoxDecoration(
-                      color: accent.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    padding: const EdgeInsets.all(12),
-                    child: Icon(
-                      _resolveIcon(),
-                      size: 22,
-                      color: accent,
-                    ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: accent.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                  child: Icon(
+                    _resolveIcon(),
+                    size: 22,
+                    color: accent,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _classificationLabel(context),
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 4),
                         Text(
-                          _classificationLabel(context),
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
+                          subtitle,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
                           ),
                         ),
-                        if (subtitle != null) ...[
-                          const SizedBox(height: 6),
-                          Text(
-                            subtitle,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.textTheme.bodyMedium?.color?.withOpacity(0.75),
-                            ),
-                          ),
-                        ],
                       ],
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-
-                  Text(
-                    amountText,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: accent,
-                      fontWeight: FontWeight.w800,
-                    ) ??
-                        TextStyle(
-                          color: accent,
-                          fontSize: theme.textTheme.titleMedium?.fontSize ?? 18,
-                          fontWeight: FontWeight.w800,
-                        ),
-                  ),
-                ],
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  amountText,
+                  textAlign: TextAlign.end,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                        color: accent,
+                        fontWeight: FontWeight.w800,
+                      ) ??
+                      TextStyle(
+                        color: accent,
+                        fontSize: theme.textTheme.titleMedium?.fontSize ?? 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _TransactionInfoRow(
+              icon: Icons.schedule_rounded,
+              label: timestamp,
+            ),
+            if (statusLabel != null) ...[
+              const SizedBox(height: 8),
+              _TransactionInfoRow(
+                icon: Icons.verified_outlined,
+                label: statusLabel,
+                labelStyle: theme.textTheme.bodySmall?.copyWith(
+                  color: accent,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-              const SizedBox(height: 18),
-
+            ],
+            if (referenceValues.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'مراجع العملية',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: referenceValues
+                    .map((value) => _buildTag(context, value, accent))
+                    .toList(),
+              ),
+            ],
+            if (transaction.beforeBalance != null ||
+                transaction.afterBalance != null) ...[
+              const SizedBox(height: 12),
               Row(
                 children: [
-                  Icon(Icons.schedule_rounded, size: 18, color: theme.colorScheme.outline),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      timestamp,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.outline,
+                  if (transaction.beforeBalance != null)
+                    Expanded(
+                      child: _BalanceSummary(
+                        label: 'الرصيد قبل العملية',
+                        value: _formatBalanceValue(transaction.beforeBalance!),
                       ),
                     ),
-                  ),
+                  if (transaction.beforeBalance != null &&
+                      transaction.afterBalance != null)
+                    const SizedBox(width: 12),
+                  if (transaction.afterBalance != null)
+                    Expanded(
+                      child: _BalanceSummary(
+                        label: 'الرصيد بعد العملية',
+                        value: _formatBalanceValue(transaction.afterBalance!),
+                      ),
+                    ),
                 ],
               ),
-              if (transaction.references.isNotEmpty || transaction.referenceCode != null) ...[
-                const SizedBox(height: 14),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    ...transaction.references
-                        .map((ref) => _buildTag(context, ref, accent))
-
-                        .toList(),
-                    if (transaction.referenceCode != null)
-                      _buildTag(context, transaction.referenceCode!, accent),
-
-                  ],
-                ),
-              ],
-              if (transaction.beforeBalance != null || transaction.afterBalance != null) ...[
-                const SizedBox(height: 14),
-                Text(
-                  'walletBalanceChange'
-                      .translate(context)
-                      .replaceFirst('{from}', (transaction.beforeBalance ?? 0).toStringAsFixed(2))
-                      .replaceFirst('{to}', (transaction.afterBalance ?? 0).toStringAsFixed(2)),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.outline,
-                  ),
-                ),
-              ],
             ],
-          ),
+          ],
         ),
       ),
     );
   }
 
   String _classificationLabel(BuildContext context) {
-    final normalized = (transaction.category ?? transaction.classification ?? '')
-        .toLowerCase()
-        .trim();
+    final normalized =
+        (transaction.category ?? transaction.classification ?? '')
+            .toLowerCase()
+            .trim();
     switch (normalized) {
       case 'deposit':
       case 'top-up':
@@ -1406,9 +1431,10 @@ class _TransactionTile extends StatelessWidget {
   }
 
   IconData _resolveIcon() {
-    final normalized = (transaction.category ?? transaction.classification ?? '')
-        .toLowerCase()
-        .trim();
+    final normalized =
+        (transaction.category ?? transaction.classification ?? '')
+            .toLowerCase()
+            .trim();
     switch (normalized) {
       case 'transfer':
       case 'wallet_transfer':
@@ -1426,9 +1452,10 @@ class _TransactionTile extends StatelessWidget {
   }
 
   Color _resolveAccentColor(BuildContext context) {
-    final normalized = (transaction.category ?? transaction.classification ?? '')
-        .toLowerCase()
-        .trim();
+    final normalized =
+        (transaction.category ?? transaction.classification ?? '')
+            .toLowerCase()
+            .trim();
     if (normalized.contains('transfer')) {
       return const Color(0xFF3A7AFE);
     }
@@ -1463,6 +1490,43 @@ class _TransactionTile extends StatelessWidget {
     return null;
   }
 
+  String? _statusLabel() {
+    final statusLabel = transaction.metadata['status_label'];
+    if (statusLabel is String && statusLabel.trim().isNotEmpty) {
+      return statusLabel.trim();
+    }
+
+    final status = transaction.metadata['status'];
+    if (status is String && status.trim().isNotEmpty) {
+      return status.trim();
+    }
+
+    return null;
+  }
+
+  List<String> _referenceValues() {
+    final values = <String>{};
+    for (final reference in transaction.references) {
+      final trimmed = reference.trim();
+      if (trimmed.isNotEmpty) {
+        values.add(trimmed);
+      }
+    }
+    final code = transaction.referenceCode;
+    if (code != null && code.trim().isNotEmpty) {
+      values.add(code.trim());
+    }
+    return values.toList();
+  }
+
+  String _formatBalanceValue(double value) {
+    final formatted = formatAmount(value, transaction.currency);
+    if (formatted.startsWith('+')) {
+      return formatted.substring(1).trimLeft();
+    }
+    return formatted;
+  }
+
   Widget _buildTag(BuildContext context, String value, Color accent) {
     final theme = Theme.of(context);
     return Container(
@@ -1475,9 +1539,9 @@ class _TransactionTile extends StatelessWidget {
       child: Text(
         value,
         style: theme.textTheme.bodySmall?.copyWith(
-          color: accent,
-          fontWeight: FontWeight.w600,
-        ) ??
+              color: accent,
+              fontWeight: FontWeight.w600,
+            ) ??
             TextStyle(
               color: accent,
               fontSize: theme.textTheme.bodySmall?.fontSize ?? 12,
@@ -1486,5 +1550,69 @@ class _TransactionTile extends StatelessWidget {
       ),
     );
   }
+}
 
+class _TransactionInfoRow extends StatelessWidget {
+  const _TransactionInfoRow({
+    required this.icon,
+    required this.label,
+    this.labelStyle,
+  });
+
+  final IconData icon;
+  final String label;
+  final TextStyle? labelStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = theme.colorScheme.outline;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: color),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label,
+            style: labelStyle ??
+                theme.textTheme.bodySmall?.copyWith(
+                  color: color,
+                ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BalanceSummary extends StatelessWidget {
+  const _BalanceSummary({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
 }

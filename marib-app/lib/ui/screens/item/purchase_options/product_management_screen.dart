@@ -12,6 +12,11 @@ import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/responsiveSize.dart';
+import 'package:marib/data/model/custom_field/custom_field_model.dart'
+    show CustomFieldColorEntry;
+
+
+
 
 class ProductManagementScreen extends StatefulWidget {
   const ProductManagementScreen({super.key, required this.item});
@@ -290,9 +295,30 @@ class _AttributesTab extends StatelessWidget {
       itemCount: options.attributes.length,
       itemBuilder: (BuildContext context, int index) {
         final ItemPurchaseAttributeOption attribute = options.attributes[index];
-        final bool hasValues = attribute.allowedValues.isNotEmpty;
+        final bool isColor = _isColorAttribute(attribute);
         final List<String> selected =
             state.attributeSelections[attribute.key] ?? const <String>[];
+        final Set<String> normalizedSelected = <String>{
+          for (final String value in selected)
+            if (isColor)
+              _normalizeColorValue(value) ?? ''
+            else
+              value,
+        }..removeWhere((String value) => value.isEmpty);
+
+        final List<String> optionValues = attribute.allowedValues.isNotEmpty
+            ? attribute.allowedValues
+            : (attribute.colorEntries.isNotEmpty
+            ? attribute.colorEntries
+            .map((CustomFieldColorEntry entry) => entry.code)
+            .toList(growable: false)
+            : attribute.values);
+
+        final bool hasValues = optionValues.isNotEmpty;
+        final Map<String, CustomFieldColorEntry> colorEntriesByCode = {
+          for (final CustomFieldColorEntry entry in attribute.colorEntries)
+            entry.code: entry,
+        };
         final bool required = attribute.requiredForCheckout;
 
         return Card(
@@ -342,32 +368,41 @@ class _AttributesTab extends StatelessWidget {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: attribute.allowedValues.map((String value) {
-                      final bool isSelected = selected.contains(value);
-                      return FilterChip(
-                        label: Text(value),
-                        selected: isSelected,
-                        labelStyle: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight:
-                          isSelected ? FontWeight.w700 : FontWeight.w500,
-                          color: isSelected
-                              ? color.territoryColor
-                              : color.textDefaultColor,
-                        ),
-                        selectedColor: color.territoryColor.withOpacity(0.12),
-                        backgroundColor: color.secondaryColor,
-                        side: BorderSide(
-                          color: isSelected
-                              ? color.territoryColor
-                              : color.borderColor.withOpacity(0.5),
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        onSelected: (_) =>
+                    children: optionValues.map<Widget?>(
+                            (String value) {
+                          if (isColor) {
+                            final String? normalized = _normalizeColorValue(value);
+                            if (normalized == null) {
+                              return null;
+                            }
+                            final bool isSelected =
+                            normalizedSelected.contains(normalized);
+                            final CustomFieldColorEntry? entry =
+                            colorEntriesByCode[normalized];
+                            return _ColorAttributeChip(
+                              code: normalized,
+                              entry: entry,
+                              isSelected: isSelected,
+                              onSelected: () => cubit.toggleAttributeValue(
+                                attribute.key,
+                                normalized,
+                              ),
+                            );
+                          }
+
+                          final bool isSelected =
+                          normalizedSelected.contains(value);
+                          return _buildTextAttributeChip(
+                            context: context,
+                            theme: theme,
+                            color: color,
+                            label: value,
+                            isSelected: isSelected,
+                            onSelected: () =>
                             cubit.toggleAttributeValue(attribute.key, value),
                       );
-                    }).toList(),
+                            }).whereType<Widget>().toList(),
+
                   )
                 else
                   TextField(
@@ -402,6 +437,134 @@ class _AttributesTab extends StatelessWidget {
     return controller;
   }
 }
+
+
+Widget _buildTextAttributeChip({
+  required BuildContext context,
+  required ThemeData theme,
+  required ColorScheme color,
+  required String label,
+  required bool isSelected,
+  required VoidCallback onSelected,
+}) {
+  return FilterChip(
+    label: Text(label),
+    selected: isSelected,
+    labelStyle: theme.textTheme.bodyMedium?.copyWith(
+      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+      color:
+      isSelected ? color.territoryColor : color.textDefaultColor,
+    ),
+    selectedColor: color.territoryColor.withOpacity(0.12),
+    backgroundColor: color.secondaryColor,
+    side: BorderSide(
+      color:
+      isSelected ? color.territoryColor : color.borderColor.withOpacity(0.5),
+    ),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+    ),
+    onSelected: (_) => onSelected(),
+  );
+}
+
+class _ColorAttributeChip extends StatelessWidget {
+  const _ColorAttributeChip({
+    required this.code,
+    required this.entry,
+    required this.isSelected,
+    required this.onSelected,
+  });
+
+  final String code;
+  final CustomFieldColorEntry? entry;
+  final bool isSelected;
+  final VoidCallback onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme palette = context.color;
+    final Color color = _colorFromHex(code) ?? palette.borderColor;
+    final int? quantity = entry?.quantity;
+    final String label = '#$code${quantity != null && quantity > 0 ? ' × $quantity' : ''}';
+
+    return FilterChip(
+      label: Text(
+        label,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+          color:
+          isSelected ? palette.territoryColor : palette.textDefaultColor,
+        ),
+      ),
+      avatar: Container(
+        width: 18,
+        height: 18,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: color,
+          border: Border.all(color: Colors.black.withOpacity(0.18), width: 1),
+        ),
+      ),
+      selected: isSelected,
+      selectedColor: palette.territoryColor.withOpacity(0.12),
+      backgroundColor: palette.secondaryColor,
+      side: BorderSide(
+        color:
+        isSelected ? palette.territoryColor : palette.borderColor.withOpacity(0.5),
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      onSelected: (_) => onSelected(),
+    );
+  }
+}
+
+bool _isColorAttribute(ItemPurchaseAttributeOption attribute) {
+  final String normalizedKey = attribute.key.toLowerCase();
+  final String normalizedName = attribute.name.toLowerCase();
+  final String? type = attribute.type?.toLowerCase();
+  final String? uiType = attribute.uiType?.toLowerCase();
+
+  if (type == 'color' || uiType == 'color') {
+    return true;
+  }
+
+  if (normalizedKey.contains('color') ||
+      normalizedKey.contains('colour') ||
+      normalizedKey.contains('اللون')) {
+    return true;
+  }
+
+  if (normalizedName.contains('color') ||
+      normalizedName.contains('colour') ||
+      normalizedName.contains('اللون')) {
+    return true;
+  }
+
+  return false;
+}
+
+String? _normalizeColorValue(String? value) {
+  if (value == null) {
+    return null;
+  }
+  final String normalized = value.replaceAll('#', '').trim().toUpperCase();
+  final RegExp pattern = RegExp(r'^[0-9A-F]{6}$');
+  return pattern.hasMatch(normalized) ? normalized : null;
+}
+
+Color? _colorFromHex(String value) {
+  final String? normalized = _normalizeColorValue(value);
+  if (normalized == null) {
+    return null;
+  }
+  return Color(int.parse('0xFF$normalized'));
+}
+
+
 
 class _StockTab extends StatelessWidget {
   const _StockTab({required this.state, required this.stockControllers});
@@ -635,7 +798,22 @@ class _StockTab extends StatelessWidget {
     attributes.forEach((String key, String value) {
       final ItemPurchaseAttributeOption? attribute = options.attributeByKey(key);
       final String name = attribute?.name ?? key;
-      parts.add('$name: $value');
+      String displayValue = value;
+      if (attribute != null && _isColorAttribute(attribute)) {
+        final String? normalized = _normalizeColorValue(value);
+        if (normalized != null) {
+          final CustomFieldColorEntry? entry = attribute.colorEntries
+              .firstWhere(
+                  (CustomFieldColorEntry element) => element.code == normalized,
+              orElse: () => CustomFieldColorEntry(code: normalized));
+          final int? quantity = entry.quantity;
+          displayValue = '#$normalized';
+          if (quantity != null && quantity > 0) {
+            displayValue = '$displayValue × $quantity';
+          }
+        }
+      }
+      parts.add('$name: $displayValue');
     });
     return parts.join(' • ');
   }

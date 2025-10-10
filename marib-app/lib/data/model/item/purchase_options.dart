@@ -1,4 +1,50 @@
+import 'dart:collection';
+
+import 'package:marib/data/model/custom_field/custom_field_model.dart'
+    show CustomFieldColorEntry, parseCustomFieldColorEntries;
+
 import 'package:marib/data/model/item/item_model.dart';
+
+
+bool _looksLikeColorAttribute(
+    String key,
+    String name,
+    String? type,
+    String? uiType,
+    ) {
+  final String normalizedKey = key.toLowerCase();
+  final String normalizedName = name.toLowerCase();
+  final String? normalizedType = type?.toLowerCase();
+  final String? normalizedUiType = uiType?.toLowerCase();
+
+  if (normalizedType == 'color' || normalizedUiType == 'color') {
+    return true;
+  }
+
+  if (normalizedKey.contains('color') ||
+      normalizedKey.contains('colour') ||
+      normalizedKey.contains('اللون')) {
+    return true;
+  }
+
+  if (normalizedName.contains('color') ||
+      normalizedName.contains('colour') ||
+      normalizedName.contains('اللون')) {
+    return true;
+  }
+
+  return false;
+}
+
+String? _normalizeColorCode(String? value) {
+  if (value == null) {
+    return null;
+  }
+  final String sanitized = value.replaceAll('#', '').trim().toUpperCase();
+  final RegExp hexPattern = RegExp(r'^[0-9A-F]{6}$');
+  return hexPattern.hasMatch(sanitized) ? sanitized : null;
+}
+
 
 class ItemPurchaseAttributeOption {
   const ItemPurchaseAttributeOption({
@@ -13,6 +59,8 @@ class ItemPurchaseAttributeOption {
     this.defaultValue,
     this.selectedValues = const <String>[],
     this.uiType,
+    this.colorEntries = const <CustomFieldColorEntry>[],
+
   });
 
   factory ItemPurchaseAttributeOption.fromJson(Map<String, dynamic> json) {
@@ -46,18 +94,95 @@ class ItemPurchaseAttributeOption {
         .toString()
         .trim();
 
+
+
+    final String name = _normalizeString(json['name']) ?? '';
+    final String? type = _normalizeString(json['type']);
+    final String? uiType = _normalizeString(json['ui_type']);
+
+    List<String> allowedValues = _stringList(json['allowed_values']);
+    List<String> values = _stringList(json['values']);
+    List<String> selectedValues = _stringList(json['selected_values']);
+    String? defaultValue = _normalizeString(json['default_value']);
+
+    final bool looksLikeColor =
+    _looksLikeColorAttribute(key, name, type, uiType);
+
+    List<CustomFieldColorEntry> colorEntries = const <CustomFieldColorEntry>[];
+    if (looksLikeColor) {
+      final List<CustomFieldColorEntry> parsedColorEntries =
+      parseCustomFieldColorEntries(json['color_entries']);
+      final List<CustomFieldColorEntry> fallbackFromAllowed =
+      parseCustomFieldColorEntries(json['allowed_values']);
+      final List<CustomFieldColorEntry> fallbackFromValues =
+      parseCustomFieldColorEntries(json['values']);
+      final Map<String, CustomFieldColorEntry> merged =
+      <String, CustomFieldColorEntry>{};
+
+      void addEntries(List<CustomFieldColorEntry> entries) {
+        for (final CustomFieldColorEntry entry in entries) {
+          final String code = entry.code;
+          final CustomFieldColorEntry? existing = merged[code];
+          if (existing == null) {
+            merged[code] = entry;
+          } else if (entry.quantity != null) {
+            merged[code] = existing.copyWith(quantity: entry.quantity);
+          }
+        }
+      }
+
+      addEntries(fallbackFromAllowed);
+      addEntries(fallbackFromValues);
+      addEntries(parsedColorEntries);
+
+      colorEntries = merged.values.toList(growable: false);
+
+      List<String> normalizeList(List<String> input) {
+        final LinkedHashSet<String> normalized = LinkedHashSet<String>();
+        for (final String value in input) {
+          final String? normalizedValue = _normalizeColorCode(value);
+          if (normalizedValue != null) {
+            normalized.add(normalizedValue);
+          }
+        }
+        return normalized.toList(growable: false);
+      }
+
+      allowedValues = normalizeList(allowedValues);
+      values = normalizeList(values);
+      selectedValues = normalizeList(selectedValues);
+      final String? normalizedDefault = _normalizeColorCode(defaultValue);
+      defaultValue = normalizedDefault ?? defaultValue;
+
+      if (allowedValues.isEmpty && colorEntries.isNotEmpty) {
+        allowedValues =
+            colorEntries.map((CustomFieldColorEntry e) => e.code).toList();
+      }
+
+      if (values.isEmpty && colorEntries.isNotEmpty) {
+        values = colorEntries.map((CustomFieldColorEntry e) => e.code).toList();
+      }
+
+      if (selectedValues.isEmpty && colorEntries.isNotEmpty) {
+        selectedValues =
+            colorEntries.map((CustomFieldColorEntry e) => e.code).toList();
+      }
+    }
+
+
     return ItemPurchaseAttributeOption(
       id: id ?? 0,
       key: key,
-      name: _normalizeString(json['name']) ?? '',
-      type: _normalizeString(json['type']),
+      name: name,
+      type: type,
       requiredForCheckout: _parseBool(json['required_for_checkout']) ?? false,
       affectsStock: _parseBool(json['affects_stock']) ?? false,
-      allowedValues: _stringList(json['allowed_values']),
-      values: _stringList(json['values']),
-      defaultValue: _normalizeString(json['default_value']),
-      selectedValues: _stringList(json['selected_values']),
-      uiType: _normalizeString(json['ui_type']),
+      allowedValues: allowedValues,
+      values: values,
+      defaultValue: defaultValue,
+      selectedValues: selectedValues,
+      uiType: uiType,
+      colorEntries: colorEntries,
     );
   }
 
@@ -72,6 +197,8 @@ class ItemPurchaseAttributeOption {
   final String? defaultValue;
   final List<String> selectedValues;
   final String? uiType;
+  final List<CustomFieldColorEntry> colorEntries;
+
 }
 
 class ItemVariantStockOption {

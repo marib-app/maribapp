@@ -22,6 +22,7 @@ import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'widgets/filter_sort_bar/filter_sort_bar.dart';
 import 'widgets/items_body_box.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
+import 'package:marib/utils/featured_section_utils.dart';
 
 
 class Section_screen extends StatefulWidget {
@@ -127,17 +128,38 @@ class Section_screenState extends State<Section_screen> {
 
 
   void _requestFeaturedSections({int? rootId, String? slug}) {
-    final String? interfaceType = widget.interfaceType?.trim();
-    if (interfaceType == null || interfaceType.isEmpty) {
+    final String? normalizedInterface =
+        SliderInterfaceMapper.normalize(widget.interfaceType) ??
+            widget.interfaceType?.trim();
+
+    if (normalizedInterface == null || normalizedInterface.isEmpty) {
       context.read<FetchHomeScreenCubit>().fetch();
       return;
     }
+    final int? effectiveRootId =
+        rootId ?? selectedCategoryId.value ?? _catId;
 
+    final FetchHomeScreenState cubitState =
+        context.read<FetchHomeScreenCubit>().state;
+    String? cachedRootIdentifier;
+    if (cubitState is FetchHomeScreenSuccess) {
+      cachedRootIdentifier = cubitState.rootIdentifier;
+    }
+
+    final String? resolvedRootIdentifier =
+    FeaturedSectionUtils.resolveRootIdentifier(
+      interfaceType: normalizedInterface,
+      rootCategoryId: effectiveRootId,
+      cachedRootIdentifier: cachedRootIdentifier,
+    );
     final String? cleanedSlug = slug?.trim();
 
     context.read<FetchHomeScreenCubit>().loadFeaturedSections(
-      interfaceType: interfaceType,
+      interfaceType: normalizedInterface,
+
       slug: (cleanedSlug != null && cleanedSlug.isNotEmpty) ? cleanedSlug : null,
+      rootIdentifier: resolvedRootIdentifier,
+
     );
   }
 
@@ -226,7 +248,7 @@ class Section_screenState extends State<Section_screen> {
     // لضمان توفر البيانات قبل بناء HomeTabView.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _requestFeaturedSections();
+      _requestFeaturedSections(rootId: _catId);
     });
 
 
@@ -305,7 +327,9 @@ class Section_screenState extends State<Section_screen> {
       );
 
       // إعادة تحميل أقسام الإعلانات المميزة عند السحب للتحديث
-      _requestFeaturedSections();
+      _requestFeaturedSections(
+        rootId: selectedCategoryId.value ?? _catId,
+      );
 
 
       // (اختياري)

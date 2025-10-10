@@ -2665,19 +2665,16 @@ class ApiController extends Controller {
             }
 
 
-            if ($request->filled('root_identifier')) {
-                Log::warning('Attempt to override featured section root identifier', [
-                    'requested_value' => $request->input('root_identifier'),
-                    'user_id' => Auth::id(),
-                    'ip' => $request->ip(),
-                ]);
-            }
+
 
             $result = $featuredSectionService->getSections(
                 $request->input('section_type'),
                 $request->input('interface_type'),
                 $request->input('slug'),
                 $limit,
+                $request->input('root_identifier'),
+
+
             );
 
 

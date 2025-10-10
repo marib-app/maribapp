@@ -182,6 +182,46 @@ class FeatureSectionCategoryService
         return array_values(array_unique($expanded));
     }
 
+
+    public static function canonicalSectionTypeOrNull(?string $sectionType): ?string
+    {
+        if ($sectionType === null) {
+            return null;
+        }
+
+        $sectionType = trim($sectionType);
+
+        if ($sectionType === '') {
+            return null;
+        }
+
+        $rootIdentifiers = self::rootIdentifiers();
+
+        if (array_key_exists($sectionType, $rootIdentifiers)) {
+            return $sectionType;
+        }
+
+        $lowerSectionType = strtolower($sectionType);
+
+        if (array_key_exists($lowerSectionType, $rootIdentifiers)) {
+            return $lowerSectionType;
+        }
+
+        if ($lowerSectionType === 'all') {
+            return 'all';
+        }
+
+        $aliasMap = self::normalizedAliasMap();
+
+        if (array_key_exists($lowerSectionType, $aliasMap)) {
+            return $aliasMap[$lowerSectionType];
+        }
+
+        return null;
+    }
+
+
+
     public static function normalizeSectionType(?string $sectionType): string
     {
         $default = self::defaultSectionType() ?? '';

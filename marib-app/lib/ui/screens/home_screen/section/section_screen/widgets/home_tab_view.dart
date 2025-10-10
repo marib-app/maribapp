@@ -84,6 +84,7 @@ import 'package:shimmer/shimmer.dart';
 import 'fetch_item_details_cubit.dart';
 import 'package:marib/data/model/home/home_screen_section.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
+import 'package:marib/utils/featured_section_utils.dart';
 
 //==============================================================================
 ///                                   HomeTabView
@@ -367,10 +368,21 @@ class _HomeTabViewState extends State<HomeTabView> {
       if (sectionSlug != null) {
         _slugByRootIdentifier[sectionRoot] = sectionSlug;
 
-        if (rootId != null && rootId > 0 &&
-            resolved != null && resolved.isNotEmpty &&
-            resolved == sectionRoot) {
-          _slugByCategoryId[rootId] = sectionSlug;
+        if (rootId != null && rootId > 0) {
+          final String? existingRootSlug = _slugByCategoryId[rootId];
+          if (existingRootSlug == null || existingRootSlug.isEmpty) {
+            _slugByCategoryId[rootId] = sectionSlug;
+          }
+        }
+      }
+
+      if (rootId != null && rootId > 0) {
+        final String? existingRootIdentifier =
+        _rootIdentifierByCategoryId[rootId];
+        if (existingRootIdentifier == null ||
+            existingRootIdentifier.isEmpty ||
+            existingRootIdentifier == rootId.toString()) {
+          _rootIdentifierByCategoryId[rootId] = sectionRoot;
         }
       }
 
@@ -387,7 +399,9 @@ class _HomeTabViewState extends State<HomeTabView> {
         }
 
         final String? existing = _rootIdentifierByCategoryId[categoryId];
-        if (existing == null || existing.isEmpty) {
+        if (existing == null ||
+            existing.isEmpty ||
+            existing == categoryId.toString()) {
           _rootIdentifierByCategoryId[categoryId] = sectionRoot;
         }
         if (sectionSlug != null) {
@@ -420,9 +434,17 @@ class _HomeTabViewState extends State<HomeTabView> {
 
     _hasRequestedInitialFeatured = true;
     _lastRequestedRootId = rootId;
-    final String? rootIdentifier = _getCachedRootIdentifier(rootId);
+    final String? cachedRootIdentifier = _getCachedRootIdentifier(rootId);
+    final String? rootIdentifier = FeaturedSectionUtils.resolveRootIdentifier(
+      interfaceType: interfaceType,
+      rootCategoryId: rootId,
+      cachedRootIdentifier: cachedRootIdentifier,
+    );
+    String? resolvedSlug = _getSlugForRootIdentifier(rootIdentifier);
 
-    final String? resolvedSlug = _getSlugForRootIdentifier(rootIdentifier);
+    if (resolvedSlug == null && rootId != null && rootId > 0) {
+      resolvedSlug = _slugByCategoryId[rootId];
+    }
 
 
     context.read<FetchHomeScreenCubit>().loadFeaturedSections(

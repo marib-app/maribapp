@@ -31,7 +31,8 @@ class FeaturedSectionService
         array $options = []
     ): SectionPayloadResult {
         $sectionType = FeatureSectionCategoryService::normalizeSectionType($section->section_type);
-
+        $rootIdentifiers = FeatureSectionCategoryService::rootIdentifiers();
+        $configuredRootIdentifier = $rootIdentifiers[$sectionType] ?? null;
         $limit = (int) ($options['limit'] ?? 0);
         if ($limit <= 0) {
             $limit = $this->defaultSectionLimit();
@@ -46,6 +47,7 @@ class FeaturedSectionService
             $section,
             $sectionType,
             $limit,
+            $configuredRootIdentifier,
 
         );
 
@@ -62,6 +64,7 @@ class FeaturedSectionService
         ?string $interfaceType,
         ?string $slug,
         ?int $limit,
+        ?string $rootIdentifier,
     ): FeaturedSectionServiceResult
 
 
@@ -133,17 +136,30 @@ class FeaturedSectionService
         $sectionsPayload = [];
         $sectionEtags = [];
 
+
+        $requestedRootTokens = $this->normalizeRootIdentifierFilter($rootIdentifier);
+        $rootIdentifiers = FeatureSectionCategoryService::rootIdentifiers();
+        $stringifiedRootFilter = $this->stringifyRootIdentifier($rootIdentifier);
+
+
         foreach ($sections as $section) {
             if ($normalizedSlug !== null && ! FeatureSection::slugMatchesFilter($normalizedSlug, $section->filter)) {
                 throw new UnknownFeaturedSectionSlugException($normalizedSlug);
             }
 
             $sectionType = FeatureSectionCategoryService::normalizeSectionType($section->section_type);
+            $configuredRootIdentifier = $rootIdentifiers[$sectionType] ?? null;
+            $sectionRootTokens = $this->sectionRootIdentifierTokens($sectionType, $configuredRootIdentifier);
+
+            if (! $this->matchesRootIdentifier($requestedRootTokens, $sectionRootTokens)) {
+                continue;
+            }
 
             $built = $this->buildSectionPayload(
                 $section,
                 $sectionType,
                 $limit,
+                $configuredRootIdentifier,
 
             );
 
@@ -158,6 +174,9 @@ class FeaturedSectionService
             'limit' => $limit,
 
             'sections' => $sectionEtags,
+            'root_identifier' => $stringifiedRootFilter,
+
+
         ];
 
         if ($sectionsPayload === []) {
@@ -179,6 +198,7 @@ class FeaturedSectionService
         FeatureSection $section,
         string $canonicalSectionType,
         int $limit,
+        mixed $configuredRootIdentifier,
 
     ): SectionPayloadResult {
         $canonicalSectionTypes = FeatureSectionCategoryService::allowedSectionTypes();
@@ -274,6 +294,10 @@ class FeaturedSectionService
         $sectionPayload = $section->toArray();
         $sectionPayload['section_type'] = $canonicalSectionType;
         $sectionPayload['root_identifier'] = $this->stringifyRootIdentifier(
+            $configuredRootIdentifier
+        ) ?? $canonicalSectionType;
+
+        $sectionPayload['root_identifier'] = $this->stringifyRootIdentifier(
             FeatureSectionCategoryService::rootIdentifiers()[$canonicalSectionType] ?? null
         ) ?? $canonicalSectionType;
 
@@ -352,6 +376,131 @@ class FeaturedSectionService
     }
 
 
+
+    /**
+     * @return array<int, string>
+     */
+    private function normalizeRootIdentifierFilter(?string $value): array
+    {
+        $tokens = $this->tokenizeRootIdentifierValue($value);
+
+        foreach ($tokens as $token) {
+            $canonical = FeatureSectionCategoryService::canonicalSectionTypeOrNull($token);
+
+            if ($canonical !== null) {
+                $tokens[] = $canonical;
+            }
+        }
+
+        return $this->normalizeTokens($tokens);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function sectionRootIdentifierTokens(string $canonicalSectionType, mixed $configuredRootIdentifier): array
+    {
+        $tokens = $this->tokenizeRootIdentifierValue($configuredRootIdentifier);
+        $tokens[] = $canonicalSectionType;
+
+        $canonicalAlias = FeatureSectionCategoryService::canonicalSectionTypeOrNull($canonicalSectionType);
+
+        if ($canonicalAlias !== null) {
+            $tokens[] = $canonicalAlias;
+        }
+
+        return $this->normalizeTokens($tokens);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function tokenizeRootIdentifierValue(mixed $value): array
+    {
+        if ($value === null) {
+            return [];
+        }
+
+        if (is_string($value)) {
+            $value = trim($value);
+
+            if ($value === '') {
+                return [];
+            }
+
+            $parts = preg_split('/[\s,]+/', $value) ?: [$value];
+            $tokens = [];
+
+            foreach ($parts as $part) {
+                $part = trim($part);
+
+                if ($part === '') {
+                    continue;
+                }
+
+                $tokens[] = $part;
+            }
+
+            return $tokens;
+        }
+
+        if (is_int($value) || is_float($value) || is_numeric($value)) {
+            return [(string) (int) $value];
+        }
+
+        if (is_array($value)) {
+            $tokens = [];
+
+            foreach ($value as $part) {
+                foreach ($this->tokenizeRootIdentifierValue($part) as $token) {
+                    $tokens[] = $token;
+                }
+            }
+
+            return $tokens;
+        }
+
+        if (is_object($value) && method_exists($value, '__toString')) {
+            return $this->tokenizeRootIdentifierValue((string) $value);
+        }
+
+        return [];
+    }
+
+    /**
+     * @param array<int, string> $tokens
+     * @return array<int, string>
+     */
+    private function normalizeTokens(array $tokens): array
+    {
+        $normalized = [];
+
+        foreach ($tokens as $token) {
+            $token = trim((string) $token);
+
+            if ($token === '') {
+                continue;
+            }
+
+            $normalized[strtolower($token)] = true;
+        }
+
+        return array_keys($normalized);
+    }
+
+    /**
+     * @param array<int, string> $filterTokens
+     * @param array<int, string> $sectionTokens
+     */
+    private function matchesRootIdentifier(array $filterTokens, array $sectionTokens): bool
+    {
+        if ($filterTokens === []) {
+            return true;
+        }
+
+        return array_intersect($filterTokens, $sectionTokens) !== [];
+    }
+
     private function stringifyRootIdentifier(mixed $value): ?string
     {
         if ($value === null) {
@@ -390,6 +539,7 @@ class FeaturedSectionService
 
         return trim((string) $value) ?: null;
     }
+
 
 
     private function positiveIntOrNull(mixed $value): ?int

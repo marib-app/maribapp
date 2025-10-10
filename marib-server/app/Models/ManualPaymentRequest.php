@@ -89,10 +89,11 @@ class ManualPaymentRequest extends Model
             return false;
         }
 
-        $normalizedValue = strtolower(trim($value, " \\t\\n\\r\\0\\x0B\\"'"));
+        $charactersToTrim = " \t\n\r\0\x0B\"'";
 
+        $normalizedValue = strtolower(trim($value, $charactersToTrim));
         foreach (self::orderPayableTypeAliases() as $alias) {
-            $normalizedAlias = strtolower(trim($alias, " \\t\\n\\r\\0\\x0B\\"'"));
+            $normalizedAlias = strtolower(trim($alias, $charactersToTrim));
 
             if ($normalizedAlias === $normalizedValue) {
                 return true;

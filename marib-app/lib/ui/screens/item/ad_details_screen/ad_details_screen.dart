@@ -1315,9 +1315,26 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     }
 
     pageController.addListener(() {
-      setState(() {
-        currentPage = pageController.page!.round();
-      });
+      if (!pageController.hasClients) {
+        return;
+      }
+
+      final double? page = pageController.page;
+      if (page == null) {
+        return;
+      }
+
+      final int roundedPage = page.round();
+      if (!mounted) {
+        currentPage = roundedPage;
+        return;
+      }
+
+      if (currentPage != roundedPage) {
+        setState(() {
+          currentPage = roundedPage;
+        });
+      }
     });
 
     _pageScrollController.addListener(_pageScroll);

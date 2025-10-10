@@ -39,14 +39,14 @@ class ItemPurchaseOptionsRepository {
 
   Future<PurchaseOptionsUpdateResult> saveAttributes({
     required int itemId,
-    required Map<String, dynamic> selectedValues,
-    required Map<String, String> textValues,
+    required List<Map<String, dynamic>> attributes,
+
   }) async {
     final Map<String, dynamic> response = await Api.post(
       url: Api.itemAttributesApi(itemId),
       parameter: <String, dynamic>{
-        'selected_values': selectedValues,
-        'text_values': textValues,
+        'attributes': attributes,
+
       },
     );
 

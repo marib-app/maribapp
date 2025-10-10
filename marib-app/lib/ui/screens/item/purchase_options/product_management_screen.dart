@@ -64,8 +64,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController = TabController(length: 3, vsync: this)
     ..addListener(_onTabChanged);
-  final Map<String, TextEditingController> _textControllers =
-  <String, TextEditingController>{};
+
   final Map<String, TextEditingController> _stockControllers =
   <String, TextEditingController>{};
   int _currentTabIndex = 0;
@@ -74,9 +73,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
   void dispose() {
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
-    for (final TextEditingController controller in _textControllers.values) {
-      controller.dispose();
-    }
+
     for (final TextEditingController controller in _stockControllers.values) {
       controller.dispose();
     }
@@ -143,10 +140,8 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
         controller: _tabController,
         physics: const BouncingScrollPhysics(),
         children: <Widget>[
-          _AttributesTab(
-            state: state,
-            textControllers: _textControllers,
-          ),
+          _AttributesTab(state: state),
+
           _StockTab(
             state: state,
             stockControllers: _stockControllers,
@@ -273,179 +268,379 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
   }
 }
 
-class _AttributesTab extends StatelessWidget {
-  const _AttributesTab({required this.state, required this.textControllers});
+class _AttributesTab extends StatefulWidget {
+  const _AttributesTab({required this.state});
 
   final ProductManagementState state;
-  final Map<String, TextEditingController> textControllers;
 
   @override
-  Widget build(BuildContext context) {
-    final ProductManagementCubit cubit = context.read<ProductManagementCubit>();
-    final ItemPurchaseOptions? options = state.options;
+  State<_AttributesTab> createState() => _AttributesTabState();
+}
 
-    if (options == null || options.attributes.isEmpty) {
-      return const _EmptyState(message: 'لا توجد سمات لإدارتها لهذا المنتج.');
+class _AttributesTabState extends State<_AttributesTab> {
+  final Map<String, TextEditingController> _nameControllers =
+  <String, TextEditingController>{};
+  final Map<String, List<TextEditingController>> _optionControllers =
+  <String, List<TextEditingController>>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _syncControllers();
+  }
+
+  @override
+  void didUpdateWidget(covariant _AttributesTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.state.managedAttributes != widget.state.managedAttributes ||
+        oldWidget.state.attributeSelections != widget.state.attributeSelections) {
+      _syncControllers();
+    }
+  }
+  @override
+  void dispose() {
+    for (final TextEditingController controller in _nameControllers.values) {
+      controller.dispose();
+    }
+    for (final List<TextEditingController> controllers in _optionControllers.values) {
+      for (final TextEditingController controller in controllers) {
+        controller.dispose();
+      }
+    }
+    super.dispose();
+  }
+  }
+
+void _syncControllers() {
+  final Set<String> keys = widget.state.managedAttributes
+      .map((ManagedPurchaseAttribute attribute) => attribute.key)
+      .toSet();
+
+  final List<String> removedNameKeys =
+  _nameControllers.keys.where((String key) => !keys.contains(key)).toList();
+  for (final String key in removedNameKeys) {
+    _nameControllers.remove(key)?.dispose();
+  }
+
+  final List<String> removedOptionKeys =
+  _optionControllers.keys.where((String key) => !keys.contains(key)).toList();
+  for (final String key in removedOptionKeys) {
+    final List<TextEditingController>? controllers = _optionControllers.remove(key);
+    if (controllers != null) {
+      for (final TextEditingController controller in controllers) {
+        controller.dispose();
+      }
+    }
+  }
+
+  for (final ManagedPurchaseAttribute attribute in widget.state.managedAttributes) {
+    _ensureNameController(attribute.key, attribute.name);
+    final List<TextEditingController> controllers =
+    _optionControllers.putIfAbsent(attribute.key, () => <TextEditingController>[]);
+    final int optionsLength = attribute.options.length;
+
+    if (controllers.length > optionsLength) {
+      final Iterable<TextEditingController> toDispose = controllers.sublist(optionsLength);
+      for (final TextEditingController controller in toDispose) {
+        controller.dispose();
+      }
+      controllers.removeRange(optionsLength, controllers.length);
     }
 
-    final color = context.color;
-    final theme = Theme.of(context);
+    while (controllers.length < optionsLength) {
+      controllers.add(TextEditingController());
+    }
 
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      physics: const BouncingScrollPhysics(),
-
-      itemCount: options.attributes.length,
-      itemBuilder: (BuildContext context, int index) {
-        final ItemPurchaseAttributeOption attribute = options.attributes[index];
-        final bool isColor = _isColorAttribute(attribute);
-
-        final bool required = attribute.requiredForCheckout;
-        late final Widget content;
-
-        if (isColor) {
-          final List<CustomFieldColorEntry> activeEntries = (() {
-            final List<CustomFieldColorEntry> current =
-                state.colorSelections[attribute.key] ?? const <CustomFieldColorEntry>[];
-            if (current.isNotEmpty) {
-              return List<CustomFieldColorEntry>.from(current);
-            }
-            if (attribute.colorEntries.isNotEmpty) {
-              return List<CustomFieldColorEntry>.from(attribute.colorEntries);
-            }
-
-            final LinkedHashSet<String> codes = LinkedHashSet<String>();
-            for (final String value in attribute.allowedValues) {
-              final String? normalized = _normalizeColorValue(value);
-              if (normalized != null) {
-                codes.add(normalized);
-              }
-            }
-            if (codes.isEmpty) {
-              for (final String value in attribute.values) {
-                final String? normalized = _normalizeColorValue(value);
-                if (normalized != null) {
-                  codes.add(normalized);
-                }
-              }
-            }
-            return codes
-                .map((String code) => CustomFieldColorEntry(code: code))
-                .toList(growable: false);
-          })();
-
-          final Set<String> suggestedCodes = <String>{
-            for (final String value in attribute.allowedValues)
-              if (_normalizeColorValue(value) != null)
-                _normalizeColorValue(value)!,
-            for (final String value in attribute.values)
-              if (_normalizeColorValue(value) != null)
-                _normalizeColorValue(value)!,
-            for (final CustomFieldColorEntry entry in attribute.colorEntries)
-              entry.code,
-            for (final CustomFieldColorEntry entry in activeEntries)
-              entry.code,
-          }..removeWhere((String value) => value.isEmpty);
-
-          content = _ColorAttributeManager(
-            entries: activeEntries,
-            onManage: () => _openColorAttributeEditor(
-              context: context,
-              attribute: attribute,
-              currentEntries: activeEntries,
-              suggestedCodes: suggestedCodes,
-            ),
+    for (int index = 0; index < optionsLength; index++) {
+      final String value = attribute.options[index];
+      final TextEditingController controller = controllers[index];
+      if (controller.text != value) {
+        controller.text = value;
+        controller.selection = TextSelection.fromPosition(
+          TextPosition(offset: controller.text.length),
           );
-        } else {
-          final List<String> optionValues = attribute.allowedValues.isNotEmpty
-              ? attribute.allowedValues
-              : attribute.values;
-          final bool hasValues = optionValues.isNotEmpty;
-          final List<String> selected =
-              state.attributeSelections[attribute.key] ?? const <String>[];
+      }
+    }
+  }
+}
 
-          if (hasValues) {
-            final Set<String> normalizedSelected = <String>{
-              for (final String value in selected) value,
-            }..removeWhere((String value) => value.isEmpty);
+TextEditingController _ensureNameController(String key, String value) {
+  final TextEditingController controller =
+  _nameControllers.putIfAbsent(key, () => TextEditingController(text: value));
+  if (controller.text != value) {
+    controller.text = value;
+    controller.selection = TextSelection.fromPosition(
+      TextPosition(offset: controller.text.length),
+    );
+  }
+  return controller;
+}
 
-            content = Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: optionValues
-                  .map<Widget>((String value) {
-                final bool isSelected = normalizedSelected.contains(value);
-                return _buildTextAttributeChip(
-                  context: context,
-                  theme: theme,
-                  color: color,
-                  label: value,
-                  isSelected: isSelected,
-                  onSelected: () => cubit.toggleAttributeValue(attribute.key, value),
-                );
-              })
-                  .toList(growable: false),
-            );
-          } else {
-            content = TextField(
-              controller: _ensureTextController(
-                attribute.key,
-                state.textInputs[attribute.key] ?? '',
-              ),
+@override
+Widget build(BuildContext context) {
+  _syncControllers();
+  final ProductManagementCubit cubit = context.read<ProductManagementCubit>();
+  final ProductManagementState state = widget.state;
+  final List<ManagedPurchaseAttribute> attributes = state.managedAttributes;
+
+  return ListView(
+    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+    physics: const BouncingScrollPhysics(),
+    children: <Widget>[
+      Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: OutlinedButton.icon(
+          onPressed: () => _showAddAttributeMenu(context),
+          icon: const Icon(Icons.add),
+          label: const Text('إضافة سمة جديدة للمنتج'),
+        ),
+      ),
+      const SizedBox(height: 16),
+      if (attributes.isEmpty)
+        const _EmptyState(
+          message:
+          'لم يتم إضافة سمات بعد. استخدم زر "إضافة سمة جديدة للمنتج" لتخصيص المنتج.',
+        )
+      else
+        ...attributes
+            .map((ManagedPurchaseAttribute attribute) => Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: _buildAttributeCard(context, attribute, cubit),
+        ))
+            .toList(growable: false),
+    ],
+  );
+}
+
+Widget _buildAttributeCard(
+    BuildContext context,
+    ManagedPurchaseAttribute attribute,
+    ProductManagementCubit cubit,
+    ) {
+  final ThemeData theme = Theme.of(context);
+  final ColorScheme palette = context.color;
+  final ProductManagementState state = widget.state;
+
+  final TextEditingController nameController =
+  _ensureNameController(attribute.key, attribute.name);
+
+  late final Widget content;
+  switch (attribute.type) {
+    case ManagedAttributeType.color:
+      final List<CustomFieldColorEntry> entries =
+          state.colorSelections[attribute.key] ?? attribute.colorEntries;
+      final Set<String> suggestedCodes = <String>{
+        for (final CustomFieldColorEntry entry in entries) entry.code,
+        for (final String code in state.attributeSelections[attribute.key] ?? const <String>[]) code,
+      }..removeWhere((String code) => code.isEmpty);
+
+      content = _ColorAttributeManager(
+        entries: entries,
+        onManage: () => _openColorAttributeEditor(
+          context: context,
+          attributeKey: attribute.key,
+          attributeName: attribute.name,
+          currentEntries: entries,
+          suggestedCodes: suggestedCodes,
+        ),
+      );
+      break;
+    case ManagedAttributeType.size:
+      content = _SizeAttributeManager(
+        catalog: _defaultSizeCatalog,
+        selected: state.attributeSelections[attribute.key] ?? const <String>[],
+        onToggle: (String value) => cubit.toggleAttributeValue(attribute.key, value),
+      );
+      break;
+    case ManagedAttributeType.custom:
+      content = _buildCustomOptions(context, attribute, cubit);
+      break;
+  }
+
+  return Card(
+      color: palette.secondaryColor,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: palette.borderColor.withOpacity(0.4)),
+      ),
+      child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+            TextField(
+            controller: nameController,
               decoration: _themedInputDecoration(
                 context,
-                label: 'قيمة السمة',
+                label: 'اسم السمة',
+
+              ),
+              onChanged: (String value) => cubit.setAttributeName(attribute.key, value),
+            ),
+              const SizedBox(height: 12),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: SwitchListTile(
+                      value: attribute.requiredForCheckout,
+                      onChanged: (bool value) => cubit.setAttributeRequired(attribute.key, value),
+                      title: const Text('مطلوب عند الشراء'),
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                    ),
+                  ),
+                  Expanded(
+                    child: SwitchListTile(
+                      value: attribute.affectsStock,
+                      onChanged: (bool value) => cubit.setAttributeAffectsStock(attribute.key, value),
+                      title: const Text('يؤثر على المخزون'),
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'حذف السمة',
+                    onPressed: () => cubit.removeAttribute(attribute.key),
+                    icon: const Icon(Icons.delete_outline),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              content,
+            ],
+          ),
+      ),
+  );
+}
+
+
+Widget _buildCustomOptions(
+    BuildContext context,
+    ManagedPurchaseAttribute attribute,
+    ProductManagementCubit cubit,
+    ) {
+  final ThemeData theme = Theme.of(context);
+  final List<String> options = attribute.options;
+  final List<TextEditingController> controllers =
+  _optionControllers.putIfAbsent(attribute.key, () => <TextEditingController>[]);
+
+  final List<Widget> children = <Widget>[];
+
+  if (options.isEmpty) {
+    children.add(
+      Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text(
+          'لم يتم إضافة خيارات بعد. أضف خيارات متعددة ليختار منها المشتري.',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+          ),
+          ),
+      ),
+    );
+  }
+
+  for (int index = 0; index < options.length; index++) {
+    if (index >= controllers.length) {
+      controllers.add(TextEditingController(text: options[index]));
+    }
+    final TextEditingController controller = controllers[index];
+    final String optionValue = options[index];
+    if (controller.text != optionValue) {
+      controller.text = optionValue;
+      controller.selection = TextSelection.fromPosition(
+        TextPosition(offset: controller.text.length),
+      );
+    }
+    children.add(
+      Row(
+        children: <Widget>[
+          Expanded(
+            child: TextField(
+              controller: controller,
+              decoration: _themedInputDecoration(
+                context,
+                label: 'الخيار ${index + 1}',
               ),
               onChanged: (String value) =>
-                  cubit.setTextAttribute(attribute.key, value),
-            );
-          }
-        }
+                  cubit.updateAttributeOption(attribute.key, index, value),
+            ),
+          ),
+          IconButton(
+            tooltip: 'حذف الخيار',
+            onPressed: () => cubit.removeAttributeOption(attribute.key, index),
+            icon: const Icon(Icons.delete_outline),
+          ),
+        ],
+      ),
+    );
+    if (index != options.length - 1) {
+      children.add(const SizedBox(height: 12));
+    }
+  }
+  children.add(
+    Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: TextButton.icon(
+        onPressed: () => cubit.addAttributeOption(attribute.key),
+        icon: const Icon(Icons.add),
+        label: const Text('إضافة خيار'),
+      ),
+    ),
+  );
 
-        return Card(
-          color: color.secondaryColor,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: color.borderColor.withOpacity(0.4)),
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: children,
+  );
+}
+
+void _showAddAttributeMenu(BuildContext context) {
+  final ProductManagementCubit cubit = context.read<ProductManagementCubit>();
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (BuildContext sheetContext) {
+      final ColorScheme palette = context.color;
+      final ThemeData theme = Theme.of(context);
+      return SafeArea(
+        child: Container(
+          margin: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: palette.secondaryColor,
+            borderRadius: BorderRadius.circular(20),
           ),
 
-          margin: const EdgeInsets.only(bottom: 16),
-          child: Padding(
-            padding: const EdgeInsets.all(18),
-
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+
               children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: Text(
-                        attribute.name.isEmpty ? 'سمة بدون اسم' : attribute.name,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    if (required)
-                      const _StatusChip(
-                        icon: Icons.lock_outline,
-                        label: 'مطلوب عند الشراء',
-                        color: Color(0xFFFF9800),
-                      ),
-                    if (attribute.affectsStock)
-                      const Padding(
-                        padding: EdgeInsetsDirectional.only(start: 8),
-                        child: _StatusChip(
-                          icon: Icons.inventory_2_outlined,
-                          label: 'يؤثر على المخزون',
-                          color: Color(0xFF1976D2),
-                        ),
-                      ),
-                  ],
+                ListTile(
+                  leading: const Icon(Icons.palette_outlined),
+                  title: Text('إضافة سمة ألوان', style: theme.textTheme.bodyLarge),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    cubit.addColorAttribute();
+                  },
                 ),
-                const SizedBox(height: 12),
-                content,
+                ListTile(
+                  leading: const Icon(Icons.straighten),
+                  title: Text('إضافة سمة مقاسات', style: theme.textTheme.bodyLarge),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    cubit.addSizeAttribute();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.view_list_outlined),
+                  title: Text('إضافة سمة مخصصة', style: theme.textTheme.bodyLarge),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    cubit.addCustomAttribute();
+                  },
+                ),
+
 
               ],
             ),
@@ -455,29 +650,18 @@ class _AttributesTab extends StatelessWidget {
     );
   }
 
-  TextEditingController _ensureTextController(String key, String value) {
-    final TextEditingController controller =
-    textControllers.putIfAbsent(key, () => TextEditingController(text: value));
-    if (controller.text != value) {
-      controller.text = value;
-      controller.selection = TextSelection.fromPosition(
-        TextPosition(offset: controller.text.length),
-      );
-    }
-    return controller;
-  }
-}
 
 
 void _openColorAttributeEditor({
   required BuildContext context,
-  required ItemPurchaseAttributeOption attribute,
+  required String attributeKey,
+  required String attributeName,
   required List<CustomFieldColorEntry> currentEntries,
   required Set<String> suggestedCodes,
 }) {
-  final String title = attribute.name.isEmpty
+  final String title = attributeName.isEmpty
       ? 'إدارة ألوان السمة'
-      : 'إدارة ألوان ${attribute.name}';
+      : 'إدارة ألوان $attributeName';
 
   final List<CustomFieldColorEntry> initial = currentEntries
       .map((CustomFieldColorEntry entry) =>
@@ -496,7 +680,7 @@ void _openColorAttributeEditor({
         onSave: (List<CustomFieldColorEntry> entries) {
           context
               .read<ProductManagementCubit>()
-              .setColorAttributeEntries(attribute.key, entries);
+              .setColorAttributeEntries(attributeKey, entries);
         },
       );
     },
@@ -538,7 +722,39 @@ Widget _buildTextAttributeChip({
 
 
 
+class _SizeAttributeManager extends StatelessWidget {
+  const _SizeAttributeManager({
+    required this.catalog,
+    required this.selected,
+    required this.onToggle,
+  });
 
+  final List<String> catalog;
+  final List<String> selected;
+  final ValueChanged<String> onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme palette = context.color;
+    final Set<String> selectedSet = selected.toSet();
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: catalog
+          .map((String value) => _buildTextAttributeChip(
+        context: context,
+        theme: theme,
+        color: palette,
+        label: value,
+        isSelected: selectedSet.contains(value),
+        onSelected: () => onToggle(value),
+      ))
+          .toList(growable: false),
+    );
+  }
+}
 
 
 class _ColorAttributeManager extends StatelessWidget {
@@ -1293,8 +1509,11 @@ class _StockTab extends StatelessWidget {
             form.variantKey,
             form.stock.toString(),
           );
-          final String title = _describeVariant(form.attributes, options);
-
+          final String title = _describeVariant(
+            form.attributes,
+            options,
+            state.managedAttributes,
+          );
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
             color: color.secondaryColor,
@@ -1421,20 +1640,53 @@ class _StockTab extends StatelessWidget {
   }
 
   String _describeVariant(
-      Map<String, String> attributes, ItemPurchaseOptions options) {
+      Map<String, String> attributes,
+      ItemPurchaseOptions options,
+      List<ManagedPurchaseAttribute> managedAttributes,
+      ) {
+    ManagedPurchaseAttribute? resolveManaged(String key) {
+      for (final ManagedPurchaseAttribute attribute in managedAttributes) {
+        if (attribute.key == key) {
+          return attribute;
+        }
+      }
+      return null;
+    }
+
     final List<String> parts = <String>[];
     attributes.forEach((String key, String value) {
+      final ManagedPurchaseAttribute? managed = resolveManaged(key);
+
       final ItemPurchaseAttributeOption? attribute = options.attributeByKey(key);
-      final String name = attribute?.name ?? key;
+      final String managedName = managed?.name ?? '';
+      final String attributeName = attribute?.name ?? '';
+      final bool hasManagedName = managedName.trim().isNotEmpty;
+      final String name = hasManagedName
+          ? managedName
+          : (attributeName.trim().isNotEmpty ? attributeName : key);
       String displayValue = value;
-      if (attribute != null && _isColorAttribute(attribute)) {
+      final bool isColorAttribute =
+          (managed?.type == ManagedAttributeType.color) ||
+              (attribute?.type?.toLowerCase() == 'color') ||
+              (attribute != null && _isColorAttribute(attribute));
+
+      if (isColorAttribute) {
         final String? normalized = _normalizeColorValue(value);
         if (normalized != null) {
-          final CustomFieldColorEntry entry = attribute.colorEntries
-              .firstWhere(
-                  (CustomFieldColorEntry element) => element.code == normalized,
-              orElse: () => CustomFieldColorEntry(code: normalized));
-          final int? quantity = entry.quantity;
+          final List<CustomFieldColorEntry> entries =
+          (managed != null && managed.colorEntries.isNotEmpty)
+              ? managed.colorEntries
+              : (attribute?.colorEntries ?? const <CustomFieldColorEntry>[]);
+
+          CustomFieldColorEntry? matched;
+          for (final CustomFieldColorEntry entry in entries) {
+            if (entry.code == normalized) {
+              matched = entry;
+              break;
+            }
+          }
+
+          final int? quantity = matched?.quantity;
           displayValue = '#$normalized';
           if (quantity != null && quantity > 0) {
             displayValue = '$displayValue × $quantity';

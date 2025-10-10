@@ -60,7 +60,8 @@ class ItemPurchaseAttributeOption {
     this.selectedValues = const <String>[],
     this.uiType,
     this.colorEntries = const <CustomFieldColorEntry>[],
-
+    this.metadata,
+    this.position,
   });
 
   factory ItemPurchaseAttributeOption.fromJson(Map<String, dynamic> json) {
@@ -90,7 +91,8 @@ class ItemPurchaseAttributeOption {
     }
 
     final int? id = _parseInt(json['id']);
-    final String key = (json['key'] ?? (id != null ? 'cf$id' : ''))
+    final String key = (json['key'] ?? (id != null ? 'attr$id' : ''))
+
         .toString()
         .trim();
 
@@ -105,8 +107,16 @@ class ItemPurchaseAttributeOption {
     List<String> selectedValues = _stringList(json['selected_values']);
     String? defaultValue = _normalizeString(json['default_value']);
 
+    final Map<String, dynamic>? metadata = json['metadata'] is Map
+        ? (json['metadata'] as Map).map((dynamic key, dynamic value) =>
+        MapEntry(key.toString(), value))
+        : null;
+
+    final int? position = _parseInt(json['position']);
+
     final bool looksLikeColor =
     _looksLikeColorAttribute(key, name, type, uiType);
+
 
     List<CustomFieldColorEntry> colorEntries = const <CustomFieldColorEntry>[];
     if (looksLikeColor) {
@@ -183,6 +193,8 @@ class ItemPurchaseAttributeOption {
       selectedValues: selectedValues,
       uiType: uiType,
       colorEntries: colorEntries,
+      metadata: metadata,
+      position: position,
     );
   }
 
@@ -198,7 +210,8 @@ class ItemPurchaseAttributeOption {
   final List<String> selectedValues;
   final String? uiType;
   final List<CustomFieldColorEntry> colorEntries;
-
+  final Map<String, dynamic>? metadata;
+  final int? position;
 }
 
 class ItemVariantStockOption {

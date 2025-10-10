@@ -12,9 +12,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\Relations\Relation;
-
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 
 class ManualPaymentRequest extends Model
@@ -57,6 +57,7 @@ class ManualPaymentRequest extends Model
             'cart_order',
             'cart_orders',
             'cart-order',
+            'cart-orders',
             'cartorder',
             'cartorders',
             'cart order',
@@ -67,13 +68,13 @@ class ManualPaymentRequest extends Model
 
             'App\\Models\\CartOrder',
             'app\\models\\cartorder',
-            'cart-orders',
             'App\\Order',
             '\\App\\Order',
             'app\\order',
             'App\\Models\\Order',
             'app\\models\\order',
         ];
+        $charactersToTrim = " \t\n\r\0\x0B\"'";
 
         $normalized = [];
 
@@ -82,16 +83,72 @@ class ManualPaymentRequest extends Model
                 continue;
             }
 
-            $trimmed = trim($alias);
+            $trimmed = trim($alias, $charactersToTrim);
+
 
             if ($trimmed === '') {
                 continue;
             }
 
-            $normalized[$trimmed] = true;
+            $variants = [$trimmed];
+
+            $lower = strtolower($trimmed);
+            $variants[] = $lower;
+            $variants[] = strtoupper($trimmed);
+
+            if (! str_contains($trimmed, '\\')) {
+                $normalizedWords = str_replace(['_', '-', '.'], ' ', $lower);
+                $variants[] = Str::title($normalizedWords);
+                $variants[] = Str::studly($normalizedWords);
+                $variants[] = Str::snake(str_replace(['-', ' '], '_', $lower));
+                $variants[] = Str::kebab(str_replace(['_', ' '], '-', $lower));
+                $variants[] = str_replace(' ', '', $normalizedWords);
+            }
+
+            foreach ($variants as $variant) {
+                if (! is_string($variant)) {
+                    continue;
+                }
+
+                $candidate = trim($variant, $charactersToTrim);
+
+                if ($candidate === '') {
+                    continue;
+                }
+
+                $normalized[$candidate] = true;
+            }
+
         }
 
         return array_keys($normalized);
+    }
+
+
+
+    /**
+     * Lowercase tokens for order payable type comparison.
+     *
+     * @return array<int, string>
+     */
+    public static function orderPayableTypeTokens(): array
+    {
+        static $tokens;
+
+        if ($tokens !== null) {
+            return $tokens;
+        }
+
+        $charactersToTrim = " \t\n\r\0\x0B\"'";
+
+        $tokens = collect(self::orderPayableTypeAliases())
+            ->filter(static fn ($alias) => is_string($alias) && trim((string) $alias, $charactersToTrim) !== '')
+            ->map(static fn ($alias) => strtolower(trim((string) $alias, $charactersToTrim)))
+            ->unique()
+            ->values()
+            ->all();
+
+        return $tokens;
     }
 
     /**

@@ -10,11 +10,252 @@ import 'package:marib/data/model/item/purchase_options.dart';
 import 'package:marib/data/repositories/item/item_purchase_options_repository.dart';
 import 'package:marib/utils/errorFilter.dart';
 
+
+import 'dart:collection';
+import 'dart:math' as math;
+import 'package:marib/data/model/custom_field/custom_field_model.dart';
+
+import 'package:equatable/equatable.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
+import 'package:marib/data/model/item/item_model.dart';
+import 'package:marib/data/model/item/purchase_options.dart';
+import 'package:marib/data/repositories/item/item_purchase_options_repository.dart';
+import 'package:marib/utils/errorFilter.dart';
+
+const List<String> _defaultSizeCatalog = <String>[
+  'XS',
+  'S',
+  'M',
+  'L',
+  'XL',
+  'XXL',
+  '3XL',
+  '4XL',
+  '5XL',
+  '6XL',
+  '28',
+  '30',
+  '32',
+  '34',
+  '36',
+  '38',
+  '40',
+  '42',
+  '44',
+  '46',
+  '48',
+  '50',
+  '52',
+  '54',
+  '56',
+  'Free Size',
+];
+
+
 class SubmissionOutcome {
   const SubmissionOutcome({required this.success, required this.message});
 
   final bool success;
   final String message;
+}
+
+
+ManagedAttributeType _resolveManagedAttributeType(
+    ItemPurchaseAttributeOption attribute,
+    ) {
+  final String? type = attribute.type?.toLowerCase();
+  final String? uiType = attribute.uiType?.toLowerCase();
+  if (type == 'color' || uiType == 'color') {
+    return ManagedAttributeType.color;
+  }
+
+  if (type == 'size' || uiType == 'size') {
+    return ManagedAttributeType.size;
+  }
+
+  final String normalizedName = attribute.name.toLowerCase();
+  if (normalizedName.contains('مقاس') || normalizedName.contains('size')) {
+    return ManagedAttributeType.size;
+  }
+
+  return ManagedAttributeType.custom;
+}
+
+String _defaultAttributeName(ManagedAttributeType type) {
+  switch (type) {
+    case ManagedAttributeType.color:
+      return 'اللون';
+    case ManagedAttributeType.size:
+      return 'المقاس';
+    case ManagedAttributeType.custom:
+      return 'سمة المنتج';
+  }
+}
+
+List<String> _normalizeOptionValues(List<String> values) {
+  final LinkedHashSet<String> normalized = LinkedHashSet<String>();
+  for (final String value in values) {
+    final String trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      continue;
+    }
+    normalized.add(trimmed);
+  }
+  return normalized.toList(growable: false);
+}
+
+List<CustomFieldColorEntry> _normalizeColorEntries(
+    List<CustomFieldColorEntry> entries,
+    ) {
+  final LinkedHashMap<String, CustomFieldColorEntry> normalized =
+  LinkedHashMap<String, CustomFieldColorEntry>();
+  for (final CustomFieldColorEntry entry in entries) {
+    final String code = entry.code.toUpperCase();
+    final int? quantity = entry.quantity;
+    if (normalized.containsKey(code) && quantity == null) {
+      continue;
+    }
+    normalized[code] = CustomFieldColorEntry(code: code, quantity: quantity);
+  }
+  return normalized.values.toList(growable: false);
+}
+
+ManagedPurchaseAttribute _createManagedAttribute(
+    ItemPurchaseAttributeOption option,
+    ) {
+  final ManagedAttributeType type = _resolveManagedAttributeType(option);
+  final String name = option.name.isEmpty
+      ? _defaultAttributeName(type)
+      : option.name;
+  final Map<String, dynamic> metadata =
+  Map<String, dynamic>.from(option.metadata ?? const <String, dynamic>{});
+
+  List<CustomFieldColorEntry> colorEntries = const <CustomFieldColorEntry>[];
+  List<String> options = const <String>[];
+
+  if (type == ManagedAttributeType.color) {
+    colorEntries = _normalizeColorEntries(option.colorEntries);
+    if (colorEntries.isEmpty && option.allowedValues.isNotEmpty) {
+      colorEntries = _normalizeColorEntries(
+        option.allowedValues
+            .map((String value) => CustomFieldColorEntry(code: value))
+            .toList(growable: false),
+      );
+    }
+  } else {
+    final List<String> source = option.allowedValues.isNotEmpty
+        ? option.allowedValues
+        : option.values;
+    options = _normalizeOptionValues(source);
+  }
+
+  return ManagedPurchaseAttribute(
+    id: option.id == 0 ? null : option.id,
+    key: option.key,
+    name: name,
+    type: type,
+    requiredForCheckout: option.requiredForCheckout,
+    affectsStock: option.affectsStock,
+    colorEntries: colorEntries,
+    options: options,
+    metadata: metadata,
+    position: option.position,
+  );
+}
+
+List<ManagedPurchaseAttribute> _withReindexedPositions(
+    List<ManagedPurchaseAttribute> attributes,
+    ) {
+  final List<ManagedPurchaseAttribute> result = <ManagedPurchaseAttribute>[];
+  for (int index = 0; index < attributes.length; index++) {
+    result.add(attributes[index].copyWith(position: index));
+  }
+  return result;
+}
+
+List<String> _sortedSelectionsFromOptions(List<String> options) {
+  final List<String> sorted = List<String>.from(options)
+    ..removeWhere((String value) => value.trim().isEmpty)
+    ..sort();
+  return sorted;
+}
+
+enum ManagedAttributeType { color, size, custom }
+
+class ManagedPurchaseAttribute extends Equatable {
+  const ManagedPurchaseAttribute({
+    this.id,
+    required this.key,
+    required this.name,
+    required this.type,
+    required this.requiredForCheckout,
+    required this.affectsStock,
+    this.colorEntries = const <CustomFieldColorEntry>[],
+    this.options = const <String>[],
+    this.metadata = const <String, dynamic>{},
+    this.position,
+  });
+
+  final int? id;
+  final String key;
+  final String name;
+  final ManagedAttributeType type;
+  final bool requiredForCheckout;
+  final bool affectsStock;
+  final List<CustomFieldColorEntry> colorEntries;
+  final List<String> options;
+  final Map<String, dynamic> metadata;
+  final int? position;
+
+  ManagedPurchaseAttribute copyWith({
+    int? id,
+    String? key,
+    String? name,
+    ManagedAttributeType? type,
+    bool? requiredForCheckout,
+    bool? affectsStock,
+    List<CustomFieldColorEntry>? colorEntries,
+    List<String>? options,
+    Map<String, dynamic>? metadata,
+    bool mergeMetadata = false,
+    int? position,
+  }) {
+    final Map<String, dynamic> nextMetadata = mergeMetadata
+        ? <String, dynamic>{...this.metadata, ...?metadata}
+        : (metadata ?? this.metadata);
+
+    return ManagedPurchaseAttribute(
+      id: id ?? this.id,
+      key: key ?? this.key,
+      name: name ?? this.name,
+      type: type ?? this.type,
+      requiredForCheckout: requiredForCheckout ?? this.requiredForCheckout,
+      affectsStock: affectsStock ?? this.affectsStock,
+      colorEntries: colorEntries ?? this.colorEntries,
+      options: options ?? this.options,
+      metadata: nextMetadata,
+      position: position ?? this.position,
+    );
+  }
+
+  @override
+  List<Object?> get props => <Object?>[
+    id,
+    key,
+    name,
+    type,
+    requiredForCheckout,
+    affectsStock,
+    colorEntries
+        .map((CustomFieldColorEntry entry) => '${entry.code}:${entry.quantity ?? ''}')
+        .join('|'),
+    options.join('|'),
+    metadata.entries
+        .map((MapEntry<String, dynamic> entry) => '${entry.key}:${entry.value}')
+        .join('|'),
+    position,
+  ];
 }
 
 class VariantStockFormState extends Equatable {
@@ -66,6 +307,7 @@ class ProductManagementState extends Equatable {
     required this.loading,
     required this.error,
     required this.options,
+    required this.managedAttributes,
     required this.attributeSelections,
     required this.colorSelections,
     required this.textInputs,
@@ -91,6 +333,7 @@ class ProductManagementState extends Equatable {
       loading: true,
       error: null,
       options: null,
+      managedAttributes: const <ManagedPurchaseAttribute>[],
       attributeSelections: const <String, List<String>>{},
       textInputs: const <String, String>{},
       attributesSaving: false,
@@ -115,6 +358,7 @@ class ProductManagementState extends Equatable {
   final bool loading;
   final String? error;
   final ItemPurchaseOptions? options;
+  final List<ManagedPurchaseAttribute> managedAttributes;
   final Map<String, List<String>> attributeSelections;
   final Map<String, String> textInputs;
   final bool attributesSaving;
@@ -139,17 +383,27 @@ class ProductManagementState extends Equatable {
       return true;
     }
 
-    if (options == null) {
+    if (managedAttributes.isEmpty) {
+
       return false;
     }
 
-    for (final ItemPurchaseAttributeOption attribute in options!.attributes) {
+    for (final ManagedPurchaseAttribute attribute in managedAttributes) {
       if (!attribute.affectsStock) {
         continue;
       }
-      final List<String> selected = attributeSelections[attribute.key] ?? const <String>[];
-      if (selected.isEmpty) {
-        return false;
+      if (attribute.type == ManagedAttributeType.color) {
+        final List<CustomFieldColorEntry> entries =
+            colorSelections[attribute.key] ?? attribute.colorEntries;
+        if (entries.isEmpty) {
+          return false;
+        }
+      } else {
+        final List<String> selected =
+            attributeSelections[attribute.key] ?? attribute.options;
+        if (selected.isEmpty) {
+          return false;
+        }
       }
     }
     return true;
@@ -160,6 +414,7 @@ class ProductManagementState extends Equatable {
     String? error,
     bool clearError = false,
     ItemPurchaseOptions? options,
+    List<ManagedPurchaseAttribute>? managedAttributes,
     Map<String, List<String>>? attributeSelections,
     Map<String, String>? textInputs,
     bool? attributesSaving,
@@ -187,6 +442,7 @@ class ProductManagementState extends Equatable {
       loading: loading ?? this.loading,
       error: clearError ? null : (error ?? this.error),
       options: options ?? this.options,
+      List<ManagedPurchaseAttribute>? managedAttributes,
       attributeSelections: attributeSelections ?? this.attributeSelections,
       textInputs: textInputs ?? this.textInputs,
       attributesSaving: attributesSaving ?? this.attributesSaving,
@@ -215,6 +471,7 @@ class ProductManagementState extends Equatable {
     loading,
     error,
     options,
+    managedAttributes,
     attributeSelections.entries
         .map((MapEntry<String, List<String>> entry) =>
     '${entry.key}:${entry.value.join(',')}')
@@ -245,6 +502,14 @@ class ProductManagementState extends Equatable {
     previewFinalPrice,
     lastKnownFinalPrice,
   ];
+  ManagedPurchaseAttribute? attributeByKey(String key) {
+    for (final ManagedPurchaseAttribute attribute in managedAttributes) {
+      if (attribute.key == key) {
+        return attribute;
+      }
+    }
+    return null;
+  }
 }
 
 class ProductManagementCubit extends Cubit<ProductManagementState> {
@@ -253,6 +518,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
 
   final ItemPurchaseOptionsRepository _repository;
   final ItemModel item;
+  int _attributeSeed = 0;
 
   Future<void> initialize() async {
     final int? itemId = item.id;
@@ -277,16 +543,17 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
   }
 
   void toggleAttributeValue(String key, String value) {
+    final ManagedPurchaseAttribute? attribute = state.attributeByKey(key);
+    if (attribute == null) {
+      return;
+    }
+    if (attribute.type == ManagedAttributeType.color) {
 
-    final ItemPurchaseAttributeOption? attribute = state.options?.attributeByKey(key);
-    final bool isColor = attribute != null && _looksLikeColorAttribute(attribute);
-
-    if (isColor) {
       final List<CustomFieldColorEntry> currentEntries =
       List<CustomFieldColorEntry>.from(state.colorSelections[key] ?? const <CustomFieldColorEntry>[]);
       final String normalized = value.toUpperCase();
-      final int index =
-      currentEntries.indexWhere((CustomFieldColorEntry entry) => entry.code.toUpperCase() == normalized);
+      final int index = currentEntries
+          .indexWhere((CustomFieldColorEntry entry) => entry.code.toUpperCase() == normalized);
 
       if (index >= 0) {
         currentEntries.removeAt(index);
@@ -298,10 +565,9 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       return;
     }
 
-    final Map<String, List<String>> nextSelections =
-    Map<String, List<String>>.from(state.attributeSelections);
-
-    final List<String> current = List<String>.from(nextSelections[key] ?? const <String>[]);
+    final List<String> current = List<String>.from(
+      state.attributeSelections[key] ?? attribute.options,
+    );
 
     if (current.contains(value)) {
       current.remove(value);
@@ -312,19 +578,246 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     current
       ..removeWhere((String element) => element.trim().isEmpty)
       ..sort();
+    _updateAttributeOptions(key, current);
+  }
 
-    if (current.isEmpty) {
+  void _updateAttributeOptions(String key, List<String> options, {bool triggerRecompute = true}) {
+    final ManagedPurchaseAttribute? attribute = state.attributeByKey(key);
+    if (attribute == null) {
+      return;
+    }
+
+    final List<String> sanitized = _normalizeOptionValues(options);
+    final List<ManagedPurchaseAttribute> nextManaged = state.managedAttributes
+        .map((ManagedPurchaseAttribute item) => item.key == key
+        ? item.copyWith(options: sanitized)
+        : item)
+        .toList(growable: false);
+
+
+    final Map<String, List<String>> nextSelections = Map<String, List<String>>.from(state.attributeSelections);
+    if (sanitized.isEmpty) {
       nextSelections.remove(key);
     } else {
-      nextSelections[key] = current;
+      nextSelections[key] = _sortedSelectionsFromOptions(sanitized);
+
     }
 
     emit(state.copyWith(
+      managedAttributes: _withReindexedPositions(nextManaged),
+
       attributeSelections: nextSelections,
       error: null,
     ));
 
+    if (triggerRecompute) {
+      _recomputeVariantState();
+    }
+  }
+
+  String _generateTemporaryAttributeKey(String prefix) {
+    String candidate;
+    do {
+      _attributeSeed++;
+      candidate = '$prefix-${DateTime.now().microsecondsSinceEpoch}-$_attributeSeed';
+    } while (state.attributeByKey(candidate) != null);
+    return candidate;
+  }
+
+  void addColorAttribute() {
+    final String key = _generateTemporaryAttributeKey('color');
+    final ManagedPurchaseAttribute attribute = ManagedPurchaseAttribute(
+      id: null,
+      key: key,
+      name: _defaultAttributeName(ManagedAttributeType.color),
+      type: ManagedAttributeType.color,
+      requiredForCheckout: true,
+      affectsStock: true,
+      colorEntries: const <CustomFieldColorEntry>[],
+      options: const <String>[],
+      metadata: const <String, dynamic>{},
+      position: state.managedAttributes.length,
+    );
+
+    final List<ManagedPurchaseAttribute> next = _withReindexedPositions(
+      <ManagedPurchaseAttribute>[...state.managedAttributes, attribute],
+    );
+
+    emit(state.copyWith(managedAttributes: next, error: null));
+
+
     _recomputeVariantState();
+  }
+
+
+  void addSizeAttribute() {
+    final String key = _generateTemporaryAttributeKey('size');
+    final ManagedPurchaseAttribute attribute = ManagedPurchaseAttribute(
+      id: null,
+      key: key,
+      name: _defaultAttributeName(ManagedAttributeType.size),
+      type: ManagedAttributeType.size,
+      requiredForCheckout: true,
+      affectsStock: true,
+      colorEntries: const <CustomFieldColorEntry>[],
+      options: const <String>[],
+      metadata: const <String, dynamic>{},
+      position: state.managedAttributes.length,
+    );
+
+    final List<ManagedPurchaseAttribute> next = _withReindexedPositions(
+      <ManagedPurchaseAttribute>[...state.managedAttributes, attribute],
+    );
+
+    emit(state.copyWith(managedAttributes: next, error: null));
+    _recomputeVariantState();
+  }
+
+  void addCustomAttribute({String? name}) {
+    final String key = _generateTemporaryAttributeKey('custom');
+    final String resolvedName = (name ?? '').trim().isEmpty
+        ? _defaultAttributeName(ManagedAttributeType.custom)
+        : name!.trim();
+    final ManagedPurchaseAttribute attribute = ManagedPurchaseAttribute(
+      id: null,
+      key: key,
+      name: resolvedName,
+      type: ManagedAttributeType.custom,
+      requiredForCheckout: false,
+      affectsStock: false,
+      colorEntries: const <CustomFieldColorEntry>[],
+      options: const <String>[],
+      metadata: const <String, dynamic>{},
+      position: state.managedAttributes.length,
+    );
+
+    final List<ManagedPurchaseAttribute> next = _withReindexedPositions(
+      <ManagedPurchaseAttribute>[...state.managedAttributes, attribute],
+    );
+
+    emit(state.copyWith(managedAttributes: next, error: null));
+    _recomputeVariantState();
+  }
+
+  void removeAttribute(String key) {
+    final List<ManagedPurchaseAttribute> next = state.managedAttributes
+        .where((ManagedPurchaseAttribute attribute) => attribute.key != key)
+        .toList(growable: false);
+
+    final Map<String, List<String>> nextSelections =
+    Map<String, List<String>>.from(state.attributeSelections)..remove(key);
+    final Map<String, List<CustomFieldColorEntry>> nextColors =
+    Map<String, List<CustomFieldColorEntry>>.from(state.colorSelections)..remove(key);
+    final Map<String, String> nextTexts =
+    Map<String, String>.from(state.textInputs)..remove(key);
+
+    emit(state.copyWith(
+      managedAttributes: _withReindexedPositions(next),
+      attributeSelections: nextSelections,
+      colorSelections: nextColors,
+      textInputs: nextTexts,
+      error: null,
+    ));
+
+    _recomputeVariantState();
+  }
+
+  void setAttributeName(String key, String name) {
+    final ManagedPurchaseAttribute? attribute = state.attributeByKey(key);
+    if (attribute == null) {
+      return;
+    }
+
+    final String normalized = name.trim().isEmpty
+        ? _defaultAttributeName(attribute.type)
+        : name.trim();
+
+    final List<ManagedPurchaseAttribute> next = state.managedAttributes
+        .map((ManagedPurchaseAttribute item) => item.key == key
+        ? item.copyWith(name: normalized)
+        : item)
+        .toList(growable: false);
+
+    emit(state.copyWith(
+      managedAttributes: _withReindexedPositions(next),
+      error: null,
+    ));
+  }
+
+  void setAttributeRequired(String key, bool required) {
+    final ManagedPurchaseAttribute? attribute = state.attributeByKey(key);
+    if (attribute == null) {
+      return;
+    }
+
+    final List<ManagedPurchaseAttribute> next = state.managedAttributes
+        .map((ManagedPurchaseAttribute item) => item.key == key
+        ? item.copyWith(requiredForCheckout: required)
+        : item)
+        .toList(growable: false);
+
+    emit(state.copyWith(
+      managedAttributes: _withReindexedPositions(next),
+      error: null,
+    ));
+  }
+
+  void setAttributeAffectsStock(String key, bool affectsStock) {
+    final ManagedPurchaseAttribute? attribute = state.attributeByKey(key);
+    if (attribute == null) {
+      return;
+    }
+
+    final List<ManagedPurchaseAttribute> next = state.managedAttributes
+        .map((ManagedPurchaseAttribute item) => item.key == key
+        ? item.copyWith(affectsStock: affectsStock)
+        : item)
+        .toList(growable: false);
+
+    emit(state.copyWith(
+      managedAttributes: _withReindexedPositions(next),
+      error: null,
+    ));
+
+    _recomputeVariantState();
+  }
+
+  void addAttributeOption(String key, {String? value}) {
+    final ManagedPurchaseAttribute? attribute = state.attributeByKey(key);
+    if (attribute == null || attribute.type == ManagedAttributeType.color) {
+      return;
+    }
+
+    final String resolved = (value ?? 'خيار ${attribute.options.length + 1}').trim();
+    final List<String> options = <String>[...attribute.options, resolved];
+    _updateAttributeOptions(key, options);
+  }
+
+  void updateAttributeOption(String key, int index, String value) {
+    final ManagedPurchaseAttribute? attribute = state.attributeByKey(key);
+    if (attribute == null || attribute.type == ManagedAttributeType.color) {
+      return;
+    }
+    if (index < 0 || index >= attribute.options.length) {
+      return;
+    }
+
+    final List<String> options = List<String>.from(attribute.options);
+    options[index] = value.trim();
+    _updateAttributeOptions(key, options);
+  }
+
+  void removeAttributeOption(String key, int index) {
+    final ManagedPurchaseAttribute? attribute = state.attributeByKey(key);
+    if (attribute == null || attribute.type == ManagedAttributeType.color) {
+      return;
+    }
+    if (index < 0 || index >= attribute.options.length) {
+      return;
+    }
+
+    final List<String> options = List<String>.from(attribute.options)..removeAt(index);
+    _updateAttributeOptions(key, options);
   }
 
   void setTextAttribute(String key, String value) {
@@ -366,7 +859,20 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       nextSelections[key] = codes;
     }
 
+
+    final ManagedPurchaseAttribute? attribute = state.attributeByKey(key);
+    final List<ManagedPurchaseAttribute> nextManaged = attribute == null
+        ? state.managedAttributes
+        : state.managedAttributes
+        .map((ManagedPurchaseAttribute item) => item.key == key
+        ? item.copyWith(colorEntries: normalized.values.toList(growable: false))
+        : item)
+        .toList(growable: false);
+
+
     emit(state.copyWith(
+      managedAttributes: _withReindexedPositions(nextManaged),
+
       colorSelections: nextColorSelections,
       attributeSelections: nextSelections,
       error: null,
@@ -375,44 +881,10 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     _recomputeVariantState();
   }
 
-  bool _looksLikeColorAttribute(ItemPurchaseAttributeOption attribute) {
-    final String? type = attribute.type?.toLowerCase();
-    final String? uiType = attribute.uiType?.toLowerCase();
-    if (type == 'color' || uiType == 'color') {
-      return true;
-    }
-
-    if (attribute.colorEntries.isNotEmpty) {
-      return true;
-    }
-
-    final String normalizedKey = attribute.key.toLowerCase();
-    final String normalizedName = attribute.name.toLowerCase();
-
-    const List<String> arabicColorKeywords = <String>['لون', 'اللون', 'الوان', 'ألوان', 'الالوان'];
-
-    bool containsArabicColorKeyword(String value) {
-      for (final String keyword in arabicColorKeywords) {
-        if (value.contains(keyword)) {
-          return true;
-        }
-      }
-      return false;
-    }
-
-
-
-    return normalizedKey.contains('color') ||
-        normalizedKey.contains('colour') ||
-        containsArabicColorKeyword(normalizedKey) ||
-        normalizedName.contains('color') ||
-        normalizedName.contains('colour') ||
-        containsArabicColorKeyword(normalizedName);
-
-  }
 
   Future<SubmissionOutcome> saveAttributes() async {
-    if (state.options == null || item.id == null) {
+    if (item.id == null) {
+
       return const SubmissionOutcome(
         success: false,
         message: 'لا يمكن حفظ السمات قبل تحميل البيانات.',
@@ -422,31 +894,71 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     emit(state.copyWith(attributesSaving: true, error: null));
 
     try {
-      final Map<String, dynamic> selectedValues = <String, dynamic>{};
+      final List<Map<String, dynamic>> attributesPayload = <Map<String, dynamic>>[];
 
-      final Map<String, String> textValues = <String, String>{};
 
-      for (final ItemPurchaseAttributeOption attribute in state.options!.attributes) {
-        final List<String> selected = state.attributeSelections[attribute.key] ?? const <String>[];
-        if (attribute.allowedValues.isNotEmpty) {
-          if (_looksLikeColorAttribute(attribute)) {
+      for (int index = 0; index < state.managedAttributes.length; index++) {
+        final ManagedPurchaseAttribute attribute = state.managedAttributes[index];
+        final String trimmedName = attribute.name.trim().isEmpty
+            ? _defaultAttributeName(attribute.type)
+            : attribute.name.trim();
+
+        switch (attribute.type) {
+          case ManagedAttributeType.color:
             final List<CustomFieldColorEntry> entries =
-                state.colorSelections[attribute.key] ?? const <CustomFieldColorEntry>[];
-            selectedValues[attribute.key] =
-                entries.map((CustomFieldColorEntry entry) => entry.toJson()).toList();
-          } else {
-            selectedValues[attribute.key] = selected;
-          }
+                state.colorSelections[attribute.key] ?? attribute.colorEntries;
+            if ((attribute.requiredForCheckout || attribute.affectsStock) && entries.isEmpty) {
+              emit(state.copyWith(attributesSaving: false));
+              return SubmissionOutcome(
+                success: false,
+                message: 'يرجى إضافة لون واحد على الأقل للسمة $trimmedName قبل الحفظ.',
+              );
+            }
 
-        } else {
-          textValues[attribute.key] = state.textInputs[attribute.key]?.trim() ?? '';
+            attributesPayload.add(<String, dynamic>{
+              if (attribute.id != null) 'id': attribute.id,
+              'key': attribute.key,
+              'name': trimmedName,
+              'type': 'color',
+              'required_for_checkout': attribute.requiredForCheckout,
+              'affects_stock': attribute.affectsStock,
+              'position': index,
+              'values': entries
+                  .map((CustomFieldColorEntry entry) => entry.toJson())
+                  .toList(growable: false),
+              if (attribute.metadata.isNotEmpty) 'metadata': attribute.metadata,
+            });
+            break;
+          case ManagedAttributeType.size:
+          case ManagedAttributeType.custom:
+            final List<String> options = attribute.options;
+            if ((attribute.requiredForCheckout || attribute.affectsStock) && options.isEmpty) {
+              emit(state.copyWith(attributesSaving: false));
+              return SubmissionOutcome(
+                success: false,
+                message: 'يرجى إضافة خيار واحد على الأقل للسمة $trimmedName قبل الحفظ.',
+              );
+            }
+
+            attributesPayload.add(<String, dynamic>{
+              if (attribute.id != null) 'id': attribute.id,
+              'key': attribute.key,
+              'name': trimmedName,
+              'type': attribute.type.name,
+              'required_for_checkout': attribute.requiredForCheckout,
+              'affects_stock': attribute.affectsStock,
+              'position': index,
+              'values': options,
+              if (attribute.metadata.isNotEmpty) 'metadata': attribute.metadata,
+            });
+            break;
         }
       }
 
       final PurchaseOptionsUpdateResult result = await _repository.saveAttributes(
         itemId: item.id!,
-        selectedValues: selectedValues,
-        textValues: textValues,
+        attributes: attributesPayload,
+
       );
 
       _applyOptions(result.options, finalPrice: result.finalPrice);
@@ -655,70 +1167,62 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
   }
 
   void _applyOptions(ItemPurchaseOptions options, {double? finalPrice}) {
+
+    final Map<String, ItemPurchaseAttributeOption> rawAttributes = <String, ItemPurchaseAttributeOption>{
+      for (final ItemPurchaseAttributeOption attribute in options.attributes)
+        attribute.key: attribute,
+    };
+
+    final List<ManagedPurchaseAttribute> managedAttributes = options.attributes
+        .map(_createManagedAttribute)
+        .toList(growable: false);
+
     final Map<String, List<String>> selections = <String, List<String>>{};
     final Map<String, String> textInputs = <String, String>{};
     final Map<String, List<CustomFieldColorEntry>> colorSelections =
     <String, List<CustomFieldColorEntry>>{};
 
-    for (final ItemPurchaseAttributeOption attribute in options.attributes) {
-      if (attribute.allowedValues.isNotEmpty) {
-        if (_looksLikeColorAttribute(attribute)) {
-          final Map<String, CustomFieldColorEntry> entriesByCode = {
-            for (final CustomFieldColorEntry entry in attribute.colorEntries)
-              entry.code: entry,
-          };
-          final List<String> selectedCodes =
-          List<String>.from(attribute.selectedValues);
+    for (final ManagedPurchaseAttribute attribute in managedAttributes) {
+      if (attribute.type == ManagedAttributeType.color) {
+        final List<CustomFieldColorEntry> entries = attribute.colorEntries.isNotEmpty
+            ? attribute.colorEntries
+            : _normalizeColorEntries(
+          (rawAttributes[attribute.key]?.allowedValues ?? const <String>[])
+              .map((String value) => CustomFieldColorEntry(code: value))
+              .toList(growable: false),
+        );
 
-          final List<CustomFieldColorEntry> selectedEntries =
-          <CustomFieldColorEntry>[];
-          final Set<String> seen = <String>{};
+        if (entries.isNotEmpty) {
+          final List<CustomFieldColorEntry> normalized = _normalizeColorEntries(entries);
 
-          void addEntry(String code) {
-            final String normalized = code.toUpperCase();
-            if (!seen.add(normalized)) {
-              return;
-            }
-            final CustomFieldColorEntry? entry = entriesByCode[normalized];
-            if (entry != null) {
-              selectedEntries.add(entry);
-            } else {
-              selectedEntries
-                  .add(CustomFieldColorEntry(code: normalized, quantity: null));
-            }
-          }
-
-          if (selectedCodes.isNotEmpty) {
-            for (final String code in selectedCodes) {
-              addEntry(code);
-            }
-          } else if (entriesByCode.isNotEmpty) {
-            for (final CustomFieldColorEntry entry in entriesByCode.values) {
-              addEntry(entry.code);
-            }
-          } else if (attribute.allowedValues.isNotEmpty) {
-            for (final String value in attribute.allowedValues) {
-              addEntry(value);
-            }
-          }
 
           final List<String> codes =
-          selectedEntries.map((CustomFieldColorEntry entry) => entry.code).toList();
-          codes.sort();
+          normalized.map((CustomFieldColorEntry entry) => entry.code).toList(growable: false)
+            ..sort();
           selections[attribute.key] = codes;
-          colorSelections[attribute.key] = selectedEntries;
-        } else {
-          final List<String> selected =
-          List<String>.from(attribute.selectedValues);
-          selected.sort();
-          selections[attribute.key] = selected;
+          colorSelections[attribute.key] = normalized;
+
         }
       } else {
-        textInputs[attribute.key] = attribute.defaultValue ?? '';
+        final List<String> optionsList = attribute.options.isNotEmpty
+            ? attribute.options
+            : _normalizeOptionValues(rawAttributes[attribute.key]?.allowedValues ?? const <String>[]);
+
+        if (optionsList.isNotEmpty) {
+          final List<String> normalized = List<String>.from(optionsList)
+            ..removeWhere((String value) => value.trim().isEmpty)
+            ..sort();
+          selections[attribute.key] = normalized;
+        } else {
+          final String fallback = rawAttributes[attribute.key]?.defaultValue ?? '';
+          textInputs[attribute.key] = fallback;
+        }
       }
     }
 
-    final bool hasVariants = options.attributes.any((ItemPurchaseAttributeOption attribute) => attribute.affectsStock);
+    final bool hasVariants =
+    managedAttributes.any((ManagedPurchaseAttribute attribute) => attribute.affectsStock);
+
 
     final ItemVariantStockOption generalStockOption = options.variantStocks.firstWhere(
           (ItemVariantStockOption element) => element.variantKey.trim().isEmpty,
@@ -758,6 +1262,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       loading: false,
       error: null,
       options: options,
+      managedAttributes: managedAttributes,
       attributeSelections: selections,
       colorSelections: colorSelections,
       textInputs: textInputs,
@@ -783,7 +1288,12 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       return;
     }
 
-    if (!targetOptions.attributes.any((ItemPurchaseAttributeOption attribute) => attribute.affectsStock)) {
+    final List<ManagedPurchaseAttribute> affecting = state.managedAttributes
+        .where((ManagedPurchaseAttribute element) => element.affectsStock)
+        .toList(growable: false);
+
+    if (affecting.isEmpty) {
+
       final ItemVariantStockOption generalStockOption = targetOptions.variantStocks.firstWhere(
             (ItemVariantStockOption element) => element.variantKey.trim().isEmpty,
         orElse: () => const ItemVariantStockOption(
@@ -807,12 +1317,8 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       stockMap[entry.variantKey] = entry;
     }
 
-    final List<ItemPurchaseAttributeOption> affecting = targetOptions.attributes
-        .where((ItemPurchaseAttributeOption element) => element.affectsStock)
-        .toList(growable: false);
-
     bool ready = true;
-    for (final ItemPurchaseAttributeOption attribute in affecting) {
+    for (final ManagedPurchaseAttribute attribute in affecting) {
       final List<String> selected = state.attributeSelections[attribute.key] ?? const <String>[];
       if (selected.isEmpty) {
         ready = false;
@@ -858,7 +1364,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
   }
 
   List<Map<String, String>> _generateCombinations(
-      List<ItemPurchaseAttributeOption> attributes,
+      List<ManagedPurchaseAttribute> attributes,
       ) {
     final List<Map<String, String>> result = <Map<String, String>>[];
 
@@ -868,7 +1374,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
         return;
       }
 
-      final ItemPurchaseAttributeOption attribute = attributes[index];
+      final ManagedPurchaseAttribute attribute = attributes[index];
       final List<String> selected = state.attributeSelections[attribute.key] ?? const <String>[];
 
       for (final String value in selected) {

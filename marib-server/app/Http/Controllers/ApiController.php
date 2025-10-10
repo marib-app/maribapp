@@ -8718,14 +8718,14 @@ public function storeRequestDevice(Request $request)
 
     private function applyManualPaymentRequestVisibilityScope(Builder $query, int $userId): Builder
     {
-        $orderPayableTypes = ManualPaymentRequest::orderPayableTypeAliases();
+        $orderPayableTypes = ManualPaymentRequest::orderPayableTypeTokens();
 
         return $query->where(static function (Builder $builder) use ($userId, $orderPayableTypes) {
             
             $builder->where('manual_payment_requests.user_id', $userId)
                 ->orWhere(static function (Builder $ordersScope) use ($userId, $orderPayableTypes) {
                     $ordersScope
-                        ->whereIn('manual_payment_requests.payable_type', $orderPayableTypes)
+                        ->whereIn(DB::raw('LOWER(manual_payment_requests.payable_type)'), $orderPayableTypes)
 
                         ->whereExists(static function ($subQuery) use ($userId) {
                             $subQuery
@@ -8747,8 +8747,12 @@ public function storeRequestDevice(Request $request)
 
                             $join
                                 ->on('orders.id', '=', 'payment_transactions.payable_id')
-                                ->whereIn('payment_transactions.payable_type', $orderPayableTypes);
+                                ->whereIn(
+                                    DB::raw('LOWER(payment_transactions.payable_type)'),
+                                    $orderPayableTypes
+                                );
 
+                                
                         })
                         ->whereColumn('payment_transactions.manual_payment_request_id', 'manual_payment_requests.id')
                         ->where(static function ($orderVisibility) use ($userId) {

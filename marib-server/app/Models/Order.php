@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use App\Exceptions\PaymentUnderReviewException;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\DB;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -367,14 +368,20 @@ class Order extends Model
     public function paymentTransactions()
     {
         return $this->hasMany(PaymentTransaction::class, 'payable_id')
-            ->whereIn('payable_type', ManualPaymentRequest::orderPayableTypeAliases());
+            ->whereIn(
+                DB::raw('LOWER(payment_transactions.payable_type)'),
+                ManualPaymentRequest::orderPayableTypeTokens()
+            );
     }
 
 
     public function manualPaymentRequests(): HasMany
     {
         return $this->hasMany(ManualPaymentRequest::class, 'payable_id')
-            ->whereIn('payable_type', ManualPaymentRequest::orderPayableTypeAliases())
+            ->whereIn(
+                DB::raw('LOWER(manual_payment_requests.payable_type)'),
+                ManualPaymentRequest::orderPayableTypeTokens()
+            )
             ->orderByDesc('id');
     }
 
@@ -382,7 +389,10 @@ class Order extends Model
     public function latestManualPaymentRequest(): HasOne
     {
         return $this->hasOne(ManualPaymentRequest::class, 'payable_id')
-            ->whereIn('payable_type', ManualPaymentRequest::orderPayableTypeAliases())
+            ->whereIn(
+                DB::raw('LOWER(manual_payment_requests.payable_type)'),
+                ManualPaymentRequest::orderPayableTypeTokens()
+            )
             ->latestOfMany('id');
     }
 

@@ -3,7 +3,8 @@
 namespace App\Services;
 
 use App\Models\Item;
-use App\Models\ItemCustomFieldValue;
+use App\Models\ItemAttribute;
+use App\Models\ItemAttributeValue;
 use App\Models\ItemStock;
 use App\Support\VariantKeyGenerator;
 use App\Support\ColorFieldParser;
@@ -22,86 +23,87 @@ class ItemPurchaseOptionsService
      */
     public function collectAttributes(Item $item): Collection
     {
-        $item->loadMissing([
-            'custom_fields',
-            'item_custom_field_values',
-            'item_custom_field_values.custom_field',
-        ]);
+         $item->loadMissing(['purchaseAttributes', 'purchaseAttributes.values']);
 
-        $fields = $item->custom_fields instanceof Collection
-            ? $item->custom_fields
-            : collect($item->custom_fields ?? []);
+        $attributes = $item->purchaseAttributes instanceof Collection
+            ? $item->purchaseAttributes
+            : collect($item->purchaseAttributes ?? []);
 
-        $values = $item->item_custom_field_values instanceof Collection
-            ? $item->item_custom_field_values->keyBy('custom_field_id')
-            : collect();
 
-        if ($values->isNotEmpty()) {
-            $valueFields = $values
-                ->map(static function (ItemCustomFieldValue $value) {
-                    return $value->custom_field;
-                })
-                ->filter();
+        return $attributes
+            ->sortBy(fn (ItemAttribute $attribute) => [$attribute->position, $attribute->id])
+            ->values()
+            ->map(function (ItemAttribute $attribute) {
+                $type = strtolower((string) ($attribute->type ?? 'custom'));
 
-            if ($valueFields->isNotEmpty()) {
-                $fields = $fields
-                    ->concat($valueFields)
-                    ->filter(static function ($field) {
-                        return $field !== null && $field->id;
-                    })
-                    ->unique(fn ($field) => $field->id)
+                $allowedValues = [];
+                $selectedValues = [];
+                $colorEntries = [];
+
+                $values = $attribute->values instanceof Collection
+                    ? $attribute->values
+                    : collect($attribute->values ?? []);
+
+                $values = $values
+                    ->sortBy(fn (ItemAttributeValue $value) => [$value->position, $value->id])
                     ->values();
-            }
-        }
-
-
-        return $fields
-            ->filter(static function ($field) {
-                $required = (bool) ($field->required_for_checkout ?? false);
-                $affectsStock = (bool) ($field->affects_stock ?? false);
-                $type = strtolower((string) ($field->type ?? ''));
 
                 if ($type === 'color') {
-                    return true;
-                }
+                    $register = static function (array &$entries, ItemAttributeValue $value): void {
+                        $code = ColorFieldParser::normalizeCode($value->value);
+                        if (! $code) {
+                            return;
+                        }
 
-                return $required || $affectsStock;
-            })
-            ->values()
-            ->map(function ($field) use ($values) {
-                $customValue = $values->get($field->id);
-                $allowedValues = $this->normalizeAllowedValues($field->allowed_values ?? $field->values ?? []);
-                $valueOptions = $this->normalizeAllowedValues($field->values ?? []);
-                $defaultValue = $this->resolveCustomFieldValue($customValue);
+                        $entry = ['code' => strtoupper($code)];
+                        if ($value->quantity !== null) {
+                            $entry['quantity'] = max(0, (int) $value->quantity);
+                        }
 
-                $selectedValues = $this->resolveSelectedValues($customValue);
+                        if ($value->label) {
+                            $entry['label'] = $value->label;
+                        }
+
+                        $entries[$entry['code']] = $entry;
+                    };
+
+                    foreach ($values as $value) {
+                        $register($colorEntries, $value);
+                    }
+
+                    $allowedValues = array_keys($colorEntries);
+                    $selectedValues = $allowedValues;
+                } else {
+                    foreach ($values as $value) {
+                        $string = $this->stringifyValue($value->value);
+                        if ($string === '') {
+                            continue;
+                        }
 
 
+                        $allowedValues[] = $string;
+                    }
 
-                $colorEntries = [];
-                if (($field->type ?? null) === 'color') {
-                    $colorEntries = $this->collectColorEntries($field, $customValue);
-                    $allowedValues = $this->normalizeColorValues($allowedValues, $colorEntries, true);
-                    $valueOptions = $this->normalizeColorValues($valueOptions, $colorEntries, true);
-                    $selectedValues = $this->normalizeColorValues($selectedValues, $colorEntries, false);
-                    $defaultValue = $this->normalizeColorDefault($defaultValue);
+                    $allowedValues = array_values(array_unique($allowedValues));
+                    $selectedValues = $allowedValues;
                 }
 
 
                 return [
-                    'id' => $field->id,
-                    'key' => $this->attributeKey($field->id),
-                    'name' => $field->name,
-                    'type' => $field->type,
-                    'required_for_checkout' => (bool) ($field->required_for_checkout ?? false) || (bool) ($field->affects_stock ?? false),
-                    'affects_stock' => (bool) ($field->affects_stock ?? false),
+                    'id' => $attribute->id,
+                    'key' => $this->attributeKey($attribute->id),
+                    'name' => $attribute->name,
+                    'type' => $type,
+                    'required_for_checkout' => (bool) ($attribute->required_for_checkout ?? false) || (bool) ($attribute->affects_stock ?? false),
+                    'affects_stock' => (bool) ($attribute->affects_stock ?? false),
                     'allowed_values' => $allowedValues,
-                    'values' => $valueOptions,
-                    'default_value' => $defaultValue,
+                    'values' => $allowedValues,
+                    'default_value' => null,
                     'selected_values' => $selectedValues,
-                    'ui_type' => $field->type ?? null,
-                    'color_entries' => $colorEntries,
-                    'is_customer_option' => (bool) ($field->is_customer_option ?? false),
+                    'ui_type' => $type,
+                    'color_entries' => array_values($colorEntries),
+                    'metadata' => $attribute->metadata ?? [],
+                    'position' => $attribute->position,
 
                 ];
             });
@@ -260,7 +262,8 @@ class ItemPurchaseOptionsService
                 'selected_values' => $definition['selected_values'] ?? [],
                 'ui_type' => $definition['ui_type'] ?? null,
                 'color_entries' => $definition['color_entries'] ?? [],
-
+                'metadata' => $definition['metadata'] ?? [],
+                'position' => $definition['position'] ?? 0,
             ];
         })->values()->all();
 
@@ -285,7 +288,8 @@ class ItemPurchaseOptionsService
 
     private function attributeKey(int $id): string
     {
-        return sprintf('cf%d', $id);
+        return sprintf('attr%d', $id);
+
     }
 
     private function normalizeAttributeKey(mixed $key): string
@@ -297,7 +301,9 @@ class ItemPurchaseOptionsService
             return $trimmed;
         }
 
-        if (preg_match('/^cf\d+$/', $trimmed)) {
+        if (preg_match('/^attr\d+$/', $trimmed)) {
+
+
             return $trimmed;
         }
 
@@ -346,153 +352,6 @@ class ItemPurchaseOptionsService
         return trim((string) $value);
     }
 
-    /**
-     * @param mixed $values
-     * @return array<int, string>
-     */
-    private function normalizeAllowedValues($values): array
-    {
-        if (! is_array($values)) {
-            $values = $values === null ? [] : [$values];
-        }
-
-        $normalized = [];
-        foreach ($values as $value) {
-            $stringValue = $this->stringifyValue($value);
-            if ($stringValue === '') {
-                continue;
-            }
-
-            $normalized[] = $stringValue;
-        }
-
-        return array_values(array_unique($normalized));
-    }
-
-    private function resolveCustomFieldValue(?ItemCustomFieldValue $value): ?string
-    {
-        if (! $value) {
-            return null;
-        }
-
-        $raw = $value->value;
-
-        if (is_array($raw)) {
-            $first = reset($raw);
-            return $first === false ? null : $this->stringifyValue($first);
-        }
-
-        return $this->stringifyValue($raw);
-    }
-
-    private function resolveSelectedValues(?ItemCustomFieldValue $value): array
-    {
-        if (! $value) {
-            return [];
-        }
-
-        $raw = $value->value;
-
-        if (is_array($raw)) {
-            $normalized = [];
-            foreach ($raw as $entry) {
-                $stringValue = $this->stringifyValue($entry);
-                if ($stringValue === '') {
-                    continue;
-                }
-
-                $normalized[] = $stringValue;
-            }
-
-            return array_values(array_unique($normalized));
-        }
-
-        $stringValue = $this->stringifyValue($raw);
-
-        return $stringValue === '' ? [] : [$stringValue];
-    }
-
-
-
-    private function collectColorEntries($field, ?ItemCustomFieldValue $value): array
-    {
-        $entries = [];
-
-        $register = static function (array $items) use (&$entries): void {
-            foreach ($items as $item) {
-                if (! is_array($item) || empty($item['code'])) {
-                    continue;
-                }
-
-                $code = strtoupper((string) $item['code']);
-                $quantity = $item['quantity'] ?? null;
-
-                if ($quantity !== null) {
-                    $quantity = is_numeric($quantity)
-                        ? max(0, (int) floor((float) $quantity))
-                        : null;
-                }
-
-                if (isset($entries[$code])) {
-                    if ($quantity !== null) {
-                        $entries[$code]['quantity'] = $quantity;
-                    }
-                    continue;
-                }
-
-                $entry = ['code' => $code];
-                if ($quantity !== null) {
-                    $entry['quantity'] = $quantity;
-                }
-
-                $entries[$code] = $entry;
-            }
-        };
-
-        $register(ColorFieldParser::parse($field->allowed_values ?? $field->values ?? []));
-        $register(ColorFieldParser::parse($field->values ?? []));
-        $register(ColorFieldParser::parse($value?->value ?? []));
-
-        return array_values($entries);
-    }
-
-    private function normalizeColorValues(array $values, array $entries, bool $fallbackToEntries): array
-    {
-        $normalized = [];
-
-        foreach ($values as $value) {
-            $code = ColorFieldParser::normalizeCode($value);
-            if (! $code) {
-                continue;
-            }
-
-            $normalized[$code] = $code;
-        }
-
-        if ($fallbackToEntries && $normalized === [] && $entries !== []) {
-            foreach ($entries as $entry) {
-                $code = $entry['code'] ?? null;
-                if (! $code) {
-                    continue;
-                }
-
-                $normalized[$code] = $code;
-            }
-        }
-
-        return array_values($normalized);
-    }
-
-    private function normalizeColorDefault(?string $value): ?string
-    {
-        if ($value === null || $value === '') {
-            return $value;
-        }
-
-        $normalized = ColorFieldParser::normalizeCode($value);
-
-        return $normalized ?? $value;
-    }
 
 
     

@@ -5,6 +5,7 @@ use App\Models\AdminNotification;
 use App\Models\Concerns\NotifiesAdminOnApprovalStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\ItemStock;
+use App\Models\ItemAttribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -106,6 +107,12 @@ class Item extends Model {
     {
         return $this->hasMany(ItemStock::class);
     }
+
+    public function purchaseAttributes(): HasMany
+    {
+        return $this->hasMany(ItemAttribute::class)->orderBy('position')->orderBy('id');
+    }
+
     public function user_reports() {
         return $this->hasMany(UserReports::class);
     }

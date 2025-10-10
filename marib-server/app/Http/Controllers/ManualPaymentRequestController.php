@@ -9,6 +9,9 @@ use App\Models\Order;
 use App\Models\Package;
 use App\Models\PaymentTransaction;
 use App\Models\WalletTransaction;
+use App\Queries\PaymentRequestTableQuery;
+use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Facades\Route;
 
 use App\Models\UserFcmToken;
 use App\Services\BootstrapTableService;
@@ -58,59 +61,72 @@ class ManualPaymentRequestController extends Controller
         ResponseService::noAnyPermissionThenRedirect(['manual-payments-list', 'manual-payments-review']);
 
         $statuses = [
-            ManualPaymentRequest::STATUS_PENDING => trans('Pending'),
-            ManualPaymentRequest::STATUS_UNDER_REVIEW => trans('Under Review'),
-            ManualPaymentRequest::STATUS_APPROVED => trans('Approved'),
-            ManualPaymentRequest::STATUS_REJECTED => trans('Rejected'),
+            'pending' => trans('Pending'),
+            'succeed' => trans('Success'),
+            'failed' => trans('Failed'),
         ];
 
         $payableTypes = [
-            'package' => trans('Packages'),
-            'item' => trans('Advertisements'),
-            'order' => trans('Orders'),
-            
-            ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP => trans('Wallet Top-up'),
+
+            'orders' => trans('Orders'),
+            'packages' => trans('Packages'),
+            'top_ups' => trans('Wallet Top-up'),
+        ];
+
+        $paymentGateways = [
+            'bank' => trans('Bank Transfer'),
+            'manual' => trans('Manual'),
+            'wallet' => trans('Wallet'),
+            'cash' => trans('Cash'),
 
 
         ];
 
-                $departments = $this->departmentReportService->availableDepartments();
+        $departments = $this->departmentReportService->availableDepartments();
+        $paymentRequestBase = DB::query()->fromSub(PaymentRequestTableQuery::make(), 'requests');
 
 
-        $paymentGateways = PaymentTransaction::query()
-            ->whereNotNull('payment_gateway')
-            ->distinct()
-            ->orderBy('payment_gateway')
-            ->pluck('payment_gateway')
-            ->mapWithKeys(fn(string $gateway) => [
-                $gateway => $this->gatewayLabel($gateway),
-            ])
-            ->all();
 
-        $statusTotals = ManualPaymentRequest::query()
-            ->selectRaw('status, COUNT(*) as total')
+        $summaryRow = (clone $paymentRequestBase)
+            ->selectRaw('COUNT(*) as total_requests, COALESCE(SUM(amount), 0) as total_amount')
+            ->first();
+
+        $statusTotals = (clone $paymentRequestBase)
+            ->select('status', DB::raw('COUNT(*) as total'))
             ->groupBy('status')
             ->pluck('total', 'status');
 
-        $gatewayTotals = ManualPaymentRequest::query()
-            ->leftJoin('payment_transactions as pt', 'pt.manual_payment_request_id', '=', 'manual_payment_requests.id')
-            ->selectRaw("COALESCE(pt.payment_gateway, 'manual_bank') as gateway")
-            ->selectRaw('COUNT(*) as total')
-            ->groupBy('gateway')
-            ->pluck('total', 'gateway');
+        $gatewayTotals = (clone $paymentRequestBase)
+            ->select('channel', DB::raw('COUNT(*) as total'))
+            ->groupBy('channel')
+            ->pluck('total', 'channel');
+
+        $categoryTotals = (clone $paymentRequestBase)
+            ->select('category', DB::raw('COUNT(*) as total'))
+            ->groupBy('category')
+            ->pluck('total', 'category');
 
         $summary = [
-            'total' => (int) $statusTotals->sum(),
-            'pending' => (int) ($statusTotals[ManualPaymentRequest::STATUS_PENDING] ?? 0),
-            'under_review' => (int) ($statusTotals[ManualPaymentRequest::STATUS_UNDER_REVIEW] ?? 0),
-            'approved' => (int) ($statusTotals[ManualPaymentRequest::STATUS_APPROVED] ?? 0),
-            'rejected' => (int) ($statusTotals[ManualPaymentRequest::STATUS_REJECTED] ?? 0),
+            'total' => (int) ($summaryRow->total_requests ?? 0),
+            'pending' => (int) ($statusTotals['pending'] ?? 0),
+            'succeed' => (int) ($statusTotals['succeed'] ?? 0),
+            'failed' => (int) ($statusTotals['failed'] ?? 0),
+            'amount' => (float) ($summaryRow->total_amount ?? 0),
         ];
 
         $gatewaySummary = [
-            'manual_bank' => (int) ($gatewayTotals['manual_bank'] ?? 0),
-            'east_yemen_bank' => (int) ($gatewayTotals['east_yemen_bank'] ?? 0),
+            'bank' => (int) ($gatewayTotals['bank'] ?? 0),
+            'manual' => (int) ($gatewayTotals['manual'] ?? 0),
             'wallet' => (int) ($gatewayTotals['wallet'] ?? 0),
+            'cash' => (int) ($gatewayTotals['cash'] ?? 0),
+        ];
+
+        $categorySummary = [
+            'orders' => (int) ($categoryTotals['orders'] ?? 0),
+            'packages' => (int) ($categoryTotals['packages'] ?? 0),
+            'top_ups' => (int) ($categoryTotals['top_ups'] ?? 0),
+            
+
         ];
 
 
@@ -162,7 +178,17 @@ class ManualPaymentRequestController extends Controller
 
         return view(
             'payments.manual.index',
-            compact('statuses', 'payableTypes', 'paymentGateways', 'summary', 'gatewaySummary', 'departments', 'departmentSummary')
+            compact(
+                'statuses',
+                'payableTypes',
+                'paymentGateways',
+                'summary',
+                'gatewaySummary',
+                'categorySummary',
+                'departments',
+                'departmentSummary'
+            )
+        
         );
     }
 
@@ -297,82 +323,84 @@ class ManualPaymentRequestController extends Controller
         }
         $searchValue = is_string($searchValue) ? trim($searchValue) : '';
 
-        $statusFilter = $this->normalizeManualPaymentStatus($request->input('status'));
-        $gatewayFilter = $this->normalizeManualPaymentGateway($request->input('payment_gateway'));
-        $payableTypeAliases = $this->expandManualPaymentPayableTypeAliases($request->input('payable_type'));
+        $statusFilter = $this->normalizePaymentRequestStatus($request->input('status'));
+        $channelFilter = $this->normalizePaymentRequestChannel($request->input('payment_gateway') ?? $request->input('channel'));
+        $categoryFilter = $this->normalizePaymentRequestCategory($request->input('payable_type') ?? $request->input('category'));
         $departmentFilter = $this->normalizeManualPaymentDepartment($request->input('department'));
         $from = $this->normalizeManualPaymentDate($request->input('from'), true);
         $to = $this->normalizeManualPaymentDate($request->input('to'), false);
 
-        $baseQuery = ManualPaymentRequest::withoutGlobalScopes()
-            ->select('manual_payment_requests.*')
-            ->with([
-                'manualBank',
-                'user',
-                'payable',
-                'paymentTransaction.order',
-            ]);
+        $baseQuery = DB::query()->fromSub(PaymentRequestTableQuery::make(), 'requests');
+
 
         $recordsTotal = (clone $baseQuery)->count();
 
         $filteredQuery = (clone $baseQuery)
-            ->when($searchValue !== '', fn(Builder $query) => $query->search($searchValue))
-            ->when($statusFilter, fn(Builder $query) => $query->where('status', $statusFilter))
-            ->when($payableTypeAliases !== [], function (Builder $query) use ($payableTypeAliases) {
-                $query->whereIn('payable_type', $payableTypeAliases);
+            ->when($searchValue !== '', function (QueryBuilder $query) use ($searchValue) {
+                $like = '%' . $searchValue . '%';
+
+                $query->where(function (QueryBuilder $inner) use ($like) {
+                    $inner->where('reference', 'LIKE', $like)
+                        ->orWhere('user_name', 'LIKE', $like)
+                        ->orWhere('user_mobile', 'LIKE', $like)
+                        ->orWhere('payment_transaction_id', 'LIKE', $like)
+                        ->orWhere('wallet_transaction_id', 'LIKE', $like);
+                });
             })
-            
-            ->when($gatewayFilter, function (Builder $query) use ($gatewayFilter) {
-                if ($gatewayFilter === 'manual_bank') {
-                    $query->where(function (Builder $inner) {
-                        $inner->whereHas('paymentTransaction', function (Builder $transaction) {
-                            $transaction->where('payment_gateway', 'manual_bank');
-                        })->orWhereDoesntHave('paymentTransaction');
-                    });
-                } else {
-                    $query->whereHas('paymentTransaction', function (Builder $transaction) use ($gatewayFilter) {
-                        $transaction->where('payment_gateway', $gatewayFilter);
-                    });
-                }
-            })
-            ->when($departmentFilter !== null, function (Builder $query) use ($departmentFilter) {
-                $query->where(function (Builder $inner) use ($departmentFilter) {
+            ->when($statusFilter, static fn (QueryBuilder $query, string $status) => $query->where('status', $status))
+            ->when($channelFilter, static fn (QueryBuilder $query, string $channel) => $query->where('channel', $channel))
+            ->when($categoryFilter, static fn (QueryBuilder $query, string $category) => $query->where('category', $category))
+            ->when($departmentFilter !== null, function (QueryBuilder $query) use ($departmentFilter) {
+                $query->where(function (QueryBuilder $inner) use ($departmentFilter) {
                     $inner->where('department', $departmentFilter)
                         ->orWhereNull('department');
                 });
             })
-            ->when($from, fn(Builder $query) => $query->where('created_at', '>=', $from))
-            ->when($to, fn(Builder $query) => $query->where('created_at', '<=', $to));
+            ->when($from, static fn (QueryBuilder $query, Carbon $date) => $query->where('created_at', '>=', $date))
+            ->when($to, static fn (QueryBuilder $query, Carbon $date) => $query->where('created_at', '<=', $date));
 
         $recordsFiltered = (clone $filteredQuery)->count();
 
-        [$orderColumn, $orderDirection] = $this->resolveManualPaymentOrder($request);
-        $orderedQuery = $this->applyManualPaymentOrdering($filteredQuery, $orderColumn, $orderDirection);
+        [$orderColumn, $orderDirection] = $this->resolvePaymentRequestOrder($request);
+
+        $orderedQuery = (clone $filteredQuery)->orderBy($orderColumn, $orderDirection);
 
         if ($length !== null) {
             $orderedQuery->skip($start)->take($length);
         }
 
-        $requests = $orderedQuery->get();
+        $rows = $orderedQuery->get();
 
-        $data = $requests->map(function (ManualPaymentRequest $manualPaymentRequest) {
+
+        $data = $        $data = $rows->map(function (object $row) {
+            $transactionId = $row->payment_transaction_id
+                ? (string) $row->payment_transaction_id
+                : ($row->wallet_transaction_id ? 'WT-' . $row->wallet_transaction_id : $row->reference);
+                
+                requests->map(function (ManualPaymentRequest $manualPaymentRequest) {
             $gatewayKey = $this->resolveManualPaymentGatewayKey($manualPaymentRequest);
             $status = $manualPaymentRequest->status ?? ManualPaymentRequest::STATUS_PENDING;
+            $amount = (float) ($row->amount ?? 0);
+
 
             return [
-
-                'transaction_id' => optional($manualPaymentRequest->paymentTransaction)->id,
-                'user_name' => $manualPaymentRequest->user?->name ?? '—',
-                'user_phone' => $manualPaymentRequest->user?->mobile ?? '—',
-                'amount_fmt' => number_format((float) $manualPaymentRequest->amount, 2, '.', ''),
-                'currency' => $manualPaymentRequest->currency ?? '',
-                'payment_gateway' => $gatewayKey,
-                'payment_gateway_label' => $this->gatewayLabel($gatewayKey),
-                'payable_label' => $this->manualPaymentPayableLabel($manualPaymentRequest),
-                'status' => $status,
-                'status_label' => $this->manualPaymentStatusLabel($status),
-                'created_at_human' => $manualPaymentRequest->created_at?->format('Y-m-d H:i') ?? '—',
-                'actions' => $this->actionsColumn($manualPaymentRequest),
+                'transaction_id' => $transactionId,
+                'user_name' => $row->user_name ?? '—',
+                'user_mobile' => $row->user_mobile ?? '—',
+                'amount_fmt' => number_format($amount, 2, '.', ''),
+                'currency' => $row->currency ?? '',
+                'payment_gateway' => $row->channel,
+                'payment_gateway_label' => $this->paymentRequestChannelLabel($row->channel),
+                'category' => $row->category,
+                'payable_type' => $row->payable_type ?? null,
+                'payable_id' => $row->payable_id ?? null,
+                'payable_label' => $this->paymentRequestPayableLabel($row),
+                'status' => $row->status,
+                'status_label' => $this->paymentRequestStatusLabel($row->status),
+                'created_at_human' => $row->created_at
+                    ? Carbon::parse($row->created_at)->format('Y-m-d H:i')
+                    : '—',
+                'actions' => $this->paymentRequestActionsFromRow($row),
             ];
         })->values();
 
@@ -384,9 +412,9 @@ class ManualPaymentRequestController extends Controller
         ]);
     }
 
+    
 
-
-    public function show(ManualPaymentRequest $manualPaymentRequest)
+    public function show(ManualPaymentRequest $manualPaymentRequest) 
     {
         ResponseService::noAnyPermissionThenSendJson(['manual-payments-list', 'manual-payments-review']);
 
@@ -397,9 +425,12 @@ class ManualPaymentRequestController extends Controller
             'timelineData' => $this->manualPaymentTimelinePayload($manualPaymentRequest),
 
 
+
+            
+
         ]);
     }
-    
+      
 
     public function review(ManualPaymentRequest $manualPaymentRequest)
     {
@@ -1267,7 +1298,180 @@ class ManualPaymentRequestController extends Controller
         return $startOfDay ? $date->startOfDay() : $date->endOfDay();
     }
 
-    private function resolveManualPaymentOrder(Request $request): array
+    private function normalizePaymentRequestStatus($status): ?string
+    {
+        if (!is_string($status)) {
+            return null;
+        }
+
+        $normalized = strtolower(trim($status));
+
+
+        if ($normalized === '' || $normalized === 'null') {
+            return null;
+        }
+
+        return match ($normalized) {
+            'succeed', 'success', 'succeeded', 'paid', 'approved', 'complete', 'completed', 'done', 'settled', 'confirmed' => 'succeed',
+            'failed', 'failure', 'error', 'cancelled', 'canceled', 'rejected', 'declined', 'void', 'refunded' => 'failed',
+            'pending', 'processing', 'in_review', 'in-review', 'review', 'reviewing', 'under_review', 'under-review', 'awaiting', 'waiting', 'new', 'initiated', 'open' => 'pending',
+            default => in_array($normalized, ['pending', 'succeed', 'failed'], true) ? $normalized : null,
+        };
+    
+    }
+
+    private function normalizePaymentRequestChannel($channel): ?string
+    {
+
+        if (!is_string($channel)) {
+            return null;
+        }
+
+        $normalized = strtolower(trim($channel));
+
+        if ($normalized === '' || $normalized === 'null') {
+            return null;
+        }
+
+
+
+        return match ($normalized) {
+            'manual_bank', 'bank', 'bank_transfer', 'banktransfer', 'bank_alsharq', 'east_yemen_bank', 'east' => 'bank',
+            'manual', 'manual_payment', 'offline', 'internal' => 'manual',
+            'wallet', 'wallet_balance', 'wallet_gateway', 'wallet_top_up', 'wallet-top-up', 'wallettopup' => 'wallet',
+            'cash', 'cod', 'cash_on_delivery', 'cashcollection', 'cash_collect' => 'cash',
+            default => in_array($normalized, ['bank', 'manual', 'wallet', 'cash'], true) ? $normalized : null,
+        };
+    }
+
+   private function normalizePaymentRequestCategory($category): ?string
+    {
+        if (!is_string($category)) {
+            return null;
+
+        }
+        $normalized = strtolower(trim($category));
+
+
+        if ($normalized === '' || $normalized === 'null') {
+            return null;
+        }
+
+        return match ($normalized) {
+            'order', 'orders', 'cart', 'cart_order', 'cart-order', 'cartorder' => 'orders',
+            'package', 'packages', 'user_purchased_package', 'userpurchasedpackage', 'user_purchased_packages', 'userpurchasedpackages' => 'packages',
+            'wallet', 'wallet_top_up', 'wallet-top-up', 'wallettopup', 'topup', 'top-ups', 'top_ups', 'topups' => 'top_ups',
+            default => in_array($normalized, ['orders', 'packages', 'top_ups'], true) ? $normalized : null,
+        };
+    }
+
+    private function paymentRequestStatusLabel(?string $status): string
+    {
+        return match ($this->normalizePaymentRequestStatus($status) ?? 'pending') {
+            'succeed' => trans('Success'),
+            'failed' => trans('Failed'),
+            default => trans('Pending'),
+        };
+    }
+
+    private function paymentRequestChannelLabel(?string $channel): string
+    {
+        return match ($this->normalizePaymentRequestChannel($channel) ?? '') {
+            'bank' => trans('Bank Transfer'),
+            'manual' => trans('Manual'),
+            'wallet' => trans('Wallet'),
+            'cash' => trans('Cash'),
+            default => '—',
+        };
+    }
+
+    private function paymentRequestCategoryLabel(?string $category): string
+    {
+        return match ($this->normalizePaymentRequestCategory($category) ?? '') {
+            'orders' => trans('Orders'),
+            'packages' => trans('Packages'),
+            'top_ups' => trans('Wallet Top-up'),
+            default => '—',
+        };
+    }
+
+    private function paymentRequestPayableLabel(object $row): string
+    {
+        $category = $this->normalizePaymentRequestCategory($row->category ?? null);
+
+        if ($category === null) {
+            return '—';
+        }
+
+        $payableId = $row->payable_id ?? null;
+        $walletTransactionId = $row->wallet_transaction_id ?? null;
+        $hasPayableId = $payableId !== null && $payableId !== '';
+        $hasWalletTransactionId = $walletTransactionId !== null && $walletTransactionId !== '';
+
+        return match ($category) {
+            'orders' => $hasPayableId ? __('Order #:id', ['id' => $payableId]) : trans('Orders'),
+            'packages' => $hasPayableId ? __('Package #:id', ['id' => $payableId]) : trans('Packages'),
+            'top_ups' => $hasWalletTransactionId
+                ? __('Wallet Top-up #:id', ['id' => $walletTransactionId])
+                : trans('Wallet Top-up'),
+            default => $this->paymentRequestCategoryLabel($category),
+        };
+    }
+
+    private function paymentRequestActionsFromRow(object $row): string
+    {
+        if (
+            !empty($row->manual_payment_request_id)
+            && Route::has('manual-payments.review')
+        ) {
+            return BootstrapTableService::button(
+                'fa fa-eye',
+                route('manual-payments.review', ['manualPaymentRequest' => $row->manual_payment_request_id]),
+                ['btn-primary', 'view-manual-payment']
+            );
+        }
+
+        if (
+            !empty($row->payment_transaction_id)
+            && Route::has('manual-payments.deep-link')
+        ) {
+            return BootstrapTableService::button(
+                'fa fa-receipt',
+                route('manual-payments.deep-link', ['paymentTransaction' => $row->payment_transaction_id]),
+                ['btn-outline-secondary'],
+                [
+                    'target' => '_blank',
+                    'rel' => 'noopener noreferrer',
+                    'title' => trans('View'),
+                ]
+            );
+        }
+
+        $category = $this->normalizePaymentRequestCategory($row->category ?? null);
+        $payableId = $row->payable_id ?? null;
+        $hasPayableId = $payableId !== null && $payableId !== '';
+
+        if (
+            $category === 'orders'
+            && $hasPayableId
+            && Route::has('orders.show')
+        ) {
+            return BootstrapTableService::button(
+                'fa fa-shopping-cart',
+                route('orders.show', ['order' => $payableId]),
+                ['btn-outline-primary'],
+                [
+                    'target' => '_blank',
+                    'rel' => 'noopener noreferrer',
+                    'title' => trans('View'),
+                ]
+            );
+        }
+
+        return '';
+    }
+
+    private function resolvePaymentRequestOrder(Request $request): array
     {
         $order = $request->input('order', []);
         $order = is_array($order) ? $order : [];
@@ -1277,50 +1481,17 @@ class ManualPaymentRequestController extends Controller
         $direction = in_array($direction, ['asc', 'desc'], true) ? $direction : 'desc';
 
         $columns = [
-            0 => 'transaction_id',
+            0 => 'reference',
             1 => 'user_name',
-            2 => 'manual_payment_requests.amount',
-            3 => 'manual_payment_requests.currency',
-            4 => 'payment_gateway',
-            5 => 'manual_payment_requests.payable_type',
-            6 => 'manual_payment_requests.status',
-            7 => 'manual_payment_requests.created_at',
+            2 => 'amount',
+            3 => 'currency',
+            4 => 'channel',
+            5 => 'category',
+            6 => 'status',
+            7 => 'created_at',
         ];
 
-        return [$columns[$columnIndex] ?? 'manual_payment_requests.created_at', $direction];
-    }
-
-    private function applyManualPaymentOrdering(Builder $query, string $column, string $direction): Builder
-    {
-
-
-        if ($column === 'transaction_id') {
-            $directionSql = strtoupper($direction) === 'ASC' ? 'ASC' : 'DESC';
-
-            return $query->orderByRaw(
-                "(SELECT pt.id FROM payment_transactions AS pt WHERE pt.manual_payment_request_id = manual_payment_requests.id LIMIT 1) {$directionSql}"
-            );
-        }
-
-
-        if ($column === 'user_name') {
-            return $query->orderBy(
-                User::select('name')
-                    ->whereColumn('users.id', 'manual_payment_requests.user_id')
-                    ->limit(1),
-                $direction
-            );
-        }
-
-        if ($column === 'payment_gateway') {
-            $directionSql = strtoupper($direction) === 'ASC' ? 'ASC' : 'DESC';
-
-            return $query->orderByRaw(
-                "(SELECT COALESCE(pt.payment_gateway, 'manual_bank') FROM payment_transactions AS pt WHERE pt.manual_payment_request_id = manual_payment_requests.id LIMIT 1) {$directionSql}"
-            );
-        }
-
-        return $query->orderBy($column, $direction);
+        return [$columns[$columnIndex] ?? 'created_at', $direction];
     }
 
     private function resolveManualPaymentGatewayKey(ManualPaymentRequest $manualPaymentRequest): string

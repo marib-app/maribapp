@@ -33,6 +33,9 @@ return [
         'merchants'   => 'e_store',
         'shein'       => null,
         'computer'    => 'computer_section',
+        'other_services' => 'services_all',
+
+
     ], $serviceRootIdentifiers),
     'allowed_section_types' => array_merge([
 
@@ -43,6 +46,8 @@ return [
         'merchants',
         'shein',
         'computer',
+        'other_services',
+
     ], array_keys($serviceRootIdentifiers)),
 
     'section_type_aliases' => [
@@ -70,7 +75,11 @@ return [
         'computersection'      => 'computer',
         'itemsListComputer'    => 'computer',
         'itemslistcomputer'    => 'computer',
-
+        'other_services'       => 'other_services',
+        'otherservices'        => 'other_services',
+        'other-services'       => 'other_services',
+        'itemsListOtherServices'  => 'other_services',
+        'itemslistotherservices'  => 'other_services',
         'public_ads'           => 'public',
         'publicads'            => 'public',
         'itemsListPublic'      => 'public',

@@ -13,17 +13,20 @@ class FeaturedSectionUtils {
       return trimmedCache;
     }
 
-    if (rootCategoryId != null && rootCategoryId > 0) {
-      return rootCategoryId.toString();
-    }
+
 
     final String? normalizedInterface =
         SliderInterfaceMapper.normalize(interfaceType) ?? interfaceType?.trim();
 
-    if (normalizedInterface == null || normalizedInterface.isEmpty) {
-      return null;
+    if (normalizedInterface != null && normalizedInterface.isNotEmpty) {
+      return normalizedInterface;
     }
 
-    return normalizedInterface;
+    if (rootCategoryId != null && rootCategoryId > 0) {
+      return rootCategoryId.toString();
+    }
+
+    return null;
+
   }
 }

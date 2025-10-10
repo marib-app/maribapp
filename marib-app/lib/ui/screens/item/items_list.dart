@@ -28,6 +28,7 @@ import 'package:marib/ui/screens/settings/main_activity.dart';
 import 'package:marib/ui/screens/native_ads_screen.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
+import 'package:marib/ui/widgets/slivers/slivers.dart';
 
 class ItemsList extends StatefulWidget {
   final String categoryId, categoryName;
@@ -624,8 +625,11 @@ class ItemsListState extends State<ItemsList> {
             }
             return Column(
               children: [
-                Expanded(child: mainChildren(state.itemModel)
-
+                Expanded(
+                  child: mainChildren(
+                    context,
+                    state.itemModel,
+                  ),
                 ),
                 if (state.isLoadingMore) UiUtils.progress()
               ],
@@ -643,70 +647,77 @@ class ItemsListState extends State<ItemsList> {
     );
   }
 
-  Widget mainChildren(List<ItemModel> items) {
-    List<Widget> children = [];
-    int gridCount = Constant.nativeAdsAfterItemNumber;
-    int total = items.length;
+  Widget mainChildren(BuildContext context, List<ItemModel> items) {
+    return CatalogScrollView(
+      controller: controller,
+      physics: const BouncingScrollPhysics(),
+      sections: _buildCatalogSections(context, items),
+    );
+  }
 
-    for (int i = 0; i < total; i += gridCount /* + listCount*/) {
+  List<CatalogSection> _buildCatalogSections(
+      BuildContext context, List<ItemModel> items) {
+    final sections = <CatalogSection>[];
+    final chunkSize = max(1, Constant.nativeAdsAfterItemNumber);
+    final total = items.length;
+
+    for (int startIndex = 0; startIndex < total; startIndex += chunkSize) {
+      final itemCount = min(chunkSize, total - startIndex);
+
       if (isList) {
-        children.add(_buildListViewSection(
-            context, i, min(gridCount, total - i), items));
+        sections.add(
+          CatalogListSection(
+            key: ValueKey('items-list-$startIndex'),
+            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 3),
+            itemCount: itemCount,
+            addAutomaticKeepAlives: false,
+            itemBuilder: (context, index) {
+              final item = items[startIndex + index];
+              return GestureDetector(
+                onTap: () => _navigateToDetails(context, item),
+                child: ItemHorizontalCard(item: item),
+              );
+            },
+          ),
+        );
       } else {
-        children.add(_buildGridViewSection(
-            context, i, min(gridCount, total - i), items));
+        sections.add(
+          CatalogGridSection(
+            key: ValueKey('items-grid-$startIndex'),
+            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+            itemCount: itemCount,
+            addAutomaticKeepAlives: false,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
+              crossAxisCount: 2,
+              height: MediaQuery.of(context).size.height / 3.5.rh(context),
+              mainAxisSpacing: 7,
+              crossAxisSpacing: 10,
+            ),
+            itemBuilder: (context, index) {
+              final item = items[startIndex + index];
+              return GestureDetector(
+                onTap: () => _navigateToDetails(context, item),
+                child: ICard(item: item),
+              );
+            },
+          ),
+        );
       }
 
-      int remainingItems = total - i - gridCount;
+      final remainingItems = total - (startIndex + itemCount);
+
       if (remainingItems > 0) {
-        children.add(NativeAdWidget(type: TemplateType.medium));
+        sections.add(
+          CatalogBoxSection(
+            key: ValueKey('items-ad-$startIndex'),
+            child: NativeAdWidget(type: TemplateType.medium),
+          ),
+        );
       }
     }
 
-    return SingleChildScrollView(
-      controller: controller,
-      physics: BouncingScrollPhysics(),
-      child: Column(children: children),
-    );
-  }
+    return sections;
 
-  Widget _buildListViewSection(BuildContext context, int startIndex,
-      int itemCount, List<ItemModel> items) {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 3),
-      itemCount: itemCount,
-      itemBuilder: (context, index) {
-        ItemModel item = items[startIndex + index];
-        return GestureDetector(
-          onTap: () => _navigateToDetails(context, item),
-          child: ItemHorizontalCard(item: item),
-        );
-      },
-    );
-  }
-
-  Widget _buildGridViewSection(BuildContext context, int startIndex,
-      int itemCount, List<ItemModel> items) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
-          crossAxisCount: 2,
-          height: MediaQuery.of(context).size.height / 3.5.rh(context),
-          mainAxisSpacing: 7,
-          crossAxisSpacing: 10),
-      itemCount: itemCount,
-      itemBuilder: (context, index) {
-        ItemModel item = items[startIndex + index];
-        return GestureDetector(
-          onTap: () => _navigateToDetails(context, item),
-          child: ICard(item: item),
-        );
-      },
-    );
   }
 
   Widget buildItemsShimmer(BuildContext context) {

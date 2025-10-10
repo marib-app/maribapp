@@ -45,77 +45,7 @@ extension _ChatTileUi on ChatTile {
     return null;
   }
 
-  String? _presenceLabel(BuildContext context, ParticipantStatus? status) {
-    if (status == null) {
-      return null;
-    }
-    if (status.isTyping == true) {
-      return "typingNow".translate(context);
-    }
-    if (status.isOnline == true) {
-      return "onlineNow".translate(context);
-    }
-    final String? lastSeen = status.lastSeen;
-    if (lastSeen != null && lastSeen.isNotEmpty) {
-      try {
-        final String formatted = lastSeen.formatDate();
-        final String template = "lastSeenAt".translate(context);
-        return template.contains('%s')
-            ? template.replaceFirst('%s', formatted)
-            : "$template $formatted";
-      } catch (_) {
-        return null;
-      }
-    }
-    return null;
-  }
 
-  Widget? _buildPresenceBadge(BuildContext context, ParticipantStatus? status) {
-    final String? label = _presenceLabel(context, status);
-    if (label == null) {
-      return null;
-    }
-
-    final bool isTyping = status?.isTyping == true;
-    final bool isOnline = status?.isOnline == true;
-
-    final Color foreground = isTyping
-        ? context.color.territoryColor
-        : (isOnline
-            ? context.color.territoryColor
-            : context.color.textLightColor);
-
-    final Color background = isTyping
-        ? context.color.territoryColor.withOpacity(0.12)
-        : context.color.secondaryColor;
-
-    final IconData icon = isTyping
-        ? Icons.edit_note_rounded
-        : (isOnline ? Icons.circle : Icons.access_time);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: foreground),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: context.font.smaller,
-              color: foreground,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   String _previewText(BuildContext context) {
     final msg = lastMessage;
@@ -161,10 +91,13 @@ extension _ChatTileUi on ChatTile {
     return '$formatted $currency';
   }
 
-  Widget _buildProfileAvatar(BuildContext context, bool showOnlineIndicator) {
+  Widget _buildProfileAvatar(
+      BuildContext context, ParticipantStatus? presenceStatus) {
+
     final borderColor = context.color.textDefaultColor.withOpacity(0.08);
     final bool hasProfileImage = profilePicture.trim().isNotEmpty;
-
+    final bool isOnline = presenceStatus?.isOnline == true;
+    final bool isTyping = presenceStatus?.isTyping == true;
     Widget avatar;
     if (!hasProfileImage) {
       avatar = Container(
@@ -203,23 +136,45 @@ extension _ChatTileUi on ChatTile {
             child: avatar,
           ),
         ),
-        if (showOnlineIndicator)
-          PositionedDirectional(
-            bottom: 0,
-            end: 0,
+        PositionedDirectional(
+    bottom: -2,
+    end: -2,
+    child: Container(
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: context.color.secondaryColor,
+        boxShadow: [
+          BoxShadow(
+            color: context.color.textDefaultColor.withOpacity(0.06),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
             child: Container(
-              width: 12,
-              height: 12,
+              width: 18,
+              height: 18,
               decoration: BoxDecoration(
-                color: context.color.territoryColor,
+                color: isTyping || isOnline
+                    ? context.color.territoryColor
+                    : context.color.textLightColor.withOpacity(0.4),
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: context.color.secondaryColor,
-                  width: 2,
-                ),
+              ),
+              child: Icon(
+                isTyping
+                    ? Icons.edit_note_rounded
+                    : (isOnline
+                    ? Icons.check_rounded
+                    : Icons.lock_outline_rounded),
+                size: isTyping ? 14 : 12,
+                color: isTyping || isOnline
+                    ? context.color.buttonColor
+                    : context.color.textColorDark.withOpacity(0.7),
               ),
             ),
           ),
+        ),
       ],
     );
 
@@ -330,7 +285,7 @@ extension _ChatTileUi on ChatTile {
                 ],
                 ],
               ),
-          )
+          ),
           ],
       ),
     );
@@ -361,8 +316,7 @@ extension _ChatTileUi on ChatTile {
 
   Widget buildChatTile(BuildContext context) {
     final ParticipantStatus? presenceStatus = _otherParticipantStatus();
-    final bool showOnlineIndicator = presenceStatus?.isOnline == true;
-    final Widget? presenceBadge = _buildPresenceBadge(context, presenceStatus);
+
     final Widget? unreadBadge = _buildUnreadBadge(context);
     final Widget? adCard = _buildAdCard(context);
     final String timeLabel = _timeLabel();
@@ -411,7 +365,6 @@ extension _ChatTileUi on ChatTile {
       child: AbsorbPointer(
         absorbing: true,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 120),
           decoration: BoxDecoration(
             color: context.color.secondaryColor,
             borderRadius: BorderRadius.circular(20),
@@ -430,39 +383,28 @@ extension _ChatTileUi on ChatTile {
           ),
           width: MediaQuery.of(context).size.width,
           child: Padding(
-            padding: const EdgeInsets.all(18.0),
+            padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildProfileAvatar(context, showOnlineIndicator),
+                    _buildProfileAvatar(context, presenceStatus),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  userName,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                )
-                                    .bold()
-                                    .size(context.font.large)
-                                    .color(context.color.textColorDark),
-                              ),
-                              if (unreadBadge != null) ...[
-                                const SizedBox(width: 8),
-                                unreadBadge,
-                              ],
-                            ],
-                          ),
-                          const SizedBox(height: 8),
+                          Text(
+                            userName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          )
+                              .bold()
+                              .size(context.font.large)
+                              .color(context.color.textColorDark),
+                          const SizedBox(height: 6),
                           Text(
                             _previewText(context),
                             maxLines: 2,
@@ -470,38 +412,38 @@ extension _ChatTileUi on ChatTile {
                           )
                               .size(context.font.normal)
                               .color(context.color.textLightColor),
+                          if (timeLabel.isNotEmpty || unreadBadge != null) ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                if (timeLabel.isNotEmpty)
+                                  Text(timeLabel)
+                                      .size(context.font.smaller)
+                                      .color(context.color.textLightColor),
+                                if (timeLabel.isNotEmpty && unreadBadge != null)
+                                  const SizedBox(width: 8),
+                                if (unreadBadge != null) unreadBadge,
+                              ],
+                            ),
+                          ],
                         ],
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    if (presenceBadge != null) ...[
-                      Flexible(child: presenceBadge),
-                      if (timeLabel.isNotEmpty || adCard != null)
-                        const SizedBox(width: 12),
-                    ],
-                    if (timeLabel.isNotEmpty || adCard != null)
-                      const Spacer(),
-                    if (timeLabel.isNotEmpty) ...[
-                      Text(timeLabel)
-                          .size(context.font.smaller)
-                          .color(context.color.textLightColor),
-                      if (adCard != null) const SizedBox(width: 12),
-                    ],
-                    if (adCard != null)
-                      Flexible(
-                        fit: FlexFit.loose,
-                        child: Align(
-                          alignment: AlignmentDirectional.centerEnd,
-                          child: adCard,
-                        ),
-                      ),
-                  ],
-                ),
+                if (adCard != null) ...[
+                  const SizedBox(height: 16),
+                  Divider(
+                    height: 1,
+                    thickness: 0.6,
+                    color: context.color.textDefaultColor.withOpacity(0.08),
+                  ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: adCard,
+                  ),
+                ],
               ],
             ),
           ),

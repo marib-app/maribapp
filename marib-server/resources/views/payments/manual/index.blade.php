@@ -623,6 +623,27 @@
         let manualPaymentFilters = loadInitialManualPaymentFilters();
 
 
+        function safeManualPaymentStorageGet(key) {
+            try {
+                if (typeof window !== 'undefined' && window.localStorage) {
+                    return window.localStorage.getItem(key);
+                }
+            } catch (error) {
+                console.warn('Failed to access manual payment storage', error);
+            }
+
+            return null;
+        }
+
+        function safeManualPaymentStorageSet(key, value) {
+            try {
+                if (typeof window !== 'undefined' && window.localStorage) {
+                    window.localStorage.setItem(key, value);
+                }
+            } catch (error) {
+                console.warn('Failed to persist manual payment storage', error);
+            }
+        }
 
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -731,7 +752,7 @@
 
         function loadInitialManualPaymentFilters() {
             const filters = {};
-            const storedRaw = localStorage.getItem(MANUAL_PAYMENT_FILTER_STORAGE_KEY);
+            const storedRaw = safeManualPaymentStorageGet(MANUAL_PAYMENT_FILTER_STORAGE_KEY);
 
 
             if (storedRaw) {
@@ -787,11 +808,10 @@
 
 
         function persistManualPaymentFilters() {
-            try {
-                localStorage.setItem(MANUAL_PAYMENT_FILTER_STORAGE_KEY, JSON.stringify(manualPaymentFilters));
-            } catch (error) {
-                console.warn('Failed to persist manual payment filters', error);
-            }
+            safeManualPaymentStorageSet(
+                MANUAL_PAYMENT_FILTER_STORAGE_KEY,
+                JSON.stringify(manualPaymentFilters)
+            );
         }
 
 
@@ -897,6 +917,33 @@
 
         }
 
+
+
+
+        function manualPaymentRowsFromResponse(json) {
+            if (!json || typeof json !== 'object') {
+                return [];
+            }
+
+            if (Array.isArray(json.data)) {
+                return json.data;
+            }
+
+            if (Array.isArray(json.rows)) {
+                return json.rows;
+            }
+
+            if (json.data && typeof json.data === 'object') {
+                return Object.values(json.data).filter((row) => row && typeof row === 'object');
+            }
+
+            if (json.rows && typeof json.rows === 'object') {
+                return Object.values(json.rows).filter((row) => row && typeof row === 'object');
+            }
+
+            return [];
+        }
+
         function updateManualPaymentSummaryNote() {
             const noteElement = document.querySelector('[data-summary-note]');
 
@@ -954,8 +1001,23 @@
             const pageLabel = '{{ __('Page') }}';
             const ofLabel = '{{ __('of') }}';
 
-            const total = Number(json?.recordsTotal ?? info.recordsTotal ?? 0);
-            const filtered = Number(json?.recordsFiltered ?? info.recordsDisplay ?? 0);
+            const total = Number(
+                json?.recordsTotal
+                ?? json?.total
+                ?? json?.meta?.total
+                ?? info.recordsTotal
+                ?? 0
+            );
+            const filtered = Number(
+                json?.recordsFiltered
+                ?? json?.total
+                ?? json?.meta?.filtered_total
+                ?? info.recordsDisplay
+                ?? info.recordsTotal
+                ?? 0
+            );
+
+
             const currentPage = Number(info.page ?? 0) + 1;
             const lastPage = Number(info.pages ?? 0) || 1;
 
@@ -974,96 +1036,116 @@
 
 
         function updateManualPaymentSummary(data = {}) {
-            const summary = data && typeof data.summary === 'object' ? data.summary : {};
-            const gatewaySummary = data && typeof data.gateway_summary === 'object' ? data.gateway_summary : {};
-            const categorySummary = data && typeof data.category_summary === 'object' ? data.category_summary : {};
-            const departmentSummary = Array.isArray(data?.department_summary) ? data.department_summary : [];
+            const summary = data && typeof data.summary === 'object' ? data.summary : null;
+            const gatewaySummary = data && typeof data.gateway_summary === 'object' ? data.gateway_summary : null;
+            const categorySummary = data && typeof data.category_summary === 'object' ? data.category_summary : null;
+            const departmentSummary = Array.isArray(data?.department_summary) ? data.department_summary : null;
 
-            const summaryFields = {
-                total: Number(summary.total ?? summary.total_requests ?? 0),
-                pending: Number(summary.pending ?? 0),
-                succeed: Number(summary.succeed ?? 0),
-                failed: Number(summary.failed ?? 0),
-                amount: Number(summary.amount ?? summary.total_amount ?? 0),
-            };
+            if (summary && Object.keys(summary).length > 0) {
+                const summaryFields = {
+                    total: Number(summary.total ?? summary.total_requests ?? 0),
+                    pending: Number(summary.pending ?? 0),
+                    succeed: Number(summary.succeed ?? 0),
+                    failed: Number(summary.failed ?? 0),
+                    amount: Number(summary.amount ?? summary.total_amount ?? 0),
+                };
 
-            document.querySelectorAll('[data-summary-field]').forEach((element) => {
-                if (!(element instanceof HTMLElement)) {
-                    return;
-                }
+                document.querySelectorAll('[data-summary-field]').forEach((element) => {
+                    if (!(element instanceof HTMLElement)) {
+                        return;
+                    }
 
-                const field = element.getAttribute('data-summary-field');
+                    const field = element.getAttribute('data-summary-field');
 
-                if (!field || !(field in summaryFields)) {
-                    return;
-                }
 
-                const value = summaryFields[field] ?? 0;
+                    if (!field || !(field in summaryFields)) {
+                        return;
+                    }
 
-                if (field === 'amount') {
-                    element.textContent = manualPaymentCurrencyFormatter(value);
-                } else {
+
+                    const value = summaryFields[field] ?? 0;
+
+
+                    if (field === 'amount') {
+                        element.textContent = manualPaymentCurrencyFormatter(value);
+                    } else {
+                        element.textContent = manualPaymentNumberFormatter(value);
+                    }
+                });
+            }
+
+            if (gatewaySummary) {
+                document.querySelectorAll('[data-summary-gateway]').forEach((element) => {
+                    if (!(element instanceof HTMLElement)) {
+                        return;
+                    }
+
+
+
+                    const key = element.getAttribute('data-summary-gateway');
+
+
+                    if (!key) {
+                        return;
+                    }
+
+
+                    const value = Number(gatewaySummary[key] ?? 0);
                     element.textContent = manualPaymentNumberFormatter(value);
-                }
-            });
+                });
+            }
 
-            document.querySelectorAll('[data-summary-gateway]').forEach((element) => {
-                if (!(element instanceof HTMLElement)) {
-                    return;
-                }
 
-                const key = element.getAttribute('data-summary-gateway');
+            if (categorySummary) {
+                document.querySelectorAll('[data-summary-category]').forEach((element) => {
+                    if (!(element instanceof HTMLElement)) {
+                        return;
+                    }
 
-                if (!key) {
-                    return;
-                }
 
-                const value = Number(gatewaySummary[key] ?? 0);
-                element.textContent = manualPaymentNumberFormatter(value);
-            });
 
-            document.querySelectorAll('[data-summary-category]').forEach((element) => {
-                if (!(element instanceof HTMLElement)) {
-                    return;
-                }
 
-                const key = element.getAttribute('data-summary-category');
+                    const key = element.getAttribute('data-summary-category');
 
-                if (!key) {
-                    return;
-                }
 
-                const value = Number(categorySummary[key] ?? 0);
-                element.textContent = manualPaymentNumberFormatter(value);
-            });
+                    if (!key) {
+                        return;
+                    }
 
-            const departmentMap = departmentSummary.reduce((carry, entry) => {
-                if (entry && typeof entry.key === 'string') {
-                    carry[entry.key] = entry;
-                }
+                    const value = Number(categorySummary[key] ?? 0);
+                    element.textContent = manualPaymentNumberFormatter(value);
+                });
+            }
 
-                return carry;
-            }, {});
+            if (departmentSummary) {
+                const departmentMap = departmentSummary.reduce((carry, entry) => {
+                    if (!entry || typeof entry !== 'object' || typeof entry.key !== 'string') {
+                        return carry;
+                    }
 
-            document.querySelectorAll('[data-summary-department-key]').forEach((element) => {
-                if (!(element instanceof HTMLElement)) {
-                    return;
-                }
+                    return carry;
+                }, {});
 
-                const key = element.getAttribute('data-summary-department-key');
-                const field = element.getAttribute('data-summary-department-field');
+                document.querySelectorAll('[data-summary-department-key]').forEach((element) => {
+                    if (!(element instanceof HTMLElement)) {
+                        return;
+                    }
 
-                if (!key || !field) {
-                    return;
-                }
+                    const key = element.getAttribute('data-summary-department-key');
+                    const field = element.getAttribute('data-summary-department-field');
 
-                const entry = departmentMap[key] ?? null;
-                const value = entry && Object.prototype.hasOwnProperty.call(entry, field)
-                    ? Number(entry[field] ?? 0)
-                    : 0;
+                    if (!key || !field) {
+                        return;
+                    }
 
-                element.textContent = manualPaymentNumberFormatter(value);
-            });
+                    const entry = departmentMap[key] ?? null;
+                    const value = entry && Object.prototype.hasOwnProperty.call(entry, field)
+                        ? Number(entry[field] ?? 0)
+                        : 0;
+
+                    element.textContent = manualPaymentNumberFormatter(value);
+                });
+            }
         }
 
 
@@ -1189,7 +1271,23 @@
                             return [];
                         }
 
-                        return Array.isArray(json.data) ? json.data : [];
+                        if (json.error) {
+                            const message = typeof json.message === 'string' && json.message.trim() !== ''
+                                ? json.message
+                                : '{{ __('Unable to load manual payment requests. Please try again later.') }}';
+                            setManualPaymentFeedback(message, 'danger');
+                            return [];
+                        }
+
+                        const rows = manualPaymentRowsFromResponse(json);
+
+                        if (!Array.isArray(rows) || rows.length === 0) {
+                            return [];
+                        }
+
+                        return rows;
+                    
+                    
                     },
                     error: function () {
                         setManualPaymentFeedback('{{ __('Unable to load manual payment requests. Please try again later.') }}', 'danger');
@@ -1332,8 +1430,16 @@
 
 
             dataTable.on('xhr.dt', function (event, settings, json) {
-                const rows = Array.isArray(json?.data) ? json.data : [];
-                const filtered = Number(json?.recordsFiltered ?? 0);
+                const rows = manualPaymentRowsFromResponse(json || {});
+                const filtered = Number(
+                    json?.recordsFiltered
+                    ?? json?.total
+                    ?? json?.meta?.filtered_total
+                    ?? rows.length
+                    ?? 0
+                );
+
+
 
                 updateManualPaymentSummary(json || {});
 
@@ -1349,7 +1455,7 @@
    
 
                 const info = dataTable.page.info();
-                updateManualPaymentMeta(info, json);
+                updateManualPaymentMeta(info, json || {});
                 syncManualPaymentQueryString(info);
 
 

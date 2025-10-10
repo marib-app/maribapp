@@ -17,6 +17,7 @@ use App\Services\ResponseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use App\Support\ColorFieldParser;
 
 use App\Models\Category;
 use App\Models\CustomField;
@@ -512,7 +513,11 @@ class ItemController extends Controller {
                 if ($customField->type === 'fileinput') {
                     $rawValue = $valueModel?->value;
 
-                    if (is_array($rawValue)) {
+                    if ($customField->type === 'color') {
+                        $entries = ColorFieldParser::parse($rawValue);
+                        $displayValue = implode(', ', ColorFieldParser::labels($entries));
+                    } elseif (is_array($rawValue)) {
+                        
                         $fileUrls = collect($rawValue)
                             ->filter()
                             ->map(static function ($value) {
@@ -555,6 +560,10 @@ class ItemController extends Controller {
                     'value_model' => $valueModel,
                     'display_value' => $displayValue,
                     'file_urls' => $fileUrls,
+                    'color_entries' => $customField->type === 'color'
+                        ? ColorFieldParser::parse($valueModel?->value)
+                        : [],
+
                 ];
             });
 

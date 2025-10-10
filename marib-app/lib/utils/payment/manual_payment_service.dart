@@ -1493,7 +1493,6 @@ class ManualPaymentService {
         return normalized;
     }
   }
-
   Future<List<ManualPayment>> fetchMyManualPayments({
     bool latestOnly = true,
     Set<String> paymentGateways = const {'manual_bank', 'east_yemen_bank'},
@@ -1559,6 +1558,7 @@ class ManualPaymentService {
           gatewayValue is String ? gatewayValue : gatewayValue?.toString(),
         );
 
+
         if (!m.containsKey('receipt_url') && m['receipt'] is String) {
           m['receipt_url'] = m['receipt'];
         }
@@ -1581,7 +1581,6 @@ class ManualPaymentService {
 
           if (normalizedGateways.isEmpty ||
               normalizedGateways.contains(gatewayKey)) {
-
             out.add(mp);
           }
         } catch (_) {

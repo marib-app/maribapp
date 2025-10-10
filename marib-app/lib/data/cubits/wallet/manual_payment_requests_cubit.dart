@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/model/data_output.dart';
 import 'package:marib/data/repositories/wallet_operations_repository.dart';
 import 'package:marib/utils/payment/manual_payment.dart';
+import 'package:marib/data/model/wallet/manual_payment_requests_summary.dart';
 
 abstract class ManualPaymentRequestsState {}
 
@@ -24,6 +25,7 @@ class ManualPaymentRequestsSuccess extends ManualPaymentRequestsState {
     this.isLoadingMore = false,
     this.isRefreshing = false,
     this.lastError,
+    this.summary,
   });
 
   final List<ManualPayment> requests;
@@ -32,6 +34,7 @@ class ManualPaymentRequestsSuccess extends ManualPaymentRequestsState {
   final bool isLoadingMore;
   final bool isRefreshing;
   final dynamic lastError;
+  final ManualPaymentRequestsSummary? summary;
 
   ManualPaymentRequestsSuccess copyWith({
     List<ManualPayment>? requests,
@@ -40,12 +43,15 @@ class ManualPaymentRequestsSuccess extends ManualPaymentRequestsState {
     bool? isLoadingMore,
     bool? isRefreshing,
     dynamic lastError,
+    ManualPaymentRequestsSummary? summary,
+    bool summaryHasValue = false,
   }) {
     return ManualPaymentRequestsSuccess(
       requests: requests ?? this.requests,
       hasMore: hasMore ?? this.hasMore,
       currentPage: currentPage ?? this.currentPage,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      summary: summaryHasValue ? summary : this.summary,
       isRefreshing: isRefreshing ?? this.isRefreshing,
       lastError: lastError,
     );
@@ -102,9 +108,22 @@ class ManualPaymentRequestsCubit extends Cubit<ManualPaymentRequestsState> {
     try {
       final nextPage = currentState.currentPage + 1;
       final result = await _repository.fetchManualPaymentRequests(page: nextPage);
-      final meta = result.extraData?.data is WalletWithdrawalsMeta
-          ? result.extraData!.data as WalletWithdrawalsMeta
-          : WalletWithdrawalsMeta(currentPage: nextPage);
+      final extraData = result.extraData?.data;
+      WalletWithdrawalsMeta meta;
+      ManualPaymentRequestsSummary? summary;
+      bool summaryHasValue = false;
+
+      if (extraData is ManualPaymentRequestsExtraData) {
+        meta = extraData.meta;
+        if (extraData.summary != null) {
+          summary = extraData.summary;
+          summaryHasValue = true;
+        }
+      } else if (extraData is WalletWithdrawalsMeta) {
+        meta = extraData;
+      } else {
+        meta = WalletWithdrawalsMeta(currentPage: nextPage);
+      }
 
       emit(
         currentState.copyWith(
@@ -112,6 +131,8 @@ class ManualPaymentRequestsCubit extends Cubit<ManualPaymentRequestsState> {
           hasMore: meta.hasMore,
           currentPage: meta.currentPage,
           isLoadingMore: false,
+          summary: summary,
+          summaryHasValue: summaryHasValue,
         ),
       );
     } catch (e) {
@@ -122,15 +143,24 @@ class ManualPaymentRequestsCubit extends Cubit<ManualPaymentRequestsState> {
   }
 
   void _emitSuccess(DataOutput<ManualPayment> result) {
-    final meta = result.extraData?.data is WalletWithdrawalsMeta
-        ? result.extraData!.data as WalletWithdrawalsMeta
-        : const WalletWithdrawalsMeta();
+    final extraData = result.extraData?.data;
+    WalletWithdrawalsMeta meta = const WalletWithdrawalsMeta();
+    ManualPaymentRequestsSummary? summary;
+
+    if (extraData is ManualPaymentRequestsExtraData) {
+      meta = extraData.meta;
+      summary = extraData.summary;
+    } else if (extraData is WalletWithdrawalsMeta) {
+      meta = extraData;
+    }
 
     emit(
       ManualPaymentRequestsSuccess(
         requests: result.modelList,
         hasMore: meta.hasMore,
         currentPage: meta.currentPage,
+        summary: summary,
+
       ),
     );
   }

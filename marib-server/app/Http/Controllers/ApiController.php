@@ -8442,8 +8442,11 @@ public function storeRequestDevice(Request $request)
                     'manualBank',
                     'payable',
                     'paymentTransaction.order',
-                ])
-                ->where('manual_payment_requests.user_id', Auth::id())
+                ]);
+
+            $this->applyManualPaymentRequestVisibilityScope($query, (int) Auth::id());
+
+            $query
                 ->when($status, static function ($builder, string $statusValue) {
                     $builder->where('manual_payment_requests.status', $statusValue);
 
@@ -8472,6 +8475,7 @@ public function storeRequestDevice(Request $request)
                     }
                 )
                 ->orderByDesc('manual_payment_requests.id');
+            $stats = $this->summarizeManualPaymentRequests($query);
 
             $paginator = $query->paginate($perPage, ['manual_payment_requests.*'], 'page', $page);
 
@@ -8490,6 +8494,8 @@ public function storeRequestDevice(Request $request)
                     'manual_payment_requests' => $requests,
                     'items' => $requests,
                     'meta' => $meta,
+                    'stats' => $stats,
+
                 ]
             );
         } catch (Throwable $th) {
@@ -8609,6 +8615,125 @@ public function storeRequestDevice(Request $request)
             default => [$gateway],
         };
     }
+
+
+
+
+
+    private function applyManualPaymentRequestVisibilityScope(Builder $query, int $userId): Builder
+    {
+        return $query->where(static function (Builder $builder) use ($userId) {
+            $builder->where('manual_payment_requests.user_id', $userId)
+                ->orWhere(static function (Builder $ordersScope) use ($userId) {
+                    $ordersScope
+                        ->where('manual_payment_requests.payable_type', Order::class)
+                        ->whereExists(static function ($subQuery) use ($userId) {
+                            $subQuery
+                                ->select(DB::raw('1'))
+                                ->from('orders')
+                                ->whereColumn('orders.id', 'manual_payment_requests.payable_id')
+                                ->where(static function ($orderVisibility) use ($userId) {
+                                    $orderVisibility
+                                        ->where('orders.user_id', $userId)
+                                        ->orWhere('orders.seller_id', $userId);
+                                });
+                        });
+                })
+                ->orWhereExists(static function ($subQuery) use ($userId) {
+                    $subQuery
+                        ->select(DB::raw('1'))
+                        ->from('payment_transactions')
+                        ->join('orders', static function ($join) {
+                            $join
+                                ->on('orders.id', '=', 'payment_transactions.payable_id')
+                                ->where('payment_transactions.payable_type', Order::class);
+                        })
+                        ->whereColumn('payment_transactions.manual_payment_request_id', 'manual_payment_requests.id')
+                        ->where(static function ($orderVisibility) use ($userId) {
+                            $orderVisibility
+                                ->where('orders.user_id', $userId)
+                                ->orWhere('orders.seller_id', $userId);
+                        });
+                });
+        });
+    }
+
+    private function summarizeManualPaymentRequests(Builder $query): array
+    {
+        $summary = [
+            'total' => [
+                'count' => 0,
+                'amount' => 0.0,
+                'amounts' => [],
+            ],
+            'statuses' => [
+                ManualPaymentRequest::STATUS_PENDING => [
+                    'count' => 0,
+                    'amount' => 0.0,
+                    'amounts' => [],
+                ],
+                ManualPaymentRequest::STATUS_UNDER_REVIEW => [
+                    'count' => 0,
+                    'amount' => 0.0,
+                    'amounts' => [],
+                ],
+                ManualPaymentRequest::STATUS_APPROVED => [
+                    'count' => 0,
+                    'amount' => 0.0,
+                    'amounts' => [],
+                ],
+                ManualPaymentRequest::STATUS_REJECTED => [
+                    'count' => 0,
+                    'amount' => 0.0,
+                    'amounts' => [],
+                ],
+            ],
+        ];
+
+        $rows = (clone $query)
+            ->cloneWithout(['columns', 'orders'])
+            ->selectRaw('COALESCE(manual_payment_requests.status, ?) as status', [ManualPaymentRequest::STATUS_PENDING])
+            ->selectRaw('COALESCE(UPPER(manual_payment_requests.currency), \'\') as currency')
+            ->selectRaw('COUNT(*) as total_count')
+            ->selectRaw('COALESCE(SUM(manual_payment_requests.amount), 0) as total_amount')
+            ->groupBy('status', 'currency')
+            ->get();
+
+        foreach ($rows as $row) {
+            $status = $row->status ?? ManualPaymentRequest::STATUS_PENDING;
+            if (!array_key_exists($status, $summary['statuses'])) {
+                $summary['statuses'][$status] = [
+                    'count' => 0,
+                    'amount' => 0.0,
+                    'amounts' => [],
+                ];
+            }
+
+            $count = (int) $row->total_count;
+            $amount = (float) $row->total_amount;
+            $currency = is_string($row->currency) && $row->currency !== ''
+                ? strtoupper($row->currency)
+                : null;
+
+            $summary['statuses'][$status]['count'] += $count;
+            $summary['total']['count'] += $count;
+
+            if ($currency !== null) {
+                $statusAmounts = &$summary['statuses'][$status]['amounts'];
+                $statusAmounts[$currency] = ($statusAmounts[$currency] ?? 0.0) + $amount;
+                $summary['statuses'][$status]['amount'] = ($summary['statuses'][$status]['amount'] ?? 0.0) + $amount;
+
+                $totalAmounts = &$summary['total']['amounts'];
+                $totalAmounts[$currency] = ($totalAmounts[$currency] ?? 0.0) + $amount;
+                $summary['total']['amount'] = ($summary['total']['amount'] ?? 0.0) + $amount;
+                unset($statusAmounts, $totalAmounts);
+            }
+        }
+
+        return $summary;
+    }
+
+
 
     private function extractIntegerFromKeys(array $input, array $keys): ?int
     {

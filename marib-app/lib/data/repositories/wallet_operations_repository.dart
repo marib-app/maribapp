@@ -4,6 +4,7 @@ import 'package:marib/data/model/wallet/wallet_operation_options.dart';
 import 'package:marib/utils/api.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/payment/manual_payment.dart';
+import 'package:marib/data/model/wallet/manual_payment_requests_summary.dart';
 
 class WalletOperationsRepository {
   Future<WalletWithdrawalsResult> fetchWithdrawals({
@@ -150,16 +151,28 @@ class WalletOperationsRepository {
     final total = _parseInt(metaMap['total']) ?? requests.length;
     final hasMore = _resolveHasMore(metaMap, currentPage, lastPage, perPageValue, requests.length);
 
+
+    final statsMap = _unwrapStats(response);
+    ManualPaymentRequestsSummary? summary;
+    if (statsMap != null && statsMap.isNotEmpty) {
+      summary = ManualPaymentRequestsSummary.fromJson(statsMap);
+    }
+
+    final meta = WalletWithdrawalsMeta(
+      currentPage: currentPage,
+      lastPage: lastPage,
+      hasMore: hasMore,
+      perPage: perPageValue,
+    );
+
     return DataOutput<ManualPayment>(
       total: total,
       modelList: requests,
       page: currentPage,
       extraData: ExtraData(
-        data: WalletWithdrawalsMeta(
-          currentPage: currentPage,
-          lastPage: lastPage,
-          hasMore: hasMore,
-          perPage: perPageValue,
+        data: ManualPaymentRequestsExtraData(
+          meta: meta,
+          summary: summary,
         ),
       ),
     );
@@ -235,6 +248,34 @@ class WalletOperationsRepository {
 
     return const {};
   }
+
+
+  Map<String, dynamic>? _unwrapStats(dynamic response) {
+    if (response is Map<String, dynamic>) {
+      final stats = response['stats'];
+      if (stats is Map<String, dynamic>) {
+        return Map<String, dynamic>.from(stats);
+      }
+      if (stats is Map) {
+        return stats.map((key, value) => MapEntry(key.toString(), value));
+      }
+      for (final key in const ['data', 'meta']) {
+        if (response.containsKey(key)) {
+          final nested = _unwrapStats(response[key]);
+          if (nested != null) {
+            return nested;
+          }
+        }
+      }
+      return null;
+    }
+    if (response is Map) {
+      final map = response.map((key, value) => MapEntry(key.toString(), value));
+      return _unwrapStats(map);
+    }
+    return null;
+  }
+
 
   Map<String, dynamic> _unwrapSingle(
       Map<String, dynamic> response,
@@ -346,4 +387,14 @@ class WalletWithdrawalsMeta {
       perPage: perPage ?? this.perPage,
     );
   }
+}
+
+class ManualPaymentRequestsExtraData {
+  const ManualPaymentRequestsExtraData({
+    required this.meta,
+    this.summary,
+  });
+
+  final WalletWithdrawalsMeta meta;
+  final ManualPaymentRequestsSummary? summary;
 }

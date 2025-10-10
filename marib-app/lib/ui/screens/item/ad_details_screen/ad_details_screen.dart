@@ -100,6 +100,8 @@ import 'package:marib/data/model/item/cart_model.dart';
 import 'package:marib/data/model/item/purchase_options.dart';
 import 'package:marib/data/repositories/item/item_purchase_options_repository.dart';
 
+import 'package:marib/data/constants/color_catalog.dart';
+import 'package:marib/utils/color_palette_utils.dart';
 
 
 
@@ -421,6 +423,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   String? _selectedVariantKey;
   ItemVariantStockOption? _selectedVariantStock;
   int? _lastPurchaseOptionsItemId;
+  int _selectedQuantity = 1;
 
   bool get isAddedByMe =>
       (_currentItem.user?.id != null
@@ -592,6 +595,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       _selectedAttributes = sanitized;
       _selectedVariantKey = _computeVariantKey(options, sanitized);
       _selectedVariantStock = _findVariantStock(_selectedVariantKey);
+      _selectedQuantity = 1;
+      _enforceQuantityConstraints();
       _currentItem = _currentItem.copyWith(
         price: options.basePrice,
         finalPrice: options.finalPrice,
@@ -721,6 +726,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       _selectedAttributes = sanitized;
       _selectedVariantKey = _computeVariantKey(options, sanitized);
       _selectedVariantStock = _findVariantStock(_selectedVariantKey);
+      _enforceQuantityConstraints();
     }
 
     if (mounted) {
@@ -729,7 +735,43 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       update();
     }
   }
+  void _enforceQuantityConstraints() {
+    if (_selectedQuantity < 1) {
+      _selectedQuantity = 1;
+    }
 
+    final int? limit = _selectedVariantStock?.availableStock;
+    if (limit != null) {
+      if (limit <= 0) {
+        _selectedQuantity = 1;
+      } else if (_selectedQuantity > limit) {
+        _selectedQuantity = limit;
+      }
+    }
+  }
+
+  void _incrementQuantity() {
+    final int? limit = _selectedVariantStock?.availableStock;
+    if (limit != null && limit > 0 && _selectedQuantity >= limit) {
+      return;
+    }
+
+    setState(() {
+      _selectedQuantity += 1;
+      _enforceQuantityConstraints();
+    });
+  }
+
+  void _decrementQuantity() {
+    if (_selectedQuantity <= 1) {
+      return;
+    }
+
+    setState(() {
+      _selectedQuantity -= 1;
+      _enforceQuantityConstraints();
+    });
+  }
 
   int? _resolveSellerId(ItemModel item) {
     if (item.user?.id != null) {
@@ -1212,6 +1254,10 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     void updateState() {
       categoryId = _currentItem.category?.id ?? _currentItem.categoryId;
       combineImages();
+      _selectedQuantity = 1;
+      _selectedAttributes = <String, String>{};
+      _selectedVariantKey = null;
+      _selectedVariantStock = null;
     }
 
     if (fromInit) {
@@ -1386,7 +1432,10 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
     final ItemPurchaseOptions? options = _purchaseOptions;
     if (options == null) {
-      return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: _buildQuantitySelector(),
+      );
     }
 
     final List<Widget> children = <Widget>[];
@@ -1436,11 +1485,17 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       }
     }
 
+
+    if (children.isNotEmpty) {
+      children.add(const SizedBox(height: 20));
+    }
+
+    children.add(_buildQuantitySelector());
+
     final ItemDiscount? discount = options.discount;
     if (discount != null) {
-      if (children.isNotEmpty) {
-        children.add(const SizedBox(height: 20));
-      }
+      children.add(const SizedBox(height: 20));
+
       final bool active =
           discount.isActive || options.finalPrice < options.basePrice;
       children.add(
@@ -1492,9 +1547,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       );
     }
 
-    if (children.isEmpty) {
-      return const SizedBox.shrink();
-    }
+
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -1528,6 +1581,12 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
           ),
         ],
       );
+    }
+
+    final bool isColorAttribute = _isColorAttribute(attribute);
+
+    if (isColorAttribute) {
+      return _buildColorAttributeSelector(attribute, values);
     }
 
     final bool isRequired = attribute.requiredForCheckout;
@@ -1572,6 +1631,209 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       ],
     );
   }
+
+
+  bool _isColorAttribute(ItemPurchaseAttributeOption attribute) {
+    final String key = attribute.key.toLowerCase();
+    final String? type = attribute.type?.toLowerCase();
+    final String? uiType = attribute.uiType?.toLowerCase();
+
+    if (type == 'color' || uiType == 'color') {
+      return true;
+    }
+
+    if (key.contains('color') || key.contains('colour') || key.contains('اللون')) {
+      return true;
+    }
+
+    final String name = attribute.name.toLowerCase();
+    if (name.contains('color') || name.contains('colour') || name.contains('اللون')) {
+      return true;
+    }
+
+    return false;
+  }
+
+  Widget _buildColorAttributeSelector(
+      ItemPurchaseAttributeOption attribute,
+      List<String> values,
+      ) {
+    final ThemeData theme = Theme.of(context);
+    final TextStyle? labelStyle =
+    theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600);
+    final TextStyle? chipTextStyle = theme.textTheme.bodyMedium;
+    final String? currentValue = _selectedAttributes[attribute.key];
+
+    final Set<String> seenValues = <String>{};
+    final List<_ColorChoiceDescriptor> descriptors = <_ColorChoiceDescriptor>[];
+
+    for (final String value in values) {
+      if (value.isEmpty) {
+        continue;
+      }
+      if (!seenValues.add(value)) {
+        continue;
+      }
+
+      final _ColorChoiceDescriptor descriptor =
+      _ColorChoiceDescriptor.fromRawValue(
+        rawValue: value,
+        context: context,
+      );
+
+      if (descriptor.displayLabel.isNotEmpty) {
+        descriptors.add(descriptor);
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '${attribute.name}${attribute.requiredForCheckout ? ' *' : ''}',
+          style: labelStyle,
+        ),
+        const SizedBox(height: 10),
+        if (descriptors.isEmpty)
+          Text(
+            'لا توجد قيم محددة لهذه السمة.',
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+          )
+        else
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: descriptors.map((descriptor) {
+              final bool selected = currentValue == descriptor.rawValue;
+              final Color borderColor = selected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.outline.withOpacity(0.35);
+              final Color backgroundColor = selected
+                  ? theme.colorScheme.primary.withOpacity(0.10)
+                  : theme.colorScheme.surface;
+              final Color textColor = selected
+                  ? theme.colorScheme.primary
+                  : chipTextStyle?.color ?? theme.colorScheme.onSurface;
+
+              return GestureDetector(
+                onTap: () => _onAttributeSelectionChanged(
+                  attribute.key,
+                  descriptor.rawValue,
+                ),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: backgroundColor,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: borderColor, width: 1.2),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: descriptor.swatchColor ?? Colors.transparent,
+                          border: Border.all(
+                            color: descriptor.swatchColor == null
+                                ? theme.colorScheme.outline.withOpacity(0.4)
+                                : Colors.black.withOpacity(0.18),
+                          ),
+                        ),
+                        child: descriptor.swatchColor == null
+                            ? Icon(Icons.block, size: 12, color: theme.hintColor)
+                            : null,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        descriptor.displayLabel,
+                        style: chipTextStyle?.copyWith(
+                          color: textColor,
+                          fontWeight:
+                          selected ? FontWeight.w600 : chipTextStyle?.fontWeight,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(growable: false),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildQuantitySelector() {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colorScheme = theme.colorScheme;
+    final TextStyle? labelStyle =
+    theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600);
+    final TextStyle? valueStyle = theme.textTheme.titleMedium?.copyWith(
+      fontWeight: FontWeight.bold,
+      color: colorScheme.onSurface,
+    );
+
+    final int? stockLimit = _selectedVariantStock?.availableStock;
+    final bool canIncrement = stockLimit == null || stockLimit <= 0
+        ? true
+        : _selectedQuantity < stockLimit;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('الكمية', style: labelStyle),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: colorScheme.outline.withOpacity(0.35)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _QuantityActionButton(
+                icon: Icons.remove,
+                onTap: _selectedQuantity > 1 ? _decrementQuantity : null,
+              ),
+              const SizedBox(width: 16),
+              Text('$_selectedQuantity', style: valueStyle),
+              const SizedBox(width: 16),
+              _QuantityActionButton(
+                icon: Icons.add,
+                onTap: canIncrement ? _incrementQuantity : null,
+              ),
+            ],
+          ),
+        ),
+        if (stockLimit != null && stockLimit > 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              'الحد المتاح: $stockLimit',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.hintColor,
+              ),
+            ),
+          ),
+        if (stockLimit != null && stockLimit <= 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              'هذه التوليفة غير متوفرة حالياً في المخزون.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
 
   String _formatPrice(double value) {
     final NumberFormat formatter = NumberFormat.currency(
@@ -1644,6 +1906,16 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       throw CartBuildException('لم يتم العثور على مخزون للتوليفة المحددة.');
     }
 
+
+    if (stockOption != null &&
+        stockOption.availableStock > 0 &&
+        _selectedQuantity > stockOption.availableStock) {
+      throw CartBuildException(
+          'الكمية المطلوبة تتجاوز المتاح للتوليفة الحالية.');
+    }
+
+
+
     final double unitPrice = options?.finalPrice ??
         item.finalPrice ??
         item.price ??
@@ -1669,7 +1941,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
     return Cart.fromItemModel(
       item,
-      quantity: 1,
+      quantity: _selectedQuantity,
       selectedCustomFields: customFields,
       variantKey: variantKey,
       variantAttributes: variantAttributes,
@@ -3805,6 +4077,148 @@ class _LoadingDetailsContent extends StatelessWidget {
       height: 60,
       width: double.infinity,
       borderRadius: 14,
+    );
+  }
+}
+
+
+class _QuantityActionButton extends StatelessWidget {
+  const _QuantityActionButton({
+    required this.icon,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colorScheme = theme.colorScheme;
+    final bool enabled = onTap != null;
+
+    final Color backgroundColor = enabled
+        ? colorScheme.primary.withOpacity(0.08)
+        : theme.disabledColor.withOpacity(0.08);
+    final Color borderColor = enabled
+        ? colorScheme.primary
+        : colorScheme.outline.withOpacity(0.25);
+    final Color iconColor = enabled
+        ? colorScheme.primary
+        : theme.disabledColor.withOpacity(0.6);
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: enabled ? onTap : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: borderColor, width: 1),
+        ),
+        child: Icon(icon, size: 18, color: iconColor),
+      ),
+    );
+  }
+}
+
+class _ColorChoiceDescriptor {
+  const _ColorChoiceDescriptor({
+    required this.rawValue,
+    required this.displayLabel,
+    required this.swatchColor,
+  });
+
+  final String rawValue;
+  final String displayLabel;
+  final Color? swatchColor;
+
+  static final RegExp _hexPattern = RegExp(r'#?[0-9a-fA-F]{6}');
+
+  factory _ColorChoiceDescriptor.fromRawValue({
+    required String rawValue,
+    required BuildContext context,
+  }) {
+    final String original = rawValue;
+    final String trimmed = rawValue.trim();
+    if (trimmed.isEmpty) {
+      return const _ColorChoiceDescriptor(
+        rawValue: '',
+        displayLabel: '',
+        swatchColor: null,
+      );
+    }
+
+    String label = trimmed;
+    Color? color;
+    String? resolvedHex;
+
+    final RegExpMatch? match = _hexPattern.firstMatch(trimmed);
+    if (match != null) {
+      resolvedHex = ColorCatalog.sanitizeHex(match.group(0)!);
+    } else {
+      final String normalized = trimmed.toLowerCase();
+      for (final ColorPaletteEntry entry in ColorPaletteHelper.entries) {
+        final String fallback = entry.fallbackLabel.toLowerCase();
+        final String englishKey = entry.labelKey
+            .replaceFirst('colorPalette', '')
+            .toLowerCase();
+        if (normalized == fallback || normalized == englishKey) {
+          resolvedHex = entry.normalizedHex;
+          break;
+        }
+      }
+    }
+
+    if (resolvedHex != null && resolvedHex.isNotEmpty) {
+      color = ColorPaletteHelper.tryParseColor(resolvedHex);
+      final String cleaned = trimmed
+          .replaceAll(_hexPattern, '')
+          .replaceAll(RegExp(r'[|:_\-]+'), ' ')
+          .trim();
+
+      final String friendly = ColorCatalog.nameForHex(
+        resolvedHex,
+        context: context,
+      );
+
+      if (cleaned.isNotEmpty) {
+        label = cleaned;
+      } else if (friendly.isNotEmpty) {
+        label = friendly;
+      } else {
+        label = '#$resolvedHex';
+      }
+    } else {
+      final String normalized = label.toLowerCase();
+      for (final ColorPaletteEntry entry in ColorPaletteHelper.entries) {
+        final String fallback = entry.fallbackLabel.toLowerCase();
+        final String englishKey = entry.labelKey
+            .replaceFirst('colorPalette', '')
+            .toLowerCase();
+        if (normalized == fallback || normalized == englishKey) {
+          color = entry.color;
+          final String friendly = entry.label(context);
+          if (friendly.isNotEmpty) {
+            label = friendly;
+          } else {
+            label = entry.fallbackLabel;
+          }
+          break;
+        }
+      }
+    }
+
+    if (label.isEmpty) {
+      label = trimmed.isNotEmpty ? trimmed : original;
+    }
+
+    return _ColorChoiceDescriptor(
+      rawValue: original,
+      displayLabel: label,
+      swatchColor: color,
     );
   }
 }

@@ -1649,10 +1649,9 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
         ),
       ...values.map(
             (String value) => _AttributeValueDescriptor(
-
+              value: value,
               label: value,
               isOptional: false,
-          child: Text(value),
         ),
       ),
     ];

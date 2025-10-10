@@ -215,6 +215,7 @@ class AdInfoSection {
       if (priceText == null) {
         return const SizedBox();
       }
+      final Color accent = context.color.territoryColor;
 
       final TextStyle currencyStyle = TextStyle(
         fontSize: context.font.normal + 2,
@@ -223,7 +224,6 @@ class AdInfoSection {
         height: 1.1,
       );
 
-      final Color accent = context.color.territoryColor;
       final TextStyle valueStyle = TextStyle(
         fontSize: context.font.larger + 2,
         fontWeight: FontWeight.w800,

@@ -4,6 +4,7 @@ import 'package:marib/data/model/custom_field/custom_field_model.dart'
     show CustomFieldColorEntry, parseCustomFieldColorEntries;
 
 import 'package:marib/data/model/item/item_model.dart';
+import 'package:marib/utils/variant_key.dart';
 
 
 bool _looksLikeColorAttribute(
@@ -223,8 +224,11 @@ class ItemVariantStockOption {
   });
 
   factory ItemVariantStockOption.fromJson(Map<String, dynamic> json) {
+    final String rawVariantKey = _normalizeString(json['variant_key']) ?? '';
+    final String normalizedVariantKey =
+    rawVariantKey.isEmpty ? '' : VariantKeyCodec.canonicalize(rawVariantKey);
     return ItemVariantStockOption(
-      variantKey: _normalizeString(json['variant_key']) ?? '',
+      variantKey: normalizedVariantKey,
       stock: _parseInt(json['stock']) ?? 0,
       reservedStock: _parseInt(json['reserved_stock']) ?? 0,
       availableStock: _parseInt(json['available_stock']) ?? 0,

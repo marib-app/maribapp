@@ -5,6 +5,7 @@ import 'package:marib/data/cubits/item/fetch_item_purchase_options_cubit.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/data/repositories/item/item_purchase_options_repository.dart';
 import 'package:marib/data/model/item/purchase_options.dart';
+import 'package:marib/utils/variant_key.dart';
 
 class ProductPurchaseOptionsScreen extends StatefulWidget {
   const ProductPurchaseOptionsScreen({super.key, required this.item});
@@ -272,7 +273,7 @@ class _StockTab extends StatelessWidget {
                 (ItemVariantStockOption stock) => DataRow(
               cells: [
                 DataCell(Text(stock.variantKey.isNotEmpty
-                    ? stock.variantKey
+                    ? VariantKeyCodec.describe(stock.variantKey)
                     : '—')),
                 DataCell(Text(stock.stock.toString(), style: textTheme.bodyMedium)),
                 DataCell(Text(stock.reservedStock.toString(),

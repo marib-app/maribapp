@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 use App\Support\ColorFieldParser;
+use App\Support\VariantKeyNormalizer;
 
 class ItemPurchaseManagementController extends Controller
 {
@@ -279,11 +280,26 @@ class ItemPurchaseManagementController extends Controller
                 continue;
             }
 
-            $variantKey = $this->stringifyValue($row['variant_key'] ?? '');
+            $rawKey = $this->stringifyValue($row['variant_key'] ?? '');
             $stock = $this->normalizeStockAmount($row['stock'] ?? null);
 
-            $normalizedRows[$variantKey] = [
-                'variant_key' => $variantKey,
+            $attributes = VariantKeyNormalizer::decode($rawKey);
+            $canonicalKey = $attributes === []
+                ? ''
+                : VariantKeyNormalizer::normalize($rawKey);
+
+            $legacyKey = $attributes === []
+                ? ''
+                : VariantKeyNormalizer::legacyFromAttributes($attributes);
+
+            $normalizedRows[$canonicalKey] = [
+                'variant_key' => $canonicalKey,
+                'legacy_keys' => array_values(array_filter([
+                    $legacyKey !== '' && $legacyKey !== $canonicalKey ? $legacyKey : null,
+                    $rawKey !== '' && ! in_array($rawKey, [$canonicalKey, $legacyKey], true) ? $rawKey : null,
+                ])),
+
+
                 'stock' => $stock,
             ];
         }
@@ -292,16 +308,37 @@ class ItemPurchaseManagementController extends Controller
             $affectedKeys = array_keys($normalizedRows);
 
             foreach ($normalizedRows as $row) {
-                ItemStock::updateOrCreate(
-                    [
-                        'item_id' => $item->getKey(),
+                $query = ItemStock::query()
+                    ->where('item_id', $item->getKey())
+                    ->where(function ($builder) use ($row) {
+                        $builder->where('variant_key', $row['variant_key']);
+
+                        foreach ($row['legacy_keys'] as $legacyKey) {
+                            $builder->orWhere('variant_key', $legacyKey);
+                        }
+                    })
+                    ->lockForUpdate();
+
+                /** @var ItemStock|null $existing */
+                $existing = $query->first();
+
+                if ($existing) {
+                    $existing->fill([
                         'variant_key' => $row['variant_key'],
-                    ],
-                    [
                         'stock' => $row['stock'],
                         'reserved_stock' => 0,
-                    ]
-                );
+                    ])->save();
+                } else {
+                    ItemStock::create([
+
+
+                        'item_id' => $item->getKey(),
+                        'variant_key' => $row['variant_key'],
+
+                        'stock' => $row['stock'],
+                        'reserved_stock' => 0,
+                    ]);
+                }
             }
 
             if ($affectedKeys !== []) {

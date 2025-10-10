@@ -11,6 +11,7 @@ use App\Support\ColorFieldParser;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
+use App\Support\VariantKeyNormalizer;
 
 class ItemPurchaseOptionsService
 {
@@ -221,7 +222,11 @@ class ItemPurchaseOptionsService
             return;
         }
 
-        $record = $this->stockQuery($item, $variantKey, true)->first();
+        $keys = VariantKeyNormalizer::expand($variantKey);
+        $record = $this->stockQuery($item, $keys, true)->first();
+
+        $record = $this->ensureCanonicalStockKey($record, $keys[0] ?? '');
+
 
         if (! $record) {
             throw ValidationException::withMessages([
@@ -267,9 +272,17 @@ class ItemPurchaseOptionsService
             ];
         })->values()->all();
 
-        $stocks = $item->stocks->map(static function (ItemStock $stock) {
+        $stocks = $item->stocks->map(function (ItemStock $stock) {
+            $currentKey = (string) ($stock->variant_key ?? '');
+            $normalizedKey = VariantKeyNormalizer::normalize($currentKey);
+
+            if ($normalizedKey !== $currentKey) {
+                $stock->variant_key = $normalizedKey;
+                $stock->save();
+            }
+            
             return [
-                'variant_key' => $stock->variant_key,
+                'variant_key' => $normalizedKey,
                 'stock' => (int) $stock->stock,
                 'reserved_stock' => (int) $stock->reserved_stock,
                 'available_stock' => $stock->available,
@@ -362,25 +375,62 @@ class ItemPurchaseOptionsService
             return null;
         }
 
-        $normalizedKey = $variantKey === '' ? '' : $variantKey;
+        $keys = VariantKeyNormalizer::expand($variantKey);
 
         if ($item->relationLoaded('stocks')) {
-            return $item->stocks->firstWhere('variant_key', $normalizedKey);
+            foreach ($keys as $candidate) {
+                $record = $item->stocks->firstWhere('variant_key', $candidate);
+
+                if ($record) {
+                    return $this->ensureCanonicalStockKey($record, $keys[0] ?? '');
+                }
+            }
+
+            return null;
+        
         }
 
-        return $this->stockQuery($item, $normalizedKey)->first();
+        $record = $this->stockQuery($item, $keys)->first();
+
+        return $this->ensureCanonicalStockKey($record, $keys[0] ?? '');
+    
     }
 
-    private function stockQuery(Item $item, string $variantKey, bool $lock = false)
+    private function stockQuery(Item $item, array $variantKeys, bool $lock = false)
     {
         $query = ItemStock::query()
-            ->where('item_id', $item->getKey())
-            ->where('variant_key', $variantKey);
+            ->where('item_id', $item->getKey());
+
+        if (count($variantKeys) === 1) {
+            $query->where('variant_key', $variantKeys[0]);
+        } else {
+            $query->whereIn('variant_key', $variantKeys);
+        }
+
+
 
         if ($lock) {
             $query->lockForUpdate();
         }
 
         return $query;
+    }
+
+
+    private function ensureCanonicalStockKey(?ItemStock $stock, string $canonicalKey): ?ItemStock
+    {
+        if (! $stock) {
+            return null;
+        }
+
+        $currentKey = (string) ($stock->variant_key ?? '');
+
+        if ($canonicalKey !== '' && $currentKey !== $canonicalKey) {
+            $stock->variant_key = $canonicalKey;
+            $stock->save();
+            $stock->variant_key = $canonicalKey;
+        }
+
+        return $stock;
     }
 }

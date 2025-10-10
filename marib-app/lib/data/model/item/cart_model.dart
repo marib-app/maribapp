@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/utils/delivery_department.dart';
 import 'package:marib/utils/currency_utils.dart';
+import 'package:marib/utils/variant_key.dart';
 
 
 
@@ -318,8 +319,16 @@ class Cart extends ItemModel {
 
     final String? variantId =
     _stringOrNull(json['variant_id'] ?? pivotMap?['variant_id']);
-    final String? variantKey =
+    String? variantKey =
     _stringOrNull(json['variant_key'] ?? pivotMap?['variant_key']);
+
+    if (variantKey != null && variantKey.trim().isNotEmpty) {
+      final String normalized = VariantKeyCodec.canonicalize(variantKey);
+      variantKey = normalized.isEmpty ? null : normalized;
+    } else {
+      variantKey = null;
+    }
+
 
     final Map<String, dynamic>? variantAttributes =
     _parseJsonMap(json['variant_attributes'] ?? pivotMap?['variant_attributes']);

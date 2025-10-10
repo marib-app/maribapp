@@ -16,6 +16,7 @@ use App\Services\DepartmentSupportService;
 use App\Services\ItemPurchaseOptionsService;
 use Illuminate\Support\Arr;
 use App\Services\DepartmentPolicyService;
+use App\Support\VariantKeyNormalizer;
 
 use App\Models\Coupon;
 use Illuminate\Support\Str;
@@ -142,7 +143,7 @@ class CartController extends Controller
         $variantKey = $this->itemPurchaseOptionsService->generateVariantKey($item, $normalizedAttributes);
 
         if (array_key_exists('variant_key', $validated)) {
-            $expectedVariantKey = trim((string) ($validated['variant_key'] ?? ''));
+            $expectedVariantKey = VariantKeyNormalizer::normalize($validated['variant_key'] ?? null);
 
             if ($expectedVariantKey !== $variantKey) {
                 return $this->validationError(
@@ -376,14 +377,14 @@ class CartController extends Controller
 
             $variantKey = $this->itemPurchaseOptionsService->generateVariantKey($itemModel, $normalizedAttributes);
 
-            if (array_key_exists('variant_key', $validated)) {
-                $expectedVariantKey = trim((string) ($validated['variant_key'] ?? ''));
-                if ($expectedVariantKey !== $variantKey) {
-                    return $this->validationError(
-                        __('تم تغيير خيارات المنتج بطريقة غير صالحة. يرجى إعادة المحاولة.'),
-                        422,
-                        'invalid_variant_key'
-                    );
+        if (array_key_exists('variant_key', $validated)) {
+            $expectedVariantKey = VariantKeyNormalizer::normalize($validated['variant_key'] ?? null);
+            if ($expectedVariantKey !== $variantKey) {
+                return $this->validationError(
+                    __('تم تغيير خيارات المنتج بطريقة غير صالحة. يرجى إعادة المحاولة.'),
+                    422,
+                    'invalid_variant_key'
+                );
                 }
             }
 

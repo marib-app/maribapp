@@ -9,6 +9,7 @@ import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/data/model/item/purchase_options.dart';
 import 'package:marib/data/repositories/item/item_purchase_options_repository.dart';
 import 'package:marib/utils/errorFilter.dart';
+import 'package:marib/utils/variant_key.dart';
 
 
 
@@ -1380,13 +1381,24 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
   }
 
   String _buildVariantKey(Map<String, String> attributes) {
-    final SplayTreeMap<String, String> ordered =
-    SplayTreeMap<String, String>.from(attributes);
-    final List<String> parts = <String>[];
-    ordered.forEach((String key, String value) {
-      parts.add('$key:$value');
+    if (attributes.isEmpty) {
+      return '';
+    }
+
+    final Map<String, String> normalized = <String, String>{};
+    attributes.forEach((String key, String value) {
+      final String trimmedKey = key.trim();
+      final String trimmedValue = value.trim();
+      if (trimmedKey.isNotEmpty) {
+        normalized[trimmedKey] = trimmedValue;
+      }
     });
-    return parts.join('|');
+
+    if (normalized.isEmpty) {
+      return '';
+    }
+
+    return VariantKeyCodec.encode(Map<String, Object?>.from(normalized));
   }
 
   void _recomputePreviewFinalPrice() {

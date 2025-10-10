@@ -26,6 +26,7 @@ class WalletAdminController extends Controller
         'all',
         'top-ups',
         'payments',
+        'transfers',
         'refunds',
     ];
 
@@ -207,7 +208,17 @@ class WalletAdminController extends Controller
                     });
                 break;
             case 'payments':
-                $query->where('type', 'debit');
+                $query->where('type', 'debit')
+                    ->where(function (Builder $builder) {
+                        $builder->whereNull('meta->reason')
+                            ->orWhere('meta->reason', '!=', 'wallet_transfer');
+                    });
+                break;
+            case 'transfers':
+                $query->where(function (Builder $builder) {
+                    $builder->where('meta->reason', 'wallet_transfer')
+                        ->orWhere('meta->context', 'wallet_transfer');
+                });
                 break;
             case 'refunds':
                 $query->where('type', 'credit')

@@ -8,6 +8,7 @@ class WalletTransaction {
     this.beforeBalance,
     this.afterBalance,
     this.classification,
+    this.category,
     this.description,
     this.references = const [],
     this.referenceCode,
@@ -26,6 +27,7 @@ class WalletTransaction {
   final double? afterBalance;
   final String? classification;
   final String? description;
+  final String? category;
   final List<String> references;
   final String? referenceCode;
   final DateTime? createdAt;
@@ -53,6 +55,7 @@ class WalletTransaction {
     Map<String, dynamic>? metadata,
     List<WalletFilter>? appliedFilters,
     bool? highlighted,
+    String? category,
   }) {
     return WalletTransaction(
       id: id ?? this.id,
@@ -61,6 +64,7 @@ class WalletTransaction {
       beforeBalance: beforeBalance ?? this.beforeBalance,
       afterBalance: afterBalance ?? this.afterBalance,
       classification: classification ?? this.classification,
+      category: category ?? this.category,
       description: description ?? this.description,
       references: references ?? this.references,
       referenceCode: referenceCode ?? this.referenceCode,
@@ -79,6 +83,7 @@ class WalletTransaction {
     final amountDetails = _extractAmountDetails(amountSource);
     final amount = amountDetails.amount ?? 0.0;
     final appliedFilters = WalletFilter.fromResponse(json['filters'] ?? json['applied_filters']);
+    final category = _parseString(json['category'] ?? json['classification']);
 
     final references = _parseReferences(json);
 
@@ -96,6 +101,7 @@ class WalletTransaction {
       beforeBalance: _parseNullableDouble(json['before_balance'] ?? json['balance_before']),
       afterBalance: _parseNullableDouble(json['after_balance'] ?? json['balance_after']),
       classification: _parseString(json['classification'] ?? json['type'] ?? json['category']),
+      category: category,
       description: _parseString(json['description'] ?? json['title'] ?? json['message']),
       references: references,
       referenceCode: _parseString(json['reference'] ?? json['reference_code'] ?? json['receipt']),

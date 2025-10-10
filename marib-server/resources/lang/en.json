@@ -278,5 +278,10 @@
     "Expiry Status": "Expiry Status",
     "Leave empty for no expiry date": "Leave empty for no expiry date",
     "No expiry date": "No expiry date",
-    "No icon available": "No icon available"
+    "No icon available": "No icon available",
+    "wallet.filters.all": "All transactions",
+    "wallet.filters.top_ups": "Deposits",
+    "wallet.filters.payments": "Purchases",
+    "wallet.filters.transfers": "Transfers",
+    "wallet.filters.refunds": "Refunds"
 }

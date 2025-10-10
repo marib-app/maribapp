@@ -37,7 +37,11 @@ class WalletTransactionResource extends JsonResource
         $reason = data_get($this->meta, 'reason');
 
         if ($reason === ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP || $this->manual_payment_request_id) {
-            return 'top-up';
+            return 'deposit';
+        }
+
+        if ($reason === 'wallet_transfer' || data_get($this->meta, 'context') === 'wallet_transfer') {
+            return 'transfer';
         }
 
         if (in_array($reason, ['refund', 'wallet_refund'], true)) {
@@ -45,7 +49,11 @@ class WalletTransactionResource extends JsonResource
         }
 
         if ($this->type === 'debit') {
-            return 'payment';
+            return 'purchase';
+        }
+
+        if ($this->type === 'credit') {
+            return 'deposit';
         }
 
         return (string) $this->type;

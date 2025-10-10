@@ -114,6 +114,34 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     );
   }
 
+
+  String _localizedFilterLabel(BuildContext context, String value, String fallback) {
+    final normalized = value.toLowerCase().trim();
+    switch (normalized) {
+      case 'top-ups':
+      case 'top_up':
+      case 'deposit':
+      case 'deposits':
+        return 'walletFilterDeposits'.translate(context);
+      case 'payments':
+      case 'payment':
+      case 'purchase':
+      case 'purchases':
+        return 'walletFilterPurchases'.translate(context);
+      case 'transfers':
+      case 'transfer':
+        return 'walletFilterTransfers'.translate(context);
+      case 'refunds':
+      case 'refund':
+        return 'walletFilterRefunds'.translate(context);
+    }
+    if (fallback.isNotEmpty) {
+      return fallback;
+    }
+    return value.isNotEmpty ? value : 'walletFilterAll'.translate(context);
+  }
+
+
   WalletSummary? _activeSummary() {
     final state = context.read<WalletSummaryCubit>().state;
     if (state is WalletSummaryLoadSuccess) {
@@ -544,7 +572,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
             children: [
               _FilterChip(
                 label: 'walletFilterAll'.translate(context),
-                selected: activeFilter == null,
+                selected: activeFilter == null || activeFilter == 'all',
                 onSelected: (_) => context.read<WalletTransactionsCubit>().clearFilters(),
               ),
               const SizedBox(width: 8),
@@ -552,7 +580,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
                     (filter) => Padding(
                   padding: const EdgeInsetsDirectional.only(end: 8),
                   child: _FilterChip(
-                    label: filter.label,
+                    label: _localizedFilterLabel(context, filter.value, filter.label),
                     selected: activeFilter == filter.value,
                     onSelected: (_) =>
                         context.read<WalletTransactionsCubit>().applyFilter(filter.value),
@@ -676,6 +704,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
         tiles.add(_TransactionTile(
           transaction: tx,
           formatAmount: _formatAmount,
+          dateFormat: _dateTimeFormat,
         ));
       }
 
@@ -1012,49 +1041,143 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final onPrimary = theme.colorScheme.onPrimary;
+    final accent = context.color.territoryColor;
+    final secondaryAccent = context.color.forthColor.withOpacity(0.9);
+    final captionColor = onPrimary.withOpacity(0.75);
+
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Container(
-        padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: context.color.secondaryColor,
-          border: Border.all(color: context.color.borderColor.withOpacity(0.2)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'walletBalance'.translate(context),
-              style: Theme.of(context).textTheme.titleMedium,
+          gradient: LinearGradient(
+            colors: [accent, secondaryAccent],
+            begin: AlignmentDirectional.centerStart,
+            end: AlignmentDirectional.centerEnd,
+          ),
+          borderRadius: BorderRadius.circular(26),
+          boxShadow: [
+            BoxShadow(
+              color: secondaryAccent.withOpacity(0.28),
+              blurRadius: 32,
+              offset: const Offset(0, 18),
             ),
-            const SizedBox(height: 12),
-            isLoading
-                ? LinearProgressIndicator(
-              minHeight: 10,
-              color: context.color.territoryColor,
-              backgroundColor: context.color.borderColor.withOpacity(.3),
-            )
-                : Text(
-              balanceText ?? '--',
-              style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                fontWeight: FontWeight.bold,
+          ],
+        ),
+        child: Stack(
+
+          children: [
+            Positioned(
+              top: -30,
+              right: -18,
+              child: Container(
+                width: 140,
+                height: 140,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.08),
+                  shape: BoxShape.circle,
+                ),
               ),
             ),
-            const SizedBox(height: 14),
-            Row(
+            Positioned(
+              bottom: -44,
+              left: -12,
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.05),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+        Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.schedule, size: 16),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    lastUpdated == null
-                        ? 'walletLastUpdatedUnknown'.translate(context)
-                        : UiUtils.formatDate(lastUpdated!.toIso8601String()),
-                    style: Theme.of(context).textTheme.bodySmall,
+          Row(
+          children: [
+          Container(
+          decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.18),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        padding: const EdgeInsets.all(12),
+        child: Icon(
+          Icons.account_balance_wallet_outlined,
+          size: 24,
+          color: onPrimary,
+        ),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Text(
+          'walletBalance'.translate(context),
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: onPrimary,
+            fontWeight: FontWeight.w600,
+          ) ??
+              TextStyle(
+                color: onPrimary,
+                fontSize: theme.textTheme.titleMedium?.fontSize ?? 18,
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+      ),
+      ],
                   ),
+                const SizedBox(height: 20),
+                if (isLoading)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      minHeight: 10,
+                      backgroundColor: Colors.white.withOpacity(0.2),
+                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                else
+                  Text(
+                    balanceText ?? '--',
+                    style: theme.textTheme.displaySmall?.copyWith(
+                      color: onPrimary,
+                      fontWeight: FontWeight.w800,
+                    ) ??
+                        TextStyle(
+                          color: onPrimary,
+                          fontSize: theme.textTheme.displaySmall?.fontSize ?? 36,
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Icon(Icons.schedule_rounded, size: 18, color: captionColor),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        lastUpdated == null
+                            ? 'walletLastUpdatedUnknown'.translate(context)
+                            : UiUtils.formatDate(lastUpdated!.toIso8601String()),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: captionColor,
+                          fontWeight: FontWeight.w500,
+                        ) ??
+                            TextStyle(
+                              color: captionColor,
+                              fontSize: theme.textTheme.bodySmall?.fontSize ?? 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
+          ),
             ),
           ],
         ),
@@ -1076,13 +1199,22 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final selectedColor = context.color.territoryColor.withOpacity(.16);
+    final borderColor = selected
+        ? context.color.territoryColor
+        : context.color.borderColor.withOpacity(0.6);
     return ChoiceChip(
       label: Text(label),
       selected: selected,
       onSelected: onSelected,
-      selectedColor: context.color.territoryColor.withOpacity(.15),
-      labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-        color: selected ? context.color.territoryColor : null,
+      side: BorderSide(color: borderColor),
+      backgroundColor: context.color.secondaryColor,
+      selectedColor: selectedColor,
+      elevation: 0,
+      labelStyle: theme.textTheme.bodyMedium?.copyWith(
+        color: selected ? context.color.territoryColor : theme.colorScheme.onSurface,
+        fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
       ),
     );
   }
@@ -1092,125 +1224,149 @@ class _TransactionTile extends StatelessWidget {
   const _TransactionTile({
     required this.transaction,
     required this.formatAmount,
+    required this.dateFormat,
   });
 
   final WalletTransaction transaction;
   final String Function(double amount, String? currency) formatAmount;
+  final DateFormat dateFormat;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isCredit = transaction.isCredit;
-    final accent = isCredit ? colorScheme.tertiary : Colors.redAccent;
-    final amountText = formatAmount(transaction.amount, transaction.currency);
+    final theme = Theme.of(context);
 
+    final amountText = formatAmount(transaction.amount, transaction.currency);
+    final accent = _resolveAccentColor(context);
+    final timestamp = transaction.createdAt == null
+        ? 'walletUnknownDate'.translate(context)
+        : dateFormat.format(transaction.createdAt!.toLocal());
+    final subtitle = _resolveSubtitle();
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         decoration: BoxDecoration(
-          color: transaction.highlighted
-              ? colorScheme.secondary.withOpacity(.2)
-              : context.color.secondaryColor,
-          borderRadius: BorderRadius.circular(14),
+          color: context.color.secondaryColor,
+          borderRadius: BorderRadius.circular(22),
           border: Border.all(
             color: transaction.highlighted
-                ? colorScheme.tertiary
-                : context.color.borderColor,
+                ? accent
+                : context.color.borderColor.withOpacity(0.45),
+            width: transaction.highlighted ? 1.4 : 1,
           ),
-          boxShadow: transaction.highlighted
-              ? [
+          boxShadow: [
+
             BoxShadow(
-              color: colorScheme.tertiary.withOpacity(.2),
-              offset: const Offset(0, 6),
-              blurRadius: 18,
+              color: transaction.highlighted
+                  ? accent.withOpacity(0.25)
+                  : Colors.black.withOpacity(0.04),
+              blurRadius: transaction.highlighted ? 28 : 16,
+              offset: const Offset(0, 12),
             ),
-          ]
-              : null,
+          ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: 10,
-                    height: 10,
+
                     decoration: BoxDecoration(
+                      color: accent.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    padding: const EdgeInsets.all(12),
+                    child: Icon(
+                      _resolveIcon(),
+                      size: 22,
                       color: accent,
-                      shape: BoxShape.circle,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 14),
                   Expanded(
-                    child: Text(
-                      transaction.classification ?? 'walletUnknownClassification'.translate(context),
-                      style: Theme.of(context).textTheme.titleMedium,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _classificationLabel(context),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        if (subtitle != null) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            subtitle,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.textTheme.bodyMedium?.color?.withOpacity(0.75),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
+                  const SizedBox(width: 12),
+
                   Text(
                     amountText,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: isCredit ? colorScheme.tertiary : Colors.red,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: accent,
+                      fontWeight: FontWeight.w800,
+                    ) ??
+                        TextStyle(
+                          color: accent,
+                          fontSize: theme.textTheme.titleMedium?.fontSize ?? 18,
+                          fontWeight: FontWeight.w800,
+                        ),
                   ),
                 ],
               ),
-              if (transaction.description != null && transaction.description!.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  transaction.description!,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ],
-              const SizedBox(height: 12),
+              const SizedBox(height: 18),
+
               Row(
                 children: [
-                  Icon(Icons.timelapse, size: 16, color: colorScheme.outline),
-                  const SizedBox(width: 6),
+                  Icon(Icons.schedule_rounded, size: 18, color: theme.colorScheme.outline),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      transaction.createdAt == null
-                          ? 'walletUnknownDate'.translate(context)
-                          : UiUtils.formatDate(transaction.createdAt!.toIso8601String()),
-                      style: Theme.of(context).textTheme.bodySmall,
+                      timestamp,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.outline,
+                      ),
                     ),
                   ),
                 ],
               ),
               if (transaction.references.isNotEmpty || transaction.referenceCode != null) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: 14),
                 Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
                     ...transaction.references
-                        .map(
-                          (ref) => Chip(
-                        label: Text(ref),
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                    )
+                        .map((ref) => _buildTag(context, ref, accent))
+
                         .toList(),
                     if (transaction.referenceCode != null)
-                      Chip(
-                        label: Text(transaction.referenceCode!),
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
+                      _buildTag(context, transaction.referenceCode!, accent),
+
                   ],
                 ),
               ],
               if (transaction.beforeBalance != null || transaction.afterBalance != null) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: 14),
                 Text(
                   'walletBalanceChange'
                       .translate(context)
                       .replaceFirst('{from}', (transaction.beforeBalance ?? 0).toStringAsFixed(2))
                       .replaceFirst('{to}', (transaction.afterBalance ?? 0).toStringAsFixed(2)),
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
                 ),
               ],
             ],
@@ -1219,4 +1375,116 @@ class _TransactionTile extends StatelessWidget {
       ),
     );
   }
+
+  String _classificationLabel(BuildContext context) {
+    final normalized = (transaction.category ?? transaction.classification ?? '')
+        .toLowerCase()
+        .trim();
+    switch (normalized) {
+      case 'deposit':
+      case 'top-up':
+      case 'top-ups':
+      case 'top_up':
+        return 'walletCategoryDeposit'.translate(context);
+      case 'transfer':
+      case 'wallet_transfer':
+        return 'walletCategoryTransfer'.translate(context);
+      case 'purchase':
+      case 'payment':
+      case 'payments':
+        return 'walletCategoryPurchase'.translate(context);
+      case 'refund':
+      case 'refunds':
+        return 'walletCategoryRefund'.translate(context);
+      default:
+        final fallback = transaction.classification ?? transaction.category;
+        if (fallback != null && fallback.trim().isNotEmpty) {
+          return fallback;
+        }
+        return 'walletUnknownClassification'.translate(context);
+    }
+  }
+
+  IconData _resolveIcon() {
+    final normalized = (transaction.category ?? transaction.classification ?? '')
+        .toLowerCase()
+        .trim();
+    switch (normalized) {
+      case 'transfer':
+      case 'wallet_transfer':
+        return Icons.swap_horiz_rounded;
+      case 'refund':
+      case 'refunds':
+        return Icons.reply_rounded;
+      case 'purchase':
+      case 'payment':
+      case 'payments':
+        return Icons.shopping_bag_outlined;
+      default:
+        return Icons.savings_outlined;
+    }
+  }
+
+  Color _resolveAccentColor(BuildContext context) {
+    final normalized = (transaction.category ?? transaction.classification ?? '')
+        .toLowerCase()
+        .trim();
+    if (normalized.contains('transfer')) {
+      return const Color(0xFF3A7AFE);
+    }
+    if (normalized.contains('refund')) {
+      return const Color(0xFF2AB795);
+    }
+    if (!transaction.isCredit) {
+      return Theme.of(context).colorScheme.error;
+    }
+    return context.color.territoryColor;
+  }
+
+  String? _resolveSubtitle() {
+    final description = transaction.description;
+    if (description != null && description.trim().isNotEmpty) {
+      return description.trim();
+    }
+
+    final reason = transaction.metadata['reason'];
+    if (reason is String && reason.trim().isNotEmpty) {
+      return reason.replaceAll('_', ' ').trim();
+    }
+
+    final applied = transaction.appliedFilters;
+    if (applied.isNotEmpty) {
+      final label = applied.first.label.trim();
+      if (label.isNotEmpty) {
+        return label;
+      }
+    }
+
+    return null;
+  }
+
+  Widget _buildTag(BuildContext context, String value, Color accent) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: accent.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accent.withOpacity(0.5)),
+      ),
+      child: Text(
+        value,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: accent,
+          fontWeight: FontWeight.w600,
+        ) ??
+            TextStyle(
+              color: accent,
+              fontSize: theme.textTheme.bodySmall?.fontSize ?? 12,
+              fontWeight: FontWeight.w600,
+            ),
+      ),
+    );
+  }
+
 }

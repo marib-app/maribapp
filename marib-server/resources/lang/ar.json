@@ -645,5 +645,11 @@
     "View Under Review": "عرض الطلبات قيد المراجعة",
     "payment_under_review": "الدفع قيد المراجعة.",
     "payment_under_review_with_reference": "لا يمكن تحديث الطلب لوجود طلب دفع يدوي رقم #:id قيد المراجعة. يرجى إتمام المراجعة عبر الرابط: :url",
-    "manual_payment_request_already_open": "يوجد طلب دفع يدوي مفتوح لهذا العنصر بالفعل (رقم #:id). يرجى مراجعة الطلب الحالي قبل إنشاء طلب جديد."
+    "manual_payment_request_already_open": "يوجد طلب دفع يدوي مفتوح لهذا العنصر بالفعل (رقم #:id). يرجى مراجعة الطلب الحالي قبل إنشاء طلب جديد.",
+    "wallet.filters.all": "جميع المعاملات",
+    "wallet.filters.top_ups": "الإيداعات",
+    "wallet.filters.payments": "المشتريات",
+    "wallet.filters.transfers": "التحويلات",
+    "wallet.filters.refunds": "المبالغ المستردة"
+
 }

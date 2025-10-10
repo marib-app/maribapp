@@ -165,6 +165,7 @@ class ApiController extends Controller {
         'all',
         'top-ups',
         'payments',
+        'transfers',
         'refunds',
     ];
 
@@ -2793,10 +2794,8 @@ class ApiController extends Controller {
                 'last_transaction_at' => optional($latestTransaction?->created_at)->toIso8601String(),
                 'updated_at' => optional($walletAccount->updated_at)->toIso8601String(),
                 'fetched_at' => now()->toIso8601String(),
-                'filters' => [
-                    'available' => self::WALLET_TRANSACTION_FILTERS,
-                    'default' => 'all',
-                ],
+                'filters' => $this->buildWalletFilterPayload(null, true),
+
             ];
 
             ResponseService::successResponse('Wallet summary fetched successfully', $data);
@@ -2852,10 +2851,8 @@ class ApiController extends Controller {
                     'current' => (float) $walletAccount->balance,
                     'currency' => strtoupper(config('app.currency', 'SAR')),
                 ],
-                'filters' => [
-                    'applied' => $filter,
-                    'available' => self::WALLET_TRANSACTION_FILTERS,
-                ],
+                'filters' => $this->buildWalletFilterPayload($filter),
+
                 'transactions' => $transactions,
                 'pagination' => [
                     'current_page' => $paginator->currentPage(),
@@ -4538,11 +4535,25 @@ class ApiController extends Controller {
                     ->where(function (Builder $builder) {
                         $builder->whereNotNull('manual_payment_request_id')
                             ->orWhere('meta->reason', ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP)
-                            ->orWhere('meta->reason', 'wallet_top_up');
-                    });
+                            ->orWhere('meta->reason', 'wallet_top_up')
+                            ->orWhere('meta->reason', 'admin_manual_credit');
+                        
+                        });
                 break;
             case 'payments':
-                $query->where('type', 'debit');
+                $query->where('type', 'debit')
+                    ->where(function (Builder $builder) {
+                        $builder->whereNull('meta->reason')
+                            ->orWhere('meta->reason', '!=', 'wallet_transfer');
+                    });
+                break;
+            case 'transfers':
+                $query->where(function (Builder $builder) {
+                    $builder->where('meta->reason', 'wallet_transfer')
+                        ->orWhere('meta->context', 'wallet_transfer');
+                });
+
+
                 break;
             case 'refunds':
                 $query->where('type', 'credit')
@@ -4556,7 +4567,45 @@ class ApiController extends Controller {
         }
     }
 
+    /**
+     * @return array{available: array<int, array<string, string>>, applied?: string, default?: string}
+     */
+    private function buildWalletFilterPayload(?string $applied = null, bool $includeDefault = false): array
+    {
+        $available = array_map(function (string $value) {
+            return [
+                'value' => $value,
+                'label' => $this->walletFilterLabel($value),
+            ];
+        }, self::WALLET_TRANSACTION_FILTERS);
 
+        $payload = [
+            'available' => $available,
+        ];
+
+        if ($applied !== null) {
+            $payload['applied'] = $applied;
+        }
+
+        if ($includeDefault) {
+            $payload['default'] = 'all';
+        }
+
+        return $payload;
+    }
+
+    private function walletFilterLabel(string $filter): string
+    {
+        return match ($filter) {
+            'top-ups' => __('wallet.filters.top_ups'),
+            'payments' => __('wallet.filters.payments'),
+            'transfers' => __('wallet.filters.transfers'),
+            'refunds' => __('wallet.filters.refunds'),
+            default => __('wallet.filters.all'),
+        };
+    }
+
+    
     private function performWalletTransfer(
         User $sender,
         User $recipient,

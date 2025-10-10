@@ -166,11 +166,11 @@
                                     <div class="col-md-6">
                                         <div class="col-md-12 form-group mandatory">
                                             <label for="slug" class="mandatory form-label">{{ __('Slug') }}</label>
-                                            <input type="text" name="slug" id="slug" class="form-control feature-section-slug" data-parsley-required="true" data-initial-slug="{{ old("slug") }}" data-enforce-filter-slug="true" readonly>
+                                            <input type="text" name="slug" id="slug" class="form-control feature-section-slug" data-parsley-required="true" data-initial-slug="{{ old("slug") }}" data-enforce-filter-slug="true">
 
 
                                             <small class="form-text text-muted" id="slug_filter_hint" data-template="{{ __('Allowed slugs for this filter: :list') }}">{{ __('Allowed slugs for this filter: :list', ['list' => $defaultFilterHint ?: __('N/A')]) }}</small>
-                                            <small class="form-text text-muted">{{ __('The slug is generated automatically from the selected filter. It is different from the root_categories setting, which only controls the default category tree.') }}</small>
+                                            <small class="form-text text-muted">{{ __('The slug is prefilled from the selected filter. You can customize it as long as it matches one of the allowed slugs. It is different from the root_categories setting, which only controls the default category tree.') }}</small>
 
 
 
@@ -416,10 +416,10 @@
                                                 <div class="form-group mb-3">
                                                     <label for="edit_slug" class="form-label fw-bold">{{ __('Slug') }} <span class="text-danger">*</span></label>
 
-                                                    <input type="text" name="slug" id="edit_slug" class="form-control edit-feature-section-slug" data-parsley-required="true" data-enforce-filter-slug="true" readonly>
+                                                    <input type="text" name="slug" id="edit_slug" class="form-control edit-feature-section-slug" data-parsley-required="true" data-enforce-filter-slug="true">
 
                                                     <small class="form-text text-muted" id="edit_slug_filter_hint" data-template="{{ __('Allowed slugs for this filter: :list') }}">{{ __('Allowed slugs for this filter: :list', ['list' => $defaultFilterHint?: __('N/A')]) }}</small>
-                                                    <small class="form-text text-muted">{{ __('The slug is generated automatically from the selected filter. It is different from the root_categories setting, which only controls the default category tree.')}}</small>
+                                                    <small class="form-text text-muted">{{ __('The slug is prefilled from the selected filter. You can customize it as long as it matches one of the allowed slugs. It is different from the root_categories setting, which only controls the default category tree.') }}</small>
 
                                                     <div class="alert alert-warning mt-2 d-none" role="alert" data-slug-exhausted="edit">
                                                         <i class="fas fa-exclamation-triangle me-1"></i>

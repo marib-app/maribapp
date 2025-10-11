@@ -283,5 +283,8 @@
     "wallet.filters.top_ups": "Deposits",
     "wallet.filters.payments": "Purchases",
     "wallet.filters.transfers": "Transfers",
-    "wallet.filters.refunds": "Refunds"
+    "wallet.filters.refunds": "Refunds",
+    "departments.shein": "SHEIN Department",
+    "departments.computer": "Computer Department",
+    "departments.store": "Store Department"
 }

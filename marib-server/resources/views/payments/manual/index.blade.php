@@ -428,6 +428,7 @@
                                 <th>{{ __('Amount') }}</th>
                                 <th>{{ __('Currency') }}</th>
                                 <th>{{ __('Gateway') }}</th>
+                                <th>{{ __('Department') }}</th>
                                 <th>{{ __('Category') }}</th>
                                 <th>{{ __('Status') }}</th>
                                 <th>{{ __('Submitted At') }}</th>
@@ -1220,6 +1221,15 @@
                         return carry;
                     }
 
+                    const key = entry.key;
+                    carry[key] = {
+                        total: Number(entry.total ?? 0),
+                        pending: Number(entry.pending ?? 0),
+                        succeed: Number(entry.succeed ?? 0),
+                        failed: Number(entry.failed ?? 0),
+                    };
+
+
                     return carry;
                 }, {});
 
@@ -1274,6 +1284,7 @@
                 if (info) {
                     url.searchParams.set('page', (info.page ?? 0) + 1);
                     const infoLength = Number(info.length ?? 20) || 20;
+                    url.searchParams.set('length', infoLength);
                     url.searchParams.set('length', infoLength);
                 
                 } else {
@@ -1344,12 +1355,21 @@
                 serverSide: true,
                 searching: false,
                 lengthMenu: [10, 20, 50, 100],
-                pageLength: 10,
+                pageLength: 20,
+
                 stateSave: true,
                 stateDuration: 0,
                 stateLoadParams: function (settings, data) {
-                    if (!data || typeof data.length !== 'number' || data.length <= 0) {
-                        data.length = 10;
+                    if (!data || typeof data !== 'object') {
+                        return;
+                    }
+
+                    if (typeof data.length !== 'number' || data.length <= 0) {
+                        data.length = 20;
+                    }
+
+                    if (typeof data.start !== 'number' || data.start < 0) {
+                        data.start = 0;
                     }
                 },
 
@@ -1538,8 +1558,19 @@
             dataTable.on('preXhr.dt', function (event, settings, params) {
                 applyManualPaymentFiltersToParams(params);
 
+                const fallbackLength = Number(dataTable.page.len()) || 20;
+                const normalizedStart = Number.isFinite(Number(params?.start)) && Number(params.start) >= 0
+                    ? Number(params.start)
+                    : 0;
+                const normalizedLength = Number.isFinite(Number(params?.length)) && Number(params.length) > 0
+                    ? Number(params.length)
+                    : fallbackLength;
 
-                manualPaymentLastRequestStart = params.start || 0;
+                params.start = normalizedStart;
+                params.length = normalizedLength;
+                params.offset = normalizedStart;
+                params.limit = normalizedLength;
+                manualPaymentLastRequestStart = normalizedStart;
             });
 
 

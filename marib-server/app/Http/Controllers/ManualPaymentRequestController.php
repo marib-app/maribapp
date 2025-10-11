@@ -48,12 +48,8 @@ class ManualPaymentRequestController extends Controller
     public function __construct(
         private readonly PaymentFulfillmentService $paymentFulfillmentService,
         private readonly DepartmentReportService $departmentReportService,
-        private readonly WalletService $walletService
-        
-
-
-
-        ) {
+        private readonly WalletService $walletService,
+    ) {
     }
 
     public function index()
@@ -115,8 +111,17 @@ class ManualPaymentRequestController extends Controller
     {
         ResponseService::noAnyPermissionThenSendJson(['manual-payments-list', 'manual-payments-review']);
 
-        $offset = max((int) $request->get('offset', 0), 0);
-        $limit = max(min((int) $request->get('limit', 10), 200), 1);
+        $start = max((int) $request->get('start', 0), 0);
+        $offset = max((int) $request->get('offset', $start), 0);
+
+        $rawLimit = $request->get('limit');
+
+        if ($rawLimit === null || (int) $rawLimit <= 0) {
+            $rawLimit = $request->get('length', 20);
+        }
+
+        $limit = max(min((int) $rawLimit, 200), 1);
+
         $page = (int) floor($offset / $limit) + 1;
 
         $sort = $request->get('sort', 'created_at');
@@ -235,9 +240,15 @@ class ManualPaymentRequestController extends Controller
         ResponseService::noAnyPermissionThenSendJson(['manual-payments-list', 'manual-payments-review']);
 
         $draw = (int) $request->input('draw', 0);
-        $start = max((int) $request->input('start', 0), 0);
-        $lengthInput = $request->input('length', 10);
-        $length = is_numeric($lengthInput) ? (int) $lengthInput : 10;
+        $start = max((int) $request->input('start', $request->input('offset', 0)), 0);
+
+        $lengthInput = $request->input('length');
+        if ($lengthInput === null || $lengthInput === '') {
+            $lengthInput = $request->input('limit', 20);
+        }
+
+        $length = is_numeric($lengthInput) ? (int) $lengthInput : 20;
+
         $length = $length < 0 ? null : max(min($length, 200), 1);
 
         $searchValue = $request->input('search');
@@ -1732,13 +1743,24 @@ class ManualPaymentRequestController extends Controller
     {
         $transaction = $manualPaymentRequest->paymentTransaction;
 
+
+        $isOrderRequest = ManualPaymentRequest::isOrderPayableType((string) $manualPaymentRequest->payable_type);
+        $resolvedOrderId = $isOrderRequest && $manualPaymentRequest->payable_id
+            ? (int) $manualPaymentRequest->payable_id
+            : null;
+
+        $gatewayKey = $this->resolveManualPaymentGatewayKey($manualPaymentRequest);
+        $transactionGateway = $gatewayKey === 'manual_banks' ? 'manual_bank' : $gatewayKey;
+
+
+
         if (!$transaction && $required) {
             $transaction = PaymentTransaction::create([
                 'user_id' => $manualPaymentRequest->user_id,
                 'amount' => $manualPaymentRequest->amount,
-                'payment_gateway' => 'manual_bank',
-                'order_id' => null,
-                'payable_type' => $manualPaymentRequest->payable_type,
+                'payment_gateway' => $transactionGateway,
+                'order_id' => $resolvedOrderId,
+                'payable_type' => $isOrderRequest ? Order::class : $manualPaymentRequest->payable_type,
                 'payable_id' => $manualPaymentRequest->payable_id,
                 'manual_payment_request_id' => $manualPaymentRequest->id,
                 'payment_status' => 'pending',
@@ -1754,8 +1776,24 @@ class ManualPaymentRequestController extends Controller
                 $updates['manual_payment_request_id'] = $manualPaymentRequest->id;
             }
 
-            if (empty($transaction->payable_type)) {
-                $updates['payable_type'] = $manualPaymentRequest->payable_type;
+            if (empty($transaction->payment_gateway) && $transactionGateway) {
+                $updates['payment_gateway'] = $transactionGateway;
+            }
+
+            if ($resolvedOrderId !== null && empty($transaction->order_id)) {
+                $updates['order_id'] = $resolvedOrderId;
+            }
+
+            $transactionPayableType = $transaction->payable_type;
+            if (empty($transactionPayableType)) {
+                $updates['payable_type'] = $isOrderRequest ? Order::class : $manualPaymentRequest->payable_type;
+            } elseif (
+                $isOrderRequest
+                && ! ManualPaymentRequest::isOrderPayableType((string) $transactionPayableType)
+            ) {
+                $updates['payable_type'] = Order::class;
+
+                
             }
 
             if (empty($transaction->payable_id) && !empty($manualPaymentRequest->payable_id)) {

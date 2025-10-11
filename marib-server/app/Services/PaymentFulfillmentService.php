@@ -822,8 +822,18 @@ class PaymentFulfillmentService
             return $normalizedClass;
         }
 
-        $normalized = strtolower($normalizedClass);
+        $normalizedLower = strtolower(trim($normalizedClass));
 
+        if (ManualPaymentRequest::isOrderPayableType($payableType)
+            || ManualPaymentRequest::isOrderPayableType($normalizedClass)
+            || ManualPaymentRequest::isOrderPayableType($normalizedLower)
+        ) {
+            return Order::class;
+        }
+
+        $normalized = $normalizedLower;
+
+        
         return match ($normalized) {
             
             'package', 'packages' => Package::class,

@@ -17,28 +17,20 @@ class ManualPaymentRequestsSheet extends StatefulWidget {
 }
 
 class _ManualPaymentRequestsSheetState extends State<ManualPaymentRequestsSheet> {
-  final ScrollController _scrollController = ScrollController();
   final DateFormat _dateFormat = DateFormat('yyyy-MM-dd HH:mm');
 
-  @override
-  void initState() {
-    super.initState();
-    _scrollController.addListener(_handleScroll);
-  }
-
-  @override
-  void dispose() {
-    _scrollController.removeListener(_handleScroll);
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _handleScroll() {
-    if (!_scrollController.hasClients) return;
-    final position = _scrollController.position;
-    if (position.pixels >= position.maxScrollExtent - 120) {
-      context.read<ManualPaymentRequestsCubit>().loadMore();
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) {
+      return false;
     }
+    if (notification is ScrollUpdateNotification || notification is OverscrollNotification) {
+      final metrics = notification.metrics;
+      if (metrics.pixels >= metrics.maxScrollExtent - 120) {
+        context.read<ManualPaymentRequestsCubit>().loadMore();
+      }
+    }
+    return false;
+
   }
 
   Future<void> _refresh() async {
@@ -100,51 +92,53 @@ class _ManualPaymentRequestsSheetState extends State<ManualPaymentRequestsSheet>
                       return RefreshIndicator(
                         color: context.color.territoryColor,
                         onRefresh: _refresh,
-                        child: ListView.builder(
-                          controller: _scrollController,
-                          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-                          padding: const EdgeInsets.only(bottom: 12),
-                          itemCount: totalItems,
+                        child: NotificationListener<ScrollNotification>(
+                            onNotification: _handleScrollNotification,
+                            child: ListView.builder(
+                                controller: scrollController,
+                                physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                                padding: const EdgeInsets.only(bottom: 12),
+                                itemCount: totalItems,
+                                itemBuilder: (context, index) {
+                                  var currentIndex = index;
 
-                          itemBuilder: (context, index) {
-                            var currentIndex = index;
+                                  if (hasSummary) {
+                                    if (currentIndex == 0) {
+                                      return Padding(
+                                        padding: const EdgeInsets.fromLTRB(4, 0, 4, 16),
+                                        child: _ManualPaymentSummarySection(summary: summary!),
+                                      );
+                                    }
+                                    currentIndex -= 1;
+                              }
 
-                            if (hasSummary) {
-                              if (currentIndex == 0) {
-                                return Padding(
-                                  padding: const EdgeInsets.fromLTRB(4, 0, 4, 16),
-                                  child: _ManualPaymentSummarySection(summary: summary!),
+                                  if (!hasRequests) {
+                                    if (currentIndex == 0) {
+                                      return Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 24),
+                                        child: _EmptyView(onRefresh: _refresh),
+                                      );
+                                    }
+                                    return const Padding(
+                                      padding: EdgeInsets.symmetric(vertical: 16),
+                                      child: Center(child: CircularProgressIndicator()),
                                 );
                               }
-                              currentIndex -= 1;
-                            }
 
-                            if (!hasRequests) {
-                              if (currentIndex == 0) {
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 24),
-                                  child: _EmptyView(onRefresh: _refresh),
-                                );
-                              }
-                              return const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 16),
-                                child: Center(child: CircularProgressIndicator()),
+                                  if (currentIndex >= requests.length) {
+                                    return const Padding(
+                                      padding: EdgeInsets.symmetric(vertical: 16),
+                                      child: Center(child: CircularProgressIndicator()),
+                                    );
+                                  }
+                                  final request = requests[currentIndex];
+                                  return _ManualPaymentTile(
+                                    payment: request,
+                                    dateFormat: _dateFormat,
+
                               );
-                            }
-
-                            if (currentIndex >= requests.length) {
-
-                              return const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 16),
-                                child: Center(child: CircularProgressIndicator()),
-                              );
-                            }
-                            final request = requests[currentIndex];
-                            return _ManualPaymentTile(
-                              payment: request,
-                              dateFormat: _dateFormat,
-                            );
-                          },
+                                },
+                            ),
                         ),
                       );
                     }

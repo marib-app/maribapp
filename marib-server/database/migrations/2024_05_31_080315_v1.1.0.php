@@ -150,9 +150,6 @@ return new class extends Migration {
         });
 
         Schema::table('payment_transactions', static function (Blueprint $table) {
-            if (Schema::hasColumn('payment_transactions', 'payment_id')) {
-                $table->dropColumn('payment_id');
-            }
 
             if (Schema::hasColumn('payment_transactions', 'payment_signature')) {
                 $table->dropColumn('payment_signature');
@@ -215,8 +212,9 @@ return new class extends Migration {
         });
 
         Schema::table('payment_transactions', static function (Blueprint $table) {
-            $table->string('payment_id')->nullable();
-            $table->string('payment_signature')->nullable();
+            if (!Schema::hasColumn('payment_transactions', 'payment_signature')) {
+                $table->string('payment_signature')->nullable();
+            }
         });
 
         Schema::table('languages', static function (Blueprint $table) {

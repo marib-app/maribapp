@@ -93,7 +93,12 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
   static const int _eastYemenPressedKey = -1000;
   static const int _walletPressedKey = -1001;
-
+  static const List<String> _allowedReceiptExtensions = <String>[
+    'jpg',
+    'jpeg',
+    'png',
+    'pdf',
+  ]; // Keep in sync with PaymentController::manual MIME validation.
 
 
   // الحقول
@@ -414,7 +419,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       final res = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowMultiple: false,
-        allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'heic'],
+        allowedExtensions: _allowedReceiptExtensions,
         withData: false,
       );
       if (res == null || res.files.isEmpty) return;

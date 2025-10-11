@@ -1424,16 +1424,17 @@
                     { data: 'amount_fmt', defaultContent: '0.00', className: 'text-end text-nowrap' },
                     { data: 'currency', defaultContent: '' },
                     {
-                        data: 'payment_gateway_label',
+                        data: 'payment_gateway_name',
                         defaultContent: '—',
                         render: function (data, type, row) {
                             if (type !== 'display') {
-                                return data ?? '';
+                                return data ?? row?.payment_gateway_label ?? '';
                             }
 
                             const key = normalizeManualPaymentGateway(row?.payment_gateway ?? '') ?? '';
                             const classes = MANUAL_PAYMENT_GATEWAY_STYLES[key] ?? 'bg-secondary';
-                            const label = data ?? '—';
+                            const label = (row?.payment_gateway_name ?? row?.payment_gateway_label ?? data ?? '—').toString();
+
 
                             return '<span class="badge ' + classes + '">' + label + '</span>';
                         }

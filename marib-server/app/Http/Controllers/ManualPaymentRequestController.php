@@ -206,6 +206,7 @@ class ManualPaymentRequestController extends Controller
 
             $row['payment_gateway_key'] = $canonicalGateway ?? 'manual_banks';
             $row['payment_gateway'] = $this->gatewayLabel($canonicalGateway ?? 'manual_banks');
+            $row['payment_gateway_name'] = $this->paymentRequestGatewayName($requestRow);
 
             $row['formatted_amount'] = number_format($requestRow->amount, 2)
                 . ($requestRow->currency ? ' ' . $requestRow->currency : '');
@@ -331,7 +332,8 @@ class ManualPaymentRequestController extends Controller
                 'amount_fmt' => number_format($amount, 2, '.', ''),
                 'currency' => $row->currency ?? '',
                 'payment_gateway' => $channel ?? $row->channel,
-                'payment_gateway_label' => $this->paymentRequestChannelLabel($channel ?? $row->channel),
+                'payment_gateway_label' => $this->paymentRequestChannelLabel($channel ?? $row->channel),                
+                'payment_gateway_name' => $this->paymentRequestGatewayName($row),
                 'category' => $row->category,
                 'department' => $row->department ?? null,
                 'department_label' => $this->paymentRequestDepartmentLabel($row->department ?? null),
@@ -1531,6 +1533,25 @@ class ManualPaymentRequestController extends Controller
 
     private function paymentRequestActionsFromRow(object $row): string
     {
+
+        $category = $this->normalizePaymentRequestCategory($row->category ?? null);
+        $payableId = $row->payable_id ?? null;
+        $hasPayableId = $payableId !== null && $payableId !== '';
+
+        if ($category === 'orders' && $hasPayableId) {
+            $url = url(sprintf('/admin/orders/%s', rawurlencode((string) $payableId)));
+
+            return BootstrapTableService::button(
+                'fa fa-external-link-alt',
+                $url,
+                ['btn-primary', 'view-order-details'],
+                [
+                    'title' => trans('View'),
+                ],
+                trans('View')
+            );
+        }
+
         if (
             !empty($row->manual_payment_request_id)
             && Route::has('manual-payments.review')
@@ -1538,7 +1559,7 @@ class ManualPaymentRequestController extends Controller
             return BootstrapTableService::button(
                 'fa fa-eye',
                 route('manual-payments.review', ['manualPaymentRequest' => $row->manual_payment_request_id]),
-                ['btn-primary', 'view-manual-payment'],
+                ['btn-outline-primary', 'view-manual-payment'],
                 [
                     'target' => '_blank',
                     'rel' => 'noopener noreferrer',
@@ -1565,9 +1586,7 @@ class ManualPaymentRequestController extends Controller
             );
         }
 
-        $category = $this->normalizePaymentRequestCategory($row->category ?? null);
-        $payableId = $row->payable_id ?? null;
-        $hasPayableId = $payableId !== null && $payableId !== '';
+
 
         if (
             $category === 'orders'
@@ -1588,6 +1607,54 @@ class ManualPaymentRequestController extends Controller
 
         return '';
     }
+
+
+
+
+
+    private function paymentRequestGatewayName(object $row): string
+    {
+        $candidates = [];
+
+        foreach (['payment_gateway_name', 'gateway_name', 'manual_bank_name', 'bank_name', 'gateway_display_name'] as $property) {
+            $value = data_get($row, $property);
+
+            if (is_string($value)) {
+                $trimmed = trim($value);
+
+                if ($trimmed !== '') {
+                    $candidates[] = $trimmed;
+                }
+            }
+        }
+
+        if ($row instanceof ManualPaymentRequest) {
+            $manualBankName = $row->manualBank?->name;
+
+            if (is_string($manualBankName) && trim($manualBankName) !== '') {
+                $candidates[] = trim($manualBankName);
+            }
+        }
+
+        foreach ($candidates as $candidate) {
+            if ($candidate !== '') {
+                return $candidate;
+            }
+        }
+
+        $channel = data_get($row, 'channel', data_get($row, 'payment_gateway'));
+
+        if (is_string($channel) && trim($channel) !== '') {
+            return Str::of($channel)
+                ->replace(['_', '-'], ' ')
+                ->trim()
+                ->title()
+                ->value();
+        }
+
+        return $this->paymentRequestChannelLabel(data_get($row, 'channel'));
+    }
+
 
     private function resolvePaymentRequestOrder(Request $request): array
     {
@@ -1610,6 +1677,7 @@ class ManualPaymentRequestController extends Controller
             'amount' => 'amount',
             'currency' => 'currency',
             'payment_gateway_label' => 'channel',
+            'payment_gateway_name' => 'channel',
             'payment_gateway' => 'channel',
             'department_label' => 'department',
             'department' => 'department',

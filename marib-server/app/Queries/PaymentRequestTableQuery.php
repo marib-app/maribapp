@@ -61,10 +61,62 @@ class PaymentRequestTableQuery
 
         $supportsDepartment = Schema::hasTable('manual_payment_requests')
             && Schema::hasColumn('manual_payment_requests', 'department');
+        $supportsManualGatewayName = Schema::hasTable('manual_payment_requests')
+            && Schema::hasColumn('manual_payment_requests', 'gateway_name');
+        $supportsManualBankName = Schema::hasTable('manual_payment_requests')
+            && Schema::hasColumn('manual_payment_requests', 'bank_name');
+        $supportsManualBankAccountName = Schema::hasTable('manual_payment_requests')
+            && Schema::hasColumn('manual_payment_requests', 'bank_account_name');
+        $supportsPaymentGatewayName = Schema::hasTable('payment_transactions')
+            && Schema::hasColumn('payment_transactions', 'payment_gateway_name');
+
 
         $departmentSelect = $supportsDepartment
             ? 'mpr.department as department'
             : "NULL as department";
+
+
+        $manualBankNameParts = [];
+        if ($supportsManualBankName) {
+            $manualBankNameParts[] = "NULLIF(mpr.bank_name, '')";
+        }
+        if ($supportsManualBankAccountName) {
+            $manualBankNameParts[] = "NULLIF(mpr.bank_account_name, '')";
+        }
+        $manualBankNameSelect = $manualBankNameParts === []
+            ? 'NULL'
+            : 'COALESCE(' . implode(', ', $manualBankNameParts) . ')';
+
+        $gatewayNameParts = [];
+        if ($supportsManualGatewayName) {
+            $gatewayNameParts[] = "NULLIF(mpr.gateway_name, '')";
+        }
+        if ($supportsManualBankName) {
+            $gatewayNameParts[] = "NULLIF(mpr.bank_name, '')";
+        }
+        if ($supportsManualBankAccountName) {
+            $gatewayNameParts[] = "NULLIF(mpr.bank_account_name, '')";
+        }
+        if ($supportsPaymentGatewayName) {
+            $gatewayNameParts[] = "NULLIF(pt.payment_gateway_name, '')";
+        }
+        $gatewayNameParts[] = "NULLIF(pt.payment_gateway, '')";
+        $gatewayNameParts[] = "'Manual Banks'";
+        $gatewayNameSelect = 'COALESCE(' . implode(', ', $gatewayNameParts) . ')';
+
+        $walletGatewayNameParts = [];
+        if ($supportsManualGatewayName) {
+            $walletGatewayNameParts[] = "NULLIF(mpr.gateway_name, '')";
+        }
+        if ($supportsManualBankName) {
+            $walletGatewayNameParts[] = "NULLIF(mpr.bank_name, '')";
+        }
+        if ($supportsManualBankAccountName) {
+            $walletGatewayNameParts[] = "NULLIF(mpr.bank_account_name, '')";
+        }
+        $walletGatewayNameParts[] = "'Wallet'";
+        $walletGatewayNameSelect = 'COALESCE(' . implode(', ', $walletGatewayNameParts) . ')';
+
 
         $paymentTransactions = DB::table('payment_transactions as pt')
             ->selectRaw("CONCAT('pt-', pt.id) as row_key")
@@ -85,6 +137,7 @@ class PaymentRequestTableQuery
             ->selectRaw('COALESCE(pt.payable_id, mpr.payable_id) as payable_id')
             ->selectRaw(self::gatewayExpression('pt') . ' as gateway_key')
             ->selectRaw(self::channelExpression('pt') . ' as channel')
+            ->selectRaw($gatewayNameSelect . ' as gateway_name')
             ->selectRaw(self::categoryExpression('pt') . ' as category')
             ->selectRaw(
                 self::statusExpression(
@@ -94,6 +147,7 @@ class PaymentRequestTableQuery
             ->selectRaw("COALESCE(mpr.reference, CONCAT('TX-', pt.id)) as reference")
             ->selectRaw('pt.created_at')
             ->selectRaw($departmentSelect)
+            ->selectRaw($manualBankNameSelect . ' as manual_bank_name')
             ->selectRaw("'payment_transactions' as source")
             ->leftJoin('users', 'users.id', '=', 'pt.user_id')
             ->leftJoin('manual_payment_requests as mpr', 'mpr.id', '=', 'pt.manual_payment_request_id');
@@ -115,6 +169,7 @@ class PaymentRequestTableQuery
             ->selectRaw('COALESCE(mpr.payable_id, wt.id) as payable_id')
             ->selectRaw("'wallet' as gateway_key")
             ->selectRaw("'wallet' as channel")
+            ->selectRaw($walletGatewayNameSelect . ' as gateway_name')
             ->selectRaw("'top_ups' as category")
             ->selectRaw(
                 self::statusExpression(
@@ -124,6 +179,7 @@ class PaymentRequestTableQuery
             ->selectRaw("COALESCE(mpr.reference, CONCAT('WT-', wt.id)) as reference")
             ->selectRaw('wt.created_at')
             ->selectRaw($departmentSelect)
+            ->selectRaw($manualBankNameSelect . ' as manual_bank_name')
             ->selectRaw("'wallet_transactions' as source")
             ->join('wallet_accounts as wa', 'wa.id', '=', 'wt.wallet_account_id')
             ->leftJoin('users', 'users.id', '=', 'wa.user_id')

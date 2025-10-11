@@ -219,11 +219,14 @@ class WifiRepository {
     required MultipartFile loginScreenshot,
     String? notes,
   }) async {
+    const bool isActive = false;
+    final int isActiveFlag = isActive ? 1 : 0;
+
     final payload = <String, dynamic>{
       'name': name,
       'contacts': <String>[contact],
       'notes': notes,
-      'is_active': false,
+      'is_active': isActiveFlag,
       'meta': <String, dynamic>{
         'source': 'mobile_app',
         'request_type': 'owner_network',

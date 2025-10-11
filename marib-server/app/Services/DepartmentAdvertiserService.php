@@ -7,6 +7,7 @@ use App\Models\Item;
 use App\Models\Setting;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
+use App\Services\FeatureSectionCategoryService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
@@ -231,7 +232,7 @@ class DepartmentAdvertiserService
     {
         if ($this->categoryHierarchy === null) {
             $this->categoryHierarchy = Category::query()
-                ->select(['id', 'parent_category_id'])
+                ->select(['id', 'parent_category_id', 'slug'])
                 ->get()
                 ->keyBy('id');
         }
@@ -239,7 +240,176 @@ class DepartmentAdvertiserService
         return $this->categoryHierarchy;
 
 
+    }
 
+    private function normalizeInterfaceType(?string $interfaceType): ?string
+    {
+        if ($interfaceType === null) {
+            return null;
+        }
+
+        $trimmed = trim($interfaceType);
+
+        if ($trimmed === '') {
+            return null;
+        }
+
+        return FeatureSectionCategoryService::normalizeSectionType($trimmed);
+    }
+
+    private function isExcludedInterfaceType(string $interfaceType): bool
+    {
+        $normalized = $this->normalizeInterfaceType($interfaceType);
+
+        if ($normalized === null) {
+            return false;
+        }
+
+        static $excluded = null;
+
+        if ($excluded === null) {
+            $excluded = [];
+
+            foreach (self::EXCLUDED_INTERFACE_TYPES as $candidate) {
+                $normalizedCandidate = $this->normalizeInterfaceType($candidate);
+
+                if ($normalizedCandidate !== null) {
+                    $excluded[] = $normalizedCandidate;
+                }
+            }
+        }
+
+        return in_array($normalized, $excluded, true);
+    }
+
+    private function collectItemCategoryIds(Item $item): array
+    {
+        $ids = [];
+
+        if ($item->category_id) {
+            $ids[] = (int) $item->category_id;
+        }
+
+        $allCategoryIds = $item->all_category_ids;
+
+        if (is_array($allCategoryIds)) {
+            foreach ($allCategoryIds as $value) {
+                $candidate = (int) $value;
+
+                if ($candidate > 0) {
+                    $ids[] = $candidate;
+                }
+            }
+        } elseif (is_string($allCategoryIds) || is_numeric($allCategoryIds)) {
+            $candidates = array_filter(array_map('intval', explode(',', (string) $allCategoryIds)));
+
+            foreach ($candidates as $candidate) {
+                if ($candidate > 0) {
+                    $ids[] = $candidate;
+                }
+            }
+        }
+
+        $ids = array_filter($ids, static fn ($value) => is_int($value) && $value > 0);
+
+        return array_values(array_unique($ids));
+    }
+
+    private function belongsToExcludedSection(int $categoryId): bool
+    {
+        if ($categoryId <= 0) {
+            return false;
+        }
+
+        if ($this->excludedSectionRootIds === null) {
+            $this->excludedSectionRootIds = $this->resolveExcludedSectionRootIds();
+        }
+
+        if ($this->excludedSectionRootIds === []) {
+            return false;
+        }
+
+        $categories = $this->getCategoryHierarchy();
+        $currentId = $categoryId;
+        $visited = [];
+
+        while ($currentId && ! in_array($currentId, $visited, true)) {
+            if (in_array($currentId, $this->excludedSectionRootIds, true)) {
+                return true;
+            }
+
+            $visited[] = $currentId;
+
+            $category = $categories->get($currentId);
+
+            if (! $category) {
+                break;
+            }
+
+            $currentId = $category->parent_category_id ? (int) $category->parent_category_id : null;
+        }
+
+        return false;
+    }
+
+    private function resolveExcludedSectionRootIds(): array
+    {
+        $rootIdentifiers = FeatureSectionCategoryService::rootIdentifiers();
+
+        if ($rootIdentifiers === []) {
+            return [];
+        }
+
+        $categories = $this->getCategoryHierarchy();
+        $roots = [];
+
+        foreach (self::EXCLUDED_SECTION_SLUGS as $sectionSlug) {
+            $normalized = $this->normalizeInterfaceType($sectionSlug);
+
+            if ($normalized === null) {
+                continue;
+            }
+
+            $identifier = $rootIdentifiers[$normalized] ?? null;
+
+            if ($identifier === null) {
+                continue;
+            }
+
+            foreach (Arr::wrap($identifier) as $value) {
+                if (is_int($value)) {
+                    $roots[] = $value;
+                    continue;
+                }
+
+                if (is_numeric($value)) {
+                    $roots[] = (int) $value;
+                    continue;
+                }
+
+                if (! is_string($value)) {
+                    continue;
+                }
+
+                $trimmed = trim($value);
+
+                if ($trimmed === '') {
+                    continue;
+                }
+
+                $match = $categories->firstWhere('slug', $trimmed);
+
+                if ($match) {
+                    $roots[] = (int) $match->id;
+                }
+            }
+        }
+
+        $roots = array_filter($roots, static fn ($value) => is_int($value) || (is_numeric($value) && (int) $value > 0));
+
+        $roots = array_map(static fn ($value) => (int) $value, $roots);
+
+        return array_values(array_unique(array_filter($roots, static fn ($value) => $value > 0)));
 
 
 

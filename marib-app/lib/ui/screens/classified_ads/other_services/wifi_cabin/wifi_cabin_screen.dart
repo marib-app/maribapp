@@ -94,7 +94,8 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
               text: _controller.query,
               selection: TextSelection.collapsed(
                 offset: _controller.query.length,
-              ),
+
+            ),
             );
           }
           return Scaffold(
@@ -103,36 +104,47 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
               context,
               showBackButton: true,
               title: 'wifiCabin'.translate(context),
-
             ),
             body: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Column(
                 children: [
-                  _SearchHeaderBar(
-                    controller: _searchController,
-                    focusNode: _searchFocusNode,
-                    isLoading:
-                    state.status == WifiCabinLoadStatus.loading &&
-                        !state.hasData,
-                    onChanged: (value) => _controller.updateQuery(value),
-                    onSubmitted: (value) =>
-                        _controller.updateQuery(value, immediate: true),
-                    onClear: _controller.clearQuery,
-                    onRefresh: () => _controller.refreshNetworks(force: true),
+                _SearchHeaderBar(
+                controller: _searchController,
+                focusNode: _searchFocusNode,
+                isLoading: state.status == WifiCabinLoadStatus.loading &&
+                    !state.hasData,
+                onChanged: (value) => _controller.updateQuery(value),
+                onSubmitted: (value) =>
+                    _controller.updateQuery(value, immediate: true),
+                onClear: _controller.clearQuery,
+                onRefresh: () => _controller.refreshNetworks(force: true),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  child: _buildBodyForState(context, state),
                   ),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 220),
-                      switchInCurve: Curves.easeOut,
-                      switchOutCurve: Curves.easeIn,
-                      child: _buildBodyForState(context, state),
-                    ),
-                  ),
+              ),
                 ],
             ),
             ),
+              bottomNavigationBar: SafeArea(
+                minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(52),
+                    backgroundColor: context.color.territoryColor,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () => _openAddNetworkSheet(context),
+                  icon: const Icon(Icons.add),
+                  label: const Text('إضافة شبكة جديدة'),
+            ),
+              ),
           );
         },
     );

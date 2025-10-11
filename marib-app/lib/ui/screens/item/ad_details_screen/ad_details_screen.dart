@@ -1630,7 +1630,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       children.add(const SizedBox(height: 12));
     }
 
-    if (options.attributes.isNotEmpty) {
+    if (!hideQuantitySelector && options.attributes.isNotEmpty) {
       children.add(
         Text(
           'خيارات الشراء',

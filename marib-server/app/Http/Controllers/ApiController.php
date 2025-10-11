@@ -9396,10 +9396,11 @@ public function storeRequestDevice(Request $request)
             return false;
         }
 
-        return in_array($section, [
-            DepartmentReportService::DEPARTMENT_SHEIN,
-            DepartmentReportService::DEPARTMENT_COMPUTER,
-        ], true);
+        $autoApproved = array_filter(
+            (array) config('delegates.auto_approve_departments', [])
+        );
+
+        return in_array($section, $autoApproved, true);
     }
 
 

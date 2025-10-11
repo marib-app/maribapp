@@ -2,71 +2,125 @@
 
 namespace App\Services;
 
-use App\Models\Setting;
+use App\Models\DepartmentDelegate;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use App\Models\User;
 
 class DelegateAuthorizationService
 {
-    public const ADMIN_ROLES = ['Super Admin', 'Admin'];
-    private const RESTRICTED_SECTIONS = [
-        DepartmentReportService::DEPARTMENT_SHEIN,
-        DepartmentReportService::DEPARTMENT_COMPUTER,
-    ];
+
     public function getDelegatesForSection(string $section): array
     {
-        $value = CachingService::getSystemSettings($this->getDelegatesSettingKey($section));
+        if ($section === '') {
 
-        if (empty($value)) {
             return [];
         }
 
-        if (is_string($value)) {
-            $decoded = json_decode($value, true);
-        } elseif (is_array($value)) {
-            $decoded = $value;
-        } else {
-            $decoded = [];
-        }
-
-        if (!is_array($decoded)) {
-            return [];
-        }
-
-        return collect($decoded)
-            ->filter(static fn($id) => is_numeric($id))
-            ->map(static fn($id) => (int) $id)
-            ->unique()
-            ->values()
-            ->toArray();
+        return Cache::remember(
+            $this->cacheKeyForSection($section),
+            now()->addSeconds($this->cacheTtl()),
+            static function () use ($section) {
+                return DepartmentDelegate::query()
+                    ->where('department', $section)
+                    ->pluck('user_id')
+                    ->map(static fn ($id) => (int) $id)
+                    ->unique()
+                    ->values()
+                    ->all();
+            }
+        );
     }
 
     public function storeDelegatesForSection(string $section, array $delegateIds): void
     {
-        Setting::updateOrCreate(
-            ['name' => $this->getDelegatesSettingKey($section)],
-            [
-                'value' => json_encode(array_values($delegateIds)),
-                'type'  => 'json',
-            ]
-        );
+        $ids = collect($delegateIds)
+            ->filter(static fn ($id) => is_numeric($id))
+            ->map(static fn ($id) => (int) $id)
+            ->unique()
+            ->values();
 
-        CachingService::removeCache(config('constants.CACHE.SETTINGS'));
+        DB::transaction(function () use ($section, $ids) {
+            if ($ids->isEmpty()) {
+                DepartmentDelegate::query()
+                    ->where('department', $section)
+                    ->delete();
+
+                return;
+            }
+
+            DepartmentDelegate::query()
+                ->where('department', $section)
+                ->whereNotIn('user_id', $ids)
+                ->delete();
+
+            $timestamp = now();
+
+            DepartmentDelegate::query()->upsert(
+                $ids->map(static fn ($id) => [
+                    'department' => $section,
+                    'user_id' => $id,
+                    'created_at' => $timestamp,
+                    'updated_at' => $timestamp,
+                ])->all(),
+                ['department', 'user_id'],
+                ['updated_at']
+            );
+        });
+
+        $this->forgetSectionCache($section);
     }
 
     public function userCanManageSection(User $user, string $section): bool
     {
-        if ($user->hasAnyRole(self::ADMIN_ROLES)) {
+        if ($user->hasAnyRole($this->adminRoles())) {
             return true;
         }
 
         $delegates = $this->getDelegatesForSection($section);
 
-        if (empty($delegates)) {
+        if ($delegates === []) {
+
             return false;
         }
 
-        return in_array($user->id, $delegates, true);
+        return in_array($section, $this->restrictedDepartments(), true);
+
     }
+
+
+    protected function restrictedDepartments(): array
+    {
+        return array_values(array_filter(
+            Arr::wrap(config('delegates.restricted_departments', [])),
+            static fn ($section) => is_string($section) && $section !== ''
+        ));
+    }
+
+    protected function adminRoles(): array
+    {
+        return array_values(array_filter(
+            Arr::wrap(config('delegates.admin_roles', [])),
+            static fn ($role) => is_string($role) && $role !== ''
+        ));
+    }
+
+    protected function cacheKeyForSection(string $section): string
+    {
+        $prefix = (string) config('delegates.cache_prefix', 'delegates');
+
+        return sprintf('%s:%s', $prefix, $section);
+    }
+
+    protected function cacheTtl(): int
+    {
+        $ttl = (int) config('delegates.cache_ttl', 120);
+
+        return $ttl > 0 ? $ttl : 120;
+    }
+
+
 
     public function isSectionRestricted(?string $section): bool
     {
@@ -79,8 +133,9 @@ class DelegateAuthorizationService
 
 
 
-    protected function getDelegatesSettingKey(string $section): string
+    protected function forgetSectionCache(string $section): void
+
     {
-        return sprintf('delegates_%s', $section);
+        Cache::forget($this->cacheKeyForSection($section));
     }
 }

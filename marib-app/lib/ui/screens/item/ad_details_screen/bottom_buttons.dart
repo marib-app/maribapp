@@ -511,51 +511,17 @@ enum AdActionMode { ecommerce, classifieds }
 
 
 
-
-// ===== ضبط القوائم حسب أقسامك =====
-const Set<int> kClassifiedIds = {1, 2, 6}; // العقارات / السياحة / إعلانات الجمهور
-
-// ---- Helpers: نجمع كل IDs المتاحة من الموديل بأمان ----
-int? _toInt(dynamic v) {
-  if (v is int) return v;
-  if (v is String) return int.tryParse(v.trim());
-  return null;
-}
-
-Set<int> _collectCategoryIds(ItemModel m) {
-  final ids = <int>{};
-
-  // من الحقل المباشر
-  final id1 = _toInt(m.categoryId);
-  if (id1 != null) ids.add(id1);
-
-  // من الموديل الفرعي (إن وجد)
-  final id2 = _toInt(m.category?.id);
-  if (id2 != null) ids.add(id2);
-
-  // من سلسلة allCategoryIds: نلتقط كل الأرقام أينما كانت
-  final raw = (m.allCategoryIds ?? '').trim();
-  if (raw.isNotEmpty) {
-    for (final match in RegExp(r'\d+').allMatches(raw)) {
-      final v = int.tryParse(match.group(0)!);
-      if (v != null) ids.add(v);
-    }
+AdActionMode resolveActionMode(ItemModel m) {
+  if (isClassifiedItem(m)) {
+    return AdActionMode.classifieds;
   }
 
-  return ids;
-}
-
-// ---- القرار النهائي: نستخدم أي ID متاح (categoryId / category.id / allCategoryIds)
-AdActionMode resolveActionMode(ItemModel m) {
-  final ids = _collectCategoryIds(m);
 
   if (isEcommerceItem(m)) {
     return AdActionMode.ecommerce;
   }
 
-  if (ids.any(kClassifiedIds.contains)) {
-    return AdActionMode.classifieds;
-  }
+
 
   // (اختياري) fallback خفيف عبر نوع العنصر (لو مشروعك يستخدمه)
   final kind = (m.itemType ?? m.type ?? '').toLowerCase();

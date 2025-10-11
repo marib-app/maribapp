@@ -37,10 +37,17 @@ class WalletTransaction extends Model
     }
 
 
-    public function account(): BelongsTo
+    public function walletAccount(): BelongsTo
     {
         return $this->belongsTo(WalletAccount::class, 'wallet_account_id');
     }
+
+
+    public function account(): BelongsTo
+    {
+        return $this->walletAccount();
+    }
+
 
     public function manualPaymentRequest(): BelongsTo
     {

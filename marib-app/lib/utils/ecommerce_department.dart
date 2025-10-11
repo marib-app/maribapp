@@ -9,6 +9,13 @@ const Set<int> _kEcommerceRootIds = <int>{
   Constant.storeRootCategoryId,
 };
 
+
+const Set<int> _kClassifiedRootIds = <int>{
+  Constant.realEstateRootCategoryId,
+  2, // قسم السياحة (مُحدد مسبقًا داخل المشروع)
+};
+
+
 const Set<String> _kEcommerceDepartments = <String>{
   'shein',
   'computer',
@@ -53,6 +60,23 @@ const Set<String> _kStoreKeywords = <String>{
 };
 
 
+const Set<String> _kRealEstateKeywords = <String>{
+  'realestate',
+  'estate',
+  'real-estate',
+  'rent',
+  'property',
+  'properties',
+  'housing',
+  'عقار',
+  'عقارات',
+  'مساكن',
+  'سكن',
+  'سكني',
+  'ايجار',
+  'إيجار',
+  'ايجارات',
+};
 
 bool isEcommerceDepartmentSlug(String? rawSlug) {
   if (rawSlug == null) {
@@ -66,7 +90,7 @@ bool isEcommerceDepartmentSlug(String? rawSlug) {
 
   final String lower = trimmed.toLowerCase();
 
-  if (_looksLikeGeneralAudienceSlug(lower)) {
+  if (isClassifiedDepartmentSlug(lower)) {
     return false;
   }
 
@@ -80,7 +104,7 @@ bool isEcommerceDepartmentSlug(String? rawSlug) {
   }
 
   if (normalized == 'store') {
-    if (_looksLikeGeneralAudienceSlug(lower)) {
+    if (isClassifiedDepartmentSlug(lower)) {
       return false;
     }
     return _looksLikeStoreSlug(lower);
@@ -96,6 +120,17 @@ bool isEcommerceCategoryId(int? id) {
   return _kEcommerceRootIds.contains(id);
 }
 
+
+
+bool isClassifiedCategoryId(int? id) {
+  if (id == null) {
+    return false;
+  }
+  return _kClassifiedRootIds.contains(id);
+}
+
+
+
 bool isEcommerceCategoryIds(Iterable<int> ids) {
   for (final int id in ids) {
     if (isEcommerceCategoryId(id)) {
@@ -105,22 +140,88 @@ bool isEcommerceCategoryIds(Iterable<int> ids) {
   return false;
 }
 
+bool isClassifiedCategoryIds(Iterable<int> ids) {
+  for (final int id in ids) {
+    if (isClassifiedCategoryId(id)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool isEcommerceItem(ItemModel item) {
 
+
   final Iterable<int> ids = buildItemCategoryIds(item);
-  if (ids.isNotEmpty && isEcommerceCategoryIds(ids)) {
+  if (ids.isNotEmpty && !isClassifiedCategoryIds(ids) &&
+      isEcommerceCategoryIds(ids)) {
+
     return true;
   }
 
-  if (isEcommerceCategoryId(item.categoryId)) {
+  if (!isClassifiedCategoryId(item.categoryId) &&
+      isEcommerceCategoryId(item.categoryId)) {
+
     return true;
   }
 
-  if (isEcommerceCategoryId(item.category?.id)) {
+  if (!isClassifiedCategoryId(item.category?.id) &&
+      isEcommerceCategoryId(item.category?.id)) {
     return true;
+  }
+
+  if (isClassifiedItem(item)) {
+    return false;
   }
 
   return isEcommerceDepartmentSlug(item.departmentSlug);
+
+}
+
+bool isClassifiedItem(ItemModel item) {
+  final Iterable<int> ids = buildItemCategoryIds(item);
+  if (ids.isNotEmpty && isClassifiedCategoryIds(ids)) {
+    return true;
+  }
+
+  if (isClassifiedCategoryId(item.categoryId)) {
+    return true;
+  }
+
+  if (isClassifiedCategoryId(item.category?.id)) {
+    return true;
+  }
+
+  final String? slug = item.departmentSlug ?? item.itemType;
+  final String? type = item.type;
+
+  final bool hasPublicId = ids.contains(Constant.publicRootCategoryId) ||
+      item.categoryId == Constant.publicRootCategoryId ||
+      item.category?.id == Constant.publicRootCategoryId;
+
+  if (hasPublicId) {
+    final String? raw = slug ?? type;
+    final String? lower = raw?.toLowerCase();
+    final bool looksStore = lower != null && _looksLikeStoreSlug(lower);
+    if (!looksStore) {
+      if (raw == null || raw.trim().isEmpty) {
+        return true;
+      }
+      if (isClassifiedDepartmentSlug(raw)) {
+        return true;
+      }
+    }
+  }
+
+  if (isClassifiedDepartmentSlug(slug)) {
+    return true;
+  }
+
+  if (isClassifiedDepartmentSlug(type)) {
+    return true;
+  }
+
+  return false;
 
 }
 
@@ -136,6 +237,41 @@ bool _looksLikeGeneralAudienceSlug(String value) {
       return true;
     }
   }
+  return false;
+}
+
+
+bool _looksLikeRealEstateSlug(String value) {
+  final String condensed = value.replaceAll(RegExp(r'[\s_\-]+'), '');
+
+  for (final String keyword in _kRealEstateKeywords) {
+    if (condensed.contains(keyword)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool isClassifiedDepartmentSlug(String? value) {
+  if (value == null) {
+    return false;
+  }
+
+  final String trimmed = value.trim();
+  if (trimmed.isEmpty) {
+    return false;
+  }
+
+  final String lower = trimmed.toLowerCase();
+
+  if (_looksLikeGeneralAudienceSlug(lower)) {
+    return true;
+  }
+
+  if (_looksLikeRealEstateSlug(lower)) {
+    return true;
+  }
+
   return false;
 }
 

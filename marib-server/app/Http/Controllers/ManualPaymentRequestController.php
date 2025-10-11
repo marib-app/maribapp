@@ -1614,9 +1614,22 @@ class ManualPaymentRequestController extends Controller
 
     private function paymentRequestGatewayName(object $row): string
     {
+
+        $channelValue = data_get($row, 'channel', data_get($row, 'payment_gateway'));
+        $normalizedChannel = $this->normalizePaymentRequestChannel($channelValue);
+
+        $properties = ['payment_gateway_name', 'gateway_name'];
+
+        if ($normalizedChannel === 'manual_banks' || $normalizedChannel === null) {
+            $properties[] = 'manual_bank_name';
+            $properties[] = 'bank_name';
+        }
+
+        $properties[] = 'gateway_display_name';
+
         $candidates = [];
 
-        foreach (['payment_gateway_name', 'gateway_name', 'manual_bank_name', 'bank_name', 'gateway_display_name'] as $property) {
+        foreach ($properties as $property) {
             $value = data_get($row, $property);
 
             if (is_string($value)) {
@@ -1628,7 +1641,7 @@ class ManualPaymentRequestController extends Controller
             }
         }
 
-        if ($row instanceof ManualPaymentRequest) {
+        if (($normalizedChannel === 'manual_banks' || $normalizedChannel === null) && $row instanceof ManualPaymentRequest) {
             $manualBankName = $row->manualBank?->name;
 
             if (is_string($manualBankName) && trim($manualBankName) !== '') {

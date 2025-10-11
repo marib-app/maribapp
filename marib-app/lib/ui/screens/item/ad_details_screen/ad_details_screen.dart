@@ -1386,46 +1386,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }
 
   bool _supportsMapSectionForItem(ItemModel item) {
-    bool belongsToSupportedSection(ItemModel model) {
-      return _isMapSupportedInterface(model.departmentSlug) ||
-          _isMapSupportedInterface(model.itemType);
-    }
-
-    bool hasExplicitSectionMetadata(ItemModel model) {
-      final String? department = model.departmentSlug;
-      final String? itemType = model.itemType;
-
-      return (department != null && department.trim().isNotEmpty) ||
-          (itemType != null && itemType.trim().isNotEmpty);
-    }
-
-    if (belongsToSupportedSection(item)) {
-
-      return true;
-    }
-
-
-    if (hasExplicitSectionMetadata(item)) {
-      return false;
-    }
-
-
-    final ItemModel baseModel = widget.model;
-    if (!identical(item, baseModel) && belongsToSupportedSection(baseModel)) {
-
-      return true;
-    }
-
-    final ItemModel? summaryModel = _resolveInitialSummaryModel();
-    if (summaryModel != null &&
-        !identical(summaryModel, item) &&
-        !identical(summaryModel, baseModel) &&
-        belongsToSupportedSection(summaryModel)) {
-
-      return true;
-    }
-
-    return false;
+    return _isMapSupportedInterface(item.departmentSlug) ||
+        _isMapSupportedInterface(item.itemType);
   }
 
 
@@ -1578,6 +1540,11 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       return const SizedBox.shrink();
     }
 
+
+    final bool hideQuantitySelector =
+    _shouldHideQuantitySelectorForItem(_currentItem);
+
+
     if (_purchaseOptionsLoading && _purchaseOptions == null) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 16),
@@ -1639,6 +1606,11 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
     final ItemPurchaseOptions? options = _purchaseOptions;
     if (options == null) {
+
+      if (hideQuantitySelector) {
+        return const SizedBox.shrink();
+      }
+
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 16),
         child: _buildQuantitySelector(),
@@ -1693,15 +1665,19 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     }
 
 
-    if (children.isNotEmpty) {
-      children.add(const SizedBox(height: 20));
+    final ItemDiscount? discount = options.discount;
+    if (!hideQuantitySelector) {
+      if (children.isNotEmpty) {
+        children.add(const SizedBox(height: 20));
+      }
+      children.add(_buildQuantitySelector());
     }
 
-    children.add(_buildQuantitySelector());
 
-    final ItemDiscount? discount = options.discount;
     if (discount != null) {
-      children.add(const SizedBox(height: 20));
+      if (children.isNotEmpty) {
+        children.add(const SizedBox(height: 20));
+      }
 
       final bool active =
           discount.isActive || options.finalPrice < options.basePrice;
@@ -1754,7 +1730,9 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       );
     }
 
-
+    if (children.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -1875,6 +1853,11 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     }
 
     return false;
+  }
+
+
+  bool _shouldHideQuantitySelectorForItem(ItemModel item) {
+    return _supportsMapSectionForItem(item);
   }
 
   Widget _buildColorAttributeSelector(

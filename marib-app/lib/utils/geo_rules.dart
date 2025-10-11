@@ -73,6 +73,9 @@ class GeoRules {
   }
 
   static bool isDisabledForItem(ItemModel item) {
+    if (isMapEnabledForItem(item)) {
+      return false;
+    }
     if (isDisabled(categoryIds: buildItemCategoryIds(item))) {
       return true;
     }
@@ -99,11 +102,11 @@ class GeoRules {
     );
   }
   static bool isMapEnabledForItem(ItemModel item) {
-    if (_isMapEnabled(interfaceType: item.departmentSlug)) {
+    if (isMapSupportedInterface(item.departmentSlug)) {
       return true;
     }
 
-    if (_isMapEnabled(interfaceType: item.itemType)) {
+    if (isMapSupportedInterface(item.itemType)) {
       return true;
     }
 
@@ -126,5 +129,12 @@ class GeoRules {
     }
 
     return _mapEnabledInterfaces.contains(fallback);
+  }
+
+  /// Returns `true` when the provided interface type belongs to one of the
+  /// sections that support the map preview component inside the item details
+  /// screen.
+  static bool isMapSupportedInterface(String? interfaceType) {
+    return _isMapEnabled(interfaceType: interfaceType);
   }
 }

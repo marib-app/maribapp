@@ -2424,8 +2424,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       isAddedByMe: false,
     );
     final bool hideLocation = GeoRules.isDisabledForItem(item);
-    final bool supportsMapSection = GeoRules.isMapSupportedInterface(item.departmentSlug) ||
-        GeoRules.isMapSupportedInterface(item.itemType);
+    final bool supportsMapSection = GeoRules.isMapEnabledForItem(item);
+
     final List<Widget> statusAlerts = _buildStatusAlerts(item);
 
 

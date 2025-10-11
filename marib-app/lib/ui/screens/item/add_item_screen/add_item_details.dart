@@ -1555,20 +1555,54 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
   }
 
   bool _supportsProductOptionsForItem(ItemModel model) {
+
+    if (GeoRules.isMapEnabledForItem(model)) {
+      return false;
+    }
+
+    final Iterable<int> categoryIds = _currentCategoryIds();
+    if (_hasMapSectionCategory(categoryIds)) {
+      return false;
+    }
+
+
     if (isEcommerceItem(model)) {
       return true;
     }
 
-    final Iterable<int> categoryIds = _currentCategoryIds();
-    if (categoryIds.isNotEmpty && supportsEcommerceByCategories(categoryIds)) {
+    final List<int> ecommerceCategoryIds =
+    _ecommerceEligibleCategoryIds(categoryIds);
+    if (ecommerceCategoryIds.isNotEmpty &&
+        supportsEcommerceByCategories(ecommerceCategoryIds)) {
       return true;
+    }
+    return false;
+  }
 
+  List<int> _ecommerceEligibleCategoryIds(Iterable<int> categoryIds) {
+    if (categoryIds.isEmpty) {
+      return const <int>[];
+    }
 
+    return categoryIds
+        .where((int id) => !_isMapSectionCategoryId(id))
+        .toList(growable: false);
+  }
+
+  bool _hasMapSectionCategory(Iterable<int> categoryIds) {
+    for (final int id in categoryIds) {
+      if (_isMapSectionCategoryId(id)) {
+        return true;
+      }
 
 
     }
     return false;
+  }
 
+  bool _isMapSectionCategoryId(int id) {
+    return id == Constant.publicRootCategoryId ||
+        id == Constant.realEstateRootCategoryId;
   }
 
   Future<void> _onSheinFetchRequested(BuildContext context) async {

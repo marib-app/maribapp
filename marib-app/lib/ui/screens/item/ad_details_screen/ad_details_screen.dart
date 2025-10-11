@@ -464,6 +464,14 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
   bool get _hasValidItemId => (_currentItem.id ?? widget.model.id ?? 0) > 0;
 
+
+// داخل AdDetailsScreenState
+  static const Set<String> _mapSupportedSections = {
+    'public_ads',
+    'real_estate_services',
+  };
+
+
 // تبديل حالة الإعجاب + ربطها بكيوبيت المفضلة
   void _onToggleFavorite() {
     if (_currentItem.id == null) return;
@@ -487,6 +495,15 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       status: newStatus,
       userId: userId,
     );
+
+
+
+
+
+    bool _shouldHideQuantitySelectorForItem(ItemModel item) =>
+        _supportsMapSectionForItem(item);
+
+
 
     final ChangeMyItemStatusState statusState = cubit.state;
     if (statusState is ChangeMyItemStatusSuccess) {

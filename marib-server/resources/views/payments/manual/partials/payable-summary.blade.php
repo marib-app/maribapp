@@ -20,19 +20,19 @@
             ? __('Order #:number', ['number' => $payable->order_number])
             : __('Order ID: :id', ['id' => $payable->id]);
         $description = __('Customer: :name', ['name' => $payable->user?->name ?? __('Unknown')]);
-        $detailsUrl = Route::has('orders.show') ? route('orders.show', $payable) : null;
+        $detailsUrl = Route::has('orders.show') ? route('orders.show', $payable, false) : null;
     } elseif ($payable instanceof Package) {
         $typeLabel = __('Package');
         $identifier = __('Package ID: :id', ['id' => $payable->id]);
         $description = $payable->name ?? __('Package without a title');
-        $detailsUrl = Route::has('package.show') ? route('package.show', $payable) : null;
+        $detailsUrl = Route::has('package.show') ? route('package.show', $payable, false) : null;
     } elseif ($payable instanceof Item) {
         $typeLabel = __('Advertisement');
         $identifier = $payable->slug
             ? __('Ad Slug: :slug', ['slug' => $payable->slug])
             : __('Ad ID: :id', ['id' => $payable->id]);
         $description = $payable->name ?? __('Advertisement without a title');
-        $detailsUrl = Route::has('item.show') ? route('item.show', $payable) : null;
+        $detailsUrl = Route::has('item.show') ? route('item.show', $payable, false) : null;
     } elseif (filled($request->payable_type)) {
         $description = __('The associated :type record could not be found.', ['type' => $typeLabel]);
     }

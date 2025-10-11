@@ -87,35 +87,73 @@ class PaymentRequestTableQuery
             ? 'NULL'
             : 'COALESCE(' . implode(', ', $manualBankNameParts) . ')';
 
-        $gatewayNameParts = [];
+        $channelExpression = self::channelExpression('pt');
+
+        $paymentGatewayNameParts = [];
+        if ($supportsPaymentGatewayName) {
+            $paymentGatewayNameParts[] = "NULLIF(pt.payment_gateway_name, '')";
+        }
+        $paymentGatewayNameParts[] = "NULLIF(pt.payment_gateway, '')";
+
+        $manualGatewayNameParts = [];
+
+
         if ($supportsManualGatewayName) {
-            $gatewayNameParts[] = "NULLIF(mpr.gateway_name, '')";
+            $manualGatewayNameParts[] = "NULLIF(mpr.gateway_name, '')";
+
         }
         if ($supportsManualBankName) {
-            $gatewayNameParts[] = "NULLIF(mpr.bank_name, '')";
+            $manualGatewayNameParts[] = "NULLIF(mpr.bank_name, '')";
         }
         if ($supportsManualBankAccountName) {
-            $gatewayNameParts[] = "NULLIF(mpr.bank_account_name, '')";
+            $manualGatewayNameParts[] = "NULLIF(mpr.bank_account_name, '')";
         }
-        if ($supportsPaymentGatewayName) {
-            $gatewayNameParts[] = "NULLIF(pt.payment_gateway_name, '')";
-        }
-        $gatewayNameParts[] = "NULLIF(pt.payment_gateway, '')";
-        $gatewayNameParts[] = "'Manual Banks'";
-        $gatewayNameSelect = 'COALESCE(' . implode(', ', $gatewayNameParts) . ')';
+        $manualGatewayNameParts = array_merge($manualGatewayNameParts, $paymentGatewayNameParts);
+        $manualGatewayNameParts[] = "'Manual Banks'";
+        $manualGatewayNameSelect = 'COALESCE(' . implode(', ', $manualGatewayNameParts) . ')';
 
         $walletGatewayNameParts = [];
         if ($supportsManualGatewayName) {
             $walletGatewayNameParts[] = "NULLIF(mpr.gateway_name, '')";
         }
-        if ($supportsManualBankName) {
-            $walletGatewayNameParts[] = "NULLIF(mpr.bank_name, '')";
-        }
-        if ($supportsManualBankAccountName) {
-            $walletGatewayNameParts[] = "NULLIF(mpr.bank_account_name, '')";
-        }
+        $walletGatewayNameParts = array_merge($walletGatewayNameParts, $paymentGatewayNameParts);
         $walletGatewayNameParts[] = "'Wallet'";
-        $walletGatewayNameSelect = 'COALESCE(' . implode(', ', $walletGatewayNameParts) . ')';
+        $paymentTransactionWalletGatewayNameSelect = 'COALESCE(' . implode(', ', $walletGatewayNameParts) . ')';
+
+        $walletTopUpGatewayNameParts = [];
+        if ($supportsManualGatewayName) {
+            $walletTopUpGatewayNameParts[] = "NULLIF(mpr.gateway_name, '')";
+
+
+        }
+        $walletTopUpGatewayNameParts[] = "'Wallet'";
+        $walletGatewayNameSelect = 'COALESCE(' . implode(', ', $walletTopUpGatewayNameParts) . ')';
+
+        $eastGatewayNameParts = [];
+        if ($supportsManualGatewayName) {
+            $eastGatewayNameParts[] = "NULLIF(mpr.gateway_name, '')";
+
+
+        }
+        $eastGatewayNameParts = array_merge($eastGatewayNameParts, $paymentGatewayNameParts);
+        $eastGatewayNameParts[] = "'East Yemen Bank'";
+        $eastGatewayNameSelect = 'COALESCE(' . implode(', ', $eastGatewayNameParts) . ')';
+
+        $cashGatewayNameParts = $paymentGatewayNameParts;
+        $cashGatewayNameParts[] = "'Cash'";
+        $cashGatewayNameSelect = 'COALESCE(' . implode(', ', $cashGatewayNameParts) . ')';
+
+        $defaultGatewayNameParts = $paymentGatewayNameParts;
+        $defaultGatewayNameParts[] = "'Manual Banks'";
+        $defaultGatewayNameSelect = 'COALESCE(' . implode(', ', $defaultGatewayNameParts) . ')';
+
+        $gatewayNameSelect = 'CASE'
+            . " WHEN ({$channelExpression}) = 'manual_banks' THEN {$manualGatewayNameSelect}"
+            . " WHEN ({$channelExpression}) = 'east_yemen_bank' THEN {$eastGatewayNameSelect}"
+            . " WHEN ({$channelExpression}) = 'wallet' THEN {$paymentTransactionWalletGatewayNameSelect}"
+            . " WHEN ({$channelExpression}) = 'cash' THEN {$cashGatewayNameSelect}"
+            . " ELSE {$defaultGatewayNameSelect}"
+            . ' END';
 
 
         $paymentTransactions = DB::table('payment_transactions as pt')

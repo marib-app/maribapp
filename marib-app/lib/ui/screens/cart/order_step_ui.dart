@@ -1100,36 +1100,53 @@ class OrderStepContent extends StatelessWidget {
     final Map<String, dynamic> normalized =
     _normalizeMap(source as Map<dynamic, dynamic>);
 
+
+    final Map<String, dynamic> directMatches = <String, dynamic>{};
+    Map<String, dynamic>? singleMatchMap;
+    int matchCount = 0;
+
     for (final MapEntry<String, dynamic> entry in normalized.entries) {
-      final String key = entry.key.toLowerCase();
-      if (_containsKeyword(key, includeKeywords) &&
-          !_containsKeyword(key, excludeKeywords)) {
-        final Map<String, dynamic>? asMap = _asMap(entry.value);
+      final String lowerKey = entry.key.toLowerCase();
+      if (_containsKeyword(lowerKey, includeKeywords) &&
+          !_containsKeyword(lowerKey, excludeKeywords)) {
+        matchCount++;
+        final dynamic value = entry.value;
+        final Map<String, dynamic>? asMap = _asMap(value);
         if (asMap != null) {
-          return asMap;
-        }
-        if (entry.value is Iterable) {
-          for (final dynamic element in entry.value as Iterable) {
-            final Map<String, dynamic>? elementMap = _asMap(element);
-            if (elementMap != null) {
-              return elementMap;
-            }
+          if (matchCount == 1) {
+            singleMatchMap = asMap;
+          } else {
+            singleMatchMap = null;
           }
+          directMatches[entry.key] = asMap;
+          continue;
         }
+        if (value is Iterable) {
+          final List<dynamic> normalizedList = <dynamic>[];
+          for (final dynamic element in value) {
+            normalizedList.add(_asMap(element) ?? element);
+          }
+          if (matchCount == 1 &&
+              normalizedList.length == 1 &&
+              normalizedList.first is Map<String, dynamic>) {
+            singleMatchMap = normalizedList.first as Map<String, dynamic>;
+          } else {
+            singleMatchMap = null;
+          }
+          directMatches[entry.key] = normalizedList;
+          continue;
+        }
+        singleMatchMap = null;
+        directMatches[entry.key] = value;
       }
     }
 
-    final Map<String, dynamic> filtered = <String, dynamic>{};
-    normalized.forEach((String key, dynamic value) {
-      final String lower = key.toLowerCase();
-      if (_containsKeyword(lower, includeKeywords) &&
-          !_containsKeyword(lower, excludeKeywords)) {
-        filtered[key] = value;
+    if (directMatches.isNotEmpty) {
+      if (matchCount == 1 && singleMatchMap != null) {
+        return singleMatchMap;
       }
-    });
+      return directMatches;
 
-    if (filtered.isNotEmpty) {
-      return filtered;
     }
 
     for (final dynamic value in normalized.values) {

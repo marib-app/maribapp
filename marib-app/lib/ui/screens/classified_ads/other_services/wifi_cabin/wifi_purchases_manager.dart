@@ -44,6 +44,7 @@ class WifiPurchasesManager {
     current.indexWhere((WifiPurchase element) => element.id == sanitized.id);
 
 
+
     if (index >= 0) {
       current[index] = sanitized;
 

@@ -161,7 +161,7 @@ class OrderPaymentGroupService
     {
         /** @var EloquentCollection<int, Order> $orders */
         $orders = $group->orders()
-            ->with(['user', 'manualPaymentRequests'])
+            ->with(['user', 'manualPaymentRequests', 'paymentTransactions'])
             ->get();
 
         if ($orders->isEmpty()) {
@@ -199,6 +199,51 @@ class OrderPaymentGroupService
                     ]),
                 ]);
             }
+
+
+            $unpaidOrders = $orders->filter(static function (Order $order): bool {
+                return ! $order->hasSuccessfulPayment();
+            });
+
+            if ($unpaidOrders->isNotEmpty()) {
+                $orderIdentifiers = $unpaidOrders
+                    ->map(static function (Order $order) {
+                        return $order->order_number ?? $order->getKey();
+                    })
+                    ->unique()
+                    ->values()
+                    ->implode('، ');
+
+                throw ValidationException::withMessages([
+                    'order_status' => __('لا يمكن تحديث حالة الطلب قبل تأكيد الدفع بنجاح للطلبات التالية: :orders.', [
+                        'orders' => $orderIdentifiers,
+                    ]),
+                ]);
+            }
+
+
+
+
+            $unpaidOrders = $orders->filter(static function (Order $order): bool {
+                return ! $order->hasSuccessfulPayment();
+            });
+
+            if ($unpaidOrders->isNotEmpty()) {
+                $orderIdentifiers = $unpaidOrders
+                    ->map(static function (Order $order) {
+                        return $order->order_number ?? $order->getKey();
+                    })
+                    ->unique()
+                    ->values()
+                    ->implode('، ');
+
+                throw ValidationException::withMessages([
+                    'order_status' => __('لا يمكن تحديث حالة الطلب للطلبات التالية قبل إتمام الدفع بنجاح: :orders.', [
+                        'orders' => $orderIdentifiers,
+                    ]),
+                ]);
+            }
+
 
 
         }

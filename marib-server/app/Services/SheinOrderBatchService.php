@@ -9,6 +9,8 @@ use App\Models\SheinOrderBatch;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\ValidationException;
 
 class SheinOrderBatchService
 {
@@ -61,6 +63,8 @@ class SheinOrderBatchService
         $orders = Order::query()
             ->where('shein_batch_id', $batch->id)
             ->whereIn('id', $ids)
+            ->with('paymentTransactions')
+
             ->get();
 
         if ($orders->isEmpty()) {
@@ -81,7 +85,54 @@ class SheinOrderBatchService
             return 0;
         }
 
+
+       if (isset($updates['order_status'])) {
+            $unpaidOrders = $orders->filter(static function (Order $order): bool {
+                return ! $order->hasSuccessfulPayment();
+            });
+
+            if ($unpaidOrders->isNotEmpty()) {
+                $orderIdentifiers = $unpaidOrders
+                    ->map(static function (Order $order) {
+                        return $order->order_number ?? $order->getKey();
+                    })
+                    ->unique()
+                    ->values()
+                    ->implode('، ');
+
+                throw ValidationException::withMessages([
+                    'order_status' => __('لا يمكن تحديث حالة الطلب للطلبات التالية قبل إتمام الدفع بنجاح: :orders.', [
+                        'orders' => $orderIdentifiers,
+                    ]),
+                ]);
+            }
+        }
+
+
         $comment = $payload['comment'] ?? null;
+
+        if (isset($updates['order_status'])) {
+            $unpaidOrders = $orders->filter(static function (Order $order): bool {
+                return ! $order->hasSuccessfulPayment();
+            });
+
+            if ($unpaidOrders->isNotEmpty()) {
+                $orderIdentifiers = $unpaidOrders
+                    ->map(static function (Order $order) {
+                        return $order->order_number ?? $order->getKey();
+                    })
+                    ->unique()
+                    ->values()
+                    ->implode('، ');
+
+                throw ValidationException::withMessages([
+                    'order_status' => __('لا يمكن تحديث حالة الطلب قبل تأكيد الدفع بنجاح للطلبات التالية: :orders.', [
+                        'orders' => $orderIdentifiers,
+                    ]),
+                ]);
+            }
+        }
+
 
         DB::transaction(function () use ($orders, $updates, $comment, $userId, $notifyCustomer) {
             foreach ($orders as $order) {

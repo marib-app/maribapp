@@ -211,6 +211,19 @@ class Order extends Model
         'cancelled' => 'ملغي',
     ];
 
+
+
+    /**
+     * قائمة حالات الدفع التي تعتبر سداداً ناجحاً للطلب.
+     *
+     * @var array<int, string>
+     */
+    public const SUCCESSFUL_PAYMENT_STATUSES = [
+        'paid',
+    ];
+
+
+
     public const CUSTOMER_CANCELLABLE_STATUSES = [
         self::STATUS_PENDING,
         self::STATUS_DEPOSIT_PAID,
@@ -373,6 +386,29 @@ class Order extends Model
                 ManualPaymentRequest::orderPayableTypeTokens()
             );
     }
+
+
+    public function hasSuccessfulPayment(): bool
+    {
+        $status = Str::lower((string) $this->payment_status);
+
+        if (in_array($status, ['paid', 'partial', 'payment_partial'], true)) {
+            return true;
+        }
+
+        if ($this->relationLoaded('paymentTransactions')) {
+            return $this->paymentTransactions
+                ->contains(static function (PaymentTransaction $transaction): bool {
+                    return Str::lower((string) $transaction->payment_status) === 'succeed';
+                });
+        }
+
+        return $this->paymentTransactions()
+            ->whereRaw('LOWER(payment_status) = ?', ['succeed'])
+            ->exists();
+    }
+
+
 
 
     public function manualPaymentRequests(): HasMany
@@ -669,6 +705,22 @@ class Order extends Model
             ],
         ];
     }
+
+    public static function paymentStatusIsSuccessful(?string $status): bool
+    {
+        if (! is_string($status) || $status === '') {
+            return false;
+        }
+
+        return in_array(strtolower($status), self::SUCCESSFUL_PAYMENT_STATUSES, true);
+    }
+
+    public function hasSuccessfulPayment(): bool
+    {
+        return self::paymentStatusIsSuccessful($this->payment_status);
+    }
+
+    
 
     public static function statusLabel(OrderStatusEnum|string|null $status): string
     {

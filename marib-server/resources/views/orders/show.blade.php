@@ -1218,14 +1218,25 @@
                         $orderStatusLocked = isset($pendingManualPaymentRequest) && $pendingManualPaymentRequest;
                         $paymentStatusLabel = $paymentStatusOptions[$order->payment_status] ?? $order->payment_status;
                         
-                        @endphp
+                        $statusLabel = \App\Models\Order::statusLabel($order->order_status);
+                        $canChangeOrderStatus = $order->hasSuccessfulPayment() && ! $orderStatusLocked;
+                        $orderStatusLockMessage = null;
+
+                        if (! $order->hasSuccessfulPayment()) {
+                            $orderStatusLockMessage = 'لا يمكن تعديل حالة الطلب قبل تأكيد الدفع بنجاح.';
+                        } elseif ($orderStatusLocked) {
+                            $orderStatusLockMessage = 'لا يمكن تعديل حالة الطلب حتى يتم اعتماد الدفعة من خلال فريق المدفوعات.';
+                        }
+
+                    @endphp
+                    @if($canChangeOrderStatus)
 
                     <form action="{{ route('orders.update', $order->id) }}" method="POST">
                         @csrf
                         @method('PUT')
                         <div class="form-group">
                             <label for="order_status">حالة الطلب</label>
-                            <select class="form-control" id="order_status" name="order_status" required {{ $orderStatusLocked ? 'disabled' : '' }}>
+                            <select class="form-control" id="order_status" name="order_status" required>
                                 @foreach($orderStatuses as $status)
                                     <option value="{{ $status->code }}" {{ $order->order_status == $status->code ? 'selected' : '' }}
                                         style="color: {{ $status->color }}">
@@ -1234,13 +1245,7 @@
                                 @endforeach
                             </select>
 
-                            @if($orderStatusLocked)
-                                <input type="hidden" name="order_status" value="{{ $order->order_status }}">
-                                <small class="text-muted d-block mt-2">
-                                    لا يمكن تعديل حالة الطلب حتى يتم اعتماد الدفعة من خلال فريق المدفوعات.
 
-                                </small>
-                            @endif
                         </div>
                         <div class="form-group">
                             <label class="form-label">حالة الدفع</label>
@@ -1262,6 +1267,28 @@
                         </div>
                         <button type="submit" class="btn btn-primary">تحديث الحالة</button>
                     </form>
+
+                    @else
+                        <div class="form-group">
+                            <label class="form-label">حالة الطلب</label>
+                            <div class="form-control-plaintext border rounded bg-light px-3 py-2">
+                                {{ $statusLabel ?? '—' }}
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">حالة الدفع</label>
+                            <div class="form-control-plaintext border rounded bg-light px-3 py-2">
+                                {{ $paymentStatusLabel ?? '—' }}
+                            </div>
+                            <small class="text-muted d-block mt-2">يتم تحديث حالة الدفع حصراً من خلال واجهة طلبات الدفع اليدوية.</small>
+                        </div>
+                        @if($orderStatusLockMessage)
+                            <div class="alert alert-info mb-0">
+                                {{ $orderStatusLockMessage }}
+                            </div>
+                        @endif
+                    @endif
+
                 </div>
             </div>
         </div>

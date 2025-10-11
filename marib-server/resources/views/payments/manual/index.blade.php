@@ -165,7 +165,7 @@
                             <h5 class="card-title mb-0">{{ __('Gateway Breakdown') }}</h5>
                             <div class="d-flex flex-wrap gap-2">
                                 <span class="badge bg-primary">{{ __('East Yemen Bank Gateway') }}: <span data-summary-gateway="east_yemen_bank">{{ number_format($gatewaySummary['east_yemen_bank'] ?? 0) }}</span></span>
-                                <span class="badge bg-dark text-white">{{ __('Manual Banks') }}: <span data-summary-gateway="manual_banks">{{ number_format($gatewaySummary['manual_banks'] ?? 0) }}</span></span>
+                                <span class="badge bg-info text-dark">{{ __('Manual Banks') }}: <span data-summary-gateway="manual_banks">{{ number_format($gatewaySummary['manual_banks'] ?? 0) }}</span></span>
                                 <span class="badge bg-warning text-dark">{{ __('Wallet') }}: <span data-summary-gateway="wallet">{{ number_format($gatewaySummary['wallet'] ?? 0) }}</span></span>
                                 <span class="badge bg-success">{{ __('Cash') }}: <span data-summary-gateway="cash">{{ number_format($gatewaySummary['cash'] ?? 0) }}</span></span>
 
@@ -188,13 +188,13 @@
                                 </div>
                             </div>
                             <div class="col-md-3 col-sm-6">
-                                <div class="border border-dark border-2 rounded-3 p-3 h-100">
+                                <div class="border border-info border-2 rounded-3 p-3 h-100">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span class="fw-semibold text-dark">{{ __('Manual Banks') }}</span>
-                                        <span class="badge bg-dark text-white"><i class="fa fa-user-cog"></i></span>
+                                        <span class="fw-semibold text-info">{{ __('Manual Banks') }}</span>
+                                        <span class="badge bg-info text-dark"><i class="fa fa-user-cog"></i></span>
                                     </div>
                                     <div class="d-flex align-items-baseline gap-2">
-                                        <h4 class="fw-bold mb-0" data-summary-gateway="manual_banks">{{ number_format($gatewaySummary['manual_banks'] ?? 0) }}</h4>
+                                        <h4 class="fw-bold mb-0 text-info" data-summary-gateway="manual_banks">{{ number_format($gatewaySummary['manual_banks'] ?? 0) }}</h4>
 
                                         <span class="text-muted small">{{ __('Requests') }}</span>
                                     </div>
@@ -567,7 +567,7 @@
 
         const MANUAL_PAYMENT_GATEWAY_STYLES = {
             east_yemen_bank: 'bg-primary',
-            manual_banks: 'bg-dark text-white',
+            manual_banks: 'bg-info text-dark',
             wallet: 'bg-warning text-dark',
             cash: 'bg-success'
         };
@@ -667,6 +667,7 @@
                 $.fn.dataTable.ext.errMode = manualPaymentOriginalErrMode;
             }
         }
+        let manualPaymentFilters = loadInitialManualPaymentFilters();
 
 
         document.addEventListener('DOMContentLoaded', () => {

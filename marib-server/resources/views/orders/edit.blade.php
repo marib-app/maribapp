@@ -155,6 +155,7 @@
             $showDeliveryProofFields = $selectedStatus === \App\Models\Order::STATUS_DELIVERED;
             $paymentStatusLocked = true;
             $orderStatusLocked = $pendingManualPaymentRequest !== null;
+            $statusLabel = \App\Models\Order::statusLabel($order->order_status);
             $latestManualPaymentRequest = $order->manualPaymentRequests->first();
             $manualPaymentStatus = $latestManualPaymentRequest?->status;
             $manualPaymentStatusLabelValue = $manualPaymentStatus
@@ -169,6 +170,15 @@
             $paymentStatusLabel = $manualPaymentStatusLabelValue
                 ?? ($paymentStatusOptions[$order->payment_status] ?? ($order->payment_status ?: 'غير محدد'));
 
+            $canChangeOrderStatus = $order->hasSuccessfulPayment() && ! $orderStatusLocked;
+            $orderStatusLockMessage = null;
+
+            if (! $order->hasSuccessfulPayment()) {
+                $orderStatusLockMessage = 'لا يمكن تعديل حالة الطلب قبل تأكيد الدفع بنجاح.';
+            } elseif ($orderStatusLocked) {
+                $orderStatusLockMessage = 'لا يمكن تعديل حالة الطلب حتى يتم اعتماد الدفعة من خلال فريق المدفوعات.';
+            }
+
         @endphp
 
         <div class="row">
@@ -181,45 +191,41 @@
                     <div class="card-body">
                         <div class="form-group">
                             <label for="order_status">حالة الطلب</label>
-                            <select class="form-control" id="order_status" name="order_status" required {{ $orderStatusLocked ? 'disabled' : '' }}>
-                                @foreach($orderStatuses as $status)
-                                    @php
-                                        $statusCode = (string) $status->code;
-                                        $statusConfig = $statusDisplayMap[$statusCode] ?? null;
-                                        $statusLabel = $status->name;
-                                        if (! is_string($statusLabel) || trim($statusLabel) === '') {
-                                            $statusLabel = $statusCode !== ''
-                                                ? (data_get($statusConfig, 'label', \Illuminate\Support\Str::of($statusCode)->replace('_', ' ')->headline()))
-                                                : 'غير مسمى';
-                                        }
-                                        $statusIcon = $status->icon ?: data_get($statusConfig, 'icon');
-                                        $statusColor = $status->color ?: '#6c757d';
-                                        $isReserveStatus = (bool) $status->is_reserve
-                                            || (bool) data_get($statusConfig, 'reserve', false);
-                                        $isCurrentStatus = $order->order_status == $statusCode;
-
-
-                                    @endphp
-                                    <option value="{{ $statusCode }}" {{ $isCurrentStatus ? 'selected' : '' }}
-                                        style="color: {{ $statusColor }}"
-                                        data-icon="{{ $statusIcon }}"
-
-
-                                        data-reserve="{{ $isReserveStatus ? '1' : '0' }}"
-                                        {{ $isReserveStatus && ! $isCurrentStatus ? 'disabled' : '' }}>
-                                        {{ $statusLabel }}{{ $isReserveStatus ? ' (احتياطي)' : '' }}
-
-
-                                    </option>
-                                @endforeach
-                            </select>
-
-
-                            @if($orderStatusLocked)
+                            @if($canChangeOrderStatus)
+                                <select class="form-control" id="order_status" name="order_status" required>
+                                    @foreach($orderStatuses as $status)
+                                        @php
+                                            $statusCode = (string) $status->code;
+                                            $statusConfig = $statusDisplayMap[$statusCode] ?? null;
+                                            $optionLabel = $status->name;
+                                            if (! is_string($optionLabel) || trim($optionLabel) === '') {
+                                                $optionLabel = $statusCode !== ''
+                                                    ? (data_get($statusConfig, 'label', \Illuminate\Support\Str::of($statusCode)->replace('_', ' ')->headline()))
+                                                    : 'غير مسمى';
+                                            }
+                                            $statusIcon = $status->icon ?: data_get($statusConfig, 'icon');
+                                            $statusColor = $status->color ?: '#6c757d';
+                                            $isReserveStatus = (bool) $status->is_reserve
+                                                || (bool) data_get($statusConfig, 'reserve', false);
+                                            $isCurrentStatus = $order->order_status == $statusCode;
+                                        @endphp
+                                        <option value="{{ $statusCode }}" {{ $isCurrentStatus ? 'selected' : '' }}
+                                            style="color: {{ $statusColor }}"
+                                            data-icon="{{ $statusIcon }}"
+                                            data-reserve="{{ $isReserveStatus ? '1' : '0' }}"
+                                            {{ $isReserveStatus && ! $isCurrentStatus ? 'disabled' : '' }}>
+                                            {{ $optionLabel }}{{ $isReserveStatus ? ' (احتياطي)' : '' }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            @else
+                                <div class="form-control-plaintext border rounded bg-light px-3 py-2">
+                                    {{ $statusLabel ?: '—' }}
+                                </div>
                                 <input type="hidden" name="order_status" value="{{ $order->order_status }}">
-                                <small class="text-muted d-block mt-2">
-                                    لا يمكن تعديل حالة الطلب حتى يتم اعتماد الدفعة من خلال فريق المدفوعات.
-                                </small>
+                                @if($orderStatusLockMessage)
+                                    <small class="text-muted d-block mt-2">{{ $orderStatusLockMessage }}</small>
+                                @endif
                             @endif
 
                             <div class="form-check mt-2">

@@ -845,9 +845,28 @@ class OrderController extends Controller
                     ->withInput();
             }
 
+
+            if (! $order->hasSuccessfulPayment() && $request->order_status !== $order->order_status) {
+                DB::rollBack();
+
+                return redirect()->back()
+                    ->with('error', 'لا يمكن تعديل حالة الطلب قبل تأكيد الدفع بنجاح.')
+                    ->withInput();
+            }
+
             
             // حفظ الحالة السابقة
             $previousStatus = $order->order_status;
+
+
+            if ($request->order_status !== $previousStatus && ! $order->hasSuccessfulPayment()) {
+                DB::rollBack();
+
+                return redirect()->back()
+                    ->with('error', 'لا يمكن تحديث حالة الطلب قبل إتمام الدفع بنجاح.')
+                    ->withInput();
+            }
+
             
             // تحديث بيانات الطلب
             $trackingAttributes = $this->prepareTrackingAttributes($request);

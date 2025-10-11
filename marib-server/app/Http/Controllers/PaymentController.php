@@ -258,12 +258,20 @@ class PaymentController extends Controller
     {
         $key = $request->header('Idempotency-Key');
 
-        if (! $key) {
+        if (is_array($key)) {
+            $key = reset($key);
+        }
+
+        $normalized = is_string($key) ? trim($key) : null;
+
+        if ($normalized === null || $normalized === '') {
+
+
             throw ValidationException::withMessages([
                 'Idempotency-Key' => __('حقل Idempotency-Key مطلوب في الترويسة.'),
             ]);
         }
 
-        return trim($key);
+        return $normalized;
     }
 }

@@ -149,8 +149,13 @@ class ManualPaymentRequestService
 
 
             if ($manualBank) {
-                $existingRequest->bank_name = $manualBank->name;
-                $existingRequest->bank_account_name = $manualBank->beneficiary_name;
+                if ($this->manualPaymentRequestsHasColumn('bank_name')) {
+                    $existingRequest->bank_name = $manualBank->name;
+                }
+
+                if ($this->manualPaymentRequestsHasColumn('bank_account_name')) {
+                    $existingRequest->bank_account_name = $manualBank->beneficiary_name;
+                }
             }
 
             $existingRequest->meta = empty($mergedMeta) ? null : $mergedMeta;
@@ -180,10 +185,27 @@ class ManualPaymentRequestService
 
 
         if ($manualBank) {
-            $attributes['bank_name'] = $manualBank->name;
-            $attributes['bank_account_name'] = $manualBank->beneficiary_name;
+            if ($this->manualPaymentRequestsHasColumn('bank_name')) {
+                $attributes['bank_name'] = $manualBank->name;
+            }
+
+            if ($this->manualPaymentRequestsHasColumn('bank_account_name')) {
+                $attributes['bank_account_name'] = $manualBank->beneficiary_name;
+            }
         }
 
         return ManualPaymentRequest::create($attributes);
     }
+
+    private function manualPaymentRequestsHasColumn(string $column): bool
+    {
+        static $columns = [];
+
+        if (! array_key_exists($column, $columns)) {
+            $columns[$column] = Schema::hasColumn('manual_payment_requests', $column);
+        }
+
+        return $columns[$column];
+    }
+
 }

@@ -1273,7 +1273,9 @@
 
                 if (info) {
                     url.searchParams.set('page', (info.page ?? 0) + 1);
-                    url.searchParams.set('length', info.length ?? 10);
+                    const infoLength = Number(info.length ?? 20) || 20;
+                    url.searchParams.set('length', infoLength);
+                
                 } else {
                     url.searchParams.delete('page');
                     url.searchParams.delete('length');

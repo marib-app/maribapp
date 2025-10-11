@@ -1554,7 +1554,7 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
 
   }
 
-   _supportsProductOptionsForItem(ItemModel model) {
+  bool _supportsProductOptionsForItem(ItemModel model) {
     if (isEcommerceItem(model)) {
       return true;
     }
@@ -1563,10 +1563,11 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
     if (categoryIds.isNotEmpty && supportsEcommerceByCategories(categoryIds)) {
       return true;
 
-      return false;
+
 
 
     }
+    return false;
 
   }
 

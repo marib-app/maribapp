@@ -9,6 +9,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // ل Clipboard
+import 'package:marib/utils/ecommerce_department.dart';
 
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/cart/cart_cubit.dart';
@@ -508,20 +509,10 @@ enum AdActionMode { ecommerce, classifieds }
 // - kClassifiedIds: أقسام الإعلانات (عقارات، إعلانات عامة...)
 
 
-/// تُحدّد إن كان الإعلان من نمط المتجر/السلة بالاعتماد على categoryId فقط.
-/// الافتراضي: متجر (ecommerce) لتجنب تعطيل الأزرار إن كانت المعطيات ناقصة.
-bool _isEcommerceByCategory(ItemModel m) {
-  final int? id = m.categoryId;
-  if (id == null) return true;          // افتراضي متجر
-  if (kEcommerceIds.contains(id))  return true;
-  if (kClassifiedIds.contains(id)) return false;
-  return true;                           // افتراضي متجر
-}
 
 
 
 // ===== ضبط القوائم حسب أقسامك =====
-const Set<int> kEcommerceIds  = {3, 4, 5}; // المتجر الإلكتروني / شي إن / الكمبيوتر
 const Set<int> kClassifiedIds = {1, 2, 6}; // العقارات / السياحة / إعلانات الجمهور
 
 // ---- Helpers: نجمع كل IDs المتاحة من الموديل بأمان ----
@@ -558,9 +549,13 @@ Set<int> _collectCategoryIds(ItemModel m) {
 AdActionMode resolveActionMode(ItemModel m) {
   final ids = _collectCategoryIds(m);
 
-  // لو وجدنا أي ID ضمن مجموعاتنا، نقرر فورًا
-  if (ids.any(kEcommerceIds.contains))  return AdActionMode.ecommerce;
-  if (ids.any(kClassifiedIds.contains)) return AdActionMode.classifieds;
+  if (isEcommerceItem(m)) {
+    return AdActionMode.ecommerce;
+  }
+
+  if (ids.any(kClassifiedIds.contains)) {
+    return AdActionMode.classifieds;
+  }
 
   // (اختياري) fallback خفيف عبر نوع العنصر (لو مشروعك يستخدمه)
   final kind = (m.itemType ?? m.type ?? '').toLowerCase();
@@ -572,7 +567,8 @@ AdActionMode resolveActionMode(ItemModel m) {
   }
 
   // الافتراضي
-  return AdActionMode.ecommerce;
+  return AdActionMode.classifieds;
+
 }
 
 // --------------------------------------------------

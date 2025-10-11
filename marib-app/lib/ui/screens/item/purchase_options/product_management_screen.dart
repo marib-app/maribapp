@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:collection';
 import 'package:marib/data/constants/color_catalog.dart';
+import 'package:marib/utils/ecommerce_department.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -31,12 +32,18 @@ class ProductManagementScreen extends StatefulWidget {
 
     return MaterialPageRoute(
       settings: settings,
-      builder: (_) => BlocProvider(
-        create: (_) =>
-        ProductManagementCubit(ItemPurchaseOptionsRepository(), item)
-          ..initialize(),
-        child: ProductManagementScreen(item: item),
-      ),
+      builder: (_) {
+        if (!isEcommerceItem(item)) {
+          return const _UnsupportedProductManagement();
+        }
+
+        return BlocProvider(
+          create: (_) =>
+          ProductManagementCubit(ItemPurchaseOptionsRepository(), item)
+            ..initialize(),
+          child: ProductManagementScreen(item: item),
+        );
+      },
     );
   }
 
@@ -59,6 +66,54 @@ class ProductManagementScreen extends StatefulWidget {
   State<ProductManagementScreen> createState() =>
       _ProductManagementScreenState();
 }
+
+
+
+
+
+
+class _UnsupportedProductManagement extends StatelessWidget {
+  const _UnsupportedProductManagement();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Scaffold(
+      appBar: UiUtils.buildAppBar(
+        context,
+        title: 'إدارة المنتج',
+        showBackButton: true,
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.info_outline,
+                  size: 48, color: colorScheme.primary.withOpacity(0.8)),
+              const SizedBox(height: 16),
+              Text(
+                'خيارات إدارة المنتج متاحة فقط لإعلانات أقسام المتجر أو الكمبيوتر أو شي إن.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(height: 1.6),
+              ),
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: () => Navigator.of(context).maybePop(),
+                child: const Text('عودة'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
 
 class _ProductManagementScreenState extends State<ProductManagementScreen>
     with SingleTickerProviderStateMixin {

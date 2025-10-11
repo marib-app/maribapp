@@ -6,6 +6,7 @@ import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/data/repositories/item/item_purchase_options_repository.dart';
 import 'package:marib/data/model/item/purchase_options.dart';
 import 'package:marib/utils/variant_key.dart';
+import 'package:marib/utils/ecommerce_department.dart';
 
 class ProductPurchaseOptionsScreen extends StatefulWidget {
   const ProductPurchaseOptionsScreen({super.key, required this.item});
@@ -17,11 +18,17 @@ class ProductPurchaseOptionsScreen extends StatefulWidget {
 
     return MaterialPageRoute(
       settings: settings,
-      builder: (_) => BlocProvider(
-        create: (_) =>
-            FetchItemPurchaseOptionsCubit(ItemPurchaseOptionsRepository()),
-        child: ProductPurchaseOptionsScreen(item: item),
-      ),
+      builder: (_) {
+        if (!isEcommerceItem(item)) {
+          return const _UnsupportedPurchaseOptions();
+        }
+
+        return BlocProvider(
+          create: (_) =>
+              FetchItemPurchaseOptionsCubit(ItemPurchaseOptionsRepository()),
+          child: ProductPurchaseOptionsScreen(item: item),
+        );
+      },
     );
   }
 
@@ -43,6 +50,27 @@ class ProductPurchaseOptionsScreen extends StatefulWidget {
   @override
   State<ProductPurchaseOptionsScreen> createState() =>
       _ProductPurchaseOptionsScreenState();
+}
+
+
+class _UnsupportedPurchaseOptions extends StatelessWidget {
+  const _UnsupportedPurchaseOptions();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('خيارات المنتج')),
+      body: const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'خيارات المنتج متاحة فقط لإعلانات أقسام المتجر، الكمبيوتر أو شي إن.',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _ProductPurchaseOptionsScreenState

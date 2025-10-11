@@ -104,7 +104,8 @@ import 'package:marib/data/repositories/item/item_purchase_options_repository.da
 import 'package:marib/data/constants/color_catalog.dart';
 import 'package:marib/utils/color_palette_utils.dart';
 import 'package:marib/utils/ecommerce_department.dart';
-
+import 'package:marib/utils/item_category_ids.dart';
+import 'package:meta/meta.dart';
 
 
 class _AdItemDetailsRepository implements details.ItemDetailsRepository {
@@ -1392,9 +1393,30 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }
 
   bool _supportsMapSectionForItem(ItemModel item) {
+
+
+    final List<int> categoryIds = buildItemCategoryIds(item);
+    final bool belongsToForcedMapRoot = categoryIds.contains(
+      Constant.realEstateRootCategoryId,
+    ) ||
+        categoryIds.contains(Constant.publicRootCategoryId);
+
+    if (belongsToForcedMapRoot) {
+      return true;
+    }
     return _isMapSupportedInterface(item.departmentSlug) ||
         _isMapSupportedInterface(item.itemType);
   }
+
+
+
+  @visibleForTesting
+  bool supportsMapSectionForTesting(ItemModel item) =>
+      _supportsMapSectionForItem(item);
+
+  @visibleForTesting
+  bool shouldHideQuantitySelectorForTesting(ItemModel item) =>
+      _shouldHideQuantitySelectorForItem(item);
 
 
   bool _isMapSupportedInterface(String? value) {

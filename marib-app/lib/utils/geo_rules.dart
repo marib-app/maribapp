@@ -102,6 +102,13 @@ class GeoRules {
     );
   }
   static bool isMapEnabledForItem(ItemModel item) {
+
+    final Iterable<int> categoryIds = buildItemCategoryIds(item);
+    if (categoryIds.contains(Constant.realEstateRootCategoryId) ||
+        categoryIds.contains(Constant.publicRootCategoryId)) {
+      return true;
+    }
+
     if (isMapSupportedInterface(item.departmentSlug)) {
       return true;
     }

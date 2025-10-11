@@ -87,6 +87,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'AdImagesHeader.dart';
 import 'package:marib/utils/delivery_department.dart';
 import 'package:marib/utils/app_telemetry.dart';
+import 'package:marib/utils/slider_interface_mapper.dart';
 
 import 'ad_details_screen.dart';
 
@@ -392,6 +393,11 @@ int? _extractItemId(dynamic value) {
 }
 
 class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
+  static const Set<String> _mapSupportedSections = <String>{
+    'public_ads',
+    'real_estate_services',
+  };
+
   //ImageView
   int currentPage = 0;
   bool? isFeaturedLimit;
@@ -1381,8 +1387,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
   bool _supportsMapSectionForItem(ItemModel item) {
     bool belongsToSupportedSection(ItemModel model) {
-      return GeoRules.isMapSupportedInterface(model.departmentSlug) ||
-          GeoRules.isMapSupportedInterface(model.itemType);
+      return _isMapSupportedInterface(model.departmentSlug) ||
+          _isMapSupportedInterface(model.itemType);
     }
 
     bool hasExplicitSectionMetadata(ItemModel model) {
@@ -1423,7 +1429,18 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }
 
 
+  bool _isMapSupportedInterface(String? value) {
+    if (value == null) {
+      return false;
+    }
 
+    final String? normalized = SliderInterfaceMapper.normalize(value);
+    if (normalized == null || normalized.isEmpty) {
+      return false;
+    }
+
+    return _mapSupportedSections.contains(normalized);
+  }
 
 
 

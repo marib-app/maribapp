@@ -14,6 +14,16 @@ class ProductPurchaseOptionsController extends Controller
 
     public function show(Item $item): JsonResponse
     {
+
+        if (! $this->purchaseOptionsService->supportsProductManagement($item)) {
+            return response()->json([
+                'status' => false,
+                'message' => __('خيارات المنتج غير متاحة لهذا الإعلان.'),
+                'data' => null,
+            ], 403);
+        }
+
+
         $item->loadMissing(['stocks']);
 
         $data = $this->purchaseOptionsService->buildPurchaseOptions($item);

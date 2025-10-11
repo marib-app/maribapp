@@ -15,6 +15,45 @@ const Set<String> _kEcommerceDepartments = <String>{
   'store',
 };
 
+
+const Set<String> _kGeneralAudienceKeywords = <String>{
+  'public',
+  'general',
+  'audience',
+  'اعلان',
+  'اعلانات',
+  'الجمهور',
+  'جمهور',
+  'عام',
+  'العام',
+  'عامه',
+  'القسمالعام',
+  'القسمالعامه',
+  'قسمعام',
+  'قسمالمتجرالعام',
+  'قسمالسوق',
+  'قسمالبقالة',
+};
+
+const Set<String> _kStoreKeywords = <String>{
+  'store',
+  'stores',
+  'storeproducts',
+  'storeproduct',
+  'store_section',
+  'storedepartment',
+  'estore',
+  'e_store',
+  'estoreproducts',
+  'merchant',
+  'merchants',
+  'ecommerce',
+  'متجر',
+  'المتجر',
+};
+
+
+
 bool isEcommerceDepartmentSlug(String? rawSlug) {
   if (rawSlug == null) {
     return false;
@@ -26,16 +65,28 @@ bool isEcommerceDepartmentSlug(String? rawSlug) {
   }
 
   final String lower = trimmed.toLowerCase();
+
+  if (_looksLikeGeneralAudienceSlug(lower)) {
+    return false;
+  }
+
   if (_kEcommerceDepartments.contains(lower)) {
     return true;
   }
 
   final String? normalized = normalizeDeliveryDepartment(lower);
-  if (normalized != null && _kEcommerceDepartments.contains(normalized)) {
-    return true;
+  if (normalized == null) {
+    return false;
   }
 
-  return false;
+  if (normalized == 'store') {
+    if (_looksLikeGeneralAudienceSlug(lower)) {
+      return false;
+    }
+    return _looksLikeStoreSlug(lower);
+  }
+
+  return _kEcommerceDepartments.contains(normalized);
 }
 
 bool isEcommerceCategoryId(int? id) {
@@ -55,9 +106,6 @@ bool isEcommerceCategoryIds(Iterable<int> ids) {
 }
 
 bool isEcommerceItem(ItemModel item) {
-  if (isEcommerceDepartmentSlug(item.departmentSlug)) {
-    return true;
-  }
 
   final Iterable<int> ids = buildItemCategoryIds(item);
   if (ids.isNotEmpty && isEcommerceCategoryIds(ids)) {
@@ -72,9 +120,32 @@ bool isEcommerceItem(ItemModel item) {
     return true;
   }
 
-  return false;
+  return isEcommerceDepartmentSlug(item.departmentSlug);
+
 }
 
 bool supportsEcommerceByCategories(Iterable<int> categoryIds) {
   return isEcommerceCategoryIds(categoryIds);
+}
+
+bool _looksLikeGeneralAudienceSlug(String value) {
+  final String condensed = value.replaceAll(RegExp(r'[\s_\-]+'), '');
+
+  for (final String keyword in _kGeneralAudienceKeywords) {
+    if (condensed.contains(keyword)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool _looksLikeStoreSlug(String value) {
+  final String condensed = value.replaceAll(RegExp(r'[\s_\-]+'), '');
+
+  for (final String keyword in _kStoreKeywords) {
+    if (condensed.contains(keyword)) {
+      return true;
+    }
+  }
+  return false;
 }

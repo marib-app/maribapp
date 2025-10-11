@@ -12,12 +12,64 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 use App\Support\VariantKeyNormalizer;
-
+use App\Services\DepartmentAdvertiserService;
+use Illuminate\Support\Facades\Config;
 class ItemPurchaseOptionsService
 {
-    public function __construct(private readonly DatabaseManager $db)
+    public function __construct(
+        private readonly DatabaseManager $db,
+        private readonly DepartmentAdvertiserService $departmentAdvertiserService
+    )
     {
     }
+
+
+
+
+    public function supportsProductManagement(Item $item): bool
+    {
+        $department = $this->departmentAdvertiserService->resolveDepartmentForItem($item);
+
+        if (in_array($department, ['shein', 'computer', 'store'], true)) {
+            return true;
+        }
+
+        $allowedRoots = collect(Config::get('cart.department_roots', []))
+            ->only(['shein', 'computer', 'store'])
+            ->map(static fn ($id) => $id !== null ? (int) $id : null)
+            ->filter(static fn ($id) => $id !== null && $id > 0)
+            ->unique()
+            ->values();
+
+        if ($allowedRoots->isEmpty()) {
+            return false;
+        }
+
+        $candidateIds = collect();
+
+        if ($item->category_id) {
+            $candidateIds->push((int) $item->category_id);
+        }
+
+        if ($item->category && $item->category->id) {
+            $candidateIds->push((int) $item->category->id);
+        }
+
+        if (! empty($item->all_category_ids)) {
+            preg_match_all('/\d+/', (string) $item->all_category_ids, $matches);
+            foreach (($matches[0] ?? []) as $value) {
+                $candidateIds->push((int) $value);
+            }
+        }
+
+        $ids = $candidateIds
+            ->filter(static fn ($id) => $id !== null)
+            ->map(static fn ($id) => (int) $id)
+            ->unique();
+
+        return $ids->contains(static fn ($id) => $allowedRoots->contains($id));
+    }
+
 
     /**
      * @return Collection<int, array<string, mixed>>

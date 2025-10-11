@@ -25,6 +25,10 @@ class ItemPurchaseManagementController extends Controller
 
     public function updateAttributes(Request $request, Item $item): JsonResponse
     {
+        if (! $this->purchaseOptionsService->supportsProductManagement($item)) {
+            return $this->forbiddenResponse();
+        }
+
         $item->loadMissing(['purchaseAttributes', 'purchaseAttributes.values']);
 
         $rawAttributes = $request->input('attributes', []);
@@ -267,6 +271,10 @@ class ItemPurchaseManagementController extends Controller
 
     public function bulkSetStock(Request $request, Item $item): JsonResponse
     {
+        if (! $this->purchaseOptionsService->supportsProductManagement($item)) {
+            return $this->forbiddenResponse();
+        }
+
         $rows = $request->input('rows');
         if (! is_array($rows)) {
             throw ValidationException::withMessages([
@@ -356,6 +364,11 @@ class ItemPurchaseManagementController extends Controller
 
     public function updateDiscount(Request $request, Item $item): JsonResponse
     {
+
+        if (! $this->purchaseOptionsService->supportsProductManagement($item)) {
+            return $this->forbiddenResponse();
+        }
+
         $enabled = filter_var($request->boolean('enabled'), FILTER_VALIDATE_BOOLEAN);
 
         if (! $enabled) {
@@ -423,6 +436,18 @@ class ItemPurchaseManagementController extends Controller
             ],
         ]);
     }
+
+
+    private function forbiddenResponse(): JsonResponse
+    {
+        return response()->json([
+            'status' => false,
+            'message' => __('إدارة المنتج غير متاحة لهذا الإعلان.'),
+            'data' => null,
+        ], 403);
+    }
+
+
 
     private function normalizeSelectionArray(mixed $value): array
     {

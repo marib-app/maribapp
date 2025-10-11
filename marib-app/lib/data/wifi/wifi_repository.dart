@@ -191,25 +191,38 @@ class WifiRepository {
       'name': name,
       'contacts': <String>[contact],
       'notes': notes,
-    };
 
-    return Api.postJson(
+
+      'logo': logo,
+      'login_screenshot': loginScreenshot,
+    }..removeWhere((key, value) {
+      if (value == null) return true;
+      if (value is String && value.trim().isEmpty) {
+        return true;
+      }
+      if (value is Iterable && value.isEmpty) {
+        return true;
+      }
+      return false;
+    });
+
+    return Api.post(
       url: Api.wifiNetworksApi,
-      data: payload,
+      parameter: payload,
     );
   }
 
   Future<Map<String, dynamic>> createOwnerRequest({
     required String name,
-    required double latitude,
-    required double longitude,
-    required double coverageKm,
+    required String contact,
+    required MultipartFile logo,
+    required MultipartFile loginScreenshot,
+    String? notes,
   }) async {
     final payload = <String, dynamic>{
       'name': name,
-      'latitude': latitude,
-      'longitude': longitude,
-      'coverage_radius_km': coverageKm,
+      'contacts': <String>[contact],
+      'notes': notes,
       'is_active': false,
       'meta': <String, dynamic>{
         'source': 'mobile_app',
@@ -223,7 +236,7 @@ class WifiRepository {
       if (value is String && value.trim().isEmpty) {
         return true;
       }
-      if (value is List && value.isEmpty) {
+      if (value is Iterable && value.isEmpty) {
         return true;
       }
       return false;

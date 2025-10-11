@@ -2584,6 +2584,11 @@ class _AddNetworkScreenState extends _OwnerRequestFormState<_AddNetworkScreen> {
 
 
 abstract class _OwnerRequestFormState<T extends StatefulWidget> extends State<T> {
+
+  static const int _maxUploadSizeBytes = 4 * 1024 * 1024;
+  static const List<String> _allowedImageExtensions = <String>['jpg', 'jpeg', 'png', 'webp'];
+
+
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _contactController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
@@ -2592,6 +2597,9 @@ abstract class _OwnerRequestFormState<T extends StatefulWidget> extends State<T>
   bool _isSubmitting = false;
 
   WifiRepository get repository;
+
+  @protected
+  void handleCompletion(Map<String, dynamic> result);
 
   @override
   void dispose() {
@@ -2730,10 +2738,10 @@ abstract class _OwnerRequestFormState<T extends StatefulWidget> extends State<T>
 
       final Map<String, dynamic> response = await repository.createOwnerRequest(
         name: name,
-      contact: contact,
-      logo: logoMultipart,
-      loginScreenshot: loginMultipart,
-      notes: _stringify(_notesController.text),
+        contact: contact,
+        logo: logoMultipart,
+        loginScreenshot: loginMultipart,
+        notes: _stringify(_notesController.text),
       );
 
       Map<String, dynamic> payload = <String, dynamic>{};
@@ -2767,7 +2775,8 @@ abstract class _OwnerRequestFormState<T extends StatefulWidget> extends State<T>
         return;
       }
 
-    handleCompletion(result);
+      setState(() => _isSubmitting = false);
+      handleCompletion(result);
     } on ApiException catch (error) {
       if (!mounted) return;
       _showError(error.toString());
@@ -2864,11 +2873,6 @@ abstract class _OwnerRequestFormState<T extends StatefulWidget> extends State<T>
   }
 }
 
-void handleCompletion(Map<String, dynamic> result);
-
-
-static const int _maxUploadSizeBytes = 4 * 1024 * 1024;
-static const List<String> _allowedImageExtensions = <String>['jpg', 'jpeg', 'png', 'webp'];
 
 
 class _OwnerRequestFilePickerTile extends StatelessWidget {

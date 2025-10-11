@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
+use App\Policies\SectionDelegatePolicy;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -31,5 +32,16 @@ class AuthServiceProvider extends ServiceProvider
             }
             return null;
         });
+
+
+
+
+
+        Gate::define('section.publish', [SectionDelegatePolicy::class, 'publish']);
+        Gate::define('section.update', [SectionDelegatePolicy::class, 'update']);
+        Gate::define('section.copy', [SectionDelegatePolicy::class, 'copy']);
+        Gate::define('section.change', [SectionDelegatePolicy::class, 'changeSection']);
+        Gate::define('section.batchImport', [SectionDelegatePolicy::class, 'batchImport']);
+
     }
 }

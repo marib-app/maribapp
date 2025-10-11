@@ -11,6 +11,7 @@ use App\Services\DepartmentAdvertiserService;
 use App\Services\DepartmentReportService;
 use App\Services\FileService;
 use App\Services\FeatureSectionCategoryService;
+use App\Policies\SectionDelegatePolicy;
 
 use App\Services\NotificationService;
 use App\Services\ResponseService;
@@ -18,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use App\Support\ColorFieldParser;
+use Illuminate\Support\Facades\Gate;
 
 use App\Models\Category;
 use App\Models\CustomField;
@@ -352,6 +354,14 @@ class ItemController extends Controller {
         try {
             ResponseService::noAnyPermissionThenSendJson(['shein-products-update']);
             
+            $authorization = Gate::inspect('section.update', DepartmentReportService::DEPARTMENT_SHEIN);
+
+            if ($authorization->denied()) {
+                $message = $authorization->message() ?? SectionDelegatePolicy::FORBIDDEN_MESSAGE;
+
+                ResponseService::errorResponse($message, null, 403);
+            }
+
             $request->validate([
                 'name' => 'required|string|max:255',
                 'description' => 'required|string',
@@ -1116,9 +1126,22 @@ class ItemController extends Controller {
             $categoryId = (int) ($context['default_category_id'] ?? $categoryId);
         }
 
-        $imagePath = FileService::upload($request->file('image'), 'items');
 
         $section = $context['section'] ?? null;
+        if ($section !== null) {
+            $authorization = Gate::inspect('section.publish', $section);
+
+            if ($authorization->denied()) {
+                $message = $authorization->message() ?? SectionDelegatePolicy::FORBIDDEN_MESSAGE;
+
+                ResponseService::errorResponse($message, null, 403);
+            }
+        }
+
+
+        $imagePath = FileService::upload($request->file('image'), 'items');
+
+
         $status = $context['status'] ?? 'review';
 
         if ($this->shouldAutoApproveSection($section)) {

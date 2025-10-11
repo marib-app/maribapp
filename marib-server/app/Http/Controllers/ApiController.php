@@ -69,6 +69,8 @@ use App\Models\WalletWithdrawalRequest;
 use App\Models\ReferralAttempt;
 use App\Services\SliderEligibilityService;
 use App\Models\ServiceReviewReport;
+use App\Policies\SectionDelegatePolicy;
+use Illuminate\Support\Facades\Gate;
 
 use App\Models\CurrencyRate;
 use App\Models\Challenge;
@@ -1380,26 +1382,19 @@ class ApiController extends Controller {
                 ResponseService::validationErrors($validator->errors());
             }
 
-            DB::beginTransaction();
-            $user = Auth::user();
-            
-            
-
-
-
-
-
 
             $section = $this->resolveSectionByCategoryId((int) $request->category_id);
+            $authorization = Gate::inspect('section.publish', $section);
 
-            if ($this->delegateAuthorizationService->isSectionRestricted($section)
-                && ! $this->delegateAuthorizationService->userCanManageSection($user, $section)) {
-            
-                    DB::rollBack();
-                ResponseService::errorResponse('غير مصرح لك بالنشر في هذا القسم.');
+            if ($authorization->denied()) {
+                $message = $authorization->message() ?? SectionDelegatePolicy::FORBIDDEN_MESSAGE;
+
+                ResponseService::errorResponse($message, null, 403);
             }
 
 
+            DB::beginTransaction();
+            $user = Auth::user();
 
 
 
@@ -1804,10 +1799,11 @@ class ApiController extends Controller {
     public function updateItem(Request $request) {
 
         $categoryInput = $request->input('category_id');
+        $item = null;
 
         if (! is_numeric($categoryInput) && $request->filled('id')) {
-            $existingItem = Item::select('category_id')->find($request->input('id'));
-            $categoryInput = $existingItem?->category_id;
+            $item = Item::owner()->find($request->input('id'));
+            $categoryInput = $item?->category_id;
         }
 
         $categoryId = is_numeric($categoryInput) ? (int) $categoryInput : null;
@@ -1844,11 +1840,39 @@ class ApiController extends Controller {
 
         }
 
+
+        $item ??= Item::owner()->findOrFail($request->id);
+
+        if ($categoryId === null) {
+            $categoryId = (int) $item->category_id;
+        }
+
+        $currentSection = $this->resolveSectionByCategoryId($item->category_id);
+        $updateAuthorization = Gate::inspect('section.update', $currentSection);
+
+        if ($updateAuthorization->denied()) {
+            $message = $updateAuthorization->message() ?? SectionDelegatePolicy::FORBIDDEN_MESSAGE;
+
+            ResponseService::errorResponse($message, null, 403);
+        }
+
+        $targetSection = $this->resolveSectionByCategoryId($categoryId);
+
+        if ($targetSection !== $currentSection) {
+            $changeAuthorization = Gate::inspect('section.change', [$currentSection, $targetSection]);
+
+            if ($changeAuthorization->denied()) {
+                $message = $changeAuthorization->message() ?? SectionDelegatePolicy::FORBIDDEN_MESSAGE;
+
+                ResponseService::errorResponse($message, null, 403);
+            }
+        }
+
+
         DB::beginTransaction();
 
         try {
 
-            $item = Item::owner()->findOrFail($request->id);
 
             // $slug = $request->input('slug', $item->slug);
             // $uniqueSlug = HelperService::generateUniqueSlug(new Item(), $slug,$request->id);
@@ -2027,6 +2051,15 @@ class ApiController extends Controller {
             }
 
             $item = Item::owner()->whereNotIn('status', ['review', 'rejected'])->withTrashed()->findOrFail($request->item_id);
+            $section = $this->resolveSectionByCategoryId($item->category_id);
+            $authorization = Gate::inspect('section.update', $section);
+
+            if ($authorization->denied()) {
+                $message = $authorization->message() ?? SectionDelegatePolicy::FORBIDDEN_MESSAGE;
+
+                ResponseService::errorResponse($message, null, 403);
+            }
+
             if ($request->status == "inactive") {
                 $item->delete();
             } else if ($request->status == "active") {

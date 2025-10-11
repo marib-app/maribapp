@@ -72,8 +72,18 @@ class DelegateAuthorizationService
         $this->forgetSectionCache($section);
     }
 
-    public function userCanManageSection(User $user, string $section): bool
+    public function userCanManageSection(User $user, ?string $section): bool
+
     {
+
+        if ($section === null) {
+            return true;
+        }
+
+        if (! $this->isSectionRestricted($section)) {
+            return true;
+        }
+
         if ($user->hasAnyRole($this->adminRoles())) {
             return true;
         }
@@ -85,7 +95,7 @@ class DelegateAuthorizationService
             return false;
         }
 
-        return in_array($section, $this->restrictedDepartments(), true);
+        return in_array($user->getKey(), $delegates, true);
 
     }
 
@@ -128,7 +138,8 @@ class DelegateAuthorizationService
             return false;
         }
 
-        return in_array($section, self::RESTRICTED_SECTIONS, true);
+        return in_array($section, $this->restrictedDepartments(), true);
+        
     }
 
 

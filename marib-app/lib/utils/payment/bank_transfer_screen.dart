@@ -821,12 +821,12 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         final padding = MediaQuery.of(sheetContext).viewInsets.bottom + 24;
 
         return SafeArea(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(20, 16, 20, padding),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final content = Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                 Row(
                   children: [
                     Expanded(
@@ -900,7 +900,16 @@ class _BankTransferScreenState extends State<BankTransferScreen>
                   ),
                 ),
               ],
-            ),
+                );
+
+                return SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(20, 16, 20, padding),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    child: content,
+                  ),
+                );
+              },
           ),
         );
       },

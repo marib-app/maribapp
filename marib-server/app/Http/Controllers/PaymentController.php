@@ -41,13 +41,11 @@ class PaymentController extends Controller
 
         $rules = [
             'purpose' => ['nullable', 'string', Rule::in(['order', 'package'])],
-            'payment_method' => ['nullable', 'string', 'max:191', Rule::in(['manual', 'manual_bank'])],
+            'payment_method' => ['required', 'string', 'max:191', Rule::in(['manual', 'manual_bank'])],
 
-
-            'payment_method' => ['required', 'string', 'max:191'],
             'notes' => ['nullable', 'string'],
             'metadata' => ['nullable', 'array'],
-            'bank_id' => ['required_if:payment_method,manual,manual_bank', 'nullable', 'integer', 'exists:manual_banks,id'],
+            'bank_id' => ['nullable', 'integer', 'exists:manual_banks,id'],
             'bank_account_id' => ['nullable', 'string', 'max:191'],
 
             'amount' => ['nullable', 'numeric', 'min:0'],

@@ -1618,34 +1618,50 @@ class ManualPaymentRequestController extends Controller
         $channelValue = data_get($row, 'channel', data_get($row, 'payment_gateway'));
         $normalizedChannel = $this->normalizePaymentRequestChannel($channelValue);
 
-        $properties = ['payment_gateway_name', 'gateway_name'];
+        $properties = [
+            'payment_gateway_name',
+            'gateway_name',
+            'gateway_display_name',
+        ];
+
 
         if ($normalizedChannel === 'manual_banks' || $normalizedChannel === null) {
             $properties[] = 'manual_bank_name';
             $properties[] = 'bank_name';
         }
 
-        $properties[] = 'gateway_display_name';
 
         $candidates = [];
 
         foreach ($properties as $property) {
             $value = data_get($row, $property);
 
-            if (is_string($value)) {
-                $trimmed = trim($value);
-
-                if ($trimmed !== '') {
-                    $candidates[] = $trimmed;
-                }
+            if (! is_string($value)) {
+                continue;
             }
+
+
+            $trimmed = trim($value);
+
+            if ($trimmed === '') {
+                continue;
+            }
+            $candidates[] = $trimmed;
+
+
         }
 
         if (($normalizedChannel === 'manual_banks' || $normalizedChannel === null) && $row instanceof ManualPaymentRequest) {
             $manualBankName = $row->manualBank?->name;
 
-            if (is_string($manualBankName) && trim($manualBankName) !== '') {
-                $candidates[] = trim($manualBankName);
+            if (is_string($manualBankName)) {
+                $trimmedManualBankName = trim($manualBankName);
+
+                if ($trimmedManualBankName !== '') {
+                    $candidates[] = $trimmedManualBankName;
+                }
+
+
             }
         }
 
@@ -1655,10 +1671,8 @@ class ManualPaymentRequestController extends Controller
             }
         }
 
-        $channel = data_get($row, 'channel', data_get($row, 'payment_gateway'));
-
-        if (is_string($channel) && trim($channel) !== '') {
-            return Str::of($channel)
+        if (is_string($channelValue) && trim($channelValue) !== '') {
+            return Str::of($channelValue)
                 ->replace(['_', '-'], ' ')
                 ->trim()
                 ->title()

@@ -1568,7 +1568,7 @@ class ApiController extends Controller {
             ],
             
             'posted_since'   => 'nullable|in:all-time,today,within-1-week,within-2-week,within-1-month,within-3-month',
-            'promoted'       => 'nullable|in:0,1',
+            'promoted'       => 'nullable|boolean',
             'interface_type' => ['nullable', Rule::in(self::interfaceTypes(includeLegacy: true))],
 
         ]);
@@ -1590,6 +1590,14 @@ class ApiController extends Controller {
                     $interfaceTypeVariants = FeatureSectionCategoryService::sectionTypeVariants($interfaceTypeFilter);
                 }
             }
+
+
+            $promotedFilter = null;
+
+            if ($request->filled('promoted')) {
+                $promotedFilter = filter_var($request->promoted, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            }
+
 
             $sql = Item::with('user:id,name,email,mobile,profile,created_at,is_verified,show_personal_details,country_code', 'category:id,name,image', 'gallery_images:id,image,item_id', 'featured_items', 'favourites', 'item_custom_field_values.custom_field', 'area:id,name')
                 ->withCount('favourites')
@@ -1628,7 +1636,7 @@ class ApiController extends Controller {
                     }
 
                     return $sql->whereIn('interface_type', $interfaceTypeVariants);
-                })->when($request->filled('promoted') && (int) $request->promoted === 1, function ($sql) {
+                })->when($promotedFilter === true, function ($sql) {
                     return $sql->whereHas('featured_items');
 
 
@@ -1823,7 +1831,27 @@ class ApiController extends Controller {
         }
     }
 
+    public function getAllowedSections(Request $request, DelegateAuthorizationService $delegateAuthorizationService)
+    {
+        $user = $request->user();
 
+        if (! $user instanceof User) {
+            return response()->json([
+                'permitted_sections' => [],
+                'blocked_sections' => [],
+            ]);
+        }
+
+        $access = $delegateAuthorizationService->getSectionAccessForUser($user);
+
+        return response()->json([
+            'permitted_sections' => $access['permitted'],
+            'blocked_sections' => $access['blocked'],
+        ]);
+    }
+
+
+    
     public function updateItem(Request $request) {
 
         $categoryInput = $request->input('category_id');

@@ -148,6 +148,46 @@ class DelegateAuthorizationService
     }
 
 
+
+    public function getRestrictedDepartments(): array
+    {
+        return $this->restrictedDepartments();
+    }
+
+    public function getSectionAccessForUser(User $user): array
+    {
+        $restricted = $this->getRestrictedDepartments();
+
+        if ($restricted === []) {
+            return [
+                'permitted' => [],
+                'blocked' => [],
+            ];
+        }
+
+        $permitted = [];
+        $blocked = [];
+
+        foreach ($restricted as $department) {
+            if ($this->userCanManageSection($user, $department)) {
+                $permitted[] = $department;
+
+                continue;
+            }
+
+            $blocked[] = $department;
+        }
+
+        return [
+            'permitted' => $permitted,
+            'blocked' => $blocked,
+        ];
+    }
+
+
+
+
+
     protected function restrictedDepartments(): array
     {
         return array_values(array_filter(

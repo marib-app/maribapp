@@ -113,6 +113,7 @@ Route::prefix('wifi-cabin')
     Route::get('get-notification-list', [ApiController::class, 'getNotificationList']);
     Route::get('get-limits', [ApiController::class, 'getLimits']);
     Route::get('get-favourite-item', [ApiController::class, 'getFavouriteItem']);
+    Route::get('delegates/sections', [ApiController::class, 'getAllowedSections']);
 
     Route::patch('addresses/{address}/default', [AddressController::class, 'setDefault'])
         ->whereNumber('address');

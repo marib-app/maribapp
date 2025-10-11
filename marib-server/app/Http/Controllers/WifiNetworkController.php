@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 use App\Models\WalletAccount;
+use Illuminate\Support\Facades\Schema;
 
 use App\Models\WifiNetwork;
 use Illuminate\Http\JsonResponse;
@@ -417,21 +418,34 @@ class WifiNetworkController extends Controller
         }
 
         $query = WalletAccount::query()->where('user_id', $user->getKey());
+        $walletsHaveCurrency = Schema::hasColumn('wallet_accounts', 'currency');
 
         if ($requestedWalletId) {
             return $query->whereKey($requestedWalletId)->first();
         }
+
+
+                if (! $walletsHaveCurrency) {
+            return $query->first();
+        }
+
 
         $defaultCurrency = strtoupper((string) config('app.currency', 'SAR'));
 
         $wallet = (clone $query)->where('currency', $defaultCurrency)->first();
 
         if (! $wallet) {
-            $wallet = WalletAccount::create([
+            $walletAttributes = [
+
                 'user_id' => $user->getKey(),
-                'currency' => $defaultCurrency,
                 'balance' => 0,
-            ]);
+            ];
+
+            if ($walletsHaveCurrency) {
+                $walletAttributes['currency'] = $defaultCurrency;
+            }
+
+            $wallet = WalletAccount::create($walletAttributes);
         }
 
         return $wallet;

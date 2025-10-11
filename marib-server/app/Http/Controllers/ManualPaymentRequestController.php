@@ -1539,7 +1539,7 @@ class ManualPaymentRequestController extends Controller
         $hasPayableId = $payableId !== null && $payableId !== '';
 
         if ($category === 'orders' && $hasPayableId) {
-            $url = url(sprintf('/admin/orders/%s', rawurlencode((string) $payableId)));
+            $url = route('orders.show', ['order' => $payableId]);
 
             return BootstrapTableService::button(
                 'fa fa-external-link-alt',

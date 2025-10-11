@@ -2,6 +2,7 @@ import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/delivery_department.dart';
 import 'package:marib/utils/item_category_ids.dart';
+import 'package:marib/utils/geo_rules.dart';
 
 const Set<int> _kEcommerceRootIds = <int>{
   Constant.sheinRootCategoryId,
@@ -106,7 +107,9 @@ bool isEcommerceCategoryIds(Iterable<int> ids) {
 }
 
 bool isEcommerceItem(ItemModel item) {
-
+  if (GeoRules.isMapEnabledForItem(item)) {
+    return false;
+  }
   final Iterable<int> ids = buildItemCategoryIds(item);
   if (ids.isNotEmpty && isEcommerceCategoryIds(ids)) {
     return true;

@@ -179,59 +179,80 @@ class _PlansSheetState extends State<_PlansSheet> {
                         ),
                       );
                     }
+                    final List<Widget> listChildren = <Widget>[];
+
+                    if (_isLoading) {
+                      listChildren.add(
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 12),
+                          child: LinearProgressIndicator(minHeight: 2),
+                        ),
+                      );
+                    }
+
+                    if (_error != null) {
+                      listChildren.add(
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: color.error.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _error!,
+                                  style: TextStyle(
+                                    color: color.error,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () => _fetchPlans(force: true),
+                                child: const Text('تحديث'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    if (widget.network.loginScreenshotUrl != null) {
+                      listChildren.addAll(
+                        [
+                          _LoginScreenshotPreview(
+                            imageUrl: widget.network.loginScreenshotUrl!,
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                      );
+                    }
+
+                    for (int i = 0; i < _plans.length; i++) {
+                      if (i > 0) {
+                        listChildren.add(const SizedBox(height: 10));
+                      }
+                      listChildren.add(
+                        _PlanTile(
+                          plan: _plans[i],
+                          onSelect: () => _openCheckout(context, _plans[i]),
+                        ),
+                      );
+                    }
+
+                    listChildren.add(const SizedBox(height: 16));
+
                     return RefreshIndicator(
                       onRefresh: () => _fetchPlans(force: true),
                       child: ListView(
                         controller: controller,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        children: [
-                          if (_isLoading)
-                            const Padding(
-                              padding: EdgeInsets.only(bottom: 12),
-                              child: LinearProgressIndicator(minHeight: 2),
-                            ),
-                          if (_error != null)
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              margin: const EdgeInsets.only(bottom: 12),
-                              decoration: BoxDecoration(
-                                color: color.error.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      _error!,
-                                      style: TextStyle(
-                                        color: color.error,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ),
-                                  TextButton(
-                                    onPressed: () => _fetchPlans(force: true),
-                                    child: const Text('تحديث'),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          if (widget.network.loginScreenshotUrl != null) ...[
-                            _LoginScreenshotPreview(
-                              imageUrl: widget.network.loginScreenshotUrl!,
-                            ),
-                            const SizedBox(height: 12),
-                          ],
-                          for (int i = 0; i < _plans.length; i++) ...[
-                            if (i > 0) const SizedBox(height: 10),
-                            _PlanTile(
-                              plan: _plans[i],
-                              onSelect: () => _openCheckout(context, _plans[i]),
-                            ),
-                          ],
-                          const SizedBox(height: 16),
-                        ],
+                        children: listChildren,
+
                       ),
                     );
                   },
@@ -347,90 +368,9 @@ class _PlanTile extends StatelessWidget {
     );
   }
 
-  @@ -195,50 +195,56 @@ class _PlansSheetState extends State<_PlansSheet> {
-  padding: const EdgeInsets.all(12),
-  margin: const EdgeInsets.only(bottom: 12),
-  decoration: BoxDecoration(
-  color: color.error.withOpacity(0.1),
-  borderRadius: BorderRadius.circular(12),
-  ),
-  child: Row(
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
-  Expanded(
-  child: Text(
-  _error!,
-  style: TextStyle(
-  color: color.error,
-  fontSize: 13,
-  ),
-  ),
-  ),
-  TextButton(
-  onPressed: () => _fetchPlans(force: true),
-  child: const Text('تحديث'),
-  ),
-  ],
-  ),
-  ),
-  if (widget.network.loginScreenshotUrl != null) ...[
-  _LoginScreenshotPreview(
-  imageUrl: widget.network.loginScreenshotUrl!,
-  ),
-  const SizedBox(height: 12),
-  ],
-  for (int i = 0; i < _plans.length; i++) ...[
-  if (i > 0) const SizedBox(height: 10),
-  _PlanTile(
-  plan: _plans[i],
-  onSelect: () => _openCheckout(context, _plans[i]),
-  ),
-  ],
-  const SizedBox(height: 16),
-  ],
-  ),
-  );
-  },
-  ),
-  ),
-  ],
-  ),
-  );
-},
-);
+
 }
 
-Future<void> _openCheckout(BuildContext context, WifiPlan plan) async {
-  final result = await showModalBottomSheet<WifiPurchaseResult>(
-      context: context,
-      isScrollControlled: true,
-      @@ -316,26 +322,143 @@ class _PlanTile extends StatelessWidget {
-  plan.description ?? 'تفاصيل الخطة ستظهر هنا.',
-  style: TextStyle(
-  color: color.textDefaultColor.withOpacity(0.75),
-  fontSize: 12,
-  ),
-  ),
-  const SizedBox(height: 12),
-  Row(
-  children: [
-  Text(
-  '${plan.price.toStringAsFixed(2)} ${plan.currency ?? 'ريال'}',
-  style: TextStyle(
-  color: color.textDefaultColor,
-  fontWeight: FontWeight.w600,
-  ),
-  ),
-  const Spacer(),
-  const Icon(Icons.arrow_forward_ios, size: 16),
-  ],
-  ),
-  ],
-  ),
-  ),
-  );
-  }
-  }
 
 class _SheetPlanHighlights extends StatelessWidget {
   const _SheetPlanHighlights({required this.plan});

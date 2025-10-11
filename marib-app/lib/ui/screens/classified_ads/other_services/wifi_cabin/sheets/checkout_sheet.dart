@@ -383,51 +383,64 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                           )
                         else
                           Align(
-          const SizedBox(height: 16),
-          Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-          color: color.secondaryColor.withOpacity(0.18),
-          borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-          Icon(
-          Icons.shield_outlined,
-          size: 20,
-          color: color.textDefaultColor.withOpacity(0.8),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-          child: Text(
-          'الكرت يباع من صاحب الشبكة مباشرة. التطبيق يوفر وسيط الدفع فقط ولا يضمن صلاحية الكود أو الخدمة.',
-          style: TextStyle(
-          color: color.textDefaultColor.withOpacity(0.8),
-          fontSize: 12.5,
-          ),
-          ),
-          ),
-          ],
-          ),
-          ),
-          const SizedBox(height: 12),
-          CheckboxListTile(
-          value: _acknowledged,
-          onChanged: _isSubmitting
-          ? null
-              : (value) =>
-          setState(() => _acknowledged = value ?? false),
-          controlAffinity: ListTileControlAffinity.leading,
-          contentPadding: EdgeInsets.zero,
-          title: Text(
-          'أؤكد أنني تحققت من صورة صفحة الدخول وأقر بأن أي مشكلة تُحل مباشرة مع صاحب الشبكة.',
-          style: TextStyle(
-          color: color.textDefaultColor,
-          fontSize: 12.5,
-          ),
-          ),
-          ),
+                            alignment: AlignmentDirectional.centerStart,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 16),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: color.secondaryColor
+                                        .withOpacity(0.18),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Icon(
+                                        Icons.shield_outlined,
+                                        size: 20,
+                                        color: color.textDefaultColor
+                                            .withOpacity(0.8),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'الكرت يباع من صاحب الشبكة مباشرة. التطبيق يوفر وسيط الدفع فقط ولا يضمن صلاحية الكود أو الخدمة.',
+                                          style: TextStyle(
+                                            color: color.textDefaultColor
+                                                .withOpacity(0.8),
+                                            fontSize: 12.5,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                CheckboxListTile(
+                                  value: _acknowledged,
+                                  onChanged: _isSubmitting
+                                      ? null
+                                      : (value) => setState(
+                                        () =>
+                                    _acknowledged = value ?? false,
+                                  ),
+                                  controlAffinity:
+                                  ListTileControlAffinity.leading,
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text(
+                                    'أؤكد أنني تحققت من صورة صفحة الدخول وأقر بأن أي مشكلة تُحل مباشرة مع صاحب الشبكة.',
+                                    style: TextStyle(
+                                      color: color.textDefaultColor,
+                                      fontSize: 12.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                       ],
                     ],
                   ),
@@ -438,10 +451,9 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton(
-                    onPressed:
-                    (_isSubmitting || !_acknowledged) ? null : _onConfirm,
-
-          child: AnimatedSwitcher(
+                      onPressed:
+                      (_isSubmitting || !_acknowledged) ? null : _onConfirm,
+                      child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 200),
                         child: _isSubmitting
                             ? Row(

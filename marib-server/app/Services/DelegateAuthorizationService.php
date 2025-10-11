@@ -139,7 +139,7 @@ class DelegateAuthorizationService
         }
 
         return in_array($section, $this->restrictedDepartments(), true);
-        
+            
     }
 
 

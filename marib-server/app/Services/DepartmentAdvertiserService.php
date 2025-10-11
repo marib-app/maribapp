@@ -237,5 +237,11 @@ class DepartmentAdvertiserService
         }
 
         return $this->categoryHierarchy;
+
+
+
+
+
+
     }
 }

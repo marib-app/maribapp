@@ -99,11 +99,11 @@ class GeoRules {
     );
   }
   static bool isMapEnabledForItem(ItemModel item) {
-    if (isMapSupportedInterface(item.departmentSlug)) {
+    if (_isMapEnabled(interfaceType: item.departmentSlug)) {
       return true;
     }
 
-    if (isMapSupportedInterface(item.itemType)) {
+    if (_isMapEnabled(interfaceType: item.itemType)) {
       return true;
     }
 
@@ -126,11 +126,5 @@ class GeoRules {
     }
 
     return _mapEnabledInterfaces.contains(fallback);
-  }
-  /// Returns `true` when the provided interface type belongs to one of the
-  /// sections that support the map preview component inside the item details
-  /// screen.
-  static bool isMapSupportedInterface(String? interfaceType) {
-    return _isMapEnabled(interfaceType: interfaceType);
   }
 }

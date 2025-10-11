@@ -1422,26 +1422,38 @@ class ApiController extends Controller {
             $uniqueSlug = HelperService::generateUniqueSlug(new Item(), $slug);
             $status = $this->shouldAutoApproveSection($section) ? 'approved' : 'review';
 
-            $data = [
-                ...$request->all(),
-                'name'        => strtoupper($request->name), // Store name in uppercase
-                'slug'        => $uniqueSlug,
-                'status'      => $status,
-                'active'      => "active", // تفعيل الإعلان مباشرة
-                'user_id'     => $user->id,
-                'package_id'  => null, // إزالة ربط الباقة
-                'expiry_date' => $user_package->end_date, // تعيين تاريخ الانتهاء بناءً على الباقة
+            $data = Arr::only($request->all(), [
+                'category_id',
+                'price',
+                'description',
+                'latitude',
+                'longitude',
+                'address',
+                'contact',
+                'show_only_to_premium',
+                'video_link',
+                'country',
+                'state',
+                'city',
+                'area_id',
+                'all_category_ids',
+                'interface_type',
+            ]);
 
-
-                'currency' => $request->currency ?? 'YER', // Default to 'YER' if not set
-                'product_link' => $request->filled('product_link') ? $request->input('product_link') : null,
             
-            
-                'review_link' => $request->filled('review_link') ? $request->input('review_link') : null,
+
+            $data['name'] = Str::upper($request->name);
+            $data['slug'] = $uniqueSlug;
+            $data['status'] = $status;
+            $data['user_id'] = $user->id;
+            $data['expiry_date'] = $user_package->end_date;
+            $data['currency'] = $request->input('currency', 'YER');
+            $data['show_only_to_premium'] = $request->boolean('show_only_to_premium');
+            $data['product_link'] = $request->filled('product_link') ? $request->input('product_link') : null;
+            $data['review_link'] = $request->filled('review_link') ? $request->input('review_link') : null;
 
             
-            ];
-
+        
             if ($request->hasFile('image')) {
                 $data['image'] = FileService::compressAndUpload($request->file('image'), $this->uploadFolder);
             }

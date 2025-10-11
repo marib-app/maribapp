@@ -799,7 +799,14 @@ class ApiController extends Controller {
 
             if (!empty($request->fcm_id)) {
 //                UserFcmToken::insertOrIgnore(['user_id' => $auth->id, 'fcm_token' => $request->fcm_id, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()]);
-                UserFcmToken::updateOrCreate(['fcm_token' => $request->fcm_id], ['user_id' => $auth->id, 'platform_type' => $request->platform_type, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()]);
+                UserFcmToken::updateOrCreate(
+                    ['fcm_token' => $request->fcm_id],
+                    [
+                        'user_id'          => $auth->id,
+                        'platform_type'    => $request->platform_type,
+                        'last_activity_at' => Carbon::now(),
+                    ]
+                );
             }
 
             if (!empty($request->registration)) {
@@ -900,12 +907,14 @@ class ApiController extends Controller {
 
             // Update FCM token
             if (!empty($request->fcm_id)) {
-                UserFcmToken::updateOrCreate(['fcm_token' => $request->fcm_id], [
-                    'user_id' => $auth->id, 
-                    'platform_type' => $request->platform_type, 
-                    'created_at' => Carbon::now(), 
-                    'updated_at' => Carbon::now()
-                ]);
+                UserFcmToken::updateOrCreate(
+                    ['fcm_token' => $request->fcm_id],
+                    [
+                        'user_id'          => $auth->id,
+                        'platform_type'    => $request->platform_type,
+                        'last_activity_at' => Carbon::now(),
+                    ]
+                );
             }
 
             // Generate token
@@ -951,10 +960,9 @@ class ApiController extends Controller {
                 UserFcmToken::updateOrCreate(
                     ['fcm_token' => $request->fcm_id],
                     [
-                        'user_id'       => $app_user->id,
-                        'platform_type' => $request->platform_type,
-                        'created_at'    => Carbon::now(),
-                        'updated_at'    => Carbon::now(),
+                        'user_id'          => $app_user->id,
+                        'platform_type'    => $request->platform_type,
+                        'last_activity_at' => Carbon::now(),
                     ]
                 );
             }
@@ -7373,12 +7381,14 @@ public function storeRequestDevice(Request $request)
 
             // تحديث FCM token إذا كان متوفراً
             if (!empty($request->fcm_id)) {
-                UserFcmToken::updateOrCreate(['fcm_token' => $request->fcm_id], [
-                    'user_id' => $user->id, 
-                    'platform_type' => $request->platform_type ?? 'android', 
-                    'created_at' => Carbon::now(), 
-                    'updated_at' => Carbon::now()
-                ]);
+                UserFcmToken::updateOrCreate(
+                    ['fcm_token' => $request->fcm_id],
+                    [
+                        'user_id'          => $user->id,
+                        'platform_type'    => $request->platform_type ?? 'android',
+                        'last_activity_at' => Carbon::now(),
+                    ]
+                );
             }
 
             return ResponseService::successResponse('تم تحديث كلمة المرور بنجاح وتسجيل الدخول', $user, ['token' => $token]);

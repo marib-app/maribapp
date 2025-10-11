@@ -15,6 +15,7 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\SyncWalletUsageLimitsCommand::class,
         \App\Console\Commands\OrdersSettlementReminder::class,
         \App\Console\Commands\SyncServiceCustomFieldLabelsCommand::class,
+        \App\Console\Commands\PruneStaleUserFcmTokens::class,
 
     ];
     /**
@@ -29,6 +30,10 @@ class Kernel extends ConsoleKernel
             ->hourly()
             ->withoutOverlapping();
 
+            
+        $schedule->command('fcm:prune-tokens')
+            ->dailyAt('03:00')
+            ->withoutOverlapping();
 
     }
 

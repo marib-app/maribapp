@@ -36,10 +36,14 @@ class WifiPurchasesManager {
 
   void register(WifiPurchase purchase) {
     final WifiPurchase sanitized = purchase.withoutCodes();
+    final List<WifiPurchase> current =
+    List<WifiPurchase>.from(purchases.value);
 
-    final int index = current.indexWhere((element) => element.id == sanitized.id);
 
-    final int index = current.indexWhere((element) => element.id == purchase.id);
+    final int index =
+    current.indexWhere((WifiPurchase element) => element.id == sanitized.id);
+
+
     if (index >= 0) {
       current[index] = sanitized;
 

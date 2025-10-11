@@ -47,8 +47,71 @@
                     </div>
                 </form>
 
+                @php
+                    $difference = session('difference', []);
+                    $reasonValue = old('reason', session('delegate_reason', ''));
+                @endphp
+
+                @if(!empty($difference['added']) || !empty($difference['removed']))
+                    <div class="alert alert-info" role="alert">
+                        <h5 class="alert-heading mb-3">{{ __('ملخص التغييرات الأخيرة') }}</h5>
+                        <div class="row g-2">
+                            @if(!empty($difference['added']))
+                                <div class="col-12 col-md-6">
+                                    <div class="border rounded p-3 h-100">
+                                        <h6 class="mb-2 text-success">{{ __('المندوبون الجدد') }}</h6>
+                                        <ul class="mb-0 ps-3">
+                                            @foreach($difference['added'] as $added)
+                                                <li>
+                                                    {{ $added['name'] ?? ('#' . ($added['id'] ?? '?')) }}
+                                                    @if(!empty($added['mobile']))
+                                                        <span class="text-muted">({{ $added['mobile'] }})</span>
+                                                    @endif
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
+                                </div>
+                            @endif
+                            @if(!empty($difference['removed']))
+                                <div class="col-12 col-md-6">
+                                    <div class="border rounded p-3 h-100">
+                                        <h6 class="mb-2 text-danger">{{ __('المندوبون الذين تمت إزالتهم') }}</h6>
+                                        <ul class="mb-0 ps-3">
+                                            @foreach($difference['removed'] as $removed)
+                                                <li>
+                                                    {{ $removed['name'] ?? ('#' . ($removed['id'] ?? '?')) }}
+                                                    @if(!empty($removed['mobile']))
+                                                        <span class="text-muted">({{ $removed['mobile'] }})</span>
+                                                    @endif
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                        @if(!empty(session('delegate_reason')))
+                            <p class="mt-3 mb-0"><strong>{{ __('السبب:') }}</strong> {{ session('delegate_reason') }}</p>
+                        @endif
+                    </div>
+                @endif
+
+
                 <form method="POST" action="{{ route('item.shein.delegates.update') }}" {{ $canUpdate ? "onsubmit=\"return confirm('" . __('هل أنت متأكد من حفظ التغييرات؟') . "');\"" : 'onsubmit="return false;"' }}>
                     @csrf
+                    <input type="hidden" name="version" value="{{ $delegateVersion }}">
+
+                    @foreach($preservedDelegateIds as $preservedId)
+                        <input type="hidden" name="delegates[]" value="{{ $preservedId }}">
+                    @endforeach
+
+                    @if(!$searchPerformed)
+                        <div class="alert alert-info" role="alert">
+                            {{ __('ابدأ بكتابة اسم المستخدم أو رقم الهاتف للبحث عن المندوبين.') }}
+                        </div>
+                    @endif
+
                     <div class="row g-3">
                         @forelse($users as $user)
                             <div class="col-12">
@@ -83,13 +146,29 @@
                                 </div>
                             </div>
                         @empty
-                            <div class="col-12">
-                                <div class="alert alert-light border text-center mb-0" role="alert">
-                                    {{ __('لا توجد نتائج مطابقة لبحثك في الوقت الحالي.') }}
+                            @if($searchPerformed)
+                                <div class="col-12">
+                                    <div class="alert alert-light border text-center mb-0" role="alert">
+                                        {{ __('لا توجد نتائج مطابقة لبحثك في الوقت الحالي.') }}
+                                    </div>
                                 </div>
-                            </div>
+                            @endif
                         @endforelse
                     </div>
+
+                    @if($users->hasPages())
+                        <div class="mt-4">
+                            {{ $users->withQueryString()->links() }}
+                        </div>
+                    @endif
+
+                    <div class="mt-4">
+                        <label for="reason" class="form-label">{{ __('سبب التعديل (اختياري)') }}</label>
+                        <input type="text" id="reason" name="reason" value="{{ $reasonValue }}" class="form-control" maxlength="255"
+                               placeholder="{{ __('أدخل سبباً واضحاً للتعديل ليسهل مراجعته لاحقاً.') }}">
+                    </div>
+
+
 
                     @if($canUpdate)
                         <div class="mt-4 d-flex justify-content-end">

@@ -314,7 +314,9 @@ class User extends Authenticatable {
             'addresses' => [],
             'categories' => [],
             'place_names' => [],
-            'contact_info' => []
+            'contact_info' => [],
+            'delegate_sections' => [],
+        
         ];
         
         if (empty($value)) {

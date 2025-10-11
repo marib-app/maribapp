@@ -207,6 +207,11 @@ class OrderStepContent extends StatelessWidget {
     'courier',
     'driver',
     'transport',
+    'cod',
+    'cash_on_delivery',
+    'cash-on-delivery',
+    'on_delivery',
+    'on-delivery',
   ];
 
   static const List<String> _paidKeywords = <String>[

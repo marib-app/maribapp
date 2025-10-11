@@ -7,6 +7,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 
 class DelegateAuthorizationService
 {
@@ -32,6 +33,53 @@ class DelegateAuthorizationService
             }
         );
     }
+
+
+
+
+    public function getSectionState(string $section): array
+    {
+        if ($section === '') {
+            return [
+                'ids'     => [],
+                'version' => '0',
+            ];
+        }
+
+        $records = DepartmentDelegate::query()
+            ->select(['user_id', 'updated_at', 'created_at'])
+            ->where('department', $section)
+            ->get();
+
+        if ($records->isEmpty()) {
+            return [
+                'ids'     => [],
+                'version' => '0',
+            ];
+        }
+
+        $ids = $records
+            ->pluck('user_id')
+            ->map(static fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        $latest = $records
+            ->map(static function ($record) {
+                return $record->updated_at ?? $record->created_at;
+            })
+            ->filter(static fn ($value) => $value !== null)
+            ->map(static fn ($value) => $value instanceof Carbon ? $value : Carbon::parse($value))
+            ->sortDesc()
+            ->first();
+
+        return [
+            'ids'     => $ids,
+            'version' => $latest instanceof Carbon ? (string) $latest->valueOf() : '0',
+        ];
+    }
+
 
     public function storeDelegatesForSection(string $section, array $delegateIds): void
     {
@@ -139,7 +187,7 @@ class DelegateAuthorizationService
         }
 
         return in_array($section, $this->restrictedDepartments(), true);
-            
+
     }
 
 

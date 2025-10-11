@@ -362,7 +362,10 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
 
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
-          if (state.type == ManageItemType.add) {
+          final bool openProductManagement =
+              state.type == ManageItemType.add && isEcommerceItem(state.model);
+
+          if (openProductManagement) {
             Navigator.pushNamed(
               context,
               Routes.productManagementScreen,

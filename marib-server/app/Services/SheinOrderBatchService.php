@@ -133,7 +133,6 @@ class SheinOrderBatchService
             }
         }
 
-
         DB::transaction(function () use ($orders, $updates, $comment, $userId, $notifyCustomer) {
             foreach ($orders as $order) {
                 $previousStatus = $order->order_status;

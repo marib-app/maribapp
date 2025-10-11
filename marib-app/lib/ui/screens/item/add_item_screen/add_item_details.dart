@@ -110,6 +110,7 @@ import 'shein_grabber_page.dart';
 
 
 import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/utils/ecommerce_department.dart';
 
 
 
@@ -1091,7 +1092,9 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
     if (currentItem == null || currentItem.id == null) {
       return const SizedBox.shrink();
     }
-
+    if (!_supportsProductOptionsForItem(currentItem)) {
+      return const SizedBox.shrink();
+    }
     final theme = Theme.of(context);
     final color = theme.colorScheme;
 
@@ -1493,7 +1496,12 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
         if (!mounted) {
           return;
         }
-        if (state.type == ManageItemType.add) {
+        final bool openProductManagement =
+            state.type == ManageItemType.add &&
+                _supportsProductOptionsForItem(state.model);
+
+        if (openProductManagement) {
+
           Navigator.pushNamed(
             context,
             Routes.productManagementScreen,
@@ -1543,6 +1551,22 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
 
     }
     return const Iterable<int>.empty();
+
+  }
+
+   _supportsProductOptionsForItem(ItemModel model) {
+    if (isEcommerceItem(model)) {
+      return true;
+    }
+
+    final Iterable<int> categoryIds = _currentCategoryIds();
+    if (categoryIds.isNotEmpty && supportsEcommerceByCategories(categoryIds)) {
+      return true;
+
+      return false;
+
+
+    }
 
   }
 

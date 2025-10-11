@@ -102,6 +102,7 @@ import 'package:marib/data/repositories/item/item_purchase_options_repository.da
 
 import 'package:marib/data/constants/color_catalog.dart';
 import 'package:marib/utils/color_palette_utils.dart';
+import 'package:marib/utils/ecommerce_department.dart';
 
 
 
@@ -424,6 +425,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   ItemVariantStockOption? _selectedVariantStock;
   int? _lastPurchaseOptionsItemId;
   int _selectedQuantity = 1;
+  bool _isEcommerceItem = false;
 
   bool get isAddedByMe =>
       (_currentItem.user?.id != null
@@ -1265,7 +1267,12 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     _currentItem = item;
 
     void updateState() {
+      _isEcommerceItem = isEcommerceItem(_currentItem);
       categoryId = _currentItem.category?.id ?? _currentItem.categoryId;
+      _purchaseOptions = null;
+      _purchaseOptionsError = null;
+      _purchaseOptionsLoading = false;
+      _lastPurchaseOptionsItemId = null;
       combineImages();
       currentPage = 0;
       currentIndex = 0;
@@ -1296,7 +1303,9 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
     if (triggerDependentFetches) {
       _fetchCustomFieldsForCurrentItem();
-      _fetchPurchaseOptionsForCurrentItem(forceRefresh: true);
+      if (_isEcommerceItem) {
+        _fetchPurchaseOptionsForCurrentItem(forceRefresh: true);
+      }
       _fetchAuxiliaryDataForCurrentItem();
       setItemClick();
     }
@@ -1441,6 +1450,10 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }
 
   Widget _buildPurchaseOptionsSection() {
+    if (!_isEcommerceItem) {
+      return const SizedBox.shrink();
+    }
+
     if (_purchaseOptionsLoading && _purchaseOptions == null) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 16),
@@ -2177,7 +2190,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                 state.item,
                 triggerDependentFetches: true,
               );
-              _fetchPurchaseOptionsForCurrentItem(forceRefresh: true);
             } else if (state is FetchItemDetailsFailure &&
                 isAddedByMe &&
                 _hasLocalItemDetails) {
@@ -2551,7 +2563,9 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                   ),
 
 
-                if (item.tips?.returnPolicyText?.trim().isNotEmpty ?? false)
+                if (_isEcommerceItem &&
+                    (item.tips?.returnPolicyText?.trim().isNotEmpty ?? false))
+
                   Padding(
                     padding: const EdgeInsets.only(top: 18.0),
                     child: _buildReturnPolicyCard(

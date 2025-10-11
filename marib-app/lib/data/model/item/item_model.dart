@@ -3,6 +3,7 @@ import 'package:marib/data/model/custom_field/custom_field_model.dart';
 import 'package:marib/data/model/seller_ratings_model.dart';
 import 'package:marib/utils/currency_utils.dart';
 import 'package:marib/utils/delivery_department.dart';
+import 'package:marib/utils/slider_interface_mapper.dart';
 
 
 
@@ -625,9 +626,23 @@ class ItemModel {
     addCandidate(json['section']);
     addCandidate(json['department_advertiser']);
 
+
+
+    for (final String candidate in candidates) {
+      final String? normalizedInterface =
+      SliderInterfaceMapper.normalize(candidate);
+      if (normalizedInterface == 'public_ads' ||
+          normalizedInterface == 'real_estate_services') {
+        return normalizedInterface;
+      }
+    }
+
+
     for (final String candidate in candidates) {
       final String? normalized = normalizeDeliveryDepartment(candidate);
-      if (normalized != null) {
+      if (normalized == 'shein' ||
+          normalized == 'computer' ||
+          normalized == 'store') {
         return normalized;
       }
     }

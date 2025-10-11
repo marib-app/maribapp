@@ -35,12 +35,17 @@ class WifiPurchasesManager {
   Future<void> refresh() => fetch(force: true);
 
   void register(WifiPurchase purchase) {
-    final List<WifiPurchase> current = List<WifiPurchase>.from(purchases.value);
+    final WifiPurchase sanitized = purchase.withoutCodes();
+
+    final int index = current.indexWhere((element) => element.id == sanitized.id);
+
     final int index = current.indexWhere((element) => element.id == purchase.id);
     if (index >= 0) {
-      current[index] = purchase;
+      current[index] = sanitized;
+
     } else {
-      current.insert(0, purchase);
+      current.insert(0, sanitized);
+
     }
     purchases.value = current;
     error.value = null;

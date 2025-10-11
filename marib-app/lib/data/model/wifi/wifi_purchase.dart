@@ -234,6 +234,14 @@ class WifiPurchase extends Equatable {
     );
   }
 
+
+  WifiPurchase withoutCodes() {
+    if (codes.isEmpty) {
+      return this;
+    }
+    return copyWith(codes: const <String>[]);
+  }
+
   bool get isWalletGateway {
     final gateway = paymentGateway?.toLowerCase() ?? '';
     if (gateway.isEmpty) {

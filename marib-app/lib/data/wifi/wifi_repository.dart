@@ -279,8 +279,55 @@ class WifiRepository {
           normalized['result'],
     );
 
-    final WifiPurchase? purchase =
+    WifiPurchase? purchase =
     payload.isEmpty ? null : WifiPurchase.fromJson(payload);
+
+
+    if (purchase != null) {
+      final Map<String, dynamic> wifiCode = _mapify(payload['wifi_code']);
+      final List<Map<String, dynamic>> wifiCodes = _listify(payload['wifi_codes'])
+          .map(_mapify)
+          .toList();
+
+      final List<String> extractedCodes = <String>[...purchase.codes];
+      final Set<int> extractedIds = <int>{
+        if (purchase.id != 0) purchase.id,
+      };
+
+      void appendCode(Map<String, dynamic> source) {
+        final String? codeValue = _stringify(source['code']);
+        if (codeValue != null && codeValue.isNotEmpty) {
+          extractedCodes.add(codeValue);
+        }
+        final int? codeId = _intify(source['id'] ?? source['code_id']);
+        if (codeId != null) {
+          extractedIds.add(codeId);
+        }
+      }
+
+      if (wifiCode.isNotEmpty) {
+        appendCode(wifiCode);
+      }
+
+      for (final Map<String, dynamic> codeMap in wifiCodes) {
+        appendCode(codeMap);
+      }
+
+      final List<String> normalizedCodes = extractedCodes
+          .map((code) => code.trim())
+          .where((code) => code.isNotEmpty)
+          .toSet()
+          .toList();
+
+      final int resolvedId = extractedIds.isNotEmpty
+          ? extractedIds.first
+          : purchase.id;
+
+      purchase = purchase.copyWith(
+        id: resolvedId,
+        codes: normalizedCodes,
+      );
+    }
 
     final String? topMessage = _stringify(
       normalized['message'] ??
@@ -476,7 +523,25 @@ class WifiRepository {
     return _buildPurchaseResult(response);
   }
 
+  Future<void> logCodeEvent({
+    required int codeId,
+    required String action,
+    Map<String, dynamic>? metadata,
+  }) async {
+    if (codeId <= 0) {
+      return;
+    }
 
+    final Map<String, dynamic> payload = <String, dynamic>{
+      'action': action,
+      if (metadata != null && metadata.isNotEmpty) 'meta': metadata,
+    };
+
+    await Api.postJson(
+      url: Api.wifiCodeEventsApi(codeId),
+      data: payload,
+    );
+  }
 
 
 }

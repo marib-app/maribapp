@@ -303,6 +303,15 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
   Future<void> _showCodesDialog(WifiPurchase purchase) async {
     final List<String> codes = purchase.codes;
     if (codes.isEmpty) return;
+    final int codeId = purchase.id;
+
+    if (codeId > 0) {
+      unawaited(
+        _repository
+            .logCodeEvent(codeId: codeId, action: 'view')
+            .catchError((_) {}),
+      );
+    }
     final messenger = ScaffoldMessenger.of(context);
     await showDialog<void>(
       context: context,
@@ -325,6 +334,13 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
                   code: code,
                   onCopy: () {
                     Clipboard.setData(ClipboardData(text: code));
+                    if (codeId > 0) {
+                      unawaited(
+                        _repository
+                            .logCodeEvent(codeId: codeId, action: 'copy')
+                            .catchError((_) {}),
+                      );
+                    }
                     messenger.showSnackBar(
                       SnackBar(content: Text('تم نسخ الكود: $code')),
                     );
@@ -338,6 +354,13 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
               TextButton(
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: codes.join('\n')));
+                  if (codeId > 0) {
+                    unawaited(
+                      _repository
+                          .logCodeEvent(codeId: codeId, action: 'copy')
+                          .catchError((_) {}),
+                    );
+                  }
                   messenger.showSnackBar(
                     const SnackBar(content: Text('تم نسخ جميع الأكواد.')),
                   );
@@ -1241,6 +1264,8 @@ class _PlanTile extends StatelessWidget {
                 fontSize: 12,
               ),
             ),
+            const SizedBox(height: 10),
+            _WifiPlanHighlights(plan: plan),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -1262,7 +1287,66 @@ class _PlanTile extends StatelessWidget {
   }
 }
 
+class _WifiPlanHighlights extends StatelessWidget {
+  const _WifiPlanHighlights({required this.plan});
 
+  final WifiPlan plan;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.color;
+    final List<String> labels = <String>[];
+
+    if (plan.isUnlimited) {
+      labels.add('بيانات غير محدودة');
+    } else if (plan.dataCapGb != null) {
+      final num cap = plan.dataCapGb!;
+      if (cap >= 1) {
+        final bool hasFraction = cap % 1 != 0;
+        labels.add('${cap.toStringAsFixed(hasFraction ? 1 : 0)} جيجابايت');
+      } else {
+        final num mb = (cap * 1024).round();
+        labels.add('$mb ميجابايت');
+      }
+    }
+
+    if (plan.durationDays != null && plan.durationDays! > 0) {
+      labels.add('صلاحية ${plan.durationDays} يوم');
+    }
+
+    if (labels.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 6,
+        children: labels
+            .map(
+              (label) => Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: color.backgroundColor,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: color.secondaryColor.withOpacity(0.35)),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: color.textDefaultColor.withOpacity(0.85),
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        )
+            .toList(),
+      ),
+    );
+  }
+}
 
 class _CheckoutSheet extends StatefulWidget {
   final WifiPlan plan;

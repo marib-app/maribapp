@@ -325,6 +325,8 @@ class _PlanTile extends StatelessWidget {
                 fontSize: 12,
               ),
             ),
+            _SheetPlanHighlights(plan: plan),
+
             const SizedBox(height: 12),
             Row(
               children: [
@@ -429,6 +431,67 @@ Future<void> _openCheckout(BuildContext context, WifiPlan plan) async {
   );
   }
   }
+
+class _SheetPlanHighlights extends StatelessWidget {
+  const _SheetPlanHighlights({required this.plan});
+
+  final WifiPlan plan;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.color;
+    final List<String> labels = <String>[];
+
+    if (plan.isUnlimited) {
+      labels.add('بيانات غير محدودة');
+    } else if (plan.dataCapGb != null) {
+      final num cap = plan.dataCapGb!;
+      if (cap >= 1) {
+        final bool hasFraction = cap % 1 != 0;
+        labels.add('${cap.toStringAsFixed(hasFraction ? 1 : 0)} جيجابايت');
+      } else {
+        final num mb = (cap * 1024).round();
+        labels.add('$mb ميجابايت');
+      }
+    }
+
+    if (plan.durationDays != null && plan.durationDays! > 0) {
+      labels.add('صلاحية ${plan.durationDays} يوم');
+    }
+
+    if (labels.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 6,
+        children: labels
+            .map(
+              (label) => Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: color.backgroundColor,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: color.secondaryColor.withOpacity(0.35)),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: color.textDefaultColor.withOpacity(0.85),
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        )
+            .toList(),
+      ),
+    );
+  }
+}
 
 class _LoginScreenshotPreview extends StatelessWidget {
   const _LoginScreenshotPreview({required this.imageUrl});

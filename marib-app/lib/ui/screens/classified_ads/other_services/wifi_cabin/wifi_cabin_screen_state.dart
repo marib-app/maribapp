@@ -244,6 +244,15 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
   Future<void> _showCodesDialog(WifiPurchase purchase) async {
     final List<String> codes = purchase.codes;
     if (codes.isEmpty) return;
+    final int codeId = purchase.id;
+
+    if (codeId > 0) {
+      unawaited(
+        _repository
+            .logCodeEvent(codeId: codeId, action: 'view')
+            .catchError((_) {}),
+      );
+    }
     final messenger = ScaffoldMessenger.of(context);
     await showDialog<void>(
       context: context,
@@ -266,6 +275,13 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
                   code: code,
                   onCopy: () {
                     Clipboard.setData(ClipboardData(text: code));
+                    if (codeId > 0) {
+                      unawaited(
+                        _repository
+                            .logCodeEvent(codeId: codeId, action: 'copy')
+                            .catchError((_) {}),
+                      );
+                    }
                     messenger.showSnackBar(
                       SnackBar(content: Text('تم نسخ الكود: $code')),
                     );
@@ -279,6 +295,13 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
               TextButton(
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: codes.join('\n')));
+                  if (codeId > 0) {
+                    unawaited(
+                      _repository
+                          .logCodeEvent(codeId: codeId, action: 'copy')
+                          .catchError((_) {}),
+                    );
+                  }
                   messenger.showSnackBar(
                     const SnackBar(content: Text('تم نسخ جميع الأكواد.')),
                   );

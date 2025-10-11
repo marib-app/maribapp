@@ -17,6 +17,7 @@ use App\Http\Controllers\WifiPlanController;
 use App\Http\Controllers\WifiPurchaseController;
 use App\Http\Controllers\ProductPurchaseOptionsController;
 use App\Http\Controllers\ItemPurchaseManagementController;
+use App\Http\Controllers\WifiCodeRevealController;
 
 
 
@@ -82,7 +83,8 @@ Route::prefix('wifi-cabin')
             
         Route::get('codes/mine', [WifiPurchaseController::class, 'index']);
         Route::get('purchases', [WifiPurchaseController::class, 'index']);
-
+        Route::post('codes/{code}/events', [WifiCodeRevealController::class, 'store'])
+            ->whereNumber('code');
 
     });
 

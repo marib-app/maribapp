@@ -387,6 +387,7 @@ class Api {
   static String wifiPlanPurchaseApi(int planId) => "wifi/plans/$planId/purchase";
   static String wifiPlanPurchaseWebhookApi = "wifi/plans/purchase/webhook";
   static String wifiPurchasesApi = "wifi/purchases";
+  static String wifiCodeEventsApi(int codeId) => "wifi/codes/$codeId/events";
 
 
 

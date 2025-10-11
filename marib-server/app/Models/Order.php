@@ -715,10 +715,6 @@ class Order extends Model
         return in_array(strtolower($status), self::SUCCESSFUL_PAYMENT_STATUSES, true);
     }
 
-    public function hasSuccessfulPayment(): bool
-    {
-        return self::paymentStatusIsSuccessful($this->payment_status);
-    }
 
     
 

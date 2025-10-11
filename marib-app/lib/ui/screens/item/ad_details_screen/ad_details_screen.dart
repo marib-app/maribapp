@@ -464,22 +464,14 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
   bool get _hasValidItemId => (_currentItem.id ?? widget.model.id ?? 0) > 0;
 
-
-// داخل AdDetailsScreenState
-  static const Set<String> _mapSupportedSections = {
-    'public_ads',
-    'real_estate_services',
-  };
-
+  bool _shouldHideQuantitySelectorForItem(ItemModel item) =>
+      _supportsMapSectionForItem(item);
 
 // تبديل حالة الإعجاب + ربطها بكيوبيت المفضلة
   void _onToggleFavorite() {
     if (_currentItem.id == null) return;
     setState(() => isFavorite = !isFavorite);
 
-    // ✅ جرّب واحدة من هذه حسب الكلاس المتوفر عندك
-    // أو:
-    // context.read<FavoriteCubit>().toggleFav(model.id!);
   }
 
   Future<bool> _changeAdStatus(String newStatus) async {
@@ -499,9 +491,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
 
 
-
-    bool _shouldHideQuantitySelectorForItem(ItemModel item) =>
-        _supportsMapSectionForItem(item);
 
 
 
@@ -1873,9 +1862,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }
 
 
-  bool _shouldHideQuantitySelectorForItem(ItemModel item) {
-    return _supportsMapSectionForItem(item);
-  }
+
 
   Widget _buildColorAttributeSelector(
       ItemPurchaseAttributeOption attribute,

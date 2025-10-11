@@ -659,6 +659,28 @@
     "wallet.filters.top_ups": "الإيداعات",
     "wallet.filters.payments": "المشتريات",
     "wallet.filters.transfers": "التحويلات",
-    "wallet.filters.refunds": "المبالغ المستردة"
+    "wallet.filters.refunds": "المبالغ المستردة",
+    "Manual Payment Order Overview": "متابعة طلب السلة",
+    "Manual Payment Order Status": "حالة الطلب",
+    "Manual Payment Payment Status": "حالة الدفع",
+    "Manual Payment Seller": "التاجر",
+    "Manual Payment Order Created": "تاريخ إنشاء الطلب",
+    "Manual Payment Payment Breakdown": "ملخص الدفعات",
+    "Manual Payment Order Total": "إجمالي الطلب",
+    "Manual Payment Advance Paid": "المبلغ المدفوع كدفعة مقدمة",
+    "Manual Payment Advance Remaining": "الرصيد المتبقي من الدفعة المقدمة",
+    "Manual Payment Outstanding Balance": "الرصيد المتبقي للدفع",
+    "Manual Payment Online Paid": "المبلغ المدفوع إلكترونياً",
+    "Manual Payment Online Outstanding": "المتبقي للدفع إلكترونياً",
+    "Manual Payment COD Due": "المستحق عند التسليم",
+    "Manual Payment COD Outstanding": "الرصيد المتبقي للدفع عند التسليم",
+    "Manual Payment Deposit Includes Delivery": "تشمل الدفعة المقدمة رسوم التوصيل",
+    "Manual Payment View Deposit Receipts": "عرض إيصالات الدفعة المقدمة",
+    "Manual Payment Follow Up Guidance": "قائمة التحقق للمتابعة",
+    "Manual Payment Follow Up Deposit": "تحقق من أن الدفعة المقدمة المسجلة بقيمة :amount مطابقة لما دفعه العميل.",
+    "Manual Payment Follow Up Outstanding": "قم بتحصيل الرصيد المتبقي وقدره :amount بعد اعتماد الطلب.",
+    "Manual Payment Follow Up Review Order": "افتح الطلب لمراجعة تفاصيل السلة وتحديث الحالة بعد التحقق من الدفع."
+
+    
 
 }

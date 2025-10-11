@@ -61,6 +61,177 @@
                     </dd>
                 @endif
             </dl>
+
+
+            @if($payable instanceof Order)
+                @php
+                    $orderStatusLabel = Str::of(Order::statusLabel($payable->order_status))->trim()->value();
+                    $paymentStatus = is_string($payable->payment_status) ? strtolower($payable->payment_status) : null;
+                    $paymentStatusLabel = $paymentStatus
+                        ? (Order::paymentStatusLabels()[$paymentStatus] ?? Str::of($payable->payment_status)->replace('_', ' ')->headline())
+                        : '';
+                    $orderCreatedAt = $payable->created_at?->format('Y-m-d H:i');
+                    $sellerName = $payable->seller?->name;
+                    $currency = $payable->currency ?? $request->currency ?? config('app.currency', 'SAR');
+                    $formatMoney = static function ($value) use ($currency) {
+                        if ($value === null) {
+                            return __('N/A');
+                        }
+
+                        if (is_numeric($value)) {
+                            return number_format((float) $value, 2) . ' ' . $currency;
+                        }
+
+                        return (string) $value;
+                    };
+                    $orderTotal = $payable->final_amount ?? $payable->total_amount ?? null;
+                    $depositPaid = (float) ($payable->deposit_amount_paid ?? 0);
+                    $depositRemaining = (float) ($payable->deposit_remaining_balance ?? 0);
+                    $depositIncludesShipping = (bool) ($payable->deposit_includes_shipping ?? false);
+                    $paymentSummary = $payable->payment_summary;
+                    $financialRows = [];
+
+                    if ($orderTotal !== null) {
+                        $financialRows[] = [
+                            'label' => __('Manual Payment Order Total'),
+                            'value' => $formatMoney($orderTotal),
+                        ];
+                    }
+
+                    if ($depositPaid > 0) {
+                        $financialRows[] = [
+                            'label' => __('Manual Payment Advance Paid'),
+                            'value' => $formatMoney($depositPaid),
+                        ];
+                    }
+
+                    if ($depositRemaining > 0) {
+                        $financialRows[] = [
+                            'label' => __('Manual Payment Advance Remaining'),
+                            'value' => $formatMoney($depositRemaining),
+                        ];
+                    }
+
+                    if (is_array($paymentSummary)) {
+                        $summaryLabels = [
+                            'remaining_balance' => __('Manual Payment Outstanding Balance'),
+                            'online_paid_total' => __('Manual Payment Online Paid'),
+                            'online_outstanding' => __('Manual Payment Online Outstanding'),
+                            'cod_due' => __('Manual Payment COD Due'),
+                            'cod_outstanding' => __('Manual Payment COD Outstanding'),
+                        ];
+
+                        foreach ($summaryLabels as $key => $label) {
+                            $value = data_get($paymentSummary, $key);
+
+                            if ($value === null) {
+                                continue;
+                            }
+
+                            $numericValue = is_numeric($value) ? (float) $value : null;
+
+                            if ($numericValue === null || abs($numericValue) < 0.0001) {
+                                continue;
+                            }
+
+                            $financialRows[] = [
+                                'label' => $label,
+                                'value' => $formatMoney($numericValue),
+                            ];
+                        }
+                    }
+
+                    $depositReceipts = is_array($payable->deposit_receipts ?? null) ? $payable->deposit_receipts : [];
+                    $canViewDepositReceipts = ! empty($depositReceipts) && Route::has('orders.deposit-receipts');
+                    $depositReceiptsUrl = $canViewDepositReceipts ? route('orders.deposit-receipts', $payable) : null;
+
+                    $followUpItems = [];
+
+                    if ($depositPaid > 0) {
+                        $followUpItems[] = __('Manual Payment Follow Up Deposit', ['amount' => $formatMoney($depositPaid)]);
+                    }
+
+                    $outstandingBalance = null;
+
+                    if (is_array($paymentSummary)) {
+                        $outstandingBalance = data_get($paymentSummary, 'remaining_balance');
+                    }
+
+                    if ($outstandingBalance === null && $depositRemaining > 0) {
+                        $outstandingBalance = $depositRemaining;
+                    }
+
+                    if ($outstandingBalance !== null && is_numeric($outstandingBalance) && (float) $outstandingBalance > 0) {
+                        $followUpItems[] = __('Manual Payment Follow Up Outstanding', ['amount' => $formatMoney((float) $outstandingBalance)]);
+                    }
+
+                    if ($detailsUrl) {
+                        $followUpItems[] = __('Manual Payment Follow Up Review Order');
+                    }
+                @endphp
+
+                <hr class="my-4">
+                <div class="row g-4 align-items-start">
+                    <div class="col-lg-6">
+                        <h6 class="fw-semibold mb-3">
+                            <i class="fa fa-clipboard-list me-2"></i>{{ __('Manual Payment Order Overview') }}
+                        </h6>
+                        <dl class="row mb-0">
+                            <dt class="col-sm-5 text-muted">{{ __('Manual Payment Order Status') }}</dt>
+                            <dd class="col-sm-7">{{ $orderStatusLabel !== '' ? $orderStatusLabel : __('N/A') }}</dd>
+
+                            <dt class="col-sm-5 text-muted">{{ __('Manual Payment Payment Status') }}</dt>
+                            <dd class="col-sm-7">{{ $paymentStatusLabel !== '' ? $paymentStatusLabel : __('N/A') }}</dd>
+
+                            <dt class="col-sm-5 text-muted">{{ __('Manual Payment Seller') }}</dt>
+                            <dd class="col-sm-7">{{ $sellerName ?? __('N/A') }}</dd>
+
+                            <dt class="col-sm-5 text-muted">{{ __('Manual Payment Order Created') }}</dt>
+                            <dd class="col-sm-7">{{ $orderCreatedAt ?? __('N/A') }}</dd>
+                        </dl>
+                    </div>
+
+                    <div class="col-lg-6">
+                        <h6 class="fw-semibold mb-3">
+                            <i class="fa fa-coins me-2"></i>{{ __('Manual Payment Payment Breakdown') }}
+                        </h6>
+                        <dl class="row mb-0">
+                            @foreach($financialRows as $row)
+                                <dt class="col-sm-6 text-muted">{{ $row['label'] }}</dt>
+                                <dd class="col-sm-6">{{ $row['value'] }}</dd>
+                            @endforeach
+                        </dl>
+
+                        @if($depositIncludesShipping && $depositPaid > 0)
+                            <p class="small text-muted mt-3 mb-0">
+                                <i class="fa fa-info-circle me-1"></i>{{ __('Manual Payment Deposit Includes Delivery') }}
+                            </p>
+                        @endif
+
+                        @if($depositReceiptsUrl)
+                            <div class="mt-3">
+                                <a href="{{ $depositReceiptsUrl }}" target="_blank" rel="noopener" class="btn btn-outline-info btn-sm">
+                                    <i class="fa fa-receipt me-1"></i>{{ __('Manual Payment View Deposit Receipts') }}
+                                </a>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                @if(! empty($followUpItems))
+                    <div class="alert alert-info mt-4 mb-0" role="alert">
+                        <h6 class="fw-semibold mb-2">
+                            <i class="fa fa-tasks me-2"></i>{{ __('Manual Payment Follow Up Guidance') }}
+                        </h6>
+                        <ul class="mb-0 ps-3">
+                            @foreach($followUpItems as $item)
+                                <li>{{ $item }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+            @endif
+
         @else
             <p class="mb-0 text-muted">
                 {{ __('No linked record is available for this manual payment request.') }}

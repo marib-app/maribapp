@@ -17,6 +17,9 @@ class DepartmentAdvertiserService
     public const KEY_COMPUTER = 'department_advertiser_computer';
     public const KEY_SHEIN = 'department_advertiser_shein';
 
+    private const EXCLUDED_INTERFACE_TYPES = ['public_ads', 'real_estate_services'];
+    private const EXCLUDED_SECTION_SLUGS = ['public_ads', 'real_estate_services'];
+
     /**
      * @var array<string, string>
      */
@@ -31,6 +34,7 @@ class DepartmentAdvertiserService
     private array $advertiserCache = [];
 
     private ?Collection $categoryHierarchy = null;
+    private ?array $excludedSectionRootIds = null;
 
     /**
      * Retrieve the advertiser configuration for a department.
@@ -111,36 +115,49 @@ class DepartmentAdvertiserService
             return null;
         }
 
+        if ($this->isExcludedSectionItem($item)) {
+            return null;
+        }
         if ($item->interface_type) {
+            $normalizedInterface = $this->normalizeInterfaceType($item->interface_type);
+
+            if ($normalizedInterface && $this->isExcludedInterfaceType($normalizedInterface)) {
+                return null;
+            }
+
             $interfaceMap = Config::get('cart.interface_map', []);
-            $department = $interfaceMap[$item->interface_type] ?? null;
+            $department = $interfaceMap[$normalizedInterface ?? $item->interface_type] ?? null;
+
 
             if ($department) {
                 return $department;
             }
         }
 
-        $categoryId = $item->category_id ? (int) $item->category_id : null;
-
-        if ($categoryId) {
-            $department = $this->departmentFromCategory($categoryId);
+        foreach ($this->collectItemCategoryIds($item) as $id) {
+            $department = $this->departmentFromCategory($id);
             if ($department) {
                 return $department;
-            }
-        }
-
-        if (! empty($item->all_category_ids)) {
-            $ids = array_filter(array_map('intval', explode(',', (string) $item->all_category_ids)));
-
-            foreach ($ids as $id) {
-                $department = $this->departmentFromCategory($id);
-                if ($department) {
-                    return $department;
-                }
             }
         }
 
         return null;
+    }
+
+    public function isExcludedSectionItem(Item $item): bool
+    {
+        $interfaceType = $this->normalizeInterfaceType($item->interface_type ?? null);
+        if ($interfaceType && $this->isExcludedInterfaceType($interfaceType)) {
+            return true;
+        }
+
+        foreach ($this->collectItemCategoryIds($item) as $id) {
+            if ($this->belongsToExcludedSection($id)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function resolveKey(string $department): ?string
@@ -174,6 +191,11 @@ class DepartmentAdvertiserService
 
     private function departmentFromCategory(int $categoryId): ?string
     {
+
+        if ($this->belongsToExcludedSection($categoryId)) {
+            return null;
+        }
+
         $categories = $this->getCategoryHierarchy();
         $currentId = $categoryId;
         $visited = [];

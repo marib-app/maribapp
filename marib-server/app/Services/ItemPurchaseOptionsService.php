@@ -28,6 +28,12 @@ class ItemPurchaseOptionsService
 
     public function supportsProductManagement(Item $item): bool
     {
+
+        if ($this->departmentAdvertiserService->isExcludedSectionItem($item)) {
+            return false;
+        }
+
+
         $department = $this->departmentAdvertiserService->resolveDepartmentForItem($item);
 
         if (in_array($department, ['shein', 'computer', 'store'], true)) {

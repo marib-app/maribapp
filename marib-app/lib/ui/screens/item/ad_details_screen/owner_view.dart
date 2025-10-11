@@ -288,7 +288,8 @@ class OwnerAdDetailsBody extends StatelessWidget {
 
   /// ويدجت اختيارية (مثل createFeaturesAds())
   final Widget? featuredSection;
-
+  final bool hideLocation;
+  final bool supportsMapSection;
   const OwnerAdDetailsBody({
     super.key,
     required this.model,
@@ -302,7 +303,8 @@ class OwnerAdDetailsBody extends StatelessWidget {
     required this.onRenewPressed,
     required this.onOpenMap,
     required this.addCloudDataFn, // 👈 جديد
-
+    required this.hideLocation,
+    required this.supportsMapSection,
     this.featuredSection,
 
 
@@ -313,7 +315,6 @@ class OwnerAdDetailsBody extends StatelessWidget {
     final adInfo = AdInfoSection(context: context, model: model, isAddedByMe: true);
     final views    = model.views ?? 0;
     final likes    = model.totalLikes ?? 0;
-    final bool hideLocation = GeoRules.isDisabledForItem(model);
 
     // شريط الإحصائيات بعرض كامل
     Widget _statsBar(BuildContext context) {
@@ -438,7 +439,7 @@ class OwnerAdDetailsBody extends StatelessWidget {
 
                 // الخريطة
                 if (!hideLocation &&
-                    GeoRules.isMapEnabledForItem(model) &&
+                     supportsMapSection &&
                     model.latitude != null &&
                     model.longitude != null)
 

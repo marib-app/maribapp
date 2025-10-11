@@ -418,6 +418,11 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   late ItemModel _currentItem;
   CartSafetyTipsPayload? _lastCartSafetyTips;
   ItemPurchaseOptions? _purchaseOptions;
+
+  ItemModel? _initialSummaryModel;
+  bool _initialSummaryModelResolved = false;
+
+
   bool _purchaseOptionsLoading = false;
   String? _purchaseOptionsError;
   Map<String, String> _selectedAttributes = <String, String>{};
@@ -1319,6 +1324,86 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
           .fetchRelatedItems(categoryId: safeCategoryId);
     }
   }
+
+
+  ItemModel? _resolveInitialSummaryModel() {
+    if (_initialSummaryModelResolved) {
+      return _initialSummaryModel;
+    }
+    _initialSummaryModelResolved = true;
+
+    final Object? summary = widget.initialSummary;
+    if (summary == null) {
+      return _initialSummaryModel;
+    }
+
+    if (summary is ItemModel) {
+      _initialSummaryModel = summary;
+      return _initialSummaryModel;
+    }
+
+    final ItemModel? converted = _tryConvertSummaryToModel(summary);
+    if (converted != null) {
+      _initialSummaryModel = converted;
+      return _initialSummaryModel;
+    }
+
+    if (summary is Map) {
+      String? extractString(dynamic value) {
+        if (value is String) {
+          final String trimmed = value.trim();
+          if (trimmed.isNotEmpty) {
+            return trimmed;
+          }
+        }
+        return null;
+      }
+
+      final Map<dynamic, dynamic> data = summary;
+      final String? department = extractString(data['department']) ??
+          extractString(data['department_slug']) ??
+          extractString(data['section']) ??
+          extractString(data['department_advertiser']);
+
+      final String? itemType =
+          extractString(data['item_type']) ?? extractString(data['itemType']);
+
+      if (department != null || itemType != null) {
+        _initialSummaryModel = ItemModel(
+          departmentSlug: department,
+          itemType: itemType,
+        );
+      }
+    }
+
+    return _initialSummaryModel;
+  }
+
+  bool _supportsMapSectionForItem(ItemModel item) {
+    if (GeoRules.isMapEnabledForItem(item)) {
+      return true;
+    }
+
+    final ItemModel baseModel = widget.model;
+    if (!identical(item, baseModel) && GeoRules.isMapEnabledForItem(baseModel)) {
+      return true;
+    }
+
+    final ItemModel? summaryModel = _resolveInitialSummaryModel();
+    if (summaryModel != null &&
+        !identical(summaryModel, item) &&
+        !identical(summaryModel, baseModel) &&
+        GeoRules.isMapEnabledForItem(summaryModel)) {
+      return true;
+    }
+
+    return false;
+  }
+
+
+
+
+
 
   @override
   void initState() {
@@ -2317,6 +2402,12 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }
 
   Widget _buildOwnerBody(BuildContext context) {
+
+    final bool supportsMapSection = _supportsMapSectionForItem(_currentItem);
+    final bool hideLocation = supportsMapSection
+        ? false
+        : GeoRules.isDisabledForItem(_currentItem);
+
     return OwnerAdDetailsBody(
       model: _currentItem,
       images: images,
@@ -2334,6 +2425,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       featuredSection: (_currentItem.isFeature != true)
           ? createFeaturesAds()
           : const SizedBox.shrink(),
+      hideLocation: hideLocation,
+      supportsMapSection: supportsMapSection,
       addCloudDataFn: (k, v) => addCloudData(k, v),
     );
   }
@@ -2423,8 +2516,10 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       model: item,
       isAddedByMe: false,
     );
-    final bool hideLocation = GeoRules.isDisabledForItem(item);
-    final bool supportsMapSection = GeoRules.isMapEnabledForItem(item);
+    final bool supportsMapSection = _supportsMapSectionForItem(item);
+    final bool hideLocation = supportsMapSection
+        ? false
+        : GeoRules.isDisabledForItem(item);
 
     final List<Widget> statusAlerts = _buildStatusAlerts(item);
 

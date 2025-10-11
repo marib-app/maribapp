@@ -12,7 +12,9 @@ use Illuminate\Validation\Rule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
-
+use Throwable;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 class PaymentController extends Controller
 {
     public function __construct(
@@ -177,6 +179,9 @@ class PaymentController extends Controller
             'metadata' => ['nullable', 'array'],
 
             'auto_confirm' => ['sometimes', 'boolean'],
+            'receipt' => ['nullable', 'file', 'max:10240', 'mimes:jpg,jpeg,png,pdf'],
+            'receipt_image' => ['nullable', 'file', 'max:10240', 'mimes:jpg,jpeg,png,pdf'],
+
         ];
 
         if ($purpose === 'package') {
@@ -194,6 +199,30 @@ class PaymentController extends Controller
         if (! isset($validated['metadata']) && $request->has('metadata') && is_array($request->input('metadata'))) {
             $validated['metadata'] = $request->input('metadata');
         }
+
+        $receiptFile = $this->resolveReceiptFile($request);
+
+        if ($receiptFile === null) {
+            throw ValidationException::withMessages([
+                'receipt' => __('يُرجى إرفاق إيصال التحويل.'),
+            ]);
+        }
+
+        $storedReceiptPath = $this->storeReceiptFile($receiptFile);
+
+        $validated['receipt_path'] = $storedReceiptPath;
+        $validated['attachments'] = [[
+            'type' => 'receipt',
+            'path' => $storedReceiptPath,
+            'disk' => 'public',
+            'name' => $receiptFile->getClientOriginalName() ?: null,
+            'mime_type' => $receiptFile->getClientMimeType() ?: null,
+            'size' => $receiptFile->getSize() ?: null,
+            'uploaded_at' => now()->toIso8601String(),
+            'url' => $this->resolvePublicUrl($storedReceiptPath),
+        ]];
+
+
 
         $validated['bank_id'] = $validated['manual_bank_id'];
 
@@ -273,5 +302,39 @@ class PaymentController extends Controller
         }
 
         return $normalized;
+    }
+    private function resolveReceiptFile(Request $request): ?UploadedFile
+    {
+        $receipt = $request->file('receipt');
+
+        if ($receipt instanceof UploadedFile) {
+            return $receipt;
+        }
+
+        $receiptImage = $request->file('receipt_image');
+
+        return $receiptImage instanceof UploadedFile ? $receiptImage : null;
+    }
+
+    private function storeReceiptFile(UploadedFile $file): string
+    {
+        $directory = 'manual_payments/' . now()->format('Y/m/d');
+
+        try {
+            return $file->store($directory, 'public');
+        } catch (Throwable) {
+            throw ValidationException::withMessages([
+                'receipt' => __('تعذر حفظ إيصال التحويل. يرجى المحاولة مرة أخرى.'),
+            ]);
+        }
+    }
+
+    private function resolvePublicUrl(string $path): ?string
+    {
+        try {
+            return Storage::disk('public')->url($path);
+        } catch (Throwable) {
+            return null;
+        }
     }
 }

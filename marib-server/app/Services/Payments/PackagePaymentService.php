@@ -134,8 +134,14 @@ class PackagePaymentService
             );
 
             $manualMeta = array_filter(
-                Arr::only($data, ['note', 'reference', 'attachments']),
-                static fn ($value) => $value !== null && $value !== ''
+                Arr::only($data, ['note', 'reference', 'attachments', 'receipt_path']),
+                static function ($value) {
+                    if (is_array($value)) {
+                        return $value !== [];
+                    }
+
+                    return $value !== null && $value !== '';
+                }
             );
 
             if (!empty($data['bank_id']) || !empty($data['bank_account_id'])) {

@@ -74,9 +74,7 @@ class ManualPaymentRequestService
             $metaUpdates['note'] = $note;
         }
 
-        if ($metadata) {
-            $metaUpdates['metadata'] = $metadata;
-        }
+
 
         $existingRequest = null;
 
@@ -123,6 +121,33 @@ class ManualPaymentRequestService
             ]);
         }
 
+
+
+        $receiptPath = $this->resolveReceiptPath($data, $existingRequest);
+        $attachments = $this->normalizeAttachments(Arr::get($data, 'attachments'), $receiptPath);
+
+        if ($existingRequest === null && $receiptPath === '') {
+            throw ValidationException::withMessages([
+                'receipt' => __('يُرجى إرفاق إيصال التحويل.'),
+            ]);
+        }
+
+        if (!empty($attachments)) {
+            $metaUpdates['attachments'] = $attachments;
+        }
+
+        if ($receiptPath !== null && $receiptPath !== '') {
+            $metaUpdates['receipt'] = array_filter([
+                'path' => $receiptPath,
+                'disk' => 'public',
+            ], static fn ($value) => $value !== null && $value !== '');
+        }
+
+        if ($metadata) {
+            $metaUpdates['metadata'] = $metadata;
+        }
+
+
         if ($existingRequest) {
             $mergedMeta = $existingRequest->meta ?? [];
             if (! is_array($mergedMeta)) {
@@ -140,6 +165,7 @@ class ManualPaymentRequestService
                 'reference' => $reference ?? $existingRequest->reference,
                 'user_note' => $note ?? $existingRequest->user_note,
                 'status' => ManualPaymentRequest::STATUS_PENDING,
+                'receipt_path' => $receiptPath !== '' ? $receiptPath : ($existingRequest->receipt_path ?? ''),
             ]);
 
 
@@ -175,6 +201,8 @@ class ManualPaymentRequestService
             'user_note' => $note,
             'status' => ManualPaymentRequest::STATUS_PENDING,
             'meta' => empty($metaUpdates) ? null : $metaUpdates,
+            'receipt_path' => $receiptPath,
+
         ];
 
 
@@ -196,6 +224,79 @@ class ManualPaymentRequestService
 
         return ManualPaymentRequest::create($attributes);
     }
+
+
+
+    private function resolveReceiptPath(array $data, ?ManualPaymentRequest $existing): string
+    {
+        $path = Arr::get($data, 'receipt_path');
+
+        if (is_string($path)) {
+            $trimmed = trim($path);
+
+            if ($trimmed !== '') {
+                return $trimmed;
+            }
+        }
+
+        if ($existing && is_string($existing->receipt_path) && $existing->receipt_path !== '') {
+            return $existing->receipt_path;
+        }
+
+        return '';
+    }
+
+    /**
+     * @param mixed $attachments
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizeAttachments(mixed $attachments, ?string $receiptPath): array
+    {
+        if (! is_iterable($attachments)) {
+            $attachments = [];
+        }
+
+        $normalized = [];
+
+        foreach ($attachments as $attachment) {
+            if (! is_array($attachment)) {
+                continue;
+            }
+
+            $path = Arr::get($attachment, 'path');
+
+            if (! is_string($path) || trim($path) === '') {
+                $path = $receiptPath;
+            }
+
+            if (! is_string($path) || trim($path) === '') {
+                continue;
+            }
+
+            $normalized[] = array_filter([
+                'type' => Arr::get($attachment, 'type', 'receipt'),
+                'path' => $path,
+                'disk' => Arr::get($attachment, 'disk', 'public'),
+                'name' => Arr::get($attachment, 'name'),
+                'mime_type' => Arr::get($attachment, 'mime_type'),
+                'size' => Arr::get($attachment, 'size'),
+                'uploaded_at' => Arr::get($attachment, 'uploaded_at'),
+                'url' => Arr::get($attachment, 'url'),
+            ], static fn ($value) => $value !== null && $value !== '');
+        }
+
+        if ($normalized === [] && is_string($receiptPath) && $receiptPath !== '') {
+            $normalized[] = [
+                'type' => 'receipt',
+                'path' => $receiptPath,
+                'disk' => 'public',
+            ];
+        }
+
+        return $normalized;
+    }
+
+
 
     private function manualPaymentRequestsHasColumn(string $column): bool
     {

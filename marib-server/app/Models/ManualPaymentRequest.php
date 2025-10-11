@@ -65,9 +65,18 @@ class ManualPaymentRequest extends Model
         'wallet' => [
             'wallet',
             'wallet_balance',
+            'wallet-balance',
+            'wallet balance',
             'wallet_gateway',
+            'wallet-gateway',
+            'wallet gateway',
             'wallet_top_up',
             'wallet-top-up',
+            'wallet top up',
+            'walletpayment',
+            'wallet_payment',
+            'wallet-payment',
+            'wallet payment',
             'wallettopup',
         ],
         'cash' => [

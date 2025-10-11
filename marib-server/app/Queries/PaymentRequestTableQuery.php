@@ -173,8 +173,19 @@ class PaymentRequestTableQuery
         $walletValues = self::sqlList([
             'wallet',
             'wallet_balance',
+            'wallet-balance',
+            'wallet balance',
             'wallet_gateway',
+            'wallet-gateway',
+            'wallet gateway',
             'wallet_top_up',
+            'wallet-top-up',
+            'wallet top up',
+            'wallettopup',
+            'walletpayment',
+            'wallet payment',
+            'wallet_payment',
+            'wallet-payment',
         ]);
 
         $cashValues = self::sqlList([

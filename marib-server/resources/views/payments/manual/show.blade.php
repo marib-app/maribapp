@@ -38,6 +38,37 @@
         ?? data_get($eastYemenMeta, 'confirm_payment.payload.voucher_number')
         ?? data_get($eastYemenMeta, 'check_voucher.payload.voucher_number');
 
+
+    $walletTransaction = $paymentTransaction?->walletTransaction;
+    $walletAccount = $walletTransaction?->walletAccount;
+    $walletOwner = $walletAccount?->user;
+
+    $orderPayable = $request->payable instanceof \App\Models\Order
+        ? $request->payable
+        : ($paymentTransaction?->order);
+
+    $orderCurrency = $orderPayable?->currency ?? $request->currency;
+    $depositPaidAmount = $orderPayable ? (float) ($orderPayable->deposit_amount_paid ?? 0) : 0.0;
+    $depositRemainingAmount = $orderPayable ? (float) ($orderPayable->deposit_remaining_balance ?? 0) : 0.0;
+
+    $orderPaymentSummary = $orderPayable?->payment_summary;
+    if (! is_array($orderPaymentSummary) && $orderPayable) {
+        $orderPaymentSummary = data_get($orderPayable->payment_payload, 'payment_summary', []);
+    }
+
+    $orderRemainingBalance = 0.0;
+    $rawRemaining = is_array($orderPaymentSummary)
+        ? data_get($orderPaymentSummary, 'remaining_balance')
+        : null;
+
+    if (is_numeric($rawRemaining)) {
+        $orderRemainingBalance = (float) $rawRemaining;
+    }
+
+    if ($orderRemainingBalance <= 0 && $depositRemainingAmount > 0) {
+        $orderRemainingBalance = $depositRemainingAmount;
+    }
+
 @endphp
 
 <div class="manual-payment-review-content py-2">
@@ -79,6 +110,17 @@
                         <dt class="col-5 text-muted">{{ __('Amount') }}</dt>
                         <dd class="col-7">{{ number_format($request->amount, 2) }} {{ $request->currency }}</dd>
 
+                        @if($depositPaidAmount > 0)
+                            <dt class="col-5 text-muted">{{ __('Manual Payment Advance Paid') }}</dt>
+                            <dd class="col-7">{{ number_format($depositPaidAmount, 2) }} {{ $orderCurrency }}</dd>
+                        @endif
+
+                        @if($orderRemainingBalance > 0)
+                            <dt class="col-5 text-muted">{{ __('Manual Payment Outstanding Balance') }}</dt>
+                            <dd class="col-7">{{ number_format($orderRemainingBalance, 2) }} {{ $orderCurrency }}</dd>
+                        @endif
+
+
                         <dt class="col-5 text-muted">{{ __('Payable Type') }}</dt>
                         <dd class="col-7">
                             {{ filled($request->payable_type)
@@ -92,7 +134,15 @@
                         <dt class="col-5 text-muted">{{ __('Payment Gateway') }}</dt>
                         <dd class="col-7">{{ $paymentGatewayLabel }}</dd>
 
+                        @if($paymentGatewayCanonical === 'wallet')
+                            <dt class="col-5 text-muted">{{ __('Wallet Transaction ID') }}</dt>
+                            <dd class="col-7">{{ $walletTransaction?->id ?? __('N/A') }}</dd>
 
+                            <dt class="col-5 text-muted">{{ __('Wallet Account Owner') }}</dt>
+                            <dd class="col-7">{{ $walletOwner?->name ?? __('N/A') }}</dd>
+                        @endif
+
+                        
                         <dt class="col-5 text-muted">{{ __('Department') }}</dt>
                         <dd class="col-7">{{ $departmentLabel }}</dd>
 

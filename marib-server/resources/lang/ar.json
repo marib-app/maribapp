@@ -397,6 +397,8 @@
     "Bank Transfer": "التحويل البنكي",
     "East Yemen Bank": "بنك الشرق",
     "Wallet": "المحفظة",
+    "Wallet Transaction ID": "رقم معاملة المحفظة",
+    "Wallet Account Owner": "مالك حساب المحفظة",
     "Requests": "طلبات",
     "Quick Actions": "اختصارات سريعة",
     "Focus on specific payment requests instantly.": "ركّز على طلبات دفع محددة بسرعة.",
@@ -679,8 +681,10 @@
     "Manual Payment Follow Up Guidance": "قائمة التحقق للمتابعة",
     "Manual Payment Follow Up Deposit": "تحقق من أن الدفعة المقدمة المسجلة بقيمة :amount مطابقة لما دفعه العميل.",
     "Manual Payment Follow Up Outstanding": "قم بتحصيل الرصيد المتبقي وقدره :amount بعد اعتماد الطلب.",
-    "Manual Payment Follow Up Review Order": "افتح الطلب لمراجعة تفاصيل السلة وتحديث الحالة بعد التحقق من الدفع."
+    "Manual Payment Follow Up Review Order": "افتح الطلب لمراجعة تفاصيل السلة وتحديث الحالة بعد التحقق من الدفع.",
+    "Manual Payment Follow Up Update Status": "حدّث حالة الطلب في لوحة الطلبات بعد اعتماد الدفع اليدوي.",
+    "Manual Payment Follow Up Quick Actions": "إجراءات سريعة للمتابعة",
+    "Manual Payment Open Order Details": "فتح تفاصيل الطلب"
 
-    
 
 }

@@ -12,6 +12,7 @@
     $identifier = $request->payable_id ? '#' . $request->payable_id : __('N/A');
     $description = __('No additional details available.');
     $detailsUrl = null;
+    $quickActions = [];
 
     if ($payable instanceof Order) {
         $typeLabel = __('Order');
@@ -59,6 +60,16 @@
                             <i class="fa fa-external-link-alt ms-1"></i>
                         </a>
                     </dd>
+                    @php
+                        if ($payable instanceof Order) {
+                            $quickActions[] = [
+                                'label' => __('Manual Payment Open Order Details'),
+                                'href' => $detailsUrl,
+                                'icon' => 'fa fa-external-link-alt',
+                            ];
+                        }
+                    @endphp
+
                 @endif
             </dl>
 
@@ -165,9 +176,18 @@
                         $followUpItems[] = __('Manual Payment Follow Up Outstanding', ['amount' => $formatMoney((float) $outstandingBalance)]);
                     }
 
-                    if ($detailsUrl) {
-                        $followUpItems[] = __('Manual Payment Follow Up Review Order');
+                    if ($depositReceiptsUrl) {
+                        $quickActions[] = [
+                            'label' => __('Manual Payment View Deposit Receipts'),
+                            'href' => $depositReceiptsUrl,
+                            'icon' => 'fa fa-receipt',
+                        ];
                     }
+
+
+                    $followUpItems[] = __('Manual Payment Follow Up Review Order');
+                    $followUpItems[] = __('Manual Payment Follow Up Update Status');
+
                 @endphp
 
                 <hr class="my-4">
@@ -208,13 +228,7 @@
                             </p>
                         @endif
 
-                        @if($depositReceiptsUrl)
-                            <div class="mt-3">
-                                <a href="{{ $depositReceiptsUrl }}" target="_blank" rel="noopener" class="btn btn-outline-info btn-sm">
-                                    <i class="fa fa-receipt me-1"></i>{{ __('Manual Payment View Deposit Receipts') }}
-                                </a>
-                            </div>
-                        @endif
+
                     </div>
                 </div>
 
@@ -230,6 +244,24 @@
                         </ul>
                     </div>
                 @endif
+
+                @if(! empty($quickActions))
+                    <div class="mt-4">
+                        <h6 class="fw-semibold mb-2">
+                            <i class="fa fa-bolt me-2"></i>{{ __('Manual Payment Follow Up Quick Actions') }}
+                        </h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            @foreach($quickActions as $action)
+                                <a href="{{ $action['href'] }}" target="_blank" rel="noopener"
+                                   class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1">
+                                    <i class="{{ $action['icon'] }}"></i>
+                                    <span>{{ $action['label'] }}</span>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
             @endif
 
         @else

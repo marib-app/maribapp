@@ -12,6 +12,7 @@ use App\Models\WalletTransaction;
 use App\Queries\PaymentRequestTableQuery;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Database\Eloquent\Model;
 
 use App\Models\UserFcmToken;
 use App\Services\BootstrapTableService;
@@ -410,18 +411,34 @@ class ManualPaymentRequestController extends Controller
     {
         $manualPaymentRequest->load([
             'user',
-            'paymentTransaction.order',
+            'paymentTransaction.order.user',
+            'paymentTransaction.walletTransaction.walletAccount.user',
+            'paymentTransaction.payable',
             'histories.user',
             'reviewer',
             'payable',
         ]);
+        $paymentTransaction = $manualPaymentRequest->paymentTransaction;
 
         $payable = $manualPaymentRequest->payable;
+
+        if ($payable === null && $paymentTransaction) {
+            if ($paymentTransaction->order) {
+                $manualPaymentRequest->setRelation('payable', $paymentTransaction->order);
+                $payable = $paymentTransaction->order;
+            } elseif ($paymentTransaction->payable instanceof Model) {
+                $manualPaymentRequest->setRelation('payable', $paymentTransaction->payable);
+                $payable = $paymentTransaction->payable;
+            }
+        }
 
         if ($payable instanceof Order) {
             $payable->loadMissing(['user', 'seller']);
         } elseif ($payable instanceof Item) {
             $payable->loadMissing(['user', 'category']);
+        } elseif ($payable instanceof WalletTransaction) {
+            $payable->loadMissing(['walletAccount.user']);
+
         }
 
         return $manualPaymentRequest;
@@ -1193,7 +1210,14 @@ class ManualPaymentRequestController extends Controller
         $buttons .= BootstrapTableService::button(
             'fa fa-eye',
             route('manual-payments.review', $manualPaymentRequest),
-            ['btn-primary', 'view-manual-payment']
+            ['btn-primary', 'view-manual-payment'],
+            [
+                'target' => '_blank',
+                'rel' => 'noopener noreferrer',
+                'title' => trans('View'),
+            ],
+            trans('View')
+        
         );
 
         return $buttons;
@@ -1433,13 +1457,27 @@ class ManualPaymentRequestController extends Controller
 
     private function paymentRequestChannelLabel(?string $channel): string
     {
-        return match ($this->normalizePaymentRequestChannel($channel) ?? '') {
-            'east_yemen_bank' => trans('East Yemen Bank Gateway'),
-            'manual_banks' => trans('Manual Banks'),
-            'wallet' => trans('Wallet'),
-            'cash' => trans('Cash'),
-            default => '—',
-        };
+        $normalized = $this->normalizePaymentRequestChannel($channel);
+
+        if ($normalized !== null) {
+            return match ($normalized) {
+                'east_yemen_bank' => trans('East Yemen Bank Gateway'),
+                'manual_banks' => trans('Manual Banks'),
+                'wallet' => trans('Wallet'),
+                'cash' => trans('Cash'),
+                default => trans('Manual Banks'),
+            };
+        }
+
+        if (is_string($channel) && $channel !== '') {
+            return Str::of($channel)
+                ->replace(['_', '-'], ' ')
+                ->trim()
+                ->title()
+                ->value();
+        }
+
+        return trans('Manual Banks');
     }
 
     private function paymentRequestCategoryLabel(?string $category): string
@@ -1500,7 +1538,14 @@ class ManualPaymentRequestController extends Controller
             return BootstrapTableService::button(
                 'fa fa-eye',
                 route('manual-payments.review', ['manualPaymentRequest' => $row->manual_payment_request_id]),
-                ['btn-primary', 'view-manual-payment']
+                ['btn-primary', 'view-manual-payment'],
+                [
+                    'target' => '_blank',
+                    'rel' => 'noopener noreferrer',
+                    'title' => trans('View'),
+                ],
+                trans('View')
+            
             );
         }
 

@@ -22,7 +22,9 @@ import 'package:marib/data/model/wifi/wifi_payment_gateway.dart';
 import 'package:intl/intl.dart';
 import 'package:marib/utils/api.dart';
 import 'package:flutter/services.dart';
-
+import 'dart:typed_data';
+import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart';
 
 
 class WifiCabinScreen extends StatefulWidget {
@@ -465,7 +467,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
       useSafeArea: true,
       backgroundColor: context.color.backgroundColor,
       builder: (_) => _AddNetworkSheet(
-        userLatLng: null,
+
         repository: _repository,
       ),
 
@@ -2468,38 +2470,27 @@ class _PurchaseTile extends StatelessWidget {
 
 
 class _AddNetworkSheet extends StatefulWidget {
-
-  const _AddNetworkSheet({this.userLatLng, WifiRepository? repository})
+  const _AddNetworkSheet({WifiRepository? repository})
       : repository = repository ?? const WifiRepository();
 
 
-  final LatLng? userLatLng;
+
   final WifiRepository repository;
 
   @override
   State<_AddNetworkSheet> createState() => _AddNetworkSheetState();
 }
 
-class _AddNetworkSheetState extends State<_AddNetworkSheet> {
-  final TextEditingController _nameController = TextEditingController();
-  LatLng? _selected;
-  double _coverage = 3;
-  bool _isSubmitting = false;
-
-  static const LatLng _defaultLatLng = LatLng(15.3694, 44.1910);
+class _AddNetworkSheetState extends _OwnerRequestFormState<_AddNetworkSheet> {
 
 
   @override
-  void initState() {
-    super.initState();
-    _selected = widget.userLatLng;
-  }
+  WifiRepository get repository => widget.repository;
+
 
   @override
-  void dispose() {
-    _nameController.dispose();
-
-    super.dispose();
+  void handleCompletion(Map<String, dynamic> result) {
+    Navigator.of(context).pop(result);
   }
 
   @override
@@ -2531,142 +2522,218 @@ class _AddNetworkSheetState extends State<_AddNetworkSheet> {
               ),
               const SizedBox(height: 12),
               Expanded(
-                child: ListView(
-                  controller: controller,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  children: [
-                    Text(
-                      'أضف شبكتك',
-                      style: TextStyle(
-                        color: color.textDefaultColor,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'اسم الشبكة',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    GestureDetector(
-                      onTap: _isSubmitting ? null : _selectLocation,
-                      child: Container(
-                        height: 220,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          color: color.secondaryColor.withOpacity(0.2),
-                        ),
-                        alignment: Alignment.center,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.map_outlined,
-                              color: color.textDefaultColor.withOpacity(0.65),
-                              size: 42,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              _selected == null
-                                  ? 'اضغط لاختيار الموقع على الخريطة'
-                                  : 'الموقع المحدد: ${_selected!.latitude.toStringAsFixed(4)}, ${_selected!.longitude.toStringAsFixed(4)}',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: color.textDefaultColor.withOpacity(0.85),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'نطاق التغطية (كم)',
-                      style: TextStyle(
-                        color: color.textDefaultColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    Slider(
-                      value: _coverage,
-                      min: 1,
-                      max: 10,
-                      divisions: 9,
-                      label: _coverage.toStringAsFixed(0),
-                      onChanged: _isSubmitting
-                          ? null
-                          : (value) {
-                        setState(() => _coverage = value);
-                      },
-                    ),
-                  ],
-                ),
+                child: buildFormContent(controller: controller),
+
               ),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: _isSubmitting ? null : _onSubmit,
-                    child: _isSubmitting
-                        ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2.5),
-                    )
-                        : const Text('إرسال الطلب'),
-                  ),
-                ),
-              ),
+              buildSubmitButton(),
+
             ],
           ),
         );
       },
     );
   }
+}
 
-  Future<void> _selectLocation() async {
-    FocusScope.of(context).unfocus();
-    final LatLng initial = _selected ?? widget.userLatLng ?? _defaultLatLng;
-    final LatLng? result = await Navigator.of(context).push<LatLng>(
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (_) => _NetworkLocationPicker(initialPosition: initial),
+
+class _AddNetworkScreen extends StatefulWidget {
+  const _AddNetworkScreen({WifiRepository? repository})
+      : repository = repository ?? const WifiRepository();
+
+  final WifiRepository repository;
+
+  @override
+  State<_AddNetworkScreen> createState() => _AddNetworkScreenState();
+}
+
+class _AddNetworkScreenState extends _OwnerRequestFormState<_AddNetworkScreen> {
+  @override
+  WifiRepository get repository => widget.repository;
+
+  @override
+  void handleCompletion(Map<String, dynamic> result) {
+    Navigator.of(context).pop(result);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('أضف شبكتك'),
+      ),
+      backgroundColor: context.color.backgroundColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: buildFormContent(
+                padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+              ),
+            ),
+            buildSubmitButton(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            ),
+          ],
+        ),
       ),
     );
+  }
+}
 
-    if (result != null) {
-      setState(() => _selected = result);
-    }
+
+
+
+abstract class _OwnerRequestFormState<T extends StatefulWidget> extends State<T> {
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _contactController = TextEditingController();
+  final TextEditingController _notesController = TextEditingController();
+  PlatformFile? _logoFile;
+  PlatformFile? _loginScreenshotFile;
+  bool _isSubmitting = false;
+
+  WifiRepository get repository;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _contactController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  Widget buildFormContent({
+    ScrollController? controller,
+    EdgeInsetsGeometry? padding,
+  }) {
+    final color = context.color;
+    final EdgeInsetsGeometry effectivePadding =
+        padding ?? const EdgeInsets.symmetric(horizontal: 16);
+
+    return ListView(
+      controller: controller,
+      padding: effectivePadding,
+      children: [
+        Text(
+          'أضف شبكتك',
+          style: TextStyle(
+            color: color.textDefaultColor,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _nameController,
+          enabled: !_isSubmitting,
+          decoration: const InputDecoration(
+            labelText: 'اسم الشبكة',
+          ),
+        ),
+        const SizedBox(height: 16),
+        _OwnerRequestFilePickerTile(
+          title: 'شعار الشبكة',
+          placeholder: 'ارفع صورة الشعار',
+          fileName: _logoFile?.name,
+          isBusy: _isSubmitting,
+          onTap: () => _pickImage(isLogo: true),
+        ),
+        const SizedBox(height: 16),
+        _OwnerRequestFilePickerTile(
+          title: 'صورة صفحة الدخول',
+          placeholder: 'ارفع صورة توضح صفحة الدخول',
+          fileName: _loginScreenshotFile?.name,
+          isBusy: _isSubmitting,
+          onTap: () => _pickImage(isLogo: false),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _contactController,
+          enabled: !_isSubmitting,
+          decoration: const InputDecoration(
+            labelText: 'وسيلة التواصل',
+            hintText: 'مثال: 777123456 أو @account',
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _notesController,
+          enabled: !_isSubmitting,
+          maxLines: 4,
+          decoration: const InputDecoration(
+            labelText: 'ملاحظات إضافية (اختياري)',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget buildSubmitButton({EdgeInsetsGeometry padding = const EdgeInsets.all(16)}) {
+    return Padding(
+      padding: padding,
+      child: SizedBox(
+        width: double.infinity,
+        height: 48,
+        child: ElevatedButton(
+          onPressed: _isSubmitting ? null : _onSubmit,
+          child: _isSubmitting
+              ? const SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2.5),
+          )
+              : const Text('إرسال الطلب'),
+        ),
+      ),
+    );
   }
 
   Future<void> _onSubmit() async {
     if (_isSubmitting) return;
-    final name = _nameController.text.trim();
+    FocusScope.of(context).unfocus();
+
+    final String name = _nameController.text.trim();
+
     if (name.isEmpty) {
       _showError('يرجى إدخال اسم الشبكة.');
-
       return;
     }
-    if (_selected == null) {
-      _showError('يرجى اختيار موقع الشبكة على الخريطة.');
+
+    final String contact = _contactController.text.trim();
+    if (contact.isEmpty) {
+      _showError('يرجى إدخال وسيلة للتواصل.');
+      return;
+    }
+
+
+
+
+    if (_logoFile == null) {
+      _showError('يرجى رفع صورة شعار الشبكة.');
+      return;
+    }
+
+    if (_loginScreenshotFile == null) {
+      _showError('يرجى رفع صورة لصفحة الدخول.');
+      return;
+    }
+
+    final MultipartFile? logoMultipart = _prepareMultipart(_logoFile!);
+    final MultipartFile? loginMultipart = _prepareMultipart(_loginScreenshotFile!);
+
+    if (logoMultipart == null || loginMultipart == null) {
+
       return;
     }
 
     setState(() => _isSubmitting = true);
     try {
-      final double coverage = double.parse(_coverage.toStringAsFixed(1));
-      final Map<String, dynamic> response =
-      await widget.repository.createOwnerRequest(
+
+      final Map<String, dynamic> response = await repository.createOwnerRequest(
         name: name,
-        latitude: _selected!.latitude,
-        longitude: _selected!.longitude,
-        coverageKm: coverage,
+      contact: contact,
+      logo: logoMultipart,
+      loginScreenshot: loginMultipart,
+      notes: _stringify(_notesController.text),
       );
 
       Map<String, dynamic> payload = <String, dynamic>{};
@@ -2700,7 +2767,7 @@ class _AddNetworkSheetState extends State<_AddNetworkSheet> {
         return;
       }
 
-      Navigator.of(context).pop(result);
+    handleCompletion(result);
     } on ApiException catch (error) {
       if (!mounted) return;
       _showError(error.toString());
@@ -2711,6 +2778,77 @@ class _AddNetworkSheetState extends State<_AddNetworkSheet> {
       setState(() => _isSubmitting = false);
     }
   }
+
+
+
+
+  Future<void> _pickImage({required bool isLogo}) async {
+    if (_isSubmitting) return;
+    FocusScope.of(context).unfocus();
+
+    try {
+      final FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: _allowedImageExtensions,
+        withData: kIsWeb,
+      );
+
+      if (result == null) {
+        return;
+      }
+
+      final PlatformFile file = result.files.single;
+      final String extension = (file.extension ?? '').toLowerCase();
+      if (!_allowedImageExtensions.contains(extension)) {
+        _showError('صيغة الملف غير مدعومة. يرجى اختيار صورة بصيغة PNG أو JPG أو WEBP.');
+        return;
+      }
+
+      if (file.size > _maxUploadSizeBytes) {
+        _showError('حجم الملف يتجاوز الحد المسموح (4 ميجابايت).');
+        return;
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        if (isLogo) {
+          _logoFile = file;
+        } else {
+          _loginScreenshotFile = file;
+        }
+      });
+    } catch (_) {
+      _showError('تعذّر اختيار الملف، حاول مرة أخرى.');
+    }
+  }
+
+  MultipartFile? _prepareMultipart(PlatformFile file) {
+    try {
+      if (!kIsWeb && file.path != null) {
+        return MultipartFile.fromFileSync(
+          file.path!,
+          filename: file.name,
+        );
+      }
+
+      final Uint8List? bytes = file.bytes;
+      if (bytes != null) {
+        return MultipartFile.fromBytes(
+          bytes,
+          filename: file.name,
+        );
+      }
+    } catch (_) {
+      _showError('تعذّر تجهيز الملف المرفوع (${file.name}).');
+      return null;
+    }
+
+    _showError('تعذّر قراءة الملف المرفوع (${file.name}).');
+    return null;
+  }
+
+
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -2726,80 +2864,79 @@ class _AddNetworkSheetState extends State<_AddNetworkSheet> {
   }
 }
 
-class _NetworkLocationPicker extends StatefulWidget {
-  const _NetworkLocationPicker({required this.initialPosition});
+void handleCompletion(Map<String, dynamic> result);
 
-  final LatLng initialPosition;
 
-  @override
-  State<_NetworkLocationPicker> createState() => _NetworkLocationPickerState();
-}
+static const int _maxUploadSizeBytes = 4 * 1024 * 1024;
+static const List<String> _allowedImageExtensions = <String>['jpg', 'jpeg', 'png', 'webp'];
 
-class _NetworkLocationPickerState extends State<_NetworkLocationPicker> {
-  late LatLng _current;
-  GoogleMapController? _controller;
 
-  @override
-  void initState() {
-    super.initState();
-    _current = widget.initialPosition;
-  }
+class _OwnerRequestFilePickerTile extends StatelessWidget {
+  const _OwnerRequestFilePickerTile({
+    required this.title,
+    required this.placeholder,
+    required this.onTap,
+    required this.isBusy,
+    this.fileName,
+  });
 
-  @override
-  void dispose() {
-    _controller?.dispose();
-    super.dispose();
-  }
-
-  Future<void> _updateSelection(LatLng value) async {
-    if (!mounted) return;
-    setState(() => _current = value);
-    await _controller?.animateCamera(
-      CameraUpdate.newLatLng(value),
-    );
-  }
-
-  void _confirm() {
-    Navigator.of(context).pop(_current);
-  }
+  final String title;
+  final String placeholder;
+  final String? fileName;
+  final VoidCallback onTap;
+  final bool isBusy;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('حدد موقع الشبكة'),
-        actions: [
-          TextButton(
-            onPressed: _confirm,
-            child: const Text('تم'),
+    final color = context.color;
+    final bool hasFile = fileName != null && fileName!.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+      Text(
+      title,
+      style: TextStyle(
+        color: color.textDefaultColor,
+        fontWeight: FontWeight.w600,
           ),
-        ],
-      ),
-      body: GoogleMap(
-        initialCameraPosition: CameraPosition(target: _current, zoom: 14.5),
-        markers: {
-          Marker(
-            markerId: const MarkerId('selected_location'),
-            position: _current,
-            draggable: true,
-            onDragEnd: (value) {
-              unawaited(_updateSelection(value));
-            },
+    ),
+    const SizedBox(height: 8),
+    GestureDetector(
+    onTap: isBusy ? null : onTap,
+    child: Container(
+    height: 72,
+    decoration: BoxDecoration(
+    color: color.secondaryColor,
+    borderRadius: BorderRadius.circular(12),
+    border: Border.all(color: color.borderColor.darken(12)),
+    ),
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    child: Row(
+    children: [
+    Icon(
+    Icons.cloud_upload_outlined,
+    color: color.territoryColor,
+    size: 28,
+    ),
+    const SizedBox(width: 12),
+    Expanded(
+    child: Text(
+    hasFile ? fileName! : placeholder,
+    maxLines: 2,
+    overflow: TextOverflow.ellipsis,
+    style: TextStyle(
+    color: hasFile
+    ? color.textDefaultColor
+        : color.textDefaultColor.withOpacity(0.6),
+    ),
+    ),
+    ),
+    ],
+    ),
           ),
-        },
-        onMapCreated: (controller) => _controller = controller,
-        onTap: (value) {
-          unawaited(_updateSelection(value));
-        },
-        zoomControlsEnabled: false,
-        myLocationButtonEnabled: false,
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _confirm,
-        icon: const Icon(Icons.check),
-        label: const Text('تأكيد'),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    ),
+      ],
     );
   }
 }

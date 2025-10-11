@@ -322,7 +322,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
     final dynamic result = await Navigator.of(context).push<dynamic>(
       MaterialPageRoute(
         builder: (_) => _AddNetworkScreen(
-          userLatLng: null,
+
           repository: _repository,
         ),
       ),
@@ -339,7 +339,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
       backgroundColor: context.color.backgroundColor,
       builder: (_) => _AddNetworkSheet(
         repository: _repository,
-        userLatLng: null,
+
       ),
     );
 

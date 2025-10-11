@@ -5,6 +5,7 @@ import 'package:marib/data/model/wifi/wifi_plan.dart';
 import 'package:marib/data/model/wifi/wifi_purchase.dart';
 import 'package:marib/data/model/wifi/wifi_purchase_result.dart';
 import 'dart:collection';
+import 'package:dio/dio.dart';
 
 
 class WifiRepository {
@@ -181,15 +182,15 @@ class WifiRepository {
 
   Future<Map<String, dynamic>> uploadBatch({
     required String name,
-    required double latitude,
-    required double longitude,
-    required double coverageKm,
+    required String contact,
+    required MultipartFile logo,
+    required MultipartFile loginScreenshot,
+    String? notes,
   }) async {
     final payload = <String, dynamic>{
       'name': name,
-      'latitude': latitude,
-      'longitude': longitude,
-      'coverage_radius_km': coverageKm,
+      'contacts': <String>[contact],
+      'notes': notes,
     };
 
     return Api.postJson(
@@ -215,11 +216,25 @@ class WifiRepository {
         'request_type': 'owner_network',
       },
 
-    };
+      'logo': logo,
+      'login_screenshot': loginScreenshot,
+    }..removeWhere((key, value) {
+      if (value == null) return true;
+      if (value is String && value.trim().isEmpty) {
+        return true;
+      }
+      if (value is List && value.isEmpty) {
+        return true;
+      }
+      return false;
+    });
 
-    return Api.postJson(
+
+    return Api.post(
+
       url: Api.wifiNetworksApi,
-      data: payload,
+      parameter: payload,
+
     );
   }
 

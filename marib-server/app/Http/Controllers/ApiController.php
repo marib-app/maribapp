@@ -1542,7 +1542,19 @@ class ApiController extends Controller {
             'user_id'        => 'nullable',
             'min_price'      => 'nullable',
             'max_price'      => 'nullable',
-            'sort_by'        => 'nullable|in:latest,most_viewed',
+            'sort_by'        => [
+                'nullable',
+                Rule::in([
+                    'latest',
+                    'most_viewed',
+                    'new-to-old',
+                    'old-to-new',
+                    'price-high-to-low',
+                    'price-low-to-high',
+                    'default',
+                ]),
+            ],
+            
             'posted_since'   => 'nullable|in:all-time,today,within-1-week,within-2-week,within-1-month,within-3-month',
             'promoted'       => 'nullable|in:0,1',
             'interface_type' => ['nullable', Rule::in(self::interfaceTypes(includeLegacy: true))],
@@ -1671,7 +1683,11 @@ class ApiController extends Controller {
             $sql = match ($sortBy) {
                 'most_viewed' => $sql->orderBy('clicks', 'DESC'),
 
-                default => $sql->orderBy('created_at', 'DESC'),
+                'old-to-new' => $sql->orderBy('created_at'),
+                'price-high-to-low' => $sql->orderByDesc('price'),
+                'price-low-to-high' => $sql->orderBy('price'),
+                null, 'default', 'latest', 'new-to-old' => $sql->orderByDesc('created_at'),
+                default => $sql->orderByDesc('created_at'),
             };
 
 

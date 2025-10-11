@@ -626,8 +626,6 @@ class ItemModel {
     addCandidate(json['section']);
     addCandidate(json['department_advertiser']);
 
-
-
     for (final String candidate in candidates) {
       final String? normalizedInterface =
       SliderInterfaceMapper.normalize(candidate);
@@ -635,7 +633,18 @@ class ItemModel {
           normalizedInterface == 'real_estate_services') {
         return normalizedInterface;
       }
+
+      final String condensed =
+      _normalizeDepartmentMatchKey(normalizedInterface ?? candidate);
+      if (_looksLikePublicAudience(condensed)) {
+        return 'public_ads';
+      }
+      if (_looksLikeRealEstate(condensed)) {
+        return 'real_estate_services';
+      }
     }
+
+
 
 
     for (final String candidate in candidates) {
@@ -649,6 +658,87 @@ class ItemModel {
 
     return candidates.isNotEmpty ? candidates.first : null;
   }
+
+
+  static String _normalizeDepartmentMatchKey(String? raw) {
+    if (raw == null) {
+      return '';
+    }
+    String value = raw.toLowerCase();
+    value = value.replaceAll(RegExp(r'[إأآٱ]'), 'ا');
+    value = value.replaceAll(RegExp(r'ة'), 'ه');
+    value = value.replaceAll(RegExp(r'ى'), 'ي');
+    value = value.replaceAll(RegExp(r'ؤ'), 'و');
+    value = value.replaceAll(RegExp(r'ئ'), 'ي');
+    value = value.replaceAll(RegExp(r'[\s_\-]+'), '');
+    value = value.replaceAll(RegExp(r'[^a-z0-9\u0621-\u064a]+'), '');
+    return value;
+  }
+
+  static bool _looksLikePublicAudience(String condensed) {
+    if (condensed.isEmpty) {
+      return false;
+    }
+
+    const Set<String> keywords = <String>{
+      'public',
+      'general',
+      'audience',
+      'publicads',
+      'publicaudience',
+      'publicaudienceads',
+      'اعلان',
+      'اعلانات',
+      'الجمهور',
+      'جمهور',
+      'عام',
+      'العام',
+      'عامه',
+      'القسمالعام',
+      'قسمعام',
+      'قسمالجمهور',
+      'قسمالجمهورالعام',
+    };
+
+    for (final String keyword in keywords) {
+      if (condensed.contains(keyword)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  static bool _looksLikeRealEstate(String condensed) {
+    if (condensed.isEmpty) {
+      return false;
+    }
+
+    const Set<String> keywords = <String>{
+      'realestate',
+      'realestateservices',
+      'realestateads',
+      'realestatedepartment',
+      'عقار',
+      'العقار',
+      'عقارات',
+      'العقارات',
+      'عقاريا',
+      'العقاريا',
+      'قسمالعقارات',
+      'قسمالعقاريه',
+      'اراضي',
+      'الاراضي',
+    };
+
+    for (final String keyword in keywords) {
+      if (condensed.contains(keyword)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+
 
   // ===== helpers =====
   static double? _toDouble(dynamic v) {

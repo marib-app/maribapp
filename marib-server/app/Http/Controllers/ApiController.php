@@ -1171,6 +1171,7 @@ class ApiController extends Controller {
             $item = Item::select([
                 'id',
                 'product_link',
+                'review_link',
                 'interface_type',
                 'category_id',
                 'all_category_ids',

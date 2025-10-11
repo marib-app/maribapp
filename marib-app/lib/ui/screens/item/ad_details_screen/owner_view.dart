@@ -438,6 +438,7 @@ class OwnerAdDetailsBody extends StatelessWidget {
 
                 // الخريطة
                 if (!hideLocation &&
+                    GeoRules.isMapEnabledForItem(model) &&
                     model.latitude != null &&
                     model.longitude != null)
 

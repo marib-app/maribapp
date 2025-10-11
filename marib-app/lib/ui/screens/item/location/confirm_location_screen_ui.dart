@@ -252,6 +252,12 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
       // نرسلها مع الحقول الجديدة لضمان التوافق وتفادي أخطاء validation.required.
       cloudData['location_latitude']  = latitude;
       cloudData['location_longitude'] = longitude;
+      final resolvedArea = _area ?? _existingValue('area');
+      if (resolvedArea != null) {
+        cloudData['area'] = resolvedArea;
+      } else {
+        cloudData.remove('area');
+      }
       final resolvedCity = _resolvedCity ?? _existingValue('city');
       if (resolvedCity == null) {
         _isPosting = false;
@@ -317,8 +323,7 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
 
       // نجاح العملية (اختياري الرجوع للشاشة السابقة)
       if (!mounted) return;
-      _snack("savedSuccessfully"); // أضف مفتاح ترجمة مناسب
-      Navigator.maybePop(context);
+
     } catch (e) {
       // سجل الخطأ وبلغ المستخدم برسالة ودّية
       debugPrint("PostNow error: $e");
@@ -360,25 +365,46 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
         myAdsCubitReference[editKey]?.edit(state.model);
       }
 
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) {
-          final bool openProductManagement =
-              state.type == ManageItemType.add && isEcommerceItem(state.model);
 
-          if (openProductManagement) {
-            Navigator.pushNamed(
-              context,
-              Routes.productManagementScreen,
-              arguments: {'model': state.model},
-            );
-          } else {
-            Navigator.pushNamed(
-              context,
-              Routes.successItemScreen,
-              arguments: {'model': state.model, 'isEdit': widget.isEdit},
-            );
-          }
+      if (_navigated) {
+        return;
+      }
+      _navigated = true;
+
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (!mounted) {
+          _navigated = false;
+          return;
         }
+
+        final bool openProductManagement =
+            state.type == ManageItemType.add && isEcommerceItem(state.model);
+
+        final Future<dynamic> navigation;
+        if (openProductManagement) {
+          navigation = Navigator.pushNamed(
+            context,
+            Routes.productManagementScreen,
+            arguments: {'model': state.model},
+          );
+        } else {
+          navigation = Navigator.pushNamed(
+            context,
+            Routes.successItemScreen,
+            arguments: {'model': state.model, 'isEdit': widget.isEdit},
+          );
+        }
+
+        navigation.whenComplete(() {
+          if (mounted) {
+            setState(() {
+              _navigated = false;
+            });
+          } else {
+            _navigated = false;
+
+          }
+        });
       });
     }
     if (state is ManageItemFail) {

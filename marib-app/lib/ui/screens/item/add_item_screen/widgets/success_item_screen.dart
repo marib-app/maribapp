@@ -211,20 +211,6 @@ class _SuccessItemScreenState extends State<SuccessItemScreen>
                               InkWell(
                                 onTap: () {
                                   _navigateToAdDetailsScreen();
-                                  //pageCntrlr.jumpToPage(3);
-                                  /*  Navigator.pushReplacementNamed(
-                                      context,
-                                      Routes.main,
-                                      arguments: {"from": "successItem"},
-                                    ).then((_) {
-                                      context
-                                          .read<NavigationCubit>()
-                                          .navigateToMyItems();
-                                    });*/
-                                  /*  Navigator.pushNamed(
-                                      context,
-                                      Routes.myItemScreen,
-                                    );*/
                                 },
                                 child: Container(
                                   height: 48,

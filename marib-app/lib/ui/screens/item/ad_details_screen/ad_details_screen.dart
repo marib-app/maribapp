@@ -2547,6 +2547,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
                 // الخريطة (لو الإحداثيات متوفرة)
                 if (!hideLocation &&
+                    GeoRules.isMapEnabledForItem(item) &&
                     item.latitude != null &&
                     item.longitude != null)
 

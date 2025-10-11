@@ -30,6 +30,10 @@ class GeoRules {
     'real_estate_services',
   };
 
+  static const Set<String> _mapEnabledInterfaces = <String>{
+    'public_ads',
+    'real_estate_services',
+  };
 
   static bool isDisabled({Iterable<int>? categoryIds, String? interfaceType}) {
     final Set<int> disabledCategories = Constant.geoDisabledCategoryIds;
@@ -93,5 +97,34 @@ class GeoRules {
           (int id) => !_forceLocationRoots.contains(id) &&
           (disabled.contains(id) || _defaultDisabledRoots.contains(id)),
     );
+  }
+  static bool isMapEnabledForItem(ItemModel item) {
+    if (_isMapEnabled(interfaceType: item.departmentSlug)) {
+      return true;
+    }
+
+    if (_isMapEnabled(interfaceType: item.itemType)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  static bool _isMapEnabled({String? interfaceType}) {
+    if (interfaceType == null) {
+      return false;
+    }
+
+    final String? normalized = SliderInterfaceMapper.normalize(interfaceType);
+    if (normalized != null && _mapEnabledInterfaces.contains(normalized)) {
+      return true;
+    }
+
+    final String fallback = interfaceType.trim().toLowerCase();
+    if (fallback.isEmpty) {
+      return false;
+    }
+
+    return _mapEnabledInterfaces.contains(fallback);
   }
 }

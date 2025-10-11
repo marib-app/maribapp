@@ -20,11 +20,24 @@ class GeoRules {
     Constant.storeRootCategoryId,
   };
 
+  static const Set<int> _forceLocationRoots = <int>{
+    Constant.realEstateRootCategoryId,
+    Constant.publicRootCategoryId,
+  };
+
+  static const Set<String> _forceLocationInterfaces = <String>{
+    'public_ads',
+    'real_estate_services',
+  };
+
 
   static bool isDisabled({Iterable<int>? categoryIds, String? interfaceType}) {
     final Set<int> disabledCategories = Constant.geoDisabledCategoryIds;
     if (categoryIds != null) {
       for (final int id in categoryIds) {
+        if (_forceLocationRoots.contains(id)) {
+          continue;
+        }
         if (disabledCategories.contains(id) ||
             _defaultDisabledRoots.contains(id)) {
           return true;
@@ -34,6 +47,9 @@ class GeoRules {
 
     final String? normalized = SliderInterfaceMapper.normalize(interfaceType);
     if (normalized != null) {
+      if (_forceLocationInterfaces.contains(normalized)) {
+        return false;
+      }
       if (_disabledInterfaces.contains(normalized)) {
         return true;
       }
@@ -41,6 +57,9 @@ class GeoRules {
 
     if (interfaceType != null) {
       final String fallback = interfaceType.trim().toLowerCase();
+      if (fallback.isNotEmpty && _forceLocationInterfaces.contains(fallback)) {
+        return false;
+      }
       if (fallback.isNotEmpty && _disabledInterfaces.contains(fallback)) {
         return true;
       }
@@ -71,7 +90,8 @@ class GeoRules {
     }
     final Set<int> disabled = Constant.geoDisabledCategoryIds;
     return categoryIds.any(
-          (int id) => disabled.contains(id) || _defaultDisabledRoots.contains(id),
+          (int id) => !_forceLocationRoots.contains(id) &&
+          (disabled.contains(id) || _defaultDisabledRoots.contains(id)),
     );
   }
 }

@@ -1380,12 +1380,33 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }
 
   bool _supportsMapSectionForItem(ItemModel item) {
-    if (GeoRules.isMapEnabledForItem(item)) {
+    bool belongsToSupportedSection(ItemModel model) {
+      return GeoRules.isMapSupportedInterface(model.departmentSlug) ||
+          GeoRules.isMapSupportedInterface(model.itemType);
+    }
+
+    bool hasExplicitSectionMetadata(ItemModel model) {
+      final String? department = model.departmentSlug;
+      final String? itemType = model.itemType;
+
+      return (department != null && department.trim().isNotEmpty) ||
+          (itemType != null && itemType.trim().isNotEmpty);
+    }
+
+    if (belongsToSupportedSection(item)) {
+
       return true;
     }
 
+
+    if (hasExplicitSectionMetadata(item)) {
+      return false;
+    }
+
+
     final ItemModel baseModel = widget.model;
-    if (!identical(item, baseModel) && GeoRules.isMapEnabledForItem(baseModel)) {
+    if (!identical(item, baseModel) && belongsToSupportedSection(baseModel)) {
+
       return true;
     }
 
@@ -1393,7 +1414,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     if (summaryModel != null &&
         !identical(summaryModel, item) &&
         !identical(summaryModel, baseModel) &&
-        GeoRules.isMapEnabledForItem(summaryModel)) {
+        belongsToSupportedSection(summaryModel)) {
+
       return true;
     }
 

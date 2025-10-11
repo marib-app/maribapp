@@ -511,21 +511,144 @@ enum AdActionMode { ecommerce, classifieds }
 
 
 
-AdActionMode resolveActionMode(ItemModel m) {
-  if (isClassifiedItem(m)) {
-    return AdActionMode.classifieds;
+
+// ===== ضبط القوائم حسب أقسامك =====
+const Set<int> kClassifiedIds = {1, 2, 6}; // العقارات / السياحة / إعلانات الجمهور
+
+const Set<String> _kRealEstateKeywords = <String>{
+  'realestate',
+  'real_estate',
+  'real-estate',
+  'estate',
+  'property',
+  'properties',
+  'aqar',
+  'aqarat',
+  'aqarats',
+  'عقار',
+  'عقارات',
+  'العقارات',
+  'الاراضي',
+  'اراضي',
+  'ارض',
+  'ايجار',
+  'الايجار',
+};
+
+const Set<String> _kGeneralAudienceKeywords = <String>{
+  'publicads',
+  'publicad',
+  'public',
+  'audience',
+  'generalads',
+  'generalad',
+  'general',
+  'announcement',
+  'announcements',
+  'اعلان',
+  'اعلانات',
+  'اعلانالجمهور',
+  'اعلاناتالجمهور',
+  'الجمهور',
+  'قسمالجمهور',
+  'قسمالاعلانات',
+  'اعلاناتعامه',
+  'اعلانعام',
+  'الاعلانات',
+  'القسمالعام',
+};
+
+bool _containsKeyword(String? source, Set<String> keywords) {
+  if (source == null) {
+    return false;
   }
 
+  final String condensed = source
+      .toLowerCase()
+      .replaceAll(RegExp(r'[\s_\-]+'), '')
+      .trim();
+
+  if (condensed.isEmpty) {
+    return false;
+  }
+
+  for (final String keyword in keywords) {
+    if (condensed.contains(keyword)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool _isClassifiedByText(ItemModel model) {
+  final Iterable<String?> candidates = <String?>[
+    model.category?.name,
+    model.category?.description,
+    model.departmentSlug,
+    model.type,
+    model.itemType,
+  ];
+
+  for (final String? candidate in candidates) {
+    if (_containsKeyword(candidate, _kRealEstateKeywords) ||
+        _containsKeyword(candidate, _kGeneralAudienceKeywords)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// ---- Helpers: نجمع كل IDs المتاحة من الموديل بأمان ----
+int? _toInt(dynamic v) {
+  if (v is int) return v;
+  if (v is String) return int.tryParse(v.trim());
+  return null;
+}
+
+Set<int> _collectCategoryIds(ItemModel m) {
+  final ids = <int>{};
+
+  // من الحقل المباشر
+  final id1 = _toInt(m.categoryId);
+  if (id1 != null) ids.add(id1);
+
+  // من الموديل الفرعي (إن وجد)
+  final id2 = _toInt(m.category?.id);
+  if (id2 != null) ids.add(id2);
+
+  // من سلسلة allCategoryIds: نلتقط كل الأرقام أينما كانت
+  final raw = (m.allCategoryIds ?? '').trim();
+  if (raw.isNotEmpty) {
+    for (final match in RegExp(r'\d+').allMatches(raw)) {
+      final v = int.tryParse(match.group(0)!);
+      if (v != null) ids.add(v);
+    }
+  }
+
+  return ids;
+}
+
+// ---- القرار النهائي: نستخدم أي ID متاح (categoryId / category.id / allCategoryIds)
+AdActionMode resolveActionMode(ItemModel m) {
+  final ids = _collectCategoryIds(m);
+
+  if (ids.any(kClassifiedIds.contains) || _isClassifiedByText(m)) {
+    return AdActionMode.classifieds;
+  }
 
   if (isEcommerceItem(m)) {
     return AdActionMode.ecommerce;
   }
 
-
-
   // (اختياري) fallback خفيف عبر نوع العنصر (لو مشروعك يستخدمه)
   final kind = (m.itemType ?? m.type ?? '').toLowerCase();
-  if (kind.contains('real') || kind.contains('estate') || kind.contains('rent') || kind.contains('classified')) {
+  if (kind.contains('real') ||
+      kind.contains('estate') ||
+      kind.contains('rent') ||
+      kind.contains('classified') ||
+      kind.contains('اعلان') ||
+      kind.contains('الجمهور')) {
+
     return AdActionMode.classifieds;
   }
   if (kind.contains('store') || kind.contains('product') || kind.contains('ecommerce')) {

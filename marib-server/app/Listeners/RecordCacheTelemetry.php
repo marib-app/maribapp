@@ -5,10 +5,16 @@ namespace App\Listeners;
 use Illuminate\Cache\Events\CacheEvent;
 use Illuminate\Cache\Events\CacheHit;
 use Illuminate\Cache\Events\CacheMissed;
-use Illuminate\Support\Facades\Log;
+use App\Services\CacheMetricsRecorder;
+
 
 class RecordCacheTelemetry
 {
+
+    public function __construct(private readonly CacheMetricsRecorder $metrics)
+    {
+    }
+
     public function handle(CacheEvent $event): void
     {
         $context = [
@@ -21,13 +27,14 @@ class RecordCacheTelemetry
         }
 
         if ($event instanceof CacheHit) {
-            Log::info('cache.hit', $context);
+            $this->metrics->recordHit($context);
+
 
             return;
         }
 
         if ($event instanceof CacheMissed) {
-            Log::notice('cache.miss', $context);
+            $this->metrics->recordMiss($context);
         }
     }
 }

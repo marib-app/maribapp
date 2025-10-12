@@ -22,6 +22,7 @@ use Throwable;
 
 class FeatureSectionController extends Controller {
 
+    private ?string $resolvedPriceColumn = null;
 
 
     public function index() {
@@ -104,6 +105,7 @@ class FeatureSectionController extends Controller {
 
         $this->ensureTitleFromFilter($request);
 
+        $this->preparePriceBoundsForValidation($request);
 
         $normalizedInputSlug = FeatureSection::normalizeSlug($request->input('slug'));
 
@@ -205,9 +207,15 @@ class FeatureSectionController extends Controller {
             $data['section_type'] = $request->input('section_type', $defaultSectionType);
             $data['slug'] = $expectedSlug;
 
-            [$minPrice, $maxPrice] = $this->resolvePriceBounds($request);
-            $data['min_price'] = $minPrice;
-            $data['max_price'] = $maxPrice;
+            $filterValue = $data['filter'] ?? null;
+            [$minPrice, $maxPrice] = $this->resolvePriceBoundsFromData($validated, $filterValue);
+
+            if ($this->filterSupportsPriceBounds($filterValue)) {
+                $data['min_price'] = $minPrice;
+                $data['max_price'] = $maxPrice;
+            } else {
+                unset($data['min_price'], $data['max_price']);
+            }
 
 
             $data['value'] = null;
@@ -469,9 +477,18 @@ class FeatureSectionController extends Controller {
             $data['section_type'] = $request->input('section_type', $fallbackSectionType);
             $data['slug'] = $expectedSlug;
 
-            [$minPrice, $maxPrice] = $this->resolvePriceBounds($request);
-            $data['min_price'] = $minPrice;
-            $data['max_price'] = $maxPrice;
+            $filterValue = $data['filter'] ?? null;
+            [$minPrice, $maxPrice] = $this->resolvePriceBoundsFromData($validated, $filterValue, [
+                'current_min' => $feature_section->min_price,
+                'current_max' => $feature_section->max_price,
+            ]);
+
+            if ($this->filterSupportsPriceBounds($filterValue)) {
+                $data['min_price'] = $minPrice;
+                $data['max_price'] = $maxPrice;
+            } else {
+                unset($data['min_price'], $data['max_price']);
+            }
 
             $data['value'] = null;
             $data['description'] = $data['description'] ?? null;
@@ -504,6 +521,7 @@ class FeatureSectionController extends Controller {
         if ($request->has('filter_type')) {
             $request->merge(['filter' => $request->input('filter_type')]);
         }
+        $this->preparePriceBoundsForValidation($request);
 
         $expectedSlug = $this->resolveSlugFromRequest($request);
         $request->merge([
@@ -816,18 +834,18 @@ class FeatureSectionController extends Controller {
 
     private function shouldValidatePriceBounds(Request $request): bool
     {
-        $filter = $request->input('filter');
+        $filter = $this->resolveFilterValue($request);
 
-        if ($filter === null && $request->has('filter_type')) {
-            $filter = $request->input('filter_type');
-        }
 
-        return $filter === 'price_range';
+        return $this->filterSupportsPriceBounds($filter);
     }
 
     private function resolvePriceBounds(Request $request): array
     {
-        if (! $this->shouldValidatePriceBounds($request)) {
+        $filter = $this->resolveFilterValue($request);
+
+        if (! $this->filterSupportsPriceBounds($filter)) {
+            
             return [null, null];
         }
 
@@ -837,7 +855,89 @@ class FeatureSectionController extends Controller {
         return [$minPrice, $maxPrice];
     }
 
+
+    private function resolvePriceBoundsFromData(array $data, ?string $filter = null, array $options = []): array
+    {
+        $filter ??= $data['filter'] ?? null;
+
+        if ($filter !== null) {
+            $filter = FeatureSection::normalizeSlug((string) $filter);
+        }
+
+        if (! $this->filterSupportsPriceBounds($filter)) {
+            return [null, null];
+        }
+
+        $minPrice = $options['current_min'] ?? null;
+        $maxPrice = $options['current_max'] ?? null;
+
+        if (array_key_exists('min_price', $data)) {
+            $minPrice = $this->normalizePriceValue($data['min_price']);
+        }
+
+        if (array_key_exists('max_price', $data)) {
+            $maxPrice = $this->normalizePriceValue($data['max_price']);
+        }
+
+        return [$minPrice, $maxPrice];
+    }
+
+    private function resolveFilterValue(Request $request): ?string
+    {
+        $filter = $request->input('filter');
+
+        if ($filter === null && $request->has('filter_type')) {
+            $filter = $request->input('filter_type');
+        }
+
+        if (! is_string($filter)) {
+            return null;
+        }
+
+        $normalized = FeatureSection::normalizeSlug($filter);
+
+        return $normalized === '' ? null : $normalized;
+    }
+
+    private function filterSupportsPriceBounds(?string $filter): bool
+    {
+        if ($filter === null) {
+            return false;
+        }
+
+        return FeatureSection::normalizeSlug($filter) === 'price_range';
+    }
+
+    private function preparePriceBoundsForValidation(Request $request): void
+    {
+        foreach (['min_price', 'max_price'] as $field) {
+            if (! $request->exists($field)) {
+                continue;
+            }
+
+            $value = $request->input($field);
+
+            if (is_string($value)) {
+                $trimmed = trim($value);
+
+                if ($trimmed === '') {
+                    $request->merge([$field => null]);
+                } else {
+                    $request->merge([$field => $trimmed]);
+                }
+            }
+        }
+    }
+
+
     private function normalizePriceValue(mixed $value): ?float
+
+    {
+        return $this->normalizeSectionPrice($value);
+    }
+
+    private function normalizeSectionPrice(mixed $value): ?float
+
     {
         if ($value === null) {
             return null;
@@ -849,17 +949,28 @@ class FeatureSectionController extends Controller {
             if ($value === '') {
                 return null;
             }
+            $value = str_replace(',', '', $value);
+
+
         }
 
-        if ($value === '') {
-            return null;
+        if (is_numeric($value)) {
+            return (float) $value;
         }
 
-        if (! is_numeric($value)) {
-            return null;
+        return null;
+    }
+
+    private function priceColumnName(): string
+    {
+        if ($this->resolvedPriceColumn !== null) {
+            return $this->resolvedPriceColumn;
         }
 
-        return (float) $value;
+        $this->resolvedPriceColumn = Schema::hasColumn('items', 'price_effective') ? 'price_effective' : 'price';
+
+        return $this->resolvedPriceColumn;
+
     }
 
 
@@ -981,8 +1092,40 @@ class FeatureSectionController extends Controller {
             $filter = $section->filter;
             $supportedFilters = FeatureSection::supportedFilters();
 
-            if (! in_array($filter, $supportedFilters, true)) {
-                $filter = 'latest';
+            $filter = in_array($filter, $supportedFilters, true) ? $filter : 'latest';
+
+            $priceColumn = $this->priceColumnName();
+            $priceColumnQualified = sprintf('items.%s', $priceColumn);
+            $minPrice = $this->normalizeSectionPrice($section->min_price);
+            $maxPrice = $this->normalizeSectionPrice($section->max_price);
+
+
+            if ($filter === 'featured') {
+                $itemsQuery->whereHas('featured_items');
+            }
+
+            switch ($filter) {
+                case 'most_viewed':
+                    $itemsQuery->orderByDesc('clicks');
+                    break;
+
+                case 'price_range':
+                    $itemsQuery->whereNotNull($priceColumnQualified);
+
+                    if ($minPrice !== null) {
+                        $itemsQuery->where($priceColumnQualified, '>=', $minPrice);
+                    }
+
+                    if ($maxPrice !== null) {
+                        $itemsQuery->where($priceColumnQualified, '<=', $maxPrice);
+                    }
+
+                    $itemsQuery->orderBy($priceColumnQualified, 'asc');
+                    break;
+
+                default:
+                    $itemsQuery->orderBy('created_at', 'desc');
+                    break;
             }
 
 

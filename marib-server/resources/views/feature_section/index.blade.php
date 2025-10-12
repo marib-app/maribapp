@@ -51,7 +51,12 @@
         $flushCacheRoute = $flushCacheRoute ?? null;
         $filterOptions = array_keys($filterLabels);
         $defaultFilterKey = $filterOptions[0] ?? null;
-        $selectedFilter = old('filter_type', old('filter', $defaultFilterKey));
+        if (! isset($section)) {
+            $section = (object) ['filter' => null];
+        }
+
+        $selectedFilter = old('filter_type', $section->filter ?? $defaultFilterKey);
+        
         if ($selectedFilter === null || ! array_key_exists($selectedFilter, $filterLabels)) {
             $selectedFilter = $defaultFilterKey;
 
@@ -149,9 +154,9 @@
 
         $defaultHasAvailableFilters = $defaultAvailableCount > 0;
 
-        $editSelectedFilter = old('filter_type', old('filter'));
-        if ($editSelectedFilter !== null && ! array_key_exists($editSelectedFilter, $filterLabels)) {
-            $editSelectedFilter = null;
+        $editSelectedFilter = old('filter_type', $section->filter ?? $defaultFilterKey);
+        if ($editSelectedFilter === null || ! array_key_exists($editSelectedFilter, $filterLabels)) {
+            $editSelectedFilter = $defaultFilterKey;
         }
 
 
@@ -214,7 +219,7 @@
                                                         $optionAttributes['data-filter-unavailable'] = '1';
                                                     }
                                                 @endphp
-                                                <option @foreach ($optionAttributes as $attr => $attrValue) {{ $attr }}="{{ e($attrValue) }}" @endforeach @selected($selectedFilter === $value)>
+                                                <option @foreach ($optionAttributes as $attr => $attrValue) {{ $attr }}="{{ e($attrValue) }}" @endforeach @selected(old('filter_type', $section->filter ?? $defaultFilterKey) === $value)>
                                                     {{ $optionLabel }}
                                                 </option>
                                                 
@@ -249,8 +254,12 @@
                                 </div>
 
 
-                                <div class="row g-3 align-items-end d-none" data-price-range-wrapper="create">
-                                    <div class="col-md-6">
+                                @php
+                                    $createPriceRangeActive = old('filter_type', $selectedFilter ?? '') === 'price_range';
+                                @endphp
+                                <div class="row g-3 align-items-end {{ $createPriceRangeActive ? '' : 'd-none' }}" data-price-range-wrapper="create" data-initial-visible="{{ $createPriceRangeActive ? '1' : '0' }}">
+                                    
+                                <div class="col-md-6">
                                         <div class="form-group">
                                             <label for="min_price" class="form-label">{{ __('Minimum Price') }}</label>
                                             <input type="number" name="min_price" id="min_price" class="form-control" min="0" step="0.01" inputmode="decimal" value="{{ old('min_price') }}" placeholder="{{ __('Enter minimum price') }}">
@@ -490,7 +499,7 @@
                                                                     $optionAttributes['data-filter-unavailable'] = '1';
                                                                 }
                                                             @endphp
-                                                            <option @foreach ($optionAttributes as $attr => $attrValue) {{ $attr }}="{{ e($attrValue) }}" @endforeach @selected($editSelectedFilter === $value)>
+                                                            <option @foreach ($optionAttributes as $attr => $attrValue) {{ $attr }}="{{ e($attrValue) }}" @endforeach @selected(old('filter_type', $section->filter ?? $defaultFilterKey) === $value)>
                                                                 {{ $optionLabel }}
                                                             </option>
                                                             

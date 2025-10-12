@@ -34,9 +34,10 @@ use App\Http\Controllers\WifiCodeRevealController;
 */
 
 
-Route::get('ping', fn () => response()->json(['ok' => true]))
-    ->middleware(InitializeApiMetrics::class)
-    ->name('ping');
+Route::middleware(InitializeApiMetrics::class)->group(function () {
+    Route::get('ping', fn () => response()->json(['ok' => true]))
+        ->name('ping');
+});
     
 Route::get('products/{item}/purchase-options', [ProductPurchaseOptionsController::class, 'show'])
     ->whereNumber('item');

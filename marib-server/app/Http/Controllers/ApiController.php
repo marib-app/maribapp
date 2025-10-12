@@ -2108,11 +2108,20 @@ class ApiController extends Controller {
 
             $item = Item::owner()->whereNotIn('status', ['review', 'rejected'])->withTrashed()->findOrFail($request->item_id);
             
+            $section = $this->resolveSectionByCategoryId($item->category_id);
+            $authorization = Gate::inspect('section.update', $section);
+
+            if ($authorization->denied()) {
+                $message = $authorization->message() ?? SectionDelegatePolicy::FORBIDDEN_MESSAGE;
+
+                ResponseService::errorResponse($message, null, 403);
+            }
+
+
             if ($request->status == "inactive") {
                 $item->delete();
             } else if ($request->status == "active") {
                 $item->restore();
-                $section = $this->resolveSectionByCategoryId($item->category_id);
                 $status = $this->shouldAutoApproveSection($section) ? 'approved' : 'review';
                 $item->update(['status' => $status]);
 

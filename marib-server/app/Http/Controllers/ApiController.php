@@ -148,8 +148,6 @@ class ApiController extends Controller {
         'all',
         'public',
         'real_estate',
-        'tourism',
-        'merchants',
         'shein',
         'computer',
     ];

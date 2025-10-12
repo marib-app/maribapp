@@ -434,16 +434,18 @@ class FeaturedSectionService
     private function normalizeRootIdentifierFilter(?string $value): array
     {
         $tokens = $this->tokenizeRootIdentifierValue($value);
+        $canonicalTokens = [];
 
         foreach ($tokens as $token) {
             $canonical = FeatureSectionCategoryService::canonicalSectionTypeOrNull($token);
 
             if ($canonical !== null) {
-                $tokens[] = $canonical;
+                $canonicalTokens[] = $canonical;
+
             }
         }
 
-        return $this->normalizeTokens($tokens);
+        return $this->normalizeTokens(array_merge($tokens, $canonicalTokens));
     }
 
     /**

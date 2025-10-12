@@ -107,16 +107,12 @@ class CatalogPersistentHeaderSection extends CatalogSection {
     required this.delegate,
     this.pinned = false,
     this.floating = false,
-    this.snap = false,
-  }) : assert(
-  !snap || floating,
-  'Snap can only be enabled when floating is true',
-  );
+  });
 
   final SliverPersistentHeaderDelegate delegate;
   final bool pinned;
   final bool floating;
-  final bool snap;
+
 }
 
 /// Allows injecting an already configured sliver into the catalog pipeline.

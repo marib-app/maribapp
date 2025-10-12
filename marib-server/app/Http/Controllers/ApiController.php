@@ -8551,9 +8551,8 @@ public function storeRequestDevice(Request $request)
 
                 $existingManualPaymentRequest->forceFill($manualPaymentAttributes)->save();
                 $manualPaymentRequest = $existingManualPaymentRequest->fresh();
-                ManualPaymentRequestCreated::dispatch($manualPaymentRequest);
 
-
+                
             } else {
 
 

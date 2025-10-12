@@ -8737,10 +8737,25 @@ public function storeRequestDevice(Request $request)
                 : $meta;
 
 
-            $shouldAssignDepartment = ManualPaymentRequest::isOrderPayableType($resolvedPayableType) && $payableId;
-            $department = $shouldAssignDepartment
-                ? Order::query()->whereKey($payableId)->value('department')
-                : null;
+            $shouldAssignDepartment = ManualPaymentRequest::isOrderPayableType($resolvedPayableType)
+                && $payableId !== null;
+
+            $department = null;
+
+            if ($shouldAssignDepartment) {
+                $orderDepartment = null;
+
+                if (is_numeric($payableId)) {
+                    $orderDepartment = Order::query()->whereKey((int) $payableId)->value('department');
+                }
+
+                $department = $this->normalizeDepartmentValue($orderDepartment);
+
+                if ($department === null && $existingManualPaymentRequest) {
+                    $department = $this->normalizeDepartmentValue($existingManualPaymentRequest->department);
+                }
+            }
+
 
             $manualPaymentAttributes = [
                 'user_id'        => $user->id,
@@ -9140,7 +9155,7 @@ public function storeRequestDevice(Request $request)
                     });
                 })
                 ->when(
-                    $department !== null && $this->manualPaymentRequestsSupportsColumn('department'),
+                    $department !== null,
                     static function ($builder) use ($department) {
                         $builder->where(static function ($query) use ($department) {
                             $query->where('manual_payment_requests.department', $department)
@@ -9438,16 +9453,15 @@ public function storeRequestDevice(Request $request)
         return null;
     }
 
-    private function manualPaymentRequestsSupportsColumn(string $column): bool
+    private function normalizeDepartmentValue(mixed $department): ?string
     {
-        static $columnSupport = [];
-
-        if (!array_key_exists($column, $columnSupport)) {
-            $columnSupport[$column] = Schema::hasTable('manual_payment_requests')
-                && Schema::hasColumn('manual_payment_requests', $column);
+        if (! is_string($department)) {
+            return null;
         }
 
-        return $columnSupport[$column];
+        $trimmed = trim($department);
+
+        return $trimmed === '' ? null : $trimmed;
     }
 
 

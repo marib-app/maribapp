@@ -259,16 +259,17 @@
                                 @endphp
                                 <div class="row g-3 align-items-end {{ $createPriceRangeActive ? '' : 'd-none' }}" data-price-range-wrapper="create" data-initial-visible="{{ $createPriceRangeActive ? '1' : '0' }}">
                                     
-                                <div class="col-md-6">
+                                    <div class="col-md-6">
+
                                         <div class="form-group">
                                             <label for="min_price" class="form-label">{{ __('Minimum Price') }}</label>
-                                            <input type="number" name="min_price" id="min_price" class="form-control" min="0" step="0.01" inputmode="decimal" value="{{ old('min_price') }}" placeholder="{{ __('Enter minimum price') }}">
+                                            <input type="number" name="min_price" id="min_price" class="form-control" min="0" step="0.01" inputmode="decimal" value="{{ old('min_price') }}" placeholder="{{ __('Enter minimum price') }}" data-price-range-input="min" @disabled(! $createPriceRangeActive)>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-group">
                                             <label for="max_price" class="form-label">{{ __('Maximum Price') }}</label>
-                                            <input type="number" name="max_price" id="max_price" class="form-control" min="0" step="0.01" inputmode="decimal" value="{{ old('max_price') }}" placeholder="{{ __('Enter maximum price') }}">
+                                            <input type="number" name="max_price" id="max_price" class="form-control" min="0" step="0.01" inputmode="decimal" value="{{ old('max_price') }}" placeholder="{{ __('Enter maximum price') }}" data-price-range-input="max" @disabled(! $createPriceRangeActive)>
                                         </div>
                                     </div>
                                 </div>
@@ -543,13 +544,13 @@
                                             <div class="col-md-6">
                                                 <div class="form-group mb-3">
                                                     <label for="edit_min_price" class="form-label fw-bold">{{ __('Minimum Price') }}</label>
-                                                    <input type="number" name="min_price" id="edit_min_price" class="form-control" min="0" step="0.01" inputmode="decimal" placeholder="{{ __('Enter minimum price') }}">
+                                                    <input type="number" name="min_price" id="edit_min_price" class="form-control" min="0" step="0.01" inputmode="decimal" placeholder="{{ __('Enter minimum price') }}" data-price-range-input="min" disabled>
                                                 </div>
                                             </div>
                                             <div class="col-md-6">
                                                 <div class="form-group mb-3">
                                                     <label for="edit_max_price" class="form-label fw-bold">{{ __('Maximum Price') }}</label>
-                                                    <input type="number" name="max_price" id="edit_max_price" class="form-control" min="0" step="0.01" inputmode="decimal" placeholder="{{ __('Enter maximum price') }}">
+                                                    <input type="number" name="max_price" id="edit_max_price" class="form-control" min="0" step="0.01" inputmode="decimal" placeholder="{{ __('Enter maximum price') }}" data-price-range-input="max" disabled>
                                                 </div>
                                             </div>
                                         </div>
@@ -826,11 +827,18 @@
                     return;
                 }
 
+                const $inputs = $wrapper.find('[data-price-range-input]');
 
                 if (show) {
                     $wrapper.removeClass('d-none');
+                    $inputs.prop('disabled', false);
+
+
                 } else {
                     $wrapper.addClass('d-none');
+                    $inputs.prop('disabled', true);
+
+
                 }
             };
 

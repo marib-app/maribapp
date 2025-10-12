@@ -15,14 +15,13 @@ use App\Services\FeatureSectionCategoryService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Http\JsonResponse;
+use App\Support\FeaturedSectionQueryHelper;
 
 use Throwable;
 
 class FeatureSectionController extends Controller {
 
-    private ?string $resolvedPriceColumn = null;
 
 
     public function index() {
@@ -208,13 +207,15 @@ class FeatureSectionController extends Controller {
             $data['slug'] = $expectedSlug;
 
             $filterValue = $data['filter'] ?? null;
-            [$minPrice, $maxPrice] = $this->resolvePriceBoundsFromData($validated, $filterValue);
+            [$minPrice, $maxPrice] = $this->resolvePriceBoundsFromData($data, $filterValue);
 
             if ($this->filterSupportsPriceBounds($filterValue)) {
                 $data['min_price'] = $minPrice;
                 $data['max_price'] = $maxPrice;
             } else {
-                unset($data['min_price'], $data['max_price']);
+                $data['min_price'] = null;
+                $data['max_price'] = null;
+            
             }
 
 
@@ -225,8 +226,15 @@ class FeatureSectionController extends Controller {
 
 
 
-            FeatureSection::create($data);
-            ResponseService::successResponse('Feature Section Added Successfully');
+            $featureSection = FeatureSection::create($data);
+            $featureSection->refresh()->load('category');
+
+            ResponseService::successResponse(
+                'Feature Section Added Successfully',
+                $this->transformSectionResponse($featureSection, includeActions: true)
+            );
+
+
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "FeaturedSection Controller -> store");
             ResponseService::errorResponse();
@@ -368,6 +376,7 @@ class FeatureSectionController extends Controller {
         }
 
         $this->ensureTitleFromFilter($request);
+        $this->preparePriceBoundsForValidation($request);
 
         $normalizedInputSlug = FeatureSection::normalizeSlug($request->input('slug'));
 
@@ -478,16 +487,16 @@ class FeatureSectionController extends Controller {
             $data['slug'] = $expectedSlug;
 
             $filterValue = $data['filter'] ?? null;
-            [$minPrice, $maxPrice] = $this->resolvePriceBoundsFromData($validated, $filterValue, [
-                'current_min' => $feature_section->min_price,
-                'current_max' => $feature_section->max_price,
-            ]);
+            [$minPrice, $maxPrice] = $this->resolvePriceBoundsFromData($data, $filterValue);
+
 
             if ($this->filterSupportsPriceBounds($filterValue)) {
                 $data['min_price'] = $minPrice;
                 $data['max_price'] = $maxPrice;
             } else {
-                unset($data['min_price'], $data['max_price']);
+                $data['min_price'] = null;
+                $data['max_price'] = null;
+            
             }
 
             $data['value'] = null;
@@ -498,8 +507,16 @@ class FeatureSectionController extends Controller {
 
 
 
-            $feature_section->update($data);
-            ResponseService::successResponse('Feature Section Updated Successfully');
+            $feature_section->fill($data);
+            $feature_section->save();
+            $feature_section->refresh()->load('category');
+
+            ResponseService::successResponse(
+                'Feature Section Updated Successfully',
+                $this->transformSectionResponse($feature_section, includeActions: true)
+            );
+
+
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "FeaturedSection Controller -> update");
             ResponseService::errorResponse();
@@ -933,43 +950,7 @@ class FeatureSectionController extends Controller {
     private function normalizePriceValue(mixed $value): ?float
 
     {
-        return $this->normalizeSectionPrice($value);
-    }
-
-    private function normalizeSectionPrice(mixed $value): ?float
-
-    {
-        if ($value === null) {
-            return null;
-        }
-
-        if (is_string($value)) {
-            $value = trim($value);
-
-            if ($value === '') {
-                return null;
-            }
-            $value = str_replace(',', '', $value);
-
-
-        }
-
-        if (is_numeric($value)) {
-            return (float) $value;
-        }
-
-        return null;
-    }
-
-    private function priceColumnName(): string
-    {
-        if ($this->resolvedPriceColumn !== null) {
-            return $this->resolvedPriceColumn;
-        }
-
-        $this->resolvedPriceColumn = Schema::hasColumn('items', 'price_effective') ? 'price_effective' : 'price';
-
-        return $this->resolvedPriceColumn;
+         return FeaturedSectionQueryHelper::normalizePrice($value);
 
     }
 
@@ -980,7 +961,8 @@ class FeatureSectionController extends Controller {
     private function transformSectionResponse(FeatureSection $section, bool $includeActions = false): array
     {
         $data = $section->toArray();
-
+        $data['min_price'] = $this->normalizeSectionPrice($section->min_price);
+        $data['max_price'] = $this->normalizeSectionPrice($section->max_price);
         $data['section_type'] = FeatureSectionCategoryService::normalizeSectionType($section->section_type);
         $data['total_data'] = $this->calculateSectionTotalData($section);
         $data['is_active'] = (bool) $section->is_active;
@@ -1052,82 +1034,18 @@ class FeatureSectionController extends Controller {
     {
         try {
             $canonicalSectionType = FeatureSectionCategoryService::normalizeSectionType($section->section_type);
-            $allowedSectionTypes = FeatureSectionCategoryService::allowedSectionTypes(includeLegacy: true);
-            $canonicalSectionTypes = FeatureSectionCategoryService::allowedSectionTypes();
+
 
             $itemsQuery = Item::query()
                 ->select('items.id')
                 ->has('user')
                 ->approved()
                 ->getNonExpiredItems();
-
-            $categoryFilterIds = FeatureSectionCategoryService::categoryIdsForSection($canonicalSectionType);
-
-            if (is_array($categoryFilterIds)) {
-                if ($categoryFilterIds === []) {
-                    return 0;
-                }
-
-                $itemsQuery->whereIn('category_id', $categoryFilterIds);
-            }
-
-            if (
-                $canonicalSectionType !== null
-                && $canonicalSectionType !== 'all'
-                && in_array($canonicalSectionType, $canonicalSectionTypes, true)
-            ) {
-                $variants = FeatureSectionCategoryService::sectionTypeVariants($canonicalSectionType);
-
-                if ($variants !== []) {
-                    $itemsQuery->whereIn('interface_type', $variants);
-                }
-            } else {
-                $expanded = FeatureSectionCategoryService::expandSectionTypes($allowedSectionTypes);
-
-                if ($expanded !== []) {
-                    $itemsQuery->whereIn('interface_type', $expanded);
-                }
-            }
-
-            $filter = $section->filter;
-            $supportedFilters = FeatureSection::supportedFilters();
-
-            $filter = in_array($filter, $supportedFilters, true) ? $filter : 'latest';
-
-            $priceColumn = $this->priceColumnName();
-            $priceColumnQualified = sprintf('items.%s', $priceColumn);
-            $minPrice = $this->normalizeSectionPrice($section->min_price);
-            $maxPrice = $this->normalizeSectionPrice($section->max_price);
-
-
-            if ($filter === 'featured') {
-                $itemsQuery->whereHas('featured_items');
-            }
-
-            switch ($filter) {
-                case 'most_viewed':
-                    $itemsQuery->orderByDesc('clicks');
-                    break;
-
-                case 'price_range':
-                    $itemsQuery->whereNotNull($priceColumnQualified);
-
-                    if ($minPrice !== null) {
-                        $itemsQuery->where($priceColumnQualified, '>=', $minPrice);
-                    }
-
-                    if ($maxPrice !== null) {
-                        $itemsQuery->where($priceColumnQualified, '<=', $maxPrice);
-                    }
-
-                    $itemsQuery->orderBy($priceColumnQualified, 'asc');
-                    break;
-
-                default:
-                    $itemsQuery->orderBy('created_at', 'desc');
-                    break;
-            }
-
+            FeaturedSectionQueryHelper::configureQuery(
+                $itemsQuery,
+                $section,
+                $canonicalSectionType
+            );
 
 
             $limit = $this->resolveSectionLimit($section);

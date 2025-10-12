@@ -79,17 +79,6 @@ class ManualPaymentRequestService
         $existingRequest = null;
 
 
-        $department = null;
-        $shouldAssignDepartment = ManualPaymentRequest::isOrderPayableType($payableType) && $payableId;
-
-        if ($shouldAssignDepartment) {
-
-            $department = Order::query()->whereKey($payableId)->value('department');
-        }
-
-
-
-
         if ($transaction->manual_payment_request_id) {
             $existingRequest = ManualPaymentRequest::query()
                 ->lockForUpdate()
@@ -97,6 +86,18 @@ class ManualPaymentRequestService
         }
 
 
+        $shouldAssignDepartment = ManualPaymentRequest::isOrderPayableType($payableType)
+            && $payableId !== null;
+
+        $department = null;
+
+        if ($shouldAssignDepartment) {
+            $department = $this->resolveOrderDepartment(is_numeric($payableId) ? (int) $payableId : null);
+
+            if ($department === null && $existingRequest !== null) {
+                $department = $this->normalizeDepartment($existingRequest->department);
+            }
+        }
 
         $duplicateRequest = null;
 
@@ -283,6 +284,29 @@ class ManualPaymentRequestService
         }
 
         return $normalized;
+    }
+
+    private function resolveOrderDepartment(?int $orderId): ?string
+    {
+        if ($orderId === null) {
+            return null;
+        }
+
+        $department = Order::query()->whereKey($orderId)->value('department');
+
+        return $this->normalizeDepartment($department);
+    }
+
+
+    private function normalizeDepartment(mixed $department): ?string
+    {
+        if (! is_string($department)) {
+            return null;
+        }
+
+        $trimmed = trim($department);
+
+        return $trimmed === '' ? null : $trimmed;
     }
 
 

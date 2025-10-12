@@ -8,18 +8,16 @@ use App\Models\FeatureSection;
 use App\Models\Item;
 use Carbon\Carbon;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Http\Resources\Json\JsonResource;
 use App\Services\CachingService;
-
+use App\Services\FeatureSectionCategoryService;
+use App\Support\FeaturedSectionQueryHelper;
 class FeaturedSectionService
 {
     public const MAX_SECTION_LIMIT = 100;
 
-    private ?string $resolvedPriceColumn = null;
     private ?int $resolvedCacheTtl = null;
     private ?int $resolvedDefaultLimit = null;
     public function __construct(private readonly CacheRepository $cache)
@@ -201,8 +199,6 @@ class FeaturedSectionService
         mixed $configuredRootIdentifier,
 
     ): SectionPayloadResult {
-        $canonicalSectionTypes = FeatureSectionCategoryService::allowedSectionTypes();
-        $categoryFilterIds = FeatureSectionCategoryService::categoryIdsForSection($canonicalSectionType);
 
         $itemsQuery = Item::query()
             ->select('items.*')
@@ -223,65 +219,17 @@ class FeaturedSectionService
 
 
 
-        $itemsQuery->when($categoryFilterIds !== null, static function (Builder $query) use ($categoryFilterIds) {
-            if ($categoryFilterIds === []) {
-                $query->whereRaw('0 = 1');
-
-                return;
-            }
-
-            $query->whereIn('category_id', $categoryFilterIds);
-        });
-
-        $itemsQuery->when(
-            in_array($canonicalSectionType, $canonicalSectionTypes, true),
-            static function (Builder $query) use ($canonicalSectionType) {
-                $interfaceVariants = FeatureSectionCategoryService::sectionTypeVariants($canonicalSectionType);
-
-                if ($interfaceVariants !== []) {
-                    $query->whereIn('interface_type', $interfaceVariants);
-                }
-            }
+        $queryState = FeaturedSectionQueryHelper::configureQuery(
+            $itemsQuery,
+            $section,
+            $canonicalSectionType
         );
 
-        $filter = $section->filter;
-        $supportedFilters = FeatureSection::supportedFilters();
-        $filter = in_array($filter, $supportedFilters, true) ? $filter : 'latest';
-
-        $priceColumn = $this->priceColumn();
-        $priceColumnName = sprintf('items.%s', $priceColumn);
-        $minPrice = $this->normalizePrice($section->min_price);
-        $maxPrice = $this->normalizePrice($section->max_price);
-
-
-        if ($filter === 'featured') {
-            $itemsQuery->whereHas('featured_items');
-        }
-
-        switch ($filter) {
-            case 'most_viewed':
-                $itemsQuery->orderByDesc('clicks');
-                break;
-
-            case 'price_range':
-                $itemsQuery->whereNotNull($priceColumnName);
-
-                if ($minPrice !== null) {
-                    $itemsQuery->where($priceColumnName, '>=', $minPrice);
-                }
-
-                if ($maxPrice !== null) {
-                    $itemsQuery->where($priceColumnName, '<=', $maxPrice);
-                }
-
-                $itemsQuery->orderBy($priceColumnName, 'asc');
-                break;
-
-
-            default:
-                $itemsQuery->orderBy('created_at', 'desc');
-                break;
-        }
+        $filter = $queryState->filter;
+        $priceColumn = $queryState->priceColumn;
+        $priceColumnName = $queryState->priceColumnQualified;
+        $minPrice = $queryState->minPrice;
+        $maxPrice = $queryState->maxPrice;
 
         if (Auth::check()) {
             $itemsQuery->with([
@@ -339,28 +287,7 @@ class FeaturedSectionService
     }
 
 
-    private function normalizePrice(mixed $value): ?float
-    {
-        if ($value === null) {
-            return null;
-        }
 
-        if (is_string($value)) {
-            $value = trim($value);
-
-            if ($value === '') {
-                return null;
-            }
-
-            $value = str_replace(',', '', $value);
-        }
-
-        if (is_numeric($value)) {
-            return (float) $value;
-        }
-
-        return null;
-    }
 
     private function hashForSummary(array $summary): string
     {
@@ -372,16 +299,6 @@ class FeaturedSectionService
         return sprintf('featured-section:%s:%s', $sectionType, $slug);
     }
 
-    private function priceColumn(): string
-    {
-        if ($this->resolvedPriceColumn !== null) {
-            return $this->resolvedPriceColumn;
-        }
-
-        $this->resolvedPriceColumn = Schema::hasColumn('items', 'price_effective') ? 'price_effective' : 'price';
-
-        return $this->resolvedPriceColumn;
-    }
 
 
     private function cacheTtlSeconds(): int

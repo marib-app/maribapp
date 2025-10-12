@@ -73,7 +73,8 @@ use App\Models\ServiceReviewReport;
 use App\Policies\SectionDelegatePolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Http\UploadedFile;
-
+use App\Models\CurrencyRateQuote;
+use App\Models\Governorate;
 use App\Models\CurrencyRate;
 use App\Models\Challenge;
 use App\Models\Referral;
@@ -6889,21 +6890,93 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
         try {
             $validator = Validator::make($request->all(), [
                 'currency_name' => 'nullable|string',
+                'governorate_code' => 'nullable|string|exists:governorates,code',
             ]);
 
             if ($validator->fails()) {
                 ResponseService::validationError($validator->errors()->first());
             }
 
-            $query = CurrencyRate::query();
+            $requestedGovernorate = null;
+            if ($request->filled('governorate_code')) {
+                $requestedGovernorate = Governorate::where('code', $request->governorate_code)->first();
 
-            // Filter by currency_name if provided
-            if ($request->has('currency_name')) {
+                if ($requestedGovernorate && !$requestedGovernorate->is_active) {
+                    $requestedGovernorate = null;
+                }
+            }
+
+            $governorates = Governorate::query()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get();
+
+            $query = CurrencyRate::with(['quotes.governorate']);
+
+            if ($request->filled('currency_name')) {
+
+
                 $query->where('currency_name', $request->currency_name);
             }
 
-            $currencyRates = $query->get();
-            ResponseService::successResponse("Currency rates fetched successfully.", $currencyRates);
+            $currencies = $query->get();
+
+            $rates = [];
+            $anyFallback = false;
+            $appliedGovernorate = null;
+
+            foreach ($currencies as $currency) {
+                [$quote, $governorate, $usedFallback] = $currency->resolveQuoteForGovernorate($requestedGovernorate);
+
+                if ($governorate && !$appliedGovernorate) {
+                    $appliedGovernorate = $governorate;
+                }
+
+                $anyFallback = $anyFallback || $usedFallback;
+
+                $rates[] = [
+                    'id' => $currency->id,
+                    'currency_name' => $currency->currency_name,
+                    'sell_price' => $quote?->sell_price,
+                    'buy_price' => $quote?->buy_price,
+                    'icon_url' => $currency->icon_url,
+                    'icon_alt' => $currency->icon_alt,
+                    'last_updated_at' => optional($quote?->quoted_at ?? $currency->last_updated_at)->toIso8601String(),
+                    'quote_governorate_code' => $governorate?->code,
+                    'quote_governorate_name' => $governorate?->name,
+                    'quote_source' => $quote?->source,
+                    'quote_quoted_at' => optional($quote?->quoted_at)->toIso8601String(),
+                    'quote_is_default' => (bool) ($quote?->is_default ?? false),
+                    'quote_used_fallback' => $usedFallback,
+                ];
+            }
+
+            $requestedGovernorateData = $requestedGovernorate ? [
+                'code' => $requestedGovernorate->code,
+                'name' => $requestedGovernorate->name,
+            ] : null;
+
+            $appliedGovernorateData = $appliedGovernorate ? [
+                'code' => $appliedGovernorate->code,
+                'name' => $appliedGovernorate->name,
+            ] : null;
+
+            ResponseService::successResponse(
+                "Currency rates fetched successfully.",
+                $rates,
+                [
+                    'governorates' => $governorates->map(fn (Governorate $governorate) => [
+                        'code' => $governorate->code,
+                        'name' => $governorate->name,
+                    ])->values(),
+                    'requested_governorate' => $requestedGovernorateData,
+                    'applied_governorate' => $appliedGovernorateData,
+                    'used_fallback' => $anyFallback,
+                    'requested_governorate_code' => $request->input('governorate_code'),
+                ]
+            );
+
+
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "API Controller -> getCurrencyRates");
             ResponseService::errorResponse();
@@ -6922,20 +6995,104 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
                 'currency_name' => 'required|string',
                 'sell_price' => 'required|numeric',
                 'buy_price' => 'required|numeric',
+                'governorate_code' => 'nullable|string|exists:governorates,code',
+                'source' => 'nullable|string|max:255',
+                'quoted_at' => 'nullable|date',
+                'set_as_default' => 'nullable|boolean',
+
             ]);
 
             if ($validator->fails()) {
                 ResponseService::validationError($validator->errors()->first());
             }
 
-            $currencyRate = CurrencyRate::updateOrCreate(
+            $currencyRate = CurrencyRate::firstOrCreate(
                 ['currency_name' => $request->currency_name],
+
+                [
+                    'sell_price' => 0,
+                    'buy_price' => 0,
+                    'last_updated_at' => now(),
+                ]
+            );
+
+            $governorate = null;
+
+            if ($request->filled('governorate_code')) {
+                $governorate = Governorate::where('code', $request->governorate_code)->first();
+
+                if ($governorate && !$governorate->is_active) {
+                    ResponseService::validationError(__('The selected governorate is inactive.'));
+                }
+            }
+
+            if (!$governorate) {
+                $defaultQuoteGovernorate = optional(
+                    $currencyRate->defaultQuote()->with('governorate')->first()
+                )->governorate;
+
+                if ($defaultQuoteGovernorate) {
+                    $governorate = $defaultQuoteGovernorate;
+                }
+            }
+
+            if (!$governorate) {
+                $governorate = Governorate::where('code', 'NATL')->first();
+            }
+
+            if (!$governorate) {
+                ResponseService::errorResponse('Governorate not found for the provided currency rate.');
+            }
+
+            $quotedAt = $request->filled('quoted_at')
+                ? Carbon::parse($request->quoted_at)
+                : now();
+
+            $existingQuote = CurrencyRateQuote::where('currency_rate_id', $currencyRate->id)
+                ->where('governorate_id', $governorate->id)
+                ->first();
+
+            $shouldBeDefault = $request->has('set_as_default')
+                ? $request->boolean('set_as_default')
+                : (bool) ($existingQuote?->is_default ?? false);
+
+            $quote = CurrencyRateQuote::updateOrCreate(
+                [
+                    'currency_rate_id' => $currencyRate->id,
+                    'governorate_id' => $governorate->id,
+                ],
+
                 [
                     'sell_price' => $request->sell_price,
                     'buy_price' => $request->buy_price,
-                    'last_updated_at' => now()
-                ]
+                    'source' => $request->filled('source') ? trim((string) $request->input('source')) : null,
+                    'quoted_at' => $quotedAt,
+                    'is_default' => $shouldBeDefault,
+                    
+                    ]
             );
+
+
+            if ($shouldBeDefault) {
+                $currencyRate->quotes()
+                    ->where('id', '!=', $quote->id)
+                    ->update(['is_default' => false]);
+            } elseif (!$currencyRate->quotes()->where('is_default', true)->exists()) {
+                $quote->is_default = true;
+                $quote->save();
+                $shouldBeDefault = true;
+            }
+
+            $quote->refresh();
+
+            if ($quote->is_default) {
+                $currencyRate->applyDefaultQuoteSnapshot($quote);
+            } else {
+                $defaultQuote = $currencyRate->defaultQuote()->first();
+                $currencyRate->applyDefaultQuoteSnapshot($defaultQuote);
+            }
+
+            $currencyRate->load('quotes.governorate');
 
             ResponseService::successResponse("Currency rate updated successfully.", $currencyRate);
         } catch (Throwable $th) {

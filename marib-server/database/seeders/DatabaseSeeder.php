@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             // ReferralSystemSeeder::class,
+            GovernorateSeeder::class,
             RequestDeviceSeeder::class,
             UpdateUserAccountTypeSeeder::class,
             InstallationSeeder::class,

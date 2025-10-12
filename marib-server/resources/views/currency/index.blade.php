@@ -34,27 +34,6 @@
                                     ]) }}
                                 </div>
 
-                                <div class="col-md-6 col-12 form-group mandatory">
-                                    {{ Form::label('sell_price', __('Sell Price'), ['class' => 'form-label']) }}
-                                    {{ Form::number('sell_price', '', [
-                                        'class' => 'form-control',
-                                        'placeholder' => __('Enter Sell Price'),
-                                        'data-parsley-required' => 'true',
-                                        'step' => '0.01',
-                                        'min' => '0'
-                                    ]) }}
-                                </div>
-
-                                <div class="col-md-6 col-12 form-group mandatory">
-                                    {{ Form::label('buy_price', __('Buy Price'), ['class' => 'form-label']) }}
-                                    {{ Form::number('buy_price', '', [
-                                        'class' => 'form-control',
-                                        'placeholder' => __('Enter Buy Price'),
-                                        'data-parsley-required' => 'true',
-                                        'step' => '0.01',
-                                        'min' => '0'
-                                    ]) }}
-                                </div>
 
 
                                 <div class="col-md-12 col-12 form-group">
@@ -80,7 +59,24 @@
                                     ]) }}
                                 </div>
 
+                                <div class="col-12">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <label class="form-label mb-1">{{ __('Governorate price sets') }}</label>
+                                        <span class="badge bg-light text-dark">{{ __('Inline editable') }}</span>
+                                    </div>
+                                </div>
 
+                                <div class="col-12">
+                                    <p class="text-muted small mb-2">
+                                        {{ __('Enter sell/buy values for each governorate. Leave a row blank to skip it and choose one default fallback set.') }}
+                                    </p>
+                                    @include('currency.partials.quote-table', [
+                                        'governorates' => $governorates,
+                                        'context' => 'create',
+                                        'quotes' => [],
+                                        'defaultGovernorateId' => null,
+                                    ])
+                                </div>
 
                                 <div class="col-12 text-end form-group">
                                     {{ Form::submit(__('Add Currency'), ['class' => 'btn btn-primary']) }}
@@ -152,29 +148,7 @@
                                     ]) }}
                                 </div>
 
-                                <div class="col-md-6 col-12 form-group mandatory">
-                                    {{ Form::label('edit_sell_price', __('Sell Price'), ['class' => 'form-label']) }}
-                                    {{ Form::number('sell_price', '', [
-                                        'class' => 'form-control',
-                                        'id' => 'edit_sell_price',
-                                        'placeholder' => __('Enter Sell Price'),
-                                        'data-parsley-required' => 'true',
-                                        'step' => '0.01',
-                                        'min' => '0'
-                                    ]) }}
-                                </div>
 
-                                <div class="col-md-6 col-12 form-group mandatory">
-                                    {{ Form::label('edit_buy_price', __('Buy Price'), ['class' => 'form-label']) }}
-                                    {{ Form::number('buy_price', '', [
-                                        'class' => 'form-control',
-                                        'id' => 'edit_buy_price',
-                                        'placeholder' => __('Enter Buy Price'),
-                                        'data-parsley-required' => 'true',
-                                        'step' => '0.01',
-                                        'min' => '0'
-                                    ]) }}
-                                </div>
 
                                 <div class="col-md-12 col-12 form-group">
                                     {{ Form::label('edit_icon', __('Icon (optional)'), ['class' => 'form-label']) }}
@@ -200,6 +174,20 @@
                                         'placeholder' => __('Describe the icon for accessibility (optional)')
                                     ]) }}
                                 </div>
+
+                                <div class="col-12">
+                                    <label class="form-label mb-1">{{ __('Governorate price sets') }}</label>
+                                    <p class="text-muted small mb-2">
+                                        {{ __('Update sell/buy values per governorate. Any empty row will be ignored; ensure one set remains marked as default.') }}
+                                    </p>
+                                    @include('currency.partials.quote-table', [
+                                        'governorates' => $governorates,
+                                        'context' => 'edit',
+                                        'quotes' => [],
+                                        'defaultGovernorateId' => null,
+                                    ])
+                                </div>
+
 
                             </div>
                         </div>
@@ -246,6 +234,64 @@
             }
         }
 
+
+
+
+        function hydrateQuoteTable(context, quotes, defaultGovernorateId) {
+            const table = $('.quotes-table[data-context="' + context + '"]');
+            if (!table.length) {
+                return;
+            }
+
+            table.find('tbody tr').each(function () {
+                const row = $(this);
+                row.find('.quote-sell-input').val('');
+                row.find('.quote-buy-input').val('');
+                row.find('.quote-source-input').val('');
+                row.find('.quote-quoted-at-input').val('');
+                row.find('.default-governorate-radio').prop('checked', false);
+            });
+
+            if (Array.isArray(quotes)) {
+                quotes.forEach(function (quote) {
+                    const row = table.find('tr[data-governorate-row="' + quote.governorate_id + '"]');
+                    if (!row.length) {
+                        return;
+                    }
+
+                    if (quote.sell_price !== undefined && quote.sell_price !== null) {
+                        row.find('.quote-sell-input').val(quote.sell_price);
+                    }
+
+                    if (quote.buy_price !== undefined && quote.buy_price !== null) {
+                        row.find('.quote-buy-input').val(quote.buy_price);
+                    }
+
+                    row.find('.quote-source-input').val(quote.source || '');
+
+                    if (quote.quoted_at) {
+                        const formatted = moment(quote.quoted_at).isValid()
+                            ? moment(quote.quoted_at).format('YYYY-MM-DDTHH:mm')
+                            : '';
+                        row.find('.quote-quoted-at-input').val(formatted);
+                    }
+
+                    if (quote.is_default) {
+                        row.find('.default-governorate-radio').prop('checked', true);
+                    }
+                });
+            }
+
+            if (defaultGovernorateId) {
+                table.find('.default-governorate-radio[value="' + defaultGovernorateId + '"]').prop('checked', true);
+            }
+
+            if (!table.find('.default-governorate-radio:checked').length) {
+                table.find('.default-governorate-radio').first().prop('checked', true);
+            }
+        }
+
+
         function operateFormatter(value, row, index) {
             var buttons = [
                 '<a class="edit-currency btn btn-sm btn-primary me-1" href="javascript:void(0)" title="تعديل">',
@@ -271,8 +317,7 @@
                 const currencyId = row.id;
                 $('#editModal #edit_id').val(row.id);
                 $('#editModal #edit_currency_name').val(row.currency_name);
-                $('#editModal #edit_sell_price').val(row.sell_price);
-                $('#editModal #edit_buy_price').val(row.buy_price);
+
 
                 const updateUrl = `/currency/${currencyId}`;
                 $('.edit-form').attr('action', updateUrl);
@@ -280,6 +325,12 @@
                 $('#edit_remove_icon').val('0');
                 $('#edit_icon').val('');
                 $('#edit_icon_alt').val(row.icon_alt || '');
+
+
+                const quotes = Array.isArray(row.quotes) ? row.quotes : [];
+                const defaultQuote = quotes.find ? quotes.find(q => q.is_default) : null;
+                hydrateQuoteTable('edit', quotes, defaultQuote ? defaultQuote.governorate_id : null);
+
 
                 $(document).trigger('currency:edit-open', [row]);
 

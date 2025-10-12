@@ -51,7 +51,6 @@ class Kernel extends HttpKernel {
             'throttle:api',
             InitializeApiMetrics::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
-            InitializeApiMetrics::class,
 
         ],
     ];

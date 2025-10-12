@@ -64,15 +64,6 @@ return [
             'permission' => 0644,
         ],
 
-
-        'performance' => [
-            'driver' => 'single',
-            'path' => storage_path('logs/performance-metrics.log'),
-            'level' => 'info',
-            'permission' => 0644,
-        ],
-
-
         'daily' => [
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),

@@ -76,10 +76,12 @@ class SystemRepository {
     final Map<String, dynamic>? dataMap = _mapify(response['data']);
     if (dataMap != null) {
       meta = _mapify(dataMap['meta']);
+      meta ??= _mapify(dataMap['pagination']);
       extras ??= _mapify(dataMap['extras']);
     }
 
     meta ??= _mapify(response['meta']);
+    meta ??= _mapify(response['pagination']);
 
     return _SettingsPage(
       items: items,
@@ -136,6 +138,7 @@ class SystemRepository {
           'list',
           'payload',
           'extras',
+          'settings',
         };
 
         const Set<String> skipKeys = <String>{
@@ -151,6 +154,7 @@ class SystemRepository {
           'current_page',
           'last_page',
           'has_more_pages',
+          'pagination',
         };
 
         for (final MapEntry<String, dynamic> entry in map.entries) {

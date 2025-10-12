@@ -1,9 +1,12 @@
 <?php
 
 namespace App\Http\Controllers;
+
+
+
 use App\Models\WalletAccount;
 use Illuminate\Support\Facades\Schema;
-
+use App\Http\Requests\Wifi\StoreWifiNetworkRequest;
 use App\Models\WifiNetwork;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,9 +19,9 @@ use Illuminate\Validation\Rule;
 
 class WifiNetworkController extends Controller
 {
-     private ?bool $wifiNetworkHasSlugColumn = null;
+    private ?bool $wifiNetworkHasSlugColumn = null;
 
-     public function index(Request $request): JsonResponse
+    public function index(Request $request): JsonResponse
     {
 
         $ownerOnly = $request->boolean('owner_only', ! $request->boolean('public'));
@@ -60,26 +63,10 @@ class WifiNetworkController extends Controller
         return response()->json($networks);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreWifiNetworkRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'slug' => $this->slugValidationRules(),
-            'description' => 'nullable|string',
-            'location_name' => 'nullable|string|max:255',
-            'latitude' => 'nullable|numeric|between:-90,90',
-            'longitude' => 'nullable|numeric|between:-180,180',
-            'commission_rate' => 'nullable|numeric|min:0|max:100',
-            'commission_flat' => 'nullable|numeric|min:0',
-            'coverage_radius_km' => 'nullable|numeric|min:0',
-            'contacts' => 'nullable',
-            'notes' => 'nullable|string',
-            'is_active' => 'boolean',
-            'meta' => 'array|nullable',
-            'logo' => 'nullable|image|max:4096',
-            'login_screenshot' => 'nullable|image|max:4096',
+        $validated = $request->validated();
 
-        ]);
 
         $user = $request->user();
         $walletAccount = $this->resolveWalletAccount($user, null);
@@ -99,7 +86,7 @@ class WifiNetworkController extends Controller
         }
         
         $networkData['contacts'] = $this->normalizeContacts($contacts);
-        $networkData['meta'] = $meta;
+        $networkData['meta'] = $this->normalizeMeta($meta);
         
         $networkData['user_id'] = $user?->getKey();
         $networkData['wallet_id'] = $walletAccount?->getKey();
@@ -457,6 +444,59 @@ class WifiNetworkController extends Controller
             ->all();
 
         return $values === [] ? null : $values;
+    }
+
+
+
+    private function normalizeMeta(mixed $meta): ?array
+    {
+        if ($meta === null || $meta === '') {
+            return null;
+        }
+
+        if (is_string($meta)) {
+            $decoded = json_decode($meta, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $meta = $decoded;
+            }
+        }
+
+        if (! is_array($meta)) {
+            return null;
+        }
+
+        $normalize = function ($items) use (&$normalize) {
+            return collect($items)
+                ->mapWithKeys(static function ($value, $key) use (&$normalize) {
+                    if (! is_string($key) || trim($key) === '') {
+                        return [];
+                    }
+
+                    if (is_array($value)) {
+                        $normalizedChild = $normalize($value);
+
+                        return $normalizedChild === [] ? [] : [$key => $normalizedChild];
+                    }
+
+                    if ($value === null) {
+                        return [];
+                    }
+
+                    if (is_string($value)) {
+                        $value = trim($value);
+                        if ($value === '') {
+                            return [];
+                        }
+                    }
+
+                    return [$key => $value];
+                })
+                ->all();
+        };
+
+        $normalized = $normalize($meta);
+
+        return $normalized === [] ? null : $normalized;
     }
 
     private function normalizeCoverageRadius(mixed $radius): ?float

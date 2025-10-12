@@ -559,30 +559,32 @@ class ApiController extends Controller {
 
             $settings = $settingsQuery->paginate($perPage)->appends($request->query());
 
-            $settings->getCollection()->transform(static function (Setting $row) {
+            $settingsCollection = $settings->getCollection()->map(static function (Setting $row) {
                 return [
                     'name'  => $row->name,
                     'value' => $row->value,
                     'type'  => $row->type,
                 ];
             });
-            $settingsItems = $settings->items();
 
-            $currentValues = [];
+            $settings->setCollection($settingsCollection);
 
-            foreach ($settingsItems as $item) {
-                if (!is_array($item)) {
-                    continue;
-                }
 
-                $name = $item['name'] ?? null;
+            $currentValues = $settingsCollection
+                ->filter(static function ($item) {
+                    if (!is_array($item)) {
+                        return false;
+                    }
 
-                if (!is_string($name) || $name === '') {
-                    continue;
-                }
+                    $name = $item['name'] ?? null;
 
-                $currentValues[$name] = $item['value'] ?? null;
-            }
+
+                    return is_string($name) && $name !== '';
+                })
+                ->mapWithKeys(static fn (array $item) => [
+                    $item['name'] => $item['value'] ?? null,
+                ])
+                ->all();
 
             $requiredKeys = $this->socialLinkSettingKeys();
             $hydratedValues = $this->hydrateSettingValues($requiredKeys, $currentValues);

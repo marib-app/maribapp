@@ -84,25 +84,14 @@ class WifiNetworkController extends Controller
         $user = $request->user();
         $walletAccount = $this->resolveWalletAccount($user, null);
 
-        $networkData = Arr::only($validated, [
-            'name',
-            'description',
-            'location_name',
-            'latitude',
-            'longitude',
-            'commission_rate',
-            'commission_flat',
-            'coverage_radius_km',
-            'notes',
-            'is_active',
-            'meta',
-        ]);
+        $networkData = $validated;
+
 
         if ($this->hasWifiNetworkSlugColumn()) {
             $networkData['slug'] = $this->prepareSlug($validated['slug'] ?? null, $validated['name']);
         }
         
-        $networkData['contacts'] = $this->normalizeContacts($request->input('contacts'));
+        $networkData['contacts'] = $this->normalizeContacts($validated['contacts'] ?? null);
         $networkData['user_id'] = $user?->getKey();
         $networkData['wallet_id'] = $walletAccount?->getKey();
         $networkData['commission_rate'] = $networkData['commission_rate'] ?? 0;
@@ -121,7 +110,7 @@ class WifiNetworkController extends Controller
             $networkData['login_screenshot_path'] = $this->storeUploadedFile($request->file('login_screenshot'), 'wifi/login-screens');
         }
 
-        $network = WifiNetwork::create($networkData);
+        $network = WifiNetwork::create(Arr::only($networkData, (new WifiNetwork())->getFillable()));
 
         return response()->json(['data' => $network->fresh()], 201);
     

@@ -16,17 +16,23 @@
 
     @php
         $sectionTypes = $allowedSectionTypes ?? [];
-        $defaultSectionType = $defaultSectionType ?? ($sectionTypes[0] ?? null);
 
 
         $sectionTypeLabels = [
+            'public' => __('إعلانات الجمهور'),
             'real_estate' => __('الخدمات العقارية'),
-            'tourism' => __('الخدمات السياحية'),
-            'merchants' => __('المتجر الإلكتروني'),
             'shein' => __('منتجات شي إن'),
             'computer' => __('قسم الكمبيوتر'),
-            'public' => __('إعلانات الجمهور'),
         ];
+
+        $allowedSectionTypeKeys = array_keys($sectionTypeLabels);
+        $sectionTypes = array_values(array_filter(
+            $sectionTypes,
+            static fn($type) => in_array($type, $allowedSectionTypeKeys, true)
+        ));
+
+        $defaultSectionType = $defaultSectionType ?? ($sectionTypes[0] ?? null);
+
 
         $featureSectionAliasMap = collect(config('feature-section.section_type_aliases', []))
             ->mapWithKeys(fn ($value, $key) => [\Illuminate\Support\Str::lower($key) => $value])

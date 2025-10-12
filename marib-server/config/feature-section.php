@@ -11,13 +11,6 @@ $serviceCategoryMap = [
     'services_marib_guide'  => (int) env('SERVICE_CATEGORY_MARIB_GUIDE_ID', 177),
 ];
 
-$serviceRootIdentifiers = [
-    'services_all' => array_values($serviceCategoryMap),
-];
-
-foreach ($serviceCategoryMap as $type => $categoryId) {
-    $serviceRootIdentifiers[$type] = $categoryId;
-}
 
 return [
     'cache_ttl_seconds' => (int) env('FEATURE_SECTION_CACHE_TTL_SECONDS', 300),
@@ -28,29 +21,19 @@ return [
         'most_viewed',
         'price_range',
     ],
-    'root_identifiers' => array_merge([
+    'root_identifiers' => [
         'public'      => null,
         'real_estate' => 'real_estate_services',
-        'tourism'     => 'tourism_services',
-        'merchants'   => 'e_store',
+
         'shein'       => null,
         'computer'    => 'computer_section',
-        'other_services' => 'services_all',
-
-
-    ], $serviceRootIdentifiers),
-    'allowed_section_types' => array_merge([
-
-
+    ],
+    'allowed_section_types' => [
         'public',
         'real_estate',
-        'tourism',
-        'merchants',
         'shein',
         'computer',
-        'other_services',
-
-    ], array_keys($serviceRootIdentifiers)),
+    ],
 
     'section_type_aliases' => [
         'real_estate_services' => 'real_estate',
@@ -58,15 +41,6 @@ return [
         'itemsListRealEstate'  => 'real_estate',
         'itemslistrealestate'  => 'real_estate',
 
-        'tourism_services'     => 'tourism',
-        'tourismservices'      => 'tourism',
-        'itemsListTourism'     => 'tourism',
-        'itemslisttourism'     => 'tourism',
-
-        'e_store'              => 'merchants',
-        'estore'               => 'merchants',
-        'itemsListSeller'      => 'merchants',
-        'itemslistseller'      => 'merchants',
 
         'shein_products'       => 'shein',
         'sheinproducts'        => 'shein',
@@ -77,76 +51,13 @@ return [
         'computersection'      => 'computer',
         'itemsListComputer'    => 'computer',
         'itemslistcomputer'    => 'computer',
-        'other_services'       => 'other_services',
-        'otherservices'        => 'other_services',
-        'other-services'       => 'other_services',
-        'itemsListOtherServices'  => 'other_services',
-        'itemslistotherservices'  => 'other_services',
+
         'public_ads'           => 'public',
         'publicads'            => 'public',
         'itemsListPublic'      => 'public',
         'itemslistpublic'      => 'public',
         'homepage'             => 'public',
         'home_page'            => 'public',
-
-        'all_services'                 => 'services_all',
-        'servicesall'                  => 'services_all',
-        'services-all'                 => 'services_all',
-        'itemsListServicesAll'         => 'services_all',
-        'itemslistservicesall'         => 'services_all',
-
-        'local_services'               => 'services_local',
-        'localservices'                => 'services_local',
-        'serviceslocal'                => 'services_local',
-        'services-local'               => 'services_local',
-        'itemsListServicesLocal'       => 'services_local',
-        'itemslistserviceslocal'       => 'services_local',
-
-        'medical_services'             => 'services_medical',
-        'medicalservices'              => 'services_medical',
-        'servicesmedical'              => 'services_medical',
-        'services-medical'             => 'services_medical',
-        'itemsListServicesMedical'     => 'services_medical',
-        'itemslistservicesmedical'     => 'services_medical',
-
-        'jobs_services'                => 'services_jobs',
-        'jobsservices'                 => 'services_jobs',
-        'servicesjobs'                 => 'services_jobs',
-        'services-jobs'                => 'services_jobs',
-        'itemsListServicesJobs'        => 'services_jobs',
-        'itemslistservicesjobs'        => 'services_jobs',
-        'jobs'                         => 'services_jobs',
-
-        'events_offers_services'       => 'services_events_offers',
-        'eventsoffersservices'         => 'services_events_offers',
-        'servicesevents_offers'        => 'services_events_offers',
-        'serviceseventsoffers'         => 'services_events_offers',
-        'services-events-offers'       => 'services_events_offers',
-        'itemsListServicesEventsOffers'=> 'services_events_offers',
-        'itemslistserviceseventsoffers'=> 'services_events_offers',
-
-        'marib_lost_services'          => 'services_marib_lost',
-        'mariblostservices'            => 'services_marib_lost',
-        'servicesmarib_lost'           => 'services_marib_lost',
-        'servicesmariblost'            => 'services_marib_lost',
-        'services-marib-lost'          => 'services_marib_lost',
-        'itemsListServicesMaribLost'   => 'services_marib_lost',
-        'itemslistservicesmariblost'   => 'services_marib_lost',
-
-        'student_services'             => 'services_student',
-        'studentservices'              => 'services_student',
-        'servicesstudent'              => 'services_student',
-        'services-student'             => 'services_student',
-        'itemsListServicesStudent'     => 'services_student',
-        'itemslistservicesstudent'     => 'services_student',
-
-        'marib_guide_services'         => 'services_marib_guide',
-        'maribguideservices'           => 'services_marib_guide',
-        'servicesmarib_guide'          => 'services_marib_guide',
-        'servicesmaribguide'           => 'services_marib_guide',
-        'services-marib-guide'         => 'services_marib_guide',
-        'itemsListServicesMaribGuide'  => 'services_marib_guide',
-        'itemslistservicesmaribguide'  => 'services_marib_guide',
 
 
 

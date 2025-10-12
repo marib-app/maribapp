@@ -80,13 +80,13 @@ class ManualPaymentRequestService
 
 
         $department = null;
+        $shouldAssignDepartment = ManualPaymentRequest::isOrderPayableType($payableType) && $payableId;
 
-        if (ManualPaymentRequest::isOrderPayableType($payableType) && $payableId) {
+        if ($shouldAssignDepartment) {
+
             $department = Order::query()->whereKey($payableId)->value('department');
         }
 
-        $canAssignDepartment = $department !== null
-            && Schema::hasColumn('manual_payment_requests', 'department');
 
 
 
@@ -166,13 +166,8 @@ class ManualPaymentRequestService
                 'user_note' => $note ?? $existingRequest->user_note,
                 'status' => ManualPaymentRequest::STATUS_PENDING,
                 'receipt_path' => $receiptPath !== '' ? $receiptPath : ($existingRequest->receipt_path ?? ''),
+                'department' => $shouldAssignDepartment ? $department : null,
             ]);
-
-
-            if ($canAssignDepartment) {
-                $existingRequest->department = $department;
-            }
-
 
             if ($manualBank) {
                 if ($this->manualPaymentRequestsHasColumn('bank_name')) {
@@ -202,15 +197,9 @@ class ManualPaymentRequestService
             'status' => ManualPaymentRequest::STATUS_PENDING,
             'meta' => empty($metaUpdates) ? null : $metaUpdates,
             'receipt_path' => $receiptPath,
+            'department' => $shouldAssignDepartment ? $department : null,
 
         ];
-
-
-
-        if ($canAssignDepartment) {
-            $attributes['department'] = $department;
-        }
-
 
         if ($manualBank) {
             if ($this->manualPaymentRequestsHasColumn('bank_name')) {

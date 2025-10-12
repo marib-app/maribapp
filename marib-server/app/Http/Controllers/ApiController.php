@@ -8694,7 +8694,10 @@ public function storeRequestDevice(Request $request)
                 : $meta;
 
 
-
+            $shouldAssignDepartment = ManualPaymentRequest::isOrderPayableType($resolvedPayableType) && $payableId;
+            $department = $shouldAssignDepartment
+                ? Order::query()->whereKey($payableId)->value('department')
+                : null;
 
             $manualPaymentAttributes = [
                 'user_id'        => $user->id,
@@ -8710,38 +8713,20 @@ public function storeRequestDevice(Request $request)
                 'status'         => ManualPaymentRequest::STATUS_PENDING,
                 'payable_type'   => $resolvedPayableType,
                 'payable_id'     => $payableId,
+                'department'     => $shouldAssignDepartment ? $department : null,
                 'meta'           => empty($metaPayload) ? null : $metaPayload,
             ];
 
             if ($existingManualPaymentRequest) {
 
 
-                if (
-                    ManualPaymentRequest::isOrderPayableType($resolvedPayableType)
-                    && $payableId
-                    && Schema::hasColumn('manual_payment_requests', 'department')
-                ) {
-                    $manualPaymentAttributes['department'] = Order::query()
-                        ->whereKey($payableId)
-                        ->value('department');
-                }
+
 
                 $existingManualPaymentRequest->forceFill($manualPaymentAttributes)->save();
                 $manualPaymentRequest = $existingManualPaymentRequest->fresh();
 
-                
-            } else {
+                } else {
 
-
-                if (
-                    ManualPaymentRequest::isOrderPayableType($resolvedPayableType)
-                    && $payableId
-                    && Schema::hasColumn('manual_payment_requests', 'department')
-                ) {
-                    $manualPaymentAttributes['department'] = Order::query()
-                        ->whereKey($payableId)
-                        ->value('department');
-                }
 
                 $manualPaymentRequest = ManualPaymentRequest::create($manualPaymentAttributes);
             }

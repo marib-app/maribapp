@@ -21,6 +21,15 @@ class ManualPaymentRequestCreated
     {
         $department = $this->manualPaymentRequest->department;
 
-        return is_string($department) && $department !== '' ? $department : null;
-    }
+        if (is_string($department) && trim($department) !== '') {
+            return $department;
+        }
+
+        $payableDepartment = $this->manualPaymentRequest->payable?->department;
+
+        return is_string($payableDepartment) && trim($payableDepartment) !== ''
+            ? $payableDepartment
+            : null;
+        
+        }
 }

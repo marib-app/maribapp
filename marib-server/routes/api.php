@@ -31,7 +31,8 @@ use App\Http\Controllers\WifiCodeRevealController;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
-Route::any('delivery-prices/calculate', fn() => response()->json(['ok'=>true]))->name('delivery-prices.calculate.test');
+
+
 
 Route::get('products/{item}/purchase-options', [ProductPurchaseOptionsController::class, 'show'])
     ->whereNumber('item');

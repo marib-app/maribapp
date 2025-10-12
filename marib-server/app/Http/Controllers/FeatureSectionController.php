@@ -194,12 +194,12 @@ class FeatureSectionController extends Controller {
         if ($validator->fails()) {
             ResponseService::validationError($validator->errors()->first());
         }
-
+        $validated = $validator->validated();
         try {
-            $data = [
-                ...$request->all(),
-                'sequence' => FeatureSection::max('sequence') + 1,
-            ];
+            $nextSequence = (int) ((FeatureSection::max('sequence')) ?? 0) + 1;
+
+            $data = $validated;
+            $data['sequence'] = $nextSequence;
 
 
             $data['section_type'] = $request->input('section_type', $defaultSectionType);
@@ -211,6 +211,7 @@ class FeatureSectionController extends Controller {
 
 
             $data['value'] = null;
+            $data['description'] = $data['description'] ?? null;
 
             $data['is_active'] = $request->boolean('is_active', true);
 
@@ -459,9 +460,10 @@ class FeatureSectionController extends Controller {
         if ($validator->fails()) {
             ResponseService::validationError($validator->errors()->first());
         }
-        try {
+        $validated = $validator->validated();
 
-            $data = $request->all();
+        try {
+            $data = $validated;
 
 
             $data['section_type'] = $request->input('section_type', $fallbackSectionType);
@@ -472,9 +474,8 @@ class FeatureSectionController extends Controller {
             $data['max_price'] = $maxPrice;
 
             $data['value'] = null;
-            $data['is_active'] = $request->has('is_active')
-                ? filter_var($request->input('is_active'), FILTER_VALIDATE_BOOLEAN)
-                : (bool) $feature_section->is_active;
+            $data['description'] = $data['description'] ?? null;
+
             $data['is_active'] = $request->boolean('is_active', (bool) $feature_section->is_active);
             
 

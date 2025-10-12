@@ -35,6 +35,8 @@ class WifiCode extends Model
     protected $casts = [
         'expires_at' => 'datetime',
         'allocated_at' => 'datetime',
+        'revealed_at' => 'datetime',
+        'reveal_count' => 'integer',
         'meta' => 'array',
     ];
 

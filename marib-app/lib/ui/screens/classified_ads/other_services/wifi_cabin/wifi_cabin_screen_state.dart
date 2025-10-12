@@ -242,18 +242,66 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
   }
 
   Future<void> _showCodesDialog(WifiPurchase purchase) async {
-    final List<String> codes = purchase.codes;
-    if (codes.isEmpty) return;
-    final int codeId = purchase.id;
+    List<String> codes = List<String>.from(purchase.codes);
+    int codeId = purchase.id;
+    final int? transactionId = purchase.transactionId;
+    final messenger = ScaffoldMessenger.of(context);
 
-    if (codeId > 0) {
+    bool isMasked(String value) {
+      final String trimmed = value.trim();
+      if (trimmed.isEmpty) {
+        return false;
+      }
+      if (!trimmed.contains('*')) {
+        return false;
+      }
+      return trimmed.replaceAll('*', '').trim().isEmpty;
+    }
+
+
+    bool fetchedFromServer = false;
+
+    if ((codes.isEmpty || codes.every(isMasked)) && transactionId != null && transactionId > 0) {
+      try {
+        final WifiPurchase? revealed =
+        await _repository.revealTransactionCode(transactionId);
+        if (revealed == null || revealed.codes.isEmpty) {
+          messenger.showSnackBar(
+            const SnackBar(content: Text('لم يتم إصدار كود بعد لهذه العملية.')),
+          );
+          return;
+        }
+        codes = List<String>.from(revealed.codes);
+        if (revealed.id != 0) {
+          codeId = revealed.id;
+        }
+        fetchedFromServer = true;
+      } catch (_) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('تعذّر استرجاع الكود من الخادم. حاول مرة أخرى لاحقاً.'),
+          ),
+        );
+      }
+    }
+
+    if (codes.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('لم يتم إصدار كود بعد لهذه العملية.')),
+      );
+      return;
+    }
+
+    if (!fetchedFromServer && codeId > 0) {
+
+
       unawaited(
         _repository
             .logCodeEvent(codeId: codeId, action: 'view')
             .catchError((_) {}),
       );
     }
-    final messenger = ScaffoldMessenger.of(context);
+
     await showDialog<void>(
       context: context,
       builder: (dialogContext) {
@@ -270,7 +318,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
               itemCount: codes.length,
               separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (_, index) {
-                final code = codes[index];
+                final String code = codes[index];
                 return _CodeTile(
                   code: code,
                   onCopy: () {

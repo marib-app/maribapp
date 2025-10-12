@@ -554,6 +554,72 @@ class WifiRepository {
     return _buildPurchaseResult(response);
   }
 
+
+
+  Future<WifiPurchase?> revealTransactionCode(int transactionId) async {
+    if (transactionId <= 0) {
+      return null;
+    }
+
+    final Map<String, dynamic> response = await Api.get(
+      url: Api.wifiOrderCodeApi(transactionId),
+    );
+
+    final Map<String, dynamic> data = _mapify(
+      response['data'] ?? response['payload'] ?? response['result'],
+    );
+
+    if (data.isEmpty) {
+      return null;
+    }
+
+    final Map<String, dynamic> codeMap = _mapify(data['code']);
+    final Map<String, dynamic> planMap = _mapify(data['plan']);
+    final Map<String, dynamic> networkMap = _mapify(data['network']);
+    final Map<String, dynamic> transactionMap = _mapify(data['transaction']);
+
+    final List<String> codes = <String>[];
+    final String? primaryCode = _stringify(codeMap['code']);
+    if (primaryCode != null && primaryCode.isNotEmpty) {
+      codes.add(primaryCode);
+    }
+
+    if (codes.isEmpty) {
+      return null;
+    }
+
+    final Map<String, dynamic> payload = <String, dynamic>{
+      'id': codeMap['id'] ?? data['code_id'] ?? transactionId,
+      'plan': planMap,
+      'network': networkMap,
+      'codes': codes,
+      'status': codeMap['status'] ?? transactionMap['payment_status'],
+      'payment_status': transactionMap['payment_status'],
+      'payment_status_label': transactionMap['payment_status_label'],
+      'payment_gateway': transactionMap['payment_gateway'],
+      'transaction_id': transactionMap['id'] ?? transactionId,
+      'meta': <String, dynamic>{
+        ..._mapify(transactionMap['meta']),
+        'transaction_id': transactionMap['id'] ?? transactionId,
+        'payment_status': transactionMap['payment_status'],
+        'payment_status_label': transactionMap['payment_status_label'],
+        'payment_gateway': transactionMap['payment_gateway'],
+        'reveal_count': codeMap['reveal_count'],
+        'revealed_at': codeMap['revealed_at'],
+        'code_id': codeMap['id'],
+      },
+      'created_at': transactionMap['completed_at'] ??
+          transactionMap['updated_at'] ??
+          transactionMap['created_at'],
+      'reference': transactionMap['reference'],
+    };
+
+    return WifiPurchase.fromJson(payload);
+  }
+
+
+
+
   Future<void> logCodeEvent({
     required int codeId,
     required String action,

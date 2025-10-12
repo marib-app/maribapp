@@ -83,6 +83,9 @@ Route::prefix('wifi-cabin')
             
         Route::get('codes/mine', [WifiPurchaseController::class, 'index']);
         Route::get('purchases', [WifiPurchaseController::class, 'index']);
+        Route::get('orders/{transaction}/code', [WifiPurchaseController::class, 'show'])
+            ->whereNumber('transaction');
+
         Route::post('codes/{code}/events', [WifiCodeRevealController::class, 'store'])
             ->whereNumber('code');
 

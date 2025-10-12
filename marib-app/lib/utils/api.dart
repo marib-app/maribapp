@@ -485,7 +485,8 @@ class Api {
     'banks',
   ];
 
-
+  static const int _manualBankDefaultPerPage = 50;
+  static const int _manualBankMaxLoops = 20;
 
   // =======================
   // مفاتيح عامة متداولة
@@ -1158,30 +1159,52 @@ class Api {
 
     for (final endpoint in _manualBankApiCandidates) {
       try {
-        final res = await Api.get(url: endpoint);
+        final List<BankAccount> collected = <BankAccount>[];
+        int currentPage = 1;
+        int loop = 0;
 
-        // السيرفر قد يرجّع { data: [...] } أو [...] مباشرة
-        final dynamic raw = res is Map<String, dynamic> ? (res['data'] ?? res['banks']) : res;
-        final List<dynamic> list = raw is List ? raw : <dynamic>[];
+        while (true) {
+          final Map<String, dynamic> response = await Api.get(
+            url: endpoint,
+            queryParameters: <String, dynamic>{
+              'per_page': _manualBankDefaultPerPage,
+              'page': currentPage,
+            },
+          );
 
-        if (list.isEmpty && raw is! List) {
-          continue;
+          final _ManualBankPage page = _parseManualBankResponse(response);
+
+          if (page.items.isEmpty && loop == 0) {
+            break;
+          }
+
+
+          collected.addAll(page.items);
+
+
+          final Map<String, dynamic>? meta = page.meta;
+          final int? current = _manualBankAsInt(meta?['current_page']) ?? currentPage;
+          final int? last = _manualBankAsInt(meta?['last_page']);
+
+          final bool hasMorePages =
+              last != null && current != null && current < last && loop < _manualBankMaxLoops - 1;
+
+          if (!hasMorePages) {
+            break;
+          }
+
+          currentPage = current + 1;
+          loop += 1;
         }
 
-        final items = list.map<BankAccount>((dynamic e) {
-          final map = e is Map<String, dynamic>
-              ? e
-              : Map<String, dynamic>.from(e as Map);
-          return BankAccount.fromJson(map);
-        }).toList();
-
-        if (items.isNotEmpty || raw is List) {
-          return items;
+        if (collected.isNotEmpty) {
+          return collected;
         }
       } on ApiHttpException catch (error) {
         lastHttpError = error;
 
-        if (error.statusCode != 404 && error.statusCode != 405 &&
+        if (error.statusCode != 404 &&
+            error.statusCode != 405 &&
             error.statusCode != 410) {
           throw error;
         }
@@ -1193,6 +1216,141 @@ class Api {
     }
 
     throw ApiException('فشل في جلب الحسابات البنكية اليدوية');
+  }
+
+
+  static _ManualBankPage _parseManualBankResponse(Map<String, dynamic> response) {
+    final List<BankAccount> accounts = <BankAccount>[];
+    Map<String, dynamic>? meta;
+
+    final Set<int> visited = <int>{};
+
+    void inspect(dynamic node) {
+      if (node == null) {
+        return;
+      }
+
+      if (node is Iterable) {
+        for (final element in node) {
+          inspect(element);
+        }
+        return;
+      }
+
+      final Map<String, dynamic>? map = _mapifyManualBank(node);
+      if (map == null) {
+        return;
+      }
+
+      meta ??= _mapifyManualBank(map['meta']) ?? meta;
+
+      final int hash = identityHashCode(map);
+      if (!visited.add(hash)) {
+        return;
+      }
+
+      const containerKeys = <String>{
+        'manual_payment_banks',
+        'manualPaymentBanks',
+        'manual_banks',
+        'manualBanks',
+        'banks',
+        'data',
+        'items',
+        'records',
+        'list',
+        'payload',
+      };
+
+      bool drilled = false;
+
+      for (final key in containerKeys) {
+        if (!map.containsKey(key)) {
+          continue;
+        }
+        drilled = true;
+        inspect(map[key]);
+      }
+
+      if (drilled) {
+        return;
+      }
+
+      if (_looksLikeManualBank(map)) {
+        accounts.add(BankAccount.fromJson(map));
+      }
+    }
+
+    inspect(response['data']);
+    if (accounts.isEmpty) {
+      inspect(response['banks']);
+    }
+    if (accounts.isEmpty) {
+      inspect(response);
+    }
+
+    meta ??= _mapifyManualBank(response['meta']);
+
+    return _ManualBankPage(items: accounts, meta: meta);
+  }
+
+  static Map<String, dynamic>? _mapifyManualBank(dynamic source) {
+    if (source is Map<String, dynamic>) {
+      return source;
+    }
+
+    if (source is Map) {
+      final map = <String, dynamic>{};
+      source.forEach((key, value) {
+        if (key == null) {
+          return;
+        }
+        map[key.toString()] = value;
+      });
+      return map;
+    }
+
+    return null;
+  }
+
+  static bool _looksLikeManualBank(Map<String, dynamic> map) {
+    const possibleKeys = <String>{
+      'bank_name',
+      'beneficiary_name',
+      'account_name',
+      'account_number',
+      'iban',
+      'swift',
+      'manual_bank_id',
+    };
+
+    for (final key in possibleKeys) {
+      if (map.containsKey(key)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  static int? _manualBankAsInt(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+
+    if (value is int) {
+      return value;
+    }
+
+    if (value is double) {
+      return value.toInt();
+    }
+
+    if (value is String) {
+      return int.tryParse(value);
+    }
+
+    return null;
   }
 
 
@@ -1245,3 +1403,12 @@ class Api {
 }
 
 
+class _ManualBankPage {
+  const _ManualBankPage({
+    required this.items,
+    this.meta,
+  });
+
+  final List<BankAccount> items;
+  final Map<String, dynamic>? meta;
+}

@@ -29,6 +29,9 @@ class WifiCodeAssignmentService
         }
 
         return DB::transaction(function () use ($plan, $buyer, $transaction, $grossAmount, $options) {
+            $filterNull = static fn (mixed $value): bool => $value !== null;
+
+
             $plan->loadMissing('network.owner');
             $network = $plan->network;
 
@@ -67,7 +70,7 @@ class WifiCodeAssignmentService
                         'commission_amount' => $commissionAmount,
                         'net_amount' => $netAmount,
                     ]),
-                    static fn ($value): bool => $value !== null
+                    $filterNull
                 ),
             ])->save();
 
@@ -87,7 +90,7 @@ class WifiCodeAssignmentService
                             'gross_amount' => $grossAmount,
                             'commission_amount' => $commissionAmount,
                             'net_amount' => $netAmount,
-                        ], static fn ($value): bool => $value !== null),
+                        ], $filterNull),
                     ]
                 );
             }

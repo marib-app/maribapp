@@ -6,7 +6,8 @@ use App\Exceptions\ResponseServiceTestException;
 use Exception;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\JsonResponse;
-
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Contracts\Pagination\Paginator as PaginatorContract;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Redirector;
 use Illuminate\Support\Facades\App;
@@ -154,6 +155,23 @@ class ResponseService
      */
     public static function successResponse(string|null $message = "Success", $data = null, array $customData = array(), $code = null): void
     {
+
+
+        $paginatorMeta = null;
+        $paginatorLinks = null;
+
+        if ($data instanceof PaginatorContract) {
+            [$data, $paginatorMeta, $paginatorLinks] = self::formatPaginator($data);
+        }
+
+        if ($paginatorMeta !== null && !array_key_exists('meta', $customData)) {
+            $customData['meta'] = $paginatorMeta;
+        }
+
+        if ($paginatorLinks !== null && !array_key_exists('links', $customData)) {
+            $customData['links'] = $paginatorLinks;
+        }
+
         $response = response()->json(array_merge([
             'error'   => false,
             'message' => trans($message),
@@ -163,6 +181,64 @@ class ResponseService
 
         self::finalizeResponse($response);
     }
+
+
+    /**
+     * @return array{0: array, 1: array<string, mixed>|null, 2: array<string, mixed>|null}
+     */
+    private static function formatPaginator(PaginatorContract $paginator): array
+    {
+        $items = array_map(static function ($item) {
+            if (is_array($item)) {
+                return $item;
+            }
+
+            if (is_object($item) && method_exists($item, 'toArray')) {
+                return $item->toArray();
+            }
+
+            return $item;
+        }, $paginator->items());
+
+        $meta = [
+            'current_page' => method_exists($paginator, 'currentPage') ? $paginator->currentPage() : null,
+            'per_page' => method_exists($paginator, 'perPage') ? $paginator->perPage() : null,
+            'has_more_pages' => method_exists($paginator, 'hasMorePages') ? $paginator->hasMorePages() : null,
+            'from' => method_exists($paginator, 'firstItem') ? $paginator->firstItem() : null,
+            'to' => method_exists($paginator, 'lastItem') ? $paginator->lastItem() : null,
+        ];
+
+        if ($paginator instanceof LengthAwarePaginator) {
+            $meta['last_page'] = $paginator->lastPage();
+            $meta['total'] = $paginator->total();
+        }
+
+        $meta = array_filter($meta, static fn ($value) => $value !== null);
+
+        $links = [];
+
+        if (method_exists($paginator, 'url')) {
+            $links['first'] = $paginator->url(1);
+
+            if ($paginator instanceof LengthAwarePaginator) {
+                $links['last'] = $paginator->url($paginator->lastPage());
+            }
+        }
+
+        if (method_exists($paginator, 'previousPageUrl')) {
+            $links['prev'] = $paginator->previousPageUrl();
+        }
+
+        if (method_exists($paginator, 'nextPageUrl')) {
+            $links['next'] = $paginator->nextPageUrl();
+        }
+
+        $links = array_filter($links, static fn ($value) => $value !== null && $value !== false);
+
+        return [$items, !empty($meta) ? $meta : null, !empty($links) ? $links : null];
+    }
+
+
 
     /**
      * @param string $message

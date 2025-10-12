@@ -373,89 +373,237 @@ class ApiController extends Controller {
 
 
 
-    public function getSystemSettings(Request $request) {
-        try {
-            $settings = Setting::select(['name', 'value', 'type']);
+    private function resolvePerPage(Request $request, int $default = 15, int $max = 100): int
+    {
+        $perPage = (int) $request->input('per_page', $default);
 
-            if (!empty($request->type)) {
-                $settings->where('name', $request->type);
+        if ($perPage <= 0) {
+            $perPage = $default;
+        }
+
+
+        return min($perPage, $max);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function normalizeSettingNames(mixed $value): array
+    {
+        if (is_string($value)) {
+            $value = explode(',', $value);
+        }
+
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $names = [];
+
+        foreach ($value as $entry) {
+            if (is_string($entry)) {
+                $candidate = trim($entry);
+            } elseif (is_numeric($entry)) {
+                $candidate = (string) $entry;
+            } else {
+                continue;
+
+            }
+            if ($candidate !== '') {
+                $names[] = $candidate;
+            }
+        }
+
+        return array_values(array_unique($names));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function socialLinkSettingKeys(): array
+    {
+        $meta = config('constants.SOCIAL_LINKS_META', []);
+
+
+
+
+        $keys = [];
+
+        foreach ($meta as $key => $definition) {
+            if (!is_string($key) || $key === '') {
+                continue;
             }
 
-            $settings = $settings->get();
+            $keys[] = $key;
 
-            $tempRow = [];
+            $enabledKey = $definition['enabled_key'] ?? null;
 
+            if (is_string($enabledKey) && $enabledKey !== '') {
+                $keys[] = $enabledKey;
+            }
+        }
 
-            foreach ($settings as $row) {
-                if ($row->name == "place_api_key") {
-                    /*TODO : Encryption will be done here*/
-                    //$tempRow[$row->name] = HelperService::encrypt($row->value);
-                    $tempRow[$row->name] = $row->value;
-                } else {
-                    $tempRow[$row->name] = $row->value;
+        return array_values(array_unique($keys));
+    }
+
+    /**
+     * @param array<int, string> $keys
+     * @param array<string, mixed> $seed
+     * @return array<string, mixed>
+     */
+    private function hydrateSettingValues(array $keys, array $seed): array
+    {
+        if (empty($keys)) {
+            return $seed;
+        }
+
+        $missing = array_values(array_diff($keys, array_keys($seed)));
+
+        if (!empty($missing)) {
+            $additional = Setting::query()
+                ->select(['name', 'value'])
+                ->whereIn('name', $missing)
+                ->pluck('value', 'name')
+                ->all();
+
+            foreach ($additional as $name => $value) {
+                if (is_string($name) && $name !== '' && !array_key_exists($name, $seed)) {
+                    $seed[$name] = $value;
                 }
             }
+        }
 
 
-            $socialLinksMeta = config('constants.SOCIAL_LINKS_META', []);
-            $socialLinks = [];
+        return $seed;
+    }
 
-            foreach ($socialLinksMeta as $key => $meta) {
-                $value = $tempRow[$key] ?? null;
-
-                $enabledKey = $meta['enabled_key'] ?? null;
-
-                if ($enabledKey !== null) {
-                    $enabledValue = $tempRow[$enabledKey] ?? null;
-
-                    if (! filter_var($enabledValue, FILTER_VALIDATE_BOOLEAN)) {
-                        continue;
-                    }
-                }
+    /**
+     * @param array<string, mixed> $settings
+     * @return array<int, array{key: string, label: string, icon: mixed, url: string, department: mixed}>
+     */
+    private function buildSocialLinks(array $settings): array
+    {
+        $socialLinksMeta = config('constants.SOCIAL_LINKS_META', []);
+        $socialLinks = [];
 
 
-                if (blank($value)) {
+        foreach ($socialLinksMeta as $key => $meta) {
+            if (!is_string($key) || $key === '') {
+                continue;
+            }
+
+            $value = $settings[$key] ?? null;
+
+
+            $enabledKey = $meta['enabled_key'] ?? null;
+
+
+              if (is_string($enabledKey) && $enabledKey !== '') {
+                $enabledValue = $settings[$enabledKey] ?? null;
+                if (!filter_var($enabledValue, FILTER_VALIDATE_BOOLEAN)) {
                     continue;
                 }
 
-                $isWhatsapp = ($meta['type'] ?? null) === 'whatsapp';
-                $url = $value;
+            }
 
-                if ($isWhatsapp) {
-                    $normalizedNumber = preg_replace('/[^0-9]/', '', (string) $value) ?? '';
+            if (blank($value)) {
+                continue;
+            }
+
+            $isWhatsapp = ($meta['type'] ?? null) === 'whatsapp';
+            $url = $value;
+
+            if ($isWhatsapp) {
+                $normalizedNumber = preg_replace('/[^0-9]/', '', (string) $value) ?? '';
 
 
+                if ($normalizedNumber === '') {
 
-                    if ($normalizedNumber === '') {
-                        continue;
-                    }
-
-                    $url = 'https://wa.me/' . $normalizedNumber;
-
+                    continue;
                 }
 
-                $socialLinks[] = [
-                    'key'        => $key,
-                    'label'      => $meta['label'] ?? Str::title(str_replace('_', ' ', $key)),
-                    'icon'       => $meta['icon'] ?? null,
-                    'url'        => $url,
-                    'department' => $meta['department'] ?? null,
-                ];
+                $url = 'https://wa.me/' . $normalizedNumber;
             }
+
+            $socialLinks[] = [
+                'key'        => $key,
+                'label'      => $meta['label'] ?? Str::title(str_replace('_', ' ', $key)),
+                'icon'       => $meta['icon'] ?? null,
+                'url'        => $url,
+                'department' => $meta['department'] ?? null,
+            ];
+        }
+
+        return $socialLinks;
+    }
+
+
+
+    public function getSystemSettings(Request $request) {
+        try {
+            $perPage = $this->resolvePerPage($request, 15, 100);
+
+            $settingsQuery = Setting::select(['name', 'value', 'type'])->orderBy('name');
+
+
+            $typeFilter = $this->normalizeSettingNames($request->input('type'));
+            if (!empty($typeFilter)) {
+                $settingsQuery->whereIn('name', $typeFilter);
+            }
+            $fieldsFilter = $this->normalizeSettingNames($request->input('fields'));
+            if (!empty($fieldsFilter)) {
+                $settingsQuery->whereIn('name', $fieldsFilter);
+            }
+
+            $settings = $settingsQuery->paginate($perPage)->appends($request->query());
+
+            $settings->getCollection()->transform(static function (Setting $row) {
+                return [
+                    'name'  => $row->name,
+                    'value' => $row->value,
+                    'type'  => $row->type,
+                ];
+            });
+
+            $currentValues = [];
+
+            foreach ($settings->items() as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+
+                $name = $item['name'] ?? null;
+
+                if (!is_string($name) || $name === '') {
+                    continue;
+                }
+
+                $currentValues[$name] = $item['value'] ?? null;
+            }
+
+            $requiredKeys = $this->socialLinkSettingKeys();
+            $hydratedValues = $this->hydrateSettingValues($requiredKeys, $currentValues);
+
+            $socialLinks = $this->buildSocialLinks($hydratedValues);
+
+
 
 
             $supportService = app(DepartmentSupportService::class);
 
 
-            $tempRow['social_links'] = $socialLinks;
-            $tempRow['department_support'] = $supportService->allWhatsAppSupport();
+            $extras = [
+                'social_links' => $socialLinks,
+                'department_support' => $supportService->allWhatsAppSupport(),
+                'demo_mode' => config('app.demo_mode'),
+                'languages' => CachingService::getLanguages(),
+                'admin' => User::role('Super Admin')->select(['name', 'profile'])->first(),
+            ];
 
-            $language = CachingService::getLanguages();
-            $tempRow['demo_mode'] = config('app.demo_mode');
-            $tempRow['languages'] = $language;
-            $tempRow['admin'] = User::role('Super Admin')->select(['name', 'profile'])->first();
-
-            ResponseService::successResponse("Data Fetched Successfully", $tempRow);
+            ResponseService::successResponse("Data Fetched Successfully", $settings, [
+                'extras' => $extras,
+            ]);
+            
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "API Controller -> getSystemSettings");
             ResponseService::errorResponse();
@@ -5888,12 +6036,19 @@ class ApiController extends Controller {
             if ($validator->fails()) {
                 ResponseService::validationError($validator->errors()->first());
             }
+            $perPage = $this->resolvePerPage($request, 15, 100);
+
+
             $settings = new SeoSetting();
             if (!empty($request->page)) {
                 $settings = $settings->where('page', $request->page);
             }
 
-            $settings = $settings->get();
+            $settings = $settings->orderBy('id')
+                ->paginate($perPage)
+                ->appends($request->query());
+
+
             ResponseService::successResponse("SEO settings fetched successfully.", $settings);
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "API Controller -> seoSettings");
@@ -8157,13 +8312,23 @@ public function storeRequestDevice(Request $request)
 
 
 
-    public function getManualBanks() {
+    public function getManualBanks(Request $request) {
         try {
-            $banks = ManualBank::active()->get()->map(function (ManualBank $bank) {
+            $perPage = $this->resolvePerPage($request, 15, 100);
+
+            $banks = ManualBank::active()
+                ->orderBy('display_order')
+                ->orderBy('id')
+                ->paginate($perPage)
+                ->appends($request->query());
+
+            $banks->getCollection()->transform(function (ManualBank $bank) {
+
+
                 $bankData = $bank->toArray();
 
                 foreach ($bankData as $key => $value) {
-                    if (!is_string($value) || empty($value)) {
+                    if (!is_string($value) || $value === '') {
                         continue;
                     }
 
@@ -8173,7 +8338,7 @@ public function storeRequestDevice(Request $request)
                 }
 
                 return $bankData;
-            })->values()->toArray();
+            });
 
             ResponseService::successResponse("Manual Banks Fetched", $banks);
         } catch (Throwable $th) {

@@ -32,11 +32,14 @@ class PerformanceMonitor {
       return;
     }
     _initialized = true;
-    final now = _nowUs();
+    _monotonicClock ??= Stopwatch()..start();
+    final int now = _elapsedUs();
+
     _appStartUs = now;
     _currentSession = _RoutePerformanceSession(
       routeName: _startupRouteName,
       startedAtUs: now,
+      wallClockStartedAt: DateTime.now(),
     );
   }
 
@@ -47,16 +50,29 @@ class PerformanceMonitor {
     if (_currentSession == null) {
       _currentSession = _RoutePerformanceSession(
         routeName: _currentRouteName ?? _startupRouteName,
-        startedAtUs: _nowUs(),
+        startedAtUs: _elapsedUs(),
+        wallClockStartedAt: DateTime.now(),
       );
     }
 
     for (final FrameTiming timing in timings) {
-      _firstFrameUs ??= timing.timestampInMicroseconds(FramePhase.buildStart);
-      _firstMeaningfulPaintUs ??=
+      final int buildStartEngineUs =
+      timing.timestampInMicroseconds(FramePhase.buildStart);
+      final int rasterFinishEngineUs =
           timing.timestampInMicroseconds(FramePhase.rasterFinish);
 
-      _currentSession!.recordFrame(timing);
+      final int buildStartUs = _convertEngineTimestamp(buildStartEngineUs);
+      final int rasterFinishUs = _convertEngineTimestamp(rasterFinishEngineUs);
+
+      _firstFrameUs ??= buildStartUs;
+      _firstMeaningfulPaintUs ??= rasterFinishUs;
+
+      _currentSession!.recordFrame(
+        timing: timing,
+        buildStartUs: buildStartUs,
+        rasterFinishUs: rasterFinishUs,
+      );
+
     }
 
     _scheduleReportWrite();
@@ -159,7 +175,8 @@ class PerformanceMonitor {
     _currentRouteName = routeName;
     _currentSession = _RoutePerformanceSession(
       routeName: routeName,
-      startedAtUs: _nowUs(),
+      startedAtUs: _elapsedUs(),
+      wallClockStartedAt: DateTime.now(),
     );
   }
 
@@ -227,18 +244,24 @@ class _RoutePerformanceSession {
   _RoutePerformanceSession({
     required this.routeName,
     required this.startedAtUs,
+    required this.wallClockStartedAt,
   });
 
   final String routeName;
   final int startedAtUs;
   final List<double> frameDurationsMs = <double>[];
+  final DateTime wallClockStartedAt;
 
   int totalFrames = 0;
   int droppedFrames = 0;
   int? _firstFrameUs;
   int? _firstMeaningfulFrameUs;
 
-  void recordFrame(FrameTiming timing) {
+  void recordFrame({
+    required FrameTiming timing,
+    required int buildStartUs,
+    required int rasterFinishUs,
+  }) {
     totalFrames += 1;
     frameDurationsMs.add(timing.totalSpan.inMicroseconds / 1000.0);
     droppedFrames += PerformanceMonitor.countDroppedFrames(timing.totalSpan);
@@ -251,6 +274,7 @@ class _RoutePerformanceSession {
     final _RoutePerformanceSession copy = _RoutePerformanceSession(
       routeName: routeName,
       startedAtUs: startedAtUs,
+      wallClockStartedAt: wallClockStartedAt,
     );
     copy.frameDurationsMs.addAll(frameDurationsMs);
     copy.totalFrames = totalFrames;

@@ -9,7 +9,11 @@ use App\Events\OrderNoteUpdated;
 use App\Events\SubscriptionExpired;
 use App\Events\UserWentInactive;
 use App\Listeners\DispatchDelegateBadgeUpdate;
-use App\Listeners\DispatchManualPaymentRequestDelegateNotifications;use App\Listeners\HandleMarketingAutomation;
+use App\Listeners\DispatchManualPaymentRequestDelegateNotifications;
+use App\Listeners\HandleMarketingAutomation;
+use App\Listeners\RecordCacheTelemetry;
+use Illuminate\Cache\Events\CacheHit;
+use Illuminate\Cache\Events\CacheMissed;
 use App\Listeners\RecordOrderStatusTelemetry;
 use App\Listeners\SendOrderStatusChangedNotification;
 use App\Listeners\SendDelegateAssignmentNotifications;
@@ -59,6 +63,16 @@ class EventServiceProvider extends ServiceProvider
             SendDelegateAssignmentNotifications::class,
             DispatchDelegateBadgeUpdate::class,
         ],
+
+        CacheHit::class => [
+            RecordCacheTelemetry::class,
+        ],
+
+        CacheMissed::class => [
+            RecordCacheTelemetry::class,
+        ],
+
+
 
     ];
 

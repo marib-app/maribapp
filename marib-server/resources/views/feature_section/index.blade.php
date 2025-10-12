@@ -143,6 +143,12 @@
 
         $defaultHasAvailableFilters = $defaultAvailableCount > 0;
 
+        $editSelectedFilter = old('filter_type', old('filter'));
+        if ($editSelectedFilter !== null && ! array_key_exists($editSelectedFilter, $filterLabels)) {
+            $editSelectedFilter = null;
+        }
+
+
 
     @endphp
 
@@ -189,8 +195,24 @@
                                         <label for="filter_type" class=" form-label">{{ __('نوع المرشح') }}</label>
                                         <select id="filter_type" name="filter_type" class="form-control select2">
                                             @foreach ($filterLabels as $filterValue => $filterLabel)
-                                                <option value="{{ $filterValue }}" @selected($selectedFilter === $filterValue)>{{ $filterLabel }}</option>
-                                            @endforeach
+                                                @php
+                                                    $optionLabel = trim((string) $filterLabel);
+                                                    $isUnavailable = isset($defaultDisabledFilters[$filterValue]);
+                                                    $optionAttributes = [
+                                                        'value' => $filterValue,
+                                                        'title' => $optionLabel,
+                                                        'data-filter-label' => $optionLabel,
+                                                    ];
+
+                                                    if ($isUnavailable) {
+                                                        $optionAttributes['data-filter-unavailable'] = '1';
+                                                    }
+                                                @endphp
+                                                <option @foreach ($optionAttributes as $attr => $value) {{ $attr }}="{{ e($value) }}" @endforeach @selected($selectedFilter === $filterValue)>
+                                                    {{ $optionLabel }}
+                                                </option>
+                                                
+                                                @endforeach
 
                                         </select>
 
@@ -449,8 +471,25 @@
                                                     <label for="edit_filter_type" class="form-label fw-bold">{{ __('نوع المرشح') }} <span class="text-danger">*</span></label>
                                                     <select id="edit_filter_type" name="filter_type" class="form-control select2">
                                                         @foreach ($filterLabels as $filterValue => $filterLabel)
-                                                            <option value="{{ $filterValue }}" @selected(old('filter_type') === $filterValue)>{{ $filterLabel }}</option>
-                                                        @endforeach
+                                                            @php
+                                                                $optionLabel = trim((string) $filterLabel);
+                                                                $isUnavailable = isset($defaultDisabledFilters[$filterValue]) && $editSelectedFilter !== $filterValue;
+                                                                $optionAttributes = [
+                                                                    'value' => $filterValue,
+                                                                    'title' => $optionLabel,
+                                                                    'data-filter-label' => $optionLabel,
+                                                                ];
+
+                                                                if ($isUnavailable) {
+                                                                    $optionAttributes['data-filter-unavailable'] = '1';
+                                                                }
+                                                            @endphp
+                                                            <option @foreach ($optionAttributes as $attr => $value) {{ $attr }}="{{ e($value) }}" @endforeach @selected($editSelectedFilter === $filterValue)>
+                                                                {{ $optionLabel }}
+                                                            </option>
+                                                            
+                                                            
+                                                            @endforeach
 
                                                     </select>
 

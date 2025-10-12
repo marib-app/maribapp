@@ -689,23 +689,34 @@ class Api {
             (key) => key.toLowerCase() == HttpHeaders.contentTypeHeader,
       );
 
-      bool hasCustomContentTypeOption = false;
       final Object? optionContentType = options?.contentType;
+      String? normalizedOptionContentType;
+
       if (optionContentType != null) {
-        final String normalized =
-        optionContentType.toString().trim().toLowerCase();
-        if (normalized.isNotEmpty) {
-          final String jsonContentType =
-          Headers.jsonContentType.toLowerCase();
-          final String formUrlEncodedContentType =
-          Headers.formUrlEncodedContentType.toLowerCase();
-          hasCustomContentTypeOption =
-          !(normalized.startsWith('application/json') ||
-              normalized == jsonContentType ||
-              normalized == formUrlEncodedContentType);
+        final String candidate = optionContentType.toString().trim();
+        if (candidate.isNotEmpty) {
+          normalizedOptionContentType = candidate.toLowerCase();
         }
       }
-      if (!hasExplicitContentTypeHeader && !hasCustomContentTypeOption) {
+      final bool optionLooksMultipart = normalizedOptionContentType != null &&
+          normalizedOptionContentType.startsWith('multipart/form-data');
+
+      bool hasCustomContentTypeOption = false;
+      if (normalizedOptionContentType != null) {
+        final String jsonContentType = Headers.jsonContentType.toLowerCase();
+        final String formUrlEncodedContentType =
+        Headers.formUrlEncodedContentType.toLowerCase();
+        final bool matchesKnownDefaults =
+            normalizedOptionContentType.startsWith('application/json') ||
+                normalizedOptionContentType == jsonContentType ||
+                normalizedOptionContentType == formUrlEncodedContentType ||
+                optionLooksMultipart;
+        hasCustomContentTypeOption = !matchesKnownDefaults;
+      }
+
+      if (!hasExplicitContentTypeHeader &&
+          (!hasCustomContentTypeOption ||
+              (parameter is FormData && optionLooksMultipart))) {
         shouldNullifyContentType = true;
       }
 

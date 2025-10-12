@@ -17,6 +17,7 @@ class PerformanceMonitor {
 
   final List<_RoutePerformanceSession> _completedSessions = <_RoutePerformanceSession>[];
   _RoutePerformanceSession? _currentSession;
+  Stopwatch? _monotonicClock;
 
   int? _appStartUs;
   int? _firstFrameUs;

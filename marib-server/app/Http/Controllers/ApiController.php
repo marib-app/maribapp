@@ -1484,8 +1484,8 @@ class ApiController extends Controller {
                     $galleryImages[] = [
                         'image'      => $imagePath,
                         'item_id'    => $item->id,
-                        'created_at' => time(),
-                        'updated_at' => time(),
+                        'created_at' => $timestamp,
+                        'updated_at' => $timestamp->copy(),
                     ];
                 }
 
@@ -1517,13 +1517,14 @@ class ApiController extends Controller {
                         ]);
                     }
 
+                    $timestamp = now();
 
                     $itemCustomFieldValues[] = [
                         'item_id'         => $item->id,
                         'custom_field_id' => $key,
                         'value'           => json_encode($custom_field, JSON_THROW_ON_ERROR),
-                        'created_at'      => time(),
-                        'updated_at'      => time()
+                         'created_at'      => $timestamp,
+                        'updated_at'      => $timestamp->copy()
                     ];
                 }
 
@@ -2032,7 +2033,8 @@ class ApiController extends Controller {
                         'item_id'         => $item->id,
                         'custom_field_id' => $key,
                         'value'           => json_encode($custom_field, JSON_THROW_ON_ERROR),
-                        'updated_at'      => time()
+                        'updated_at'      => now()
+
                     ];
                 }
 

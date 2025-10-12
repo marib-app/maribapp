@@ -31,7 +31,7 @@ class SliverSectionBuilder extends StatelessWidget {
     }
 
     if (section.key != null) {
-      sliver = KeyedSubtree.wrap(sliver, section.key!);
+      sliver = KeyedSubtree(key: section.key!, child: sliver);
     }
 
     return sliver;
@@ -48,7 +48,8 @@ class SliverSectionBuilder extends StatelessWidget {
       addAutomaticKeepAlives: section.addAutomaticKeepAlives,
       addRepaintBoundaries: section.addRepaintBoundaries,
       addSemanticIndexes: section.addSemanticIndexes,
-      semanticIndexCallback: section.semanticIndexCallback,
+      semanticIndexCallback:
+      section.semanticIndexCallback ?? _defaultSemanticIndexCallback,
       semanticIndexOffset: section.semanticIndexOffset,
       findChildIndexCallback: section.findChildIndexCallback,
     );
@@ -84,7 +85,8 @@ class SliverSectionBuilder extends StatelessWidget {
         addAutomaticKeepAlives: section.addAutomaticKeepAlives,
         addRepaintBoundaries: section.addRepaintBoundaries,
         addSemanticIndexes: section.addSemanticIndexes,
-        semanticIndexCallback: section.semanticIndexCallback,
+        semanticIndexCallback:
+        section.semanticIndexCallback ?? _defaultSemanticIndexCallback,
         semanticIndexOffset: section.semanticIndexOffset,
         findChildIndexCallback: section.findChildIndexCallback,
       ),
@@ -102,8 +104,10 @@ class SliverSectionBuilder extends StatelessWidget {
     return SliverPersistentHeader(
       delegate: section.delegate,
       pinned: section.pinned,
-      floating: section.floating,
-      snap: section.snap,
+      floating: section.floating || section.snap,
+
     );
   }
 }
+
+int? _defaultSemanticIndexCallback(Widget _, int __) => null;

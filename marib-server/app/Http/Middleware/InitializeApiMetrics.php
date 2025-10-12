@@ -12,6 +12,10 @@ class InitializeApiMetrics
     {
         ApiMetricsService::startRequest($request);
 
-        return $next($request);
+        $response = $next($request);
+
+        ApiMetricsService::record($response);
+
+        return $response;
     }
 }

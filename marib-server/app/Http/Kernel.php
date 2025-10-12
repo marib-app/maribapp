@@ -2,6 +2,7 @@
 
 namespace App\Http;
 
+use App\Http\Middleware\InitializeApiMetrics;
 use App\Http\Middleware\DemoMiddleware;
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
 use Spatie\Permission\Middleware\PermissionMiddleware;
@@ -48,7 +49,9 @@ class Kernel extends HttpKernel {
         'api' => [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             'throttle:api',
+            InitializeApiMetrics::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            InitializeApiMetrics::class,
 
         ],
     ];

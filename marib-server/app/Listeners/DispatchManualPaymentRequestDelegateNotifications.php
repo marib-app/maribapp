@@ -50,6 +50,11 @@ class DispatchManualPaymentRequestDelegateNotifications
                 ? $manualPaymentRequest->status
                 : ManualPaymentRequest::STATUS_PENDING;
 
+            $orderId = ManualPaymentRequest::isOrderPayableType((string) $manualPaymentRequest->payable_type)
+                ? $manualPaymentRequest->payable_id
+                : null;
+
+
             ManualPaymentRequestHistory::create([
                 'manual_payment_request_id' => $manualPaymentRequest->getKey(),
                 'status' => $status,
@@ -57,6 +62,9 @@ class DispatchManualPaymentRequestDelegateNotifications
                     'action' => 'delegate_notifications_dispatched',
                     'department' => $department,
                     'delegate_ids' => $delegateIds,
+                    'order_id' => $orderId,
+
+
                 ],
             ]);
         }

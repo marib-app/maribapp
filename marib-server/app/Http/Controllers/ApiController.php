@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\ManualPaymentRequestCreated;
 use App\Events\MessageDelivered;
 use App\Events\MessageRead;
 use App\Events\MessageSent;
@@ -8550,6 +8551,9 @@ public function storeRequestDevice(Request $request)
 
                 $existingManualPaymentRequest->forceFill($manualPaymentAttributes)->save();
                 $manualPaymentRequest = $existingManualPaymentRequest->fresh();
+                ManualPaymentRequestCreated::dispatch($manualPaymentRequest);
+
+
             } else {
 
 

@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\ManualPaymentRequest;
+use App\Models\Order;
 use App\Models\UserFcmToken;
 use App\Services\NotificationService;
 use Illuminate\Bus\Queueable;
@@ -11,6 +12,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class SendManualPaymentRequestDelegateNotification implements ShouldQueue
 {
@@ -28,11 +30,47 @@ class SendManualPaymentRequestDelegateNotification implements ShouldQueue
 
     public function handle(): void
     {
-        $manualPaymentRequest = ManualPaymentRequest::query()->find($this->manualPaymentRequestId);
+        $manualPaymentRequest = ManualPaymentRequest::query()
+            ->with('payable')
+            ->find($this->manualPaymentRequestId);
+
 
         if ($manualPaymentRequest === null) {
             return;
         }
+
+        $orderId = null;
+        $orderReference = null;
+
+        if (ManualPaymentRequest::isOrderPayableType((string) $manualPaymentRequest->payable_type)) {
+            $orderId = $manualPaymentRequest->payable_id ? (int) $manualPaymentRequest->payable_id : null;
+
+            $payable = $manualPaymentRequest->payable;
+
+            if ($payable instanceof Order) {
+                $orderReference = $payable->order_number
+                    ?: $payable->invoice_no
+                    ?: (string) $payable->getKey();
+            } elseif ($orderId !== null) {
+                $orderReference = (string) $orderId;
+            }
+        }
+
+        if ($orderReference === null) {
+            $orderReference = (string) $manualPaymentRequest->getKey();
+        }
+
+        $orderReference = trim($orderReference);
+
+        if ($orderReference === '') {
+            $orderReference = (string) $manualPaymentRequest->getKey();
+        }
+
+        if (! Str::startsWith($orderReference, '#')) {
+            $orderReference = '#' . ltrim($orderReference, '#');
+        }
+
+
 
         $tokens = UserFcmToken::query()
             ->where('user_id', $this->delegateId)
@@ -46,16 +84,32 @@ class SendManualPaymentRequestDelegateNotification implements ShouldQueue
             return;
         }
 
-        $title = __('Manual payment request received');
-        $body = __('A new manual payment request requires your review for the :department department.', [
-            'department' => $this->department,
-        ]);
+        $departmentLabel = trans('departments.' . $this->department, [], 'ar');
+
+        if ($departmentLabel === 'departments.' . $this->department) {
+            $departmentLabel = $this->department;
+        }
+
+        $title = 'طلب شراء جديد يحتاج إلى مراجعة';
+        $body = sprintf(
+            'لديك طلب شراء في قسم %s رقم الطلب %s يحتاج إلى مراجعة.',
+            $departmentLabel,
+            $orderReference
+        );
+
+        $ordersIndexUrl = route('orders.index', ['department' => $this->department]);
 
         $payload = [
             'manual_payment_request_id' => $manualPaymentRequest->getKey(),
             'department' => $this->department,
             'status' => $manualPaymentRequest->status,
             'type' => 'manual_payment_request',
+            'order_id' => $orderId,
+            'order_reference' => $orderReference,
+            'deeplink' => $ordersIndexUrl,
+            'click_action' => $ordersIndexUrl,
+            'message_preview' => $body,
+
         ];
 
         try {

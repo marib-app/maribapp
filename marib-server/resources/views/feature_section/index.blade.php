@@ -1586,14 +1586,16 @@
 
 
 
-                const minPriceField = $form.find('input[name="min_price"]').first();
-                if (minPriceField.length) {
-                    formData.min_price = (minPriceField.val() ?? '').toString().trim();
-                }
+                if (filterValue === priceRangeFilterValue) {
+                    const minPriceField = $form.find('input[name="min_price"]').first();
+                    if (minPriceField.length) {
+                        formData.min_price = (minPriceField.val() ?? '').toString().trim();
+                    }
 
-                const maxPriceField = $form.find('input[name="max_price"]').first();
-                if (maxPriceField.length) {
-                    formData.max_price = (maxPriceField.val() ?? '').toString().trim();
+                    const maxPriceField = $form.find('input[name="max_price"]').first();
+                    if (maxPriceField.length) {
+                        formData.max_price = (maxPriceField.val() ?? '').toString().trim();
+                    }
                 }
 
 

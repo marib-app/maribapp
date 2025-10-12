@@ -67,6 +67,9 @@ class FeatureSection extends Model {
 
     protected $casts = [
         'is_active' => 'boolean',
+        'min_price' => 'float',
+        'max_price' => 'float',
+
     ];
 
 

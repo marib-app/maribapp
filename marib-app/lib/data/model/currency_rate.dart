@@ -3,12 +3,15 @@ class CurrencyRate {
   final double sellPrice;
   final double buyPrice;
   final DateTime? lastUpdatedAt;
-
+  final String? iconUrl;
+  final String? iconAlt;
   CurrencyRate({
     required this.currencyName,
     required this.sellPrice,
     required this.buyPrice,
     this.lastUpdatedAt,
+    this.iconUrl,
+    this.iconAlt,
   });
 
   factory CurrencyRate.fromJson(Map<String, dynamic> json) {
@@ -29,6 +32,9 @@ class CurrencyRate {
       lastUpdatedAt: json['last_updated_at'] != null
           ? DateTime.tryParse(json['last_updated_at'].toString())
           : null,
+      iconUrl: json['icon_url'] as String?,
+      iconAlt: json['icon_alt'] as String?,
+
     );
   }
 }

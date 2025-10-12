@@ -2,12 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\CurrencyIconStorageService;
+use Illuminate\Support\Facades\Auth;
 use App\Models\CurrencyRate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class CurrencyController extends Controller
 {
+
+        public function __construct(private readonly CurrencyIconStorageService $iconStorageService)
+    {
+    }
+
     public function index()
     {
         $currencies = CurrencyRate::latest()->get();
@@ -24,24 +31,40 @@ class CurrencyController extends Controller
         $validator = Validator::make($request->all(), [
             'currency_name' => 'required|string|max:255|unique:currency_rates',
             'sell_price' => 'required|numeric|min:0',
-            'buy_price' => 'required|numeric|min:0'
+            'buy_price' => 'required|numeric|min:0',
+            'icon' => 'nullable|image|mimes:jpg,jpeg,png,webp,svg|max:2048',
+            'icon_alt' => 'nullable|string|max:255',
+        
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $currency = CurrencyRate::create([
+        $data = [
             'currency_name' => $request->currency_name,
             'sell_price' => $request->sell_price,
             'buy_price' => $request->buy_price,
-            'last_updated_at' => now()
-        ]);
+            'icon_alt' => $request->filled('icon_alt') ? $request->icon_alt : null,
+            'last_updated_at' => now(),
+        ];
+
+        if ($request->hasFile('icon')) {
+            $path = $this->iconStorageService->storeIcon($request->file('icon'));
+            $data['icon_path'] = $path;
+            $data['icon_uploaded_by'] = Auth::id();
+            $data['icon_uploaded_at'] = now();
+            $data['icon_removed_by'] = null;
+            $data['icon_removed_at'] = null;
+        }
+
+        $currency = CurrencyRate::create($data);
 
         return response()->json([
             'success' => true,
             'message' => 'Currency rate created successfully',
-            'data' => $currency
+            'data' => $currency->fresh()
+
         ]);
     }
 
@@ -58,30 +81,61 @@ class CurrencyController extends Controller
         $validator = Validator::make($request->all(), [
             'currency_name' => 'required|string|max:255|unique:currency_rates,currency_name,' . $id,
             'sell_price' => 'required|numeric|min:0',
-            'buy_price' => 'required|numeric|min:0'
+            'buy_price' => 'required|numeric|min:0',
+            'icon' => 'nullable|image|mimes:jpg,jpeg,png,webp,svg|max:2048',
+            'icon_alt' => 'nullable|string|max:255',
+            'remove_icon' => 'sometimes|boolean',
+        
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $currency->update([
+        $data = [
+
             'currency_name' => $request->currency_name,
             'sell_price' => $request->sell_price,
             'buy_price' => $request->buy_price,
-            'last_updated_at' => now()
-        ]);
+            'icon_alt' => $request->filled('icon_alt') ? $request->icon_alt : null,
+            'last_updated_at' => now(),
+        ];
+
+        if ($request->boolean('remove_icon')) {
+            $this->iconStorageService->deleteIcon($currency->icon_path);
+            $data['icon_path'] = null;
+            $data['icon_alt'] = null;
+            $data['icon_uploaded_by'] = null;
+            $data['icon_uploaded_at'] = null;
+            $data['icon_removed_by'] = Auth::id();
+            $data['icon_removed_at'] = now();
+        }
+
+        if ($request->hasFile('icon')) {
+            $path = $this->iconStorageService->storeIcon($request->file('icon'), $currency->icon_path);
+            $data['icon_path'] = $path;
+            $data['icon_uploaded_by'] = Auth::id();
+            $data['icon_uploaded_at'] = now();
+            $data['icon_removed_by'] = null;
+            $data['icon_removed_at'] = null;
+        }
+
+        $currency->update($data);
 
         return response()->json([
             'success' => true,
             'message' => 'Currency rate updated successfully',
-            'data' => $currency
+            'data' => $currency->fresh()
+
         ]);
     }
 
     public function destroy($id)
     {
         $currency = CurrencyRate::findOrFail($id);
+        $this->iconStorageService->deleteIcon($currency->icon_path);
+
+
         $currency->delete();
 
         return response()->json([
@@ -89,6 +143,39 @@ class CurrencyController extends Controller
             'message' => 'Currency rate deleted successfully'
         ]);
     }
+
+
+    public function destroyIcon($id)
+    {
+        $currency = CurrencyRate::findOrFail($id);
+
+        if (!$currency->icon_path) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Currency icon already removed',
+                'data' => $currency->fresh(),
+            ]);
+        }
+
+        $this->iconStorageService->deleteIcon($currency->icon_path);
+
+        $currency->update([
+            'icon_path' => null,
+            'icon_alt' => null,
+            'icon_uploaded_by' => null,
+            'icon_uploaded_at' => null,
+            'icon_removed_by' => Auth::id(),
+            'icon_removed_at' => now(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Currency icon removed successfully',
+            'data' => $currency->fresh(),
+        ]);
+    }
+
+
 
     public function show()
     {
@@ -115,8 +202,15 @@ class CurrencyController extends Controller
                            ->limit($limit)
                            ->get()
                            ->map(function ($currency) {
-                               $currency->last_updated_at = $currency->last_updated_at ? $currency->last_updated_at->format('Y-m-d H:i:s') : null;
-                               return $currency;
+                               return [
+                                   'id' => $currency->id,
+                                   'currency_name' => $currency->currency_name,
+                                   'sell_price' => $currency->sell_price,
+                                   'buy_price' => $currency->buy_price,
+                                   'icon_url' => $currency->icon_url,
+                                   'icon_alt' => $currency->icon_alt,
+                                   'last_updated_at' => $currency->last_updated_at ? $currency->last_updated_at->format('Y-m-d H:i:s') : null,
+                               ];
                            });
 
         return response()->json([

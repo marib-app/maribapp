@@ -1640,6 +1640,7 @@ class ApiController extends Controller {
 
             if ($request->hasFile('gallery_images')) {
                 $galleryImages = [];
+                $timestamp = now();
                 foreach ($request->file('gallery_images') as $file) {
 
                     try {
@@ -1723,14 +1724,7 @@ class ApiController extends Controller {
                             "custom_field_files.$key" => [__('The selected custom field is invalid for this category.')],
                         ]);
                     }
-
-                    $customFieldId = is_numeric($key) ? (int) $key : null;
-
-                    if ($customFieldId === null || ! $allowedCustomFieldIds->containsStrict($customFieldId)) {
-                        ResponseService::validationErrors([
-                            "custom_field_files.$key" => [__('The selected custom field is invalid for this category.')],
-                        ]);
-                    }
+ 
                     if (! $file instanceof UploadedFile) {
                         
                         ResponseService::validationErrors([
@@ -1752,12 +1746,11 @@ class ApiController extends Controller {
 
                     $itemCustomFieldValues[] = [
 
-                    
+                        'item_id'         => $item->id,
                         'custom_field_id' => $customFieldId,
-                        'value'           => $encodedValue,
+                        'value'           => $filePath,
                         'created_at'      => $timestamp,
-                        'created_at'      => time(),
-                        'updated_at'      => time()
+                        'updated_at'      => $timestamp,
                     ];
                 }
 

@@ -343,6 +343,9 @@ class RatesTabView extends StatelessWidget {
         required String name,
         required String sell,
         required String buy,
+        String? iconUrl,
+        String? iconAlt,
+
       }) {
     final theme = Theme.of(context);
     final onBg = _isDark(context) ? Colors.white : Colors.black;
@@ -376,19 +379,66 @@ class RatesTabView extends StatelessWidget {
               final narrow = cons.maxWidth < 360; // استجابة للشاشات الصغيرة
 
               // أيقونة عامة مناسبة لكل العملات
+
+              Widget fallbackIcon() {
+                return Container(
+                  width: 32,
+                  height: 32,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: onBg.withOpacity(0.20)),
+                  ),
+                  child: Icon(Icons.account_balance_wallet_outlined, size: 17, color: brand),
+                );
+              }
+
+              Widget leadingIcon;
+
+              if (iconUrl != null && iconUrl.isNotEmpty) {
+                leadingIcon = Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: onBg.withOpacity(0.20)),
+                  ),
+                  clipBehavior: Clip.hardEdge,
+                  child: Semantics(
+                    label: iconAlt?.isNotEmpty == true ? iconAlt : 'أيقونة $name',
+                    child: Image.network(
+                      iconUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => fallbackIcon(),
+                      loadingBuilder: (ctx, child, progress) {
+                        if (progress == null) return child;
+                        return Center(
+                          child: SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(brand),
+                              value: progress.expectedTotalBytes != null
+                                  ? progress.cumulativeBytesLoaded / (progress.expectedTotalBytes ?? 1)
+                                  : null,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                );
+              } else {
+                leadingIcon = fallbackIcon();
+              }
+
+
               final leading = Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    width: 26,
-                    height: 26,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: onBg.withOpacity(0.20)),
-                    ),
-                    child: Icon(Icons.account_balance_wallet_outlined, size: 15, color: brand),
-                  ),
+                  leadingIcon,
+
                   const SizedBox(width: 8),
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 170),
@@ -543,7 +593,8 @@ class RatesTabView extends StatelessWidget {
     String _name(d) => (d as dynamic).currencyName?.toString() ?? '';
     String _sell(d) => (d as dynamic).sellPrice?.toString() ?? '';
     String _buy(d)  => (d as dynamic).buyPrice?.toString() ?? '';
-
+    String? _icon(d) => (d as dynamic).iconUrl?.toString();
+    String? _iconAlt(d) => (d as dynamic).iconAlt?.toString();
     if (rates.isEmpty) {
       final onBg = _isDark(context) ? Colors.white : Colors.black;
       return ListView(
@@ -579,6 +630,8 @@ class RatesTabView extends StatelessWidget {
           name: _name(r),
           sell: _sell(r),
           buy: _buy(r),
+          iconUrl: _icon(r),
+          iconAlt: _iconAlt(r),
         );
       },
     );

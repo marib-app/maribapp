@@ -120,6 +120,10 @@ class WifiNetworkController extends Controller
         }
 
         $networkData = Arr::only($networkData, (new WifiNetwork())->getFillable());
+        $networkData = collect($networkData)
+            ->reject(static fn ($value, $key) => is_int($key))
+            ->all();
+
         $network = WifiNetwork::create($networkData);
         return response()->json(['data' => $network->fresh()], 201);
     

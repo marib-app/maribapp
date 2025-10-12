@@ -107,11 +107,14 @@ class CatalogPersistentHeaderSection extends CatalogSection {
     required this.delegate,
     this.pinned = false,
     this.floating = false,
+    this.snap = false,
+
   });
 
   final SliverPersistentHeaderDelegate delegate;
   final bool pinned;
   final bool floating;
+  final bool snap;
 
 }
 

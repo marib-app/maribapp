@@ -18,6 +18,7 @@ class PerformanceMonitor {
   final List<_RoutePerformanceSession> _completedSessions = <_RoutePerformanceSession>[];
   _RoutePerformanceSession? _currentSession;
   Stopwatch? _monotonicClock;
+  int? _engineTimestampOffsetUs;
 
   int? _appStartUs;
   int? _firstFrameUs;
@@ -195,8 +196,15 @@ class PerformanceMonitor {
     });
   }
 
-  int _nowUs() => DateTime.now().microsecondsSinceEpoch;
+  int _elapsedUs() {
+    _monotonicClock ??= Stopwatch()..start();
+    return _monotonicClock!.elapsedMicroseconds;
+  }
 
+  int _convertEngineTimestamp(int engineTimestampUs) {
+    _engineTimestampOffsetUs ??= _elapsedUs() - engineTimestampUs;
+    return engineTimestampUs + _engineTimestampOffsetUs!;
+  }
   Future<File> _resolveLogFile() async {
     final Directory dir = await getApplicationSupportDirectory();
     final Directory logDir = Directory('${dir.path}/performance');
@@ -241,17 +249,6 @@ class PerformanceMonitor {
 }
 
 
-class _MonotonicClock {
-  _MonotonicClock._(this._stopwatch);
-
-  factory _MonotonicClock.start() {
-    return _MonotonicClock._(Stopwatch()..start());
-  }
-
-  final Stopwatch _stopwatch;
-
-  int get elapsedUs => _stopwatch.elapsedMicroseconds;
-}
 
 
 class _RoutePerformanceSession {

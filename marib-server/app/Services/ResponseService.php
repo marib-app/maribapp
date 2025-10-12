@@ -156,20 +156,50 @@ class ResponseService
     public static function successResponse(string|null $message = "Success", $data = null, array $customData = array(), $code = null): void
     {
 
+        $itemsKey = 'items';
 
-        $paginatorMeta = null;
-        $paginatorLinks = null;
+        if (array_key_exists('items_key', $customData)) {
+            $customItemsKey = $customData['items_key'];
+
+            if (is_string($customItemsKey) && $customItemsKey !== '') {
+                $itemsKey = $customItemsKey;
+            }
+
+            unset($customData['items_key']);
+
+        }
+
+        $appendToData = [];
+
+        if (array_key_exists('append_to_data', $customData)) {
+            $candidateAppend = $customData['append_to_data'];
+
+            if (is_array($candidateAppend)) {
+                $appendToData = $candidateAppend;
+            }
+
+            unset($customData['append_to_data']);
+        }
 
         if ($data instanceof PaginatorContract) {
-            [$data, $paginatorMeta, $paginatorLinks] = self::formatPaginator($data);
+            [$items, $pagination] = self::formatPaginator($data);
+
+            $data = [
+                $itemsKey   => $items,
+                'pagination' => $pagination,
+            ];
         }
 
-        if ($paginatorMeta !== null && !array_key_exists('meta', $customData)) {
-            $customData['meta'] = $paginatorMeta;
-        }
-
-        if ($paginatorLinks !== null && !array_key_exists('links', $customData)) {
-            $customData['links'] = $paginatorLinks;
+        if (!empty($appendToData)) {
+            if ($data === null) {
+                $data = $appendToData;
+            } elseif (is_array($data)) {
+                $data = array_merge($data, $appendToData);
+            } else {
+                $data = array_merge([
+                    $itemsKey => $data,
+                ], $appendToData);
+            }
         }
 
         $response = response()->json(array_merge([
@@ -184,7 +214,7 @@ class ResponseService
 
 
     /**
-     * @return array{0: array, 1: array<string, mixed>|null, 2: array<string, mixed>|null}
+     * @return array{0: array<int, mixed>, 1: array<string, mixed>}
      */
     private static function formatPaginator(PaginatorContract $paginator): array
     {
@@ -215,27 +245,33 @@ class ResponseService
 
         $meta = array_filter($meta, static fn ($value) => $value !== null);
 
-        $links = [];
+        $links = [
+            'first' => method_exists($paginator, 'url') ? $paginator->url(1) : null,
+            'prev' => method_exists($paginator, 'previousPageUrl') ? $paginator->previousPageUrl() : null,
+            'next' => method_exists($paginator, 'nextPageUrl') ? $paginator->nextPageUrl() : null,
+        ];
 
-        if (method_exists($paginator, 'url')) {
-            $links['first'] = $paginator->url(1);
-
-            if ($paginator instanceof LengthAwarePaginator) {
-                $links['last'] = $paginator->url($paginator->lastPage());
-            }
-        }
-
-        if (method_exists($paginator, 'previousPageUrl')) {
-            $links['prev'] = $paginator->previousPageUrl();
-        }
-
-        if (method_exists($paginator, 'nextPageUrl')) {
-            $links['next'] = $paginator->nextPageUrl();
+        if ($paginator instanceof LengthAwarePaginator && method_exists($paginator, 'url')) {
+            $links['last'] = $paginator->url($paginator->lastPage());
         }
 
         $links = array_filter($links, static fn ($value) => $value !== null && $value !== false);
 
-        return [$items, !empty($meta) ? $meta : null, !empty($links) ? $links : null];
+
+        $pagination = array_merge(
+            $meta,
+            [
+                'first_page_url' => $links['first'] ?? null,
+                'last_page_url' => $links['last'] ?? null,
+                'prev_page_url' => $links['prev'] ?? null,
+                'next_page_url' => $links['next'] ?? null,
+                'path' => method_exists($paginator, 'path') ? $paginator->path() : null,
+            ]
+        );
+
+        $pagination = array_filter($pagination, static fn ($value) => $value !== null);
+
+        return [$items, $pagination];
     }
 
 

@@ -9,7 +9,7 @@ use App\Models\Order;
 use App\Models\User;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\Schema;
+
 
 class ManualPaymentRequestService
 {
@@ -86,18 +86,8 @@ class ManualPaymentRequestService
         }
 
 
-        $shouldAssignDepartment = ManualPaymentRequest::isOrderPayableType($payableType)
-            && $payableId !== null;
+        $department = $this->determineDepartmentForOrderPayable($payableType, $payableId, $existingRequest);
 
-        $department = null;
-
-        if ($shouldAssignDepartment) {
-            $department = $this->resolveOrderDepartment(is_numeric($payableId) ? (int) $payableId : null);
-
-            if ($department === null && $existingRequest !== null) {
-                $department = $this->normalizeDepartment($existingRequest->department);
-            }
-        }
 
         $duplicateRequest = null;
 
@@ -167,17 +157,12 @@ class ManualPaymentRequestService
                 'user_note' => $note ?? $existingRequest->user_note,
                 'status' => ManualPaymentRequest::STATUS_PENDING,
                 'receipt_path' => $receiptPath !== '' ? $receiptPath : ($existingRequest->receipt_path ?? ''),
-                'department' => $shouldAssignDepartment ? $department : null,
+                'department' => $department,
             ]);
 
             if ($manualBank) {
-                if ($this->manualPaymentRequestsHasColumn('bank_name')) {
-                    $existingRequest->bank_name = $manualBank->name;
-                }
-
-                if ($this->manualPaymentRequestsHasColumn('bank_account_name')) {
-                    $existingRequest->bank_account_name = $manualBank->beneficiary_name;
-                }
+                $existingRequest->bank_name = $manualBank->name;
+                $existingRequest->bank_account_name = $manualBank->beneficiary_name;
             }
 
             $existingRequest->meta = empty($mergedMeta) ? null : $mergedMeta;
@@ -198,22 +183,49 @@ class ManualPaymentRequestService
             'status' => ManualPaymentRequest::STATUS_PENDING,
             'meta' => empty($metaUpdates) ? null : $metaUpdates,
             'receipt_path' => $receiptPath,
-            'department' => $shouldAssignDepartment ? $department : null,
+            'department' => $department,
 
         ];
 
         if ($manualBank) {
-            if ($this->manualPaymentRequestsHasColumn('bank_name')) {
-                $attributes['bank_name'] = $manualBank->name;
-            }
-
-            if ($this->manualPaymentRequestsHasColumn('bank_account_name')) {
-                $attributes['bank_account_name'] = $manualBank->beneficiary_name;
-            }
+            $attributes['bank_name'] = $manualBank->name;
+            $attributes['bank_account_name'] = $manualBank->beneficiary_name;
         }
 
         return ManualPaymentRequest::create($attributes);
     }
+
+
+    private function determineDepartmentForOrderPayable(
+        mixed $payableType,
+        mixed $payableId,
+        ?ManualPaymentRequest $existingRequest
+    ): ?string {
+        if (! ManualPaymentRequest::isOrderPayableType($payableType)) {
+            return null;
+        }
+
+        $orderId = is_numeric($payableId) ? (int) $payableId : null;
+
+        if ($orderId !== null) {
+            $department = $this->resolveOrderDepartment($orderId);
+
+            if ($department !== null) {
+                return $department;
+            }
+        }
+
+        if ($existingRequest !== null) {
+            $fallback = $this->normalizeDepartment($existingRequest->department);
+
+            if ($fallback !== null) {
+                return $fallback;
+            }
+        }
+
+        return null;
+    }
+
 
 
 
@@ -311,15 +323,6 @@ class ManualPaymentRequestService
 
 
 
-    private function manualPaymentRequestsHasColumn(string $column): bool
-    {
-        static $columns = [];
 
-        if (! array_key_exists($column, $columns)) {
-            $columns[$column] = Schema::hasColumn('manual_payment_requests', $column);
-        }
-
-        return $columns[$column];
-    }
 
 }

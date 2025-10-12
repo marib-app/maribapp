@@ -82,7 +82,6 @@ use App\Models\DepartmentTicket;
 use App\Services\DepartmentSupportService;
 use App\Exceptions\UnknownFeaturedSectionSlugException;
 use App\Services\FeaturedSectionService;
-use Illuminate\Pagination\LengthAwarePaginator;
 
 use App\Models\RequestDevice;
 use App\Models\Order;
@@ -386,39 +385,6 @@ class ApiController extends Controller {
         return min($perPage, $max);
     }
 
-    /**
-     * @return array<string, int|bool>
-     */
-    private function buildLengthAwarePaginatorMeta(LengthAwarePaginator $paginator): array
-    {
-        $meta = [
-            'current_page' => $paginator->currentPage(),
-            'per_page' => $paginator->perPage(),
-            'has_more_pages' => $paginator->hasMorePages(),
-            'from' => $paginator->firstItem(),
-            'to' => $paginator->lastItem(),
-            'last_page' => $paginator->lastPage(),
-            'total' => $paginator->total(),
-        ];
-
-        return array_filter($meta, static fn ($value) => $value !== null);
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    private function buildLengthAwarePaginatorLinks(LengthAwarePaginator $paginator): array
-    {
-        $links = [
-            'first' => $paginator->url(1),
-            'last' => $paginator->url($paginator->lastPage()),
-            'prev' => $paginator->previousPageUrl(),
-            'next' => $paginator->nextPageUrl(),
-        ];
-
-        return array_filter($links, static fn ($value) => $value !== null && $value !== false);
-    }
-
 
 
     /**
@@ -637,15 +603,16 @@ class ApiController extends Controller {
                 'admin' => User::role('Super Admin')->select(['name', 'profile'])->first(),
             ];
 
-            ResponseService::successResponse("Data Fetched Successfully", [
-                'settings' => $settingsItems,
-                
-                'extras' => $extras,
-            ], [
-                'meta' => $this->buildLengthAwarePaginatorMeta($settings),
-                'links' => $this->buildLengthAwarePaginatorLinks($settings),
-
-            ]);
+            ResponseService::successResponse(
+                "Data Fetched Successfully",
+                $settings,
+                [
+                    'items_key' => 'settings',
+                    'append_to_data' => [
+                        'extras' => $extras,
+                    ],
+                ]
+            );
             
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "API Controller -> getSystemSettings");
@@ -8737,24 +8704,11 @@ public function storeRequestDevice(Request $request)
                 : $meta;
 
 
-            $shouldAssignDepartment = ManualPaymentRequest::isOrderPayableType($resolvedPayableType)
-                && $payableId !== null;
-
-            $department = null;
-
-            if ($shouldAssignDepartment) {
-                $orderDepartment = null;
-
-                if (is_numeric($payableId)) {
-                    $orderDepartment = Order::query()->whereKey((int) $payableId)->value('department');
-                }
-
-                $department = $this->normalizeDepartmentValue($orderDepartment);
-
-                if ($department === null && $existingManualPaymentRequest) {
-                    $department = $this->normalizeDepartmentValue($existingManualPaymentRequest->department);
-                }
-            }
+            $department = $this->resolveManualPaymentDepartment(
+                $resolvedPayableType,
+                $payableId,
+                $existingManualPaymentRequest
+            );
 
 
             $manualPaymentAttributes = [
@@ -8771,7 +8725,7 @@ public function storeRequestDevice(Request $request)
                 'status'         => ManualPaymentRequest::STATUS_PENDING,
                 'payable_type'   => $resolvedPayableType,
                 'payable_id'     => $payableId,
-                'department'     => $shouldAssignDepartment ? $department : null,
+                'department'     => $department,
                 'meta'           => empty($metaPayload) ? null : $metaPayload,
             ];
 
@@ -9452,6 +9406,38 @@ public function storeRequestDevice(Request $request)
 
         return null;
     }
+
+    private function resolveManualPaymentDepartment(
+        ?string $payableType,
+        mixed $payableId,
+        ?ManualPaymentRequest $existingManualPaymentRequest
+    ): ?string {
+        if (! ManualPaymentRequest::isOrderPayableType($payableType)) {
+            return null;
+        }
+
+        $orderId = is_numeric($payableId) ? (int) $payableId : null;
+
+        if ($orderId !== null) {
+            $department = Order::query()->whereKey($orderId)->value('department');
+            $normalized = $this->normalizeDepartmentValue($department);
+
+            if ($normalized !== null) {
+                return $normalized;
+            }
+        }
+
+        if ($existingManualPaymentRequest !== null) {
+            $normalized = $this->normalizeDepartmentValue($existingManualPaymentRequest->department);
+
+            if ($normalized !== null) {
+                return $normalized;
+            }
+        }
+
+        return null;
+    }
+
 
     private function normalizeDepartmentValue(mixed $department): ?string
     {

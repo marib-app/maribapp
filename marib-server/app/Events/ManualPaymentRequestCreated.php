@@ -20,20 +20,20 @@ class ManualPaymentRequestCreated
 
     public function department(): ?string
     {
-        $department = $this->manualPaymentRequest->department;
-        $department = $this->normalizeDepartment($this->manualPaymentRequest->department);
+        $storedDepartment = $this->normalizeDepartment($this->manualPaymentRequest->department);
 
-        if ($department !== null) {
-            return $department;
+
+        if ($storedDepartment !== null) {
+            return $storedDepartment;
         }
 
         $payable = $this->manualPaymentRequest->payable;
 
         if ($payable instanceof Order) {
-            $department = $this->normalizeDepartment($payable->department);
+            $relatedDepartment = $this->normalizeDepartment($payable->department);
 
-            if ($department !== null) {
-                return $department;
+            if ($relatedDepartment !== null) {
+                return $relatedDepartment;
             }
         }
 

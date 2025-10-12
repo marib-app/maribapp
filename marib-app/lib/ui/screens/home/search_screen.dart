@@ -889,12 +889,11 @@ class SearchScreenState extends State<SearchScreen>
 enum _DebounceScope { search, scroll }
 
 class _SearchDebounceCoordinator {
-  _SearchDebounceCoordinator(Duration duration)
-      : this._(duration, <_DebounceScope, Timer>{});
+  _SearchDebounceCoordinator(this.duration);
 
-  _SearchDebounceCoordinator._(this.duration, this._timers);
+
   final Duration duration;
-  final Map<_DebounceScope, Timer> _timers;
+  final Map<_DebounceScope, Timer> _timers = <_DebounceScope, Timer>{};
 
   void run(_DebounceScope scope, VoidCallback action) {
     _timers[scope]?.cancel();

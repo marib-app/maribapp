@@ -4,7 +4,6 @@ namespace App\Http;
 
 
 use App\Http\Middleware\DemoMiddleware;
-use App\Http\Middleware\CompressJsonResponse;
 use App\Http\Middleware\InitializeApiMetrics;
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
 use Spatie\Permission\Middleware\PermissionMiddleware;
@@ -53,7 +52,7 @@ class Kernel extends HttpKernel {
             'throttle:api',
             InitializeApiMetrics::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
-            CompressJsonResponse::class,
+            \App\Http\Middleware\CompressJsonResponse::class,
 
         ],
     ];

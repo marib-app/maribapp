@@ -67,7 +67,7 @@ class WifiCodeAssignmentService
                         'commission_amount' => $commissionAmount,
                         'net_amount' => $netAmount,
                     ]),
-                    static fn ($value) => $value !== null
+                    static fn ($value): bool => $value !== null
                 ),
             ])->save();
 
@@ -87,7 +87,7 @@ class WifiCodeAssignmentService
                             'gross_amount' => $grossAmount,
                             'commission_amount' => $commissionAmount,
                             'net_amount' => $netAmount,
-                        ], static fn ($value) => $value !== null),
+                        ], static fn ($value): bool => $value !== null),
                     ]
                 );
             }

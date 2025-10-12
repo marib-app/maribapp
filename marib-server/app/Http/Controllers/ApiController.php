@@ -71,6 +71,7 @@ use App\Services\SliderEligibilityService;
 use App\Models\ServiceReviewReport;
 use App\Policies\SectionDelegatePolicy;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Http\UploadedFile;
 
 use App\Models\CurrencyRate;
 use App\Models\Challenge;
@@ -1455,15 +1456,33 @@ class ApiController extends Controller {
             
         
             if ($request->hasFile('image')) {
-                $data['image'] = FileService::compressAndUpload($request->file('image'), $this->uploadFolder);
+                try {
+                    $data['image'] = FileService::compressAndUpload($request->file('image'), $this->uploadFolder);
+                } catch (Throwable $exception) {
+                    ResponseService::validationErrors([
+                        'image' => [__('Unable to process the uploaded image. Please try again with a different file.')],
+                    ]);
+                }
+            
+            
+            
             }
             $item = Item::create($data);
 
             if ($request->hasFile('gallery_images')) {
                 $galleryImages = [];
                 foreach ($request->file('gallery_images') as $file) {
+
+                    try {
+                        $imagePath = FileService::compressAndUpload($file, $this->uploadFolder);
+                    } catch (Throwable $exception) {
+                        ResponseService::validationErrors([
+                            'gallery_images' => [__('Unable to process one of the gallery images. Please verify the files and retry.')],
+                        ]);
+                    }
+
                     $galleryImages[] = [
-                        'image'      => FileService::compressAndUpload($file, $this->uploadFolder),
+                        'image'      => $imagePath,
                         'item_id'    => $item->id,
                         'created_at' => time(),
                         'updated_at' => time(),
@@ -1483,6 +1502,22 @@ class ApiController extends Controller {
                     : $request->custom_fields;
                     
                 foreach ($customFields as $key => $custom_field) {
+
+                    if ($custom_field instanceof UploadedFile) {
+                        ResponseService::validationErrors([
+                            "custom_fields.$key" => [__('Custom field values cannot contain files. Use custom_field_files instead.')],
+                        ]);
+                    }
+
+                    try {
+                        $encodedValue = json_encode($custom_field, JSON_THROW_ON_ERROR);
+                    } catch (JsonException $exception) {
+                        ResponseService::validationErrors([
+                            "custom_fields.$key" => [__('Unable to process the provided custom field value.')],
+                        ]);
+                    }
+
+
                     $itemCustomFieldValues[] = [
                         'item_id'         => $item->id,
                         'custom_field_id' => $key,
@@ -1500,6 +1535,21 @@ class ApiController extends Controller {
             if ($request->custom_field_files) {
                 $itemCustomFieldValues = [];
                 foreach ($request->custom_field_files as $key => $file) {
+
+                                        if (! $file instanceof UploadedFile) {
+                        ResponseService::validationErrors([
+                            "custom_field_files.$key" => [__('Each custom field file must be an uploaded file.')],
+                        ]);
+                    }
+
+                    try {
+                        $filePath = ! empty($file) ? FileService::upload($file, 'custom_fields_files') : '';
+                    } catch (Throwable $exception) {
+                        ResponseService::validationErrors([
+                            "custom_field_files.$key" => [__('Failed to store the uploaded custom field file. Please try again.')],
+                        ]);
+                    }
+                    
                     $itemCustomFieldValues[] = [
                         'item_id'         => $item->id,
                         'custom_field_id' => $key,

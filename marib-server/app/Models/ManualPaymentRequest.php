@@ -3,7 +3,7 @@
 namespace App\Models;
 
 
-
+use App\Events\ManualPaymentRequestCreated;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -22,6 +22,12 @@ class ManualPaymentRequest extends Model
     use HasFactory;
     use Concerns\NotifiesAdminOnApprovalStatus;
 
+    /**
+     * @var array<string, class-string>
+     */
+    protected $dispatchesEvents = [
+        'created' => ManualPaymentRequestCreated::class,
+    ];
 
     // حالات الطلب
     public const STATUS_PENDING = 'pending';

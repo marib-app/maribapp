@@ -3,11 +3,13 @@
 namespace App\Providers;
 
 use App\Events\CompetitionAnnounced;
+use App\Events\ManualPaymentRequestCreated;
 use App\Events\OrderStatusChanged;
 use App\Events\OrderNoteUpdated;
 use App\Listeners\HandleMarketingAutomation;
 use App\Listeners\RecordOrderStatusTelemetry;
 use App\Listeners\SendOrderStatusChangedNotification;
+use App\Listeners\DispatchManualPaymentRequestDelegateNotifications;
 use App\Events\SubscriptionExpired;
 use App\Listeners\SendDelegateAssignmentNotifications;
 use App\Listeners\SendOrderNoteNotification;

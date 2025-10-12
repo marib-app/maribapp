@@ -8317,7 +8317,36 @@ public function storeRequestDevice(Request $request)
         try {
             $perPage = $this->resolvePerPage($request, 15, 100);
 
+
+            $availableColumns = Schema::getColumnListing('manual_banks');
+
+            $columns = array_values(array_intersect($availableColumns, [
+                'id',
+                'name',
+                'logo_path',
+                'beneficiary_name',
+                'account_name',
+                'account_number',
+                'iban',
+                'swift',
+                'branch',
+                'note',
+                'notes',
+                'display_order',
+                'status',
+                'currency',
+                'qr_code_path',
+                'created_at',
+                'updated_at',
+            ]));
+
+            if (!in_array('id', $columns, true)) {
+                $columns[] = 'id';
+            }
+
+
             $banks = ManualBank::active()
+                ->select($columns)
                 ->orderBy('display_order')
                 ->orderBy('id')
                 ->paginate($perPage)

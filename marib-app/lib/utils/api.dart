@@ -1218,11 +1218,15 @@ class Api {
           final Map<String, dynamic>? meta = page.meta;
           final int? current = _manualBankAsInt(meta?['current_page']) ?? currentPage;
           final int? last = _manualBankAsInt(meta?['last_page']);
+          final bool? metaHasMore = _manualBankAsBool(meta?['has_more_pages']);
 
-          final bool hasMorePages =
-              last != null && current != null && current < last && loop < _manualBankMaxLoops - 1;
+          final bool canLoop = loop < _manualBankMaxLoops - 1;
+          final bool hasMorePages = metaHasMore != null
+              ? (metaHasMore && canLoop)
+              : (last != null && current != null && current < last && canLoop);
 
-          if (!hasMorePages) {
+          if (!hasMorePages || current == null) {
+
             break;
           }
 
@@ -1386,6 +1390,37 @@ class Api {
     return null;
   }
 
+  static bool? _manualBankAsBool(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+
+    if (value is bool) {
+      return value;
+    }
+
+    if (value is num) {
+      return value != 0;
+    }
+
+    if (value is String) {
+      final normalized = value.trim().toLowerCase();
+
+      if (normalized.isEmpty) {
+        return null;
+      }
+
+      if (<String>{'1', 'true', 'yes', 'on'}.contains(normalized)) {
+        return true;
+      }
+
+      if (<String>{'0', 'false', 'no', 'off'}.contains(normalized)) {
+        return false;
+      }
+    }
+
+    return null;
+  }
 
   // إرسال إثبات تحويل (رفع إيصال) للدفع اليدوي
   // - الراوت في لاراڤيل: POST /api/payments/manual (محمي بمصادقة Sanctum)

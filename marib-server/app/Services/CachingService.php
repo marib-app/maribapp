@@ -15,11 +15,8 @@ class CachingService {
      * @return mixed
      */
     public static function cacheRemember($key, callable $callback, int $time = 3600) {
-        $store = config('cache.default', 'file');
+        $store = self::resolveCacheStore();
 
-        if ($store !== 'redis' && config('cache.stores.redis')) {
-            $store = 'redis';
-        }
 
         return Cache::store($store)->remember($key, now()->addSeconds($time), $callback);
     }
@@ -29,8 +26,12 @@ class CachingService {
 
         $keys[] = config('constants.CACHE.SETTINGS');
 
+        $cacheStore = Cache::store(self::resolveCacheStore());
+
+
+
         foreach (array_unique($keys) as $cacheKey) {
-            Cache::forget($cacheKey);
+            $cacheStore->forget($cacheKey);
         }
     
     }
@@ -80,4 +81,46 @@ class CachingService {
     public static function getDefaultLanguage() {
         return Language::where('code', 'ar')->first();
     }
+
+
+
+    private static function resolveCacheStore(): string {
+        $stores = config('cache.stores', []);
+        $defaultStore = config('cache.default', 'file');
+
+        if (!array_key_exists($defaultStore, $stores)) {
+            $defaultStore = 'file';
+        }
+
+        if ($defaultStore === 'redis') {
+            return self::redisIsAvailable() ? 'redis' : 'file';
+        }
+
+        if (self::redisIsAvailable()) {
+            return 'redis';
+        }
+
+        return $defaultStore;
+    }
+
+    private static function redisIsAvailable(): bool {
+        $stores = config('cache.stores', []);
+
+        if (!array_key_exists('redis', $stores)) {
+            return false;
+        }
+
+        if (($stores['redis']['driver'] ?? null) !== 'redis') {
+            return false;
+        }
+
+        $client = config('database.redis.client', 'phpredis');
+
+        return match ($client) {
+            'phpredis' => class_exists(\Redis::class),
+            'predis' => class_exists(\Predis\Client::class),
+            default => false,
+        };
+    }
+
 }

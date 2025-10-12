@@ -1,21 +1,43 @@
-import 'package:marib/data/model/currency_rate.dart';
+import 'package:marib/data/model/currency_rates_bundle.dart';
 import 'package:marib/utils/api.dart';
 
 class CurrencyRepository {
-  
-  Future<List<CurrencyRate>> getCurrencyRates() async {
+
+  Future<CurrencyRatesBundle> getCurrencyRates({String? governorateCode}) async {
+
     try {
-      Map<String, dynamic> result = await Api.get(url: Api.getCurrencyRatesApi);
-      
-      if (result['error'] == false && result['data'] != null) {
-        final List<dynamic> currencyData = result['data'];
-        return currencyData.map((json) => CurrencyRate.fromJson(json)).toList();
+      final Map<String, dynamic> result = await Api.get(
+        url: Api.getCurrencyRatesApi,
+        queryParameters: governorateCode != null
+            ? {'governorate_code': governorateCode}
+            : null,
+      );
+
+      if (result['error'] == false && result['data'] is List<dynamic>) {
+        return CurrencyRatesBundle.fromApi(
+          result['data'] as List<dynamic>,
+          result,
+        );
       }
-      
-      return [];
+
+      return CurrencyRatesBundle(
+        rates: const [],
+        governorates: const [],
+        requestedGovernorate: null,
+        appliedGovernorate: null,
+        usedFallback: false,
+        requestedGovernorateCode: governorateCode,
+      );
     } catch (e) {
       print('Error fetching currency rates: $e');
-      return [];
+      return CurrencyRatesBundle(
+        rates: const [],
+        governorates: const [],
+        requestedGovernorate: null,
+        appliedGovernorate: null,
+        usedFallback: false,
+        requestedGovernorateCode: governorateCode,
+      );
     }
   }
 }

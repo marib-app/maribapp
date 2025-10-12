@@ -1,26 +1,81 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/model/currency_rate.dart';
 import 'package:marib/data/repositories/currency_repository.dart';
+import 'package:marib/data/model/currency_rates_bundle.dart';
+import 'package:marib/data/model/governorate.dart';
+import 'package:marib/data/repositories/preferences/governorate_preference_repository.dart';
 
 part 'currency_state.dart';
 
 class CurrencyCubit extends Cubit<CurrencyState> {
   final CurrencyRepository _currencyRepository;
+  final GovernoratePreferenceRepository _preferenceRepository;
+  String? _cachedGovernorateCode;
+  CurrencyCubit(
+      this._currencyRepository,
+      this._preferenceRepository,
+      ) : super(CurrencyInitial());
 
-  CurrencyCubit(this._currencyRepository) : super(CurrencyInitial());
+  Future<void> initialize() async {
+    final saved = await _preferenceRepository.loadPreferredGovernorate();
+    _cachedGovernorateCode = saved;
+    await getCurrencyRates(governorateCode: saved);
+  }
 
-  Future<void> getCurrencyRates() async {
+  Future<void> getCurrencyRates({String? governorateCode, bool persistSelection = false}) async {
+    final requestedCode = governorateCode ?? _cachedGovernorateCode;
+
+
     emit(CurrencyLoading());
     try {
-      final currencyRates = await _currencyRepository.getCurrencyRates();
-      if (currencyRates.isEmpty) {
+      final CurrencyRatesBundle bundle = await _currencyRepository.getCurrencyRates(
+        governorateCode: requestedCode,
+      );
+
+      if (bundle.rates.isEmpty) {
+        if (persistSelection) {
+          await _preferenceRepository.clearPreferredGovernorate();
+        }
         emit(CurrencyError("لا توجد بيانات متاحة"));
-      } else {
-        emit(CurrencySuccess(currencyRates));
+        return;
       }
+
+      final resolvedCode = requestedCode ??
+          bundle.requestedGovernorateCode ??
+          bundle.appliedGovernorate?.code ??
+          bundle.requestedGovernorate?.code;
+
+      if (persistSelection) {
+        if (resolvedCode != null && resolvedCode.isNotEmpty) {
+          await _preferenceRepository.savePreferredGovernorate(resolvedCode);
+        } else {
+          await _preferenceRepository.clearPreferredGovernorate();
+        }
+      }
+
+      _cachedGovernorateCode = resolvedCode;
+
+      emit(CurrencySuccess(
+        currencyRates: bundle.rates,
+        governorates: bundle.governorates,
+        requestedGovernorate: bundle.requestedGovernorate,
+        appliedGovernorate: bundle.appliedGovernorate,
+        usedFallback: bundle.usedFallback,
+        requestedGovernorateCode: bundle.requestedGovernorateCode ?? requestedCode,
+      ));
     } catch (e) {
       emit(CurrencyError(e.toString()));
     }
+  }
+
+  Future<void> changeGovernorate(String? governorateCode) async {
+    final trimmed = governorateCode != null && governorateCode.isNotEmpty
+        ? governorateCode
+        : null;
+    await getCurrencyRates(
+      governorateCode: trimmed,
+      persistSelection: true,
+    );
   }
 
   // Calculate conversion based on amount and selected currencies

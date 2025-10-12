@@ -24,6 +24,7 @@ import 'package:marib/data/repositories/currency_repository.dart';
 
 // 👇 واجهة العرض (UI-Only)
 import 'currency_screen_ui.dart' show CurrencyScreenUI;
+import 'package:marib/data/repositories/preferences/governorate_preference_repository.dart';
 
 /// حالة صفحة العملات
 enum CurrencyPageStatus { loading, error, ready }
@@ -36,6 +37,14 @@ class CurrencyViewState {
   // بيانات الأسعار (ديناميكية لتفادي خطأ النوع)
   final List<dynamic> rates;
   final DateTime? lastUpdatedAt;
+
+  final List<Map<String, String?>> governorates;
+  final String? selectedGovernorateCode;
+  final String? appliedGovernorateCode;
+  final String? appliedGovernorateName;
+  final String? requestedGovernorateCode;
+  final String? requestedGovernorateName;
+  final bool usedFallback;
 
   // حالة الحاسبة
   final String amountText;
@@ -54,6 +63,18 @@ class CurrencyViewState {
     required this.toCurrency,
     required this.convertedAmount,
     required this.hasCalculated,
+
+
+
+
+    required this.governorates,
+    required this.selectedGovernorateCode,
+    required this.appliedGovernorateCode,
+    required this.appliedGovernorateName,
+    required this.requestedGovernorateCode,
+    required this.requestedGovernorateName,
+    required this.usedFallback,
+
   });
 
   CurrencyViewState copyWith({
@@ -77,6 +98,18 @@ class CurrencyViewState {
       toCurrency: toCurrency ?? this.toCurrency,
       convertedAmount: convertedAmount ?? this.convertedAmount,
       hasCalculated: hasCalculated ?? this.hasCalculated,
+      governorates: governorates ?? this.governorates,
+      selectedGovernorateCode:
+      selectedGovernorateCode ?? this.selectedGovernorateCode,
+      appliedGovernorateCode:
+      appliedGovernorateCode ?? this.appliedGovernorateCode,
+      appliedGovernorateName:
+      appliedGovernorateName ?? this.appliedGovernorateName,
+      requestedGovernorateCode:
+      requestedGovernorateCode ?? this.requestedGovernorateCode,
+      requestedGovernorateName:
+      requestedGovernorateName ?? this.requestedGovernorateName,
+      usedFallback: usedFallback ?? this.usedFallback,
     );
   }
 }
@@ -96,7 +129,11 @@ class CurrencyScreen extends StatelessWidget {
         statusBarColor: context.color.secondaryColor,
       ),
       child: BlocProvider(
-        create: (_) => CurrencyCubit(CurrencyRepository())..getCurrencyRates(),
+        create: (_) => CurrencyCubit(
+          CurrencyRepository(),
+          GovernoratePreferenceRepository(),
+        )..initialize(),
+
         child: const _CurrencyScreenLogic(),
       ),
     );
@@ -185,12 +222,13 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
     });
   }
 
-  void _onShareRates(List<dynamic> rates) {
+  void _onShareRates(CurrencyViewState viewState) {
+    final rates = viewState.rates;
     if (rates.isEmpty) return;
 
     String _name(d) => (d as dynamic).currencyName?.toString() ?? '';
     String _sell(d) => (d as dynamic).sellPrice?.toString() ?? '';
-    String _buy(d)  => (d as dynamic).buyPrice?.toString() ?? '';
+    String _buy(d) => (d as dynamic).buyPrice?.toString() ?? '';
     DateTime? _stamp(d) => (d as dynamic).lastUpdatedAt is DateTime
         ? (d as dynamic).lastUpdatedAt as DateTime
         : null;
@@ -200,12 +238,22 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
         .map((r) => "💱 ${_name(r)}\nبيع: ${_sell(r)}\nشراء: ${_buy(r)}\n")
         .join("\n");
 
-    final stamp = last != null ? DateFormat('yyyy-MM-dd HH:mm').format(last) : 'غير متاح';
+    final stamp = last != null
+        ? DateFormat('yyyy-MM-dd HH:mm').format(last)
+        : 'غير متاح';
+
+    final applied = viewState.appliedGovernorateName ?? 'المتوسط الافتراضي';
+    final requested = viewState.requestedGovernorateName;
+    final locationLine = (requested != null && requested != applied)
+        ? 'المحافظة: $applied (بديل عن $requested)'
+        : 'المحافظة: $applied';
 
     final text = """
-💰 مارب بين يديك - أسعار العملات 💰
+💰 أسعار العملات - $applied 💰
+
 
 $ratesText
+📍 $locationLine
 
 📅 تم التحديث: $stamp
 
@@ -239,6 +287,16 @@ $ratesText
     }
   }
 
+
+
+
+
+
+
+  void _onGovernorateChanged(String? code) {
+    context.read<CurrencyCubit>().changeGovernorate(code);
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<CurrencyCubit, CurrencyState>(
@@ -255,6 +313,13 @@ $ratesText
             toCurrency: _toCurrency,
             convertedAmount: _convertedAmount,
             hasCalculated: _hasCalculated,
+            governorates: const [],
+            selectedGovernorateCode: null,
+            appliedGovernorateCode: null,
+            appliedGovernorateName: null,
+            requestedGovernorateCode: null,
+            requestedGovernorateName: null,
+            usedFallback: false,
           );
         } else if (state is CurrencyError) {
           viewState = CurrencyViewState(
@@ -267,10 +332,17 @@ $ratesText
             toCurrency: _toCurrency,
             convertedAmount: _convertedAmount,
             hasCalculated: _hasCalculated,
+            governorates: const [],
+            selectedGovernorateCode: null,
+            appliedGovernorateCode: null,
+            appliedGovernorateName: null,
+            requestedGovernorateCode: null,
+            requestedGovernorateName: null,
+            usedFallback: false,
           );
         } else if (state is CurrencySuccess) {
-          final rates = state.currencyRates; // ديناميكية كفاية
-          // تهيئة الافتراضيات مرة واحدة
+          final rates = state.currencyRates;
+
           _ensureInitialSelection(rates);
 
           // محاولة أخذ آخر تحديث من أول عنصر
@@ -282,10 +354,50 @@ $ratesText
             }
           }
 
+          final governorateOptions = state.governorates
+              .map((gov) => {
+            'code': gov.code,
+            'name': gov.name,
+          })
+              .toList();
+
+          String? requestedCode =
+              state.requestedGovernorateCode ?? state.requestedGovernorate?.code;
+          String? requestedName = state.requestedGovernorate?.name;
+          if (requestedName == null && requestedCode != null) {
+            try {
+              requestedName = state.governorates
+                  .firstWhere((gov) => gov.code == requestedCode)
+                  .name;
+            } catch (_) {}
+          }
+
+          String? appliedCode = state.appliedGovernorate?.code ?? requestedCode;
+          String? appliedName = state.appliedGovernorate?.name;
+          if (appliedName == null && appliedCode != null) {
+            try {
+              appliedName = state.governorates
+                  .firstWhere((gov) => gov.code == appliedCode)
+                  .name;
+            } catch (_) {}
+          }
+
+          final selectedCode = requestedCode ?? appliedCode;
+
+
           viewState = CurrencyViewState(
             status: CurrencyPageStatus.ready,
             rates: rates,
             lastUpdatedAt: updatedAt,
+            governorates: governorateOptions,
+            selectedGovernorateCode: selectedCode,
+            appliedGovernorateCode: appliedCode,
+            appliedGovernorateName: appliedName,
+            requestedGovernorateCode: requestedCode,
+            requestedGovernorateName: requestedName,
+            usedFallback: state.usedFallback,
+
+
             amountText: _amountController.text,
             fromCurrency: _fromCurrency,
             toCurrency: _toCurrency,
@@ -298,6 +410,13 @@ $ratesText
             errorMessage: 'حدث خطأ ما',
             rates: const [],
             lastUpdatedAt: null,
+            governorates: const [],
+            selectedGovernorateCode: null,
+            appliedGovernorateCode: null,
+            appliedGovernorateName: null,
+            requestedGovernorateCode: null,
+            requestedGovernorateName: null,
+            usedFallback: false,
             amountText: _amountController.text,
             fromCurrency: _fromCurrency,
             toCurrency: _toCurrency,
@@ -315,8 +434,8 @@ $ratesText
           onAmountChanged: _onAmountChanged,
           onReset: _onReset,
           onConvert: () => _onConvert(context.read<CurrencyCubit>()),
-          onShareRates: () => _onShareRates(viewState.rates),
-
+          onShareRates: () => _onShareRates(viewState),
+          onGovernorateChanged: _onGovernorateChanged,
           // 🔧 لا تستخدم const هنا
           amountInputFormatters: [
             FilteringTextInputFormatter.digitsOnly,

@@ -39,6 +39,7 @@ class CurrencyScreenUI extends StatelessWidget {
     required this.onAmountChanged,
     required this.onReset,
     required this.onConvert,
+    required this.onGovernorateChanged,
     required this.onShareRates,
     required this.amountInputFormatters,
     required this.systemUiOverlayStyle,
@@ -55,6 +56,7 @@ class CurrencyScreenUI extends StatelessWidget {
   final VoidCallback onReset;
   final VoidCallback onConvert;
   final VoidCallback onShareRates;
+  final void Function(String?) onGovernorateChanged;
 
   final List<TextInputFormatter> amountInputFormatters;
   final SystemUiOverlayStyle systemUiOverlayStyle;
@@ -79,6 +81,8 @@ class CurrencyScreenUI extends StatelessWidget {
         body: Column(
           children: [
             const SizedBox(height: 8),
+            _buildGovernorateSelector(context, brand, bg, onBg),
+            const SizedBox(height: 8),
             _buildSegmentedTabs(context, brand, bg, onBg),
             const SizedBox(height: 4),
             Expanded(child: _buildBody(context, brand, onBg)),
@@ -87,6 +91,125 @@ class CurrencyScreenUI extends StatelessWidget {
       ),
     );
   }
+
+
+
+
+  Widget _buildGovernorateSelector(
+      BuildContext context, Color brand, Color bg, Color onBg) {
+    final theme = Theme.of(context);
+    final border = _isDark(context) ? Colors.white12 : Colors.black12;
+    const defaultValue = '_default_';
+
+    final items = <DropdownMenuItem<String>>[
+      const DropdownMenuItem<String>(
+        value: defaultValue,
+        child: Text(
+          'المتوسط الافتراضي الوطني',
+          textDirection: TextDirection.rtl,
+        ),
+      ),
+    ];
+
+    for (final gov in state.governorates) {
+      final code = (gov['code'] ?? '').toString();
+      if (code.isEmpty) continue;
+      final rawName = gov['name'];
+      final name = (rawName is String && rawName.isNotEmpty) ? rawName : code;
+      items.add(
+        DropdownMenuItem<String>(
+          value: code,
+          child: Text(
+            name,
+            textDirection: TextDirection.rtl,
+          ),
+        ),
+      );
+    }
+
+    final selected = state.selectedGovernorateCode;
+    final dropdownValue =
+    (selected == null || selected.isEmpty) ? defaultValue : selected;
+    final enabled =
+        state.status == CurrencyPageStatus.ready && items.length > 1;
+
+    final appliedName = state.appliedGovernorateName ??
+        (dropdownValue == defaultValue ? 'المتوسط الافتراضي' : null);
+    final requestedName = state.requestedGovernorateName;
+    final showFallback = state.status == CurrencyPageStatus.ready &&
+        state.usedFallback &&
+        requestedName != null &&
+        appliedName != null &&
+        requestedName != appliedName;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'اختر المحافظة لعرض الأسعار',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: onBg,
+            ),
+            textDirection: TextDirection.rtl,
+          ),
+          const SizedBox(height: 6),
+          DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: dropdownValue,
+              isExpanded: true,
+              iconEnabledColor: brand,
+              style: theme.textTheme.bodyLarge?.copyWith(color: onBg),
+              onChanged: enabled
+                  ? (value) {
+                if (value == defaultValue) {
+                  onGovernorateChanged(null);
+                } else {
+                  onGovernorateChanged(value);
+                }
+              }
+                  : null,
+              items: items,
+            ),
+          ),
+          if (appliedName != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'الأسعار المعروضة: $appliedName',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: onBg.withOpacity(0.75),
+                  fontWeight: FontWeight.w600,
+                ),
+                textDirection: TextDirection.rtl,
+              ),
+            ),
+          if (showFallback)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'لم تتوفر بيانات لمحافظة $requestedName، تم استخدام أسعار $appliedName كبديل.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: brand,
+                  fontWeight: FontWeight.w600,
+                ),
+                textDirection: TextDirection.rtl,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+
 
   // ——— تبويبات موحدة الخط ———
   Widget _buildSegmentedTabs(
@@ -332,6 +455,31 @@ class RatesTabView extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
+          const SizedBox(height: 6),
+          Text(
+            'الأسعار المعروضة: '
+                '${state.appliedGovernorateName ?? 'المتوسط الافتراضي'}',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: onBg.withOpacity(0.75),
+              fontWeight: FontWeight.w600,
+            ),
+            textDirection: TextDirection.rtl,
+          ),
+          if (state.usedFallback &&
+              state.requestedGovernorateName != null &&
+              state.appliedGovernorateName != null &&
+              state.requestedGovernorateName != state.appliedGovernorateName)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'تم استخدام أسعار ${state.appliedGovernorateName} بدلًا من ${state.requestedGovernorateName}.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: brand,
+                  fontWeight: FontWeight.w600,
+                ),
+                textDirection: TextDirection.rtl,
+              ),
+            ),
         ],
       ),
     );

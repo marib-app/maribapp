@@ -5,6 +5,15 @@ class CurrencyRate {
   final DateTime? lastUpdatedAt;
   final String? iconUrl;
   final String? iconAlt;
+  final String? quoteGovernorateCode;
+  final String? quoteGovernorateName;
+  final String? quoteSource;
+  final DateTime? quoteQuotedAt;
+  final bool quoteIsDefault;
+  final bool quoteUsedFallback;
+
+
+
   CurrencyRate({
     required this.currencyName,
     required this.sellPrice,
@@ -12,6 +21,20 @@ class CurrencyRate {
     this.lastUpdatedAt,
     this.iconUrl,
     this.iconAlt,
+    this.quoteGovernorateCode,
+    this.quoteGovernorateName,
+    this.quoteSource,
+    this.quoteQuotedAt,
+    this.quoteIsDefault = false,
+    this.quoteUsedFallback = false,
+
+
+
+
+
+
+
+
   });
 
   factory CurrencyRate.fromJson(Map<String, dynamic> json) {
@@ -34,6 +57,15 @@ class CurrencyRate {
           : null,
       iconUrl: json['icon_url'] as String?,
       iconAlt: json['icon_alt'] as String?,
+      quoteGovernorateCode: json['quote_governorate_code'] as String?,
+      quoteGovernorateName: json['quote_governorate_name'] as String?,
+      quoteSource: json['quote_source'] as String?,
+      quoteQuotedAt: json['quote_quoted_at'] != null
+          ? DateTime.tryParse(json['quote_quoted_at'].toString())
+          : null,
+      quoteIsDefault: json['quote_is_default'] == true,
+      quoteUsedFallback: json['quote_used_fallback'] == true,
+
 
     );
   }

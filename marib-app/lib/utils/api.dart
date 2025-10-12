@@ -666,10 +666,21 @@ class Api {
       };
       _ensureSliderSessionHeaders(mergedHeaders);
 
+
+
+
+      // Let Dio infer the appropriate multipart boundary when no explicit
+      // content type is provided. Forcing "multipart/form-data" without a
+      // boundary prevents the backend from receiving uploaded files.
+      final Object? resolvedContentType = options?.contentType;
+
+
+
+
       final Options requestOptions = _buildRequestOptions(
         base: options,
         headers: mergedHeaders,
-        contentType: options?.contentType ?? "multipart/form-data",
+        contentType: resolvedContentType,
         followRedirects: false,
       );
 

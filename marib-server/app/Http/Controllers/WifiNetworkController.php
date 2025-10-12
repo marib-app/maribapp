@@ -16,7 +16,9 @@ use Illuminate\Validation\Rule;
 
 class WifiNetworkController extends Controller
 {
-    public function index(Request $request): JsonResponse
+     private ?bool $wifiNetworkHasSlugColumn = null;
+
+     public function index(Request $request): JsonResponse
     {
 
         $ownerOnly = $request->boolean('owner_only', ! $request->boolean('public'));
@@ -36,13 +38,17 @@ class WifiNetworkController extends Controller
             $query->where('is_active', $request->boolean('is_active'));
         }
 
-        if ($request->filled('q')) {
+         $supportsSlug = $this->hasWifiNetworkSlugColumn();
+
+         if ($request->filled('q')) {
             $search = trim((string) $request->input('q'));
             if ($search !== '') {
-                $query->where(static function ($builder) use ($search) {
-                    $builder
-                        ->where('name', 'like', "%{$search}%")
-                        ->orWhere('slug', 'like', "%{$search}%");
+                $query->where(static function ($builder) use ($search, $supportsSlug) {
+                    $builder->where('name', 'like', "%{$search}%");
+
+                    if ($supportsSlug) {
+                        $builder->orWhere('slug', 'like', "%{$search}%");
+                    }
                 });
             }
         }
@@ -58,7 +64,7 @@ class WifiNetworkController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:wifi_networks,slug',
+            'slug' => $this->slugValidationRules(),
             'description' => 'nullable|string',
             'location_name' => 'nullable|string|max:255',
             'latitude' => 'nullable|numeric|between:-90,90',
@@ -92,7 +98,10 @@ class WifiNetworkController extends Controller
             'meta',
         ]);
 
-        $networkData['slug'] = $this->prepareSlug($validated['slug'] ?? null, $validated['name']);
+        if ($this->hasWifiNetworkSlugColumn()) {
+            $networkData['slug'] = $this->prepareSlug($validated['slug'] ?? null, $validated['name']);
+        }
+        
         $networkData['contacts'] = $this->normalizeContacts($request->input('contacts'));
         $networkData['user_id'] = $user?->getKey();
         $networkData['wallet_id'] = $walletAccount?->getKey();
@@ -126,13 +135,8 @@ class WifiNetworkController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
 
-            'slug' => [
-                'sometimes',
-                'nullable',
-                'string',
-                'max:255',
-                Rule::unique('wifi_networks', 'slug')->ignore($network->getKey()),
-            ],
+            'slug' => $this->slugValidationRules($network, true),
+
 
             'description' => 'nullable|string',
             'location_name' => 'nullable|string|max:255',
@@ -173,7 +177,8 @@ class WifiNetworkController extends Controller
             $updateData['coverage_radius_km'] = $this->normalizeCoverageRadius($updateData['coverage_radius_km']);
         }
 
-        if (array_key_exists('slug', $validated)) {
+        if ($this->hasWifiNetworkSlugColumn() && array_key_exists('slug', $validated)) {
+
             $nameForSlug = $validated['name'] ?? $network->name;
             $updateData['slug'] = $this->prepareSlug($validated['slug'], $nameForSlug, $network->getKey());
         }
@@ -212,7 +217,7 @@ class WifiNetworkController extends Controller
 
             'limit' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
-
+        $supportsSlug = $this->hasWifiNetworkSlugColumn();
         $queryText = trim((string) ($validated['q'] ?? ''));
         $limit = (int) ($validated['limit'] ?? 50);
 
@@ -250,23 +255,25 @@ class WifiNetworkController extends Controller
             ->orderBy('id');
 
         if ($queryText !== '') {
-            $networksQuery->where(static function ($builder) use ($queryText) {
-                $builder
-                    ->where('name', 'like', "%{$queryText}%")
-                    ->orWhere('slug', 'like', "%{$queryText}%");
+            $networksQuery->where(static function ($builder) use ($queryText, $supportsSlug) {
+                $builder->where('name', 'like', "%{$queryText}%");
+
+                if ($supportsSlug) {
+                    $builder->orWhere('slug', 'like', "%{$queryText}%");
+                }
             });
         }
 
         $networks = $networksQuery->limit($limit)->get();
 
-        $data = $networks->map(function (WifiNetwork $network) {
+        $data = $networks->map(function (WifiNetwork $network) use ($supportsSlug) {
 
-            $base = Arr::only($network->toArray(), [
+            $attributes = [
+
 
  
                 'id',
                 'name',
-                'slug',
                 'location_name',
                 'description',
                 'coverage_radius_km',
@@ -275,7 +282,13 @@ class WifiNetworkController extends Controller
                 'contacts',
                 'notes',
                 'meta',
-            ]);
+            ];
+
+            if ($supportsSlug) {
+                $attributes[] = 'slug';
+            }
+
+            $base = Arr::only($network->toArray(), $attributes);
 
             $base['plan_count'] = $network->plans->count();
             $base['plans'] = $network->plans
@@ -332,8 +345,45 @@ class WifiNetworkController extends Controller
 
 
 
+    private function slugValidationRules(?WifiNetwork $network = null, bool $includeSometimes = false): array
+    {
+        $rules = $includeSometimes ? ['sometimes'] : [];
+
+        $rules[] = 'nullable';
+        $rules[] = 'string';
+        $rules[] = 'max:255';
+
+        if ($this->hasWifiNetworkSlugColumn()) {
+            $uniqueRule = Rule::unique('wifi_networks', 'slug');
+
+            if ($network) {
+                $uniqueRule->ignore($network->getKey());
+            }
+
+            $rules[] = $uniqueRule;
+        }
+
+        return $rules;
+    }
+
+    private function hasWifiNetworkSlugColumn(): bool
+    {
+        if ($this->wifiNetworkHasSlugColumn === null) {
+            $this->wifiNetworkHasSlugColumn = Schema::hasColumn('wifi_networks', 'slug');
+        }
+
+        return $this->wifiNetworkHasSlugColumn;
+    }
+
+
     private function prepareSlug(?string $slug, string $name, ?int $ignoreId = null): string
     {
+
+        if (! $this->hasWifiNetworkSlugColumn()) {
+            return Str::slug($slug ?: $name) ?: Str::slug(Str::random(8));
+        }
+
+
         $base = Str::slug($slug ?: $name);
 
         if ($base === '') {
@@ -354,6 +404,11 @@ class WifiNetworkController extends Controller
 
     private function slugExists(string $slug, ?int $ignoreId = null): bool
     {
+
+        if (! $this->hasWifiNetworkSlugColumn()) {
+            return false;
+        }
+
         $query = WifiNetwork::query()->where('slug', $slug);
 
         if ($ignoreId !== null) {

@@ -683,8 +683,8 @@ class Api {
 
 
 
-      final bool parameterIsFormData = parameter is FormData;
-
+      final bool requestBodyIsMultipart =
+          parameter is FormData || formData.files.isNotEmpty;
       final bool hasExplicitContentTypeHeader = mergedHeaders.keys.any(
             (key) => key.toLowerCase() == HttpHeaders.contentTypeHeader,
       );
@@ -716,7 +716,7 @@ class Api {
         !(isJsonDefault || isFormUrlEncoded || isMultipart);
       }
 
-      final bool shouldNullifyContentType = parameterIsFormData &&
+      final bool shouldNullifyContentType = requestBodyIsMultipart &&
           !hasExplicitContentTypeHeader &&
           !hasCustomContentTypeOption;
 

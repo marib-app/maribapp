@@ -6,19 +6,18 @@ use App\Events\CompetitionAnnounced;
 use App\Events\ManualPaymentRequestCreated;
 use App\Events\OrderStatusChanged;
 use App\Events\OrderNoteUpdated;
-use App\Listeners\HandleMarketingAutomation;
+use App\Events\SubscriptionExpired;
+use App\Events\UserWentInactive;
+use App\Listeners\DispatchDelegateBadgeUpdate;
+use App\Listeners\DispatchManualPaymentRequestDelegateNotifications;use App\Listeners\HandleMarketingAutomation;
 use App\Listeners\RecordOrderStatusTelemetry;
 use App\Listeners\SendOrderStatusChangedNotification;
-use App\Listeners\DispatchManualPaymentRequestDelegateNotifications;
-use App\Events\SubscriptionExpired;
 use App\Listeners\SendDelegateAssignmentNotifications;
 use App\Listeners\SendOrderNoteNotification;
-use App\Events\UserWentInactive;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use App\Events\DelegateAssignmentsUpdated;
-use App\Listeners\DispatchDelegateBadgeUpdate;
 
 class EventServiceProvider extends ServiceProvider
 {
@@ -52,7 +51,11 @@ class EventServiceProvider extends ServiceProvider
         OrderNoteUpdated::class => [
             SendOrderNoteNotification::class,
         ],
-         DelegateAssignmentsUpdated::class => [
+        ManualPaymentRequestCreated::class => [
+            DispatchManualPaymentRequestDelegateNotifications::class,
+        ],
+        DelegateAssignmentsUpdated::class => [
+            
             SendDelegateAssignmentNotifications::class,
             DispatchDelegateBadgeUpdate::class,
         ],

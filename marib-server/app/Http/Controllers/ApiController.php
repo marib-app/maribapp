@@ -1583,6 +1583,7 @@ class ApiController extends Controller {
                         ]);
                     }
                     if (! $file instanceof UploadedFile) {
+                        
                         ResponseService::validationErrors([
                             "custom_field_files.$key" => [__('Each custom field file must be an uploaded file.')],
                         ]);
@@ -1595,6 +1596,13 @@ class ApiController extends Controller {
                             "custom_field_files.$key" => [__('Failed to store the uploaded custom field file. Please try again.')],
                         ]);
                     }
+
+
+
+                    $timestamp = now();
+
+                    $itemCustomFieldValues[] = [
+
                     
                         'custom_field_id' => $customFieldId,
                         'value'           => $encodedValue,

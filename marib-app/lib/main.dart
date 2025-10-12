@@ -17,7 +17,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:marib/data/cubits/system/language_cubit.dart';
 import 'dart:async';
 import 'package:marib/ui/screens/chat/chat_badge_controller.dart';
-
+import 'package:marib/utils/performance/performance_route_observer.dart';
 
 
 /////////////
@@ -95,6 +95,7 @@ class _AppState extends State<App> {
           // App will start from here splash screen is first screen,
           navigatorKey: Constant.navigatorKey,
           //This navigator key is used for Navigate users through notification
+          navigatorObservers: [PerformanceRouteObserver()],
           title: Constant.appName,
           debugShowCheckedModeBanner: false,
           onGenerateRoute: Routes.onGenerateRouted,

@@ -119,11 +119,6 @@ class WifiNetworkController extends Controller
             $networkData['login_screenshot_path'] = $this->storeUploadedFile($request->file('login_screenshot'), 'wifi/login-screens');
         }
 
-        $networkData = array_merge(
-            Arr::only($validated, array_unique(array_merge($fillable, ['contacts']))),
-            $networkData
-        );
-
         $networkData = Arr::only($networkData, (new WifiNetwork())->getFillable());
         $network = WifiNetwork::create($networkData);
         return response()->json(['data' => $network->fresh()], 201);

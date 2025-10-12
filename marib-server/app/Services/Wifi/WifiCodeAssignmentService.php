@@ -58,23 +58,24 @@ class WifiCodeAssignmentService
             $commissionAmount = min($commissionAmount, $grossAmount);
             $netAmount = round($grossAmount - $commissionAmount, 2);
 
+            $codeMeta = array_merge($code->meta ?? [], [
+                'payment_transaction_id' => $transaction->getKey(),
+                'gross_amount' => $grossAmount,
+                'commission_amount' => $commissionAmount,
+                'net_amount' => $netAmount,
+            ]);
+
+
             $code->forceFill([
                 'status' => WifiCode::STATUS_ALLOCATED,
                 'allocated_to_user_id' => $buyer->getKey(),
                 'allocated_at' => now(),
-                'meta' => array_filter(
-                    array_merge($code->meta ?? [], [
-                        'payment_transaction_id' => $transaction->getKey(),
-                        'gross_amount' => $grossAmount,
-                        'commission_amount' => $commissionAmount,
-                        'net_amount' => $netAmount,
-                    ]),
-                    static fn (mixed $value): bool => $value !== null
-                ),
+                'meta' => array_filter($codeMeta, static fn ($value) => $value !== null),
+
             ])->save();
 
             if ($netAmount > 0) {
-                $walletTransactionMeta = array_filter([
+                $walletTransactionMeta = [
                     'source' => 'wifi_plan_purchase',
                     'wifi_plan_id' => $plan->getKey(),
                     'wifi_network_id' => $network->getKey(),
@@ -82,7 +83,9 @@ class WifiCodeAssignmentService
                     'gross_amount' => $grossAmount,
                     'commission_amount' => $commissionAmount,
                     'net_amount' => $netAmount,
-                ], static fn (mixed $value): bool => $value !== null);
+                ];
+
+                $walletTransactionMeta = array_filter($walletTransactionMeta, static fn ($value) => $value !== null);
 
                 $walletCreditPayload = array_filter([
                     'currency' => $plan->currency,

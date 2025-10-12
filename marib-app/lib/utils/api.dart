@@ -679,15 +679,28 @@ class Api {
       };
       _ensureSliderSessionHeaders(mergedHeaders);
 
-
-
-
-
       final bool requestBodyIsMultipart =
           parameter is FormData || formData.files.isNotEmpty;
-      final bool hasExplicitContentTypeHeader = mergedHeaders.keys.any(
-            (key) => key.toLowerCase() == HttpHeaders.contentTypeHeader,
-      );
+
+      String? explicitContentTypeHeaderKey;
+      String? explicitContentTypeHeaderValue;
+
+      mergedHeaders.forEach((String key, dynamic value) {
+        if (key.toLowerCase() == HttpHeaders.contentTypeHeader) {
+          explicitContentTypeHeaderKey ??= key;
+          explicitContentTypeHeaderValue = value?.toString();
+        }
+      });
+
+
+
+      String? normalizedHeaderContentType;
+      if (explicitContentTypeHeaderValue != null) {
+        final String candidate = explicitContentTypeHeaderValue!.trim();
+        if (candidate.isNotEmpty) {
+          normalizedHeaderContentType = candidate.toLowerCase();
+        }
+      }
 
       final Object? optionContentType = options?.contentType;
       String? normalizedOptionContentType;
@@ -716,9 +729,32 @@ class Api {
         !(isJsonDefault || isFormUrlEncoded || isMultipart);
       }
 
+      bool hasCustomContentTypeHeader = false;
+      if (normalizedHeaderContentType != null) {
+        final String normalized = normalizedHeaderContentType!;
+        final String jsonContentType = Headers.jsonContentType.toLowerCase();
+        final String formUrlEncodedContentType =
+        Headers.formUrlEncodedContentType.toLowerCase();
+        final bool isJsonDefault =
+            normalized == jsonContentType ||
+                normalized.startsWith('application/json');
+        final bool isFormUrlEncoded = normalized == formUrlEncodedContentType;
+        final bool isMultipart = normalized.startsWith('multipart/form-data');
+        hasCustomContentTypeHeader =
+        !(isJsonDefault || isFormUrlEncoded || isMultipart);      }
+
       final bool shouldNullifyContentType = requestBodyIsMultipart &&
-          !hasExplicitContentTypeHeader &&
+          !hasCustomContentTypeHeader &&
           !hasCustomContentTypeOption;
+
+      if (shouldNullifyContentType && explicitContentTypeHeaderKey != null) {
+        mergedHeaders.remove(explicitContentTypeHeaderKey);
+      }
+
+      if (shouldNullifyContentType) {
+        dio.options.contentType = null;
+      }
+
 
       final Object? resolvedContentType = shouldNullifyContentType
           ? null

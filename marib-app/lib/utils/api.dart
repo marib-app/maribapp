@@ -458,7 +458,7 @@ class Api {
   static String clearCartApi = "cart/clear";
   static String cartQuoteShippingApi = "cart/quote-shipping";
 
-  static String getDeliveryPricesApi = "get-delivery-prices";
+  static String getDeliveryPricesApi = "delivery-prices";
   static String userOrdersApi = "orders";
 
 

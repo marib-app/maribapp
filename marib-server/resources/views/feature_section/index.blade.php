@@ -208,19 +208,17 @@
                                             @foreach ($filterLabels as $value => $label)
                                                 @php
                                                     $optionLabel = trim((string) __($label));
-                                                    $isUnavailable = isset($defaultDisabledFilters[$value]);
-                                                    $optionAttributes = [
-                                                        'value' => $value,
-                                                        'title' => $optionLabel,
-                                                        'data-filter-label' => $optionLabel,
-                                                    ];
+                                                    $optionLabel = $optionLabel !== '' ? $optionLabel : (string) $label;
 
-                                                    if ($isUnavailable) {
-                                                        $optionAttributes['data-filter-unavailable'] = '1';
-                                                    }
+                                                    
+                                                    $isUnavailable = isset($defaultDisabledFilters[$value]);
+
                                                 @endphp
-                                                <option @foreach ($optionAttributes as $attr => $attrValue) {{ $attr }}="{{ e($attrValue) }}" @endforeach @selected(old('filter_type', $section->filter ?? $defaultFilterKey) === $value)>
-                                                    {{ $optionLabel }}
+                                                <option value="{{ $value }}"
+                                                    title="{{ e($optionLabel) }}"
+                                                    data-filter-label="{{ e($optionLabel) }}"
+                                                    @if($isUnavailable) data-filter-unavailable="1" @endif
+                                                    @selected($selectedFilter === $value)>                                                    {{ $optionLabel }}
                                                 </option>
                                                 
                                             @endforeach
@@ -489,19 +487,17 @@
                                                         @foreach ($filterLabels as $value => $label)
                                                             @php
                                                                 $optionLabel = trim((string) __($label));
-                                                                $isUnavailable = isset($defaultDisabledFilters[$value]) && $editSelectedFilter !== $value;
-                                                                $optionAttributes = [
-                                                                    'value' => $value,
-                                                                    'title' => $optionLabel,
-                                                                    'data-filter-label' => $optionLabel,
-                                                                ];
+                                                                $optionLabel = $optionLabel !== '' ? $optionLabel : (string) $label;
 
-                                                                if ($isUnavailable) {
-                                                                    $optionAttributes['data-filter-unavailable'] = '1';
-                                                                }
+
+                                                                $isUnavailable = isset($defaultDisabledFilters[$value]) && $editSelectedFilter !== $value;
+
                                                             @endphp
-                                                            <option @foreach ($optionAttributes as $attr => $attrValue) {{ $attr }}="{{ e($attrValue) }}" @endforeach @selected(old('filter_type', $section->filter ?? $defaultFilterKey) === $value)>
-                                                                {{ $optionLabel }}
+                                                            <option value="{{ $value }}"
+                                                                title="{{ e($optionLabel) }}"
+                                                                data-filter-label="{{ e($optionLabel) }}"
+                                                                @if($isUnavailable) data-filter-unavailable="1" @endif
+                                                                @selected($editSelectedFilter === $value)>                                                                {{ $optionLabel }}
                                                             </option>
                                                             
                                                             

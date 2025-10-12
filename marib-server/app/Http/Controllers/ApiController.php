@@ -376,7 +376,7 @@ class ApiController extends Controller {
 
     private function resolvePerPage(Request $request, int $default = 15, int $max = 100): int
     {
-        $perPage = (int) $request->input('per_page', $default);
+        $perPage = $request->integer('per_page', $default) ?? $default;
 
         if ($perPage <= 0) {
             $perPage = $default;

@@ -3,6 +3,7 @@ import 'package:marib/data/model/company.dart';
 import 'package:marib/utils/api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:marib/data/repositories/system_repository.dart';
 
 abstract class CompanyState {}
 
@@ -42,13 +43,14 @@ class CompanyCubit extends Cubit<CompanyState> {
           await Api.get(url: Api.getSystemSettingsApi, queryParameters: body);
 
       if (!response[Api.error]) {
-        var data = response['data'];
-
+        final Map<String, dynamic> data =
+        SystemRepository.normalizeSettingsPayload(response);
         companyData = Company(
-            companyEmail: data['company_email'],
-            companyName: data['company_name'],
-            companyTel1: data['company_tel1'],
-            companyTel2: data['company_tel2']);
+          companyEmail: data['company_email']?.toString(),
+          companyName: data['company_name']?.toString(),
+          companyTel1: data['company_tel1']?.toString(),
+          companyTel2: data['company_tel2']?.toString(),
+        );
       } else {
         throw CustomException(response[Api.message]);
       }

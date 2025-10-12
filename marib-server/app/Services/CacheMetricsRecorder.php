@@ -45,13 +45,18 @@ class CacheMetricsRecorder
             $hits = $data['hits'];
             $misses = $data['misses'];
             $total = $hits + $misses;
+            $hitRate = $total > 0 ? round($hits / $total, 4) : null;
+            $summary = [
 
-            $this->telemetry->record('cache.metrics', [
                 'store' => $store,
                 'hits' => $hits,
                 'misses' => $misses,
-                'hit_rate' => $total > 0 ? round($hits / $total, 4) : null,
-            ]);
+                'hit_rate' => $hitRate,
+                'miss_rate' => $total > 0 ? round($misses / $total, 4) : null,
+            ];
+
+            $this->telemetry->record('cache.metrics', $summary);
+            Log::info('cache.metrics.summary', $summary);
         }
 
         $this->metrics = [];

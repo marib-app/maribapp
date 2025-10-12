@@ -14,27 +14,27 @@ class SectionDelegatePolicy
     {
     }
 
-    public function publish(User $user, ?string $section): Response
+    public function publish(User $user, ?string $section = null): Response
     {
         return $this->authorizeForSection($user, $section);
     }
 
-    public function update(User $user, ?string $section): Response
+    public function update(User $user, ?string $section = null): Response
     {
         return $this->authorizeForSection($user, $section);
     }
 
-    public function copy(User $user, ?string $sourceSection, ?string $targetSection = null): Response
+    public function copy(User $user, ?string $sourceSection = null, ?string $targetSection = null): Response
     {
         return $this->authorizeForSections($user, [$sourceSection, $targetSection]);
     }
 
-    public function changeSection(User $user, ?string $fromSection, ?string $toSection = null): Response
+    public function changeSection(User $user, ?string $fromSection = null, ?string $toSection = null): Response
     {
         return $this->authorizeForSections($user, [$fromSection, $toSection]);
     }
 
-    public function batchImport(User $user, ?string $section): Response
+    public function batchImport(User $user, ?string $section = null): Response
     {
         return $this->authorizeForSection($user, $section);
     }

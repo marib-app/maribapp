@@ -10,9 +10,9 @@ class SystemRepository {
     };
 
 
-      final Map<String, dynamic> firstResponse = await Api.get(
-    queryParameters: baseParameters,
-    url: Api.getSystemSettingsApi,
+    final Map<String, dynamic> firstResponse = await Api.get(
+      queryParameters: baseParameters,
+      url: Api.getSystemSettingsApi,
     );
 
 
@@ -68,57 +68,15 @@ class SystemRepository {
   }
 
   _SettingsPage _parseSettingsResponse(Map<String, dynamic> response) {
-    final Map<String, dynamic> items = <String, dynamic>{};
+    final Map<String, dynamic> items = normalizeSettingsPayload(response);
 
     Map<String, dynamic>? meta;
     Map<String, dynamic>? extras = _mapify(response['extras']);
 
-    void mergeItems(dynamic source) {
-      if (source is Iterable) {
-        for (final element in source) {
-          mergeItems(element);
-        }
-        return;
-      }
-
-      final Map<String, dynamic>? map = _mapify(source);
-      if (map == null) {
-        return;
-      }
-
-      final String? name = _stringify(map['name']);
-      if (name != null && name.isNotEmpty) {
-        items[name] = map['value'];
-      } else {
-        const ignoredKeys = <String>{'items', 'meta', 'links', 'extras'};
-        for (final entry in map.entries) {
-          final String key = entry.key.toString();
-          if (ignoredKeys.contains(key)) {
-            continue;
-          }
-          items.putIfAbsent(key, () => entry.value);
-        }
-      }
-    }
-
-    final dynamic dataNode = response['data'];
-    if (dataNode is Map || dataNode is Iterable) {
-      final Map<String, dynamic>? dataMap = _mapify(dataNode);
-      if (dataMap != null) {
-        final dynamic nestedItems = dataMap['items'];
-        if (nestedItems != null) {
-          mergeItems(nestedItems);
-        } else {
-          mergeItems(dataMap);
-        }
-
-        meta = _mapify(dataMap['meta']);
-        extras ??= _mapify(dataMap['extras']);
-      } else if (dataNode is Iterable) {
-        mergeItems(dataNode);
-      }
-    } else if (dataNode != null) {
-      mergeItems(dataNode);
+    final Map<String, dynamic>? dataMap = _mapify(response['data']);
+    if (dataMap != null) {
+      meta = _mapify(dataMap['meta']);
+      extras ??= _mapify(dataMap['extras']);
     }
 
     meta ??= _mapify(response['meta']);
@@ -128,6 +86,101 @@ class SystemRepository {
       meta: meta,
       extras: extras,
     );
+  }
+
+  static Map<String, dynamic> normalizeSettingsPayload(dynamic payload) {
+    final Map<String, dynamic> values = <String, dynamic>{};
+    final Set<int> visitedNodes = <int>{};
+
+    void inspect(dynamic node) {
+      if (node == null) {
+        return;
+      }
+
+      if (node is Map || node is Iterable) {
+        final int identity = identityHashCode(node);
+        if (!visitedNodes.add(identity)) {
+          return;
+        }
+      }
+
+      if (node is Iterable) {
+        for (final element in node) {
+          inspect(element);
+        }
+        return;
+      }
+
+      if (node is Map) {
+        final Map<String, dynamic> map = <String, dynamic>{};
+        node.forEach((dynamic key, dynamic value) {
+          if (key == null) {
+            return;
+          }
+          map[key.toString()] = value;
+        });
+
+        final dynamic rawName = map['name'];
+        if (rawName != null) {
+          final String name = rawName.toString();
+          if (name.isNotEmpty && map.containsKey('value')) {
+            values[name] = map['value'];
+          }
+
+        }
+        const Set<String> containerKeys = <String>{
+          'data',
+          'items',
+          'values',
+          'records',
+          'list',
+          'payload',
+          'extras',
+        };
+
+        const Set<String> skipKeys = <String>{
+          'name',
+          'value',
+          'type',
+          'meta',
+          'links',
+          'error',
+          'message',
+          'code',
+          'per_page',
+          'current_page',
+          'last_page',
+          'has_more_pages',
+        };
+
+        for (final MapEntry<String, dynamic> entry in map.entries) {
+          final String key = entry.key;
+          final dynamic value = entry.value;
+
+          if (containerKeys.contains(key)) {
+            inspect(value);
+            continue;
+          }
+
+          if (!skipKeys.contains(key) && !values.containsKey(key)) {
+            values[key] = value;
+          }
+
+          if (value is Map || value is Iterable) {
+            inspect(value);
+          }
+        }
+
+        return;
+
+      }
+
+    }
+
+    inspect(payload);
+
+
+    return values;
   }
 
   int? _asInt(dynamic value) {
@@ -156,15 +209,7 @@ class SystemRepository {
     return null;
   }
 
-  String? _stringify(dynamic value) {
-    if (value is String) {
-      return value;
-    }
-    if (value == null) {
-      return null;
-    }
-    return value.toString();
-  }
+
 }
 
 class _SettingsPage {

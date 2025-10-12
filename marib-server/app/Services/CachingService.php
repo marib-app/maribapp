@@ -11,11 +11,17 @@ class CachingService {
     /**
      * @param $key
      * @param callable $callback - Callback function must return a value
-     * @param int $time = 3600
+     * @param int $time Seconds to cache the value for (defaults to 3600).
      * @return mixed
      */
     public static function cacheRemember($key, callable $callback, int $time = 3600) {
-        return Cache::remember($key, $time, $callback);
+        $store = config('cache.default', 'file');
+
+        if ($store !== 'redis' && config('cache.stores.redis')) {
+            $store = 'redis';
+        }
+
+        return Cache::store($store)->remember($key, now()->addSeconds($time), $callback);
     }
 
     public static function removeCache($key) {

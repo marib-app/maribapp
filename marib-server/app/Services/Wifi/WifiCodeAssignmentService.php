@@ -69,28 +69,33 @@ class WifiCodeAssignmentService
                         'commission_amount' => $commissionAmount,
                         'net_amount' => $netAmount,
                     ]),
-                    static fn (mixed $value): bool => $value !== null
+                    static fn ($value) => $value !== null
                 ),
             ])->save();
 
             if ($netAmount > 0) {
+                $walletTransactionMeta = array_filter([
+                    'source' => 'wifi_plan_purchase',
+                    'wifi_plan_id' => $plan->getKey(),
+                    'wifi_network_id' => $network->getKey(),
+                    'wifi_code_id' => $code->getKey(),
+                    'gross_amount' => $grossAmount,
+                    'commission_amount' => $commissionAmount,
+                    'net_amount' => $netAmount,
+                ], static fn ($value) => $value !== null);
+
+                $walletCreditPayload = array_filter([
+                    'currency' => $plan->currency,
+                    'payment_transaction' => $transaction,
+                    'meta' => $walletTransactionMeta,
+                ], static fn ($value) => $value !== null);
+
                 $this->walletService->credit(
                     $network->owner,
                     'wifi-credit-' . $transaction->getKey(),
                     $netAmount,
-                    [
-                        'currency' => $plan->currency,
-                        'payment_transaction' => $transaction,
-                        'meta' => array_filter([
-                            'source' => 'wifi_plan_purchase',
-                            'wifi_plan_id' => $plan->getKey(),
-                            'wifi_network_id' => $network->getKey(),
-                            'wifi_code_id' => $code->getKey(),
-                            'gross_amount' => $grossAmount,
-                            'commission_amount' => $commissionAmount,
-                            'net_amount' => $netAmount,
-                        ], static fn (mixed $value): bool => $value !== null),
-                    ]
+                    $walletCreditPayload
+
                 );
             }
 

@@ -683,7 +683,7 @@ class Api {
 
 
 
-      bool shouldNullifyContentType = false;
+      final bool parameterIsFormData = parameter is FormData;
 
       final bool hasExplicitContentTypeHeader = mergedHeaders.keys.any(
             (key) => key.toLowerCase() == HttpHeaders.contentTypeHeader,
@@ -698,27 +698,27 @@ class Api {
           normalizedOptionContentType = candidate.toLowerCase();
         }
       }
-      final bool optionLooksMultipart = normalizedOptionContentType != null &&
-          normalizedOptionContentType.startsWith('multipart/form-data');
+
 
       bool hasCustomContentTypeOption = false;
       if (normalizedOptionContentType != null) {
+        final String normalized = normalizedOptionContentType;
+
         final String jsonContentType = Headers.jsonContentType.toLowerCase();
         final String formUrlEncodedContentType =
         Headers.formUrlEncodedContentType.toLowerCase();
-        final bool matchesKnownDefaults =
-            normalizedOptionContentType.startsWith('application/json') ||
-                normalizedOptionContentType == jsonContentType ||
-                normalizedOptionContentType == formUrlEncodedContentType ||
-                optionLooksMultipart;
-        hasCustomContentTypeOption = !matchesKnownDefaults;
+        final bool isJsonDefault =
+            normalized == jsonContentType ||
+                normalized.startsWith('application/json');
+        final bool isFormUrlEncoded = normalized == formUrlEncodedContentType;
+        final bool isMultipart = normalized.startsWith('multipart/form-data');
+        hasCustomContentTypeOption =
+        !(isJsonDefault || isFormUrlEncoded || isMultipart);
       }
 
-      if (!hasExplicitContentTypeHeader &&
-          (!hasCustomContentTypeOption ||
-              (parameter is FormData && optionLooksMultipart))) {
-        shouldNullifyContentType = true;
-      }
+      final bool shouldNullifyContentType = parameterIsFormData &&
+          !hasExplicitContentTypeHeader &&
+          !hasCustomContentTypeOption;
 
       final Object? resolvedContentType = shouldNullifyContentType
           ? null

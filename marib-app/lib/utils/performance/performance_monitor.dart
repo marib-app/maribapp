@@ -297,8 +297,8 @@ class _RoutePerformanceSession {
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
       'routeName': routeName,
-      'startedAt': DateTime.fromMicrosecondsSinceEpoch(startedAtUs)
-          .toIso8601String(),
+      'startedAt': wallClockStartedAt.toIso8601String(),
+
       'frames': totalFrames,
       'droppedFrames': droppedFrames,
       'averageFps': frameDurationsMs.isEmpty

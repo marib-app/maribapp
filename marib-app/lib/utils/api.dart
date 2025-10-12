@@ -187,13 +187,15 @@ class Api {
 
     return Map<String, dynamic>.from(source);
   }
+  static const Object _contentTypeNotSpecified = Object();
 
 
   static String? _resolveContentType({
-    Object? override,
+    Object? override = _contentTypeNotSpecified,
     Object? base,
   }) {
-    final Object? candidate = override ?? base;
+    final bool hasOverride = !identical(override, _contentTypeNotSpecified);
+    final Object? candidate = hasOverride ? override : base;
 
     if (candidate == null) {
       return null;
@@ -213,7 +215,7 @@ class Api {
     Options? base,
     String? method,
     Map<String, dynamic>? headers,
-    Object? contentType,
+    Object? contentType = _contentTypeNotSpecified,
     bool? followRedirects,
   }) {
     final Options resolvedBase = base ?? Options();
@@ -673,12 +675,8 @@ class Api {
 
 
 
-      final Options requestOptions = _buildRequestOptions(
-        base: options,
-        headers: mergedHeaders,
-        contentType: options?.contentType,
-        followRedirects: false,
-      );
+      bool shouldNullifyContentType = false;
+
 
       if (formData is FormData) {
         final bool hasExplicitContentTypeHeader = mergedHeaders.keys.any(
@@ -704,10 +702,20 @@ class Api {
           }
         }
 
-        if (!hasExplicitContentTypeHeader && !hasCustomContentTypeOption) {
-          requestOptions.contentType = null;
-        }
+        shouldNullifyContentType =
+            !hasExplicitContentTypeHeader && !hasCustomContentTypeOption;
       }
+
+      final Object? resolvedContentType = shouldNullifyContentType
+          ? null
+          : (options?.contentType ?? _contentTypeNotSpecified);
+
+      final Options requestOptions = _buildRequestOptions(
+        base: options,
+        headers: mergedHeaders,
+        contentType: resolvedContentType,
+        followRedirects: false,
+      );
 
 
       final response = await dio.post(

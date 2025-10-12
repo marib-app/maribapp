@@ -672,20 +672,42 @@ class Api {
 
 
 
-      // Let Dio infer the appropriate multipart boundary when no explicit
-      // content type is provided. Forcing "multipart/form-data" without a
-      // boundary prevents the backend from receiving uploaded files.
-      final Object? resolvedContentType = options?.contentType;
-
-
-
 
       final Options requestOptions = _buildRequestOptions(
         base: options,
         headers: mergedHeaders,
-        contentType: resolvedContentType,
+        contentType: options?.contentType,
         followRedirects: false,
       );
+
+      if (formData is FormData) {
+        final bool hasExplicitContentTypeHeader = mergedHeaders.keys.any(
+              (key) => key.toLowerCase() == HttpHeaders.contentTypeHeader,
+        );
+
+        bool hasCustomContentTypeOption = false;
+        final Object? optionContentType = options?.contentType;
+        if (optionContentType != null) {
+          final String normalized = optionContentType
+              .toString()
+              .trim()
+              .toLowerCase();
+          if (normalized.isNotEmpty) {
+            final String jsonContentType =
+            Headers.jsonContentType.toLowerCase();
+            final String formUrlEncodedContentType =
+            Headers.formUrlEncodedContentType.toLowerCase();
+            hasCustomContentTypeOption =
+            !(normalized.startsWith('application/json') ||
+                normalized == jsonContentType ||
+                normalized == formUrlEncodedContentType);
+          }
+        }
+
+        if (!hasExplicitContentTypeHeader && !hasCustomContentTypeOption) {
+          requestOptions.contentType = null;
+        }
+      }
 
 
       final response = await dio.post(

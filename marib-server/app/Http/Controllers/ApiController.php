@@ -82,6 +82,7 @@ use App\Models\DepartmentTicket;
 use App\Services\DepartmentSupportService;
 use App\Exceptions\UnknownFeaturedSectionSlugException;
 use App\Services\FeaturedSectionService;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 use App\Models\RequestDevice;
 use App\Models\Order;
@@ -386,6 +387,41 @@ class ApiController extends Controller {
     }
 
     /**
+     * @return array<string, int|bool>
+     */
+    private function buildLengthAwarePaginatorMeta(LengthAwarePaginator $paginator): array
+    {
+        $meta = [
+            'current_page' => $paginator->currentPage(),
+            'per_page' => $paginator->perPage(),
+            'has_more_pages' => $paginator->hasMorePages(),
+            'from' => $paginator->firstItem(),
+            'to' => $paginator->lastItem(),
+            'last_page' => $paginator->lastPage(),
+            'total' => $paginator->total(),
+        ];
+
+        return array_filter($meta, static fn ($value) => $value !== null);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function buildLengthAwarePaginatorLinks(LengthAwarePaginator $paginator): array
+    {
+        $links = [
+            'first' => $paginator->url(1),
+            'last' => $paginator->url($paginator->lastPage()),
+            'prev' => $paginator->previousPageUrl(),
+            'next' => $paginator->nextPageUrl(),
+        ];
+
+        return array_filter($links, static fn ($value) => $value !== null && $value !== false);
+    }
+
+
+
+    /**
      * @return array<int, string>
      */
     private function normalizeSettingNames(mixed $value): array
@@ -541,7 +577,7 @@ class ApiController extends Controller {
 
     public function getSystemSettings(Request $request) {
         try {
-            $perPage = $this->resolvePerPage($request, 15, 100);
+            $perPage = $this->resolvePerPage($request, 15, 50);
 
             $settingsQuery = Setting::select(['name', 'value', 'type'])->orderBy('name');
 
@@ -564,10 +600,11 @@ class ApiController extends Controller {
                     'type'  => $row->type,
                 ];
             });
+            $settingsItems = $settings->items();
 
             $currentValues = [];
 
-            foreach ($settings->items() as $item) {
+            foreach ($settingsItems as $item) {
                 if (!is_array($item)) {
                     continue;
                 }
@@ -600,8 +637,14 @@ class ApiController extends Controller {
                 'admin' => User::role('Super Admin')->select(['name', 'profile'])->first(),
             ];
 
-            ResponseService::successResponse("Data Fetched Successfully", $settings, [
+            ResponseService::successResponse("Data Fetched Successfully", [
+                'settings' => $settingsItems,
+                
                 'extras' => $extras,
+            ], [
+                'meta' => $this->buildLengthAwarePaginatorMeta($settings),
+                'links' => $this->buildLengthAwarePaginatorLinks($settings),
+
             ]);
             
         } catch (Throwable $th) {

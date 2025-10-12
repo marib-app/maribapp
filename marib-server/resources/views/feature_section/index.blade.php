@@ -188,8 +188,9 @@
                                     <div class="col-md-6 form-group mandatory">
                                         <label for="filter_type" class=" form-label">{{ __('نوع المرشح') }}</label>
                                         <select id="filter_type" name="filter_type" class="form-control select2">
-                                            <option value="latest" @selected($selectedFilter === 'latest')>latest</option>
-                                            <option value="most_viewed" @selected($selectedFilter === 'most_viewed')>most_viewed</option>
+                                            @foreach ($filterLabels as $filterValue => $filterLabel)
+                                                <option value="{{ $filterValue }}" @selected($selectedFilter === $filterValue)>{{ $filterLabel }}</option>
+                                            @endforeach
 
                                         </select>
 
@@ -434,8 +435,9 @@
                                                 <div class="form-group mb-3">
                                                     <label for="edit_filter_type" class="form-label fw-bold">{{ __('نوع المرشح') }} <span class="text-danger">*</span></label>
                                                     <select id="edit_filter_type" name="filter_type" class="form-control select2">
-                                                        <option value="latest">latest</option>
-                                                        <option value="most_viewed">most_viewed</option>
+                                                        @foreach ($filterLabels as $filterValue => $filterLabel)
+                                                            <option value="{{ $filterValue }}" @selected(old('filter_type') === $filterValue)>{{ $filterLabel }}</option>
+                                                        @endforeach
 
                                                     </select>
 

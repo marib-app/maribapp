@@ -103,17 +103,19 @@ class ItemImageSection extends StatelessWidget {
             // ✅ صورة مباشرة (بدون شيمر)
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: CachedNetworkImage(
-                imageUrl: item.image ?? '',
-                height: imageHeight,
-                width: imageWidth,
-                fit: BoxFit.cover,
-                errorWidget: (_, __, ___) => Container(
+              child: RepaintBoundary(
+                child: CachedNetworkImage(
+                  imageUrl: item.image ?? '',
                   height: imageHeight,
                   width: imageWidth,
-                  color: Colors.grey.shade200,
-                  child: Icon(Icons.broken_image,
-                      size: 40, color: Colors.grey.shade400),
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) => Container(
+                    height: imageHeight,
+                    width: imageWidth,
+                    color: Colors.grey.shade200,
+                    child: Icon(Icons.broken_image,
+                        size: 40, color: Colors.grey.shade400),
+                  ),
                 ),
               ),
             ),

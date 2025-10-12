@@ -322,11 +322,13 @@ class _ItemCardState extends State<ICard> {
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(18),
-                      child: UiUtils.getImage(
-                        widget.item?.image ?? "assets/image/2.png",
-                        height: widget.imageHeight ?? 147,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
+                      child: RepaintBoundary(
+                        child: UiUtils.getImage(
+                          widget.item?.image ?? "assets/image/2.png",
+                          height: widget.imageHeight ?? 147,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     ),
 

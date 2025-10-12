@@ -292,7 +292,24 @@ class HiveUtils {
     if (normalized == null) {
       return false;
     }
-    return getPermittedDelegateSections().contains(normalized);
+
+    final Set<String> blocked = getBlockedDelegateSections();
+    if (blocked.contains(normalized)) {
+      return false;
+    }
+
+    final Set<String> permitted = getPermittedDelegateSections();
+    if (permitted.contains(normalized)) {
+      return true;
+    }
+
+    // إذا لم نستقبل أي صلاحيات مخصصة من الخادم بعد، نعتبر الأقسام متاحة افتراضياً
+    if (permitted.isEmpty && blocked.isEmpty) {
+      return true;
+    }
+
+    return false;
+
   }
 
   static bool isDelegateSectionBlocked(String section) {

@@ -189,6 +189,9 @@ class Api {
   }
   static const Object _contentTypeNotSpecified = Object();
 
+  @visibleForTesting
+  static Dio Function()? dioFactory;
+
 
   static String? _resolveContentType({
     Object? override = _contentTypeNotSpecified,
@@ -218,7 +221,7 @@ class Api {
     Object? contentType = _contentTypeNotSpecified,
     bool? followRedirects,
   }) {
-    final Options resolvedBase = base ?? Options();
+    final Options resolvedBase = base ?? Options(contentType: null);
 
     return Options(
       method: method ?? resolvedBase.method,
@@ -615,7 +618,7 @@ class Api {
         await HiveUtils.ensureSliderSessionId();
       }
 
-      final Dio dio = Dio();
+      final Dio dio = (dioFactory ?? () => Dio())();
 
       dio.options.followRedirects = false;
       dio.options.validateStatus = (_) => true;
@@ -625,10 +628,12 @@ class Api {
 
       dio.interceptors.add(NetworkRequestInterseptor());
 
-      late FormData formData;
+      FormData formData;
 
-      if (parameter is Map<String, dynamic>) {
-        Map<String, dynamic> formMap = {};
+      if (parameter is FormData) {
+        formData = parameter;
+      } else if (parameter is Map<String, dynamic>) {
+        final Map<String, dynamic> formMap = <String, dynamic>{};
 
         parameter.forEach((key, value) {
           if (value is File) {
@@ -656,9 +661,12 @@ class Api {
           formMap,
           ListFormat.multiCompatible,
         );
+      } else if (parameter == null) {
+        formData = FormData();
       } else {
         throw ArgumentError(
-            'Invalid parameter type. Expected Map<String, dynamic>.');
+          'Invalid parameter type. Expected Map<String, dynamic> or FormData.',
+        );
       }
 
 
@@ -677,33 +685,28 @@ class Api {
 
       bool shouldNullifyContentType = false;
 
+      final bool hasExplicitContentTypeHeader = mergedHeaders.keys.any(
+            (key) => key.toLowerCase() == HttpHeaders.contentTypeHeader,
+      );
 
-      if (formData is FormData) {
-        final bool hasExplicitContentTypeHeader = mergedHeaders.keys.any(
-              (key) => key.toLowerCase() == HttpHeaders.contentTypeHeader,
-        );
-
-        bool hasCustomContentTypeOption = false;
-        final Object? optionContentType = options?.contentType;
-        if (optionContentType != null) {
-          final String normalized = optionContentType
-              .toString()
-              .trim()
-              .toLowerCase();
-          if (normalized.isNotEmpty) {
-            final String jsonContentType =
-            Headers.jsonContentType.toLowerCase();
-            final String formUrlEncodedContentType =
-            Headers.formUrlEncodedContentType.toLowerCase();
-            hasCustomContentTypeOption =
-            !(normalized.startsWith('application/json') ||
-                normalized == jsonContentType ||
-                normalized == formUrlEncodedContentType);
-          }
+      bool hasCustomContentTypeOption = false;
+      final Object? optionContentType = options?.contentType;
+      if (optionContentType != null) {
+        final String normalized =
+        optionContentType.toString().trim().toLowerCase();
+        if (normalized.isNotEmpty) {
+          final String jsonContentType =
+          Headers.jsonContentType.toLowerCase();
+          final String formUrlEncodedContentType =
+          Headers.formUrlEncodedContentType.toLowerCase();
+          hasCustomContentTypeOption =
+          !(normalized.startsWith('application/json') ||
+              normalized == jsonContentType ||
+              normalized == formUrlEncodedContentType);
         }
-
-        shouldNullifyContentType =
-            !hasExplicitContentTypeHeader && !hasCustomContentTypeOption;
+      }
+      if (!hasExplicitContentTypeHeader && !hasCustomContentTypeOption) {
+        shouldNullifyContentType = true;
       }
 
       final Object? resolvedContentType = shouldNullifyContentType

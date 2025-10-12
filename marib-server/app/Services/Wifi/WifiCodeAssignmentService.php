@@ -60,12 +60,15 @@ class WifiCodeAssignmentService
                 'status' => WifiCode::STATUS_ALLOCATED,
                 'allocated_to_user_id' => $buyer->getKey(),
                 'allocated_at' => now(),
-                'meta' => array_filter(array_merge($code->meta ?? [], [
-                    'payment_transaction_id' => $transaction->getKey(),
-                    'gross_amount' => $grossAmount,
-                    'commission_amount' => $commissionAmount,
-                    'net_amount' => $netAmount,
-                ])),
+                'meta' => array_filter(
+                    array_merge($code->meta ?? [], [
+                        'payment_transaction_id' => $transaction->getKey(),
+                        'gross_amount' => $grossAmount,
+                        'commission_amount' => $commissionAmount,
+                        'net_amount' => $netAmount,
+                    ]),
+                    static fn ($value) => $value !== null
+                ),
             ])->save();
 
             if ($netAmount > 0) {
@@ -83,7 +86,8 @@ class WifiCodeAssignmentService
                             'wifi_code_id' => $code->getKey(),
                             'gross_amount' => $grossAmount,
                             'commission_amount' => $commissionAmount,
-                        ]),
+                            'net_amount' => $netAmount,
+                        ], static fn ($value) => $value !== null),
                     ]
                 );
             }

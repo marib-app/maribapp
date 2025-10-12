@@ -74,6 +74,7 @@ class SearchScreen extends StatefulWidget {
 class SearchScreenState extends State<SearchScreen>
     with TickerProviderStateMixin, AutomaticKeepAliveClientMixin<SearchScreen> {
   static const double _listItemExtent = 160;
+  static const double sidePadding = Constant.defaultPadding;
 
   @override
   bool get wantKeepAlive => true;

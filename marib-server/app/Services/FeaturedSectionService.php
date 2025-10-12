@@ -249,13 +249,39 @@ class FeaturedSectionService
         $filter = in_array($filter, $supportedFilters, true) ? $filter : 'latest';
 
         $priceColumn = $this->priceColumn();
+        $priceColumnName = sprintf('items.%s', $priceColumn);
+        $minPrice = $this->normalizePrice($section->min_price);
+        $maxPrice = $this->normalizePrice($section->max_price);
 
-        $itemsQuery = match ($filter) {
-            'most_viewed' => $itemsQuery->orderByDesc('clicks'),
+
+        if ($filter === 'featured') {
+            $itemsQuery->whereHas('featured_items');
+        }
+
+        switch ($filter) {
+            case 'most_viewed':
+                $itemsQuery->orderByDesc('clicks');
+                break;
+
+            case 'price_range':
+                $itemsQuery->whereNotNull($priceColumnName);
+
+                if ($minPrice !== null) {
+                    $itemsQuery->where($priceColumnName, '>=', $minPrice);
+                }
+
+                if ($maxPrice !== null) {
+                    $itemsQuery->where($priceColumnName, '<=', $maxPrice);
+                }
+
+                $itemsQuery->orderBy($priceColumnName, 'asc');
+                break;
 
 
-            default => $itemsQuery->orderBy('created_at', 'desc'),
-        };
+            default:
+                $itemsQuery->orderBy('created_at', 'desc');
+                break;
+        }
 
         if (Auth::check()) {
             $itemsQuery->with([
@@ -300,15 +326,40 @@ class FeaturedSectionService
         $sectionPayload['root_identifier'] = $this->stringifyRootIdentifier(
             FeatureSectionCategoryService::rootIdentifiers()[$canonicalSectionType] ?? null
         ) ?? $canonicalSectionType;
-
+        $sectionPayload['min_price'] = $minPrice;
+        $sectionPayload['max_price'] = $maxPrice;
         $sectionPayload['total_data'] = $items->count();
         $sectionPayload['section_data'] = $items->count() > 0
             ? new ItemCollection($items)
             : [];
-        unset($sectionPayload['min_price'], $sectionPayload['max_price']);
+
 
 
         return new SectionPayloadResult($sectionPayload, $sectionEtag);
+    }
+
+
+    private function normalizePrice(mixed $value): ?float
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $value = trim($value);
+
+            if ($value === '') {
+                return null;
+            }
+
+            $value = str_replace(',', '', $value);
+        }
+
+        if (is_numeric($value)) {
+            return (float) $value;
+        }
+
+        return null;
     }
 
     private function hashForSummary(array $summary): string

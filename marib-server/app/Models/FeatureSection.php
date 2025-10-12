@@ -30,7 +30,25 @@ class FeatureSection extends Model {
         
         ],
 
-
+        'featured' => [
+            'label'   => 'Featured Ads',
+            'slug'    => 'featured',
+            'aliases' => [
+                'featured_ads',
+                'featured_items',
+                'featured-only',
+                'promoted',
+            ],
+        ],
+        'price_range' => [
+            'label'   => 'Price Range',
+            'slug'    => 'price_range',
+            'aliases' => [
+                'price-range',
+                'price_range_ads',
+                'price_range_items',
+            ],
+        ],
     ];
 
     protected $fillable = [

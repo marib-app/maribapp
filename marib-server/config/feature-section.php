@@ -23,8 +23,10 @@ return [
     'cache_ttl_seconds' => (int) env('FEATURE_SECTION_CACHE_TTL_SECONDS', 300),
     'section_item_limit' => (int) env('FEATURE_SECTION_ITEM_LIMIT', 12),
     'default_filters' => [
+        'featured',
         'latest',
         'most_viewed',
+        'price_range',
     ],
     'root_identifiers' => array_merge([
         'public'      => null,

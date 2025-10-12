@@ -138,9 +138,12 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
                                   country: det.country,
                                 );
                                 _cameraPosition = buildCamera(LatLng(det.lat, det.lng));
-                                _mapController.animateCamera(
-                                  CameraUpdate.newCameraPosition(_cameraPosition!),
-                                );
+                                final controller = _mapController;
+                                if (controller != null) {
+                                  controller.animateCamera(
+                                    CameraUpdate.newCameraPosition(_cameraPosition!),
+                                  );
+                                }
                                 _markers
                                   ..clear()
                                   ..add(Marker(
@@ -646,7 +649,7 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
 
           onMapCreated: (c) async {
             _mapController = c;
-            _mapController.animateCamera(
+            await c.animateCamera(
               CameraUpdate.newCameraPosition(_cameraPosition!),
             );
             await _applyMapStyle();
@@ -797,8 +800,12 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
 
         final target = LatLng(latitude!, longitude!);
         _cameraPosition = buildCamera(target);
-        await _mapController.animateCamera(CameraUpdate.newCameraPosition(_cameraPosition!));
-
+        final controller = _mapController;
+        if (controller != null) {
+          await controller.animateCamera(
+            CameraUpdate.newCameraPosition(_cameraPosition!),
+          );
+        }
         // تحديث العنوان
         await getLocationFromLatitudeLongitude(latLng: target);
 
@@ -895,7 +902,11 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
 
   Future<void> _animateZoom({required bool zoomIn}) async {
     try {
-      final currentZoom = await _mapController.getZoomLevel();
+      final controller = _mapController;
+      if (controller == null) return;
+
+      final currentZoom = await controller.getZoomLevel();
+
       const double minZoom = 0.0;
       const double maxZoom = 20.0;
 
@@ -909,7 +920,7 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
       }
 
       HapticFeedback.selectionClick();
-      await _mapController.animateCamera(
+      await controller.animateCamera(
         zoomIn ? CameraUpdate.zoomIn() : CameraUpdate.zoomOut(),
       );
     } catch (_) {

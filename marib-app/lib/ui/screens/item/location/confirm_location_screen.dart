@@ -117,7 +117,7 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
   double? latitude, longitude;
   CameraPosition? _cameraPosition;
   final Set<Marker> _markers = Set();
-  late GoogleMapController _mapController;
+  GoogleMapController? _mapController;
   var markerMove;
   bool _openedAppSettings = false;
   MapType _mapType = MapType.normal;
@@ -346,8 +346,9 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
       });
 
       // حرّك الكاميرا إذا الكنترولر جاهز
-      if (_mapController != null) {
-        _mapController!.animateCamera(
+      final controller = _mapController;
+      if (controller != null) {
+        controller.animateCamera(
           CameraUpdate.newCameraPosition(_cameraPosition!),
         );
       }

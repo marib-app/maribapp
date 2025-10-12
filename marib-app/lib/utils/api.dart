@@ -343,6 +343,7 @@ class Api {
   static String getPaymentSettingsApi = "get-payment-settings";
   static String getSystemSettingsApi = "get-system-settings";
   static String getFavoriteItemApi = "get-favourite-item";
+  static String delegateSectionsApi = "delegates/sections";
   static String updateItemStatusApi = "update-item-status";
   static String getReportReasonsApi = "get-report-reasons";
   static String addReportsApi = "add-reports";

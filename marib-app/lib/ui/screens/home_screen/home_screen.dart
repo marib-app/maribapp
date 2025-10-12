@@ -204,16 +204,20 @@ class HomeScreenState extends State<HomeScreen>
                       assetPath: 'assets/sections/3.jpg',
                       onTap: _goElectronicStore,
                     ),
-                    const SizedBox(height: 8),
-                    ImageWithNavigationWidget(
-                      assetPath: 'assets/sections/4.jpg',
-                      onTap: _goShein,
-                    ),
-                    const SizedBox(height: 8),
-                    ImageWithNavigationWidget(
-                      assetPath: 'assets/sections/5.jpg',
-                      onTap: _goComputerSection,
-                    ),
+                    if (HiveUtils.hasDelegateAccess('shein')) ...[
+                      const SizedBox(height: 8),
+                      ImageWithNavigationWidget(
+                        assetPath: 'assets/sections/4.jpg',
+                        onTap: _goShein,
+                      ),
+                    ],
+                    if (HiveUtils.hasDelegateAccess('computer')) ...[
+                      const SizedBox(height: 8),
+                      ImageWithNavigationWidget(
+                        assetPath: 'assets/sections/5.jpg',
+                        onTap: _goComputerSection,
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     ImageWithNavigationWidget(
                       assetPath: 'assets/sections/6.jpg',

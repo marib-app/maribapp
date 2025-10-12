@@ -240,6 +240,20 @@ class PerformanceMonitor {
   }
 }
 
+
+class _MonotonicClock {
+  _MonotonicClock._(this._stopwatch);
+
+  factory _MonotonicClock.start() {
+    return _MonotonicClock._(Stopwatch()..start());
+  }
+
+  final Stopwatch _stopwatch;
+
+  int get elapsedUs => _stopwatch.elapsedMicroseconds;
+}
+
+
 class _RoutePerformanceSession {
   _RoutePerformanceSession({
     required this.routeName,
@@ -265,9 +279,8 @@ class _RoutePerformanceSession {
     totalFrames += 1;
     frameDurationsMs.add(timing.totalSpan.inMicroseconds / 1000.0);
     droppedFrames += PerformanceMonitor.countDroppedFrames(timing.totalSpan);
-    _firstFrameUs ??= timing.timestampInMicroseconds(FramePhase.buildStart);
-    _firstMeaningfulFrameUs ??=
-        timing.timestampInMicroseconds(FramePhase.rasterFinish);
+    _firstFrameUs ??= buildStartUs;
+    _firstMeaningfulFrameUs ??= rasterFinishUs;
   }
 
   _RoutePerformanceSession snapshot() {

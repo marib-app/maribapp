@@ -1330,6 +1330,26 @@ class ApiController extends Controller {
             $categoryId = is_numeric($categoryInput) ? (int) $categoryInput : null;
             $requiresProductLink = $this->shouldRequireProductLink($categoryId);
 
+            $allowedCustomFieldIds = collect();
+
+            if ($categoryId !== null) {
+                $categoryWithCustomFields = Category::query()
+                    ->with(['custom_fields' => static function ($query) {
+                        $query->select('id', 'category_id', 'custom_field_id');
+                    }])
+                    ->find($categoryId);
+
+                if ($categoryWithCustomFields !== null) {
+                    $allowedCustomFieldIds = $categoryWithCustomFields->custom_fields
+                        ->pluck('custom_field_id')
+                        ->filter(static fn ($id) => $id !== null)
+                        ->map(static fn ($id) => (int) $id)
+                        ->unique()
+                        ->values();
+                }
+            }
+
+
             $validationRules = [
 
                 'name'                 => 'required',
@@ -1497,11 +1517,22 @@ class ApiController extends Controller {
             if ($request->custom_fields) {
                 $itemCustomFieldValues = [];
                 // Handle both JSON string and array formats
-                $customFields = is_string($request->custom_fields) 
-                    ? json_decode($request->custom_fields, true, 512, JSON_THROW_ON_ERROR) 
+                $customFields = is_string($request->custom_fields)
+                    ? json_decode($request->custom_fields, true, 512, JSON_THROW_ON_ERROR)
+
+
                     : $request->custom_fields;
                     
                 foreach ($customFields as $key => $custom_field) {
+
+
+                    $customFieldId = is_numeric($key) ? (int) $key : null;
+
+                    if ($customFieldId === null || ! $allowedCustomFieldIds->containsStrict($customFieldId)) {
+                        ResponseService::validationErrors([
+                            "custom_fields.$key" => [__('The selected custom field is invalid for this category.')],
+                        ]);
+                    }
 
                     if ($custom_field instanceof UploadedFile) {
                         ResponseService::validationErrors([
@@ -1521,9 +1552,9 @@ class ApiController extends Controller {
 
                     $itemCustomFieldValues[] = [
                         'item_id'         => $item->id,
-                        'custom_field_id' => $key,
-                        'value'           => json_encode($custom_field, JSON_THROW_ON_ERROR),
-                         'created_at'      => $timestamp,
+                        'custom_field_id' => $customFieldId,
+                        'value'           => $encodedValue,
+                        'created_at'      => $timestamp,
                         'updated_at'      => $timestamp->copy()
                     ];
                 }
@@ -1536,8 +1567,22 @@ class ApiController extends Controller {
             if ($request->custom_field_files) {
                 $itemCustomFieldValues = [];
                 foreach ($request->custom_field_files as $key => $file) {
+                    $customFieldId = is_numeric($key) ? (int) $key : null;
 
-                                        if (! $file instanceof UploadedFile) {
+                    if ($customFieldId === null || ! $allowedCustomFieldIds->containsStrict($customFieldId)) {
+                        ResponseService::validationErrors([
+                            "custom_field_files.$key" => [__('The selected custom field is invalid for this category.')],
+                        ]);
+                    }
+
+                    $customFieldId = is_numeric($key) ? (int) $key : null;
+
+                    if ($customFieldId === null || ! $allowedCustomFieldIds->containsStrict($customFieldId)) {
+                        ResponseService::validationErrors([
+                            "custom_field_files.$key" => [__('The selected custom field is invalid for this category.')],
+                        ]);
+                    }
+                    if (! $file instanceof UploadedFile) {
                         ResponseService::validationErrors([
                             "custom_field_files.$key" => [__('Each custom field file must be an uploaded file.')],
                         ]);
@@ -1551,10 +1596,9 @@ class ApiController extends Controller {
                         ]);
                     }
                     
-                    $itemCustomFieldValues[] = [
-                        'item_id'         => $item->id,
-                        'custom_field_id' => $key,
-                        'value'           => !empty($file) ? FileService::upload($file, 'custom_fields_files') : '',
+                        'custom_field_id' => $customFieldId,
+                        'value'           => $encodedValue,
+                        'created_at'      => $timestamp,
                         'created_at'      => time(),
                         'updated_at'      => time()
                     ];

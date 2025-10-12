@@ -171,10 +171,24 @@ class FeatureSectionController extends Controller {
             'is_active'   => ['sometimes', 'boolean'],
             'section_type' => ['nullable', 'string', 'regex:/^[a-z0-9_]+$/', Rule::in($validationSectionTypes)],
 
+            'min_price'   => ['nullable', 'numeric', 'min:0'],
+            'max_price'   => ['nullable', 'numeric', 'min:0'],
 
         ], $messages, [
             'section_type' => 'section type',
                 ]);
+
+        $validator->after(function ($validator) use ($request): void {
+            if (! $this->shouldValidatePriceBounds($request)) {
+                return;
+            }
+
+            [$minPrice, $maxPrice] = $this->resolvePriceBounds($request);
+
+            if ($minPrice !== null && $maxPrice !== null && $minPrice > $maxPrice) {
+                $validator->errors()->add('min_price', __('The minimum price must be less than or equal to the maximum price.'));
+            }
+        });
 
 
         if ($validator->fails()) {
@@ -191,8 +205,9 @@ class FeatureSectionController extends Controller {
             $data['section_type'] = $request->input('section_type', $defaultSectionType);
             $data['slug'] = $expectedSlug;
 
-            $data['min_price'] = null;
-            $data['max_price'] = null;
+            [$minPrice, $maxPrice] = $this->resolvePriceBounds($request);
+            $data['min_price'] = $minPrice;
+            $data['max_price'] = $maxPrice;
 
 
             $data['value'] = null;
@@ -419,13 +434,27 @@ class FeatureSectionController extends Controller {
 
             'section_type' => ['nullable', 'string', 'regex:/^[a-z0-9_]+$/', Rule::in($validationSectionTypes)],
 
-
+            'min_price'   => ['nullable', 'numeric', 'min:0'],
+            'max_price'   => ['nullable', 'numeric', 'min:0'],
 
             
         ], $messages, [
             'section_type' => 'section type',
         
         ]);
+
+        $validator->after(function ($validator) use ($request): void {
+            if (! $this->shouldValidatePriceBounds($request)) {
+                return;
+            }
+
+            [$minPrice, $maxPrice] = $this->resolvePriceBounds($request);
+
+            if ($minPrice !== null && $maxPrice !== null && $minPrice > $maxPrice) {
+                $validator->errors()->add('min_price', __('The minimum price must be less than or equal to the maximum price.'));
+            }
+        });
+
 
         if ($validator->fails()) {
             ResponseService::validationError($validator->errors()->first());
@@ -438,8 +467,9 @@ class FeatureSectionController extends Controller {
             $data['section_type'] = $request->input('section_type', $fallbackSectionType);
             $data['slug'] = $expectedSlug;
 
-            $data['min_price'] = null;
-            $data['max_price'] = null;
+            [$minPrice, $maxPrice] = $this->resolvePriceBounds($request);
+            $data['min_price'] = $minPrice;
+            $data['max_price'] = $maxPrice;
 
             $data['value'] = null;
             $data['is_active'] = $request->has('is_active')
@@ -490,9 +520,26 @@ class FeatureSectionController extends Controller {
             'filter'        => ['required', Rule::in(FeatureSection::supportedFilters())],
             'section_type'  => ['nullable', 'string', 'regex:/^[a-z0-9_]+$/', Rule::in($validationSectionTypes)],
             'limit'         => ['nullable', 'integer', 'min:1', 'max:100'],
+            'min_price'     => ['nullable', 'numeric', 'min:0'],
+            'max_price'     => ['nullable', 'numeric', 'min:0'],
+
         ], $messages, [
             'section_type' => 'section type',
         ]);
+
+        $validator->after(function ($validator) use ($request): void {
+            if (! $this->shouldValidatePriceBounds($request)) {
+                return;
+            }
+
+            [$minPrice, $maxPrice] = $this->resolvePriceBounds($request);
+
+            if ($minPrice !== null && $maxPrice !== null && $minPrice > $maxPrice) {
+                $validator->errors()->add('min_price', __('The minimum price must be less than or equal to the maximum price.'));
+            }
+        });
+
+
 
 
         if ($validator->fails()) {
@@ -503,6 +550,7 @@ class FeatureSectionController extends Controller {
             $filter = $request->input('filter');
             $sectionType = $normalizedSectionType;
             $slug = FeatureSection::normalizeSlug($request->input('slug'));
+            [$minPrice, $maxPrice] = $this->resolvePriceBounds($request);
 
             if (! FeatureSection::slugMatchesFilter($slug, $filter)) {
                 $allowed = FeatureSection::allowedSlugsForFilter($filter);
@@ -526,6 +574,10 @@ class FeatureSectionController extends Controller {
                 'style'        => $request->input('style', 'style_1'),
                 'description'  => $request->input('description'),
                 'is_active'    => true,
+                'min_price'    => $minPrice,
+                'max_price'    => $maxPrice,
+                
+
             ]);
 
             $limit = $request->filled('limit') ? (int) $request->input('limit') : $this->resolveSectionLimit($section);
@@ -757,6 +809,59 @@ class FeatureSectionController extends Controller {
 
         $request->merge(['title' => $resolved]);
     }
+
+
+
+
+    private function shouldValidatePriceBounds(Request $request): bool
+    {
+        $filter = $request->input('filter');
+
+        if ($filter === null && $request->has('filter_type')) {
+            $filter = $request->input('filter_type');
+        }
+
+        return $filter === 'price_range';
+    }
+
+    private function resolvePriceBounds(Request $request): array
+    {
+        if (! $this->shouldValidatePriceBounds($request)) {
+            return [null, null];
+        }
+
+        $minPrice = $this->normalizePriceValue($request->input('min_price'));
+        $maxPrice = $this->normalizePriceValue($request->input('max_price'));
+
+        return [$minPrice, $maxPrice];
+    }
+
+    private function normalizePriceValue(mixed $value): ?float
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $value = trim($value);
+
+            if ($value === '') {
+                return null;
+            }
+        }
+
+        if ($value === '') {
+            return null;
+        }
+
+        if (! is_numeric($value)) {
+            return null;
+        }
+
+        return (float) $value;
+    }
+
+
 
 
     

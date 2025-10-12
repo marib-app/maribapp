@@ -6,6 +6,7 @@ use App\Http\Controllers\WifiPaymentGatewayController;
 use App\Http\Controllers\ApiController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ServiceRequestController as ApiServiceRequestController;
+use App\Http\Middleware\InitializeApiMetrics;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CartShippingQuoteController;
 use App\Http\Controllers\OrderApiController;
@@ -33,7 +34,10 @@ use App\Http\Controllers\WifiCodeRevealController;
 */
 
 
-
+Route::get('ping', fn () => response()->json(['ok' => true]))
+    ->middleware(InitializeApiMetrics::class)
+    ->name('ping');
+    
 Route::get('products/{item}/purchase-options', [ProductPurchaseOptionsController::class, 'show'])
     ->whereNumber('item');
 

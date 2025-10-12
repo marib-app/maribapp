@@ -145,35 +145,56 @@ window.reportReasonEvents = {
 
 window.featuredSectionEvents = {
     'click .edit_btn': function (e, value, row) {
+        const $form = $('#feature-section-edit-form');
+        const $slugField = $('#edit_slug');
+        const normalizedSlug = (row.slug || '').toString();
+
         $('#edit_title').val(row.title);
-        $('#edit_description').val(row.description);
-        $('#edit_slug').val(row.slug);
-        $('#edit_filter').val(row.filter).trigger('change');
-        $('input[name="edit_style_app"][value="' + row.style + '"]').prop('checked', true);
+        $('#edit_description').val(row.description || '');
 
-        if (row.filter === "price_criteria") {
-            $('.price_criteria').show();
-            $('#edit_min_price').val(row.min_price);
-            $('#edit_max_price').val(row.max_price);
-        } else {
-            $('.price_criteria').hide();
-            $('#edit_min_price').val();
-            $('#edit_max_price').val();
+        if ($slugField.length) {
+            $slugField.val(normalizedSlug);
+            $slugField.data('featureSectionCurrentSlug', normalizedSlug);
+            $slugField.data('featureSectionPreferredSlug', normalizedSlug);
         }
-        if (row.filter == "category_criteria") {
-            $('.category_criteria').show();
-            if (row.value != '') {
-                $('#edit_category_id').val(row.value.split(',')).trigger('change');
-            } else {
-                $('#edit_category_id').val('').trigger('change');
-            }
-        } else {
-            $('.category_criteria').hide();
-            $('#edit_category_id').val('').trigger('change');
+        const $editSectionType = $('#edit_section_type');
+        const $editFilter = $('#edit_filter_type');
+
+        if ($editSectionType.length) {
+            $editSectionType.val((row.section_type || '').toString());
         }
 
-        $('input[name="style"]').attr('checked', false);
-        $('input[name="style"][value="' + row.style + '"]').attr('checked', true);
+        if ($editFilter.length) {
+            $editFilter.val((row.filter || '').toString());
+        }
+
+        if ($editSectionType.length) {
+            $editSectionType.trigger('change');
+        }
+
+        if ($editFilter.length) {
+            $editFilter.trigger('change');
+        }
+
+        const $styleInputs = $('input[name="style"]');
+        $styleInputs.prop('checked', false);
+
+        if (row.style) {
+            $styleInputs.filter(`[value="${row.style}"]`).prop('checked', true).trigger('change');
+        }
+
+        $('#edit_is_active').prop('checked', !!row.is_active);
+
+        const minPrice = row.min_price ?? '';
+        const maxPrice = row.max_price ?? '';
+        $('#edit_min_price').val(minPrice);
+        $('#edit_max_price').val(maxPrice);
+
+        if ($form.length) {
+            $form.find('input[name="min_price"]').val(minPrice);
+            $form.find('input[name="max_price"]').val(maxPrice);
+        }
+        
     }
 };
 

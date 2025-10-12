@@ -221,7 +221,20 @@
                                 </div>
 
 
-
+                                <div class="row g-3 align-items-end d-none" data-price-range-wrapper="create">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="min_price" class="form-label">{{ __('Minimum Price') }}</label>
+                                            <input type="number" name="min_price" id="min_price" class="form-control" min="0" step="0.01" inputmode="decimal" value="{{ old('min_price') }}" placeholder="{{ __('Enter minimum price') }}">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="max_price" class="form-label">{{ __('Maximum Price') }}</label>
+                                            <input type="number" name="max_price" id="max_price" class="form-control" min="0" step="0.01" inputmode="decimal" value="{{ old('max_price') }}" placeholder="{{ __('Enter maximum price') }}">
+                                        </div>
+                                    </div>
+                                </div>
 
                                 </div>
                                 <div class="row form-group mandatory">
@@ -471,7 +484,20 @@
                                         </div>
 
 
-
+                                        <div class="row g-3 align-items-end d-none" data-price-range-wrapper="edit">
+                                            <div class="col-md-6">
+                                                <div class="form-group mb-3">
+                                                    <label for="edit_min_price" class="form-label fw-bold">{{ __('Minimum Price') }}</label>
+                                                    <input type="number" name="min_price" id="edit_min_price" class="form-control" min="0" step="0.01" inputmode="decimal" placeholder="{{ __('Enter minimum price') }}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group mb-3">
+                                                    <label for="edit_max_price" class="form-label fw-bold">{{ __('Maximum Price') }}</label>
+                                                    <input type="number" name="max_price" id="edit_max_price" class="form-control" min="0" step="0.01" inputmode="decimal" placeholder="{{ __('Enter maximum price') }}">
+                                                </div>
+                                            </div>
+                                        </div>
 
                                         <div class="row">
                                             <div class="col-md-12">
@@ -736,7 +762,22 @@
 
             const usedSlugMap = window.featureSectionUsedSlugsMap || {};
             const filterLabelsMap = window.featureSectionFilterLabels || {};
+            const priceRangeFilterValue = 'price_range';
 
+            const togglePriceRangeFields = (context, show) => {
+                const $wrapper = $(`[data-price-range-wrapper="${context}"]`);
+
+                if (!$wrapper.length) {
+                    return;
+                }
+
+
+                if (show) {
+                    $wrapper.removeClass('d-none');
+                } else {
+                    $wrapper.addClass('d-none');
+                }
+            };
 
 
 
@@ -1221,8 +1262,10 @@
                 }
 
                 const currentSlug = ($createSlug.val() || '').toString();
+                togglePriceRangeFields('create', filterValue === priceRangeFilterValue);
 
                 
+
 
                 setSlugFieldValue($createSlug, filterValue, {
                     preferredSlug: initialSlug || currentSlug,
@@ -1263,6 +1306,11 @@
                 if (!autoFill) {
                     preferredSlug = getDataString($editSlug, 'featureSectionPreferredSlug') || currentSlug;
                 }
+
+
+                togglePriceRangeFields('edit', filterValue === priceRangeFilterValue);
+
+
 
                 setSlugFieldValue($editSlug, filterValue, {
 
@@ -1494,6 +1542,19 @@
 
                 if (limitField.length) {
                     formData.limit = limitField.val();
+                }
+
+
+
+
+                const minPriceField = $form.find('input[name="min_price"]').first();
+                if (minPriceField.length) {
+                    formData.min_price = (minPriceField.val() ?? '').toString().trim();
+                }
+
+                const maxPriceField = $form.find('input[name="max_price"]').first();
+                if (maxPriceField.length) {
+                    formData.max_price = (maxPriceField.val() ?? '').toString().trim();
                 }
 
 

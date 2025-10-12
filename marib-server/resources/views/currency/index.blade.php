@@ -23,7 +23,7 @@
                 <div class="col-md-4">
                     <div class="card">
                         <div class="card-body">
-                            {!! Form::open(['route' => 'currency.store', 'data-parsley-validate', 'class'=>'create-form']) !!}
+                            {!! Form::open(['route' => 'currency.store', 'data-parsley-validate', 'class'=>'create-form', 'files' => true]) !!}
                             <div class="row">
                                 <div class="col-md-12 col-12 form-group mandatory">
                                     {{ Form::label('currency_name', __('Currency Name'), ['class' => 'form-label']) }}
@@ -56,6 +56,32 @@
                                     ]) }}
                                 </div>
 
+
+                                <div class="col-md-12 col-12 form-group">
+                                    {{ Form::label('icon', __('Icon (optional)'), ['class' => 'form-label']) }}
+                                    <input type="file" name="icon" id="create_icon" class="form-control icon-input"
+                                           accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml">
+                                    <small class="text-muted">{{ __('Max 2MB. Allowed types: JPG, PNG, SVG, WEBP.') }}</small>
+
+                                    <div class="currency-icon-preview mt-2 d-none" data-preview="create">
+                                        <img src="" alt="" class="img-thumbnail preview-image" style="max-height: 120px;">
+                                        <div class="mt-2">
+                                            <button type="button" class="btn btn-outline-danger btn-sm clear-icon"
+                                                    data-target="create">{{ __('Remove icon') }}</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-12 col-12 form-group">
+                                    {{ Form::label('icon_alt', __('Icon alternative text'), ['class' => 'form-label']) }}
+                                    {{ Form::text('icon_alt', '', [
+                                        'class' => 'form-control icon-alt-input',
+                                        'placeholder' => __('Describe the icon for accessibility (optional)')
+                                    ]) }}
+                                </div>
+
+
+
                                 <div class="col-12 text-end form-group">
                                     {{ Form::submit(__('Add Currency'), ['class' => 'btn btn-primary']) }}
                                 </div>
@@ -86,6 +112,7 @@
                                         <th scope="col" data-field="currency_name" data-sortable="true">{{ __('Currency Name') }}</th>
                                         <th scope="col" data-field="sell_price" data-sortable="true">{{ __('Sell Price') }}</th>
                                         <th scope="col" data-field="buy_price" data-sortable="true">{{ __('Buy Price') }}</th>
+                                        <th scope="col" data-field="icon_url" data-formatter="iconFormatter">{{ __('Icon') }}</th>
                                         <th scope="col" data-field="last_updated_at" data-sortable="true" data-formatter="dateFormatter">{{ __('Last Updated') }}</th>
                                         @can('currency-rate-edit')
                                             <th scope="col" data-field="operate" data-events="currencyEvents"
@@ -108,11 +135,12 @@
                         <h5 class="modal-title" id="editModalLabel">{{ __('Edit Currency Rate') }}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <form action="" class="edit-form form-horizontal" method="POST" data-parsley-validate>
+                    <form action="" class="edit-form form-horizontal" method="POST" data-parsley-validate enctype="multipart/form-data">
                         @csrf
                         @method('PUT') {{-- أو PATCH حسب تعريف Route --}}
                         <div class="modal-body">
                             <input type="hidden" id="edit_id" name="edit_id">
+                            <input type="hidden" name="remove_icon" id="edit_remove_icon" value="0">
                             <div class="row">
                                 <div class="col-md-12 col-12 form-group mandatory">
                                     {{ Form::label('edit_currency_name', __('Currency Name'), ['class' => 'form-label']) }}
@@ -147,6 +175,32 @@
                                         'min' => '0'
                                     ]) }}
                                 </div>
+
+                                <div class="col-md-12 col-12 form-group">
+                                    {{ Form::label('edit_icon', __('Icon (optional)'), ['class' => 'form-label']) }}
+                                    <input type="file" name="icon" id="edit_icon" class="form-control icon-input"
+                                           accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml">
+                                    <small class="text-muted">{{ __('Max 2MB. Allowed types: JPG, PNG, SVG, WEBP.') }}</small>
+
+                                    <div class="currency-icon-preview mt-2 d-none" data-preview="edit">
+                                        <img src="" alt="" class="img-thumbnail preview-image" style="max-height: 120px;">
+                                        <div class="mt-2 d-flex gap-2">
+                                            <button type="button" class="btn btn-outline-danger btn-sm clear-icon"
+                                                    data-target="edit">{{ __('Remove icon') }}</button>
+                                            <span class="text-muted current-icon-alt"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-12 col-12 form-group">
+                                    {{ Form::label('edit_icon_alt', __('Icon alternative text'), ['class' => 'form-label']) }}
+                                    {{ Form::text('icon_alt', '', [
+                                        'class' => 'form-control icon-alt-input',
+                                        'id' => 'edit_icon_alt',
+                                        'placeholder' => __('Describe the icon for accessibility (optional)')
+                                    ]) }}
+                                </div>
+
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -171,6 +225,18 @@
         //         order: params.order
         //     };
         // }
+
+
+        function iconFormatter(value, row, index) {
+            if (!value) {
+                return '<span class="text-muted">&mdash;</span>';
+            }
+
+            const alt = row.icon_alt ? $('<div>').text(row.icon_alt).html() : '';
+            return '<img src="' + value + '" alt="' + alt + '" class="img-thumbnail" style="height:40px;max-width:40px;">';
+        }
+
+
 
         function dateFormatter(value, row, index) {
             if (value) {
@@ -203,17 +269,21 @@
                 // e.preventDefault();
 
                 const currencyId = row.id;
-                const currencyName = row.currency_name;
-                const sellPrice = row.sell_price;
-                const buyPrice = row.buy_price;
-
-                $('#editModal #edit_id').val(currencyId);
-                $('#editModal #edit_currency_name').val(currencyName);
-                $('#editModal #edit_sell_price').val(sellPrice);
-                $('#editModal #edit_buy_price').val(buyPrice);
+                $('#editModal #edit_id').val(row.id);
+                $('#editModal #edit_currency_name').val(row.currency_name);
+                $('#editModal #edit_sell_price').val(row.sell_price);
+                $('#editModal #edit_buy_price').val(row.buy_price);
 
                 const updateUrl = `/currency/${currencyId}`;
                 $('.edit-form').attr('action', updateUrl);
+
+                $('#edit_remove_icon').val('0');
+                $('#edit_icon').val('');
+                $('#edit_icon_alt').val(row.icon_alt || '');
+
+                $(document).trigger('currency:edit-open', [row]);
+
+
 
                 $('#editModal').modal('show');
             },

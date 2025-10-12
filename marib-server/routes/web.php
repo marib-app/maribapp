@@ -372,6 +372,7 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
         Route::get('/currency/show', [CurrencyController::class, 'show'])->name('currency.show');
         Route::put('/currency/{id}', [CurrencyController::class, 'update'])->name('currency.update');
         Route::delete('/currency/{id}', [CurrencyController::class, 'destroy'])->name('currency.destroy');
+        Route::delete('/currency/{id}/icon', [CurrencyController::class, 'destroyIcon'])->name('currency.icon.destroy');
     });
 
 

@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             SystemUpgradeSeeder::class,
             OrdersTestDataSeeder::class,
             CurrencyPermissionSeeder::class,
+            MetalRatePermissionSeeder::class,
             ChatMonitorPermissionSeeder::class,
         
             FeatureSectionActivationSeeder::class,

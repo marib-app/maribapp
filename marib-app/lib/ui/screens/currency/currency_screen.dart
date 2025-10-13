@@ -25,7 +25,8 @@ import 'package:marib/data/repositories/currency_repository.dart';
 // 👇 واجهة العرض (UI-Only)
 import 'currency_screen_ui.dart' show CurrencyScreenUI;
 import 'package:marib/data/repositories/preferences/governorate_preference_repository.dart';
-
+import 'package:marib/data/model/metal_rate.dart';
+import 'package:marib/data/repositories/metal_repository.dart';
 /// حالة صفحة العملات
 enum CurrencyPageStatus { loading, error, ready }
 
@@ -37,7 +38,9 @@ class CurrencyViewState {
   // بيانات الأسعار (ديناميكية لتفادي خطأ النوع)
   final List<dynamic> rates;
   final DateTime? lastUpdatedAt;
-
+  final List<MetalRate> goldRates;
+  final List<MetalRate> silverRates;
+  final DateTime? metalsLastUpdatedAt;
   final List<Map<String, String?>> governorates;
   final String? selectedGovernorateCode;
   final String? appliedGovernorateCode;
@@ -56,6 +59,9 @@ class CurrencyViewState {
   const CurrencyViewState({
     required this.status,
     this.errorMessage,
+    required this.goldRates,
+    required this.silverRates,
+    required this.metalsLastUpdatedAt,
     required this.rates,
     required this.lastUpdatedAt,
     required this.amountText,
@@ -82,6 +88,9 @@ class CurrencyViewState {
     String? errorMessage,
     List<dynamic>? rates,
     DateTime? lastUpdatedAt,
+    List<MetalRate>? goldRates,
+    List<MetalRate>? silverRates,
+    DateTime? metalsLastUpdatedAt,
     String? amountText,
     String? fromCurrency,
     String? toCurrency,
@@ -94,6 +103,9 @@ class CurrencyViewState {
       rates: rates ?? this.rates,
       lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt,
       amountText: amountText ?? this.amountText,
+      goldRates: goldRates ?? this.goldRates,
+      silverRates: silverRates ?? this.silverRates,
+      metalsLastUpdatedAt: metalsLastUpdatedAt ?? this.metalsLastUpdatedAt,
       fromCurrency: fromCurrency ?? this.fromCurrency,
       toCurrency: toCurrency ?? this.toCurrency,
       convertedAmount: convertedAmount ?? this.convertedAmount,
@@ -131,6 +143,7 @@ class CurrencyScreen extends StatelessWidget {
       child: BlocProvider(
         create: (_) => CurrencyCubit(
           CurrencyRepository(),
+          MetalRepository(),
           GovernoratePreferenceRepository(),
         )..initialize(),
 
@@ -160,7 +173,7 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -223,43 +236,74 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
   }
 
   void _onShareRates(CurrencyViewState viewState) {
-    final rates = viewState.rates;
-    if (rates.isEmpty) return;
+    final currencyRates = viewState.rates;
+    final goldRates = viewState.goldRates;
+    final silverRates = viewState.silverRates;
 
-    String _name(d) => (d as dynamic).currencyName?.toString() ?? '';
-    String _sell(d) => (d as dynamic).sellPrice?.toString() ?? '';
-    String _buy(d) => (d as dynamic).buyPrice?.toString() ?? '';
-    DateTime? _stamp(d) => (d as dynamic).lastUpdatedAt is DateTime
-        ? (d as dynamic).lastUpdatedAt as DateTime
-        : null;
+    if (currencyRates.isEmpty && goldRates.isEmpty && silverRates.isEmpty) {
+      return;
+    }
 
-    final last = _stamp(rates.first);
-    final ratesText = rates
-        .map((r) => "💱 ${_name(r)}\nبيع: ${_sell(r)}\nشراء: ${_buy(r)}\n")
-        .join("\n");
+    final priceFormat = NumberFormat('#,##0.000');
 
-    final stamp = last != null
-        ? DateFormat('yyyy-MM-dd HH:mm').format(last)
-        : 'غير متاح';
+    final buffer = StringBuffer();
 
-    final applied = viewState.appliedGovernorateName ?? 'المتوسط الافتراضي';
-    final requested = viewState.requestedGovernorateName;
-    final locationLine = (requested != null && requested != applied)
-        ? 'المحافظة: $applied (بديل عن $requested)'
-        : 'المحافظة: $applied';
+    if (currencyRates.isNotEmpty) {
+      final applied = viewState.appliedGovernorateName ?? 'المتوسط الافتراضي';
+      final requested = viewState.requestedGovernorateName;
+      final locationLine = (requested != null && requested != applied)
+          ? 'المحافظة: $applied (بديل عن $requested)'
+          : 'المحافظة: $applied';
+      final stamp = viewState.lastUpdatedAt != null
+          ? DateFormat('yyyy-MM-dd HH:mm').format(viewState.lastUpdatedAt!)
+          : 'غير متاح';
 
-    final text = """
-💰 أسعار العملات - $applied 💰
+      buffer.writeln('💰 أسعار العملات - $applied 💰\n');
+
+      for (final rate in currencyRates) {
+        final dynamic r = rate;
+        final name = r.currencyName?.toString() ?? '';
+        final sell = r.sellPrice?.toString() ?? '';
+        final buy = r.buyPrice?.toString() ?? '';
+        buffer.writeln('💱 $name');
+        buffer.writeln('بيع: $sell');
+        buffer.writeln('شراء: $buy\n');
+      }
+
+      buffer.writeln('📍 $locationLine');
+      buffer.writeln('📅 تم التحديث: $stamp\n');
+    }
+
+    if (goldRates.isNotEmpty) {
+      buffer.writeln('🟡 أسعار الذهب:');
+      for (final rate in goldRates) {
+        buffer.writeln(
+            '• ${rate.displayName}: بيع ${priceFormat.format(rate.sellPrice)} | شراء ${priceFormat.format(rate.buyPrice)}');
+      }
+      buffer.writeln('');
+    }
+
+    if (silverRates.isNotEmpty) {
+      buffer.writeln('⚪ أسعار الفضة:');
+      for (final rate in silverRates) {
+        buffer.writeln(
+            '• ${rate.displayName}: بيع ${priceFormat.format(rate.sellPrice)} | شراء ${priceFormat.format(rate.buyPrice)}');
+      }
+      buffer.writeln('');
+    }
 
 
-$ratesText
-📍 $locationLine
+    if (viewState.metalsLastUpdatedAt != null) {
+      buffer.writeln(
+          '⏱️ آخر تحديث للمعادن: ${DateFormat('yyyy-MM-dd HH:mm').format(viewState.metalsLastUpdatedAt!)}');
+      buffer.writeln('');
+    }
 
-📅 تم التحديث: $stamp
+    buffer.writeln('🔗 حمل تطبيق "مارب بين يديك" الآن للاستفادة من المزيد من الخدمات المميزة!');
 
-🔗 حمل تطبيق "مارب بين يديك" الآن للاستفادة من المزيد من الخدمات المميزة!
-""";
-    Share.share(text);
+
+    Share.share(buffer.toString().trim());
+
   }
 
   // ————— أدوات مساعدة داخلية —————
@@ -310,6 +354,9 @@ $ratesText
             lastUpdatedAt: null,
             amountText: _amountController.text,
             fromCurrency: _fromCurrency,
+            goldRates: const [],
+            silverRates: const [],
+              metalsLastUpdatedAt: null,
             toCurrency: _toCurrency,
             convertedAmount: _convertedAmount,
             hasCalculated: _hasCalculated,
@@ -332,6 +379,9 @@ $ratesText
             toCurrency: _toCurrency,
             convertedAmount: _convertedAmount,
             hasCalculated: _hasCalculated,
+            goldRates: const [],
+            silverRates: const [],
+            metalsLastUpdatedAt: null,
             governorates: const [],
             selectedGovernorateCode: null,
             appliedGovernorateCode: null,
@@ -342,7 +392,12 @@ $ratesText
           );
         } else if (state is CurrencySuccess) {
           final rates = state.currencyRates;
-
+          final goldRates = state.metalRates
+              .where((rate) => rate.isGold)
+              .toList(growable: false);
+          final silverRates = state.metalRates
+              .where((rate) => rate.isSilver)
+              .toList(growable: false);
           _ensureInitialSelection(rates);
 
           // محاولة أخذ آخر تحديث من أول عنصر
@@ -391,6 +446,9 @@ $ratesText
             lastUpdatedAt: updatedAt,
             governorates: governorateOptions,
             selectedGovernorateCode: selectedCode,
+            goldRates: goldRates,
+            silverRates: silverRates,
+            metalsLastUpdatedAt: state.metalsLastUpdatedAt,
             appliedGovernorateCode: appliedCode,
             appliedGovernorateName: appliedName,
             requestedGovernorateCode: requestedCode,
@@ -411,6 +469,9 @@ $ratesText
             rates: const [],
             lastUpdatedAt: null,
             governorates: const [],
+            goldRates: const [],
+            silverRates: const [],
+            metalsLastUpdatedAt: null,
             selectedGovernorateCode: null,
             appliedGovernorateCode: null,
             appliedGovernorateName: null,

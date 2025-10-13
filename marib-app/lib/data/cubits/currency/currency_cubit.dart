@@ -4,16 +4,21 @@ import 'package:marib/data/repositories/currency_repository.dart';
 import 'package:marib/data/model/currency_rates_bundle.dart';
 import 'package:marib/data/model/governorate.dart';
 import 'package:marib/data/repositories/preferences/governorate_preference_repository.dart';
-
+import 'package:marib/data/repositories/metal_repository.dart';
+import 'package:marib/data/model/metal_rate.dart';
+import 'package:marib/data/model/metal_rates_bundle.dart';
 part 'currency_state.dart';
 
 class CurrencyCubit extends Cubit<CurrencyState> {
   final CurrencyRepository _currencyRepository;
+  final MetalRepository _metalRepository;
+
   final GovernoratePreferenceRepository _preferenceRepository;
   String? _cachedGovernorateCode;
   CurrencyCubit(
       this._currencyRepository,
       this._preferenceRepository,
+      this._metalRepository,
       ) : super(CurrencyInitial());
 
   Future<void> initialize() async {
@@ -28,10 +33,14 @@ class CurrencyCubit extends Cubit<CurrencyState> {
 
     emit(CurrencyLoading());
     try {
-      final CurrencyRatesBundle bundle = await _currencyRepository.getCurrencyRates(
+      final futureCurrency = _currencyRepository.getCurrencyRates(
         governorateCode: requestedCode,
       );
 
+      final futureMetal = _metalRepository.getMetalRates();
+
+      final CurrencyRatesBundle bundle = await futureCurrency;
+      final MetalRatesBundle metalBundle = await futureMetal;
       if (bundle.rates.isEmpty) {
         if (persistSelection) {
           await _preferenceRepository.clearPreferredGovernorate();
@@ -57,6 +66,8 @@ class CurrencyCubit extends Cubit<CurrencyState> {
 
       emit(CurrencySuccess(
         currencyRates: bundle.rates,
+        metalRates: metalBundle.rates,
+        metalsLastUpdatedAt: metalBundle.lastUpdatedAt,
         governorates: bundle.governorates,
         requestedGovernorate: bundle.requestedGovernorate,
         appliedGovernorate: bundle.appliedGovernorate,

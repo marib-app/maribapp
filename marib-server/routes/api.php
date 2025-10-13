@@ -1,6 +1,8 @@
 <?php
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\Api\DeliveryPriceCalculatorController;
+use App\Http\Controllers\Api\MetalRateController as PublicMetalRateController;
+use App\Http\Controllers\Api\MetalRateManagementController;
 use App\Http\Controllers\WifiCabinApiController;
 use App\Http\Controllers\WifiPaymentGatewayController;
 use App\Http\Controllers\ApiController;
@@ -40,6 +42,7 @@ Route::middleware(InitializeApiMetrics::class)
     
 Route::get('products/{item}/purchase-options', [ProductPurchaseOptionsController::class, 'show'])
     ->whereNumber('item');
+Route::get('metal-rates', [PublicMetalRateController::class, 'index']);
 
     
 Route::prefix('wifi-cabin')
@@ -294,4 +297,27 @@ Route::group([
 ], static function () {
     Route::post('wallet', [PaymentWebhookController::class, 'wallet'])->name('payments.webhook.wallet');
     Route::post('bank-alsharq', [PaymentWebhookController::class, 'bankAlsharq'])->name('payments.webhook.bank-alsharq');
+
+
+
 });
+    Route::group([
+        'prefix' => 'admin/metal-rates',
+        'middleware' => ['permission:metal-rate-list|metal-rate-create|metal-rate-edit|metal-rate-delete|metal-rate-schedule'],
+    ], static function () {
+        Route::get('/', [MetalRateManagementController::class, 'index']);
+        Route::post('/', [MetalRateManagementController::class, 'store'])->middleware('permission:metal-rate-create');
+        Route::get('/{metalRate}', [MetalRateManagementController::class, 'show'])->whereNumber('metalRate');
+        Route::put('/{metalRate}', [MetalRateManagementController::class, 'update'])
+            ->whereNumber('metalRate')
+            ->middleware('permission:metal-rate-edit');
+        Route::delete('/{metalRate}', [MetalRateManagementController::class, 'destroy'])
+            ->whereNumber('metalRate')
+            ->middleware('permission:metal-rate-delete');
+        Route::post('/{metalRate}/schedule', [MetalRateManagementController::class, 'schedule'])
+            ->whereNumber('metalRate')
+            ->middleware('permission:metal-rate-schedule');
+        Route::delete('/schedules/{metalRateUpdate}', [MetalRateManagementController::class, 'cancelSchedule'])
+            ->whereNumber('metalRateUpdate')
+            ->middleware('permission:metal-rate-schedule');
+    });

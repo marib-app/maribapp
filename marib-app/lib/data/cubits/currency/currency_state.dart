@@ -13,7 +13,8 @@ class CurrencySuccess extends CurrencyState {
   final Governorate? appliedGovernorate;
   final bool usedFallback;
   final String? requestedGovernorateCode;
-
+  final List<MetalRate> metalRates;
+  final DateTime? metalsLastUpdatedAt;
 
 
   CurrencySuccess({
@@ -21,6 +22,8 @@ class CurrencySuccess extends CurrencyState {
     required this.governorates,
     this.requestedGovernorate,
     this.appliedGovernorate,
+    required this.metalRates,
+    required this.metalsLastUpdatedAt,
     required this.usedFallback,
     this.requestedGovernorateCode,
   });

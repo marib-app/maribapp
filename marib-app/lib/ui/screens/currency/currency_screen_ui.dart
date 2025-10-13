@@ -25,6 +25,7 @@ import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/extensions/extensions.dart'; // context.color
 
 import 'currency_screen.dart' show CurrencyViewState, CurrencyPageStatus;
+import 'package:marib/data/model/metal_rate.dart';
 
 
 
@@ -231,7 +232,12 @@ class CurrencyScreenUI extends StatelessWidget {
       ),
       child: TabBar(
         controller: tabController,
-        tabs: const [Tab(text: 'الأسعار'), Tab(text: 'التحويل'), Tab(text: 'الذهب')],
+        tabs: const [
+          Tab(text: 'الأسعار'),
+          Tab(text: 'التحويل'),
+          Tab(text: 'الذهب'),
+          Tab(text: 'الفضة'),
+        ],
         indicator: UnderlineTabIndicator(
           borderSide: BorderSide(color: brand, width: 3),
           insets: const EdgeInsets.symmetric(horizontal: 24),
@@ -241,6 +247,7 @@ class CurrencyScreenUI extends StatelessWidget {
         labelColor: onBg,
         unselectedLabelColor: onBg.withOpacity(0.5),
         overlayColor: MaterialStateProperty.all(Colors.transparent),
+        SilverTabView(state: state, brand: brand),
       ),
     );
   }
@@ -826,6 +833,12 @@ class ConvertTabView extends StatelessWidget {
   bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
 
   // ——— دوال داخلية ———
+
+  List<MetalRate> get _rates => state.goldRates;
+  DateTime? get _lastUpdated => state.metalsLastUpdatedAt;
+
+  String _format(double value) => NumberFormat('#,##0.000').format(value);
+
   OutlineInputBorder _border(BuildContext context) {
     final color = _isDark(context) ? Colors.white12 : Colors.black12;
     return OutlineInputBorder(
@@ -1072,9 +1085,9 @@ class GoldTabView extends StatelessWidget {
   Widget _header(BuildContext context) {
     final onBg = _isDark(context) ? Colors.white : Colors.black;
     final border = _isDark(context) ? Colors.white12 : Colors.black12;
-    final text = state.lastUpdatedAt == null
-        ? "أسعار الذهب — آخر تحديث غير متاح"
-        : "أسعار الذهب — ${DateFormat('yyyy-MM-dd HH:mm').format(state.lastUpdatedAt!)}";
+    final updatedLabel = _lastUpdated == null
+        ? 'آخر تحديث غير متاح'
+        : DateFormat('yyyy-MM-dd HH:mm').format(_lastUpdated!);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1089,7 +1102,7 @@ class GoldTabView extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              text,
+              'أسعار الذهب — $updatedLabel',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: onBg.withOpacity(0.85),
                 fontWeight: FontWeight.w700,
@@ -1103,37 +1116,39 @@ class GoldTabView extends StatelessWidget {
             onPressed: onShareRates,
             icon: Icon(Icons.ios_share, size: 18, color: brand),
             splashRadius: 18,
-            tooltip: "مشاركة",
+            tooltip: 'مشاركة',
+
           ),
         ],
       ),
     );
   }
 
-  Widget _row(BuildContext context, {required String name, required String sell, required String buy}) {
+  Widget _row(BuildContext context, MetalRate rate) {
+
     final onBg = _isDark(context) ? Colors.white : Colors.black;
 
-    TextStyle nameStyle = Theme.of(context).textTheme.titleSmall?.copyWith(
+    final nameStyle = Theme.of(context).textTheme.titleSmall?.copyWith(
       color: onBg,
       fontWeight: FontWeight.w800,
     ) ??
         TextStyle(color: onBg, fontWeight: FontWeight.w800, fontSize: 15.5);
-    TextStyle labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+    final labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
       color: onBg.withOpacity(0.6),
       fontWeight: FontWeight.w700,
     ) ??
         TextStyle(color: onBg.withOpacity(0.6), fontWeight: FontWeight.w700);
 
-    Widget chip(String v, Color c) => Container(
+    Widget chip(String value, Color color) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: c.withOpacity(0.5)),
+        border: Border.all(color: color.withOpacity(0.5)),
       ),
       child: Text(
-        v,
+        value,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: c,
+          color: color,
           fontWeight: FontWeight.w900,
           letterSpacing: 0.2,
         ),
@@ -1159,7 +1174,7 @@ class GoldTabView extends StatelessWidget {
 
           Expanded(
             child: Text(
-              name,
+              rate.displayName,
               style: nameStyle,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -1172,18 +1187,22 @@ class GoldTabView extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text("بيع", style: labelStyle),
+              Text('بيع', style: labelStyle),
+
               const SizedBox(height: 4),
-              chip(sell, Colors.orangeAccent),
+              chip(_format(rate.sellPrice), Colors.orangeAccent),
+
             ],
           ),
           const SizedBox(width: 8),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text("شراء", style: labelStyle),
+              Text('شراء', style: labelStyle),
+
               const SizedBox(height: 4),
-              chip(buy, Colors.blueAccent),
+              chip(_format(rate.buyPrice), Colors.blueAccent),
+
             ],
           ),
         ],
@@ -1214,37 +1233,189 @@ class GoldTabView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final divider = _isDark(context) ? Colors.white12 : Colors.black12;
-
-    String _name(d) => (d as dynamic).currencyName?.toString() ?? '';
-    String _sell(d) => (d as dynamic).sellPrice?.toString() ?? '';
-    String _buy(d)  => (d as dynamic).buyPrice?.toString() ?? '';
-
-    bool _isGold(dynamic d) {
-      final n = _name(d);
-      final lower = n.toLowerCase();
-      return n.contains('ذهب') || n.contains('عيار') || lower.contains('gold');
-    }
-
-    final goldRates = state.rates.where(_isGold).toList(growable: false);
+    final rates = _rates;
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
         SliverToBoxAdapter(child: _header(context)),
-        if (goldRates.isEmpty)
+        if (rates.isEmpty)
           SliverFillRemaining(hasScrollBody: false, child: _empty(context))
         else
           SliverList.separated(
-            itemCount: goldRates.length,
-            itemBuilder: (ctx, i) {
-              final r = goldRates[i];
-              return _row(
-                context,
-                name: _name(r),
-                sell: _sell(r),
-                buy: _buy(r),
-              );
-            },
+            itemCount: rates.length,
+            itemBuilder: (ctx, i) => _row(ctx, rates[i]),
+            separatorBuilder: (_, __) => Divider(height: 1, color: divider),
+          ),
+      ],
+    );
+  }
+}
+
+
+class SilverTabView extends StatelessWidget {
+  const SilverTabView({
+    super.key,
+    required this.state,
+    required this.brand,
+  });
+
+  final CurrencyViewState state;
+  final Color brand;
+
+  bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
+
+  List<MetalRate> get _rates => state.silverRates;
+
+  String _format(double value) => NumberFormat('#,##0.000').format(value);
+
+  Widget _header(BuildContext context) {
+    final onBg = _isDark(context) ? Colors.white : Colors.black;
+    final border = _isDark(context) ? Colors.white12 : Colors.black12;
+    final updatedLabel = state.metalsLastUpdatedAt == null
+        ? 'آخر تحديث غير متاح'
+        : DateFormat('yyyy-MM-dd HH:mm').format(state.metalsLastUpdatedAt!);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.diamond_outlined, size: 18, color: onBg.withOpacity(0.7)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'أسعار الفضة — $updatedLabel',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: onBg.withOpacity(0.85),
+                fontWeight: FontWeight.w700,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textDirection: TextDirection.rtl,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _row(BuildContext context, MetalRate rate) {
+    final onBg = _isDark(context) ? Colors.white : Colors.black;
+    final nameStyle = Theme.of(context).textTheme.titleSmall?.copyWith(
+      color: onBg,
+      fontWeight: FontWeight.w800,
+    ) ??
+        TextStyle(color: onBg, fontWeight: FontWeight.w800, fontSize: 15.5);
+    final labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+      color: onBg.withOpacity(0.6),
+      fontWeight: FontWeight.w700,
+    ) ??
+        TextStyle(color: onBg.withOpacity(0.6), fontWeight: FontWeight.w700);
+
+    Widget chip(String value, Color color) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Text(
+        value,
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+          color: color,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0.2,
+        ),
+      ),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: onBg.withOpacity(0.25)),
+            ),
+            child: Icon(Icons.diamond, size: 16, color: Colors.grey[400] ?? Colors.grey),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              rate.displayName,
+              style: nameStyle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textDirection: TextDirection.rtl,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text('بيع', style: labelStyle),
+              const SizedBox(height: 4),
+              chip(_format(rate.sellPrice), Colors.blueGrey),
+            ],
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text('شراء', style: labelStyle),
+              const SizedBox(height: 4),
+              chip(_format(rate.buyPrice), Colors.indigoAccent),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _empty(BuildContext context) {
+    final onBg = _isDark(context) ? Colors.white : Colors.black;
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.info_outline, color: brand),
+          const SizedBox(height: 8),
+          Text(
+            'لا توجد بيانات فضة حالياً',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: onBg,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final divider = _isDark(context) ? Colors.white12 : Colors.black12;
+    final rates = _rates;
+
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        SliverToBoxAdapter(child: _header(context)),
+        if (rates.isEmpty)
+
+          SliverFillRemaining(hasScrollBody: false, child: _empty(context))
+        else
+          SliverList.separated(
+            itemCount: rates.length,
+            itemBuilder: (ctx, i) => _row(ctx, rates[i]),
             separatorBuilder: (_, __) => Divider(height: 1, color: divider),
           ),
       ],

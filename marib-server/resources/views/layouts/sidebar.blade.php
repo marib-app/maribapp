@@ -91,8 +91,10 @@
         @canany(['item-listing-package-list','item-listing-package-create','item-listing-package-update','item-listing-package-delete',
                  'advertisement-package-list','advertisement-package-create','advertisement-package-update','advertisement-package-delete',
                  'user-package-list','payment-transactions-list',
-                 'currency-rate-list','currency-rate-create','currency-rate-edit','currency-rate-delete'])
-          <div class="sidebar-new-title">{{ __('Package Management') }}</div>
+                 'currency-rate-list','currency-rate-create','currency-rate-edit','currency-rate-delete',
+                 'metal-rate-list','metal-rate-create','metal-rate-edit','metal-rate-delete','metal-rate-schedule'])
+                 
+                 <div class="sidebar-new-title">{{ __('Package Management') }}</div>
 
           @canany(['item-listing-package-list','item-listing-package-create','item-listing-package-update','item-listing-package-delete',
                    'advertisement-package-list','advertisement-package-create','advertisement-package-update','advertisement-package-delete'])
@@ -187,6 +189,16 @@
               </a>
             </li>
           @endcanany
+
+          @canany(['metal-rate-list','metal-rate-create','metal-rate-edit','metal-rate-delete','metal-rate-schedule'])
+            <li class="sidebar-item sidebar-submenus">
+              <a href="{{ route('metal-rates.index') }}" class="sidebar-link">
+                <i class="bi bi-gem"></i>
+                <span class="menu-item">{{ __('Metal Rates') }}</span>
+              </a>
+            </li>
+          @endcanany
+
         @endcanany
 
 

@@ -28,6 +28,7 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SellerController;
 use App\Http\Controllers\SeoSettingController;
 use App\Http\Controllers\OrderPaymentGroupController;
+use App\Http\Controllers\MetalRateController;
 
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SliderController;
@@ -375,6 +376,29 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
         Route::delete('/currency/{id}/icon', [CurrencyController::class, 'destroyIcon'])->name('currency.icon.destroy');
     });
 
+    /* ------------------------------- أسعار المعادن Metal Rates ------------------------------ */
+    Route::group([
+        'prefix' => 'metal-rates',
+        'as' => 'metal-rates.',
+        'middleware' => ['permission:metal-rate-list|metal-rate-create|metal-rate-edit|metal-rate-delete|metal-rate-schedule'],
+    ], static function () {
+        Route::get('/', [MetalRateController::class, 'index'])->name('index');
+        Route::post('/', [MetalRateController::class, 'store'])->name('store');
+        Route::put('/{metalRate}', [MetalRateController::class, 'update'])
+            ->whereNumber('metalRate')
+            ->name('update');
+        Route::delete('/{metalRate}', [MetalRateController::class, 'destroy'])
+            ->whereNumber('metalRate')
+            ->name('destroy');
+        Route::post('/{metalRate}/schedule', [MetalRateController::class, 'schedule'])
+            ->whereNumber('metalRate')
+            ->middleware('permission:metal-rate-schedule')
+            ->name('schedule');
+        Route::delete('/schedules/{metalRateUpdate}', [MetalRateController::class, 'cancelSchedule'])
+            ->whereNumber('metalRateUpdate')
+            ->middleware('permission:metal-rate-schedule')
+            ->name('schedule.cancel');
+    });
 
 
     /* --------------------------------- الرئيسية Home ------------------------------- */

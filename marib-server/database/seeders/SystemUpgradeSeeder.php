@@ -70,7 +70,8 @@ class SystemUpgradeSeeder extends Seeder {
             'seller-verification-request' => [
                 'only' => ['list','update']
             ],
-            'currency-rate'               => '*'
+            'currency-rate'               => '*',
+            'metal-rate'                  => '*'
         ];
 
         $permissionsList = self::generatePermissionList($permissionsList);

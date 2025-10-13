@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/model/category_model.dart';
 import 'package:marib/data/cubits/category/fetch_category_cubit.dart';
+import 'dart:collection';
+import 'package:marib/ui/screens/widgets/lazy_network_image.dart';
 
 import 'dart:io';
 import 'package:marib/utils/extensions/extensions.dart';
@@ -128,26 +130,40 @@ class AdCreationWizardArguments {
 }
 
 class AdCreationWizardScreen extends StatefulWidget {
-  const AdCreationWizardScreen({
+  AdCreationWizardScreen({
     super.key,
-    this.initialDraftId,
-    this.interfaceType,
+    String? initialDraftId,
+    String? interfaceType,
     List<int>? initialCategoryIds,
-  }) : initialCategoryIds = initialCategoryIds ?? const <int>[];
+
+
+    RouteSettings? routeSettings,
+  })  : routeSettings = routeSettings,
+        resolvedArguments = _mergeArguments(
+          explicitDraftId: initialDraftId,
+          explicitInterfaceType: interfaceType,
+          explicitCategoryIds: initialCategoryIds,
+          raw: routeSettings?.arguments,
+        ),
+        initialDraftId = resolvedArguments.draftId,
+        interfaceType = resolvedArguments.interfaceType,
+        initialCategoryIds = List<int>.unmodifiable(
+          resolvedArguments.initialCategoryIds,
+        );
+
 
   final String? initialDraftId;
   final String? interfaceType;
   final List<int> initialCategoryIds;
-
+  final RouteSettings? routeSettings;
+  final AdCreationWizardArguments resolvedArguments;
 
   static Route<void> route(RouteSettings settings) {
-    final AdCreationWizardArguments args = _resolveArguments(settings.arguments);
 
     return MaterialPageRoute(
       builder: (_) => AdCreationWizardScreen(
-        initialDraftId: args.draftId,
-        interfaceType: args.interfaceType,
-        initialCategoryIds: args.initialCategoryIds,
+        routeSettings: settings,
+
       ),
       settings: settings,
     );
@@ -162,6 +178,41 @@ class AdCreationWizardScreen extends StatefulWidget {
           Map<dynamic, dynamic>.from(raw as Map));
     }
     return const AdCreationWizardArguments();
+  }
+
+  static AdCreationWizardArguments _mergeArguments({
+    String? explicitDraftId,
+    String? explicitInterfaceType,
+    List<int>? explicitCategoryIds,
+    Object? raw,
+  }) {
+    final AdCreationWizardArguments routeArgs = _resolveArguments(raw);
+    final String? resolvedDraftId =
+        routeArgs.draftId ?? AdCreationWizardArguments._stringArgument(explicitDraftId);
+    final String? resolvedInterfaceType =
+        routeArgs.interfaceType ?? AdCreationWizardArguments._stringArgument(explicitInterfaceType);
+
+    final LinkedHashSet<int> categorySet = LinkedHashSet<int>();
+
+    void consume(Iterable<int>? source) {
+      if (source == null) {
+        return;
+      }
+      for (final int id in source) {
+        if (id > 0) {
+          categorySet.add(id);
+        }
+      }
+    }
+
+    consume(routeArgs.initialCategoryIds);
+    consume(explicitCategoryIds);
+
+    return AdCreationWizardArguments(
+      draftId: resolvedDraftId,
+      interfaceType: resolvedInterfaceType,
+      initialCategoryIds: categorySet.toList(growable: false),
+    );
   }
 
 
@@ -187,7 +238,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   final _videoLinkFieldController = TextEditingController();
   final _sheinProductLinkController = TextEditingController();
   final _sheinReviewLinkController = TextEditingController();
-
+  final TextEditingController _categorySearchController =
+  TextEditingController();
   String? _selectedCurrency = 'YER';
 
   final PickImage _imagePicker = PickImage();
@@ -208,6 +260,9 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   bool _isPickingVideo = false;
 
   final GlobalKey<FormState> _textDetailsFormKey = GlobalKey<FormState>();
+  Timer? _categorySearchDebounce;
+  String _categorySearchQuery = '';
+
 
   static const Map<String, String> _currencyOptions = <String, String>{
     'YER': 'ريال يمني',
@@ -221,6 +276,18 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     'services': _WizardSectionConfig(requiresInventory: true),
     'shein_products': _WizardSectionConfig(requiresInventory: true),
   };
+
+
+  static const Map<String, String> _interfaceTypeLabels =
+  <String, String>{
+    'public_ads': 'واجهة الإعلانات العامة',
+    'services': 'الخدمات المتخصصة',
+    'shein_products': 'منتجات شي إن',
+    'computer_section': 'قسم الكمبيوتر',
+    'store_products': 'منتجات المتجر',
+  };
+
+
 
   String get _stepFiveLabel {
     final _WizardSectionConfig config = _currentSectionConfig;
@@ -328,6 +395,17 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   String? _customFieldError;
   bool _isPublishing = false;
 
+
+  List<_MainCategoryOption> get _filteredMainCategories {
+    final String normalized = _categorySearchQuery.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return _mainCategories;
+    }
+    return _mainCategories
+        .where((option) => option.name.toLowerCase().contains(normalized))
+        .toList(growable: false);
+  }
+
   Timer? _autoSaveTimer;
   int _currentStep = 0;
   bool _hasUnsavedChanges = false;
@@ -404,6 +482,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     _categorySubscription?.cancel();
 
     _autoSaveTimer?.cancel();
+    _categorySearchDebounce?.cancel();
+
     _titleController.dispose();
     _descriptionController.dispose();
     _contactController.dispose();
@@ -412,6 +492,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     _sheinProductLinkController.dispose();
     _sheinReviewLinkController.dispose();
     _locationAddressController.dispose();
+    _categorySearchController.dispose();
     _locationLatitudeController.dispose();
     _locationLongitudeController.dispose();
     _imagePicker.dispose();
@@ -461,6 +542,23 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     }
   }
 
+
+  List<int> _collectEnsuredCategoryIds() {
+    final LinkedHashSet<int> ensured = LinkedHashSet<int>();
+    ensured.addAll(_preferredCategoryPath);
+    final _MainCategoryOption? main = _selectedMainCategory;
+    if (main != null) {
+      ensured.add(main.id);
+    }
+    final _SubCategoryOption? sub = _selectedSubCategory;
+    if (sub != null) {
+      ensured.add(sub.id);
+    }
+    return ensured.toList(growable: false);
+  }
+
+
+
   void _triggerCategoryFetch({bool forceRefresh = false}) {
     final FetchCategoryCubit? cubit =
         _categoryCubit ?? context.read<FetchCategoryCubit>();
@@ -470,11 +568,15 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     _categoryCubit = cubit;
     final List<int> categoryPath = List<int>.from(_preferredCategoryPath);
     final int? categoryId = categoryPath.isEmpty ? null : categoryPath.first;
+    final List<int> ensuredCategoryIds = _collectEnsuredCategoryIds();
+
     cubit.fetchCategories(
       interfaceType: _preferredInterfaceTypeOriginal,
       categoryId: categoryId,
       categoryIds: categoryPath.isEmpty ? null : categoryPath,
       forceRefresh: forceRefresh,
+      onlyAllowed: true,
+      ensureCategoryIds: ensuredCategoryIds,
     );
     _hasRequestedCategoryFetch = true;
   }
@@ -967,6 +1069,19 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         }
       });
     }
+
+    final bool requiresCategoryRefresh = _preferredCategoryPath.isNotEmpty &&
+        !_mainCategories.any(
+              (_MainCategoryOption option) => option.id == _preferredCategoryPath.first,
+        );
+    if (requiresCategoryRefresh) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _triggerCategoryFetch(forceRefresh: true);
+        }
+      });
+    }
+
   }
 
   _MainCategoryOption? _resolveMainCategory(Map<String, dynamic> payload) {
@@ -2857,6 +2972,10 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
           final ThemeData theme = Theme.of(context);
           final _MainCategoryOption? selected = _selectedMainCategory;
 
+          final List<_MainCategoryOption> displayCategories =
+              _filteredMainCategories;
+          final bool hasSearchTerm = _categorySearchQuery.trim().isNotEmpty;
+
           return ListView(
               padding: const EdgeInsets.all(16),
               children: [
@@ -2872,12 +2991,53 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
           ),
           ),
           ),
+                const SizedBox(height: 12),
+                _buildCategorySearchField(),
           if (isLoading)
           const Padding(
           padding: EdgeInsets.only(top: 12),
           child: LinearProgressIndicator(),
           ),
           const SizedBox(height: 16),
+
+
+          if (displayCategories.isEmpty)
+          Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+          _buildPlaceholderMessage(
+          hasSearchTerm
+          ? 'لا توجد فئات مطابقة لبحثك. جرّب كلمة مختلفة.'
+              : 'لا توجد فئات متاحة لهذا الحساب حاليًا.',
+          ),
+          if (hasSearchTerm)
+          Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: TextButton(
+          onPressed: () {
+          _categorySearchDebounce?.cancel();
+          _categorySearchController.clear();
+          setState(() => _categorySearchQuery = '');
+          },
+          child: const Text('إعادة ضبط البحث'),
+          ),
+          ),
+          ],
+          )
+          else ...[
+          SizedBox(
+          height: 220,
+          child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemBuilder: (BuildContext context, int index) {
+          final _MainCategoryOption option = displayCategories[index];
+          return _buildMainCategoryCard(option);
+          },
+          separatorBuilder: (_, __) => const SizedBox(width: 12),
+          itemCount: displayCategories.length,
+          ),
+          ),
+          const SizedBox(height: 20),
           DropdownButtonFormField<int>(
           value: selected?.id,
           decoration: const InputDecoration(
@@ -2898,14 +3058,15 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
           }
               },
             ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: _mainCategories
-                      .map(_buildMainCategoryChip)
-                      .toList(growable: false),
-                ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: displayCategories
+                  .map(_buildMainCategoryChip)
+                  .toList(growable: false),
+            ),
+          ],
                 if (state is FetchCategoryFailure && _mainCategories.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 16),
@@ -2919,6 +3080,148 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         },
     );
   }
+
+
+  Widget _buildCategorySearchField() {
+    final ThemeData theme = Theme.of(context);
+    return TextField(
+      controller: _categorySearchController,
+      onChanged: _onMainCategorySearchChanged,
+      textInputAction: TextInputAction.search,
+      decoration: InputDecoration(
+        prefixIcon: const Icon(Icons.search),
+        labelText: 'بحث عن فئة',
+        hintText: 'اكتب اسم الفئة الرئيسية للعثور عليها بسرعة',
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        filled: true,
+        fillColor: theme.colorScheme.surfaceVariant.withOpacity(0.25),
+      ),
+    );
+  }
+
+  void _onMainCategorySearchChanged(String value) {
+    _categorySearchDebounce?.cancel();
+    final String query = value;
+    _categorySearchDebounce = Timer(const Duration(milliseconds: 180), () {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _categorySearchQuery = query;
+      });
+    });
+  }
+
+  String _interfaceDisplayName(String? interfaceType) {
+    final String normalized = interfaceType?.trim().toLowerCase() ?? '';
+    if (normalized.isEmpty) {
+      return 'واجهة عامة';
+    }
+    return _interfaceTypeLabels[normalized] ?? interfaceType ?? 'واجهة عامة';
+  }
+
+  Widget _buildMainCategoryCard(_MainCategoryOption category) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colors = theme.colorScheme;
+    final bool isSelected = _selectedMainCategory?.id == category.id;
+    final String interfaceLabel = _interfaceDisplayName(category.interfaceType);
+
+    return InkWell(
+      onTap: () => _onMainCategorySelected(category),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: 220,
+        margin: const EdgeInsetsDirectional.only(end: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: isSelected ? colors.primaryContainer : colors.surface,
+          border: Border.all(
+            color: isSelected ? colors.primary : colors.outlineVariant,
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: colors.shadow.withOpacity(0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            ClipRRect(
+              borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(16)),
+              child: category.imageUrl != null &&
+                  category.imageUrl!.trim().isNotEmpty
+                  ? LazyNetworkImage(
+                imageUrl: category.imageUrl!,
+                height: 120,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              )
+                  : Container(
+                height: 120,
+                width: double.infinity,
+                color: colors.surfaceVariant,
+                alignment: Alignment.center,
+                child: Icon(
+                  Icons.category_outlined,
+                  color: colors.onSurfaceVariant,
+                  size: 40,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    category.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: isSelected
+                          ? colors.onPrimaryContainer
+                          : colors.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    interfaceLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: isSelected
+                          ? colors.onPrimaryContainer.withOpacity(0.85)
+                          : colors.onSurfaceVariant,
+                    ),
+                  ),
+                  if (category.subCategories.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: 8),
+                    Text(
+                      '${category.subCategories.length} فئات فرعية',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: isSelected
+                            ? colors.onPrimaryContainer.withOpacity(0.7)
+                            : colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 
   Widget _buildMainCategoryChip(_MainCategoryOption category) {
     final bool isSelected = _selectedMainCategory?.id == category.id;
@@ -4096,11 +4399,13 @@ class _MainCategoryOption {
     required this.id,
     required this.name,
     required this.interfaceType,
+    this.imageUrl,
     this.subCategories = const <_SubCategoryOption>[],
   });
 
   final int id;
   final String name;
+  final String? imageUrl;
   final String interfaceType;
   final List<_SubCategoryOption> subCategories;
 
@@ -4123,6 +4428,7 @@ class _MainCategoryOption {
       id: model.id!,
       name: resolveName(model.name),
       interfaceType: (model.interfaceType ?? '').trim(),
+      imageUrl: model.url,
       subCategories: subCategories,
     );
   }

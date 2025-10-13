@@ -390,7 +390,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
       if (!serviceEnabled) {
         HelperUtils.showSnackBarMessage(
           context,
-          'locationServicesDisabled'.translate(context),
+          'locationServicesDisabledMarib'.translate(context),
           messageDuration: 3,
           type: MessageType.warning,
         );
@@ -405,7 +405,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
       if (permission == LocationPermission.denied) {
         HelperUtils.showSnackBarMessage(
           context,
-          'locationPermissionDenied'.translate(context),
+          'locationPermissionDeniedMarib'.translate(context),
           messageDuration: 3,
           type: MessageType.warning,
         );
@@ -415,7 +415,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
       if (permission == LocationPermission.deniedForever) {
         HelperUtils.showSnackBarMessage(
           context,
-          'locationPermissionDeniedForever'.translate(context),
+          'locationPermissionDeniedForeverMarib'.translate(context),
           messageDuration: 3,
           type: MessageType.warning,
         );
@@ -473,7 +473,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
     } catch (_) {
       HelperUtils.showSnackBarMessage(
         context,
-        'errorGettingLocation'.translate(context),
+        'errorGettingLocationMarib'.translate(context),
         messageDuration: 3,
         type: MessageType.warning,
       );

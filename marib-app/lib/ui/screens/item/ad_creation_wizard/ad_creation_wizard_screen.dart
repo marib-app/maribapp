@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:marib/data/model/category_model.dart';
+import 'package:marib/data/cubits/category/fetch_category_cubit.dart';
 
 import 'dart:io';
 import 'package:marib/utils/extensions/extensions.dart';
@@ -8,20 +11,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/helper_utils.dart';
-import 'package:marib/utils/imagePicker.dart';
 import 'package:dio/dio.dart';
 import 'package:marib/data/model/ad_draft_model.dart';
-import 'package:marib/data/model/ad_draft_model.dart';
-import 'package:marib/data/repositories/item/ad_draft_local_store.dart';
-import 'package:marib/data/repositories/item/ad_draft_repository.dart';
 import 'package:marib/utils/app_telemetry.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'models/custom_field_schema.dart';
 import 'services/category_inventory_service.dart';
 import 'widgets/dynamic_custom_fields_form.dart';
-import 'package:marib/ui/theme/theme.dart';
 
 
 

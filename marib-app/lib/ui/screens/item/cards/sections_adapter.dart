@@ -56,6 +56,17 @@ class SectionsAdapter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
+    final ItemModel? item = widget.item;
+    final String? preferredThumb =
+    (item?.thumbnailUrl?.trim().isNotEmpty ?? false) ? item!.thumbnailUrl : null;
+    final String? fallbackThumb =
+    (item?.thumbnailFallbackUrl?.trim().isNotEmpty ?? false)
+        ? item!.thumbnailFallbackUrl
+        : item?.image;
+    final String resolvedUrl =
+        preferredThumb ?? fallbackThumb ?? item?.image ?? '';
+
     final data = section.sectionData;
     if (data == null || data.isEmpty) return const SizedBox.shrink();
 
@@ -324,10 +335,15 @@ class _ItemCardState extends State<ICard> {
                       borderRadius: BorderRadius.circular(18),
                       child: RepaintBoundary(
                         child: UiUtils.getImage(
-                          widget.item?.image ?? "assets/image/2.png",
+                          resolvedUrl.isNotEmpty
+                              ? resolvedUrl
+                              : "assets/image/2.png",
                           height: widget.imageHeight ?? 147,
                           width: double.infinity,
                           fit: BoxFit.cover,
+                          fallbackUrl: fallbackThumb,
+                          cacheWidth: 200,
+                          cacheHeight: 200,
                         ),
                       ),
                     ),

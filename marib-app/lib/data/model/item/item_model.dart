@@ -17,6 +17,8 @@ class ItemSummary {
   final double? price;
   final double? finalPrice;
   final String? image;
+  final String? thumbnailUrl;
+  final String? thumbnailFallbackUrl;
   final String? productLink;
   final dynamic watermarkImage;
   final double? latitude;
@@ -48,6 +50,8 @@ class ItemSummary {
     this.price,
     this.finalPrice,
     this.image,
+    this.thumbnailUrl,
+    this.thumbnailFallbackUrl,
     this.productLink,
     this.watermarkImage,
     this.latitude,
@@ -78,7 +82,9 @@ class ItemSummary {
       description: json['description'],
       price: ItemModel._toDouble(json['price']),
       finalPrice: ItemModel._toDouble(json['final_price']) ?? ItemModel._toDouble(json['price']),
-      image: json['image'],
+      image: json['image'] ?? json['thumbnail_fallback_url'] ?? json['thumbnail_url'],
+      thumbnailUrl: json['thumbnail_url'] ?? json['thumbnail'] ?? json['thumb'],
+      thumbnailFallbackUrl: json['thumbnail_fallback_url'] ?? json['thumbnail_fallback'] ?? json['image'],
       productLink: json['product_link'],
       watermarkImage: json['watermark_image'],
       latitude: ItemModel._toDouble(json['latitude'] ?? json['lat']),
@@ -111,6 +117,8 @@ class ItemSummary {
       'price': price,
       'final_price': finalPrice,
       'image': image,
+      'thumbnail_url': thumbnailUrl,
+      'thumbnail_fallback_url': thumbnailFallbackUrl,
       'product_link': productLink,
       'watermark_image': watermarkImage,
       'latitude': latitude,
@@ -144,6 +152,8 @@ extension ItemSummaryX on ItemSummary {
       description: description,
       price: price,
       image: image,
+      thumbnailUrl: thumbnailUrl,
+      thumbnailFallbackUrl: thumbnailFallbackUrl,
       productLink: productLink,
       watermarkimage: watermarkImage,
       latitude: latitude,
@@ -185,6 +195,10 @@ class ItemModel {
   double? price;
   double? finalPrice;
   String? image;
+  String? thumbnailUrl;
+  String? thumbnailFallbackUrl;
+  String? detailImageUrl;
+  String? detailImageFallbackUrl;
   dynamic watermarkimage;
 
   double? _latitude;
@@ -250,6 +264,10 @@ class ItemModel {
     this.price,
     this.finalPrice,
     this.image,
+    String? thumbnailUrl,
+    String? thumbnailFallbackUrl,
+    String? detailImageUrl,
+    String? detailImageFallbackUrl,
     this.watermarkimage,
     dynamic latitude,
     dynamic longitude,
@@ -302,6 +320,11 @@ class ItemModel {
     double? price,
     double? finalPrice,
     String? image,
+    thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+    thumbnailFallbackUrl: thumbnailFallbackUrl ?? this.thumbnailFallbackUrl,
+    detailImageUrl: detailImageUrl ?? this.detailImageUrl,
+    detailImageFallbackUrl:
+    detailImageFallbackUrl ?? this.detailImageFallbackUrl,
     dynamic watermarkimage,
     String? currencyCode,
     dynamic latitude,
@@ -422,7 +445,15 @@ class ItemModel {
     m.views = _toInt(json['clicks']);
     m.description = json['description'];
 
-    m.image = json['image'];
+    m.image = json['image'] ?? json['thumbnail_fallback_url'] ?? json['thumbnail_url'];
+    m.thumbnailUrl = json['thumbnail_url'] ?? json['thumbnail'] ?? json['thumb'];
+    m.thumbnailFallbackUrl =
+        json['thumbnail_fallback_url'] ?? json['thumbnail_fallback'] ?? json['image'];
+    m.detailImageUrl = json['detail_image_url'] ?? json['detailImageUrl'];
+    m.detailImageFallbackUrl = json['detail_image_fallback_url'] ??
+        json['detail_image_fallback'] ??
+        json['detail_image'];
+
     m.watermarkimage = json['watermark_image'];
 
     // يدعم مفاتيح بديلة lat/lng
@@ -525,6 +556,10 @@ class ItemModel {
     data['total_likes'] = totalLikes;
     data['clicks'] = views;
     data['image'] = image;
+    data['thumbnail_url'] = thumbnailUrl;
+    data['thumbnail_fallback_url'] = thumbnailFallbackUrl;
+    data['detail_image_url'] = detailImageUrl;
+    data['detail_image_fallback_url'] = detailImageFallbackUrl;
     data['watermark_image'] = watermarkimage;
     data['latitude'] = latitude;
     data['longitude'] = longitude;
@@ -1004,15 +1039,35 @@ class User {
 class GalleryImages {
   int? id;
   String? image;
+  String? thumbnailUrl;
+  String? thumbnailFallbackUrl;
+  String? detailImageUrl;
+  String? detailImageFallbackUrl;
   String? createdAt;
   String? updatedAt;
   int? itemId;
 
-  GalleryImages({this.id, this.image, this.createdAt, this.updatedAt, this.itemId});
+  GalleryImages({
+    this.id,
+    this.image,
+    this.thumbnailUrl,
+    this.thumbnailFallbackUrl,
+    this.detailImageUrl,
+    this.detailImageFallbackUrl,
+    this.createdAt,
+    this.updatedAt,
+    this.itemId,
+  });
 
   GalleryImages.fromJson(Map<String, dynamic> json) {
     id = ItemModel._toInt(json['id']);
-    image = json['image'];
+    image = json['image'] ?? json['thumbnail_fallback_url'] ?? json['thumbnail_url'];
+    thumbnailUrl = json['thumbnail_url'] ?? json['thumbnail'];
+    thumbnailFallbackUrl =
+        json['thumbnail_fallback_url'] ?? json['thumbnail_fallback'] ?? json['image'];
+    detailImageUrl = json['detail_image_url'];
+    detailImageFallbackUrl =
+        json['detail_image_fallback_url'] ?? json['detail_image_fallback'];
     createdAt = json['created_at'];
     updatedAt = json['updated_at'];
     itemId = ItemModel._toInt(json['item_id']);
@@ -1022,6 +1077,10 @@ class GalleryImages {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['id'] = id;
     data['image'] = image;
+    data['thumbnail_url'] = thumbnailUrl;
+    data['thumbnail_fallback_url'] = thumbnailFallbackUrl;
+    data['detail_image_url'] = detailImageUrl;
+    data['detail_image_fallback_url'] = detailImageFallbackUrl;
     data['created_at'] = createdAt;
     data['updated_at'] = updatedAt;
     data['item_id'] = itemId;
@@ -1031,6 +1090,7 @@ class GalleryImages {
 
 class ItemOffers {
   int? id;
+
   int? sellerId;
   int? buyerId;
   String? createdAt;

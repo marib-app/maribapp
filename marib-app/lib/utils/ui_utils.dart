@@ -43,6 +43,93 @@ import 'package:marib/data/model/subscription_package_limit.dart';
 import 'dart:ui' show ImageFilter;          // للـ blur
 import 'package:flutter/gestures.dart';     // للروابط
 import 'package:marib/utils/scroll/low_spec_scroll_physics.dart';
+import 'dart:collection';
+
+import 'package:flutter/foundation.dart';
+
+
+class _AdaptiveNetworkImage extends StatefulWidget {
+  const _AdaptiveNetworkImage({
+    required this.urls,
+    required this.width,
+    required this.height,
+    required this.fit,
+    required this.cacheWidth,
+    required this.cacheHeight,
+  });
+
+  final List<String> urls;
+  final double? width;
+  final double? height;
+  final BoxFit fit;
+  final int cacheWidth;
+  final int cacheHeight;
+
+  @override
+  State<_AdaptiveNetworkImage> createState() => _AdaptiveNetworkImageState();
+}
+
+class _AdaptiveNetworkImageState extends State<_AdaptiveNetworkImage> {
+  int _currentIndex = 0;
+
+  @override
+  void didUpdateWidget(covariant _AdaptiveNetworkImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!listEquals(oldWidget.urls, widget.urls)) {
+      _currentIndex = 0;
+    } else if (widget.urls.isNotEmpty && _currentIndex >= widget.urls.length) {
+      _currentIndex = widget.urls.length - 1;
+    } else if (widget.urls.isEmpty) {
+      _currentIndex = 0;
+    }
+  }
+
+  void _scheduleNextCandidate() {
+    if (_currentIndex >= widget.urls.length - 1) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _currentIndex += 1;
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.urls.isEmpty) {
+      return UiUtils._buildImageError(context, widget.width, widget.height);
+    }
+
+    final int index = (_currentIndex >= widget.urls.length)
+        ? widget.urls.length - 1
+        : _currentIndex;
+    final String url = widget.urls[index];
+
+    return CachedNetworkImage(
+      key: ValueKey('cached_network_image_${url.hashCode}'),
+      imageUrl: url,
+      width: widget.width,
+      height: widget.height,
+      fit: widget.fit,
+      memCacheWidth: widget.cacheWidth,
+      memCacheHeight: widget.cacheHeight,
+      maxWidthDiskCache: widget.cacheWidth,
+      maxHeightDiskCache: widget.cacheHeight,
+      placeholder: (context, _) =>
+          UiUtils._buildImagePlaceholder(context, widget.width, widget.height),
+      errorWidget: (context, _, __) {
+        if (_currentIndex < widget.urls.length - 1) {
+          _scheduleNextCandidate();
+          return UiUtils._buildImagePlaceholder(
+              context, widget.width, widget.height);
+        }
+        return UiUtils._buildImageError(context, widget.width, widget.height);
+      },
+    );
+  }
+}
+
+
 
 
 
@@ -542,53 +629,109 @@ class UiUtils {
   }
 
 
-  static Widget getImage(String url,
-      {double? width,
+  static const int _defaultCacheDimension = 200;
+  static const int _minCacheDimension = 160;
+  static const int _maxCacheDimension = 240;
+  static final RegExp _preferredThumbnailExtension =
+  RegExp(r'\.(avif|webp)(?:\?|#|\b)', caseSensitive: false);
+
+  static Widget getImage(
+      String url, {
+        double? width,
         double? height,
         BoxFit? fit,
         String? blurHash,
-        bool? showFullScreenImage}) {
-    return CachedNetworkImage(
-      imageUrl: url,
-      fit: fit,
+        bool? showFullScreenImage,
+        String? fallbackUrl,
+        List<String>? alternateUrls,
+        int? cacheWidth,
+        int? cacheHeight,
+      }) {
+    final List<String> candidates = _prepareImageCandidates(
+      primary: url,
+      alternates: alternateUrls,
+      fallback: fallbackUrl,
+    );
+
+    final int resolvedCacheWidth = _resolveCacheDimension(cacheWidth);
+    final int resolvedCacheHeight = _resolveCacheDimension(cacheHeight);
+
+    return _AdaptiveNetworkImage(
+      urls: candidates,
       width: width,
       height: height,
-      memCacheHeight: 1000,
-      memCacheWidth: 1000,
-      placeholder: (context, url) {
-        return Container(
-            width: width,
-            color: context.color.territoryColor.withOpacity(0.1),
-            height: height,
-            alignment: AlignmentDirectional.center,
-            child: SizedBox(
-                width: width,
-                height: height,
-                child: getSvg(
-                  AppIcons.placeHolder,
-                  width: width ?? 70,
-                  height: height ?? 70,
-                )));
-      },
-      errorWidget: (context, url, error) {
-        return Container(
-          width: width,
-          color: context.color.territoryColor.withOpacity(0.1),
-          height: height,
-          alignment: AlignmentDirectional.center,
-          child: SizedBox(
-            width: width,
-            height: height,
-            child: getSvg(
-              AppIcons.placeHolder,
-              width: width ?? 70,
-              height: height ?? 70,
-            ),
-          ),
-        );
-      },
+      fit: fit ?? BoxFit.cover,
+      cacheWidth: resolvedCacheWidth,
+      cacheHeight: resolvedCacheHeight,
     );
   }
+
+  static List<String> _prepareImageCandidates({
+    String? primary,
+    List<String>? alternates,
+    String? fallback,
+  }) {
+    final ordered = <String?>[primary, ...?alternates, fallback];
+    final filtered = ordered
+        .whereType<String>()
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toList();
+
+    final LinkedHashSet<String> deduplicated =
+    LinkedHashSet<String>.from(filtered);
+    final List<String> urls = deduplicated.toList();
+    if (urls.length <= 1) {
+      return urls;
+    }
+
+    final List<String> preferred = [];
+    final List<String> others = [];
+    for (final url in urls) {
+      if (_isPreferredThumbnailFormat(url)) {
+        preferred.add(url);
+      } else {
+        others.add(url);
+      }
+    }
+    return [...preferred, ...others];
+  }
+
+  static bool _isPreferredThumbnailFormat(String url) {
+    return _preferredThumbnailExtension.hasMatch(url);
+  }
+
+  static int _resolveCacheDimension(int? dimension) {
+    final int resolved = dimension ?? _defaultCacheDimension;
+    if (resolved < _minCacheDimension) return _minCacheDimension;
+    if (resolved > _maxCacheDimension) return _maxCacheDimension;
+    return resolved;
+  }
+
+  static Widget _buildImagePlaceholder(
+      BuildContext context, double? width, double? height) {
+    return Container(
+      width: width,
+      height: height,
+      color: context.color.territoryColor.withOpacity(0.1),
+      alignment: AlignmentDirectional.center,
+      child: SizedBox(
+        width: width,
+        height: height,
+        child: getSvg(
+          AppIcons.placeHolder,
+          width: width ?? 70,
+          height: height ?? 70,
+        ),
+      ),
+    );
+  }
+
+  static Widget _buildImageError(
+      BuildContext context, double? width, double? height) {
+    return _buildImagePlaceholder(context, width, height);
+  }
+
 
 
   static Widget progress({double? width,

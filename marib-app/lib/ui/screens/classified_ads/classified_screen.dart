@@ -464,35 +464,57 @@ Widget buildClassifiedCard(
                   );
                 }
               },
-              child: Ink( // ✅ Ink لسبلاش متوافق مع الديكور
-                decoration: BoxDecoration(
-                  color: context.color.secondaryColor,
-                  borderRadius: BorderRadius.circular(r),
-                  border: Border.all(
-                    width: bw,
-                    color: context.color.borderColor.darken(90),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ✅ الصورة مرِنة ومقصوصة بنفس حافة الأعلى (مطابقة تمامًا للإطار)
-                    Expanded(
-                      child: ClipRRect(
-                        clipBehavior: Clip.antiAlias,
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(r - bw), // تطابق الإطار
-                        ),
-                        child: UiUtils.getImage(
-                          classified.image ?? '',
-                          fit: BoxFit.fill,
-                          width: double.infinity,
-                        ),
+                child: Builder(
+                    builder: (context) {
+                      final preferredThumb =
+                      (classified.thumbnailUrl?.trim().isNotEmpty ?? false)
+                          ? classified.thumbnailUrl
+                          : null;
+                      final fallbackThumb =
+                      (classified.thumbnailFallbackUrl?.trim().isNotEmpty ?? false)
+                          ? classified.thumbnailFallbackUrl
+                          : classified.image;
+                      final resolvedThumb =
+                          preferredThumb ?? fallbackThumb ?? classified.image ?? '';
+
+                      return Ink( // ✅ Ink لسبلاش متوافق مع الديكور
+                        decoration: BoxDecoration(
+                          color: context.color.secondaryColor,
+                          borderRadius: BorderRadius.circular(r),
+                          border: Border.all(
+                            width: bw,
+                            color: context.color.borderColor.darken(90),
                       ),
                     ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // ✅ الصورة مرِنة ومقصوصة بنفس حافة الأعلى (مطابقة تمامًا للإطار)
+                            Expanded(
+                              child: ClipRRect(
+                                clipBehavior: Clip.antiAlias,
+                                borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(r - bw), // تطابق الإطار
+                                ),
+                                child: UiUtils.getImage(
+                                  resolvedThumb,
+                                  fit: BoxFit.fill,
+                                  width: double.infinity,
+                                  fallbackUrl: fallbackThumb,
+                                  cacheWidth: 200,
+                                  cacheHeight: 200,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                ),
 
-                    // العنوان مع نفس المقاسات
-                    Padding(
+
+              // العنوان مع نفس المقاسات
+              Padding(
                       padding: EdgeInsets.symmetric(
                         horizontal: ScreenScaler.s(10),
                         vertical: ScreenScaler.s(8),
@@ -527,8 +549,6 @@ Widget buildClassifiedCard(
               ),
             ),
           ),
-        ),
-      ),
 
       // مسافة صغيرة أسفل البطاقة
       SizedBox(height: gap),

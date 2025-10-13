@@ -13,7 +13,7 @@ class FetchItemFromCategoryInProgress extends FetchItemFromCategoryState {}
 class FetchItemFromCategorySuccess extends FetchItemFromCategoryState {
   final bool isLoadingMore;
   final bool loadingMoreError;
-  final List<ItemModel> itemModel;
+  final List<ItemSummary> itemSummaries;
   final int page;
   final int total;
   final int? categoryId;
@@ -21,7 +21,7 @@ class FetchItemFromCategorySuccess extends FetchItemFromCategoryState {
   FetchItemFromCategorySuccess(
       {required this.isLoadingMore,
         required this.loadingMoreError,
-        required this.itemModel,
+        required this.itemSummaries,
         required this.page,
         required this.total,
         this.categoryId});
@@ -29,18 +29,20 @@ class FetchItemFromCategorySuccess extends FetchItemFromCategoryState {
   FetchItemFromCategorySuccess copyWith(
       {bool? isLoadingMore,
         bool? loadingMoreError,
-        List<ItemModel>? itemModel,
+        List<ItemSummary>? itemSummaries,
         int? page,
         int? total,
         int? categoryId}) {
     return FetchItemFromCategorySuccess(
         isLoadingMore: isLoadingMore ?? this.isLoadingMore,
         loadingMoreError: loadingMoreError ?? this.loadingMoreError,
-        itemModel: itemModel ?? this.itemModel,
+        itemSummaries: itemSummaries ?? this.itemSummaries,
         page: page ?? this.page,
         total: total ?? this.total,
         categoryId: categoryId ?? this.categoryId);
   }
+  List<ItemModel> get itemSkeletons =>
+      itemSummaries.map((summary) => summary.toItemModelSkeleton()).toList();
 }
 
 class FetchItemFromCategoryFailure extends FetchItemFromCategoryState {
@@ -50,33 +52,36 @@ class FetchItemFromCategoryFailure extends FetchItemFromCategoryState {
 }
 
 class FetchItemFromCategoryCubit extends Cubit<FetchItemFromCategoryState> {
-  FetchItemFromCategoryCubit() : super(FetchItemFromCategoryInitial());
+  FetchItemFromCategoryCubit({ItemRepository? itemRepository})
+      : _itemRepository = itemRepository ?? ItemRepository(),
+        super(FetchItemFromCategoryInitial());
 
-  final ItemRepository _itemRepository = ItemRepository();
+  final ItemRepository _itemRepository;
+
 
   Future<void> fetchItemFromCategory({
     required int categoryId,
     required String search,
     String? sortBy,
     ItemFilterModel? filter,
-    bool useDetailView = true,
   }) async {
     try {
       emit(FetchItemFromCategoryInProgress());
 
-      DataOutput<ItemModel> result = await _itemRepository.fetchItemFromCatId(
+      DataOutput<ItemSummary> result =
+      await _itemRepository.fetchItemFromCatId(
         categoryId: categoryId,
         page: 1,
         search: search,
         sortBy: sortBy,
         filter: filter,
-        detailed: useDetailView,
+
       );
       emit(
         FetchItemFromCategorySuccess(
           isLoadingMore: false,
           loadingMoreError: false,
-          itemModel: result.modelList,
+          itemSummaries: result.modelList,
           page: 1,
           total: result.total,
           categoryId: categoryId,
@@ -96,7 +101,6 @@ class FetchItemFromCategoryCubit extends Cubit<FetchItemFromCategoryState> {
     required String? search,
     String? sortBy,
     ItemFilterModel? filter,
-    bool useDetailView = true,
   }) async {
     try {
       if (state is FetchItemFromCategorySuccess) {
@@ -106,29 +110,32 @@ class FetchItemFromCategoryCubit extends Cubit<FetchItemFromCategoryState> {
         emit((state as FetchItemFromCategorySuccess)
             .copyWith(isLoadingMore: true));
 
-        DataOutput<ItemModel> result = await _itemRepository.fetchItemFromCatId(
+        final FetchItemFromCategorySuccess currentState =
+        state as FetchItemFromCategorySuccess;
+
+        DataOutput<ItemSummary> result =
+        await _itemRepository.fetchItemFromCatId(
+
           categoryId: catId,
-          page: (state as FetchItemFromCategorySuccess).page + 1,
+          page: currentState.page + 1,
           search: search,
           sortBy: sortBy,
           filter: filter,
-          detailed: useDetailView,
+
         );
 
-        FetchItemFromCategorySuccess item =
-        (state as FetchItemFromCategorySuccess);
+        final List<ItemSummary> updatedSummaries =
+        List<ItemSummary>.from(currentState.itemSummaries)
+          ..addAll(result.modelList);
 
-        item.itemModel.addAll(result.modelList);
-
-        emit(
-          FetchItemFromCategorySuccess(
-            isLoadingMore: false,
-            loadingMoreError: false,
-            itemModel: item.itemModel,
-            page: (state as FetchItemFromCategorySuccess).page + 1,
-            total: result.total,
-          ),
-        );
+        emit(FetchItemFromCategorySuccess(
+          isLoadingMore: false,
+          loadingMoreError: false,
+          itemSummaries: updatedSummaries,
+          page: currentState.page + 1,
+          total: result.total,
+          categoryId: currentState.categoryId,
+        ));
       }
     } catch (e) {
       emit(
@@ -142,7 +149,7 @@ class FetchItemFromCategoryCubit extends Cubit<FetchItemFromCategoryState> {
 
   bool hasMoreData() {
     if (state is FetchItemFromCategorySuccess) {
-      return (state as FetchItemFromCategorySuccess).itemModel.length <
+      return (state as FetchItemFromCategorySuccess).itemSummaries.length <
           (state as FetchItemFromCategorySuccess).total;
     }
     return false;

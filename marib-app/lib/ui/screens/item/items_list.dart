@@ -629,10 +629,13 @@ class ItemsListState extends State<ItemsList> {
     }
 
     if (state is FetchItemFromCategorySuccess) {
-      if (state.itemModel.isEmpty) {
+      final List<ItemModel> skeletons = state.itemSkeletons;
+
+      if (skeletons.isEmpty) {
+
         sections.add(_buildEmptySection(context));
       } else {
-        sections.addAll(_buildSuccessSections(context, state.itemModel));
+        sections.addAll(_buildSuccessSections(context, skeletons));
       }
 
       if (state.isLoadingMore) {

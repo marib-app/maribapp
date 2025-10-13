@@ -2996,7 +2996,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       }
 
       if (state is FetchRelatedItemsSuccess) {
-        if (state.itemModel.isEmpty || state.itemModel.length == 1) {
+        if (state.itemSummaries.isEmpty || state.itemSummaries.length == 1) {
           return SizedBox.shrink();
         }
 
@@ -3010,8 +3010,10 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   /// عرض قائمة الإعلانات المشابهة بطريقة محسنة (تجاهل الإعلان الحالي + عرض نظيف)
   Widget buildRelatedListWidget(FetchRelatedItemsSuccess state) {
     // ✅ تصفية العناصر: نحذف الإعلان الحالي من القائمة قبل البناء
-    final relatedItems =
-        state.itemModel.where((item) => item.id != _currentItem.id).toList();
+    final relatedItems = state.itemSummaries
+        .where((summary) => summary.id != _currentItem.id)
+        .map((summary) => summary.toItemModelSkeleton())
+        .toList();
 
     return Padding(
       padding: const EdgeInsets.only(top: 10.0),

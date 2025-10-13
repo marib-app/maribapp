@@ -288,7 +288,7 @@ class ItemRepository {
   /// - التصفح بترقيم الصفحات
   /// يعيد: DataOutput<ItemModel>
   /// -------------------------------------------------------------------------
-  Future<DataOutput<ItemModel>> fetchItemFromCatId({
+  Future<DataOutput<ItemSummary>> fetchItemFromCatId({
     required int categoryId,
     required int page,
     String? search,
@@ -298,51 +298,13 @@ class ItemRepository {
     String? city,
     int? areaId,
     ItemFilterModel? filter,
-    bool detailed = true,
   }) async {
-    final Map<String, dynamic> parameters = {
-      Api.categoryId: categoryId,
-      Api.page: page,
-    };
-
-    // تطبيق الفلاتر (إن وُجدت)
-    if (filter != null) {
-      parameters.addAll(filter.toMap());
-
-      // تنظيف بعض المفاتيح حسب شروطك:
-      if (filter.areaId == null) {
-        parameters.remove('area_id');
-      }
-      parameters.remove('area');
-
-      // تحويل الحقول المخصصة customFields إلى شكل مناسب في الاستعلام
-      if (filter.customFields != null) {
-        filter.customFields!.forEach((key, value) {
-          if (value is List) {
-            parameters[key] = value.map((v) => v.toString()).join(',');
-          } else {
-            parameters[key] = value.toString();
-          }
-        });
-      }
-    }
-
-    if (search != null) parameters[Api.search] = search;
-    if (sortBy != null) parameters[Api.sortBy] = sortBy;
-
-    parameters['view'] = detailed ? 'detail' : 'summary';
-
-
-    final Map<String, dynamic> response =
-    await Api.get(url: Api.getItemApi, queryParameters: parameters);
-
-    final List<ItemModel> items = (response['data']['data'] as List)
-        .map((e) => ItemModel.fromJson(e))
-        .toList();
-
-    return DataOutput(
-      total: response['data']['total'] ?? 0,
-      modelList: items,
+    return fetchItemSummariesFromCatId(
+      categoryId: categoryId,
+      page: page,
+      search: search,
+      sortBy: sortBy,
+      filter: filter,
     );
   }
 

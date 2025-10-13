@@ -1,6 +1,5 @@
 import 'dart:async';
 
-
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -21,7 +20,6 @@ import 'models/custom_field_schema.dart';
 import 'services/category_inventory_service.dart';
 import 'widgets/dynamic_custom_fields_form.dart';
 
-
 /// Simplified ad creation wizard showcasing a multi-step flow with
 /// progress indicator, navigation guards and auto-save hooks.
 
@@ -31,7 +29,6 @@ class AdCreationWizardArguments {
   final String? draftId;
 }
 
-
 class AdCreationWizardScreen extends StatefulWidget {
   const AdCreationWizardScreen({super.key, this.initialDraftId});
 
@@ -39,9 +36,9 @@ class AdCreationWizardScreen extends StatefulWidget {
 
   static Route<void> route(RouteSettings settings) {
     final AdCreationWizardArguments? args =
-    settings.arguments is AdCreationWizardArguments
-        ? settings.arguments as AdCreationWizardArguments
-        : null;
+        settings.arguments is AdCreationWizardArguments
+            ? settings.arguments as AdCreationWizardArguments
+            : null;
     return MaterialPageRoute(
       builder: (_) => AdCreationWizardScreen(initialDraftId: args?.draftId),
       settings: settings,
@@ -62,7 +59,6 @@ enum _WizardStepId {
   review,
 }
 
-
 class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -79,9 +75,12 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
 
   final List<_PendingMedia> _mediaFiles = <_PendingMedia>[];
   final List<String> _videoLinks = <String>[];
-  final TextEditingController _locationAddressController = TextEditingController();
-  final TextEditingController _locationLatitudeController = TextEditingController();
-  final TextEditingController _locationLongitudeController = TextEditingController();
+  final TextEditingController _locationAddressController =
+      TextEditingController();
+  final TextEditingController _locationLatitudeController =
+      TextEditingController();
+  final TextEditingController _locationLongitudeController =
+      TextEditingController();
   final GlobalKey<FormState> _locationFormKey = GlobalKey<FormState>();
   final GlobalKey<FormState> _inventoryFormKey = GlobalKey<FormState>();
   List<_InventoryVariation> _inventoryVariations = <_InventoryVariation>[];
@@ -96,7 +95,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     'USD': 'دولار أمريكي',
   };
   static const Map<String, _WizardSectionConfig> _sectionConfigurations =
-  <String, _WizardSectionConfig>{
+      <String, _WizardSectionConfig>{
     'public_ads': _WizardSectionConfig(requiresLocation: true),
     'public_ads:102': _WizardSectionConfig(requiresLocation: true),
     'services': _WizardSectionConfig(requiresInventory: true),
@@ -124,8 +123,10 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     }
     final _SubCategoryOption? subCategory = _selectedSubCategory;
     if (subCategory != null) {
-      final String overrideKey = '${mainCategory.interfaceType}:${subCategory.id}';
-      final _WizardSectionConfig? override = _sectionConfigurations[overrideKey];
+      final String overrideKey =
+          '${mainCategory.interfaceType}:${subCategory.id}';
+      final _WizardSectionConfig? override =
+          _sectionConfigurations[overrideKey];
       if (override != null) {
         return override;
       }
@@ -135,6 +136,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   }
 
   bool get _requiresLocation => _currentSectionConfig.requiresLocation;
+
   bool get _requiresInventory => _currentSectionConfig.requiresInventory;
 
   List<_WizardStep> get _steps {
@@ -142,7 +144,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     final bool requiresLocation = config.requiresLocation;
     final bool requiresInventory = config.requiresInventory;
     final bool hasRequiredCustomFields =
-    _customFieldSchemas.any((CustomFieldSchema field) => field.isRequired);
+        _customFieldSchemas.any((CustomFieldSchema field) => field.isRequired);
 
     return <_WizardStep>[
       const _WizardStep(
@@ -179,9 +181,9 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     ];
   }
 
-  List<_WizardStep> get _visibleSteps =>
-      _steps.where((_WizardStep step) => step.isVisible).toList(growable: false);
-
+  List<_WizardStep> get _visibleSteps => _steps
+      .where((_WizardStep step) => step.isVisible)
+      .toList(growable: false);
 
   final CategoryInventoryService _inventoryService = CategoryInventoryService();
   final AdPublishingService _adPublishingService = AdPublishingService();
@@ -206,9 +208,9 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     ),
   ];
   final GlobalKey<DynamicCustomFieldsFormState> _customFieldsFormKey =
-  GlobalKey<DynamicCustomFieldsFormState>();
+      GlobalKey<DynamicCustomFieldsFormState>();
   final Map<String, List<CustomFieldSchema>> _customFieldSchemaCache =
-  <String, List<CustomFieldSchema>>{};
+      <String, List<CustomFieldSchema>>{};
   _MainCategoryOption? _selectedMainCategory;
   _SubCategoryOption? _selectedSubCategory;
   List<CustomFieldSchema> _customFieldSchemas = const <CustomFieldSchema>[];
@@ -227,16 +229,18 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   bool _isHydratingState = false;
   final Map<String, String> _serverFieldErrors = <String, String>{};
 
-
   @override
   void initState() {
     super.initState();
     _registerFieldController(_titleController, const <String>['title']);
-    _registerFieldController(_descriptionController, const <String>['description']);
+    _registerFieldController(
+        _descriptionController, const <String>['description']);
     _registerFieldController(_contactController, const <String>['contact']);
     _registerFieldController(_priceController, const <String>['price']);
-    _registerFieldController(_sheinProductLinkController, const <String>['product_link']);
-    _registerFieldController(_sheinReviewLinkController, const <String>['review_link']);
+    _registerFieldController(
+        _sheinProductLinkController, const <String>['product_link']);
+    _registerFieldController(
+        _sheinReviewLinkController, const <String>['review_link']);
     _registerFieldController(
         _locationAddressController, const <String>['location.address']);
     _registerFieldController(
@@ -256,7 +260,6 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeDraft();
     });
-
   }
 
   @override
@@ -288,8 +291,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     _autoSaveTimer = Timer(const Duration(seconds: 3), _autoSaveDraft);
   }
 
-
-  void _registerFieldController(TextEditingController controller, List<String> keys) {
+  void _registerFieldController(
+      TextEditingController controller, List<String> keys) {
     controller.addListener(() {
       for (final String key in keys) {
         _clearServerFieldError(key);
@@ -303,7 +306,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       return;
     }
     final List<String> targets = _serverFieldErrors.keys
-        .where((String existing) => existing == key || existing.startsWith('$key.'))
+        .where((String existing) =>
+            existing == key || existing.startsWith('$key.'))
         .toList(growable: false);
     if (targets.isEmpty) {
       return;
@@ -356,18 +360,20 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     });
 
     if (customFieldErrors.isNotEmpty) {
-      _customFieldsFormKey.currentState?.applyValidationErrors(customFieldErrors);
+      _customFieldsFormKey.currentState
+          ?.applyValidationErrors(customFieldErrors);
     }
 
     _textDetailsFormKey.currentState?.validate();
     if (_requiresLocation ||
-        _serverFieldErrors.keys.any((String key) => key.startsWith('location.'))) {
+        _serverFieldErrors.keys
+            .any((String key) => key.startsWith('location.'))) {
       _locationFormKey.currentState?.validate();
     }
-    final bool shouldValidateInventory =
-        _requiresInventory ||
-            _inventoryVariations.isNotEmpty ||
-            _serverFieldErrors.keys.any((String key) => key.startsWith('inventory.'));
+    final bool shouldValidateInventory = _requiresInventory ||
+        _inventoryVariations.isNotEmpty ||
+        _serverFieldErrors.keys
+            .any((String key) => key.startsWith('inventory.'));
     if (shouldValidateInventory) {
       _inventoryFormKey.currentState?.validate();
     }
@@ -415,7 +421,6 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     return null;
   }
 
-
   String get _draftCacheKey => _cacheKeyFor(_draftId ?? widget.initialDraftId);
 
   String _cacheKeyFor(String? draftId) => 'ad_wizard_${draftId ?? 'new'}';
@@ -425,9 +430,9 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     setState(() => _isLoadingDraft = true);
     try {
       Map<String, dynamic>? pending =
-      await _adPublishingService.readPending(activeCacheKey);
+          await _adPublishingService.readPending(activeCacheKey);
       AdDraftModel? snapshot =
-      await _adPublishingService.readCachedDraft(activeCacheKey);
+          await _adPublishingService.readCachedDraft(activeCacheKey);
       AdDraftModel? remote;
 
       final String? initialDraftId = widget.initialDraftId;
@@ -435,7 +440,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         try {
           remote = await _adPublishingService.fetchDraft(initialDraftId);
           final String remoteCacheKey =
-          _cacheKeyFor(remote.id ?? initialDraftId);
+              _cacheKeyFor(remote.id ?? initialDraftId);
           await _adPublishingService.rememberDraft(remoteCacheKey, remote);
           if (remoteCacheKey != activeCacheKey) {
             await _adPublishingService.migrateCache(
@@ -507,7 +512,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       );
       if (synced != null) {
         final String newCacheKey =
-        _cacheKeyFor(synced.id ?? _draftId ?? widget.initialDraftId);
+            _cacheKeyFor(synced.id ?? _draftId ?? widget.initialDraftId);
         if (newCacheKey != resolvedKey) {
           await _adPublishingService.migrateCache(
             from: resolvedKey,
@@ -523,7 +528,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       }
     } on DioException catch (error) {
       if (mounted) {
-        _showMessage('تعذّر مزامنة المسودة: ${error.message ?? error.toString()}');
+        _showMessage(
+            'تعذّر مزامنة المسودة: ${error.message ?? error.toString()}');
       }
     } finally {
       _isSyncingPending = false;
@@ -540,24 +546,24 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
 
     final _MainCategoryOption? mainCategory = _resolveMainCategory(payload);
     final _SubCategoryOption? subCategory =
-    _resolveSubCategory(mainCategory, payload);
+        _resolveSubCategory(mainCategory, payload);
     final Map<String, dynamic> customFields = _mapOf(payload['custom_fields']);
     final Map<String, dynamic> location = _mapOf(payload['location']);
     final Map<String, dynamic> media = _mapOf(payload['media']);
     final Map<String, dynamic> inventory = _mapOf(payload['inventory']);
-    final Map<String, dynamic> mediaCache =
-    temporaryMedia != null ? Map<String, dynamic>.from(temporaryMedia) : <String, dynamic>{};
+    final Map<String, dynamic> mediaCache = temporaryMedia != null
+        ? Map<String, dynamic>.from(temporaryMedia)
+        : <String, dynamic>{};
 
     final List<_PendingMedia> mediaFiles =
-    _composePendingMedia(media, mediaCache);
+        _composePendingMedia(media, mediaCache);
     final List<String> videoLinks = _collectVideoLinks(media, mediaCache);
     final List<_InventoryVariation> variations = _buildVariations(inventory);
     final String? currency = _stringOrNull(payload['currency']);
 
     try {
       _titleController.text = _stringOrNull(payload['title']) ?? '';
-      _descriptionController.text =
-          _stringOrNull(payload['description']) ?? '';
+      _descriptionController.text = _stringOrNull(payload['description']) ?? '';
       _contactController.text = _stringOrNull(payload['contact']) ?? '';
       _priceController.text = _stringOrNull(payload['price']) ?? '';
       _sheinProductLinkController.text =
@@ -632,9 +638,9 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   }
 
   _SubCategoryOption? _resolveSubCategory(
-      _MainCategoryOption? mainCategory,
-      Map<String, dynamic> payload,
-      ) {
+    _MainCategoryOption? mainCategory,
+    Map<String, dynamic> payload,
+  ) {
     if (mainCategory == null) {
       return null;
     }
@@ -651,9 +657,9 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   }
 
   Map<String, dynamic> _buildStepPayload(
-      _WizardStepId step,
-      Map<String, dynamic> payload,
-      ) {
+    _WizardStepId step,
+    Map<String, dynamic> payload,
+  ) {
     switch (step) {
       case _WizardStepId.mainCategory:
         return <String, dynamic>{
@@ -691,17 +697,17 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         };
       case _WizardStepId.locationInventory:
         return <String, dynamic>{
-          if (payload.containsKey('location'))
-            'location': payload['location'],
+          if (payload.containsKey('location')) 'location': payload['location'],
           if (payload.containsKey('inventory'))
             'inventory': payload['inventory'],
         };
       case _WizardStepId.review:
         final Map<_WizardStepId, bool> completion =
-        _calculateStepCompletion(_visibleSteps);
+            _calculateStepCompletion(_visibleSteps);
         return <String, dynamic>{
           'completed_steps': <String, bool>{
-            for (final MapEntry<_WizardStepId, bool> entry in completion.entries)
+            for (final MapEntry<_WizardStepId, bool> entry
+                in completion.entries)
               entry.key.name: entry.value,
           },
           'ready': !_hasUnsavedChanges,
@@ -711,9 +717,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
 
   Map<String, dynamic> _buildTemporaryMediaSnapshot() {
     final Map<String, dynamic> snapshot = <String, dynamic>{};
-    final List<Map<String, dynamic>> pending = _mediaFiles
-        .map((media) => media.toPayload())
-        .toList(growable: false);
+    final List<Map<String, dynamic>> pending =
+        _mediaFiles.map((media) => media.toPayload()).toList(growable: false);
     if (pending.isNotEmpty) {
       snapshot['pending'] = pending;
     }
@@ -724,9 +729,9 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   }
 
   List<_PendingMedia> _composePendingMedia(
-      Map<String, dynamic> media,
-      Map<String, dynamic> temporaryMedia,
-      ) {
+    Map<String, dynamic> media,
+    Map<String, dynamic> temporaryMedia,
+  ) {
     final List<_PendingMedia> result = <_PendingMedia>[];
     final Set<String> seen = <String>{};
 
@@ -772,9 +777,9 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   }
 
   List<String> _collectVideoLinks(
-      Map<String, dynamic> media,
-      Map<String, dynamic> temporaryMedia,
-      ) {
+    Map<String, dynamic> media,
+    Map<String, dynamic> temporaryMedia,
+  ) {
     final Set<String> links = <String>{};
     final List<dynamic>? existing = media['video_links'] as List<dynamic>?;
     if (existing != null) {
@@ -786,7 +791,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       }
     }
     final List<dynamic>? pending =
-    temporaryMedia['video_links'] as List<dynamic>?;
+        temporaryMedia['video_links'] as List<dynamic>?;
     if (pending != null) {
       for (final dynamic raw in pending) {
         final String? link = _stringOrNull(raw);
@@ -799,9 +804,10 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   }
 
   List<_InventoryVariation> _buildVariations(
-      Map<String, dynamic> inventory,
-      ) {
-    final List<dynamic>? rawVariations = inventory['variations'] as List<dynamic>?;
+    Map<String, dynamic> inventory,
+  ) {
+    final List<dynamic>? rawVariations =
+        inventory['variations'] as List<dynamic>?;
     if (rawVariations == null) {
       return <_InventoryVariation>[];
     }
@@ -868,7 +874,6 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     return null;
   }
 
-
   bool get _isSheinInterface =>
       _selectedMainCategory?.interfaceType == 'shein_products';
 
@@ -884,7 +889,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       summary
         ..add(Text(
           field.label,
-          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+          style:
+              theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
         ))
         ..add(const SizedBox(height: 4))
         ..add(Text(formatted.isEmpty ? 'غير محدد' : formatted))
@@ -904,7 +910,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         ..add(Text(
           field.label,
           style:
-          theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+              theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
         ))
         ..add(const SizedBox(height: 4))
         ..add(Text(displayValue))
@@ -912,8 +918,6 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     }
     return widgets;
   }
-
-
 
   void _addImageFiles(List<File> files) {
     if (files.isEmpty) {
@@ -1057,9 +1061,14 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     if (host.contains('vimeo.com') || host.contains('dailymotion.com')) {
       return true;
     }
-    const List<String> allowedExtensions = <String>['.mp4', '.mov', '.m4v', '.webm'];
+    const List<String> allowedExtensions = <String>[
+      '.mp4',
+      '.mov',
+      '.m4v',
+      '.webm'
+    ];
     return allowedExtensions.any(
-          (String ext) => uri.path.toLowerCase().endsWith(ext),
+      (String ext) => uri.path.toLowerCase().endsWith(ext),
     );
   }
 
@@ -1088,7 +1097,6 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     }
     return true;
   }
-
 
   bool _validateStepFive() {
     bool isValid = true;
@@ -1137,9 +1145,6 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     return valid;
   }
 
-
-
-
   String? _validateTitle(String? value) {
     final String trimmed = value?.trim() ?? '';
     if (trimmed.length < 10 || trimmed.length > 90) {
@@ -1176,7 +1181,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     if (trimmed.isEmpty) {
       return 'يرجى إدخال رقم للتواصل.';
     }
-    final String normalized = trimmed.startsWith('+') ? trimmed.substring(1) : trimmed;
+    final String normalized =
+        trimmed.startsWith('+') ? trimmed.substring(1) : trimmed;
     if (normalized.length < 6 || normalized.length > 15) {
       return 'رقم التواصل يجب أن يكون بين 6 و15 رقمًا.';
     }
@@ -1193,7 +1199,6 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       _validateSheinUrlInternal(value, 'review_link');
 
   String? _validateSheinUrlInternal(String? value, String key) {
-
     final String trimmed = value?.trim() ?? '';
     if (trimmed.isEmpty) {
       return _serverFieldErrors[key];
@@ -1205,8 +1210,6 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     return _serverFieldErrors[key];
   }
 
-
-
   Future<void> _autoSaveDraft() async {
     if (!_hasUnsavedChanges || _isSavingDraft) {
       return;
@@ -1215,16 +1218,14 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     final List<_WizardStep> steps = _visibleSteps;
     final int currentIndex = _clampCurrentStepIndex(steps);
     final _WizardStepId currentStepId =
-    steps.isEmpty ? _WizardStepId.mainCategory : steps[currentIndex].id;
+        steps.isEmpty ? _WizardStepId.mainCategory : steps[currentIndex].id;
     final String previousCacheKey =
-    _cacheKeyFor(_draftId ?? widget.initialDraftId);
+        _cacheKeyFor(_draftId ?? widget.initialDraftId);
 
     final Map<String, dynamic> payload = _buildAdPayload(isDraft: true);
     final Map<String, dynamic> stepPayload =
-    _buildStepPayload(currentStepId, payload);
-    final Map<String, dynamic> temporaryMedia =
-    _buildTemporaryMediaSnapshot();
-
+        _buildStepPayload(currentStepId, payload);
+    final Map<String, dynamic> temporaryMedia = _buildTemporaryMediaSnapshot();
 
     setState(() => _isSavingDraft = true);
     try {
@@ -1239,7 +1240,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       );
 
       final String newCacheKey =
-      _cacheKeyFor(draft.id ?? _draftId ?? widget.initialDraftId);
+          _cacheKeyFor(draft.id ?? _draftId ?? widget.initialDraftId);
       if (newCacheKey != previousCacheKey) {
         await _adPublishingService.migrateCache(
           from: previousCacheKey,
@@ -1257,7 +1258,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       });
     } on DraftSaveOfflineException {
       if (mounted) {
-        _showMessage('تم حفظ التغييرات محليًا. سيتم المزامنة عند توفر الاتصال.');
+        _showMessage(
+            'تم حفظ التغييرات محليًا. سيتم المزامنة عند توفر الاتصال.');
       }
     } on DioException catch (error) {
       if (mounted) {
@@ -1272,7 +1274,6 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         setState(() => _isSavingDraft = false);
       }
     }
-
   }
 
   void _goNext() {
@@ -1315,8 +1316,6 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     setState(() => _currentStep = index);
   }
 
-
-
   bool _canProceedFromStep(_WizardStepId stepId) {
     switch (stepId) {
       case _WizardStepId.mainCategory:
@@ -1335,7 +1334,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         }
         return true;
       case _WizardStepId.customFields:
-        final bool valid = _customFieldsFormKey.currentState?.validate() ?? true;
+        final bool valid =
+            _customFieldsFormKey.currentState?.validate() ?? true;
         if (!valid) {
           _showMessage('يرجى إكمال الحقول المخصّصة المطلوبة قبل المتابعة.');
           return false;
@@ -1365,8 +1365,6 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     }
     return _currentStep;
   }
-
-
 
   int _effectiveCurrentStepIndex(List<_WizardStep> steps) {
     final int clamped = _clampCurrentStepIndex(steps);
@@ -1413,13 +1411,12 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     return completion;
   }
 
-
   Color _segmentColor(
-      ColorScheme colors,
-      bool isCompleted,
-      bool isCurrent,
-      bool isBeforeCurrent,
-      ) {
+    ColorScheme colors,
+    bool isCompleted,
+    bool isCurrent,
+    bool isBeforeCurrent,
+  ) {
     if (isCompleted || isBeforeCurrent) {
       return colors.territoryColor;
     }
@@ -1428,7 +1425,6 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     }
     return colors.borderColor.withOpacity(0.28);
   }
-
 
   bool _isNonReviewStepComplete(_WizardStepId id) {
     switch (id) {
@@ -1469,7 +1465,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         final bool descriptionValid =
             _validateDescription(_descriptionController.text) == null;
         final bool priceValid = _validatePrice(_priceController.text) == null;
-        final bool contactValid = _validateContact(_contactController.text) == null;
+        final bool contactValid =
+            _validateContact(_contactController.text) == null;
         final bool currencySelected = _selectedCurrency != null;
         final bool sheinProductValid = !_isSheinInterface ||
             _validateSheinProductLink(_sheinProductLinkController.text) == null;
@@ -1536,7 +1533,6 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     return true;
   }
 
-
   String? _inventoryFieldError(int index, String field) {
     return _serverFieldErrors['inventory.variations.$index.$field'];
   }
@@ -1560,7 +1556,6 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     return null;
   }
 
-
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
@@ -1572,13 +1567,12 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     final List<_WizardStep> steps = _visibleSteps;
     final int currentStepIndex = _effectiveCurrentStepIndex(steps);
     final Map<_WizardStepId, bool> completionByStep =
-    _calculateStepCompletion(steps);
+        _calculateStepCompletion(steps);
     final double stepProgress =
-    steps.isEmpty ? 0 : (currentStepIndex + 1) / steps.length;
-    final int progressPercent =
-    (stepProgress * 100).clamp(0, 100).round();
+        steps.isEmpty ? 0 : (currentStepIndex + 1) / steps.length;
+    final int progressPercent = (stepProgress * 100).clamp(0, 100).round();
     final bool isCurrentStepOptional =
-    steps.isNotEmpty ? steps[currentStepIndex].isOptional : false;
+        steps.isNotEmpty ? steps[currentStepIndex].isOptional : false;
     final ThemeData theme = Theme.of(context);
     final ColorScheme colors = context.color;
     final String dynamicTitle = steps.isEmpty
@@ -1604,87 +1598,85 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
                     value: _isLoadingDraft ? null : stepProgress,
                     minHeight: 6,
                     valueColor:
-                    AlwaysStoppedAnimation<Color>(colors.territoryColor),
-                    backgroundColor:
-                    colors.borderColor.withOpacity(_isLoadingDraft ? 0.2 : 0.12),
+                        AlwaysStoppedAnimation<Color>(colors.territoryColor),
+                    backgroundColor: colors.borderColor
+                        .withOpacity(_isLoadingDraft ? 0.2 : 0.12),
                   ),
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
-                height: 6,
-                child: Row(
-                children: [
-                for (int i = 0; i < steps.length; i++)
-                Expanded(
-                child: Container(
-                margin: EdgeInsetsDirectional.only(
-                end: i == steps.length - 1 ? 0 : 4,
+                  height: 6,
+                  child: Row(
+                    children: [
+                      for (int i = 0; i < steps.length; i++)
+                        Expanded(
+                          child: Container(
+                            margin: EdgeInsetsDirectional.only(
+                              end: i == steps.length - 1 ? 0 : 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _segmentColor(
+                                colors,
+                                completionByStep[steps[i].id] ?? false,
+                                i == currentStepIndex,
+                                i < currentStepIndex,
+                              ),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              decoration: BoxDecoration(
-                color: _segmentColor(
-                colors,
-                completionByStep[steps[i].id] ?? false,
-                i == currentStepIndex,
-                i < currentStepIndex,
-                ),
-                borderRadius: BorderRadius.circular(3),
-    ),
-    ),
-    ),
-    ],
-    ),
-    ),
-    if (steps.isNotEmpty) ...[
-    const SizedBox(height: 12),
-    Row(
-    children: [
-    Container(
-    padding: const EdgeInsets.symmetric(
-    horizontal: 12,
-    vertical: 4,
-    ),
-    decoration: BoxDecoration(
-    color: colors.secondaryColor,
-    borderRadius: BorderRadius.circular(14),
-    border: Border.all(
-    color: colors.borderColor.withOpacity(0.35),
-    ),
-    ),
-    child: Text(
-    'المرحلة ${currentStepIndex + 1}/${steps.length}',
-    style: theme.textTheme.labelMedium?.copyWith(
-    color: colors.textDefaultColor,
-    fontWeight: FontWeight.w600,
-    ),
-    ),
-
-
-    ),
-    const SizedBox(width: 8),
-    Container(
-    padding: const EdgeInsets.symmetric(
-    horizontal: 10,
-    vertical: 3,
-    ),
-    decoration: BoxDecoration(
-    color: isCurrentStepOptional
-    ? colors.deactivateColor.withOpacity(0.16)
-        : colors.territoryColor.withOpacity(0.16),
-    borderRadius: BorderRadius.circular(12),
-    ),
-    child: Text(
-    isCurrentStepOptional ? 'اختياري' : 'مطلوب',
-    style: theme.textTheme.labelSmall?.copyWith(
-    color: isCurrentStepOptional
-    ? colors.textDefaultColor
-        : colors.territoryColor,
-    fontWeight: FontWeight.w600,
-    ),
-    ),
-    ),
-    ],
-    ),
-
+                if (steps.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colors.secondaryColor,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: colors.borderColor.withOpacity(0.35),
+                          ),
+                        ),
+                        child: Text(
+                          'المرحلة ${currentStepIndex + 1}/${steps.length}',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: colors.textDefaultColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isCurrentStepOptional
+                              ? colors.deactivateColor.withOpacity(0.16)
+                              : colors.territoryColor.withOpacity(0.16),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          isCurrentStepOptional ? 'اختياري' : 'مطلوب',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: isCurrentStepOptional
+                                ? colors.textDefaultColor
+                                : colors.territoryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -1693,9 +1685,11 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       ),
       bottomNavigationBar: Padding(
         padding: EdgeInsets.fromLTRB(
-          16.0, 12.0, 16.0, 12.0 + MediaQuery.of(context).viewPadding.bottom,
+          16.0,
+          12.0,
+          16.0,
+          12.0 + MediaQuery.of(context).viewPadding.bottom,
         ),
-
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1706,10 +1700,10 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
                     onPressed: _isSavingDraft ? null : _autoSaveDraft,
                     child: _isSavingDraft
                         ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
                         : const Text('حفظ كمسودة'),
                   ),
                 ),
@@ -1737,16 +1731,17 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
                     onPressed: _isPublishing
                         ? null
                         : (currentStepIndex == steps.length - 1
-                        ? _publishAd
-                        : _goNext),
+                            ? _publishAd
+                            : _goNext),
                     child: currentStepIndex == steps.length - 1
                         ? (_isPublishing
-                        ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                        : const Text('نشر'))
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Text('نشر'))
                         : const Text('التالي'),
                   ),
                 ),
@@ -1758,8 +1753,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     );
   }
 
-
-  Widget _buildReviewItem(String label, String value, {bool multiline = false}) {
+  Widget _buildReviewItem(String label, String value,
+      {bool multiline = false}) {
     final ThemeData theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -1768,7 +1763,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         children: [
           Text(
             label,
-            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 4),
           Text(
@@ -1793,7 +1789,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       ),
       child: Text(
         label,
-        style: theme.textTheme.bodySmall?.copyWith(color: color, fontWeight: FontWeight.w600),
+        style: theme.textTheme.bodySmall
+            ?.copyWith(color: color, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -1860,27 +1857,33 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     }
 
     final List<_PendingMedia> images =
-    _mediaFiles.where((media) => media.isImage).toList(growable: false);
+        _mediaFiles.where((media) => media.isImage).toList(growable: false);
     final List<_PendingMedia> videos =
-    _mediaFiles.where((media) => media.isVideo).toList(growable: false);
+        _mediaFiles.where((media) => media.isVideo).toList(growable: false);
     final bool isShein = _isSheinInterface;
     final String currencyLabel = _currencyLabel;
     final Map<String, dynamic>? locationSummary = _buildLocationPayload();
     final List<_InventoryVariation> inventorySummary =
-    List<_InventoryVariation>.from(_inventoryVariations);
+        List<_InventoryVariation>.from(_inventoryVariations);
 
-    final bool locationComplete = !_requiresLocation || _isLocationDataComplete();
-    final bool inventoryComplete = !_requiresInventory || _isInventoryDataComplete();
+    final bool locationComplete =
+        !_requiresLocation || _isLocationDataComplete();
+    final bool inventoryComplete =
+        !_requiresInventory || _isInventoryDataComplete();
 
     final List<Widget> categoryContent = <Widget>[
-      _buildReviewItem('الفئة الرئيسية', _selectedMainCategory?.name ?? 'غير محدد'),
-      _buildReviewItem('الفئة الفرعية', _selectedSubCategory?.name ?? 'غير محدد'),
-      _buildReviewItem('واجهة العرض', _selectedMainCategory?.interfaceType ?? 'غير محدد'),
+      _buildReviewItem(
+          'الفئة الرئيسية', _selectedMainCategory?.name ?? 'غير محدد'),
+      _buildReviewItem(
+          'الفئة الفرعية', _selectedSubCategory?.name ?? 'غير محدد'),
+      _buildReviewItem(
+          'واجهة العرض', _selectedMainCategory?.interfaceType ?? 'غير محدد'),
     ];
 
     final List<Widget> textDetailContent = <Widget>[
       _buildReviewItem('العنوان', displayValue(_titleController.text)),
-      _buildReviewItem('الوصف', displayValue(_descriptionController.text), multiline: true),
+      _buildReviewItem('الوصف', displayValue(_descriptionController.text),
+          multiline: true),
       _buildReviewItem(
         'السعر',
         displayValue(
@@ -1911,15 +1914,16 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     final List<Widget> customFieldContent;
     if (_customFieldSchemas.isEmpty) {
       customFieldContent = <Widget>[
-        Text('لا توجد حقول مخصّصة لهذه الفئة.', style: theme.textTheme.bodySmall),
+        Text('لا توجد حقول مخصّصة لهذه الفئة.',
+            style: theme.textTheme.bodySmall),
       ];
     } else if (_customFieldValues.isEmpty) {
       customFieldContent = <Widget>[
-        Text('لم يتم إدخال بيانات الحقول المخصّصة.', style: theme.textTheme.bodySmall),
+        Text('لم يتم إدخال بيانات الحقول المخصّصة.',
+            style: theme.textTheme.bodySmall),
       ];
     } else {
-      customFieldContent = _customFieldSchemas
-          .map((CustomFieldSchema field) {
+      customFieldContent = _customFieldSchemas.map((CustomFieldSchema field) {
         final dynamic value = _customFieldValues[field.id];
         final String formatted = field.formatValue(value);
         return _buildReviewItem(
@@ -1927,22 +1931,24 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
           displayValue(formatted, 'غير محدد'),
           multiline: true,
         );
-      })
-          .toList(growable: false);
+      }).toList(growable: false);
     }
 
     final List<Widget> mediaContent = <Widget>[];
     if (images.isEmpty && videos.isEmpty && _videoLinks.isEmpty) {
-      mediaContent.add(Text('لم تتم إضافة وسائط.', style: theme.textTheme.bodySmall));
+      mediaContent
+          .add(Text('لم تتم إضافة وسائط.', style: theme.textTheme.bodySmall));
     } else {
       if (images.isNotEmpty) {
         mediaContent.add(_buildReviewItem('عدد الصور', '${images.length}'));
       }
       if (videos.isNotEmpty) {
-        mediaContent.add(_buildReviewItem('عدد الفيديوهات', '${videos.length}'));
+        mediaContent
+            .add(_buildReviewItem('عدد الفيديوهات', '${videos.length}'));
       }
       if (_videoLinks.isNotEmpty) {
-        mediaContent.add(_buildReviewItem('روابط الفيديو', '${_videoLinks.length} رابط'));
+        mediaContent.add(
+            _buildReviewItem('روابط الفيديو', '${_videoLinks.length} رابط'));
         mediaContent.add(
           Padding(
             padding: const EdgeInsets.only(top: 4),
@@ -1950,9 +1956,9 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: _videoLinks
                   .map((String link) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text(link, style: theme.textTheme.bodySmall),
-              ))
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text(link, style: theme.textTheme.bodySmall),
+                      ))
                   .toList(growable: false),
             ),
           ),
@@ -2002,7 +2008,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       inventoryContent = <Widget>[
         for (int i = 0; i < inventorySummary.length; i++)
           Padding(
-            padding: EdgeInsets.only(bottom: i == inventorySummary.length - 1 ? 0 : 12),
+            padding: EdgeInsets.only(
+                bottom: i == inventorySummary.length - 1 ? 0 : 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -2011,7 +2018,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
                     inventorySummary[i].name,
                     'تنويعة ${i + 1}',
                   ),
-                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -2038,15 +2046,26 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
           title: 'الفئات',
           step: _WizardStepId.mainCategory,
           content: categoryContent,
-          errorMessage:
-          _anyBlockErrorFor(const <String>['main_category_id', 'sub_category_id', 'interface_type']),
+          errorMessage: _anyBlockErrorFor(const <String>[
+            'main_category_id',
+            'sub_category_id',
+            'interface_type'
+          ]),
         ),
         _buildReviewCard(
           title: 'التفاصيل النصية',
           step: _WizardStepId.textDetails,
           content: textDetailContent,
           errorMessage: _anyBlockErrorFor(
-            const <String>['title', 'description', 'price', 'contact', 'currency', 'product_link', 'review_link'],
+            const <String>[
+              'title',
+              'description',
+              'price',
+              'contact',
+              'currency',
+              'product_link',
+              'review_link'
+            ],
           ),
         ),
         if (_customFieldSchemas.isNotEmpty)
@@ -2088,7 +2107,6 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     );
   }
 
-
   Widget _buildStepBody(List<_WizardStep> steps, int currentIndex) {
     if (steps.isEmpty) {
       return const SizedBox.shrink();
@@ -2098,30 +2116,22 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       case _WizardStepId.mainCategory:
         return _buildMainCategoryStep();
       case _WizardStepId.subCategory:
-
         return _buildSubCategoryStep();
       case _WizardStepId.customFields:
-
         return _buildCustomFieldsStep();
       case _WizardStepId.media:
-
         return _buildMediaStep();
 
       case _WizardStepId.textDetails:
-
         return _buildTextDetailsStep();
       case _WizardStepId.locationInventory:
-
         return _buildStepFiveBody();
       case _WizardStepId.review:
-
         return _buildReviewStep();
       default:
         return const SizedBox.shrink();
     }
   }
-
-
 
   Widget _buildStepFiveBody() {
     if (_requiresLocation && _requiresInventory) {
@@ -2234,7 +2244,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         controller: _locationLatitudeController,
         decoration: const InputDecoration(labelText: 'خط العرض'),
         keyboardType:
-        const TextInputType.numberWithOptions(decimal: true, signed: true),
+            const TextInputType.numberWithOptions(decimal: true, signed: true),
         validator: _validateLatitudeField,
       ),
       const SizedBox(height: 12),
@@ -2242,7 +2252,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         controller: _locationLongitudeController,
         decoration: const InputDecoration(labelText: 'خط الطول'),
         keyboardType:
-        const TextInputType.numberWithOptions(decimal: true, signed: true),
+            const TextInputType.numberWithOptions(decimal: true, signed: true),
         validator: _validateLongitudeField,
       ),
     ];
@@ -2267,12 +2277,9 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
               : 'لم يتم إضافة تنويعات بعد. يمكنك المتابعة أو إضافة تنويعات اختيارية.',
         ),
       if (hasVariations)
-        ..._inventoryVariations
-            .asMap()
-            .entries
-            .map((MapEntry<int, _InventoryVariation> entry) =>
-            _buildVariationCard(entry.value, requiresInventory, entry.key)),
-
+        ..._inventoryVariations.asMap().entries.map(
+            (MapEntry<int, _InventoryVariation> entry) =>
+                _buildVariationCard(entry.value, requiresInventory, entry.key)),
       Align(
         alignment: Alignment.centerLeft,
         child: OutlinedButton.icon(
@@ -2285,10 +2292,10 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   }
 
   Widget _buildVariationCard(
-      _InventoryVariation variation,
-      bool requiresInventory,
-      int index,
-      ) {
+    _InventoryVariation variation,
+    bool requiresInventory,
+    int index,
+  ) {
     final ThemeData theme = Theme.of(context);
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -2357,7 +2364,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
                 errorText: _inventoryFieldError(index, 'price'),
               ),
               keyboardType:
-              const TextInputType.numberWithOptions(decimal: true),
+                  const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: <TextInputFormatter>[
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
               ],
@@ -2462,15 +2469,12 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     return _serverFieldErrors['location.longitude'];
   }
 
-
-
-
-
   Widget _buildMainCategoryStep() {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const Text('اختر الفئة الرئيسية للإعلان. يمكن تعديل هذا الاختيار لاحقًا.'),
+        const Text(
+            'اختر الفئة الرئيسية للإعلان. يمكن تعديل هذا الاختيار لاحقًا.'),
         const SizedBox(height: 12),
         for (final _MainCategoryOption category in _mainCategories)
           Card(
@@ -2493,7 +2497,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   Widget _buildSubCategoryStep() {
     final _MainCategoryOption? mainCategory = _selectedMainCategory;
     if (mainCategory == null) {
-      return _buildPlaceholderMessage('يرجى اختيار الفئة الرئيسية أولًا لمتابعة اختيار الفئة الفرعية.');
+      return _buildPlaceholderMessage(
+          'يرجى اختيار الفئة الرئيسية أولًا لمتابعة اختيار الفئة الفرعية.');
     }
 
     final List<_SubCategoryOption> subCategories = mainCategory.subCategories;
@@ -2527,43 +2532,42 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     final _MainCategoryOption? mainCategory = _selectedMainCategory;
     final _SubCategoryOption? subCategory = _selectedSubCategory;
 
-
-
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         const Text('املأ الحقول المخصّصة المرتبطة بالفئة الفرعية المختارة.'),
         const SizedBox(height: 12),
         if (mainCategory == null)
-          _buildInfoCard('يرجى اختيار الفئة الرئيسية قبل الانتقال إلى الحقول المخصّصة.')
+          _buildInfoCard(
+              'يرجى اختيار الفئة الرئيسية قبل الانتقال إلى الحقول المخصّصة.')
         else if (subCategory == null)
           _buildInfoCard('يرجى اختيار الفئة الفرعية لمتابعة الحقول المخصّصة.')
         else if (_isLoadingCustomFields)
-            const Center(child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
-              child: CircularProgressIndicator(),
-            ))
-          else if (_customFieldError != null)
-              _buildErrorCard(
-                message: 'تعذّر تحميل الحقول المخصّصة. حاول مجددًا.',
-                onRetry: _fetchCustomFieldSchema,
-              )
-            else
-              DynamicCustomFieldsForm(
-                key: _customFieldsFormKey,
-                fields: _customFieldSchemas,
-                values: Map<String, dynamic>.unmodifiable(_customFieldValues),
-                onChanged: (Map<String, dynamic> values) {
-                  setState(() {
-                    _customFieldValues = values;
-                  });
-                  _markDirty();
-                },
-              ),
+          const Center(
+              child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: CircularProgressIndicator(),
+          ))
+        else if (_customFieldError != null)
+          _buildErrorCard(
+            message: 'تعذّر تحميل الحقول المخصّصة. حاول مجددًا.',
+            onRetry: _fetchCustomFieldSchema,
+          )
+        else
+          DynamicCustomFieldsForm(
+            key: _customFieldsFormKey,
+            fields: _customFieldSchemas,
+            values: Map<String, dynamic>.unmodifiable(_customFieldValues),
+            onChanged: (Map<String, dynamic> values) {
+              setState(() {
+                _customFieldValues = values;
+              });
+              _markDirty();
+            },
+          ),
       ],
     );
   }
-
 
   void _onMainCategorySelected(_MainCategoryOption category) {
     if (_selectedMainCategory?.id == category.id) {
@@ -2586,7 +2590,6 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         }
       }
       _recomputeCurrentStepBounds();
-
     });
     _locationFormKey.currentState?.reset();
     _inventoryFormKey.currentState?.reset();
@@ -2613,10 +2616,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       _customFieldError = null;
       _inventoryVariations = <_InventoryVariation>[];
       _recomputeCurrentStepBounds();
-
-
     });
-
 
     _locationFormKey.currentState?.reset();
     _inventoryFormKey.currentState?.reset();
@@ -2629,8 +2629,6 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     if (_locationLongitudeController.text.isNotEmpty) {
       _locationLongitudeController.clear();
     }
-
-
 
     _customFieldsFormKey.currentState?.clearValidationErrors();
     _markDirty();
@@ -2658,7 +2656,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     });
 
     try {
-      final List<CustomFieldSchema> fields = await _inventoryService.fetchCustomFieldSchema(
+      final List<CustomFieldSchema> fields =
+          await _inventoryService.fetchCustomFieldSchema(
         interfaceType: mainCategory.interfaceType,
         categoryId: subCategory.id,
       );
@@ -2680,12 +2679,14 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   }
 
   void _applyCustomFieldSchema(List<CustomFieldSchema> fields) {
-    final Map<String, dynamic> previousValues = Map<String, dynamic>.from(_customFieldValues);
+    final Map<String, dynamic> previousValues =
+        Map<String, dynamic>.from(_customFieldValues);
     setState(() {
       _customFieldSchemas = fields;
       _customFieldError = null;
       _isLoadingCustomFields = false;
-      final Set<String> allowed = fields.map((CustomFieldSchema f) => f.id).toSet();
+      final Set<String> allowed =
+          fields.map((CustomFieldSchema f) => f.id).toSet();
       _customFieldValues = <String, dynamic>{
         for (final MapEntry<String, dynamic> entry in previousValues.entries)
           if (allowed.contains(entry.key)) entry.key: entry.value,
@@ -2722,7 +2723,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     );
   }
 
-  Widget _buildErrorCard({required String message, required VoidCallback onRetry}) {
+  Widget _buildErrorCard(
+      {required String message, required VoidCallback onRetry}) {
     final ThemeData theme = Theme.of(context);
     return Container(
       width: double.infinity,
@@ -2737,7 +2739,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         children: [
           Text(
             message,
-            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error),
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(color: theme.colorScheme.error),
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
@@ -2750,13 +2753,12 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     );
   }
 
-
   Map<String, dynamic>? _buildLocationPayload() {
     final String address = _locationAddressController.text.trim();
     final double? latitude =
-    double.tryParse(_locationLatitudeController.text.trim());
+        double.tryParse(_locationLatitudeController.text.trim());
     final double? longitude =
-    double.tryParse(_locationLongitudeController.text.trim());
+        double.tryParse(_locationLongitudeController.text.trim());
     if (address.isEmpty || latitude == null || longitude == null) {
       return null;
     }
@@ -2774,7 +2776,6 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         .toList(growable: false);
   }
 
-
   Map<String, dynamic> _buildAdPayload({required bool isDraft}) {
     final Map<String, dynamic> payload = <String, dynamic>{
       'interface_type': _selectedMainCategory?.interfaceType,
@@ -2789,22 +2790,23 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       'has_custom_fields': _customFieldSchemas.isNotEmpty,
     };
 
-
     final List<_PendingMedia> images =
-    _mediaFiles.where((media) => media.isImage).toList(growable: false);
+        _mediaFiles.where((media) => media.isImage).toList(growable: false);
     final List<_PendingMedia> videos =
-    _mediaFiles.where((media) => media.isVideo).toList(growable: false);
+        _mediaFiles.where((media) => media.isVideo).toList(growable: false);
 
     if (images.isNotEmpty || videos.isNotEmpty || _videoLinks.isNotEmpty) {
       payload['media'] = <String, dynamic>{
         if (images.isNotEmpty)
-          'images': images.map((media) => media.toPayload()).toList(growable: false),
+          'images':
+              images.map((media) => media.toPayload()).toList(growable: false),
         if (videos.isNotEmpty)
-          'videos': videos.map((media) => media.toPayload()).toList(growable: false),
-        if (_videoLinks.isNotEmpty) 'video_links': List<String>.from(_videoLinks),
+          'videos':
+              videos.map((media) => media.toPayload()).toList(growable: false),
+        if (_videoLinks.isNotEmpty)
+          'video_links': List<String>.from(_videoLinks),
       };
     }
-
 
     if (_customFieldValues.isNotEmpty) {
       payload['custom_fields'] = Map<String, dynamic>.from(_customFieldValues);
@@ -2816,13 +2818,12 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     }
 
     final List<Map<String, dynamic>> inventoryPayload =
-    _buildInventoryVariationsPayload();
+        _buildInventoryVariationsPayload();
     if (inventoryPayload.isNotEmpty) {
       payload['inventory'] = <String, dynamic>{
         'variations': inventoryPayload,
       };
     }
-
 
     if (_isSheinInterface) {
       final String productLink = _sheinProductLinkController.text.trim();
@@ -2834,7 +2835,6 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         payload['review_link'] = reviewLink;
       }
     }
-
 
     payload.removeWhere((String key, dynamic value) {
       if (value == null) {
@@ -2852,15 +2852,12 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     return payload;
   }
 
-
-
-
   Widget _buildMediaStep() {
     final ThemeData theme = Theme.of(context);
     final List<_PendingMedia> images =
-    _mediaFiles.where((media) => media.isImage).toList(growable: false);
+        _mediaFiles.where((media) => media.isImage).toList(growable: false);
     final List<_PendingMedia> videos =
-    _mediaFiles.where((media) => media.isVideo).toList(growable: false);
+        _mediaFiles.where((media) => media.isVideo).toList(growable: false);
     final bool canAddLink = _videoLinkFieldController.text.trim().isNotEmpty;
 
     return ListView(
@@ -2881,10 +2878,10 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
               onPressed: _isPickingImages ? null : _pickImages,
               icon: _isPickingImages
                   ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : const Icon(Icons.image_outlined),
               label: const Text('إضافة صور'),
             ),
@@ -2892,10 +2889,10 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
               onPressed: _isPickingVideo ? null : _pickVideo,
               icon: _isPickingVideo
                   ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : const Icon(Icons.videocam_outlined),
               label: const Text('إضافة فيديو'),
             ),
@@ -2922,7 +2919,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
           const SizedBox(height: 16),
         ],
         if (videos.isNotEmpty) ...[
-          Text('الفيديوهات (${videos.length})', style: theme.textTheme.titleSmall),
+          Text('الفيديوهات (${videos.length})',
+              style: theme.textTheme.titleSmall),
           const SizedBox(height: 8),
           Wrap(
             spacing: 12,
@@ -2990,10 +2988,6 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     );
   }
 
-
-
-
-
   bool _runPrePublishChecklist() {
     if (_selectedMainCategory == null) {
       _showMessage('يرجى اختيار الفئة الرئيسية قبل النشر.');
@@ -3001,7 +2995,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       return false;
     }
     final _MainCategoryOption? mainCategory = _selectedMainCategory;
-    if (mainCategory != null && mainCategory.subCategories.isNotEmpty &&
+    if (mainCategory != null &&
+        mainCategory.subCategories.isNotEmpty &&
         _selectedSubCategory == null) {
       _showMessage('يرجى اختيار الفئة الفرعية قبل النشر.');
       _jumpToStep(_WizardStepId.subCategory);
@@ -3024,10 +3019,10 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       return false;
     }
 
-    if ((_requiresLocation || _requiresInventory ||
-        _inventoryVariations.isNotEmpty) &&
+    if ((_requiresLocation ||
+            _requiresInventory ||
+            _inventoryVariations.isNotEmpty) &&
         !_validateStepFive()) {
-
       _jumpToStep(_WizardStepId.locationInventory);
       return false;
     }
@@ -3045,10 +3040,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   }
 
   Map<String, dynamic> _buildPublishTelemetryContext(AdPublishResult result) {
-    final int imageCount =
-        _mediaFiles.where((media) => media.isImage).length;
-    final int videoCount =
-        _mediaFiles.where((media) => media.isVideo).length;
+    final int imageCount = _mediaFiles.where((media) => media.isImage).length;
+    final int videoCount = _mediaFiles.where((media) => media.isVideo).length;
     final Map<String, dynamic>? locationPayload = _buildLocationPayload();
     return <String, dynamic>{
       'draft_id': result.draftId ?? _draftId ?? 'new',
@@ -3064,7 +3057,6 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   Future<void> _publishAd() async {
     _resetServerValidationState();
     if (!_runPrePublishChecklist()) {
-
       return;
     }
 
@@ -3085,14 +3077,16 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
           _draftId = result.draftId.toString();
         }
       });
-      AppTelemetry.record('ad.publish.success', _buildPublishTelemetryContext(result));
+      AppTelemetry.record(
+          'ad.publish.success', _buildPublishTelemetryContext(result));
       _showMessage(result.message);
     } on PublishValidationException catch (error) {
       if (!mounted) {
         return;
       }
       _applyServerValidationErrors(error.fieldErrors);
-      final String? firstKey = _firstNormalizedServerErrorKey(error.fieldErrors);
+      final String? firstKey =
+          _firstNormalizedServerErrorKey(error.fieldErrors);
       if (firstKey != null) {
         final _WizardStepId? step = _stepForErrorKey(firstKey);
         if (step != null) {
@@ -3117,15 +3111,11 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     }
   }
 
-
   Widget _buildTextDetailsStep() {
-
     final ThemeData theme = Theme.of(context);
     final bool isShein = _isSheinInterface;
 
     final List<Widget> customFieldWidgets = _customFieldWidgets;
-
-
 
     final TextStyle? sectionStyle = theme.textTheme.titleMedium;
 
@@ -3136,30 +3126,35 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         children: [
           Text('المراجعة النهائية', style: theme.textTheme.titleMedium),
           const SizedBox(height: 12),
-          _buildInfoCard('تحقق من التفاصيل قبل الإرسال. يمكنك العودة لتعديل أي خطوة.'),
+          _buildInfoCard(
+              'تحقق من التفاصيل قبل الإرسال. يمكنك العودة لتعديل أي خطوة.'),
           const SizedBox(height: 16),
           Text('معلومات الإعلان', style: theme.textTheme.titleMedium),
-
           const SizedBox(height: 8),
-          Text('العنوان: ${_titleController.text.isEmpty ? 'غير محدد' : _titleController.text}'),
+          Text(
+              'العنوان: ${_titleController.text.isEmpty ? 'غير محدد' : _titleController.text}'),
           const SizedBox(height: 6),
-          Text('الوصف: ${_descriptionController.text.isEmpty ? 'غير محدد' : _descriptionController.text}'),
+          Text(
+              'الوصف: ${_descriptionController.text.isEmpty ? 'غير محدد' : _descriptionController.text}'),
           const SizedBox(height: 6),
-          Text('السعر: ${_priceController.text.isEmpty ? 'غير محدد' : _priceController.text} $_currencyLabel'),
+          Text(
+              'السعر: ${_priceController.text.isEmpty ? 'غير محدد' : _priceController.text} $_currencyLabel'),
           const SizedBox(height: 6),
-          Text('رقم التواصل: ${_contactController.text.isEmpty ? 'غير محدد' : _contactController.text}'),
+          Text(
+              'رقم التواصل: ${_contactController.text.isEmpty ? 'غير محدد' : _contactController.text}'),
           const SizedBox(height: 16),
           Text('الفئات المختارة', style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
-
           Text('الفئة الرئيسية: ${_selectedMainCategory?.name ?? 'غير محدد'}'),
           Text('الفئة الفرعية: ${_selectedSubCategory?.name ?? 'غير محدد'}'),
-          Text('واجهة العرض: ${_selectedMainCategory?.interfaceType ?? 'غير محدد'}'),
+          Text(
+              'واجهة العرض: ${_selectedMainCategory?.interfaceType ?? 'غير محدد'}'),
           const SizedBox(height: 16),
           Text('الحقول المخصّصة', style: sectionStyle),
           const SizedBox(height: 8),
           if (customFieldWidgets.isEmpty)
-            Text('لا توجد قيم محفوظة للحقول المخصّصة.', style: theme.textTheme.bodySmall)
+            Text('لا توجد قيم محفوظة للحقول المخصّصة.',
+                style: theme.textTheme.bodySmall)
           else
             ...customFieldWidgets,
           const Divider(height: 32),
@@ -3196,7 +3191,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
                 flex: 3,
                 child: TextFormField(
                   controller: _priceController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                   textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(
                     labelText: 'السعر',
@@ -3212,18 +3208,18 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
                 flex: 2,
                 child: DropdownButtonFormField<String>(
                   value: _selectedCurrency,
-                  decoration:  InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'العملة',
                     errorText: _serverFieldErrors['currency'],
-
                   ),
                   items: _currencyOptions.entries
                       .map(
-                        (MapEntry<String, String> entry) => DropdownMenuItem<String>(
-                      value: entry.key,
-                      child: Text(entry.value),
-                    ),
-                  )
+                        (MapEntry<String, String> entry) =>
+                            DropdownMenuItem<String>(
+                          value: entry.key,
+                          child: Text(entry.value),
+                        ),
+                      )
                       .toList(growable: false),
                   onChanged: (String? value) {
                     setState(() => _selectedCurrency = value);
@@ -3288,7 +3284,6 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   }
 }
 
-
 enum _PendingMediaType { image, video }
 
 class _PendingMedia {
@@ -3313,6 +3308,7 @@ class _PendingMedia {
   }
 
   bool get isImage => type == _PendingMediaType.image;
+
   bool get isVideo => type == _PendingMediaType.video;
 
   String get displayName {
@@ -3324,13 +3320,12 @@ class _PendingMedia {
   }
 
   Map<String, dynamic> toPayload() => <String, dynamic>{
-    'type': type.name,
-    'path': file.path,
-    'size': sizeInBytes,
-    'name': displayName,
-  };
+        'type': type.name,
+        'path': file.path,
+        'size': sizeInBytes,
+        'name': displayName,
+      };
 }
-
 
 class _InventoryVariation {
   _InventoryVariation({
@@ -3383,10 +3378,9 @@ class _WizardSectionConfig {
   final bool requiresInventory;
 }
 
-
-
 class _MediaPreviewCard extends StatelessWidget {
-  const _MediaPreviewCard({super.key, required this.media, required this.onRemove});
+  const _MediaPreviewCard(
+      {super.key, required this.media, required this.onRemove});
 
   final _PendingMedia media;
   final VoidCallback onRemove;
@@ -3403,7 +3397,8 @@ class _MediaPreviewCard extends StatelessWidget {
           child: Image.file(
             media.file,
             fit: BoxFit.cover,
-            errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) {
+            errorBuilder:
+                (BuildContext context, Object error, StackTrace? stackTrace) {
               return Container(
                 color: colors.surfaceVariant,
                 alignment: Alignment.center,
@@ -3461,7 +3456,8 @@ class _MediaPreviewCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            HelperUtils.getFileSizeString(bytes: media.sizeInBytes, decimals: 1),
+            HelperUtils.getFileSizeString(
+                bytes: media.sizeInBytes, decimals: 1),
             style: theme.textTheme.bodySmall?.copyWith(
               color: colors.onSurfaceVariant,
             ),
@@ -3472,7 +3468,8 @@ class _MediaPreviewCard extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.movie_filter_outlined, size: 16, color: colors.tertiary),
+                  Icon(Icons.movie_filter_outlined,
+                      size: 16, color: colors.tertiary),
                   const SizedBox(width: 4),
                   Text('ملف فيديو', style: theme.textTheme.bodySmall),
                 ],
@@ -3505,7 +3502,6 @@ class _StepChip extends StatelessWidget {
     required this.isCurrent,
     required this.isCompleted,
     required this.isOptional,
-
   });
 
   final String label;
@@ -3521,30 +3517,28 @@ class _StepChip extends StatelessWidget {
     final Color background = isCompleted
         ? colors.territoryColor.withOpacity(0.1)
         : isCurrent
-        ? colors.territoryColor.withOpacity(0.12)
-        : colors.secondaryColor;
+            ? colors.territoryColor.withOpacity(0.12)
+            : colors.secondaryColor;
     final Color borderColor = isCompleted
         ? colors.territoryColor
         : isCurrent
-        ? colors.territoryColor.withOpacity(0.6)
-        : colors.borderColor.withOpacity(0.4);
+            ? colors.territoryColor.withOpacity(0.6)
+            : colors.borderColor.withOpacity(0.4);
     final Color labelColor =
-    isCompleted ? colors.territoryColor : colors.textDefaultColor;
+        isCompleted ? colors.territoryColor : colors.textDefaultColor;
 
     final Color badgeBackground = isOptional
         ? colors.deactivateColor.withOpacity(isCompleted ? 0.24 : 0.14)
         : colors.territoryColor.withOpacity(isCompleted ? 0.24 : 0.14);
     final Color badgeTextColor =
-    isOptional ? colors.textDefaultColor : colors.territoryColor;
+        isOptional ? colors.textDefaultColor : colors.territoryColor;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: borderColor),
-
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -3554,7 +3548,7 @@ class _StepChip extends StatelessWidget {
             height: 26,
             decoration: BoxDecoration(
               color:
-              isCompleted ? colors.territoryColor : colors.secondaryColor,
+                  isCompleted ? colors.territoryColor : colors.secondaryColor,
               shape: BoxShape.circle,
               border: Border.all(
                 color: isCompleted
@@ -3566,14 +3560,14 @@ class _StepChip extends StatelessWidget {
             child: isCompleted
                 ? const Icon(Icons.check, size: 16, color: Colors.white)
                 : Text(
-              '${index + 1}',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: isCurrent
-                    ? colors.territoryColor
-                    : colors.textDefaultColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+                    '${index + 1}',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: isCurrent
+                          ? colors.territoryColor
+                          : colors.textDefaultColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
           ),
           const SizedBox(width: 12),
           Column(
@@ -3589,8 +3583,7 @@ class _StepChip extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Container(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: badgeBackground,
                   borderRadius: BorderRadius.circular(12),
@@ -3605,7 +3598,6 @@ class _StepChip extends StatelessWidget {
               ),
             ],
           ),
-
         ],
       ),
     );

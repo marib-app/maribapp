@@ -57,8 +57,8 @@ class CurrencyRatesBundle {
 
 
     final dynamic preferencesJson = payload['preferences'];
-    final UserPreferences? preferences =
-    preferencesJson is Map<String, dynamic>
+    final UserPreferences? preferences = preferencesJson is Map<String, dynamic>
+
         ? UserPreferences.fromJson(preferencesJson)
         : null;
 

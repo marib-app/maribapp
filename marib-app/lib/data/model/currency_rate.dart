@@ -50,6 +50,10 @@ class CurrencyRate {
 
   CurrencyRate copyWith({
     bool? isWatchlisted,
+    CurrencyHistoryBundle? history,
+
+
+
   }) {
     return CurrencyRate(
       id: id,
@@ -66,6 +70,8 @@ class CurrencyRate {
       quoteIsDefault: quoteIsDefault,
       quoteUsedFallback: quoteUsedFallback,
       isWatchlisted: isWatchlisted ?? this.isWatchlisted,
+      history: history ?? this.history,
+
     );
   }
 

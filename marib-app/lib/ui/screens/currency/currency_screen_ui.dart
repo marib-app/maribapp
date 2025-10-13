@@ -639,6 +639,8 @@ class RatesTabView extends StatelessWidget {
     String? iconAlt,
     required bool isWatchlisted,
     required VoidCallback onToggleWatchlist,
+    CurrencyHistoryBundle? history,
+
   }) {
     final theme = Theme.of(context);
     final onBg = _isDark(context) ? Colors.white : Colors.black;
@@ -822,13 +824,10 @@ class RatesTabView extends StatelessWidget {
               builder: (ctx, cons) {
                 final bool narrow = cons.maxWidth < 360;
 
-
                 final Widget leading = Row(
-
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                     leadingIcon,
-
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -837,13 +836,12 @@ class RatesTabView extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         textDirection: TextDirection.rtl,
-                      ),
                     ),
-                  ],
+                    ),
+                    ],
                 );
 
-                final Widget sellBlock = priceStat(
-                    'بيع', sell, Colors.redAccent);
+                final Widget sellBlock = priceStat('بيع', sell, Colors.redAccent);
                 final Widget buyBlock = priceStat('شراء', buy, Colors.green);
 
                 final Widget priceContent = narrow
@@ -854,12 +852,11 @@ class RatesTabView extends StatelessWidget {
                     const SizedBox(height: 6),
                     buyBlock,
                   ],
-                )
+                    )
                     : Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     sellBlock,
-                    // فاصل عمودي خافت بين البيع والشراء
                     Container(
                       margin: const EdgeInsets.symmetric(horizontal: 10),
                       width: 1,
@@ -867,195 +864,88 @@ class RatesTabView extends StatelessWidget {
                       color: onBg.withOpacity(0.12),
                     ),
                     buyBlock,
-
                   ],
                 );
 
                 Widget buildHistorySection(double availableWidth) {
                   if (!hasSparkline && changeText == '--') {
                     return Container(
-                      width: availableWidth,
-                      height: 40,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: onBg.withOpacity(0.12)),
-                      ),
+                        width: availableWidth,
+                        height: 40,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: onBg.withOpacity(0.12)),
+                    ),
                       child: Text(
                         'لا يوجد سجل',
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: onBg.withOpacity(0.5),
                           fontWeight: FontWeight.w600,
                         ) ??
-                            TextStyle(color: onBg.withOpacity(0.5),
-                                fontSize: 12),
-                      ),
-                    );
-                  }
-
-                  final List<Widget> children = <Widget>[
-                    hasSparkline
-                        ? SizedBox(
-                      width: availableWidth,
-                      height: 40,
-                      child: _MiniTrendChart(
-                        values: sparklineValues,
-                        color: trendColor,
-                      ),
-                    )
-                        : Container(
-                      width: availableWidth,
-                      height: 40,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: onBg.withOpacity(0.12)),
-                      ),
-                      child: Icon(
-                        Icons.trending_flat,
-                        color: trendColor,
-                        size: 18,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: trendColor.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(trendIcon, size: 14, color: trendColor),
-                          const SizedBox(width: 4),
-                          Text(
-                            changeText,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: trendColor,
-                              fontWeight: FontWeight.w700,
-                            ) ??
-                                TextStyle(color: trendColor,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 12),
+                            TextStyle(
+                              color: onBg.withOpacity(0.5),
+                              fontSize: 12,
                           ),
-                        ],
-                      ),
+
                     ),
-                  ];
 
-                  if (highText != null && lowText != null) {
-                    children.addAll([
-                      const SizedBox(height: 4),
-                      Text(
-                        'أعلى: $highText | أدنى: $lowText',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: onBg.withOpacity(0.6),
-                          fontWeight: FontWeight.w600,
-                        ) ??
-                            TextStyle(color: onBg.withOpacity(0.6),
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600),
-                        textDirection: TextDirection.rtl,
-                      ),
-                    ]);
-                  }
-
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: children,
                   );
                 }
 
-                if (narrow) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(child: leading),
-                          star,
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      priceContent,
-                      const SizedBox(height: 12),
-                      buildHistorySection(cons.maxWidth),
-                    ],
-                  );
-                }
-                );
-
-                Widget buildHistorySection(double availableWidth) {
-                if (!hasSparkline && changeText == '--') {
-                return Container(
-                width: availableWidth,
-                height: 40,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: onBg.withOpacity(0.12)),
-                ),
-                child: Text(
-                'لا يوجد سجل',
-                style: theme.textTheme.labelSmall?.copyWith(
-                color: onBg.withOpacity(0.5),
-                fontWeight: FontWeight.w600,
-                ) ??
-                TextStyle(color: onBg.withOpacity(0.5), fontSize: 12),
-                ),
-                );
-                }
 
                 final List<Widget> children = <Widget>[
-                hasSparkline
-                ? SizedBox(
-                width: availableWidth,
-                height: 40,
-                child: _MiniTrendChart(
-                values: sparklineValues,
-                color: trendColor,
-                ),
-                )
-                    : Container(
-                width: availableWidth,
-                height: 40,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: onBg.withOpacity(0.12)),
-                ),
-                child: Icon(
-                Icons.trending_flat,
-                color: trendColor,
-                size: 18,
-                ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                color: trendColor.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                Icon(trendIcon, size: 14, color: trendColor),
-                const SizedBox(width: 4),
-                Text(
-                changeText,
-                style: theme.textTheme.labelSmall?.copyWith(
-                color: trendColor,
-                fontWeight: FontWeight.w700,
-                ) ??
-                TextStyle(color: trendColor, fontWeight: FontWeight.w700, fontSize: 12),
-                ),
-                ],
-                ),
-                ),
+                  hasSparkline
+                      ? SizedBox(
+                    width: availableWidth,
+                    height: 40,
+                    child: _MiniTrendChart(
+                      values: sparklineValues,
+                      color: trendColor,
+                    ),
+                  )
+                      : Container(
+                    width: availableWidth,
+                    height: 40,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: onBg.withOpacity(0.12)),
+                    ),
+                    child: Icon(
+                      Icons.trending_flat,
+                      color: trendColor,
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: trendColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(trendIcon, size: 14, color: trendColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          changeText,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: trendColor,
+                            fontWeight: FontWeight.w700,
+                          ) ??
+                              TextStyle(
+                                color: trendColor,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ];
 
                 if (highText != null && lowText != null) {
@@ -1074,59 +964,59 @@ class RatesTabView extends StatelessWidget {
                 }
 
                 return Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: children,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: children,
                 );
                 }
 
                 if (narrow) {
                 return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                Expanded(child: leading),
-                star,
-                ],
-                ),
-                const SizedBox(height: 8),
-                priceContent,
-                const SizedBox(height: 12),
-                buildHistorySection(cons.maxWidth),
-                ],
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: leading),
+                        star,
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    priceContent,
+                    const SizedBox(height: 12),
+                    buildHistorySection(cons.maxWidth),
+                  ],
                 );
                 }
 
-
                 return Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
 
-                children: [
-                Expanded(
-                child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                Expanded(child: leading),
-                const SizedBox(width: 12),
-                priceContent,
-                const SizedBox(width: 16),
-                SizedBox(width: 140, child: buildHistorySection(140)),
+                  Expanded(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(child: leading),
+                        const SizedBox(width: 12),
+                        priceContent,
+                        const SizedBox(width: 16),
+                        SizedBox(
+                          width: 140,
+                          child: buildHistorySection(140),
+                        ),
+                      ],
+                    ),
+                  ),
+                  star,
                 ],
-                ),
-                )
-                ,
-                star
-                ,
-                ]
-                ,
                 );
               },
-            ),
           ),
 
-        );
-    }
+          ),
+        ),
+    );
+  }
 
   // ---------- بطاقة الملاحظة (احتفظنا بها كما أعجبتك) ----------
   Widget _noteCard(BuildContext context) {

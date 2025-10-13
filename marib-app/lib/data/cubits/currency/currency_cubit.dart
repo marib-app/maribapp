@@ -3,8 +3,7 @@ import 'package:marib/data/model/currency_rate.dart';
 import 'package:marib/data/repositories/currency_repository.dart';
 import 'package:marib/data/model/currency_rates_bundle.dart';
 import 'package:marib/data/model/governorate.dart';
-import 'package:marib/data/repositories/preferences/governorate_preference_repository.dart';
-import 'package:marib/data/repositories/metal_repository.dart';
+
 import 'package:marib/data/model/metal_rate.dart';
 import 'package:marib/data/model/metal_rates_bundle.dart';
 import 'package:marib/data/model/preference_option.dart';
@@ -113,8 +112,8 @@ class CurrencyCubit extends Cubit<CurrencyState> {
           .toSet()
           .toList(growable: false);
 
-      Map<int, CurrencyHistoryBundle> historyMap = <int, CurrencyHistoryBundle>{};
-
+      Map<int, CurrencyHistoryBundle> historyMap =
+      <int, CurrencyHistoryBundle>{};
       if (currencyIds.isNotEmpty) {
         historyMap = await _currencyRepository.getCurrencyHistory(
           currencyIds: currencyIds,
@@ -124,19 +123,22 @@ class CurrencyCubit extends Cubit<CurrencyState> {
 
 
       final List<CurrencyRate> currencyRates = bundle.rates
-          .map((CurrencyRate rate) => rate.copyWith(
-        isWatchlisted:
-        _preferences.currencyWatchlist.contains(rate.id),
-        history: historyMap[rate.id],
-
-      ))
+          .map(
+            (CurrencyRate rate) => rate.copyWith(
+          isWatchlisted:
+          _preferences.currencyWatchlist.contains(rate.id),
+          history: historyMap[rate.id],
+        ),
+      )
           .toList(growable: false);
 
       final List<MetalRate> metalRates = metalBundle.rates
-          .map((MetalRate rate) => rate.copyWith(
-        isWatchlisted:
-        _preferences.metalWatchlist.contains(rate.id),
-      ))
+          .map(
+            (MetalRate rate) => rate.copyWith(
+          isWatchlisted:
+          _preferences.metalWatchlist.contains(rate.id),
+        ),
+      )
           .toList(growable: false);
 
       emit(CurrencySuccess(

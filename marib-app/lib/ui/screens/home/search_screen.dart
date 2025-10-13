@@ -301,7 +301,6 @@ class SearchScreenState extends State<SearchScreen>
           ),
           itemCount: state.searchedItems.length,
           itemExtent: _listItemExtent,
-          addAutomaticKeepAlives: true,
           addRepaintBoundaries: true,
           itemBuilder: (context, index) {
             final item = state.searchedItems[index];

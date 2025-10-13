@@ -51,6 +51,7 @@ use App\Models\ServiceCustomFieldValue;
 use App\Models\ServiceRequest;
 use App\Models\ServiceReview;
 use App\Models\Setting;
+use Illuminate\Pagination\AbstractPaginator;
 use App\Models\Slider;
 use App\Models\SocialLogin;
 use App\Models\State;
@@ -1854,6 +1855,10 @@ class ApiController extends Controller {
         try {
             //TODO : need to simplify this whole module
 
+            $viewMode = strtolower((string) $request->query('view', 'detail'));
+            $isSummaryView = $viewMode === 'summary';
+            $isDetailView = ! $isSummaryView;
+
 
             $interfaceTypeFilter = null;
             $interfaceTypeVariants = [];
@@ -1874,13 +1879,55 @@ class ApiController extends Controller {
             }
 
 
-            $sql = Item::with('user:id,name,email,mobile,profile,created_at,is_verified,show_personal_details,country_code', 'category:id,name,image', 'gallery_images:id,image,item_id,thumbnail_url,detail_image_url', 'featured_items', 'favourites', 'item_custom_field_values.custom_field', 'area:id,name')
-                ->withCount('favourites')
+            $summarySelectColumns = [
+                'items.id',
+                'items.user_id',
+                'items.category_id',
+                'items.area_id',
+                'items.name',
+                'items.slug',
+                'items.price',
+                'items.currency',
+                'items.status',
+                'items.image',
+                'items.thumbnail_url',
+                'items.detail_image_url',
+                'items.created_at',
+                'items.updated_at',
+            ];
 
-                ->withAvg('review as ratings_avg', 'ratings')
-                ->withCount('review as ratings_count')
+            $summaryRelations = [
+                'user:id,name,profile,is_verified,show_personal_details,country_code',
+                'category:id,name,image',
+                'area:id,name',
+            ];
 
-                ->select('items.*')
+
+
+            $detailRelations = [
+                'user:id,name,email,mobile,profile,created_at,is_verified,show_personal_details,country_code',
+                'category:id,name,image',
+                'gallery_images:id,image,item_id,thumbnail_url,detail_image_url',
+                'featured_items',
+                'favourites',
+                'item_custom_field_values.custom_field',
+                'area:id,name',
+            ];
+
+            if ($isDetailView) {
+                $sql = Item::with($detailRelations)
+                    ->withCount('favourites')
+                    ->withAvg('review as ratings_avg', 'ratings')
+                    ->withCount('review as ratings_count')
+                    ->select('items.*');
+            } else {
+                $sql = Item::with($summaryRelations)
+                    ->select($summarySelectColumns);
+            }
+
+            $sql = $sql
+
+
                 ->when($request->id, function ($sql) use ($request) {
                     $sql->where('id', $request->id);
                 })->when(($request->category_id), function ($sql) use ($request) {
@@ -2053,7 +2100,7 @@ class ApiController extends Controller {
                     })->groupBy('item_id')->having(DB::raw("COUNT(DISTINCT CASE $having END)"), '=', count($request->custom_fields));
                 });
             }
-            if (Auth::check()) {
+            if ($isDetailView && Auth::check()) {
                 $sql->with(['item_offers' => function ($q) {
                     $q->where('buyer_id', Auth::user()->id);
                 }, 'user_reports'         => function ($q) {
@@ -2099,12 +2146,224 @@ class ApiController extends Controller {
             //                }
             //            }
             // Return success response with the fetched items
-            ResponseService::successResponse("Item Fetched Successfully", new ItemCollection($result));
+            if ($isSummaryView) {
+                $collection = $result instanceof AbstractPaginator ? $result->getCollection() : collect($result);
+
+                $etagPayload = [];
+                $latestUpdatedAt = null;
+
+                if ($collection->isNotEmpty()) {
+                    $latestUpdatedAt = $collection
+                        ->map(static fn ($item) => $item->updated_at)
+                        ->filter()
+                        ->max();
+                }
+
+                $sortedFilters = $request->query();
+                if (is_array($sortedFilters)) {
+                    ksort($sortedFilters);
+                } else {
+                    $sortedFilters = [];
+                }
+
+                try {
+                    $etagPayload = json_encode([
+                        'view' => 'summary',
+                        'filters' => $sortedFilters,
+                        'items' => $collection->map(static function ($item) {
+                            return [
+                                'id' => $item->id,
+                                'updated_at' => optional($item->updated_at)->toJSON(),
+                            ];
+                        })->values()->all(),
+                    ], JSON_THROW_ON_ERROR);
+                } catch (JsonException) {
+                    $etagPayload = json_encode([
+                        'view' => 'summary',
+                        'filters' => [],
+                        'items' => $collection->map(static function ($item) {
+                            return [
+                                'id' => $item->id,
+                                'updated_at' => optional($item->updated_at)->timestamp,
+                            ];
+                        })->values()->all(),
+                    ]);
+                }
+
+                $etag = '"' . sha1((string) $etagPayload) . '"';
+
+                $lastModifiedHeader = null;
+
+                if ($latestUpdatedAt instanceof Carbon) {
+                    $lastModifiedHeader = $latestUpdatedAt->copy()->setTimezone('UTC')->toRfc7231String();
+                }
+
+                $ifNoneMatch = $request->headers->get('If-None-Match');
+                $etagMatches = false;
+
+                if ($ifNoneMatch !== null) {
+                    $candidateEtags = array_map('trim', explode(',', $ifNoneMatch));
+                    $etagMatches = in_array('*', $candidateEtags, true) || in_array($etag, $candidateEtags, true);
+                }
+
+                $ifModifiedSince = $request->headers->get('If-Modified-Since');
+                $modifiedSinceMatches = false;
+
+                if ($ifNoneMatch === null && $ifModifiedSince !== null && $lastModifiedHeader !== null) {
+                    $modifiedSince = strtotime($ifModifiedSince);
+                    $lastModifiedTime = strtotime($lastModifiedHeader);
+
+                    if ($modifiedSince !== false && $lastModifiedTime !== false) {
+                        $modifiedSinceMatches = $modifiedSince >= $lastModifiedTime;
+                    }
+                }
+
+                if ($etagMatches || $modifiedSinceMatches) {
+                    $response = response()->noContent(HttpResponse::HTTP_NOT_MODIFIED);
+                    $response->setEtag($etag);
+
+                    if ($lastModifiedHeader !== null) {
+                        $response->headers->set('Last-Modified', $lastModifiedHeader);
+                    }
+
+                    return $response;
+                }
+
+                $summaryData = $this->formatSummaryResult($result);
+
+                $payload = [
+                    'error' => false,
+                    'message' => trans('Item Fetched Successfully'),
+                    'data' => $summaryData,
+                    'code' => config('constants.RESPONSE_CODE.SUCCESS'),
+                ];
+
+                $response = response()->json($payload);
+                $response->setEtag($etag);
+
+                if ($lastModifiedHeader !== null) {
+                    $response->headers->set('Last-Modified', $lastModifiedHeader);
+                }
+
+                return $response;
+            }
+
+            $payload = [
+                'error' => false,
+                'message' => trans('Item Fetched Successfully'),
+                'data' => (new ItemCollection($result))->toArray($request),
+                'code' => config('constants.RESPONSE_CODE.SUCCESS'),
+            ];
+
+            return response()->json($payload);
+        
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "API Controller -> getItem");
             ResponseService::errorResponse();
         }
     }
+
+
+    /**
+     * @param  AbstractPaginator|Collection  $result
+     */
+    protected function formatSummaryResult($result): array
+    {
+        $transformItem = function (Item $item): array {
+            $thumbnail = $item->thumbnail_url ?? $item->image;
+            $detailImage = $item->detail_image_url ?? $item->image;
+
+            $summary = [
+                'id' => $item->id,
+                'name' => $item->name,
+                'slug' => $item->slug,
+                'price' => $item->price,
+                'currency' => $item->currency,
+                'status' => $item->status,
+                'thumbnail_url' => $thumbnail,
+                'detail_image_url' => $detailImage,
+                'created_at' => optional($item->created_at)->toIso8601String(),
+                'updated_at' => optional($item->updated_at)->toIso8601String(),
+            ];
+
+            if ($item->relationLoaded('user') && $item->user !== null) {
+                $summary['user'] = [
+                    'id' => $item->user->id,
+                    'name' => $item->user->name,
+                    'profile' => $item->user->profile,
+                    'is_verified' => (bool) $item->user->is_verified,
+                ];
+            }
+
+            if ($item->relationLoaded('category') && $item->category !== null) {
+                $summary['category'] = [
+                    'id' => $item->category->id,
+                    'name' => $item->category->name,
+                    'image' => $item->category->image,
+                ];
+            }
+
+            if ($item->relationLoaded('area') && $item->area !== null) {
+                $summary['area'] = [
+                    'id' => $item->area->id,
+                    'name' => $item->area->name,
+                ];
+            }
+
+            return $summary;
+        };
+
+        if ($result instanceof AbstractPaginator) {
+            $collection = $result->getCollection();
+            $items = $collection->map($transformItem)->values()->all();
+            $paginatorArray = $result->toArray();
+
+            $meta = [
+                'current_page' => $paginatorArray['current_page'] ?? null,
+                'from' => $paginatorArray['from'] ?? null,
+                'last_page' => $paginatorArray['last_page'] ?? null,
+                'per_page' => $paginatorArray['per_page'] ?? null,
+                'to' => $paginatorArray['to'] ?? null,
+                'total' => $paginatorArray['total'] ?? null,
+            ];
+
+            if (method_exists($result, 'hasMorePages')) {
+                $meta['has_more_pages'] = $result->hasMorePages();
+            }
+
+            if (method_exists($result, 'hasPages')) {
+                $meta['has_pages'] = $result->hasPages();
+            }
+
+            $links = [
+                'first_page_url' => $paginatorArray['first_page_url'] ?? null,
+                'last_page_url' => $paginatorArray['last_page_url'] ?? null,
+                'next_page_url' => $paginatorArray['next_page_url'] ?? null,
+                'prev_page_url' => $paginatorArray['prev_page_url'] ?? null,
+                'path' => $paginatorArray['path'] ?? null,
+            ];
+
+            $pagination = array_merge($meta, $links);
+            $pagination['links'] = $paginatorArray['links'] ?? [];
+
+            return [
+                'items' => $items,
+                'meta' => $meta,
+                'links' => $links,
+                'link_items' => $paginatorArray['links'] ?? [],
+                'pagination' => $pagination,
+            ];
+        }
+
+        if ($result instanceof Collection) {
+            return [
+                'items' => $result->map($transformItem)->values()->all(),
+            ];
+        }
+
+        return ['items' => collect($result)->map($transformItem)->values()->all()];
+    }
+
 
     public function getAllowedSections(Request $request, DelegateAuthorizationService $delegateAuthorizationService)
     {

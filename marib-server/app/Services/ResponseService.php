@@ -269,6 +269,12 @@ class ResponseService
             ]
         );
 
+        if (!empty($links)) {
+            $pagination['links'] = $links;
+        }
+
+
+
         $pagination = array_filter($pagination, static fn ($value) => $value !== null);
 
         return [$items, $pagination];

@@ -185,8 +185,18 @@ window.featuredSectionEvents = {
 
         $('#edit_is_active').prop('checked', !!row.is_active);
 
-        const minPrice = row.min_price ?? '';
-        const maxPrice = row.max_price ?? '';
+        const normalizePriceValue = (value) => {
+            if (value === undefined || value === null) {
+                return '';
+            }
+
+            const text = value.toString();
+
+            return text.trim();
+        };
+
+        const minPrice = normalizePriceValue(row.min_price ?? row.minPrice);
+        const maxPrice = normalizePriceValue(row.max_price ?? row.maxPrice);
         $('#edit_min_price').val(minPrice);
         $('#edit_max_price').val(maxPrice);
 

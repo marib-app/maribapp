@@ -629,9 +629,10 @@ class Api {
       dio.interceptors.add(NetworkRequestInterseptor());
 
       FormData formData;
+      final bool parameterIsFormData = parameter is FormData;
 
-      if (parameter is FormData) {
-        formData = parameter;
+      if (parameterIsFormData) {
+        formData = parameter as FormData;
       } else if (parameter is Map<String, dynamic>) {
         final Map<String, dynamic> formMap = <String, dynamic>{};
 
@@ -677,10 +678,20 @@ class Api {
         if (optionHeaders != null) ...optionHeaders,
         if (extraHeaders != null) ...extraHeaders,
       };
+
+      if (parameterIsFormData) {
+        mergedHeaders.removeWhere(
+              (String key, dynamic value) =>
+          key.toLowerCase() == HttpHeaders.contentTypeHeader &&
+              value?.toString().toLowerCase() ==
+                  Headers.jsonContentType.toLowerCase(),
+        );
+      }
+
       _ensureSliderSessionHeaders(mergedHeaders);
 
       final bool requestBodyIsMultipart =
-          parameter is FormData || formData.files.isNotEmpty;
+          parameterIsFormData || formData.files.isNotEmpty;
 
       String? explicitContentTypeHeaderKey;
       String? explicitContentTypeHeaderValue;
@@ -756,7 +767,9 @@ class Api {
       }
 
 
-      final Object? resolvedContentType = shouldNullifyContentType
+      final Object? resolvedContentType = parameterIsFormData
+          ? null
+          : shouldNullifyContentType
           ? null
           : (options?.contentType ?? _contentTypeNotSpecified);
 
@@ -975,19 +988,39 @@ class Api {
 
       final bool hasJsonBody =
           resolvedMethod == 'POST' || resolvedMethod == 'PUT' || resolvedMethod == 'PATCH';
+      final bool dataIsFormData = data is FormData;
+
       if (hasJsonBody) {
-        mergedHeaders[Headers.contentTypeHeader] = Headers.jsonContentType;
+        if (dataIsFormData) {
+          mergedHeaders.removeWhere(
+                (String key, dynamic value) =>
+            key.toLowerCase() == HttpHeaders.contentTypeHeader &&
+                value?.toString().toLowerCase() ==
+                    Headers.jsonContentType.toLowerCase(),
+          );
+        } else {
+          mergedHeaders[Headers.contentTypeHeader] =
+              options?.contentType ?? Headers.jsonContentType;
+        }
       }
 
       _ensureSliderSessionHeaders(mergedHeaders);
+
+      final Object? requestContentType;
+      if (!hasJsonBody) {
+        requestContentType = options?.contentType;
+      } else {
+        requestContentType = dataIsFormData
+            ? null
+            : (options?.contentType ?? Headers.jsonContentType);
+      }
 
       final Options requestOptions = _buildRequestOptions(
         base: options,
         method: resolvedMethod,
         headers: mergedHeaders,
-        contentType: hasJsonBody
-            ? Headers.jsonContentType
-            : options?.contentType,
+        contentType: requestContentType,
+
         followRedirects: false,
 
       );

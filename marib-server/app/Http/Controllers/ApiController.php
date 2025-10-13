@@ -557,17 +557,19 @@ class ApiController extends Controller {
                 $settingsQuery->whereIn('name', $fieldsFilter);
             }
 
-            $settings = $settingsQuery->paginate($perPage)->appends($request->query());
+            $settings = $settingsQuery
+                ->paginate($perPage)
+                ->withQueryString()
+                ->through(static function (Setting $row): array {
+                    return [
+                        'name'  => $row->name,
+                        'value' => $row->value,
+                        'type'  => $row->type,
+                    ];
+                });
 
-            $settingsCollection = $settings->getCollection()->map(static function (Setting $row) {
-                return [
-                    'name'  => $row->name,
-                    'value' => $row->value,
-                    'type'  => $row->type,
-                ];
-            });
+            $settingsCollection = collect($settings->items());
 
-            $settings->setCollection($settingsCollection);
 
 
             $currentValues = $settingsCollection

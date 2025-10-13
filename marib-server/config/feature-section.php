@@ -2,13 +2,20 @@
 
 
 $serviceCategoryMap = [
-    'services_local'        => (int) env('SERVICE_CATEGORY_LOCAL_ID', 174),
-    'services_medical'      => (int) env('SERVICE_CATEGORY_MEDICAL_ID', 175),
-    'services_jobs'         => (int) env('SERVICE_CATEGORY_JOBS_ID', 176),
-    'services_events_offers'=> (int) env('SERVICE_CATEGORY_EVENTS_OFFERS_ID', 114),
-    'services_marib_lost'   => (int) env('SERVICE_CATEGORY_MARIB_LOST_ID', 181),
-    'services_student'      => (int) env('SERVICE_CATEGORY_STUDENT_ID', 180),
-    'services_marib_guide'  => (int) env('SERVICE_CATEGORY_MARIB_GUIDE_ID', 177),
+    'services_local'         => (int) env('SERVICE_CATEGORY_LOCAL_ID', 174),
+    'services_medical'       => (int) env('SERVICE_CATEGORY_MEDICAL_ID', 175),
+    'services_jobs'          => (int) env('SERVICE_CATEGORY_JOBS_ID', 176),
+    'services_events_offers' => (int) env('SERVICE_CATEGORY_EVENTS_OFFERS_ID', 114),
+    'services_marib_lost'    => (int) env('SERVICE_CATEGORY_MARIB_LOST_ID', 181),
+    'services_student'       => (int) env('SERVICE_CATEGORY_STUDENT_ID', 180),
+    'services_marib_guide'   => (int) env('SERVICE_CATEGORY_MARIB_GUIDE_ID', 177),
+];
+
+$featureSectionRoots = [
+    'public'      => null,
+    'real_estate' => 'real_estate_services',
+    'shein'       => null,
+    'computer'    => 'computer_section',
 ];
 
 
@@ -21,19 +28,8 @@ return [
         'most_viewed',
         'price_range',
     ],
-    'root_identifiers' => [
-        'public'      => null,
-        'real_estate' => 'real_estate_services',
-
-        'shein'       => null,
-        'computer'    => 'computer_section',
-    ],
-    'allowed_section_types' => [
-        'public',
-        'real_estate',
-        'shein',
-        'computer',
-    ],
+    'root_identifiers' => $featureSectionRoots,
+    'allowed_section_types' => array_keys($featureSectionRoots),
 
     'section_type_aliases' => [
         'real_estate_services' => 'real_estate',

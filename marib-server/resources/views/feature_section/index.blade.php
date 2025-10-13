@@ -208,8 +208,9 @@
                                             @foreach ($filterLabels as $value => $label)
                                                 @php
                                                     $optionLabel = trim((string) __($label));
-                                                    $optionLabel = $optionLabel !== '' ? $optionLabel : (string) $label;
-
+                                                    if ($optionLabel === '') {
+                                                        $optionLabel = (string) $label;
+                                                    }
                                                     
                                                     $isUnavailable = isset($defaultDisabledFilters[$value]);
 
@@ -217,9 +218,8 @@
                                                 <option value="{{ $value }}"
                                                     title="{{ e($optionLabel) }}"
                                                     data-filter-label="{{ e($optionLabel) }}"
-                                                    @if($isUnavailable) data-filter-unavailable="1" @endif
-                                                    @selected($selectedFilter === $value)>                                                    {{ $optionLabel }}
-                                                </option>
+                                                    @if ($isUnavailable) data-filter-unavailable="1" @endif
+                                                    @selected($selectedFilter === $value)>{{ $optionLabel }}</option>
                                                 
                                             @endforeach
 
@@ -487,8 +487,9 @@
                                                         @foreach ($filterLabels as $value => $label)
                                                             @php
                                                                 $optionLabel = trim((string) __($label));
-                                                                $optionLabel = $optionLabel !== '' ? $optionLabel : (string) $label;
-
+                                                                if ($optionLabel === '') {
+                                                                    $optionLabel = (string) $label;
+                                                                }
 
                                                                 $isUnavailable = isset($defaultDisabledFilters[$value]) && $editSelectedFilter !== $value;
 
@@ -496,11 +497,8 @@
                                                             <option value="{{ $value }}"
                                                                 title="{{ e($optionLabel) }}"
                                                                 data-filter-label="{{ e($optionLabel) }}"
-                                                                @if($isUnavailable) data-filter-unavailable="1" @endif
-                                                                @selected($editSelectedFilter === $value)>                                                                {{ $optionLabel }}
-                                                            </option>
-                                                            
-                                                            
+                                                                @if ($isUnavailable) data-filter-unavailable="1" @endif
+                                                                @selected($editSelectedFilter === $value)>{{ $optionLabel }}</option>   
                                                         @endforeach
 
 

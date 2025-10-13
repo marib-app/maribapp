@@ -206,17 +206,8 @@ class FeatureSectionController extends Controller {
             $data['section_type'] = $request->input('section_type', $defaultSectionType);
             $data['slug'] = $expectedSlug;
 
-            $filterValue = $data['filter'] ?? null;
-            [$minPrice, $maxPrice] = $this->resolvePriceBoundsFromData($data, $filterValue);
+            $data = $this->applyPriceBoundsToData($data);
 
-            if ($this->filterSupportsPriceBounds($filterValue)) {
-                $data['min_price'] = $minPrice;
-                $data['max_price'] = $maxPrice;
-            } else {
-                $data['min_price'] = null;
-                $data['max_price'] = null;
-            
-            }
 
 
             $data['value'] = null;
@@ -486,18 +477,8 @@ class FeatureSectionController extends Controller {
             $data['section_type'] = $request->input('section_type', $fallbackSectionType);
             $data['slug'] = $expectedSlug;
 
-            $filterValue = $data['filter'] ?? null;
-            [$minPrice, $maxPrice] = $this->resolvePriceBoundsFromData($data, $filterValue);
+            $data = $this->applyPriceBoundsToData($data, $feature_section);
 
-
-            if ($this->filterSupportsPriceBounds($filterValue)) {
-                $data['min_price'] = $minPrice;
-                $data['max_price'] = $maxPrice;
-            } else {
-                $data['min_price'] = null;
-                $data['max_price'] = null;
-            
-            }
 
             $data['value'] = null;
             $data['description'] = $data['description'] ?? null;
@@ -955,7 +936,24 @@ class FeatureSectionController extends Controller {
     }
 
 
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function applyPriceBoundsToData(array $data, ?FeatureSection $currentSection = null): array
+    {
+        $filterValue = $data['filter'] ?? null;
 
+        [$minPrice, $maxPrice] = $this->resolvePriceBoundsFromData($data, $filterValue, [
+            'current_min' => $currentSection ? $currentSection->min_price : null,
+            'current_max' => $currentSection ? $currentSection->max_price : null,
+        ]);
+
+        $data['min_price'] = $minPrice;
+        $data['max_price'] = $maxPrice;
+
+        return $data;
+    }
 
     
     private function transformSectionResponse(FeatureSection $section, bool $includeActions = false): array

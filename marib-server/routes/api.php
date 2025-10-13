@@ -21,6 +21,7 @@ use App\Http\Controllers\WifiPurchaseController;
 use App\Http\Controllers\ProductPurchaseOptionsController;
 use App\Http\Controllers\ItemPurchaseManagementController;
 use App\Http\Controllers\WifiCodeRevealController;
+use App\Http\Controllers\Api\UserPreferenceController;
 
 
 
@@ -63,7 +64,8 @@ Route::prefix('wifi-cabin')
 
 /* Authenticated Routes */
     Route::group(['middleware' => ['auth:sanctum']], static function () {
-
+    Route::get('user/preferences', [UserPreferenceController::class, 'show']);
+    Route::put('user/preferences', [UserPreferenceController::class, 'update']);
 
     Route::post('items/{item}/attributes', [ItemPurchaseManagementController::class, 'updateAttributes'])
         ->whereNumber('item');

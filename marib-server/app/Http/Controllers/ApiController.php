@@ -577,7 +577,7 @@ class ApiController extends Controller {
                     ];
                 });
 
-            $settingsCollection = collect($settings->items());
+            $settingsCollection = $settings->getCollection();
 
 
 

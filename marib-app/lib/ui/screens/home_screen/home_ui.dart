@@ -27,7 +27,6 @@ import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/helper_utils.dart';
 
 import 'unread_notifications_cubit.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
 // ملاحظة: ProfileHeaderUI يدعم welcomeText و welcomeColor و shrinkFactor.
 
@@ -35,7 +34,8 @@ class HomeScreenUI extends StatelessWidget {
   // الأساسيات
   final ScrollController scrollController;
   final VoidCallback onSupportPressed;
-  final Widget bodyContent;
+  final List<Widget> bodySlivers;
+
 
   // إمّا تمرر ودجت جاهز للهيدر... (اختياري)
   final Widget? appBarLeading;
@@ -67,7 +67,7 @@ class HomeScreenUI extends StatelessWidget {
     super.key,
     required this.scrollController,
     required this.onSupportPressed,
-    required this.bodyContent,
+    required this.bodySlivers,
     this.appBarLeading,
     this.isAuthenticated,
     this.name,
@@ -226,13 +226,14 @@ class HomeScreenUI extends StatelessWidget {
 
   Widget _buildBody(BuildContext context) {
     // ✨ لا نستخدم SingleChildScrollView ولا PrimaryScrollController هنا
+    final List<Widget> slivers =
+    bodySlivers.isEmpty ? <Widget>[const SliverToBoxAdapter(child: SizedBox.shrink())] : bodySlivers;
+
     final scroll = CustomScrollView(
       physics: const BouncingScrollPhysics(),
 
-      slivers: [
-        // حوّل الجسم إلى سليفَر واحد
-        SliverToBoxAdapter(child: bodyContent),
-      ],
+      slivers: slivers,
+
     );
 
     return onRefresh == null

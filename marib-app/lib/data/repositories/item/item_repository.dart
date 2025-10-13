@@ -330,9 +330,8 @@ class ItemRepository {
     if (search != null) parameters[Api.search] = search;
     if (sortBy != null) parameters[Api.sortBy] = sortBy;
 
-    if (detailed) {
-      parameters['view'] = 'detail';
-    }
+    parameters['view'] = detailed ? 'detail' : 'summary';
+
 
     final Map<String, dynamic> response =
     await Api.get(url: Api.getItemApi, queryParameters: parameters);

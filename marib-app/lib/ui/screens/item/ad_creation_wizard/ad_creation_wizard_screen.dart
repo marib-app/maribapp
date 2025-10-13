@@ -107,15 +107,50 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   bool get _requiresLocation => _currentSectionConfig.requiresLocation;
   bool get _requiresInventory => _currentSectionConfig.requiresInventory;
 
-  List<_WizardStep> get _steps => <_WizardStep>[
-    const _WizardStep(label: 'الفئة الرئيسية'),
-    const _WizardStep(label: 'الفئة الفرعية'),
-    const _WizardStep(label: 'الحقول المخصّصة'),
-    const _WizardStep(label: 'المرحلة 4A: الوسائط'),
-    const _WizardStep(label: 'المرحلة 4B: التفاصيل النصية'),
-    _WizardStep(label: _stepFiveLabel),
-    const _WizardStep(label: 'المراجعة النهائية'),
-  ];
+  List<_WizardStep> get _steps {
+    final _WizardSectionConfig config = _currentSectionConfig;
+    final bool requiresLocation = config.requiresLocation;
+    final bool requiresInventory = config.requiresInventory;
+    final bool hasRequiredCustomFields =
+    _customFieldSchemas.any((CustomFieldSchema field) => field.isRequired);
+
+    return <_WizardStep>[
+      const _WizardStep(
+        id: _WizardStepId.mainCategory,
+        label: 'الفئة الرئيسية',
+      ),
+      const _WizardStep(
+        id: _WizardStepId.subCategory,
+        label: 'الفئة الفرعية',
+      ),
+      _WizardStep(
+        id: _WizardStepId.customFields,
+        label: 'الحقول المخصّصة',
+        isOptional: !hasRequiredCustomFields,
+      ),
+      const _WizardStep(
+        id: _WizardStepId.media,
+        label: 'المرحلة 4A: الوسائط',
+      ),
+      const _WizardStep(
+        id: _WizardStepId.textDetails,
+        label: 'المرحلة 4B: التفاصيل النصية',
+      ),
+      _WizardStep(
+        id: _WizardStepId.locationInventory,
+        label: _stepFiveLabel,
+        isOptional: !(requiresLocation || requiresInventory),
+        isVisible: requiresLocation || requiresInventory,
+      ),
+      const _WizardStep(
+        id: _WizardStepId.review,
+        label: 'المراجعة النهائية',
+      ),
+    ];
+  }
+
+  List<_WizardStep> get _visibleSteps =>
+      _steps.where((_WizardStep step) => step.isVisible).toList(growable: false);
 
 
   final CategoryInventoryService _inventoryService = CategoryInventoryService();
@@ -199,8 +234,14 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   }
 
   void _markDirty() {
-    _hasUnsavedChanges = true;
     _autoSaveTimer?.cancel();
+    if (mounted) {
+      setState(() {
+        _hasUnsavedChanges = true;
+      });
+    } else {
+      _hasUnsavedChanges = true;
+    }
     _autoSaveTimer = Timer(const Duration(seconds: 3), _autoSaveDraft);
   }
 
@@ -558,43 +599,233 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   }
 
   void _goNext() {
-    if (_currentStep >= _steps.length - 1) {
+    final List<_WizardStep> steps = _visibleSteps;
+    if (steps.isEmpty) {
       return;
     }
-    if (_currentStep == 0 && _selectedMainCategory == null) {
-      _showMessage('يرجى اختيار الفئة الرئيسية قبل المتابعة.');
+    final int currentIndex = _clampCurrentStepIndex(steps);
+    if (currentIndex >= steps.length - 1) {
       return;
     }
-    if (_currentStep == 1 && _selectedSubCategory == null) {
-      _showMessage('يرجى اختيار الفئة الفرعية قبل المتابعة.');
+    final _WizardStep currentStep = steps[currentIndex];
+    if (!_canProceedFromStep(currentStep.id)) {
       return;
     }
-    if (_currentStep == 2) {
-      final bool valid = _customFieldsFormKey.currentState?.validate() ?? true;
-      if (!valid) {
-        _showMessage('يرجى إكمال الحقول المخصّصة المطلوبة قبل المتابعة.');
-        return;
-      }
-    }
-    if (_currentStep == 3 && !_validateMediaStep()) {
-      return;
-    }
-    if (_currentStep == 4 && !_validateTextDetailsStep()) {
-      return;
-    }
-
-    if (_currentStep == 5 && !_validateStepFive()) {
-      return;
-    }
-
-    setState(() => _currentStep += 1);
+    setState(() => _currentStep = currentIndex + 1);
   }
 
   void _goPrevious() {
-    if (_currentStep == 0) {
+    final List<_WizardStep> steps = _visibleSteps;
+    if (steps.isEmpty) {
       return;
     }
-    setState(() => _currentStep -= 1);
+    final int currentIndex = _clampCurrentStepIndex(steps);
+    if (currentIndex == 0) {
+      return;
+    }
+    setState(() => _currentStep = currentIndex - 1);
+  }
+
+  bool _canProceedFromStep(_WizardStepId stepId) {
+    switch (stepId) {
+      case _WizardStepId.mainCategory:
+        if (_selectedMainCategory == null) {
+          _showMessage('يرجى اختيار الفئة الرئيسية قبل المتابعة.');
+          return false;
+        }
+        return true;
+      case _WizardStepId.subCategory:
+        final _MainCategoryOption? mainCategory = _selectedMainCategory;
+        final bool hasSubCategories =
+            mainCategory != null && mainCategory.subCategories.isNotEmpty;
+        if (hasSubCategories && _selectedSubCategory == null) {
+          _showMessage('يرجى اختيار الفئة الفرعية قبل المتابعة.');
+          return false;
+        }
+        return true;
+      case _WizardStepId.customFields:
+        final bool valid = _customFieldsFormKey.currentState?.validate() ?? true;
+        if (!valid) {
+          _showMessage('يرجى إكمال الحقول المخصّصة المطلوبة قبل المتابعة.');
+          return false;
+        }
+        return true;
+      case _WizardStepId.media:
+        return _validateMediaStep();
+      case _WizardStepId.textDetails:
+        return _validateTextDetailsStep();
+      case _WizardStepId.locationInventory:
+        return _validateStepFive();
+      case _WizardStepId.review:
+        return true;
+    }
+  }
+
+  int _clampCurrentStepIndex(List<_WizardStep> steps) {
+    if (steps.isEmpty) {
+      return 0;
+    }
+    final int maxIndex = steps.length - 1;
+    if (_currentStep < 0) {
+      return 0;
+    }
+    if (_currentStep > maxIndex) {
+      return maxIndex;
+    }
+    return _currentStep;
+  }
+
+
+
+  int _effectiveCurrentStepIndex(List<_WizardStep> steps) {
+    final int clamped = _clampCurrentStepIndex(steps);
+    if (clamped != _currentStep && mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() => _currentStep = clamped);
+        }
+      });
+    }
+    return clamped;
+  }
+
+  void _recomputeCurrentStepBounds() {
+    final List<_WizardStep> steps = _visibleSteps;
+    if (steps.isEmpty) {
+      _currentStep = 0;
+      return;
+    }
+    final int maxIndex = steps.length - 1;
+    if (_currentStep > maxIndex) {
+      _currentStep = maxIndex;
+    }
+    if (_currentStep < 0) {
+      _currentStep = 0;
+    }
+  }
+
+  Map<_WizardStepId, bool> _calculateStepCompletion(List<_WizardStep> steps) {
+    final Map<_WizardStepId, bool> completion = <_WizardStepId, bool>{};
+    for (final _WizardStep step in steps) {
+      if (step.id == _WizardStepId.review) {
+        continue;
+      }
+      completion[step.id] = _isNonReviewStepComplete(step.id);
+    }
+    if (steps.any((step) => step.id == _WizardStepId.review)) {
+      final bool prerequisitesComplete = steps
+          .where((step) => step.id != _WizardStepId.review)
+          .every((step) => completion[step.id] ?? false);
+      completion[_WizardStepId.review] =
+          prerequisitesComplete && !_hasUnsavedChanges;
+    }
+    return completion;
+  }
+
+  bool _isNonReviewStepComplete(_WizardStepId id) {
+    switch (id) {
+      case _WizardStepId.mainCategory:
+        return _selectedMainCategory != null;
+      case _WizardStepId.subCategory:
+        final _MainCategoryOption? mainCategory = _selectedMainCategory;
+        if (mainCategory == null) {
+          return false;
+        }
+        if (mainCategory.subCategories.isEmpty) {
+          return true;
+        }
+        return _selectedSubCategory != null;
+      case _WizardStepId.customFields:
+        if (_customFieldSchemas.isEmpty) {
+          return true;
+        }
+        for (final CustomFieldSchema field in _customFieldSchemas) {
+          if (field.isRequired &&
+              !_hasCustomFieldValue(field, _customFieldValues[field.id])) {
+            return false;
+          }
+        }
+        return true;
+      case _WizardStepId.media:
+        if (_mediaFiles.isEmpty && _videoLinks.isEmpty) {
+          return false;
+        }
+        for (final String link in _videoLinks) {
+          if (!_isValidVideoLink(link)) {
+            return false;
+          }
+        }
+        return true;
+      case _WizardStepId.textDetails:
+        final bool titleValid = _validateTitle(_titleController.text) == null;
+        final bool descriptionValid =
+            _validateDescription(_descriptionController.text) == null;
+        final bool priceValid = _validatePrice(_priceController.text) == null;
+        final bool contactValid = _validateContact(_contactController.text) == null;
+        final bool currencySelected = _selectedCurrency != null;
+        final bool sheinProductValid = !_isSheinInterface ||
+            _validateSheinUrl(_sheinProductLinkController.text) == null;
+        final bool sheinReviewValid =
+            _validateSheinUrl(_sheinReviewLinkController.text) == null;
+        return titleValid &&
+            descriptionValid &&
+            priceValid &&
+            contactValid &&
+            currencySelected &&
+            sheinProductValid &&
+            sheinReviewValid;
+      case _WizardStepId.locationInventory:
+        final bool requiresLocation = _requiresLocation;
+        final bool requiresInventory = _requiresInventory;
+        final bool locationComplete =
+            !requiresLocation || _isLocationDataComplete();
+        final bool inventoryComplete =
+            !requiresInventory || _isInventoryDataComplete();
+        return locationComplete && inventoryComplete;
+      case _WizardStepId.review:
+        return !_hasUnsavedChanges;
+    }
+  }
+
+  bool _hasCustomFieldValue(CustomFieldSchema field, dynamic value) {
+    if (value == null) {
+      return false;
+    }
+    if (field.type == CustomFieldType.multiChoice) {
+      if (value is Iterable) {
+        return value
+            .map((dynamic element) => element.toString().trim())
+            .where((String element) => element.isNotEmpty)
+            .isNotEmpty;
+      }
+      return false;
+    }
+    if (value is String) {
+      return value.trim().isNotEmpty;
+    }
+    return true;
+  }
+
+  bool _isLocationDataComplete() {
+    final String address = _locationAddressController.text.trim();
+    final bool hasAddress = address.isNotEmpty;
+    final bool latitudeValid =
+        _validateLatitudeField(_locationLatitudeController.text) == null;
+    final bool longitudeValid =
+        _validateLongitudeField(_locationLongitudeController.text) == null;
+    return hasAddress && latitudeValid && longitudeValid;
+  }
+
+  bool _isInventoryDataComplete() {
+    if (_inventoryVariations.isEmpty) {
+      return false;
+    }
+    for (final _InventoryVariation variation in _inventoryVariations) {
+      if (!variation.isComplete) {
+        return false;
+      }
+    }
+    return true;
   }
 
   void _showMessage(String message) {
@@ -605,7 +836,14 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final double progress = (_currentStep + 1) / _steps.length;
+    final List<_WizardStep> steps = _visibleSteps;
+    final int currentStepIndex = _effectiveCurrentStepIndex(steps);
+    final Map<_WizardStepId, bool> completionByStep =
+    _calculateStepCompletion(steps);
+    final int completedSteps =
+        completionByStep.values.where((bool value) => value).length;
+    final double progress =
+    steps.isEmpty ? 0 : completedSteps / steps.length;
 
     return Scaffold(
       appBar: AppBar(
@@ -623,19 +861,21 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
                 Wrap(
                   spacing: 8,
                   children: [
-                    for (int i = 0; i < _steps.length; i++)
+                    for (int i = 0; i < steps.length; i++)
                       _StepChip(
-                        label: _steps[i].label,
+                        label: steps[i].label,
                         index: i,
-                        isCurrent: i == _currentStep,
-                        isCompleted: i < _currentStep,
+                        isCurrent: i == currentStepIndex,
+                        isCompleted:
+                        completionByStep[steps[i].id] ?? false,
+                        isOptional: steps[i].isOptional,
                       ),
                   ],
                 ),
               ],
             ),
           ),
-          Expanded(child: _buildStepBody()),
+          Expanded(child: _buildStepBody(steps, currentStepIndex)),
         ],
       ),
       bottomNavigationBar: Padding(
@@ -674,16 +914,19 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: _currentStep == 0 ? null : _goPrevious,
+                    onPressed: currentStepIndex == 0 ? null : _goPrevious,
                     child: const Text('رجوع'),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed:
-                    _isPublishing ? null : (_currentStep == _steps.length - 1 ? _publishAd : _goNext),
-                    child: _currentStep == _steps.length - 1
+                    onPressed: _isPublishing
+                        ? null
+                        : (currentStepIndex == steps.length - 1
+                        ? _publishAd
+                        : _goNext),
+                    child: currentStepIndex == steps.length - 1
                         ? (_isPublishing
                         ? const SizedBox(
                       width: 18,
@@ -702,22 +945,32 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     );
   }
 
-  Widget _buildStepBody() {
-    switch (_currentStep) {
-      case 0:
+  Widget _buildStepBody(List<_WizardStep> steps, int currentIndex) {
+    if (steps.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final _WizardStep currentStep = steps[currentIndex];
+    switch (currentStep.id) {
+      case _WizardStepId.mainCategory:
         return _buildMainCategoryStep();
-      case 1:
+      case _WizardStepId.subCategory:
+
         return _buildSubCategoryStep();
-      case 2:
+      case _WizardStepId.customFields:
+
         return _buildCustomFieldsStep();
-      case 3:
+      case _WizardStepId.media:
+
         return _buildMediaStep();
 
-      case 4:
+      case _WizardStepId.textDetails:
+
         return _buildTextDetailsStep();
-      case 5:
+      case _WizardStepId.locationInventory:
+
         return _buildStepFiveBody();
-      case 6:
+      case _WizardStepId.review:
+
         return _buildReviewStep();
       default:
         return const SizedBox.shrink();
@@ -1168,6 +1421,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
           _sheinReviewLinkController.clear();
         }
       }
+      _recomputeCurrentStepBounds();
+
     });
     _locationFormKey.currentState?.reset();
     _inventoryFormKey.currentState?.reset();
@@ -1193,6 +1448,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       _customFieldValues = <String, dynamic>{};
       _customFieldError = null;
       _inventoryVariations = <_InventoryVariation>[];
+      _recomputeCurrentStepBounds();
+
 
     });
 
@@ -2093,8 +2350,17 @@ class _MediaPreviewCard extends StatelessWidget {
 }
 
 class _WizardStep {
-  const _WizardStep({required this.label});
+  const _WizardStep({
+    required this.id,
+    required this.label,
+    this.isOptional = false,
+    this.isVisible = true,
+  });
+
+  final _WizardStepId id;
   final String label;
+  final bool isOptional;
+  final bool isVisible;
 }
 
 class _StepChip extends StatelessWidget {
@@ -2103,44 +2369,107 @@ class _StepChip extends StatelessWidget {
     required this.index,
     required this.isCurrent,
     required this.isCompleted,
+    required this.isOptional,
+
   });
 
   final String label;
   final int index;
   final bool isCurrent;
   final bool isCompleted;
+  final bool isOptional;
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme colors = context.color;
-    final Color background = isCurrent
-        ? colors.territoryColor.withOpacity(0.14)
+    final Color background = isCompleted
+        ? colors.territoryColor.withOpacity(0.1)
+        : isCurrent
+        ? colors.territoryColor.withOpacity(0.12)
         : colors.secondaryColor;
-    final Color border = isCompleted
+    final Color borderColor = isCompleted
         ? colors.territoryColor
-        : colors.borderColor.withOpacity(0.3);
+        : isCurrent
+        ? colors.territoryColor.withOpacity(0.6)
+        : colors.borderColor.withOpacity(0.4);
+    final Color labelColor =
+    isCompleted ? colors.territoryColor : colors.textDefaultColor;
+
+    final Color badgeBackground = isOptional
+        ? colors.deactivateColor.withOpacity(isCompleted ? 0.24 : 0.14)
+        : colors.territoryColor.withOpacity(isCompleted ? 0.24 : 0.14);
+    final Color badgeTextColor =
+    isOptional ? colors.textDefaultColor : colors.territoryColor;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: border),
+        border: Border.all(color: borderColor),
+
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircleAvatar(
-            radius: 10,
-            backgroundColor:
-            isCompleted ? colors.territoryColor : Colors.transparent,
+          Container(
+            width: 26,
+            height: 26,
+            decoration: BoxDecoration(
+              color:
+              isCompleted ? colors.territoryColor : colors.secondaryColor,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isCompleted
+                    ? colors.territoryColor
+                    : colors.borderColor.withOpacity(isCurrent ? 0.6 : 0.4),
+              ),
+            ),
+            alignment: Alignment.center,
             child: isCompleted
-                ? const Icon(Icons.check, size: 14, color: Colors.white)
-                : Text('${index + 1}',
-                style: TextStyle(color: colors.textDefaultColor)),
+                ? const Icon(Icons.check, size: 16, color: Colors.white)
+                : Text(
+              '${index + 1}',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: isCurrent
+                    ? colors.territoryColor
+                    : colors.textDefaultColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-          const SizedBox(width: 8),
-          Text(label, style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: labelColor,
+                  fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: badgeBackground,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  isOptional ? 'اختياري' : 'مطلوب',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: badgeTextColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
         ],
       ),
     );

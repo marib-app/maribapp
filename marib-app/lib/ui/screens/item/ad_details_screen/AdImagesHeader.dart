@@ -335,7 +335,7 @@ class _AdImageHeaderState extends State<AdImageHeader> {
       physics: const BouncingScrollPhysics(),
       itemBuilder: (context, index) {
         final AdImageSource imageSource = widget.images[index];
-        final String imageUrl = imageSource.displayUrl;
+        final String imageUrl = imageSource.detailUrl;
         return Hero(
           tag: widget.modelId != null
               ? 'ad-image-${widget.modelId}-$index'
@@ -347,6 +347,15 @@ class _AdImageHeaderState extends State<AdImageHeader> {
             memCacheHeight: kAdDetailImageMaxEdge,
             maxWidthDiskCache: kAdDetailImageMaxEdge,
             maxHeightDiskCache: kAdDetailImageMaxEdge,
+            imageBuilder: (context, imageProvider) => Image(
+              image: imageProvider,
+              width: double.infinity,
+              height: double.infinity,
+              fit: BoxFit.cover,
+              cacheWidth: kAdDetailImageMaxEdge,
+              cacheHeight: kAdDetailImageMaxEdge,
+              filterQuality: FilterQuality.high,
+            ),
             placeholder: (context, url) => const ShimmerBox(
               width: double.infinity,
               height: double.infinity,
@@ -361,27 +370,26 @@ class _AdImageHeaderState extends State<AdImageHeader> {
                   memCacheHeight: kAdDetailImageMaxEdge,
                   maxWidthDiskCache: kAdDetailImageMaxEdge,
                   maxHeightDiskCache: kAdDetailImageMaxEdge,
+                  imageBuilder: (context, imageProvider) => Image(
+                    image: imageProvider,
+                    width: double.infinity,
+                    height: double.infinity,
+                    fit: BoxFit.cover,
+                    cacheWidth: kAdDetailImageMaxEdge,
+                    cacheHeight: kAdDetailImageMaxEdge,
+                    filterQuality: FilterQuality.high,
+                  ),
                   placeholder: (context, _) => const ShimmerBox(
                     width: double.infinity,
                     height: double.infinity,
                     borderRadius: BorderRadius.zero,
                   ),
-                  errorWidget: (context, _, __) => ShimmerBox(
-                    width: double.infinity,
-                    height: double.infinity,
-                    borderRadius: BorderRadius.zero,
-                    animate: false,
-                    baseColor: Colors.grey.shade300,
-                  ),
+                  errorWidget: (context, _, __) => _buildImageErrorPlaceholder(),
+
                 );
               }
-              return ShimmerBox(
-                width: double.infinity,
-                height: double.infinity,
-                borderRadius: BorderRadius.zero,
-                animate: false,
-                baseColor: Colors.grey.shade300,
-              );
+              return _buildImageErrorPlaceholder();
+
             },
           ),
         );
@@ -391,25 +399,44 @@ class _AdImageHeaderState extends State<AdImageHeader> {
 
 
   Widget _buildPlaceholder() {
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme colorScheme = theme.colorScheme;
-    final bool isDark = theme.brightness == Brightness.dark;
-    final Color background = colorScheme.surfaceVariant.withOpacity(
-      isDark ? 0.35 : 0.8,
+    return _buildShimmerFallback(
+      icon: Icons.image_not_supported_outlined,
+      animate: true,
     );
-    final Color iconColor = colorScheme.onSurface.withOpacity(0.6);
+  }
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: background,
-      ),
-      child: Center(
-        child: Icon(
-          Icons.image_not_supported_outlined,
-          size: 48,
-          color: iconColor,
+  Widget _buildImageErrorPlaceholder() {
+    return _buildShimmerFallback(
+      icon: Icons.broken_image_outlined,
+      animate: false,
+    );
+  }
+
+  Widget _buildShimmerFallback({
+    required IconData icon,
+    required bool animate,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final Color iconColor = colorScheme.onSurface.withOpacity(0.65);
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+      ShimmerBox(
+      width: double.infinity,
+      height: double.infinity,
+      borderRadius: BorderRadius.zero,
+      animate: animate,
         ),
-      ),
+        Center(
+          child: Icon(
+            icon,
+            size: 56,
+            color: iconColor,
+          ),
+        ),
+      ],
     );
   }
 

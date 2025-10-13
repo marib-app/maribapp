@@ -17,6 +17,7 @@ class AdImageSource {
 
     final String resolvedOriginal =
     normalizedFallback.isNotEmpty ? normalizedFallback : normalizedDetail;
+
     final String resolvedDetail =
     normalizedDetail.isNotEmpty ? normalizedDetail : resolvedOriginal;
 
@@ -40,10 +41,13 @@ class AdImageSource {
   String get fallbackDisplayUrl => originalUrl;
 
   CachedNetworkImageProvider buildFullScreenProvider() {
+    final bool preferOriginal = hasOptimizedVariant && originalUrl.isNotEmpty;
+    final String url = preferOriginal ? originalUrl : detailUrl;
+
     return CachedNetworkImageProvider(
-      displayUrl,
-      maxWidth: hasOptimizedVariant ? kAdDetailImageMaxEdge : null,
-      maxHeight: hasOptimizedVariant ? kAdDetailImageMaxEdge : null,
+      url,
+      maxWidth: preferOriginal ? null : kAdDetailImageMaxEdge,
+      maxHeight: preferOriginal ? null : kAdDetailImageMaxEdge,
     );
   }
 

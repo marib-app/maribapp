@@ -37,8 +37,12 @@ class AdCreationWizardScreen extends StatefulWidget {
   final String? initialDraftId;
 
   static Route<void> route(RouteSettings settings) {
+    final AdCreationWizardArguments? args =
+    settings.arguments is AdCreationWizardArguments
+        ? settings.arguments as AdCreationWizardArguments
+        : null;
     return MaterialPageRoute(
-      builder: (_) => AdCreationWizardScreen(initialDraftId: draftId),
+      builder: (_) => AdCreationWizardScreen(initialDraftId: args?.draftId),
       settings: settings,
     );
   }

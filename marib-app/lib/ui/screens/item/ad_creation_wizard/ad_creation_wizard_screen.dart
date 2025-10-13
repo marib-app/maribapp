@@ -3,6 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
+import 'models/custom_field_schema.dart';
+import 'services/category_inventory_service.dart';
+import 'widgets/dynamic_custom_fields_form.dart';
+import 'package:flutter/material.dart';
+
+
+
 
 /// Simplified ad creation wizard showcasing a multi-step flow with
 /// progress indicator, navigation guards and auto-save hooks.
@@ -27,11 +34,46 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   final List<_WizardStep> _steps = const <_WizardStep>[
     _WizardStep(label: 'الفئة الرئيسية'),
     _WizardStep(label: 'الفئة الفرعية'),
+    _WizardStep(label: 'الحقول المخصّصة'),
     _WizardStep(label: 'الوسائط'),
     _WizardStep(label: 'التفاصيل النصية'),
     _WizardStep(label: 'الخريطة / إدارة المنتج'),
     _WizardStep(label: 'المراجعة النهائية'),
   ];
+
+  final CategoryInventoryService _inventoryService = CategoryInventoryService();
+  final AdPublishingService _adPublishingService = AdPublishingService();
+  final List<_MainCategoryOption> _mainCategories = <_MainCategoryOption>[
+    _MainCategoryOption(
+      id: 1,
+      name: 'إعلانات عامة',
+      interfaceType: 'public_ads',
+      subCategories: const <_SubCategoryOption>[
+        const _SubCategoryOption(id: 101, name: 'سيارات للبيع'),
+        const _SubCategoryOption(id: 102, name: 'عقارات للإيجار'),
+      ],
+    ),
+    _MainCategoryOption(
+      id: 2,
+      name: 'الخدمات',
+      interfaceType: 'services',
+      subCategories: const <_SubCategoryOption>[
+        const _SubCategoryOption(id: 201, name: 'خدمات الصيانة'),
+        const _SubCategoryOption(id: 202, name: 'استشارات الأعمال'),
+      ],
+    ),
+  ];
+  final GlobalKey<DynamicCustomFieldsFormState> _customFieldsFormKey =
+  GlobalKey<DynamicCustomFieldsFormState>();
+  final Map<String, List<CustomFieldSchema>> _customFieldSchemaCache =
+  <String, List<CustomFieldSchema>>{};
+  _MainCategoryOption? _selectedMainCategory;
+  _SubCategoryOption? _selectedSubCategory;
+  List<CustomFieldSchema> _customFieldSchemas = const <CustomFieldSchema>[];
+  Map<String, dynamic> _customFieldValues = <String, dynamic>{};
+  bool _isLoadingCustomFields = false;
+  String? _customFieldError;
+  bool _isPublishing = false;
 
   Timer? _autoSaveTimer;
   int _currentStep = 0;
@@ -66,21 +108,47 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       return;
     }
     setState(() => _isSavingDraft = true);
-    await Future<void>.delayed(const Duration(milliseconds: 350));
-    if (!mounted) {
-      return;
+    try {
+      final Map<String, dynamic> payload = _buildAdPayload(isDraft: true);
+      await _adPublishingService.saveDraft(payload);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _hasUnsavedChanges = false;
+      });
+    } catch (error) {
+      if (mounted) {
+        _showMessage('تعذّر حفظ المسودة: $error');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSavingDraft = false);
+      }
     }
-    setState(() {
-      _hasUnsavedChanges = false;
-      _isSavingDraft = false;
-    });
+
   }
 
   void _goNext() {
     if (_currentStep >= _steps.length - 1) {
       return;
     }
-    if (_currentStep == 3 && _titleController.text.trim().isEmpty) {
+    if (_currentStep == 0 && _selectedMainCategory == null) {
+      _showMessage('يرجى اختيار الفئة الرئيسية قبل المتابعة.');
+      return;
+    }
+    if (_currentStep == 1 && _selectedSubCategory == null) {
+      _showMessage('يرجى اختيار الفئة الفرعية قبل المتابعة.');
+      return;
+    }
+    if (_currentStep == 2) {
+      final bool valid = _customFieldsFormKey.currentState?.validate() ?? true;
+      if (!valid) {
+        _showMessage('يرجى إكمال الحقول المخصّصة المطلوبة قبل المتابعة.');
+        return;
+      }
+    }
+    if (_currentStep == 4 && _titleController.text.trim().isEmpty) {
       _showMessage('يرجى إدخال عنوان للإعلان قبل المتابعة.');
       return;
     }
@@ -136,7 +204,10 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         ],
       ),
       bottomNavigationBar: Padding(
-        padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + context.mediaQuery.viewPadding.bottom),
+        padding: EdgeInsets.fromLTRB(
+          16.0, 12.0, 16.0, 12.0 + MediaQuery.of(context).viewPadding.bottom,
+        ),
+
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -175,10 +246,17 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: _goNext,
-                    child: Text(
-                      _currentStep == _steps.length - 1 ? 'نشر' : 'التالي',
-                    ),
+                    onPressed:
+                    _isPublishing ? null : (_currentStep == _steps.length - 1 ? _publishAd : _goNext),
+                    child: _currentStep == _steps.length - 1
+                        ? (_isPublishing
+                        ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                        : const Text('نشر'))
+                        : const Text('التالي'),
                   ),
                 ),
               ],
@@ -196,12 +274,15 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       case 1:
         return _buildSubCategoryStep();
       case 2:
-        return const Center(child: Text('ارفع صورك أو فيديو الإعلان.'));
+        return _buildCustomFieldsStep();
       case 3:
-        return _buildTextDetailsStep();
+        return const Center(child: Text('ارفع صورك أو فيديو الإعلان.'));
+
       case 4:
-        return const Center(child: Text('حدد الموقع أو أضف بيانات المخزون.'));
+        return _buildTextDetailsStep();
       case 5:
+        return const Center(child: Text('حدد الموقع أو أضف بيانات المخزون.'));
+      case 6:
         return _buildReviewStep();
       default:
         return const SizedBox.shrink();
@@ -211,25 +292,354 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   Widget _buildMainCategoryStep() {
     return ListView(
       padding: const EdgeInsets.all(16),
-      children: const [
-        Text('اختر الفئة الرئيسية للإعلان. يمكن تعديل هذا الاختيار لاحقًا.'),
+      children: [
+        const Text('اختر الفئة الرئيسية للإعلان. يمكن تعديل هذا الاختيار لاحقًا.'),
+        const SizedBox(height: 12),
+        for (final _MainCategoryOption category in _mainCategories)
+          Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: RadioListTile<_MainCategoryOption>(
+              value: category,
+              groupValue: _selectedMainCategory,
+              title: Text(category.name),
+              subtitle: Text('واجهة العرض: ${category.interfaceType}'),
+              onChanged: (value) {
+                if (value == null) return;
+                _onMainCategorySelected(value);
+              },
+            ),
+          ),
       ],
     );
   }
 
   Widget _buildSubCategoryStep() {
+    final _MainCategoryOption? mainCategory = _selectedMainCategory;
+    if (mainCategory == null) {
+      return _buildPlaceholderMessage('يرجى اختيار الفئة الرئيسية أولًا لمتابعة اختيار الفئة الفرعية.');
+    }
+
+    final List<_SubCategoryOption> subCategories = mainCategory.subCategories;
+    if (subCategories.isEmpty) {
+      return _buildPlaceholderMessage('لا توجد فئات فرعية متاحة لهذه الفئة.');
+    }
+
     return ListView(
       padding: const EdgeInsets.all(16),
-      children: const [
-        Text('اختر الفئة الفرعية المناسبة لإعلانك.'),
+      children: [
+        Text('اختر الفئة الفرعية المناسبة لإعلانك ضمن ${mainCategory.name}.'),
+        const SizedBox(height: 12),
+        for (final _SubCategoryOption subCategory in subCategories)
+          Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: RadioListTile<_SubCategoryOption>(
+              value: subCategory,
+              groupValue: _selectedSubCategory,
+              title: Text(subCategory.name),
+              onChanged: (value) {
+                if (value == null) return;
+                _onSubCategorySelected(value);
+              },
+            ),
+          ),
       ],
     );
   }
 
-  Widget _buildTextDetailsStep() {
+  Widget _buildCustomFieldsStep() {
+    final _MainCategoryOption? mainCategory = _selectedMainCategory;
+    final _SubCategoryOption? subCategory = _selectedSubCategory;
+
+
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        const Text('املأ الحقول المخصّصة المرتبطة بالفئة الفرعية المختارة.'),
+        const SizedBox(height: 12),
+        if (mainCategory == null)
+          _buildInfoCard('يرجى اختيار الفئة الرئيسية قبل الانتقال إلى الحقول المخصّصة.')
+        else if (subCategory == null)
+          _buildInfoCard('يرجى اختيار الفئة الفرعية لمتابعة الحقول المخصّصة.')
+        else if (_isLoadingCustomFields)
+            const Center(child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: CircularProgressIndicator(),
+            ))
+          else if (_customFieldError != null)
+              _buildErrorCard(
+                message: 'تعذّر تحميل الحقول المخصّصة. حاول مجددًا.',
+                onRetry: _fetchCustomFieldSchema,
+              )
+            else
+              DynamicCustomFieldsForm(
+                key: _customFieldsFormKey,
+                fields: _customFieldSchemas,
+                values: Map<String, dynamic>.unmodifiable(_customFieldValues),
+                onChanged: (Map<String, dynamic> values) {
+                  setState(() {
+                    _customFieldValues = values;
+                  });
+                  _markDirty();
+                },
+              ),
+      ],
+    );
+  }
+
+
+  void _onMainCategorySelected(_MainCategoryOption category) {
+    if (_selectedMainCategory?.id == category.id) {
+      return;
+    }
+    setState(() {
+      _selectedMainCategory = category;
+      _selectedSubCategory = null;
+      _customFieldSchemas = const <CustomFieldSchema>[];
+      _customFieldValues = <String, dynamic>{};
+      _customFieldError = null;
+      _isLoadingCustomFields = false;
+    });
+    _customFieldsFormKey.currentState?.clearValidationErrors();
+    _markDirty();
+  }
+
+  void _onSubCategorySelected(_SubCategoryOption subCategory) {
+    if (_selectedSubCategory?.id == subCategory.id) {
+      return;
+    }
+    setState(() {
+      _selectedSubCategory = subCategory;
+      _customFieldValues = <String, dynamic>{};
+      _customFieldError = null;
+    });
+    _customFieldsFormKey.currentState?.clearValidationErrors();
+    _markDirty();
+    _fetchCustomFieldSchema();
+  }
+
+  Future<void> _fetchCustomFieldSchema() async {
+    final _MainCategoryOption? mainCategory = _selectedMainCategory;
+    final _SubCategoryOption? subCategory = _selectedSubCategory;
+    if (mainCategory == null || subCategory == null) {
+      return;
+    }
+
+    final String cacheKey = '${mainCategory.interfaceType}:${subCategory.id}';
+    final List<CustomFieldSchema>? cached = _customFieldSchemaCache[cacheKey];
+    if (cached != null) {
+      _applyCustomFieldSchema(cached);
+      return;
+    }
+
+    setState(() {
+      _isLoadingCustomFields = true;
+      _customFieldError = null;
+      _customFieldSchemas = const <CustomFieldSchema>[];
+    });
+
+    try {
+      final List<CustomFieldSchema> fields = await _inventoryService.fetchCustomFieldSchema(
+        interfaceType: mainCategory.interfaceType,
+        categoryId: subCategory.id,
+      );
+      if (!mounted) {
+        return;
+      }
+      _customFieldSchemaCache[cacheKey] = fields;
+      _applyCustomFieldSchema(fields);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _customFieldError = error.toString();
+        _customFieldSchemas = const <CustomFieldSchema>[];
+        _isLoadingCustomFields = false;
+      });
+    }
+  }
+
+  void _applyCustomFieldSchema(List<CustomFieldSchema> fields) {
+    final Map<String, dynamic> previousValues = Map<String, dynamic>.from(_customFieldValues);
+    setState(() {
+      _customFieldSchemas = fields;
+      _customFieldError = null;
+      _isLoadingCustomFields = false;
+      final Set<String> allowed = fields.map((CustomFieldSchema f) => f.id).toSet();
+      _customFieldValues = <String, dynamic>{
+        for (final MapEntry<String, dynamic> entry in previousValues.entries)
+          if (allowed.contains(entry.key)) entry.key: entry.value,
+      };
+    });
+    if (_customFieldValues.length != previousValues.length) {
+      _markDirty();
+    }
+    _customFieldsFormKey.currentState?.clearValidationErrors();
+  }
+
+  Widget _buildPlaceholderMessage(String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoCard(String message) {
+    final ThemeData theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceVariant.withOpacity(0.4),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(message),
+    );
+  }
+
+  Widget _buildErrorCard({required String message, required VoidCallback onRetry}) {
+    final ThemeData theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.error.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.colorScheme.error.withOpacity(0.6)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            message,
+            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh),
+            label: const Text('إعادة المحاولة'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Map<String, dynamic> _buildAdPayload({required bool isDraft}) {
+    final Map<String, dynamic> payload = <String, dynamic>{
+      'interface_type': _selectedMainCategory?.interfaceType,
+      'main_category_id': _selectedMainCategory?.id,
+      'sub_category_id': _selectedSubCategory?.id,
+      'title': _titleController.text.trim(),
+      'description': _descriptionController.text.trim(),
+      'contact': _contactController.text.trim(),
+      'status': isDraft ? 'draft' : 'pending',
+      'has_custom_fields': _customFieldSchemas.isNotEmpty,
+    };
+
+    if (_customFieldValues.isNotEmpty) {
+      payload['custom_fields'] = Map<String, dynamic>.from(_customFieldValues);
+    }
+
+    payload.removeWhere((String key, dynamic value) {
+      if (value == null) {
+        return true;
+      }
+      if (value is String) {
+        return value.trim().isEmpty;
+      }
+      if (value is Map && value.isEmpty) {
+        return true;
+      }
+      return false;
+    });
+
+    return payload;
+  }
+
+  Future<void> _publishAd() async {
+    if (_selectedMainCategory == null) {
+      _showMessage('يرجى اختيار الفئة الرئيسية قبل النشر.');
+      return;
+    }
+    if (_selectedSubCategory == null) {
+      _showMessage('يرجى اختيار الفئة الفرعية قبل النشر.');
+      return;
+    }
+    if (_customFieldSchemas.isNotEmpty) {
+      final bool valid = _customFieldsFormKey.currentState?.validate() ?? true;
+      if (!valid) {
+        _showMessage('يرجى إكمال الحقول المخصّصة المطلوبة قبل النشر.');
+        return;
+      }
+    }
+    if (_titleController.text.trim().isEmpty) {
+      _showMessage('يرجى إدخال عنوان الإعلان قبل النشر.');
+      return;
+    }
+
+    setState(() => _isPublishing = true);
+    try {
+      final Map<String, dynamic> payload = _buildAdPayload(isDraft: false);
+      await _adPublishingService.publish(payload);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _hasUnsavedChanges = false;
+      });
+      _showMessage('تم إرسال الإعلان للنشر بنجاح.');
+    } catch (error) {
+      if (mounted) {
+        _showMessage('تعذّر نشر الإعلان: $error');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isPublishing = false);
+      }
+    }
+  }
+
+
+  Widget _buildTextDetailsStep() {
+
+    final ThemeData theme = Theme.of(context);
+    final List<Widget> customFieldWidgets = <Widget>[];
+    for (final CustomFieldSchema field in _customFieldSchemas) {
+      final dynamic value = _customFieldValues[field.id];
+      final String displayValue = field.formatValue(value).isEmpty ? 'غير محدد' : field.formatValue(value);
+      customFieldWidgets
+        ..add(Text(
+          field.label,
+          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+        ))
+        ..add(const SizedBox(height: 4))
+        ..add(Text(displayValue))
+        ..add(const SizedBox(height: 12));
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text('الفئة الرئيسية: ${_selectedMainCategory?.name ?? 'غير محدد'}'),
+        const SizedBox(height: 8),
+        Text('الفئة الفرعية: ${_selectedSubCategory?.name ?? 'غير محدد'}'),
+        const SizedBox(height: 8),
+        Text('واجهة العرض: ${_selectedMainCategory?.interfaceType ?? 'غير محدد'}'),
+        const Divider(height: 32),
+        Text('الحقول المخصّصة', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 8),
+        if (customFieldWidgets.isEmpty)
+          Text('لا توجد قيم محفوظة للحقول المخصّصة.', style: theme.textTheme.bodySmall)
+        else
+          ...customFieldWidgets,
+        const Divider(height: 32),
         TextField(
           controller: _titleController,
           decoration: const InputDecoration(
@@ -325,4 +735,25 @@ class _StepChip extends StatelessWidget {
       ),
     );
   }
+}
+
+class _MainCategoryOption {
+  const _MainCategoryOption({
+    required this.id,
+    required this.name,
+    required this.interfaceType,
+    this.subCategories = const <_SubCategoryOption>[],
+  });
+
+  final int id;
+  final String name;
+  final String interfaceType;
+  final List<_SubCategoryOption> subCategories;
+}
+
+class _SubCategoryOption {
+  const _SubCategoryOption({required this.id, required this.name});
+
+  final int id;
+  final String name;
 }

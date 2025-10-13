@@ -106,7 +106,6 @@ import 'package:marib/utils/color_palette_utils.dart';
 import 'package:marib/utils/ecommerce_department.dart';
 import 'package:marib/utils/item_category_ids.dart';
 import 'package:meta/meta.dart';
-import 'package:marib/ui/screens/news/widgets/item_market_news_feed.dart';
 
 
 class _AdItemDetailsRepository implements details.ItemDetailsRepository {

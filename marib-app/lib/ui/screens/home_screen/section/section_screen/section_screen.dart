@@ -8,7 +8,6 @@ import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/api.dart';
 import 'package:marib/data/model/item_filter_model.dart';
-import 'package:marib/data/cubits/item/fetch_item_from_category_cubit.dart';
 import 'package:marib/data/cubits/item/fetch_item_summary_cubit.dart';
 import 'package:marib/data/cubits/home/fetch_home_screen_cubit.dart';
 
@@ -180,20 +179,12 @@ class Section_screenState extends State<Section_screen> {
 
     final String query = search ?? searchController.text;
 
-    await Future.wait([
-      context.read<FetchItemSummaryCubit>().fetchSummaries(
-        categoryId: resolvedCategoryId,
-        search: query,
-        sortBy: sortBy,
-        filter: effectiveFilter,
-      ),
-      context.read<FetchItemFromCategoryCubit>().fetchItemFromCategory(
-        categoryId: resolvedCategoryId,
-        search: query,
-        sortBy: sortBy,
-        filter: effectiveFilter,
-      ),
-    ]);
+    await context.read<FetchItemSummaryCubit>().fetchSummaries(
+      categoryId: resolvedCategoryId,
+      search: query,
+      sortBy: sortBy,
+      filter: effectiveFilter,
+    );
   }
 
   @override

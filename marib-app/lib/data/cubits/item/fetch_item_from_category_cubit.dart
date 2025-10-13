@@ -54,20 +54,24 @@ class FetchItemFromCategoryCubit extends Cubit<FetchItemFromCategoryState> {
 
   final ItemRepository _itemRepository = ItemRepository();
 
-  Future<void> fetchItemFromCategory(
-      {required int categoryId,
-        required String search,
-        String? sortBy,
-        ItemFilterModel? filter}) async {
+  Future<void> fetchItemFromCategory({
+    required int categoryId,
+    required String search,
+    String? sortBy,
+    ItemFilterModel? filter,
+    bool useDetailView = true,
+  }) async {
     try {
       emit(FetchItemFromCategoryInProgress());
 
       DataOutput<ItemModel> result = await _itemRepository.fetchItemFromCatId(
-          categoryId: categoryId,
-          page: 1,
-          search: search,
-          sortBy: sortBy,
-          filter: filter);
+        categoryId: categoryId,
+        page: 1,
+        search: search,
+        sortBy: sortBy,
+        filter: filter,
+        detailed: useDetailView,
+      );
       emit(
         FetchItemFromCategorySuccess(
           isLoadingMore: false,
@@ -87,11 +91,13 @@ class FetchItemFromCategoryCubit extends Cubit<FetchItemFromCategoryState> {
     }
   }
 
-  Future<void> fetchItemFromCategoryMore(
-      {required int catId,
-        required String? search,
-        String? sortBy,
-        ItemFilterModel? filter}) async {
+  Future<void> fetchItemFromCategoryMore({
+    required int catId,
+    required String? search,
+    String? sortBy,
+    ItemFilterModel? filter,
+    bool useDetailView = true,
+  }) async {
     try {
       if (state is FetchItemFromCategorySuccess) {
         if ((state as FetchItemFromCategorySuccess).isLoadingMore) {
@@ -101,11 +107,13 @@ class FetchItemFromCategoryCubit extends Cubit<FetchItemFromCategoryState> {
             .copyWith(isLoadingMore: true));
 
         DataOutput<ItemModel> result = await _itemRepository.fetchItemFromCatId(
-            categoryId: catId,
-            page: (state as FetchItemFromCategorySuccess).page + 1,
-            search: search,
-            sortBy: sortBy,
-            filter: filter);
+          categoryId: catId,
+          page: (state as FetchItemFromCategorySuccess).page + 1,
+          search: search,
+          sortBy: sortBy,
+          filter: filter,
+          detailed: useDetailView,
+        );
 
         FetchItemFromCategorySuccess item =
         (state as FetchItemFromCategorySuccess);

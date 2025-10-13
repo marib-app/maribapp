@@ -209,7 +209,10 @@ class ItemRepository {
   /// يعيد: DataOutput<ItemModel> (عادة عنصر واحد)
   /// -------------------------------------------------------------------------
   Future<DataOutput<ItemModel>> fetchItemFromItemId(int id) async {
-    final Map<String, dynamic> parameters = {Api.id: id};
+    final Map<String, dynamic> parameters = {
+      Api.id: id,
+      'view': 'detail',
+    };
 
     final Map<String, dynamic> response = await Api.get(
       url: Api.getItemApi,
@@ -295,6 +298,7 @@ class ItemRepository {
     String? city,
     int? areaId,
     ItemFilterModel? filter,
+    bool detailed = true,
   }) async {
     final Map<String, dynamic> parameters = {
       Api.categoryId: categoryId,
@@ -325,6 +329,10 @@ class ItemRepository {
 
     if (search != null) parameters[Api.search] = search;
     if (sortBy != null) parameters[Api.sortBy] = sortBy;
+
+    if (detailed) {
+      parameters['view'] = 'detail';
+    }
 
     final Map<String, dynamic> response =
     await Api.get(url: Api.getItemApi, queryParameters: parameters);

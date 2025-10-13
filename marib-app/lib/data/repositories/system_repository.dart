@@ -4,9 +4,14 @@ class SystemRepository {
   static const int _defaultPerPage = 50;
   static const int _maxPaginationLoops = 25;
 
-  Future<Map> fetchSystemSettings() async {
+  Future<Map<String, dynamic>> fetchSystemSettings({
+    Map<String, dynamic>? parameters,
+  }) async {
+
     final Map<String, dynamic> baseParameters = <String, dynamic>{
       'per_page': _defaultPerPage,
+      if (parameters != null) ...parameters,
+
     };
 
 

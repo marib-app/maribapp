@@ -11,7 +11,6 @@ class SystemRepository {
     final Map<String, dynamic> baseParameters = <String, dynamic>{
       'per_page': _defaultPerPage,
       if (parameters != null) ...parameters,
-
     };
 
 
@@ -37,11 +36,11 @@ class SystemRepository {
     int loop = 0;
     while (meta != null && currentPage != null && lastPage != null && currentPage < lastPage && loop < _maxPaginationLoops) {
       currentPage += 1;
-      final Map<String, dynamic> parameters = Map<String, dynamic>.from(baseParameters)
+      final Map<String, dynamic> nextParameters = Map<String, dynamic>.from(baseParameters)
         ..['page'] = currentPage;
 
       final Map<String, dynamic> response = await Api.get(
-        queryParameters: parameters,
+        queryParameters: nextParameters,
         url: Api.getSystemSettingsApi,
       );
 
@@ -64,12 +63,31 @@ class SystemRepository {
     }
 
     final Map<String, dynamic> normalizedResponse = Map<String, dynamic>.from(firstResponse);
+    if (meta != null && meta.isNotEmpty) {
+      normalizedResponse['meta'] = Map<String, dynamic>.from(meta);
+      normalizedResponse['pagination'] = Map<String, dynamic>.from(meta);
+    }
     normalizedResponse['data'] = aggregatedValues;
     if (aggregatedExtras != null && aggregatedExtras.isNotEmpty) {
       normalizedResponse['extras'] = aggregatedExtras;
     }
 
     return normalizedResponse;
+  }
+
+
+  static Map<String, dynamic> extractSettingsData(Map<dynamic, dynamic> response) {
+    final dynamic dataPayload = response['data'];
+
+    if (dataPayload is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(dataPayload);
+    }
+
+    if (dataPayload is Map) {
+      return Map<String, dynamic>.from(dataPayload as Map);
+    }
+
+    return normalizeSettingsPayload(response);
   }
 
   _SettingsPage _parseSettingsResponse(Map<String, dynamic> response) {

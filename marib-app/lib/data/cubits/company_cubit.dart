@@ -37,14 +37,15 @@ class CompanyCubit extends Cubit<CompanyState> {
     try {
       Company companyData = Company();
 
-      Map<String, String> body = {};
+      final SystemRepository repository = SystemRepository();
 
-      var response =
-          await Api.get(url: Api.getSystemSettingsApi, queryParameters: body);
+      final Map<String, dynamic> response =
+      await repository.fetchSystemSettings();
 
       if (!response[Api.error]) {
         final Map<String, dynamic> data =
-        SystemRepository.normalizeSettingsPayload(response);
+        SystemRepository.extractSettingsData(response);
+
         companyData = Company(
           companyEmail: data['company_email']?.toString(),
           companyName: data['company_name']?.toString(),

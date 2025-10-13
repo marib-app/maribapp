@@ -79,18 +79,19 @@ class ProfileSettingCubit extends Cubit<ProfileSettingState> {
       BuildContext context, String title) async {
     try {
       String? profileSettingData;
-      Map<String, String> body = {
-        Api.type: title,
-      };
+      final SystemRepository repository = SystemRepository();
 
-      var response = await Api.get(
-        url: Api.getSystemSettingsApi,
-        queryParameters: body,
+
+      final Map<String, dynamic> response = await repository.fetchSystemSettings(
+        parameters: <String, dynamic>{
+          Api.type: title,
+        },
       );
 
       if (!response[Api.error]) {
         final Map<String, dynamic> data =
-        SystemRepository.normalizeSettingsPayload(response);
+        SystemRepository.extractSettingsData(response);
+
 
         if (title == Api.maintenanceMode) {
           final dynamic maintenanceValue =

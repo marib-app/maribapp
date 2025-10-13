@@ -223,16 +223,24 @@ class CurrencyController extends Controller
             ->offset($offset)
             ->limit($limit)
             ->get()
-             ->map(function (CurrencyRate $currency) use ($historyService) {
+            ->map(function (CurrencyRate $currency) use ($historyService) {
 
                 [$defaultQuote] = $currency->resolveQuoteForGovernorate(null);
 
+                if (!$defaultQuote) {
+                    $defaultQuote = $currency->quotes->first();
+                }
+
+                $defaultGovernorateId = $defaultQuote?->governorate_id;
+
 
                 $latestHourly = $currency->hourlyHistories()
+                    ->when($defaultGovernorateId, fn ($query) => $query->where('governorate_id', $defaultGovernorateId))
                     ->latest('hour_start')
                     ->first();
 
                 $latestDaily = $currency->dailyHistories()
+                    ->when($defaultGovernorateId, fn ($query) => $query->where('governorate_id', $defaultGovernorateId))
                     ->latest('day_start')
                     ->first();
 

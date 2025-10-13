@@ -88,6 +88,8 @@ class CurrencyRatesBundle {
       usedFallback: payload['used_fallback'] == true,
       requestedGovernorateCode:
       payload['requested_governorate_code']?.toString(),
+      preferences: preferences,
+      notificationOptions: notificationOptions,
     );
   }
 }

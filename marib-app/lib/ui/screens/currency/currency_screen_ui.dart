@@ -867,6 +867,7 @@ class RatesTabView extends StatelessWidget {
                       color: onBg.withOpacity(0.12),
                     ),
                     buyBlock,
+
                   ],
                 );
 

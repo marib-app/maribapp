@@ -1959,17 +1959,12 @@ class ApiController extends Controller {
 
             $summarySelectColumns = [
                 'items.id',
-                'items.user_id',
-                'items.category_id',
-                'items.area_id',
                 'items.name',
                 'items.slug',
                 'items.price',
                 'items.currency',
-                'items.status',
-                'items.image',
                 'items.thumbnail_url',
-                'items.detail_image_url',
+                'items.image',
                 'items.created_at',
                 'items.updated_at',
             ];
@@ -2341,48 +2336,20 @@ class ApiController extends Controller {
      */
     protected function formatSummaryResult($result): array
     {
-        $transformItem = function (Item $item): array {
+        $transformItem = static function (Item $item): array {
             $thumbnail = $item->thumbnail_url ?? $item->image;
-            $detailImage = $item->detail_image_url ?? $item->image;
 
-            $summary = [
+            return [
                 'id' => $item->id,
                 'name' => $item->name,
                 'slug' => $item->slug,
                 'price' => $item->price,
                 'currency' => $item->currency,
-                'status' => $item->status,
                 'thumbnail_url' => $thumbnail,
-                'detail_image_url' => $detailImage,
                 'created_at' => optional($item->created_at)->toIso8601String(),
                 'updated_at' => optional($item->updated_at)->toIso8601String(),
             ];
 
-            if ($item->relationLoaded('user') && $item->user !== null) {
-                $summary['user'] = [
-                    'id' => $item->user->id,
-                    'name' => $item->user->name,
-                    'profile' => $item->user->profile,
-                    'is_verified' => (bool) $item->user->is_verified,
-                ];
-            }
-
-            if ($item->relationLoaded('category') && $item->category !== null) {
-                $summary['category'] = [
-                    'id' => $item->category->id,
-                    'name' => $item->category->name,
-                    'image' => $item->category->image,
-                ];
-            }
-
-            if ($item->relationLoaded('area') && $item->area !== null) {
-                $summary['area'] = [
-                    'id' => $item->area->id,
-                    'name' => $item->area->name,
-                ];
-            }
-
-            return $summary;
         };
 
         if ($result instanceof AbstractPaginator) {

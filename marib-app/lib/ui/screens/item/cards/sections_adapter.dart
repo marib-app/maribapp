@@ -288,6 +288,28 @@ class _ItemCardState extends State<ICard> {
 
   @override
   Widget build(BuildContext context) {
+
+    final item = widget.item;
+
+    String? preferredThumb;
+    final thumb = item?.thumbnailUrl;
+    if (thumb != null && thumb.trim().isNotEmpty) {
+      preferredThumb = thumb;
+    }
+
+    String? fallbackThumb;
+    final fallbackCandidate = item?.thumbnailFallbackUrl;
+    if (fallbackCandidate != null && fallbackCandidate.trim().isNotEmpty) {
+      fallbackThumb = fallbackCandidate;
+    } else {
+      final image = item?.image;
+      if (image != null && image.trim().isNotEmpty) {
+        fallbackThumb = image;
+      }
+    }
+
+    final resolvedUrl = preferredThumb ?? fallbackThumb ?? '';
+
     return UiUtils.ripple(
       onTap: () {
         final id = widget.item?.id;

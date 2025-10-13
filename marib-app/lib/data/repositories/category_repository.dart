@@ -6,6 +6,8 @@ class CategoryRepository {
   Future<DataOutput<CategoryModel>> fetchCategories({
     required int page,
     int? categoryId,
+    String? interfaceType,
+    List<int>? categoryIds,
   }) async {
     try {
       Map<String, dynamic> parameters = {
@@ -14,6 +16,12 @@ class CategoryRepository {
 
       if (categoryId != null) {
         parameters[Api.categoryId] = categoryId;
+      }
+      if (categoryIds != null && categoryIds.isNotEmpty) {
+        parameters[Api.categoryIds] = categoryIds.join(',');
+      }
+      if (interfaceType != null && interfaceType.trim().isNotEmpty) {
+        parameters[Api.interfaceType] = interfaceType.trim();
       }
       Map<String, dynamic> response =
           await Api.get(url: Api.getCategoriesApi, queryParameters: parameters);

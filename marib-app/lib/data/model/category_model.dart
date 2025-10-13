@@ -20,6 +20,7 @@ class CategoryModel {
   final String? url;
   final List<CategoryModel>? children;
   final String? description;
+  final String? interfaceType;
 
   //final String translatedName;
   final int? subcategoriesCount;
@@ -30,6 +31,7 @@ class CategoryModel {
     this.url,
     this.description,
     this.children,
+    this.interfaceType,
     this.subcategoriesCount,
     //required this.translatedName,
   });
@@ -37,17 +39,20 @@ class CategoryModel {
   factory CategoryModel.fromJson(Map<String, dynamic> json) {
     try {
       List<dynamic> childData = json['subcategories'] ?? [];
-      List<CategoryModel> children =
-          childData.map((child) => CategoryModel.fromJson(child)).toList();
+      List<CategoryModel> children = childData
+          .whereType<Map<String, dynamic>>()
+          .map((child) => CategoryModel.fromJson(child))
+          .toList();
 
       return CategoryModel(
-          id: json['id'],
+          id: _parseId(json['id']),
           //name: json['name'],
-          name: json['translated_name'],
+          name: json['translated_name'] ?? json['name'],
           url: json['image'],
-          subcategoriesCount: json['subcategories_count'] ?? 0,
+          subcategoriesCount: json['subcategories_count'] ?? children.length,
           children: children,
-          description: json['description'] ?? "");
+          description: json['description'] ?? "",
+          interfaceType: _parseInterfaceType(json));
     } catch (e) {
       rethrow;
     }
@@ -61,13 +66,44 @@ class CategoryModel {
       'image': url,
       'subcategories_count': subcategoriesCount,
       "description": description,
-      'subcategories': children!.map((child) => child.toJson()).toList(),
+      'interface_type': interfaceType,
+      'subcategories': (children ?? const <CategoryModel>[])
+          .map((child) => child.toJson())
+          .toList(),
     };
     return data;
   }
 
   @override
   String toString() {
-    return 'CategoryModel( id: $id, translated_name:$name, url: $url, descrtiption:$description, children: $children,subcategories_count:$subcategoriesCount)';
+    return 'CategoryModel( id: $id, translated_name:$name, url: $url, descrtiption:$description, interfaceType:$interfaceType, children: $children,subcategories_count:$subcategoriesCount)';
+  }
+
+  static int? _parseId(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is int) {
+      return value;
+    }
+    if (value is String) {
+      return int.tryParse(value);
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+    return null;
+  }
+
+  static String? _parseInterfaceType(Map<String, dynamic> json) {
+    final dynamic value = json['interface_type'] ?? json['interfaceType'];
+    if (value == null) {
+      return null;
+    }
+    final String text = value.toString().trim();
+    if (text.isEmpty) {
+      return null;
+    }
+    return text;
   }
 }

@@ -593,6 +593,7 @@ class Api {
   static String v360degImage = "threeD_image";
   static String videoLink = "video_link";
   static String categoryIds = "category_ids";
+  static String interfaceType = "interface_type";
   static String sortBy = "sort_by";
   static String stateId = "state_id";
   static String countryId = "country_id";

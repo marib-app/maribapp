@@ -7,6 +7,7 @@ import 'package:marib/data/model/data_output.dart';
 import 'package:marib/data/repositories/category_repository.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/foundation.dart';
 
 abstract class FetchCategoryState {}
 
@@ -20,6 +21,11 @@ class FetchCategorySuccess extends FetchCategoryState {
   final bool isLoadingMore;
   final bool hasError;
   final List<CategoryModel> categories;
+  final String? interfaceType;
+  final int? categoryId;
+  final List<int>? categoryIds;
+
+
 
   FetchCategorySuccess({
     required this.total,
@@ -27,6 +33,9 @@ class FetchCategorySuccess extends FetchCategoryState {
     required this.isLoadingMore,
     required this.hasError,
     required this.categories,
+    this.interfaceType,
+    this.categoryId,
+    this.categoryIds,
   });
 
   FetchCategorySuccess copyWith({
@@ -42,6 +51,9 @@ class FetchCategorySuccess extends FetchCategoryState {
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       hasError: hasError ?? this.hasError,
       categories: categories ?? this.categories,
+      interfaceType: interfaceType ?? this.interfaceType,
+      categoryId: categoryId ?? this.categoryId,
+      categoryIds: categoryIds ?? this.categoryIds,
     );
   }
 
@@ -52,6 +64,9 @@ class FetchCategorySuccess extends FetchCategoryState {
       'isLoadingMore': isLoadingMore,
       'hasError': hasError,
       'categories': categories.map((x) => x.toJson()).toList(),
+      'interfaceType': interfaceType,
+      'categoryId': categoryId,
+      'categoryIds': categoryIds,
     };
   }
 
@@ -66,6 +81,11 @@ class FetchCategorySuccess extends FetchCategoryState {
           (x) => CategoryModel.fromJson(x as Map<String, dynamic>),
         ),
       ),
+      interfaceType: map['interfaceType'] as String?,
+      categoryId: map['categoryId'] as int?,
+      categoryIds: (map['categoryIds'] as List<dynamic>?)
+          ?.map((dynamic e) => e as int)
+          .toList(),
     );
   }
 
@@ -76,8 +96,7 @@ class FetchCategorySuccess extends FetchCategoryState {
 
   @override
   String toString() {
-    return 'FetchCategorySuccess(total: $total,  page: $page, isLoadingMore: $isLoadingMore, hasError: $hasError, categories: $categories)';
-  }
+    return 'FetchCategorySuccess(total: $total,  page: $page, isLoadingMore: $isLoadingMore, hasError: $hasError, interfaceType: $interfaceType, categoryId: $categoryId, categoryIds: $categoryIds, categories: $categories)';  }
 }
 
 class FetchCategoryFailure extends FetchCategoryState {
@@ -91,20 +110,49 @@ class FetchCategoryCubit extends Cubit<FetchCategoryState> {
 
   final CategoryRepository _categoryRepository = CategoryRepository();
 
-  Future<void> fetchCategories(
-      {bool? forceRefresh, bool? loadWithoutDelay}) async {
+  Future<void> fetchCategories({
+    bool? forceRefresh,
+    bool? loadWithoutDelay,
+    String? interfaceType,
+    int? categoryId,
+    List<int>? categoryIds,
+  }) async {
+
     try {
+      if (state is FetchCategorySuccess && forceRefresh != true) {
+        final FetchCategorySuccess current = state as FetchCategorySuccess;
+        final bool sameInterface =
+        _sameInterface(current.interfaceType, interfaceType);
+        final bool sameCategoryId = current.categoryId == categoryId;
+        final bool sameCategoryIds = listEquals(
+            current.categoryIds,
+            categoryIds);
+        if (sameInterface && sameCategoryId && sameCategoryIds) {
+          return;
+        }
+      }
       emit(FetchCategoryInProgress());
 
       DataOutput<CategoryModel> categories =
-          await _categoryRepository.fetchCategories(page: 1);
+      await _categoryRepository.fetchCategories(
+        page: 1,
+        interfaceType: interfaceType,
+        categoryId: categoryId,
+        categoryIds: categoryIds,
+      );
 
       emit(FetchCategorySuccess(
           total: categories.total,
           categories: categories.modelList,
           page: 1,
           hasError: false,
-          isLoadingMore: false));
+        isLoadingMore: false,
+        interfaceType: interfaceType?.trim(),
+        categoryId: categoryId,
+        categoryIds: categoryIds == null
+            ? null
+            : List<int>.from(categoryIds),
+      ));
     } catch (e) {
       emit(FetchCategoryFailure(e.toString()));
     }
@@ -125,9 +173,13 @@ class FetchCategoryCubit extends Cubit<FetchCategoryState> {
           return;
         }
         emit((state as FetchCategorySuccess).copyWith(isLoadingMore: true));
+        final FetchCategorySuccess current = state as FetchCategorySuccess;
         DataOutput<CategoryModel> result =
             await _categoryRepository.fetchCategories(
-          page: (state as FetchCategorySuccess).page + 1,
+              page: current.page + 1,
+              interfaceType: current.interfaceType,
+              categoryId: current.categoryId,
+              categoryIds: current.categoryIds,
         );
 
         FetchCategorySuccess categoryState = (state as FetchCategorySuccess);
@@ -141,14 +193,35 @@ class FetchCategoryCubit extends Cubit<FetchCategoryState> {
             isLoadingMore: false,
             hasError: false,
             categories: categoryState.categories,
-            page: (state as FetchCategorySuccess).page + 1,
-            total: result.total));
+            page: current.page + 1,
+            total: result.total,
+            interfaceType: current.interfaceType,
+            categoryId: current.categoryId,
+            categoryIds: current.categoryIds));
       }
     } catch (e) {
       emit((state as FetchCategorySuccess)
           .copyWith(isLoadingMore: false, hasError: true));
     }
   }
+
+  bool _sameInterface(String? current, String? requested) {
+    final String? a = _normalizeInterface(current);
+    final String? b = _normalizeInterface(requested);
+    return a == b;
+  }
+
+  String? _normalizeInterface(String? raw) {
+    if (raw == null) {
+      return null;
+    }
+    final String trimmed = raw.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    return trimmed.toLowerCase();
+  }
+
 
   bool hasMoreData() {
     if (state is FetchCategorySuccess) {

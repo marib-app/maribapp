@@ -11,6 +11,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:marib/ui/screens/item/ad_creation_wizard/ad_creation_wizard_screen.dart';
 
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/item/search_item_cubit.dart';
@@ -356,17 +357,95 @@ class MainActivityState extends State<MainActivity> with TickerProviderStateMixi
 
 
   void _openAdCreationWizard({String? interfaceType, Map<String, dynamic>? initialData}) {
-    final Map<String, dynamic> args = <String, dynamic>{
-      if (interfaceType != null) 'interfaceType': interfaceType,
-      if (initialData != null) ...initialData,
-    };
+    final String? resolvedInterfaceType =
+        interfaceType ?? _extractString(initialData?['interfaceType']) ?? _extractString(initialData?['interface_type']);
+    final String? draftId =
+        _extractString(initialData?['draftId']) ?? _extractString(initialData?['draft_id']);
+    final List<int> initialCategoryIds =
+    _extractInitialCategoryIds(initialData);
+
+    final AdCreationWizardArguments arguments = AdCreationWizardArguments(
+      draftId: draftId,
+      interfaceType: resolvedInterfaceType,
+      initialCategoryIds:
+      initialCategoryIds.isEmpty ? null : initialCategoryIds,
+    );
 
 
     Navigator.pushNamed(
       context,
       Routes.adCreationWizard,
-      arguments: args.isEmpty ? const <String, dynamic>{} : args,
+      arguments: arguments,
     ).then((_) => _refreshListingLimit());
+  }
+  List<int> _extractInitialCategoryIds(Map<String, dynamic>? source) {
+    if (source == null || source.isEmpty) {
+      return <int>[];
+    }
+    final List<int> categoryIds = <int>[];
+
+    void addCategory(dynamic value) {
+      final int? parsed = _extractInt(value);
+      if (parsed == null) {
+        return;
+      }
+      if (!categoryIds.contains(parsed)) {
+        categoryIds.add(parsed);
+      }
+    }
+
+    final dynamic rawCategoryIds =
+        source['categoryIds'] ?? source['category_ids'];
+    if (rawCategoryIds is Iterable) {
+      for (final dynamic entry in rawCategoryIds) {
+        addCategory(entry);
+      }
+    } else if (rawCategoryIds is String) {
+      for (final String token in rawCategoryIds.split(RegExp(r'[\s,]+'))) {
+        addCategory(token);
+      }
+    } else {
+      addCategory(rawCategoryIds);
+    }
+
+    addCategory(source['catID']);
+    addCategory(source['catId']);
+    addCategory(source['categoryId']);
+    addCategory(source['category_id']);
+    addCategory(source['mainCategoryId']);
+    addCategory(source['subCategoryId']);
+    addCategory(source['sub_category_id']);
+
+    return categoryIds;
+  }
+
+  String? _extractString(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    final String text = value.toString().trim();
+    return text.isEmpty ? null : text;
+  }
+
+  int? _extractInt(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is int) {
+      return value;
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+    if (value is String) {
+      final String trimmed = value.trim();
+      if (trimmed.isEmpty) {
+        return null;
+      }
+      return int.tryParse(trimmed);
+    }
+    return null;
+
 
   }
 

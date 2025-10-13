@@ -159,6 +159,49 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   bool get _isSheinInterface =>
       _selectedMainCategory?.interfaceType == 'shein_products';
 
+  String get _currencyLabel =>
+      _currencyOptions[_selectedCurrency] ?? (_selectedCurrency ?? 'غير محدد');
+
+  List<Widget> get _customFieldSummary {
+    final ThemeData theme = Theme.of(context);
+    final List<Widget> summary = <Widget>[];
+    for (final CustomFieldSchema field in _customFieldSchemas) {
+      final dynamic value = _customFieldValues[field.id];
+      final String formatted = field.formatValue(value);
+      summary
+        ..add(Text(
+          field.label,
+          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+        ))
+        ..add(const SizedBox(height: 4))
+        ..add(Text(formatted.isEmpty ? 'غير محدد' : formatted))
+        ..add(const SizedBox(height: 12));
+    }
+    return summary;
+  }
+
+  List<Widget> get _customFieldWidgets {
+    final ThemeData theme = Theme.of(context);
+    final List<Widget> widgets = <Widget>[];
+    for (final CustomFieldSchema field in _customFieldSchemas) {
+      final dynamic value = _customFieldValues[field.id];
+      final String formatted = field.formatValue(value);
+      final String displayValue = formatted.isEmpty ? 'غير محدد' : formatted;
+      widgets
+        ..add(Text(
+          field.label,
+          style:
+          theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+        ))
+        ..add(const SizedBox(height: 4))
+        ..add(Text(displayValue))
+        ..add(const SizedBox(height: 12));
+    }
+    return widgets;
+  }
+
+
+
   void _addImageFiles(List<File> files) {
     if (files.isEmpty) {
       return;
@@ -1080,20 +1123,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     final ThemeData theme = Theme.of(context);
     final bool isShein = _isSheinInterface;
 
-    final List<Widget> customFieldWidgets = <Widget>[];
-    for (final CustomFieldSchema field in _customFieldSchemas) {
-      final dynamic value = _customFieldValues[field.id];
-      final String formatted = field.formatValue(value);
-      final String displayValue = formatted.isEmpty ? 'غير محدد' : formatted;
-      customFieldWidgets
-        ..add(Text(
-          field.label,
-          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-        ))
-        ..add(const SizedBox(height: 4))
-        ..add(Text(displayValue))
-        ..add(const SizedBox(height: 12));
-    }
+    final List<Widget> customFieldWidgets = _customFieldWidgets;
+
 
 
     final TextStyle? sectionStyle = theme.textTheme.titleMedium;
@@ -1114,7 +1145,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
           const SizedBox(height: 6),
           Text('الوصف: ${_descriptionController.text.isEmpty ? 'غير محدد' : _descriptionController.text}'),
           const SizedBox(height: 6),
-          Text('السعر: ${_priceController.text.isEmpty ? 'غير محدد' : _priceController.text} $currencyLabel'),
+          Text('السعر: ${_priceController.text.isEmpty ? 'غير محدد' : _priceController.text} $_currencyLabel'),
           const SizedBox(height: 6),
           Text('رقم التواصل: ${_contactController.text.isEmpty ? 'غير محدد' : _contactController.text}'),
           const SizedBox(height: 16),
@@ -1127,10 +1158,10 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
           const SizedBox(height: 16),
           Text('الحقول المخصّصة', style: sectionStyle),
           const SizedBox(height: 8),
-          if (customFieldSummary.isEmpty)
+          if (customFieldWidgets.isEmpty)
             Text('لا توجد قيم محفوظة للحقول المخصّصة.', style: theme.textTheme.bodySmall)
           else
-            ...customFieldSummary,
+            ...customFieldWidgets,
           const Divider(height: 32),
           Text('معلومات الإعلان', style: sectionStyle),
           const SizedBox(height: 12),
@@ -1254,30 +1285,22 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     final List<_PendingMedia> videos =
     _mediaFiles.where((media) => media.isVideo).toList(growable: false);
     final bool isShein = _isSheinInterface;
-    final String currencyLabel =
-        _currencyOptions[_selectedCurrency] ?? (_selectedCurrency ?? 'غير محدد');
-
-    final List<Widget> customFieldSummary = <Widget>[];
-    for (final CustomFieldSchema field in _customFieldSchemas) {
-      final dynamic value = _customFieldValues[field.id];
-      final String formatted = field.formatValue(value);
-      customFieldSummary
-        ..add(Text(
-          field.label,
-          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
-        ))
-        ..add(const SizedBox(height: 4))
-        ..add(Text(formatted.isEmpty ? 'غير محدد' : formatted))
-        ..add(const SizedBox(height: 12));
-    }
-
-
-
-
+    final List<Widget> customFieldSummary = _customFieldSummary;
+    final String currencyLabel = _currencyLabel;
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        Text('معلومات الإعلان', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 8),
+        Text('العنوان: ${_titleController.text.isEmpty ? 'غير محدد' : _titleController.text}'),
+        const SizedBox(height: 6),
+        Text('الوصف: ${_descriptionController.text.isEmpty ? 'غير محدد' : _descriptionController.text}'),
+        const SizedBox(height: 6),
+        Text('السعر: ${_priceController.text.isEmpty ? 'غير محدد' : _priceController.text} $currencyLabel'),
+        const SizedBox(height: 6),
+        Text('رقم التواصل: ${_contactController.text.isEmpty ? 'غير محدد' : _contactController.text}'),
+        const Divider(height: 32),
         Text('الفئة الرئيسية: ${_selectedMainCategory?.name ?? 'غير محدد'}'),
         const SizedBox(height: 8),
         Text('الفئة الفرعية: ${_selectedSubCategory?.name ?? 'غير محدد'}'),
@@ -1286,10 +1309,11 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         const Divider(height: 32),
         Text('الحقول المخصّصة', style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),
-        if (customFieldWidgets.isEmpty)
+        if (customFieldSummary.isEmpty)
           Text('لا توجد قيم محفوظة للحقول المخصّصة.', style: theme.textTheme.bodySmall)
         else
-          ...customFieldWidgets,
+          ...customFieldSummary,
+
         const Divider(height: 32),
         Text('الوسائط', style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),

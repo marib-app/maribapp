@@ -506,49 +506,46 @@ Widget buildClassifiedCard(
                                 ),
                               ),
                             ),
+                            // العنوان مع نفس المقاسات
+                            Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: ScreenScaler.s(10),
+                                vertical: ScreenScaler.s(8),
+                              ),
+                              child: SizedBox(
+                                height: titleH,
+                                child: (classified.title ?? "").length < 20
+                                    ? Text(
+                                  (classified.title ?? "").firstUpperCase(),
+                                  style: TextStyle(
+                                    color: context.color.textColorDark,
+                                    fontSize: ScreenScaler.s(14),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                )
+                                    : Marquee(
+                                  text: (classified.title ?? "").firstUpperCase(),
+                                  style: TextStyle(
+                                    color: context.color.textColorDark,
+                                    fontSize: ScreenScaler.s(14),
+                                  ),
+                                  scrollAxis: Axis.horizontal,
+                                  blankSpace: 30.0,
+                                  velocity: 30.0,
+                                  pauseAfterRound: const Duration(seconds: 2),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       );
                     },
                 ),
-
-
-              // العنوان مع نفس المقاسات
-              Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: ScreenScaler.s(10),
-                        vertical: ScreenScaler.s(8),
-                      ),
-                      child: SizedBox(
-                        height: titleH,
-                        child: (classified.title ?? "").length < 20
-                            ? Text(
-                          (classified.title ?? "").firstUpperCase(),
-                          style: TextStyle(
-                            color: context.color.textColorDark,
-                            fontSize: ScreenScaler.s(14),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        )
-                            : Marquee(
-                          text: (classified.title ?? "").firstUpperCase(),
-                          style: TextStyle(
-                            color: context.color.textColorDark,
-                            fontSize: ScreenScaler.s(14),
-                          ),
-                          scrollAxis: Axis.horizontal,
-                          blankSpace: 30.0,
-                          velocity: 30.0,
-                          pauseAfterRound: const Duration(seconds: 2),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
           ),
+      ),
 
       // مسافة صغيرة أسفل البطاقة
       SizedBox(height: gap),

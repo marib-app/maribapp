@@ -320,11 +320,10 @@ class ItemModel {
     double? price,
     double? finalPrice,
     String? image,
-    thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
-    thumbnailFallbackUrl: thumbnailFallbackUrl ?? this.thumbnailFallbackUrl,
-    detailImageUrl: detailImageUrl ?? this.detailImageUrl,
-    detailImageFallbackUrl:
-    detailImageFallbackUrl ?? this.detailImageFallbackUrl,
+    String? thumbnailUrl,
+    String? thumbnailFallbackUrl,
+    String? detailImageUrl,
+    String? detailImageFallbackUrl,
     dynamic watermarkimage,
     String? currencyCode,
     dynamic latitude,
@@ -375,6 +374,12 @@ class ItemModel {
       price: price ?? this.price,
       finalPrice: finalPrice ?? this.finalPrice,
       image: image ?? this.image,
+      thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+      thumbnailFallbackUrl:
+      thumbnailFallbackUrl ?? this.thumbnailFallbackUrl,
+      detailImageUrl: detailImageUrl ?? this.detailImageUrl,
+      detailImageFallbackUrl:
+      detailImageFallbackUrl ?? this.detailImageFallbackUrl,
       watermarkimage: watermarkimage ?? this.watermarkimage,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,

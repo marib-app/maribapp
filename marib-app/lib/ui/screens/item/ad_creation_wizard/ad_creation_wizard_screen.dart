@@ -1,13 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
-import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/utils/extensions/extensions.dart';
-import 'models/custom_field_schema.dart';
-import 'services/category_inventory_service.dart';
-import 'widgets/dynamic_custom_fields_form.dart';
-import 'package:flutter/material.dart';
-import 'dart:async';
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -19,6 +12,9 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/imagePicker.dart';
 
 
+import 'models/custom_field_schema.dart';
+import 'services/category_inventory_service.dart';
+import 'widgets/dynamic_custom_fields_form.dart';
 
 
 /// Simplified ad creation wizard showcasing a multi-step flow with
@@ -53,7 +49,12 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
 
   final List<_PendingMedia> _mediaFiles = <_PendingMedia>[];
   final List<String> _videoLinks = <String>[];
-
+  final TextEditingController _locationAddressController = TextEditingController();
+  final TextEditingController _locationLatitudeController = TextEditingController();
+  final TextEditingController _locationLongitudeController = TextEditingController();
+  final GlobalKey<FormState> _locationFormKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> _inventoryFormKey = GlobalKey<FormState>();
+  List<_InventoryVariation> _inventoryVariations = <_InventoryVariation>[];
   bool _isPickingImages = false;
   bool _isPickingVideo = false;
 
@@ -64,15 +65,58 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     'SAR': 'ريال سعودي',
     'USD': 'دولار أمريكي',
   };
-  final List<_WizardStep> _steps = const <_WizardStep>[
-    _WizardStep(label: 'الفئة الرئيسية'),
-    _WizardStep(label: 'الفئة الفرعية'),
-    _WizardStep(label: 'الحقول المخصّصة'),
-    _WizardStep(label: 'المرحلة 4A: الوسائط'),
-    _WizardStep(label: 'المرحلة 4B: التفاصيل النصية'),
-    _WizardStep(label: 'الخريطة / إدارة المنتج'),
-    _WizardStep(label: 'المراجعة النهائية'),
+  static const Map<String, _WizardSectionConfig> _sectionConfigurations =
+  <String, _WizardSectionConfig>{
+    'public_ads': _WizardSectionConfig(requiresLocation: true),
+    'public_ads:102': _WizardSectionConfig(requiresLocation: true),
+    'services': _WizardSectionConfig(requiresInventory: true),
+    'shein_products': _WizardSectionConfig(requiresInventory: true),
+  };
+
+  String get _stepFiveLabel {
+    final _WizardSectionConfig config = _currentSectionConfig;
+    if (config.requiresLocation && config.requiresInventory) {
+      return 'الموقع والمخزون';
+    }
+    if (config.requiresLocation) {
+      return 'تحديد الموقع';
+    }
+    if (config.requiresInventory) {
+      return 'إدارة المخزون';
+    }
+    return 'خيارات إضافية';
+  }
+
+  _WizardSectionConfig get _currentSectionConfig {
+    final _MainCategoryOption? mainCategory = _selectedMainCategory;
+    if (mainCategory == null) {
+      return const _WizardSectionConfig();
+    }
+    final _SubCategoryOption? subCategory = _selectedSubCategory;
+    if (subCategory != null) {
+      final String overrideKey = '${mainCategory.interfaceType}:${subCategory.id}';
+      final _WizardSectionConfig? override = _sectionConfigurations[overrideKey];
+      if (override != null) {
+        return override;
+      }
+    }
+    return _sectionConfigurations[mainCategory.interfaceType] ??
+        const _WizardSectionConfig();
+  }
+
+  bool get _requiresLocation => _currentSectionConfig.requiresLocation;
+  bool get _requiresInventory => _currentSectionConfig.requiresInventory;
+
+  List<_WizardStep> get _steps => <_WizardStep>[
+    const _WizardStep(label: 'الفئة الرئيسية'),
+    const _WizardStep(label: 'الفئة الفرعية'),
+    const _WizardStep(label: 'الحقول المخصّصة'),
+    const _WizardStep(label: 'المرحلة 4A: الوسائط'),
+    const _WizardStep(label: 'المرحلة 4B: التفاصيل النصية'),
+    _WizardStep(label: _stepFiveLabel),
+    const _WizardStep(label: 'المراجعة النهائية'),
   ];
+
 
   final CategoryInventoryService _inventoryService = CategoryInventoryService();
   final AdPublishingService _adPublishingService = AdPublishingService();
@@ -122,7 +166,9 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     _priceController.addListener(_markDirty);
     _sheinProductLinkController.addListener(_markDirty);
     _sheinReviewLinkController.addListener(_markDirty);
-
+    _locationAddressController.addListener(_markDirty);
+    _locationLatitudeController.addListener(_markDirty);
+    _locationLongitudeController.addListener(_markDirty);
     _imagePicker.listener((dynamic files) {
       if (!mounted) {
         return;
@@ -145,6 +191,9 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     _videoLinkFieldController.dispose();
     _sheinProductLinkController.dispose();
     _sheinReviewLinkController.dispose();
+    _locationAddressController.dispose();
+    _locationLatitudeController.dispose();
+    _locationLongitudeController.dispose();
     _imagePicker.dispose();
     super.dispose();
   }
@@ -371,6 +420,57 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     return true;
   }
 
+
+  bool _validateStepFive() {
+    bool isValid = true;
+    if (_requiresLocation) {
+      isValid = _validateLocationSection(showMessages: true) && isValid;
+    } else {
+      _locationFormKey.currentState?.validate();
+    }
+    final bool shouldValidateInventory =
+        _requiresInventory || _inventoryVariations.isNotEmpty;
+    if (shouldValidateInventory) {
+      isValid = _validateInventorySection(showMessages: true) && isValid;
+    } else {
+      _inventoryFormKey.currentState?.validate();
+    }
+    return isValid;
+  }
+
+  bool _validateLocationSection({required bool showMessages}) {
+    final FormState? form = _locationFormKey.currentState;
+    if (form == null) {
+      if (_requiresLocation && showMessages) {
+        _showMessage('يرجى إكمال بيانات الموقع قبل المتابعة.');
+      }
+      return !_requiresLocation;
+    }
+    final bool valid = form.validate();
+    if (!valid && showMessages) {
+      _showMessage('يرجى إكمال بيانات الموقع قبل المتابعة.');
+    }
+    return valid;
+  }
+
+  bool _validateInventorySection({required bool showMessages}) {
+    final FormState? form = _inventoryFormKey.currentState;
+    final bool fieldsValid = form?.validate() ?? true;
+    final bool hasVariations = _inventoryVariations.isNotEmpty;
+    final bool meetsMinimum = !_requiresInventory || hasVariations;
+    final bool valid = fieldsValid && meetsMinimum;
+    if (!valid && showMessages) {
+      final String message = !hasVariations && _requiresInventory
+          ? 'يرجى إضافة تنويعة واحدة على الأقل للمخزون.'
+          : 'يرجى تصحيح بيانات التنويعات قبل المتابعة.';
+      _showMessage(message);
+    }
+    return valid;
+  }
+
+
+
+
   String? _validateTitle(String? value) {
     final String trimmed = value?.trim() ?? '';
     if (trimmed.length < 10 || trimmed.length > 90) {
@@ -482,6 +582,11 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     if (_currentStep == 4 && !_validateTextDetailsStep()) {
       return;
     }
+
+    if (_currentStep == 5 && !_validateStepFive()) {
+      return;
+    }
+
     setState(() => _currentStep += 1);
   }
 
@@ -611,13 +716,338 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       case 4:
         return _buildTextDetailsStep();
       case 5:
-        return const Center(child: Text('حدد الموقع أو أضف بيانات المخزون.'));
+        return _buildStepFiveBody();
       case 6:
         return _buildReviewStep();
       default:
         return const SizedBox.shrink();
     }
   }
+
+
+
+  Widget _buildStepFiveBody() {
+    if (_requiresLocation && _requiresInventory) {
+      return _buildCombinedLocationInventoryStep();
+    }
+    if (_requiresLocation) {
+      return _buildLocationStep();
+    }
+    if (_requiresInventory) {
+      return _buildInventoryStep();
+    }
+    return _buildOptionalExtrasStep();
+  }
+
+  Widget _buildCombinedLocationInventoryStep() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Form(
+          key: _locationFormKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: _buildLocationFields(),
+          ),
+        ),
+        const SizedBox(height: 24),
+        Form(
+          key: _inventoryFormKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: _buildInventoryFields(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLocationStep() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Form(
+          key: _locationFormKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: _buildLocationFields(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInventoryStep() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Form(
+          key: _inventoryFormKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: _buildInventoryFields(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOptionalExtrasStep() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _buildInfoCard(
+          'لا تتطلب هذه المرحلة إدخال بيانات إضافية. يمكنك مراجعة التفاصيل أو العودة لأي خطوة سابقة.',
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _buildLocationFields() {
+    final ThemeData theme = Theme.of(context);
+    return <Widget>[
+      Text('تحديد موقع الإعلان', style: theme.textTheme.titleMedium),
+      const SizedBox(height: 12),
+      Text(
+        'أدخل العنوان والإحداثيات التقريبية للموقع لضمان ظهور الإعلان في المكان الصحيح.',
+        style: theme.textTheme.bodySmall,
+      ),
+      const SizedBox(height: 16),
+      TextFormField(
+        controller: _locationAddressController,
+        decoration: const InputDecoration(
+          labelText: 'العنوان التفصيلي',
+          helperText: 'مثال: صنعاء، شارع الخمسين، جوار المستشفى.',
+        ),
+        textInputAction: TextInputAction.next,
+        validator: (String? value) {
+          final String trimmed = value?.trim() ?? '';
+          if (trimmed.isEmpty) {
+            return 'يرجى إدخال العنوان.';
+          }
+          return null;
+        },
+      ),
+      const SizedBox(height: 16),
+      TextFormField(
+        controller: _locationLatitudeController,
+        decoration: const InputDecoration(labelText: 'خط العرض'),
+        keyboardType:
+        const TextInputType.numberWithOptions(decimal: true, signed: true),
+        validator: _validateLatitudeField,
+      ),
+      const SizedBox(height: 12),
+      TextFormField(
+        controller: _locationLongitudeController,
+        decoration: const InputDecoration(labelText: 'خط الطول'),
+        keyboardType:
+        const TextInputType.numberWithOptions(decimal: true, signed: true),
+        validator: _validateLongitudeField,
+      ),
+    ];
+  }
+
+  List<Widget> _buildInventoryFields() {
+    final ThemeData theme = Theme.of(context);
+    final bool requiresInventory = _requiresInventory;
+    final bool hasVariations = _inventoryVariations.isNotEmpty;
+    return <Widget>[
+      Text('إدارة تنويعات المخزون', style: theme.textTheme.titleMedium),
+      const SizedBox(height: 12),
+      Text(
+        'أضف التنويعات المختلفة للمنتج مع السعر والكمية لضمان توفر المعلومات للمشترين.',
+        style: theme.textTheme.bodySmall,
+      ),
+      const SizedBox(height: 16),
+      if (!hasVariations)
+        _buildInfoCard(
+          requiresInventory
+              ? 'لا يمكن المتابعة دون إضافة تنويعة واحدة على الأقل.'
+              : 'لم يتم إضافة تنويعات بعد. يمكنك المتابعة أو إضافة تنويعات اختيارية.',
+        ),
+      if (hasVariations)
+        ..._inventoryVariations
+            .map((variation) => _buildVariationCard(variation, requiresInventory)),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: OutlinedButton.icon(
+          onPressed: _addInventoryVariation,
+          icon: const Icon(Icons.add),
+          label: const Text('إضافة تنويعة'),
+        ),
+      ),
+    ];
+  }
+
+  Widget _buildVariationCard(
+      _InventoryVariation variation,
+      bool requiresInventory,
+      ) {
+    final ThemeData theme = Theme.of(context);
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'تنويعة جديدة',
+                    style: theme.textTheme.titleSmall,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => _removeInventoryVariation(variation),
+                  icon: const Icon(Icons.delete_outline),
+                  tooltip: 'حذف التنويعة',
+                ),
+              ],
+            ),
+            TextFormField(
+              key: ValueKey<String>('variation_name_${variation.id}'),
+              initialValue: variation.name,
+              decoration: const InputDecoration(labelText: 'اسم التنويعة'),
+              textInputAction: TextInputAction.next,
+              onChanged: (String value) {
+                setState(() => variation.name = value);
+                _markDirty();
+              },
+              validator: (String? value) {
+                final String trimmed = value?.trim() ?? '';
+                if (trimmed.isEmpty && requiresInventory) {
+                  return 'يرجى إدخال اسم للتنويعة.';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              key: ValueKey<String>('variation_sku_${variation.id}'),
+              initialValue: variation.sku,
+              decoration: const InputDecoration(
+                labelText: 'المعرف (SKU)',
+                helperText: 'اختياري لتتبع المخزون الداخلي.',
+              ),
+              textInputAction: TextInputAction.next,
+              onChanged: (String value) {
+                setState(() => variation.sku = value);
+                _markDirty();
+              },
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              key: ValueKey<String>('variation_price_${variation.id}'),
+              initialValue: variation.priceText,
+              decoration: const InputDecoration(labelText: 'السعر'),
+              keyboardType:
+              const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: <TextInputFormatter>[
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+              ],
+              onChanged: (String value) {
+                setState(() => variation.priceText = value);
+                _markDirty();
+              },
+              validator: (String? value) {
+                final String trimmed = value?.trim() ?? '';
+                if (trimmed.isEmpty) {
+                  return requiresInventory ? 'يرجى إدخال السعر.' : null;
+                }
+                final double? parsed = double.tryParse(trimmed);
+                if (parsed == null || parsed <= 0) {
+                  return 'يرجى إدخال سعر صالح أكبر من صفر.';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              key: ValueKey<String>('variation_quantity_${variation.id}'),
+              initialValue: variation.quantityText,
+              decoration: const InputDecoration(labelText: 'الكمية المتاحة'),
+              keyboardType: TextInputType.number,
+              inputFormatters: <TextInputFormatter>[
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
+              ],
+              onChanged: (String value) {
+                setState(() => variation.quantityText = value);
+                _markDirty();
+              },
+              validator: (String? value) {
+                final String trimmed = value?.trim() ?? '';
+                if (trimmed.isEmpty) {
+                  return requiresInventory ? 'يرجى إدخال الكمية.' : null;
+                }
+                final int? parsed = int.tryParse(trimmed);
+                if (parsed == null || parsed < 0) {
+                  return 'يرجى إدخال كمية صحيحة (0 أو أكثر).';
+                }
+                return null;
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _addInventoryVariation() {
+    setState(() {
+      _inventoryVariations = <_InventoryVariation>[
+        ..._inventoryVariations,
+        _InventoryVariation(
+          id: DateTime.now().microsecondsSinceEpoch.toString(),
+        ),
+      ];
+    });
+    _inventoryFormKey.currentState?.validate();
+    _markDirty();
+  }
+
+  void _removeInventoryVariation(_InventoryVariation variation) {
+    setState(() {
+      _inventoryVariations = _inventoryVariations
+          .where((_) => _.id != variation.id)
+          .toList(growable: false);
+    });
+    _inventoryFormKey.currentState?.validate();
+    _markDirty();
+  }
+
+  String? _validateLatitudeField(String? value) {
+    final String trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return _requiresLocation ? 'يرجى إدخال خط العرض.' : null;
+    }
+    final double? parsed = double.tryParse(trimmed);
+    if (parsed == null || parsed < -90 || parsed > 90) {
+      return 'القيمة يجب أن تكون بين -90 و 90.';
+    }
+    return null;
+  }
+
+  String? _validateLongitudeField(String? value) {
+    final String trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return _requiresLocation ? 'يرجى إدخال خط الطول.' : null;
+    }
+    final double? parsed = double.tryParse(trimmed);
+    if (parsed == null || parsed < -180 || parsed > 180) {
+      return 'القيمة يجب أن تكون بين -180 و 180.';
+    }
+    return null;
+  }
+
+
+
+
 
   Widget _buildMainCategoryStep() {
     return ListView(
@@ -729,6 +1159,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       _customFieldValues = <String, dynamic>{};
       _customFieldError = null;
       _isLoadingCustomFields = false;
+      _inventoryVariations = <_InventoryVariation>[];
       if (category.interfaceType != 'shein_products') {
         if (_sheinProductLinkController.text.isNotEmpty) {
           _sheinProductLinkController.clear();
@@ -738,6 +1169,17 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         }
       }
     });
+    _locationFormKey.currentState?.reset();
+    _inventoryFormKey.currentState?.reset();
+    if (_locationAddressController.text.isNotEmpty) {
+      _locationAddressController.clear();
+    }
+    if (_locationLatitudeController.text.isNotEmpty) {
+      _locationLatitudeController.clear();
+    }
+    if (_locationLongitudeController.text.isNotEmpty) {
+      _locationLongitudeController.clear();
+    }
     _customFieldsFormKey.currentState?.clearValidationErrors();
     _markDirty();
   }
@@ -750,7 +1192,25 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       _selectedSubCategory = subCategory;
       _customFieldValues = <String, dynamic>{};
       _customFieldError = null;
+      _inventoryVariations = <_InventoryVariation>[];
+
     });
+
+
+    _locationFormKey.currentState?.reset();
+    _inventoryFormKey.currentState?.reset();
+    if (_locationAddressController.text.isNotEmpty) {
+      _locationAddressController.clear();
+    }
+    if (_locationLatitudeController.text.isNotEmpty) {
+      _locationLatitudeController.clear();
+    }
+    if (_locationLongitudeController.text.isNotEmpty) {
+      _locationLongitudeController.clear();
+    }
+
+
+
     _customFieldsFormKey.currentState?.clearValidationErrors();
     _markDirty();
     _fetchCustomFieldSchema();
@@ -869,6 +1329,31 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     );
   }
 
+
+  Map<String, dynamic>? _buildLocationPayload() {
+    final String address = _locationAddressController.text.trim();
+    final double? latitude =
+    double.tryParse(_locationLatitudeController.text.trim());
+    final double? longitude =
+    double.tryParse(_locationLongitudeController.text.trim());
+    if (address.isEmpty || latitude == null || longitude == null) {
+      return null;
+    }
+    return <String, dynamic>{
+      'address': address,
+      'latitude': latitude,
+      'longitude': longitude,
+    };
+  }
+
+  List<Map<String, dynamic>> _buildInventoryVariationsPayload() {
+    return _inventoryVariations
+        .where((variation) => variation.isComplete)
+        .map((variation) => variation.toPayload())
+        .toList(growable: false);
+  }
+
+
   Map<String, dynamic> _buildAdPayload({required bool isDraft}) {
     final Map<String, dynamic> payload = <String, dynamic>{
       'interface_type': _selectedMainCategory?.interfaceType,
@@ -902,6 +1387,19 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
 
     if (_customFieldValues.isNotEmpty) {
       payload['custom_fields'] = Map<String, dynamic>.from(_customFieldValues);
+    }
+
+    final Map<String, dynamic>? locationPayload = _buildLocationPayload();
+    if (locationPayload != null) {
+      payload['location'] = locationPayload;
+    }
+
+    final List<Map<String, dynamic>> inventoryPayload =
+    _buildInventoryVariationsPayload();
+    if (inventoryPayload.isNotEmpty) {
+      payload['inventory'] = <String, dynamic>{
+        'variations': inventoryPayload,
+      };
     }
 
 
@@ -1092,6 +1590,12 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       return;
     }
     if (!_validateTextDetailsStep()) {
+      return;
+    }
+
+    if ((_requiresLocation || _requiresInventory ||
+        _inventoryVariations.isNotEmpty) &&
+        !_validateStepFive()) {
       return;
     }
 
@@ -1288,6 +1792,12 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     final List<Widget> customFieldSummary = _customFieldSummary;
     final String currencyLabel = _currencyLabel;
 
+    final Map<String, dynamic>? locationSummary = _buildLocationPayload();
+    final List<_InventoryVariation> inventorySummary = _inventoryVariations
+        .where((variation) => variation.isComplete)
+        .toList(growable: false);
+
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -1313,6 +1823,45 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
           Text('لا توجد قيم محفوظة للحقول المخصّصة.', style: theme.textTheme.bodySmall)
         else
           ...customFieldSummary,
+
+
+        if (locationSummary != null) ...[
+          const Divider(height: 32),
+          Text('الموقع', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Text('العنوان: ${locationSummary['address']}'),
+          Text('خط العرض: ${locationSummary['latitude']}'),
+          Text('خط الطول: ${locationSummary['longitude']}'),
+        ],
+
+        if (inventorySummary.isNotEmpty) ...[
+          const Divider(height: 32),
+          Text('تنويعات المخزون', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 8),
+          ...inventorySummary.map((variation) {
+            final String price = variation.priceText.trim();
+            final String quantity = variation.quantityText.trim();
+            final String sku = variation.sku.trim();
+            final String name =
+            variation.name.trim().isEmpty ? 'تنويعة بدون اسم' : variation.name.trim();
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text('السعر: ${price.isEmpty ? 'غير محدد' : price}'),
+                  Text('الكمية: ${quantity.isEmpty ? 'غير محددة' : quantity}'),
+                  if (sku.isNotEmpty) Text('SKU: $sku'),
+                ],
+              ),
+            );
+          }),
+        ],
 
         const Divider(height: 32),
         Text('الوسائط', style: theme.textTheme.titleMedium),
@@ -1389,6 +1938,60 @@ class _PendingMedia {
     'name': displayName,
   };
 }
+
+
+class _InventoryVariation {
+  _InventoryVariation({
+    required this.id,
+    this.name = '',
+    this.sku = '',
+    this.priceText = '',
+    this.quantityText = '',
+  });
+
+  final String id;
+  String name;
+  String sku;
+  String priceText;
+  String quantityText;
+
+  Map<String, dynamic> toPayload() {
+    final String trimmedName = name.trim();
+    final String trimmedSku = sku.trim();
+    final double? price = double.tryParse(priceText.trim());
+    final int? quantity = int.tryParse(quantityText.trim());
+    final Map<String, dynamic> payload = <String, dynamic>{
+      'id': id,
+      if (trimmedName.isNotEmpty) 'name': trimmedName,
+      if (trimmedSku.isNotEmpty) 'sku': trimmedSku,
+      if (price != null) 'price': price,
+      if (quantity != null) 'quantity': quantity,
+    };
+    return payload;
+  }
+
+  bool get isComplete {
+    final double? price = double.tryParse(priceText.trim());
+    final int? quantity = int.tryParse(quantityText.trim());
+    return name.trim().isNotEmpty &&
+        price != null &&
+        price > 0 &&
+        quantity != null &&
+        quantity >= 0;
+  }
+}
+
+class _WizardSectionConfig {
+  const _WizardSectionConfig({
+    this.requiresLocation = false,
+    this.requiresInventory = false,
+  });
+
+  final bool requiresLocation;
+  final bool requiresInventory;
+}
+
+
 
 class _MediaPreviewCard extends StatelessWidget {
   const _MediaPreviewCard({super.key, required this.media, required this.onRemove});

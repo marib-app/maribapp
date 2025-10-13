@@ -139,6 +139,7 @@ use Exception;
 use Illuminate\Support\Facades\Hash;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
+use App\Services\ImageVariantService;
 
 use JsonException;
 
@@ -1648,7 +1649,7 @@ class ApiController extends Controller {
         
             if ($request->hasFile('image')) {
                 try {
-                    $data['image'] = FileService::compressAndUpload($request->file('image'), $this->uploadFolder);
+                    $variants = ImageVariantService::storeWithVariants($request->file('image'), $this->uploadFolder);
                 } catch (Throwable $exception) {
                     ResponseService::validationErrors([
                         'image' => [__('Unable to process the uploaded image. Please try again with a different file.')],
@@ -1657,6 +1658,11 @@ class ApiController extends Controller {
             
             
             
+
+                $data['image'] = $variants['original'];
+                $data['thumbnail_url'] = $variants['thumbnail'];
+                $data['detail_image_url'] = $variants['detail'];
+
             }
             $item = Item::create($data);
 
@@ -1666,7 +1672,7 @@ class ApiController extends Controller {
                 foreach ($request->file('gallery_images') as $file) {
 
                     try {
-                        $imagePath = FileService::compressAndUpload($file, $this->uploadFolder);
+                        $galleryVariants = ImageVariantService::storeWithVariants($file, $this->uploadFolder);
                     } catch (Throwable $exception) {
                         ResponseService::validationErrors([
                             'gallery_images' => [__('Unable to process one of the gallery images. Please verify the files and retry.')],
@@ -1674,7 +1680,9 @@ class ApiController extends Controller {
                     }
 
                     $galleryImages[] = [
-                        'image'      => $imagePath,
+                        'image'      => $galleryVariants['original'],
+                        'thumbnail_url' => $galleryVariants['thumbnail'],
+                        'detail_image_url' => $galleryVariants['detail'],
                         'item_id'    => $item->id,
                         'created_at' => $timestamp,
                         'updated_at' => $timestamp->copy(),
@@ -1791,7 +1799,7 @@ class ApiController extends Controller {
             $result = Item::with(
                 'user:id,name,email,mobile,profile,country_code',
                 'category:id,name,image',
-                'gallery_images:id,image,item_id',
+                'gallery_images:id,image,item_id,thumbnail_url,detail_image_url',
                 'featured_items',
                 'favourites',
                 'item_custom_field_values.custom_field',
@@ -1866,7 +1874,7 @@ class ApiController extends Controller {
             }
 
 
-            $sql = Item::with('user:id,name,email,mobile,profile,created_at,is_verified,show_personal_details,country_code', 'category:id,name,image', 'gallery_images:id,image,item_id', 'featured_items', 'favourites', 'item_custom_field_values.custom_field', 'area:id,name')
+            $sql = Item::with('user:id,name,email,mobile,profile,created_at,is_verified,show_personal_details,country_code', 'category:id,name,image', 'gallery_images:id,image,item_id,thumbnail_url,detail_image_url', 'featured_items', 'favourites', 'item_custom_field_values.custom_field', 'area:id,name')
                 ->withCount('favourites')
 
                 ->withAvg('review as ratings_avg', 'ratings')
@@ -2231,7 +2239,24 @@ class ApiController extends Controller {
 
             // $data['slug'] = $uniqueSlug;
             if ($request->hasFile('image')) {
-                $data['image'] = FileService::compressAndReplace($request->file('image'), $this->uploadFolder, $item->getRawOriginal('image'));
+                try {
+                    $variants = ImageVariantService::storeWithVariants($request->file('image'), $this->uploadFolder);
+                } catch (Throwable $exception) {
+                    ResponseService::validationErrors([
+                        'image' => [__('Unable to process the uploaded image. Please try again with a different file.')],
+                    ]);
+                }
+
+                ImageVariantService::deleteStoredVariants([
+                    $item->getRawOriginal('image'),
+                    $item->getRawOriginal('thumbnail_url'),
+                    $item->getRawOriginal('detail_image_url'),
+                ]);
+
+                $data['image'] = $variants['original'];
+                $data['thumbnail_url'] = $variants['thumbnail'];
+                $data['detail_image_url'] = $variants['detail'];
+            
             }
 
             $item->update($data);
@@ -2263,8 +2288,19 @@ class ApiController extends Controller {
             if ($request->hasFile('gallery_images')) {
                 $galleryImages = [];
                 foreach ($request->file('gallery_images') as $file) {
+
+                    try {
+                        $galleryVariants = ImageVariantService::storeWithVariants($file, $this->uploadFolder);
+                    } catch (Throwable $exception) {
+                        ResponseService::validationErrors([
+                            'gallery_images' => [__('Unable to process one of the gallery images. Please verify the files and retry.')],
+                        ]);
+                    }
+
                     $galleryImages[] = [
-                        'image'      => FileService::compressAndUpload($file, $this->uploadFolder),
+                        'image'      => $galleryVariants['original'],
+                        'thumbnail_url' => $galleryVariants['thumbnail'],
+                        'detail_image_url' => $galleryVariants['detail'],
                         'item_id'    => $item->id,
                         'created_at' => time(),
                         'updated_at' => time(),
@@ -2301,12 +2337,17 @@ class ApiController extends Controller {
             if (!empty($request->delete_item_image_id)) {
                 $item_ids = explode(',', $request->delete_item_image_id);
                 foreach (ItemImages::whereIn('id', $item_ids)->get() as $itemImage) {
-                    FileService::delete($itemImage->getRawOriginal('image'));
+                    ImageVariantService::deleteStoredVariants([
+                        $itemImage->getRawOriginal('image'),
+                        $itemImage->getRawOriginal('thumbnail_url'),
+                        $itemImage->getRawOriginal('detail_image_url'),
+                    ]);
+                    
                     $itemImage->delete();
                 }
             }
 
-            $result = Item::with('user:id,name,email,mobile,profile,country_code', 'category:id,name,image', 'gallery_images:id,image,item_id', 'featured_items', 'favourites', 'item_custom_field_values.custom_field', 'area')->where('id', $item->id)->get();
+            $result = Item::with('user:id,name,email,mobile,profile,country_code', 'category:id,name,image', 'gallery_images:id,image,item_id,thumbnail_url,detail_image_url', 'featured_items', 'favourites', 'item_custom_field_values.custom_field', 'area')->where('id', $item->id)->get();
             /*
              * Collection does not support first OR find method's result as of now. It's a part of R&D
              * So currently using this shortcut method
@@ -2333,11 +2374,18 @@ class ApiController extends Controller {
                 ResponseService::errorResponse($validator->errors()->first());
             }
             $item = Item::owner()->with('gallery_images')->withTrashed()->findOrFail($request->id);
-            FileService::delete($item->getRawOriginal('image'));
-
+            ImageVariantService::deleteStoredVariants([
+                $item->getRawOriginal('image'),
+                $item->getRawOriginal('thumbnail_url'),
+                $item->getRawOriginal('detail_image_url'),
+            ]);
             if (count($item->gallery_images) > 0) {
-                foreach ($item->gallery_images as $key => $value) {
-                    FileService::delete($value->getRawOriginal('image'));
+                foreach ($item->gallery_images as $value) {
+                    ImageVariantService::deleteStoredVariants([
+                        $value->getRawOriginal('image'),
+                        $value->getRawOriginal('thumbnail_url'),
+                        $value->getRawOriginal('detail_image_url'),
+                    ]);
                 }
             }
 
@@ -2808,7 +2856,7 @@ class ApiController extends Controller {
             }
             $favouriteItemIDS = Favourite::where('user_id', Auth::user()->id)->select('item_id')->pluck('item_id');
             $items = Item::whereIn('id', $favouriteItemIDS)
-                ->with('user:id,name,email,mobile,profile,country_code', 'category:id,name,image', 'gallery_images:id,image,item_id', 'featured_items', 'favourites', 'item_custom_field_values.custom_field')->where('status', '<>', 'sold out')->paginate();
+                ->with('user:id,name,email,mobile,profile,country_code', 'category:id,name,image', 'gallery_images:id,image,item_id,thumbnail_url,detail_image_url', 'featured_items', 'favourites', 'item_custom_field_values.custom_field')->where('status', '<>', 'sold out')->paginate();
 
             ResponseService::successResponse("Data Fetched Successfully", new ItemCollection($items));
         } catch (Throwable $th) {

@@ -35,6 +35,8 @@ class Item extends Model {
         'rejected_reason',
         'user_id',
         'image',
+        'thumbnail_url',
+        'detail_image_url',
         'country',
         'state',
         'city',
@@ -175,6 +177,19 @@ class Item extends Model {
     public function getImageAttribute($image) {
         return !empty($image) ? url(Storage::url($image)) : $image;
     }
+
+
+    public function getThumbnailUrlAttribute($image)
+    {
+        return !empty($image) ? url(Storage::url($image)) : null;
+    }
+
+    public function getDetailImageUrlAttribute($image)
+    {
+        return !empty($image) ? url(Storage::url($image)) : null;
+    }
+
+
 
     public function getStatusAttribute($value)
     {

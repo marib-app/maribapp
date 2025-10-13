@@ -205,7 +205,7 @@ class FeaturedSectionService
             ->with([
                 'user:id,name,email,mobile,profile,is_verified,show_personal_details,country_code',
                 'category:id,name,image',
-                'gallery_images:id,image,item_id',
+                'gallery_images:id,image,item_id,thumbnail_url,detail_image_url',
                 'featured_items',
                 'favourites',
                 'item_custom_field_values.custom_field',

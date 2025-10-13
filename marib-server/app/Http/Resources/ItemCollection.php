@@ -37,6 +37,26 @@ class ItemCollection extends ResourceCollection {
                 
                 /* NOTE : This code can be improved */
                 $response[$key] = $collection->toArray();
+                $originalImageUrl = $collection->image;
+                $response[$key]['thumbnail_url'] = $collection->thumbnail_url ?? $originalImageUrl;
+                $response[$key]['detail_image_url'] = $collection->detail_image_url ?? $originalImageUrl;
+                $response[$key]['thumbnail_fallback_url'] = $originalImageUrl;
+                $response[$key]['detail_image_fallback_url'] = $originalImageUrl;
+                unset($response[$key]['image']);
+
+                if (! empty($response[$key]['gallery_images']) && is_array($response[$key]['gallery_images'])) {
+                    $response[$key]['gallery_images'] = collect($response[$key]['gallery_images'])->map(static function (array $galleryImage) {
+                        $originalGalleryImage = $galleryImage['image'] ?? null;
+                        $galleryImage['thumbnail_url'] = $galleryImage['thumbnail_url'] ?? $originalGalleryImage;
+                        $galleryImage['detail_image_url'] = $galleryImage['detail_image_url'] ?? $originalGalleryImage;
+                        $galleryImage['thumbnail_fallback_url'] = $originalGalleryImage;
+                        $galleryImage['detail_image_fallback_url'] = $originalGalleryImage;
+                        unset($galleryImage['image']);
+
+                        return $galleryImage;
+                    })->all();
+                }
+
                 $response[$key]['product_link'] = $collection->product_link;
                 $response[$key]['review_link'] = $collection->review_link;
                 $response[$key]['base_price'] = (float) ($collection->price ?? 0.0);

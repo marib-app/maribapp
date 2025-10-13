@@ -12,6 +12,7 @@ use App\Services\DepartmentReportService;
 use App\Services\FileService;
 use App\Services\FeatureSectionCategoryService;
 use App\Policies\SectionDelegatePolicy;
+use App\Services\ImageVariantService;
 
 use App\Services\NotificationService;
 use App\Services\ResponseService;
@@ -382,12 +383,22 @@ class ItemController extends Controller {
             
             // Update image if provided
             if ($request->hasFile('image')) {
-                // Delete old image
-                if ($item->image) {
-                    FileService::delete($item->getRawOriginal('image'));
+                try {
+                    $variants = ImageVariantService::storeWithVariants($request->file('image'), 'items');
+                } catch (Throwable $exception) {
+                    ResponseService::validationErrors([
+                        'image' => [__('Unable to process the uploaded image. Please try again with a different file.')],
+                    ]);
                 }
-                $imagePath = FileService::upload($request->file('image'), 'items');
-                $item->image = $imagePath;
+                ImageVariantService::deleteStoredVariants([
+                    $item->getRawOriginal('image'),
+                    $item->getRawOriginal('thumbnail_url'),
+                    $item->getRawOriginal('detail_image_url'),
+                ]);
+
+                $item->image = $variants['original'];
+                $item->thumbnail_url = $variants['thumbnail'];
+                $item->detail_image_url = $variants['detail'];
             }
 
             // Update item details
@@ -413,9 +424,18 @@ class ItemController extends Controller {
             // Upload gallery images if any
             if ($request->hasFile('gallery_images')) {
                 foreach ($request->file('gallery_images') as $image) {
-                    $galleryImagePath = FileService::upload($image, 'items/gallery');
+                    try {
+                        $galleryVariants = ImageVariantService::storeWithVariants($image, 'items/gallery');
+                    } catch (Throwable $exception) {
+                        ResponseService::validationErrors([
+                            'gallery_images' => [__('Unable to process one of the gallery images. Please verify the files and retry.')],
+                        ]);
+                    }
+                    
                     $item->gallery_images()->create([
-                        'image' => $galleryImagePath
+                        'image' => $galleryVariants['original'],
+                        'thumbnail_url' => $galleryVariants['thumbnail'],
+                        'detail_image_url' => $galleryVariants['detail'],
                     ]);
                 }
             }
@@ -426,7 +446,11 @@ class ItemController extends Controller {
                 foreach ($deleteIds as $deleteId) {
                     $galleryImage = $item->gallery_images()->find($deleteId);
                     if ($galleryImage) {
-                        FileService::delete($galleryImage->getRawOriginal('image'));
+                        ImageVariantService::deleteStoredVariants([
+                            $galleryImage->getRawOriginal('image'),
+                            $galleryImage->getRawOriginal('thumbnail_url'),
+                            $galleryImage->getRawOriginal('detail_image_url'),
+                        ]);
                         $galleryImage->delete();
                     }
                 }
@@ -947,9 +971,19 @@ class ItemController extends Controller {
 
 
             foreach ($item->gallery_images as $gallery_image) {
-                FileService::delete($gallery_image->getRawOriginal('image'));
+                ImageVariantService::deleteStoredVariants([
+                    $gallery_image->getRawOriginal('image'),
+                    $gallery_image->getRawOriginal('thumbnail_url'),
+                    $gallery_image->getRawOriginal('detail_image_url'),
+                ]);
+            
             }
-            FileService::delete($item->getRawOriginal('image'));
+            ImageVariantService::deleteStoredVariants([
+                $item->getRawOriginal('image'),
+                $item->getRawOriginal('thumbnail_url'),
+                $item->getRawOriginal('detail_image_url'),
+            ]);
+
 
             $item->forceDelete();
 
@@ -1139,7 +1173,14 @@ class ItemController extends Controller {
         }
 
 
-        $imagePath = FileService::upload($request->file('image'), 'items');
+        try {
+            $variants = ImageVariantService::storeWithVariants($request->file('image'), 'items');
+        } catch (Throwable $exception) {
+            ResponseService::validationErrors([
+                'image' => [__('Unable to process the uploaded image. Please try again with a different file.')],
+            ]);
+        }
+
 
 
         $status = $context['status'] ?? 'review';
@@ -1157,7 +1198,9 @@ class ItemController extends Controller {
             'currency' => $request->currency,
             'category_id' => $categoryId,
             'user_id' => Auth::id(),
-            'image' => $imagePath,
+            'image' => $variants['original'],
+            'thumbnail_url' => $variants['thumbnail'],
+            'detail_image_url' => $variants['detail'],
             'country' => $request->country ?? '',
             'state' => $request->state ?? '',
             'city' => $request->city ?? '',
@@ -1196,9 +1239,18 @@ class ItemController extends Controller {
                 continue;
             }
 
-            $galleryImagePath = FileService::upload($image, 'items/gallery');
+            try {
+                $galleryVariants = ImageVariantService::storeWithVariants($image, 'items/gallery');
+            } catch (Throwable $exception) {
+                ResponseService::validationErrors([
+                    'gallery_images' => [__('Unable to process one of the gallery images. Please verify the files and retry.')],
+                ]);
+            }
+            
             $item->gallery_images()->create([
-                'image' => $galleryImagePath,
+                'image' => $galleryVariants['original'],
+                'thumbnail_url' => $galleryVariants['thumbnail'],
+                'detail_image_url' => $galleryVariants['detail'],
             ]);
         }
     }

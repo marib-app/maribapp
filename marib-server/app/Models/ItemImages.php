@@ -12,6 +12,9 @@ class ItemImages extends Model {
     protected $fillable = [
         'item_id',
         'image',
+        'thumbnail_url',
+        'detail_image_url',
+
     ];
 
     public function getImageAttribute($image) {
@@ -20,4 +23,15 @@ class ItemImages extends Model {
         }
         return $image;
     }
+
+    public function getThumbnailUrlAttribute($image)
+    {
+        return !empty($image) ? url(Storage::url($image)) : null;
+    }
+
+    public function getDetailImageUrlAttribute($image)
+    {
+        return !empty($image) ? url(Storage::url($image)) : null;
+    }
+
 }

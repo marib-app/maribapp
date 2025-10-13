@@ -42,6 +42,10 @@ import 'package:marib/data/model/subscription_package_limit.dart';
 
 import 'dart:ui' show ImageFilter;          // للـ blur
 import 'package:flutter/gestures.dart';     // للروابط
+import 'package:marib/utils/scroll/low_spec_scroll_physics.dart';
+
+
+
 
 class UiUtils {
 
@@ -1217,10 +1221,17 @@ extension ScrollEndListen on ScrollController {
 
 
 class RemoveGlow extends ScrollBehavior {
+  const RemoveGlow();
+
+
   @override
   Widget buildOverscrollIndicator(
       BuildContext context, Widget child, ScrollableDetails details) {
     return child;
+  }
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) {
+    return const LowSpecScrollPhysics();
   }
 }
 

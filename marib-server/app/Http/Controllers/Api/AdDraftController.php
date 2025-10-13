@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\SaveAdDraftRequest;
+use App\Http\Requests\Api\PublishAdDraftRequest;
 use App\Http\Resources\AdDraftResource;
 use App\Services\AdDraftService;
 use App\Services\ResponseService;
@@ -41,6 +42,22 @@ class AdDraftController extends Controller
         return ResponseService::successResponse(
             __('Draft fetched successfully.'),
             (new AdDraftResource($found))->toArray($request)
+        );
+    }
+    public function publish(PublishAdDraftRequest $request, AdDraftService $service)
+    {
+        $userId = (int) $request->user()->id;
+        $normalized = $request->normalized();
+        $draftId = $normalized['draft_id'];
+        $result = $service->publish(
+            $draftId !== null ? (int) $draftId : null,
+            $userId,
+            $normalized['payload'],
+        );
+
+        return ResponseService::successResponse(
+            __('Ad submitted successfully.'),
+            $result,
         );
     }
 }

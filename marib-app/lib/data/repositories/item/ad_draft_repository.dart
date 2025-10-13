@@ -47,4 +47,21 @@ class AdDraftRepository {
       error: 'invalid-draft-response',
     );
   }
+
+
+  Future<Map<String, dynamic>> publishDraft({
+    String? draftId,
+    required Map<String, dynamic> payload,
+  }) {
+    final Map<String, dynamic> body = <String, dynamic>{
+      'payload': payload,
+      if (draftId != null && draftId.isNotEmpty)
+        'draft_id': int.tryParse(draftId) ?? draftId,
+    };
+    return Api.requestJson(
+      url: '${Api.adDraftsApi}/publish',
+      method: 'POST',
+      data: body,
+    );
+  }
 }

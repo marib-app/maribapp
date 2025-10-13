@@ -326,5 +326,6 @@ Route::group([
             ->middleware('permission:metal-rate-schedule');
     });
     Route::post('ad-drafts', [AdDraftController::class, 'store']);
+    Route::post('ad-drafts/publish', [AdDraftController::class, 'publish']);
     Route::put('ad-drafts/{draft}', [AdDraftController::class, 'update'])->whereNumber('draft');
     Route::get('ad-drafts/{draft}', [AdDraftController::class, 'show'])->whereNumber('draft');

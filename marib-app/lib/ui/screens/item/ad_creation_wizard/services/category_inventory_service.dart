@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:marib/data/model/ad_draft_model.dart';
 import 'package:marib/data/repositories/item/ad_draft_local_store.dart';
 import 'package:marib/data/repositories/item/ad_draft_repository.dart';
+import 'package:marib/utils/api.dart';
 
 import '../models/custom_field_schema.dart';
 
@@ -240,10 +241,43 @@ class AdPublishingService {
     return _localStore.migrate(from: from, to: to);
   }
 
-  Future<void> publish(Map<String, dynamic> payload) async {
-    await Future<void>.delayed(const Duration(milliseconds: 400));
-    // ignore: avoid_print
-    print('Ad published with payload: $payload');
+  Future<AdPublishResult> publish({
+    required Map<String, dynamic> payload,
+    String? draftId,
+    String? cacheKey,
+  }) async {
+    try {
+      final Map<String, dynamic> response = await _draftRepository.publishDraft(
+        draftId: draftId,
+        payload: payload,
+      );
+      final String message =
+          _stringOrNull(response['message']) ?? 'تم إرسال الإعلان للنشر بنجاح.';
+      final Map<String, dynamic> data = _mapOf(response['data']);
+      final AdPublishResult result = AdPublishResult(message: message, data: data);
+      if (cacheKey != null) {
+        final AdDraftModel snapshot = AdDraftModel(
+          id: result.draftId?.toString() ?? draftId,
+          currentStep: 'review',
+          payload: Map<String, dynamic>.from(payload),
+          stepPayload: const <String, dynamic>{},
+          temporaryMedia: const <String, dynamic>{},
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        await _localStore.saveSnapshot(cacheKey, snapshot);
+        await _localStore.clearPending(cacheKey);
+      }
+      return result;
+    } on ApiHttpException catch (error) {
+      if (error.statusCode == 422) {
+        final Map<String, List<String>> fieldErrors = _extractFieldErrors(error.payload);
+        final String message =
+            _stringOrNull(error.errorMessage) ?? 'تعذّر نشر الإعلان بسبب أخطاء التحقق.';
+        throw PublishValidationException(message, fieldErrors);
+      }
+      rethrow;
+    }
   }
 
 
@@ -258,6 +292,39 @@ class AdPublishingService {
     return underlying is Exception &&
         underlying.toString().toLowerCase().contains('socket');
   }
+
+  Map<String, List<String>> _extractFieldErrors(dynamic payload) {
+    final Map<String, List<String>> fieldErrors = <String, List<String>>{};
+    final Map<String, dynamic> payloadMap = _mapOf(payload);
+    final dynamic rawErrors = payloadMap['errors'];
+    if (rawErrors is Map) {
+      rawErrors.forEach((dynamic key, dynamic value) {
+        final String? normalizedKey = _stringOrNull(key);
+        if (normalizedKey == null) {
+          return;
+        }
+        final List<String> messages = <String>[];
+        if (value is Iterable) {
+          for (final dynamic entry in value) {
+            final String? text = _stringOrNull(entry);
+            if (text != null) {
+              messages.add(text);
+            }
+          }
+        } else {
+          final String? text = _stringOrNull(value);
+          if (text != null) {
+            messages.add(text);
+          }
+        }
+        if (messages.isNotEmpty) {
+          fieldErrors[normalizedKey] = messages;
+        }
+      });
+    }
+    return fieldErrors;
+  }
+
 
   Map<String, dynamic> _mapOf(dynamic value) {
     if (value is Map<String, dynamic>) {
@@ -277,4 +344,42 @@ class AdPublishingService {
     return candidate.isEmpty ? null : candidate;
   }
 
+}
+
+class AdPublishResult {
+  AdPublishResult({required this.message, required Map<String, dynamic> data})
+      : data = Map<String, dynamic>.from(data),
+        draftId = _parseDraftId(data['draft_id']),
+        status = data['status']?.toString();
+
+  final String message;
+  final Map<String, dynamic> data;
+  final int? draftId;
+  final String? status;
+
+  static int? _parseDraftId(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+    if (value is String && value.isNotEmpty) {
+      return int.tryParse(value);
+    }
+    return null;
+  }
+}
+
+class PublishValidationException implements Exception {
+  PublishValidationException(this.message, Map<String, List<String>> errors)
+      : fieldErrors = errors.map(
+        (String key, List<String> value) => MapEntry<String, List<String>>(
+      key,
+      List<String>.from(value),
+    ),
+  );
+
+  final String message;
+  final Map<String, List<String>> fieldErrors;
+
+  @override
+  String toString() => message;
 }

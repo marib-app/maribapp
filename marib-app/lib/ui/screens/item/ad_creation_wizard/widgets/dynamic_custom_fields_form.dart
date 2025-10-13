@@ -89,6 +89,15 @@ class DynamicCustomFieldsFormState extends State<DynamicCustomFieldsForm> {
     setState(() => _errors.clear());
   }
 
+
+  void applyValidationErrors(Map<String, String> errors) {
+    setState(() {
+      _errors
+        ..clear()
+        ..addAll(errors);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.fields.isEmpty) {

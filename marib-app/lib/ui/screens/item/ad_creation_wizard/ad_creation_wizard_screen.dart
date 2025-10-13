@@ -15,6 +15,7 @@ import 'package:marib/data/model/ad_draft_model.dart';
 import 'package:marib/data/model/ad_draft_model.dart';
 import 'package:marib/data/repositories/item/ad_draft_local_store.dart';
 import 'package:marib/data/repositories/item/ad_draft_repository.dart';
+import 'package:marib/utils/app_telemetry.dart';
 
 import 'models/custom_field_schema.dart';
 import 'services/category_inventory_service.dart';
@@ -224,20 +225,24 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   bool _isLoadingDraft = false;
   bool _isSyncingPending = false;
   bool _isHydratingState = false;
+  final Map<String, String> _serverFieldErrors = <String, String>{};
 
 
   @override
   void initState() {
     super.initState();
-    _titleController.addListener(_markDirty);
-    _descriptionController.addListener(_markDirty);
-    _contactController.addListener(_markDirty);
-    _priceController.addListener(_markDirty);
-    _sheinProductLinkController.addListener(_markDirty);
-    _sheinReviewLinkController.addListener(_markDirty);
-    _locationAddressController.addListener(_markDirty);
-    _locationLatitudeController.addListener(_markDirty);
-    _locationLongitudeController.addListener(_markDirty);
+    _registerFieldController(_titleController, const <String>['title']);
+    _registerFieldController(_descriptionController, const <String>['description']);
+    _registerFieldController(_contactController, const <String>['contact']);
+    _registerFieldController(_priceController, const <String>['price']);
+    _registerFieldController(_sheinProductLinkController, const <String>['product_link']);
+    _registerFieldController(_sheinReviewLinkController, const <String>['review_link']);
+    _registerFieldController(
+        _locationAddressController, const <String>['location.address']);
+    _registerFieldController(
+        _locationLatitudeController, const <String>['location.latitude']);
+    _registerFieldController(
+        _locationLongitudeController, const <String>['location.longitude']);
     _imagePicker.listener((dynamic files) {
       if (!mounted) {
         return;
@@ -282,6 +287,134 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     }
     _autoSaveTimer = Timer(const Duration(seconds: 3), _autoSaveDraft);
   }
+
+
+  void _registerFieldController(TextEditingController controller, List<String> keys) {
+    controller.addListener(() {
+      for (final String key in keys) {
+        _clearServerFieldError(key);
+      }
+      _markDirty();
+    });
+  }
+
+  void _clearServerFieldError(String key) {
+    if (_serverFieldErrors.isEmpty) {
+      return;
+    }
+    final List<String> targets = _serverFieldErrors.keys
+        .where((String existing) => existing == key || existing.startsWith('$key.'))
+        .toList(growable: false);
+    if (targets.isEmpty) {
+      return;
+    }
+    for (final String target in targets) {
+      _serverFieldErrors.remove(target);
+    }
+  }
+
+  void _resetServerValidationState() {
+    if (_serverFieldErrors.isEmpty) {
+      _customFieldsFormKey.currentState?.clearValidationErrors();
+      return;
+    }
+    setState(() {
+      _serverFieldErrors.clear();
+    });
+    _customFieldsFormKey.currentState?.clearValidationErrors();
+  }
+
+  String _normalizeServerFieldKey(String key) {
+    if (key.startsWith('payload.')) {
+      return key.substring('payload.'.length);
+    }
+    return key;
+  }
+
+  void _applyServerValidationErrors(Map<String, List<String>> errors) {
+    final Map<String, String> normalized = <String, String>{};
+    final Map<String, String> customFieldErrors = <String, String>{};
+
+    errors.forEach((String rawKey, List<String> messages) {
+      if (messages.isEmpty) {
+        return;
+      }
+      final String normalizedKey = _normalizeServerFieldKey(rawKey);
+      final String message = messages.first;
+      if (normalizedKey.startsWith('custom_fields.')) {
+        final String fieldId = normalizedKey.substring('custom_fields.'.length);
+        customFieldErrors[fieldId] = message;
+      } else {
+        normalized[normalizedKey] = message;
+      }
+    });
+
+    setState(() {
+      _serverFieldErrors
+        ..clear()
+        ..addAll(normalized);
+    });
+
+    if (customFieldErrors.isNotEmpty) {
+      _customFieldsFormKey.currentState?.applyValidationErrors(customFieldErrors);
+    }
+
+    _textDetailsFormKey.currentState?.validate();
+    if (_requiresLocation ||
+        _serverFieldErrors.keys.any((String key) => key.startsWith('location.'))) {
+      _locationFormKey.currentState?.validate();
+    }
+    final bool shouldValidateInventory =
+        _requiresInventory ||
+            _inventoryVariations.isNotEmpty ||
+            _serverFieldErrors.keys.any((String key) => key.startsWith('inventory.'));
+    if (shouldValidateInventory) {
+      _inventoryFormKey.currentState?.validate();
+    }
+  }
+
+  String? _firstNormalizedServerErrorKey(Map<String, List<String>> errors) {
+    for (final String rawKey in errors.keys) {
+      final String normalized = _normalizeServerFieldKey(rawKey);
+      if (normalized.isNotEmpty) {
+        return normalized;
+      }
+    }
+    return null;
+  }
+
+  _WizardStepId? _stepForErrorKey(String key) {
+    if (key.startsWith('custom_fields.')) {
+      return _WizardStepId.customFields;
+    }
+    if (key.startsWith('media')) {
+      return _WizardStepId.media;
+    }
+    if (key.startsWith('location.') || key.startsWith('inventory.')) {
+      return _WizardStepId.locationInventory;
+    }
+    if (key.startsWith('sub_category')) {
+      return _WizardStepId.subCategory;
+    }
+    if (key.startsWith('main_category') || key.startsWith('interface_type')) {
+      return _WizardStepId.mainCategory;
+    }
+    const Set<String> textDetailKeys = <String>{
+      'title',
+      'description',
+      'price',
+      'contact',
+      'currency',
+      'product_link',
+      'review_link',
+      'video_links',
+    };
+    if (textDetailKeys.contains(key)) {
+      return _WizardStepId.textDetails;
+    }
+    return null;
+  }
+
 
   String get _draftCacheKey => _cacheKeyFor(_draftId ?? widget.initialDraftId);
 
@@ -799,6 +932,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     });
 
     if (didAdd) {
+      _clearServerFieldError('media');
       _markDirty();
     }
   }
@@ -850,6 +984,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       });
 
       if (didAdd) {
+        _clearServerFieldError('media');
         _markDirty();
       }
     } catch (error) {
@@ -867,6 +1002,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     setState(() {
       _mediaFiles.remove(media);
     });
+    _clearServerFieldError('media');
     _markDirty();
   }
 
@@ -889,6 +1025,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       _videoLinks.add(raw);
       _videoLinkFieldController.clear();
     });
+    _clearServerFieldError('media');
     FocusScope.of(context).unfocus();
     _markDirty();
   }
@@ -897,6 +1034,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     setState(() {
       _videoLinks.remove(link);
     });
+    _clearServerFieldError('media');
     _markDirty();
   }
 
@@ -1007,7 +1145,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     if (trimmed.length < 10 || trimmed.length > 90) {
       return 'العنوان يجب أن يكون بين 10 و90 حرفًا.';
     }
-    return null;
+    return _serverFieldErrors['title'];
   }
 
   String? _validateDescription(String? value) {
@@ -1018,7 +1156,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     if (trimmed.length > 1200) {
       return 'الوصف طويل جدًا. يرجى تقليصه إلى 1200 حرف كحد أقصى.';
     }
-    return null;
+    return _serverFieldErrors['description'];
   }
 
   String? _validatePrice(String? value) {
@@ -1030,7 +1168,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     if (parsed == null || parsed <= 0) {
       return 'يرجى إدخال سعر صالح أكبر من صفر.';
     }
-    return null;
+    return _serverFieldErrors['price'];
   }
 
   String? _validateContact(String? value) {
@@ -1045,19 +1183,26 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     if (!RegExp(r'^[0-9]+$').hasMatch(normalized)) {
       return 'رقم التواصل يجب أن يحتوي على أرقام فقط بعد المقدمة.';
     }
-    return null;
+    return _serverFieldErrors['contact'];
   }
 
-  String? _validateSheinUrl(String? value) {
+  String? _validateSheinProductLink(String? value) =>
+      _validateSheinUrlInternal(value, 'product_link');
+
+  String? _validateSheinReviewLink(String? value) =>
+      _validateSheinUrlInternal(value, 'review_link');
+
+  String? _validateSheinUrlInternal(String? value, String key) {
+
     final String trimmed = value?.trim() ?? '';
     if (trimmed.isEmpty) {
-      return null;
+      return _serverFieldErrors[key];
     }
     final Uri? uri = Uri.tryParse(trimmed);
     if (uri == null || !uri.hasScheme || uri.scheme == 'file') {
       return 'يرجى إدخال رابط صالح.';
     }
-    return null;
+    return _serverFieldErrors[key];
   }
 
 
@@ -1157,6 +1302,20 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     }
     setState(() => _currentStep = currentIndex - 1);
   }
+
+  void _jumpToStep(_WizardStepId stepId) {
+    final List<_WizardStep> steps = _visibleSteps;
+    if (steps.isEmpty) {
+      return;
+    }
+    final int index = steps.indexWhere((step) => step.id == stepId);
+    if (index < 0) {
+      return;
+    }
+    setState(() => _currentStep = index);
+  }
+
+
 
   bool _canProceedFromStep(_WizardStepId stepId) {
     switch (stepId) {
@@ -1296,9 +1455,9 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         final bool contactValid = _validateContact(_contactController.text) == null;
         final bool currencySelected = _selectedCurrency != null;
         final bool sheinProductValid = !_isSheinInterface ||
-            _validateSheinUrl(_sheinProductLinkController.text) == null;
+            _validateSheinProductLink(_sheinProductLinkController.text) == null;
         final bool sheinReviewValid =
-            _validateSheinUrl(_sheinReviewLinkController.text) == null;
+            _validateSheinReviewLink(_sheinReviewLinkController.text) == null;
         return titleValid &&
             descriptionValid &&
             priceValid &&
@@ -1359,6 +1518,31 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     }
     return true;
   }
+
+
+  String? _inventoryFieldError(int index, String field) {
+    return _serverFieldErrors['inventory.variations.$index.$field'];
+  }
+
+  String? _blockErrorFor(String prefix) {
+    for (final MapEntry<String, String> entry in _serverFieldErrors.entries) {
+      if (entry.key == prefix || entry.key.startsWith('$prefix.')) {
+        return entry.value;
+      }
+    }
+    return null;
+  }
+
+  String? _anyBlockErrorFor(Iterable<String> prefixes) {
+    for (final String prefix in prefixes) {
+      final String? error = _blockErrorFor(prefix);
+      if (error != null) {
+        return error;
+      }
+    }
+    return null;
+  }
+
 
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1476,6 +1660,337 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       ),
     );
   }
+
+
+  Widget _buildReviewItem(String label, String value, {bool multiline = false}) {
+    final ThemeData theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: theme.textTheme.bodyMedium,
+            maxLines: multiline ? 4 : null,
+            overflow: multiline ? TextOverflow.ellipsis : TextOverflow.visible,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(String label, Color color) {
+    final ThemeData theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Text(
+        label,
+        style: theme.textTheme.bodySmall?.copyWith(color: color, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+
+  Widget _buildReviewCard({
+    required String title,
+    required List<Widget> content,
+    _WizardStepId? step,
+    Widget? status,
+    String? errorMessage,
+  }) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colors = theme.colorScheme;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(title, style: theme.textTheme.titleMedium),
+                ),
+                if (status != null) ...[
+                  status,
+                  const SizedBox(width: 8),
+                ],
+                if (step != null)
+                  TextButton.icon(
+                    onPressed: _isPublishing ? null : () => _jumpToStep(step),
+                    icon: const Icon(Icons.edit_outlined, size: 18),
+                    label: const Text('تحرير'),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (content.isEmpty)
+              Text('لا توجد بيانات متاحة.', style: theme.textTheme.bodySmall)
+            else
+              ...content,
+            if (errorMessage != null && errorMessage.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                errorMessage,
+                style: theme.textTheme.bodySmall?.copyWith(color: colors.error),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReviewStep() {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colors = theme.colorScheme;
+
+    String displayValue(String value, [String placeholder = 'غير محدد']) {
+      final String trimmed = value.trim();
+      return trimmed.isEmpty ? placeholder : trimmed;
+    }
+
+    final List<_PendingMedia> images =
+    _mediaFiles.where((media) => media.isImage).toList(growable: false);
+    final List<_PendingMedia> videos =
+    _mediaFiles.where((media) => media.isVideo).toList(growable: false);
+    final bool isShein = _isSheinInterface;
+    final String currencyLabel = _currencyLabel;
+    final Map<String, dynamic>? locationSummary = _buildLocationPayload();
+    final List<_InventoryVariation> inventorySummary =
+    List<_InventoryVariation>.from(_inventoryVariations);
+
+    final bool locationComplete = !_requiresLocation || _isLocationDataComplete();
+    final bool inventoryComplete = !_requiresInventory || _isInventoryDataComplete();
+
+    final List<Widget> categoryContent = <Widget>[
+      _buildReviewItem('الفئة الرئيسية', _selectedMainCategory?.name ?? 'غير محدد'),
+      _buildReviewItem('الفئة الفرعية', _selectedSubCategory?.name ?? 'غير محدد'),
+      _buildReviewItem('واجهة العرض', _selectedMainCategory?.interfaceType ?? 'غير محدد'),
+    ];
+
+    final List<Widget> textDetailContent = <Widget>[
+      _buildReviewItem('العنوان', displayValue(_titleController.text)),
+      _buildReviewItem('الوصف', displayValue(_descriptionController.text), multiline: true),
+      _buildReviewItem(
+        'السعر',
+        displayValue(
+          _priceController.text.isEmpty
+              ? ''
+              : '${_priceController.text.trim()} $currencyLabel',
+        ),
+      ),
+      _buildReviewItem('رقم التواصل', displayValue(_contactController.text)),
+    ];
+    if (isShein) {
+      textDetailContent.add(
+        _buildReviewItem(
+          'رابط المنتج',
+          displayValue(_sheinProductLinkController.text, 'غير متوفر'),
+          multiline: true,
+        ),
+      );
+      textDetailContent.add(
+        _buildReviewItem(
+          'رابط المراجعة',
+          displayValue(_sheinReviewLinkController.text, 'غير متوفر'),
+          multiline: true,
+        ),
+      );
+    }
+
+    final List<Widget> customFieldContent;
+    if (_customFieldSchemas.isEmpty) {
+      customFieldContent = <Widget>[
+        Text('لا توجد حقول مخصّصة لهذه الفئة.', style: theme.textTheme.bodySmall),
+      ];
+    } else if (_customFieldValues.isEmpty) {
+      customFieldContent = <Widget>[
+        Text('لم يتم إدخال بيانات الحقول المخصّصة.', style: theme.textTheme.bodySmall),
+      ];
+    } else {
+      customFieldContent = _customFieldSchemas
+          .map((CustomFieldSchema field) {
+        final dynamic value = _customFieldValues[field.id];
+        final String formatted = field.formatValue(value);
+        return _buildReviewItem(
+          field.label,
+          displayValue(formatted, 'غير محدد'),
+          multiline: true,
+        );
+      })
+          .toList(growable: false);
+    }
+
+    final List<Widget> mediaContent = <Widget>[];
+    if (images.isEmpty && videos.isEmpty && _videoLinks.isEmpty) {
+      mediaContent.add(Text('لم تتم إضافة وسائط.', style: theme.textTheme.bodySmall));
+    } else {
+      if (images.isNotEmpty) {
+        mediaContent.add(_buildReviewItem('عدد الصور', '${images.length}'));
+      }
+      if (videos.isNotEmpty) {
+        mediaContent.add(_buildReviewItem('عدد الفيديوهات', '${videos.length}'));
+      }
+      if (_videoLinks.isNotEmpty) {
+        mediaContent.add(_buildReviewItem('روابط الفيديو', '${_videoLinks.length} رابط'));
+        mediaContent.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _videoLinks
+                  .map((String link) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(link, style: theme.textTheme.bodySmall),
+              ))
+                  .toList(growable: false),
+            ),
+          ),
+        );
+      }
+    }
+
+    final List<Widget> locationContent;
+    if (locationSummary == null || locationSummary.isEmpty) {
+      locationContent = <Widget>[
+        Text(
+          _requiresLocation
+              ? 'لم يتم تحديد الموقع بعد. هذه الخطوة مطلوبة.'
+              : 'لم يتم تحديد موقع (اختياري).',
+          style: theme.textTheme.bodySmall,
+        ),
+      ];
+    } else {
+      locationContent = <Widget>[
+        _buildReviewItem(
+          'العنوان',
+          displayValue(locationSummary['address']?.toString() ?? ''),
+          multiline: true,
+        ),
+        _buildReviewItem(
+          'خط العرض',
+          displayValue(locationSummary['latitude']?.toString() ?? ''),
+        ),
+        _buildReviewItem(
+          'خط الطول',
+          displayValue(locationSummary['longitude']?.toString() ?? ''),
+        ),
+      ];
+    }
+
+    final List<Widget> inventoryContent;
+    if (inventorySummary.isEmpty) {
+      inventoryContent = <Widget>[
+        Text(
+          _requiresInventory
+              ? 'لم يتم إضافة أي تنويعات بعد. هذه الخطوة مطلوبة قبل النشر.'
+              : 'لم يتم إضافة تنويعات (اختياري).',
+          style: theme.textTheme.bodySmall,
+        ),
+      ];
+    } else {
+      inventoryContent = <Widget>[
+        for (int i = 0; i < inventorySummary.length; i++)
+          Padding(
+            padding: EdgeInsets.only(bottom: i == inventorySummary.length - 1 ? 0 : 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  displayValue(
+                    inventorySummary[i].name,
+                    'تنويعة ${i + 1}',
+                  ),
+                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'السعر: ${displayValue(inventorySummary[i].priceText.isEmpty ? '' : '${inventorySummary[i].priceText.trim()} $currencyLabel', 'غير محدد')}',
+                  style: theme.textTheme.bodySmall,
+                ),
+                Text(
+                  'الكمية: ${displayValue(inventorySummary[i].quantityText, 'غير محددة')}',
+                  style: theme.textTheme.bodySmall,
+                ),
+                if (inventorySummary[i].sku.trim().isNotEmpty)
+                  Text('SKU: ${inventorySummary[i].sku.trim()}',
+                      style: theme.textTheme.bodySmall),
+              ],
+            ),
+          ),
+      ];
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _buildReviewCard(
+          title: 'الفئات',
+          step: _WizardStepId.mainCategory,
+          content: categoryContent,
+          errorMessage:
+          _anyBlockErrorFor(const <String>['main_category_id', 'sub_category_id', 'interface_type']),
+        ),
+        _buildReviewCard(
+          title: 'التفاصيل النصية',
+          step: _WizardStepId.textDetails,
+          content: textDetailContent,
+          errorMessage: _anyBlockErrorFor(
+            const <String>['title', 'description', 'price', 'contact', 'currency', 'product_link', 'review_link'],
+          ),
+        ),
+        if (_customFieldSchemas.isNotEmpty)
+          _buildReviewCard(
+            title: 'الحقول المخصّصة',
+            step: _WizardStepId.customFields,
+            content: customFieldContent,
+            errorMessage: _blockErrorFor('custom_fields'),
+          ),
+        _buildReviewCard(
+          title: 'الوسائط',
+          step: _WizardStepId.media,
+          content: mediaContent,
+          errorMessage: _blockErrorFor('media'),
+        ),
+        if (_requiresLocation || locationSummary != null)
+          _buildReviewCard(
+            title: 'الموقع',
+            step: _WizardStepId.locationInventory,
+            status: _buildStatusChip(
+              locationComplete ? 'مكتمل' : 'ناقص',
+              locationComplete ? colors.tertiary : colors.error,
+            ),
+            content: locationContent,
+            errorMessage: _blockErrorFor('location'),
+          ),
+        if (_requiresInventory || inventorySummary.isNotEmpty)
+          _buildReviewCard(
+            title: 'تنويعات المخزون',
+            step: _WizardStepId.locationInventory,
+            status: _buildStatusChip(
+              inventoryComplete ? 'مكتمل' : 'ناقص',
+              inventoryComplete ? colors.tertiary : colors.error,
+            ),
+            content: inventoryContent,
+            errorMessage: _blockErrorFor('inventory'),
+          ),
+      ],
+    );
+  }
+
 
   Widget _buildStepBody(List<_WizardStep> steps, int currentIndex) {
     if (steps.isEmpty) {
@@ -1614,7 +2129,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
           if (trimmed.isEmpty) {
             return 'يرجى إدخال العنوان.';
           }
-          return null;
+          return _serverFieldErrors['location.address'];
         },
       ),
       const SizedBox(height: 16),
@@ -1656,7 +2171,11 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         ),
       if (hasVariations)
         ..._inventoryVariations
-            .map((variation) => _buildVariationCard(variation, requiresInventory)),
+            .asMap()
+            .entries
+            .map((MapEntry<int, _InventoryVariation> entry) =>
+            _buildVariationCard(entry.value, requiresInventory, entry.key)),
+
       Align(
         alignment: Alignment.centerLeft,
         child: OutlinedButton.icon(
@@ -1671,6 +2190,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   Widget _buildVariationCard(
       _InventoryVariation variation,
       bool requiresInventory,
+      int index,
       ) {
     final ThemeData theme = Theme.of(context);
     return Card(
@@ -1698,10 +2218,14 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
             TextFormField(
               key: ValueKey<String>('variation_name_${variation.id}'),
               initialValue: variation.name,
-              decoration: const InputDecoration(labelText: 'اسم التنويعة'),
+              decoration: InputDecoration(
+                labelText: 'اسم التنويعة',
+                errorText: _inventoryFieldError(index, 'name'),
+              ),
               textInputAction: TextInputAction.next,
               onChanged: (String value) {
                 setState(() => variation.name = value);
+                _clearServerFieldError('inventory.variations.$index.name');
                 _markDirty();
               },
               validator: (String? value) {
@@ -1709,16 +2233,17 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
                 if (trimmed.isEmpty && requiresInventory) {
                   return 'يرجى إدخال اسم للتنويعة.';
                 }
-                return null;
+                return _inventoryFieldError(index, 'name');
               },
             ),
             const SizedBox(height: 12),
             TextFormField(
               key: ValueKey<String>('variation_sku_${variation.id}'),
               initialValue: variation.sku,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'المعرف (SKU)',
                 helperText: 'اختياري لتتبع المخزون الداخلي.',
+                errorText: _inventoryFieldError(index, 'sku'),
               ),
               textInputAction: TextInputAction.next,
               onChanged: (String value) {
@@ -1730,7 +2255,10 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
             TextFormField(
               key: ValueKey<String>('variation_price_${variation.id}'),
               initialValue: variation.priceText,
-              decoration: const InputDecoration(labelText: 'السعر'),
+              decoration: InputDecoration(
+                labelText: 'السعر',
+                errorText: _inventoryFieldError(index, 'price'),
+              ),
               keyboardType:
               const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: <TextInputFormatter>[
@@ -1738,6 +2266,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
               ],
               onChanged: (String value) {
                 setState(() => variation.priceText = value);
+                _clearServerFieldError('inventory.variations.$index.price');
                 _markDirty();
               },
               validator: (String? value) {
@@ -1756,13 +2285,17 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
             TextFormField(
               key: ValueKey<String>('variation_quantity_${variation.id}'),
               initialValue: variation.quantityText,
-              decoration: const InputDecoration(labelText: 'الكمية المتاحة'),
+              decoration: InputDecoration(
+                labelText: 'الكمية المتاحة',
+                errorText: _inventoryFieldError(index, 'quantity'),
+              ),
               keyboardType: TextInputType.number,
               inputFormatters: <TextInputFormatter>[
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
               ],
               onChanged: (String value) {
                 setState(() => variation.quantityText = value);
+                _clearServerFieldError('inventory.variations.$index.quantity');
                 _markDirty();
               },
               validator: (String? value) {
@@ -1774,7 +2307,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
                 if (parsed == null || parsed < 0) {
                   return 'يرجى إدخال كمية صحيحة (0 أو أكثر).';
                 }
-                return null;
+                return _inventoryFieldError(index, 'quantity');
               },
             ),
           ],
@@ -1792,6 +2325,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         ),
       ];
     });
+    _clearServerFieldError('inventory');
     _inventoryFormKey.currentState?.validate();
     _markDirty();
   }
@@ -1802,6 +2336,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
           .where((_) => _.id != variation.id)
           .toList(growable: false);
     });
+    _clearServerFieldError('inventory');
     _inventoryFormKey.currentState?.validate();
     _markDirty();
   }
@@ -1815,7 +2350,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     if (parsed == null || parsed < -90 || parsed > 90) {
       return 'القيمة يجب أن تكون بين -90 و 90.';
     }
-    return null;
+    return _serverFieldErrors['location.latitude'];
   }
 
   String? _validateLongitudeField(String? value) {
@@ -1827,7 +2362,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     if (parsed == null || parsed < -180 || parsed > 180) {
       return 'القيمة يجب أن تكون بين -180 و 180.';
     }
-    return null;
+    return _serverFieldErrors['location.longitude'];
   }
 
 
@@ -2319,7 +2854,10 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
                 decoration: const InputDecoration(
                   labelText: 'أدخل رابط فيديو (يوتيوب أو ملف مباشر)',
                 ),
-                onChanged: (_) => setState(() {}),
+                onChanged: (_) {
+                  _clearServerFieldError('media');
+                  setState(() {});
+                },
               ),
             ),
             const SizedBox(width: 12),
@@ -2359,49 +2897,121 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
 
 
 
-  Future<void> _publishAd() async {
+  bool _runPrePublishChecklist() {
     if (_selectedMainCategory == null) {
       _showMessage('يرجى اختيار الفئة الرئيسية قبل النشر.');
-      return;
+      _jumpToStep(_WizardStepId.mainCategory);
+      return false;
     }
-    if (_selectedSubCategory == null) {
+    final _MainCategoryOption? mainCategory = _selectedMainCategory;
+    if (mainCategory != null && mainCategory.subCategories.isNotEmpty &&
+        _selectedSubCategory == null) {
       _showMessage('يرجى اختيار الفئة الفرعية قبل النشر.');
-      return;
+      _jumpToStep(_WizardStepId.subCategory);
+      return false;
     }
     if (_customFieldSchemas.isNotEmpty) {
       final bool valid = _customFieldsFormKey.currentState?.validate() ?? true;
       if (!valid) {
         _showMessage('يرجى إكمال الحقول المخصّصة المطلوبة قبل النشر.');
-        return;
+        _jumpToStep(_WizardStepId.customFields);
+        return false;
       }
     }
     if (!_validateMediaStep()) {
-      return;
+      _jumpToStep(_WizardStepId.media);
+      return false;
     }
     if (!_validateTextDetailsStep()) {
-      return;
+      _jumpToStep(_WizardStepId.textDetails);
+      return false;
     }
 
     if ((_requiresLocation || _requiresInventory ||
         _inventoryVariations.isNotEmpty) &&
         !_validateStepFive()) {
+
+      _jumpToStep(_WizardStepId.locationInventory);
+      return false;
+    }
+    if (_requiresInventory && !_isInventoryDataComplete()) {
+      _showMessage('يرجى إكمال بيانات تنويعات المخزون قبل النشر.');
+      _jumpToStep(_WizardStepId.locationInventory);
+      return false;
+    }
+    if (_requiresLocation && !_isLocationDataComplete()) {
+      _showMessage('يرجى تحديد موقع الإعلان بشكل كامل قبل النشر.');
+      _jumpToStep(_WizardStepId.locationInventory);
+      return false;
+    }
+    return true;
+  }
+
+  Map<String, dynamic> _buildPublishTelemetryContext(AdPublishResult result) {
+    final int imageCount =
+        _mediaFiles.where((media) => media.isImage).length;
+    final int videoCount =
+        _mediaFiles.where((media) => media.isVideo).length;
+    final Map<String, dynamic>? locationPayload = _buildLocationPayload();
+    return <String, dynamic>{
+      'draft_id': result.draftId ?? _draftId ?? 'new',
+      'status': result.status ?? 'unknown',
+      'images': imageCount,
+      'videos': videoCount,
+      'video_links': _videoLinks.length,
+      'variations': _inventoryVariations.length,
+      'has_location': locationPayload != null,
+    };
+  }
+
+  Future<void> _publishAd() async {
+    _resetServerValidationState();
+    if (!_runPrePublishChecklist()) {
+
       return;
     }
 
     setState(() => _isPublishing = true);
     try {
       final Map<String, dynamic> payload = _buildAdPayload(isDraft: false);
-      await _adPublishingService.publish(payload);
+      final AdPublishResult result = await _adPublishingService.publish(
+        payload: payload,
+        draftId: _draftId,
+        cacheKey: _draftCacheKey,
+      );
       if (!mounted) {
         return;
       }
       setState(() {
         _hasUnsavedChanges = false;
+        if (result.draftId != null) {
+          _draftId = result.draftId.toString();
+        }
       });
-      _showMessage('تم إرسال الإعلان للنشر بنجاح.');
+      AppTelemetry.record('ad.publish.success', _buildPublishTelemetryContext(result));
+      _showMessage(result.message);
+    } on PublishValidationException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _applyServerValidationErrors(error.fieldErrors);
+      final String? firstKey = _firstNormalizedServerErrorKey(error.fieldErrors);
+      if (firstKey != null) {
+        final _WizardStepId? step = _stepForErrorKey(firstKey);
+        if (step != null) {
+          _jumpToStep(step);
+        }
+      }
+      AppTelemetry.record('ad.publish.validation_failed', <String, dynamic>{
+        'message': error.message,
+        if (firstKey != null) 'field': firstKey,
+      });
+      _showMessage(error.message);
     } catch (error) {
       if (mounted) {
-        _showMessage('تعذّر نشر الإعلان: $error');
+        AppTelemetry.record('ad.publish.error', <String, dynamic>{
+          'message': error.toString(),
+        });
       }
     } finally {
       if (mounted) {
@@ -2505,8 +3115,10 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
                 flex: 2,
                 child: DropdownButtonFormField<String>(
                   value: _selectedCurrency,
-                  decoration: const InputDecoration(
+                  decoration:  InputDecoration(
                     labelText: 'العملة',
+                    errorText: _serverFieldErrors['currency'],
+
                   ),
                   items: _currencyOptions.entries
                       .map(
@@ -2518,9 +3130,16 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
                       .toList(growable: false),
                   onChanged: (String? value) {
                     setState(() => _selectedCurrency = value);
+                    _clearServerFieldError('currency');
+
                     _markDirty();
                   },
-                  validator: (String? value) => value == null ? 'يرجى اختيار العملة.' : null,
+                  validator: (String? value) {
+                    if (value == null) {
+                      return 'يرجى اختيار العملة.';
+                    }
+                    return _serverFieldErrors['currency'];
+                  },
                 ),
               ),
             ],
@@ -2553,7 +3172,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
               decoration: const InputDecoration(
                 labelText: 'رابط المنتج في شي إن',
               ),
-              validator: _validateSheinUrl,
+              validator: _validateSheinProductLink,
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -2563,124 +3182,11 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
               decoration: const InputDecoration(
                 labelText: 'رابط مراجعة موثوقة (اختياري)',
               ),
-              validator: _validateSheinUrl,
+              validator: _validateSheinReviewLink,
             ),
           ],
         ],
       ),
-    );
-  }
-
-  Widget _buildReviewStep() {
-    final ThemeData theme = Theme.of(context);
-    final List<_PendingMedia> images =
-    _mediaFiles.where((media) => media.isImage).toList(growable: false);
-    final List<_PendingMedia> videos =
-    _mediaFiles.where((media) => media.isVideo).toList(growable: false);
-    final bool isShein = _isSheinInterface;
-    final List<Widget> customFieldSummary = _customFieldSummary;
-    final String currencyLabel = _currencyLabel;
-
-    final Map<String, dynamic>? locationSummary = _buildLocationPayload();
-    final List<_InventoryVariation> inventorySummary = _inventoryVariations
-        .where((variation) => variation.isComplete)
-        .toList(growable: false);
-
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Text('معلومات الإعلان', style: theme.textTheme.titleMedium),
-        const SizedBox(height: 8),
-        Text('العنوان: ${_titleController.text.isEmpty ? 'غير محدد' : _titleController.text}'),
-        const SizedBox(height: 6),
-        Text('الوصف: ${_descriptionController.text.isEmpty ? 'غير محدد' : _descriptionController.text}'),
-        const SizedBox(height: 6),
-        Text('السعر: ${_priceController.text.isEmpty ? 'غير محدد' : _priceController.text} $currencyLabel'),
-        const SizedBox(height: 6),
-        Text('رقم التواصل: ${_contactController.text.isEmpty ? 'غير محدد' : _contactController.text}'),
-        const Divider(height: 32),
-        Text('الفئة الرئيسية: ${_selectedMainCategory?.name ?? 'غير محدد'}'),
-        const SizedBox(height: 8),
-        Text('الفئة الفرعية: ${_selectedSubCategory?.name ?? 'غير محدد'}'),
-        const SizedBox(height: 8),
-        Text('واجهة العرض: ${_selectedMainCategory?.interfaceType ?? 'غير محدد'}'),
-        const Divider(height: 32),
-        Text('الحقول المخصّصة', style: theme.textTheme.titleMedium),
-        const SizedBox(height: 8),
-        if (customFieldSummary.isEmpty)
-          Text('لا توجد قيم محفوظة للحقول المخصّصة.', style: theme.textTheme.bodySmall)
-        else
-          ...customFieldSummary,
-
-
-        if (locationSummary != null) ...[
-          const Divider(height: 32),
-          Text('الموقع', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Text('العنوان: ${locationSummary['address']}'),
-          Text('خط العرض: ${locationSummary['latitude']}'),
-          Text('خط الطول: ${locationSummary['longitude']}'),
-        ],
-
-        if (inventorySummary.isNotEmpty) ...[
-          const Divider(height: 32),
-          Text('تنويعات المخزون', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 8),
-          ...inventorySummary.map((variation) {
-            final String price = variation.priceText.trim();
-            final String quantity = variation.quantityText.trim();
-            final String sku = variation.sku.trim();
-            final String name =
-            variation.name.trim().isEmpty ? 'تنويعة بدون اسم' : variation.name.trim();
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text('السعر: ${price.isEmpty ? 'غير محدد' : price}'),
-                  Text('الكمية: ${quantity.isEmpty ? 'غير محددة' : quantity}'),
-                  if (sku.isNotEmpty) Text('SKU: $sku'),
-                ],
-              ),
-            );
-          }),
-        ],
-
-        const Divider(height: 32),
-        Text('الوسائط', style: theme.textTheme.titleMedium),
-        const SizedBox(height: 8),
-        if (images.isEmpty && videos.isEmpty && _videoLinks.isEmpty)
-          Text('لم تتم إضافة وسائط.', style: theme.textTheme.bodySmall)
-        else ...[
-          if (images.isNotEmpty)
-            Text('عدد الصور: ${images.length}', style: theme.textTheme.bodyMedium),
-          if (videos.isNotEmpty)
-            Text('عدد الفيديوهات: ${videos.length}', style: theme.textTheme.bodyMedium),
-          if (_videoLinks.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text('روابط الفيديو:', style: theme.textTheme.bodyMedium),
-            const SizedBox(height: 4),
-            ..._videoLinks.map((String link) => Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(link, style: theme.textTheme.bodySmall),
-            )),
-          ],
-        ],
-        if (isShein) ...[
-          const Divider(height: 32),
-          Text('تفاصيل قسم شي إن', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Text('رابط المنتج: ${_sheinProductLinkController.text.isEmpty ? 'غير متوفر' : _sheinProductLinkController.text}'),
-          const SizedBox(height: 6),
-          Text('رابط المراجعة: ${_sheinReviewLinkController.text.isEmpty ? 'غير متوفر' : _sheinReviewLinkController.text}'),
-        ],
-      ],
     );
   }
 }

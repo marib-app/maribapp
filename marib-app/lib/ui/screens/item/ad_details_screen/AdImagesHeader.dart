@@ -352,8 +352,7 @@ class _AdImageHeaderState extends State<AdImageHeader> {
               width: double.infinity,
               height: double.infinity,
               fit: BoxFit.cover,
-              cacheWidth: kAdDetailImageMaxEdge,
-              cacheHeight: kAdDetailImageMaxEdge,
+
               filterQuality: FilterQuality.high,
             ),
             placeholder: (context, url) => const ShimmerBox(
@@ -375,8 +374,7 @@ class _AdImageHeaderState extends State<AdImageHeader> {
                     width: double.infinity,
                     height: double.infinity,
                     fit: BoxFit.cover,
-                    cacheWidth: kAdDetailImageMaxEdge,
-                    cacheHeight: kAdDetailImageMaxEdge,
+
                     filterQuality: FilterQuality.high,
                   ),
                   placeholder: (context, _) => const ShimmerBox(

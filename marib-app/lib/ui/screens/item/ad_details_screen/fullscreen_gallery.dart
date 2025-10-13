@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'ad_image_source.dart';
+import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 
 class FullscreenGalleryPage extends StatefulWidget {
   final List<AdImageSource> images;
@@ -328,9 +329,18 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
                       memCacheHeight: kAdDetailImageMaxEdge,
                       maxWidthDiskCache: kAdDetailImageMaxEdge,
                       maxHeightDiskCache: kAdDetailImageMaxEdge,
-                      placeholder: (_, __) => Container(color: Colors.white10),
-                      errorWidget: (_, __, ___) =>
-                      const Icon(Icons.broken_image_outlined, color: Colors.white54),
+                      placeholder: (_, __) => const ShimmerBox(
+                        width: double.infinity,
+                        height: double.infinity,
+                        borderRadius: BorderRadius.zero,
+                      ),
+                      errorWidget: (_, __, ___) => ShimmerBox(
+                        width: double.infinity,
+                        height: double.infinity,
+                        borderRadius: BorderRadius.zero,
+                        animate: false,
+                        baseColor: Colors.white24,
+                      ),
                     ),
                   ),
                 ),

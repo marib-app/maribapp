@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'fullscreen_gallery.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 import 'ad_image_source.dart';
+import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 
 
 
@@ -346,7 +347,11 @@ class _AdImageHeaderState extends State<AdImageHeader> {
             memCacheHeight: kAdDetailImageMaxEdge,
             maxWidthDiskCache: kAdDetailImageMaxEdge,
             maxHeightDiskCache: kAdDetailImageMaxEdge,
-            placeholder: (context, url) => Container(color: Colors.grey[200]),
+            placeholder: (context, url) => const ShimmerBox(
+              width: double.infinity,
+              height: double.infinity,
+              borderRadius: BorderRadius.zero,
+            ),
             errorWidget: (context, url, error) {
               if (imageSource.hasOptimizedVariant) {
                 return CachedNetworkImage(
@@ -356,12 +361,27 @@ class _AdImageHeaderState extends State<AdImageHeader> {
                   memCacheHeight: kAdDetailImageMaxEdge,
                   maxWidthDiskCache: kAdDetailImageMaxEdge,
                   maxHeightDiskCache: kAdDetailImageMaxEdge,
-                  placeholder:
-                      (context, _) => Container(color: Colors.grey[200]),
-                  errorWidget: (context, _, __) => const Icon(Icons.error),
+                  placeholder: (context, _) => const ShimmerBox(
+                    width: double.infinity,
+                    height: double.infinity,
+                    borderRadius: BorderRadius.zero,
+                  ),
+                  errorWidget: (context, _, __) => ShimmerBox(
+                    width: double.infinity,
+                    height: double.infinity,
+                    borderRadius: BorderRadius.zero,
+                    animate: false,
+                    baseColor: Colors.grey.shade300,
+                  ),
                 );
               }
-              return const Icon(Icons.error);
+              return ShimmerBox(
+                width: double.infinity,
+                height: double.infinity,
+                borderRadius: BorderRadius.zero,
+                animate: false,
+                baseColor: Colors.grey.shade300,
+              );
             },
           ),
         );

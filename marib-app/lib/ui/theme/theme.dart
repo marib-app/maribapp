@@ -24,6 +24,7 @@ Color primaryColorDark = const Color(0xff121212);
 Color secondaryColorDark = const Color(0xff1C1C1C).brighten(5);
 const Color territoryColorDark = Color(0xffEB5924);
 Color deactivateColorLight = const Color(0xff7F7F7F);
+const Color deactivateColorDark = Color(0xFF3D3D3D);
 
 const Color forthColorDark = Color(0xffEB5924);
 Color backgroundColorDark = primaryColorDark; //here you can change if you need
@@ -68,7 +69,7 @@ extension ColorPrefs on ColorScheme {
       lightColor: territoryColor_, darkColor: territoryColorDark);
 
   Color get deactivateColor => _getColor(brightness,
-      lightColor: deactivateColorLight, darkColor: backgroundColorDark);
+      lightColor: deactivateColorLight, darkColor: deactivateColorDark);
 
   Color get forthColor =>
       _getColor(brightness, lightColor: forthColor_, darkColor: forthColorDark);
@@ -78,7 +79,8 @@ extension ColorPrefs on ColorScheme {
 
   Color get buttonColor => buttonTextColor;
 
-    Color get textColor => ligttextColor;
+  Color get textColor => _getColor(brightness,
+      lightColor: textDarkColor, darkColor: textColorDarkTheme);
 
   Color get textColorDark => _getColor(brightness,
       lightColor: textDarkColor, darkColor: textColorDarkTheme);

@@ -418,10 +418,10 @@ class _MobileVerificationScreenState extends State<MobileVerificationScreen> {
                   children: [
                     const SizedBox(height: 40),
                     SvgPicture.asset('assets/svg/Logo.svg',
-                        height: 90, color: Colors.white),
+                        height: 90, color: context.color.buttonColor),
                     Text("readytoserve".translate(context))
                         .size(context.font.large)
-                        .color(context.color.textColor),
+                        .color(context.color.buttonColor),
                     const SizedBox(height: 20),
                     Expanded(
                       child: Container(
@@ -558,7 +558,7 @@ class _MobileVerificationScreenState extends State<MobileVerificationScreen> {
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor:
                                             context.color.territoryColor,
-                                        foregroundColor: Colors.white,
+                                        foregroundColor: context.color.buttonColor,
                                         shape: RoundedRectangleBorder(
                                           borderRadius:
                                               BorderRadius.circular(8),

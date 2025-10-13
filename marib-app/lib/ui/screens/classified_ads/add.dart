@@ -12,6 +12,7 @@ import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marquee/marquee.dart';
 import 'package:marib/utils/screen_scaler.dart';
+import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 
 
 
@@ -89,13 +90,19 @@ class AddClassified extends StatelessWidget {
                       child: CachedNetworkImage(
                         imageUrl: classified.image!,
                         fit: BoxFit.cover,
-                        placeholder: (ctx, _) => Container(
-                          color: context.color.secondaryColor,
-                          child: const Center(child: CircularProgressIndicator()),
+                        placeholder: (_, __) => ShimmerBox(
+                          width: ScreenScaler.s(100),
+                          height: ScreenScaler.s(25),
+                          borderRadius:
+                          BorderRadius.circular(ScreenScaler.s(1.5)),
                         ),
-                        errorWidget: (_, __, ___) => Container(
-                          color: Colors.grey[300],
-                          child: const Icon(Icons.broken_image),
+                        errorWidget: (_, __, ___) => ShimmerBox(
+                          width: ScreenScaler.s(100),
+                          height: ScreenScaler.s(25),
+                          borderRadius:
+                          BorderRadius.circular(ScreenScaler.s(1.5)),
+                          animate: false,
+                          baseColor: Colors.grey.shade300,
                         ),
                       ),
                     ),

@@ -15,6 +15,7 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/constant.dart';
 import 'hive_utils.dart';
 import 'package:timeago/timeago.dart' as timeago_ar show setLocaleMessages;
+import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -115,13 +116,19 @@ class _AdaptiveNetworkImageState extends State<_AdaptiveNetworkImage> {
       memCacheHeight: widget.cacheHeight,
       maxWidthDiskCache: widget.cacheWidth,
       maxHeightDiskCache: widget.cacheHeight,
-      placeholder: (context, _) =>
-          UiUtils._buildImagePlaceholder(context, widget.width, widget.height),
+      placeholder: (context, _) => UiUtils._buildImagePlaceholder(
+        context,
+        widget.width,
+        widget.height,
+      ),
       errorWidget: (context, _, __) {
         if (_currentIndex < widget.urls.length - 1) {
           _scheduleNextCandidate();
           return UiUtils._buildImagePlaceholder(
-              context, widget.width, widget.height);
+            context,
+            widget.width,
+            widget.height,
+          );
         }
         return UiUtils._buildImageError(context, widget.width, widget.height);
       },
@@ -611,19 +618,11 @@ class UiUtils {
       height: height,
       fit: fit!,
       placeholderBuilder: (context) {
-        return Container(
-            width: width,
-            color: context.color.territoryColor.withOpacity(0.1),
-            height: height,
-            alignment: AlignmentDirectional.center,
-            child: SizedBox(
-                width: width,
-                height: height,
-                child: getSvg(
-                  AppIcons.placeHolder,
-                  width: width ?? 70,
-                  height: height ?? 70,
-                )));
+        return ShimmerBox(
+          width: width,
+          height: height,
+          borderRadius: BorderRadius.circular(12),
+        );
       },
     );
   }
@@ -709,28 +708,28 @@ class UiUtils {
   }
 
   static Widget _buildImagePlaceholder(
-      BuildContext context, double? width, double? height) {
-    return Container(
+      BuildContext context,
+      double? width,
+      double? height, {
+        BorderRadius? borderRadius,
+        bool animate = true,
+      }) {
+    return ShimmerBox(
       width: width,
       height: height,
-      color: context.color.territoryColor.withOpacity(0.1),
-      alignment: AlignmentDirectional.center,
-      child: SizedBox(
-        width: width,
-        height: height,
-        child: getSvg(
-          AppIcons.placeHolder,
-          width: width ?? 70,
-          height: height ?? 70,
-        ),
-      ),
+      borderRadius: borderRadius ?? BorderRadius.circular(12),
+      animate: animate,
     );
   }
 
   static Widget _buildImageError(
       BuildContext context, double? width, double? height) {
-    return _buildImagePlaceholder(context, width, height);
-  }
+    return _buildImagePlaceholder(
+      context,
+      width,
+      height,
+      animate: false,
+    );  }
 
 
 

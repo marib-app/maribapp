@@ -6,6 +6,7 @@ import 'package:marquee/marquee.dart';
 import 'package:marib/data/model/category_model.dart';
 import 'package:shimmer/shimmer.dart';
 import 'shimmer_colors.dart';
+import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 
 
 const double _subcatCardRadius = 20.0;
@@ -319,19 +320,12 @@ class _SubcatCircle extends StatelessWidget {
 
     Widget avatar;
     if (useImage) {
-      Widget shimmerTile() => Shimmer.fromColors(
-
+      Widget shimmerTile() => ShimmerBox(
+        width: circleSize,
+        height: circleSize,
+        borderRadius: cardRadius,
             baseColor: shimmerBase,
             highlightColor: shimmerHighlight,
-        period: const Duration(milliseconds: 1150),
-        child: Container(
-              width: circleSize,
-              height: circleSize,
-          decoration: BoxDecoration(
-            borderRadius: cardRadius,
-            color: shimmerContent,
-          ),
-        ),
       );
 
       avatar = ClipRRect(

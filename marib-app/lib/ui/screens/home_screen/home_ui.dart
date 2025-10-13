@@ -6,6 +6,7 @@ import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/home/fetch_home_all_items_cubit.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/ui/screens/home/widgets/grid_list_adapter.dart';
+import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 
 import 'package:marib/ui/screens/item/cards/horizontal_card.dart';
 import 'package:marib/ui/screens/item/cards/sections_adapter.dart';
@@ -735,6 +736,21 @@ class ProfileHeaderUI extends StatelessWidget {
           fit: BoxFit.cover,
           width: double.infinity,
           height: double.infinity,
+          placeholder: (_, __) => ShimmerBox(
+            width: double.infinity,
+            height: double.infinity,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          errorWidget: (_, __, ___) => ShimmerBox(
+            width: double.infinity,
+            height: double.infinity,
+            borderRadius: BorderRadius.circular(999),
+            animate: false,
+            baseColor: Theme.of(context)
+                .colorScheme
+                .surfaceVariant
+                .withOpacity(0.35),
+          ),
         ),
       );
     }

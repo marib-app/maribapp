@@ -195,24 +195,13 @@ extension _ChatTileUi on ChatTile {
 
   Widget _buildAdImage(BuildContext context) {
     if (itemPicture.trim().isEmpty) {
-      return Container(
+      return ShimmerBox(
         width: 44,
         height: 44,
-        decoration: BoxDecoration(
-          color: context.color.territoryColor.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Center(
-          child: SvgPicture.asset(
-            AppIcons.placeHolder,
-            width: 28,
-            height: 28,
-            colorFilter: ColorFilter.mode(
-              context.color.textLightColor,
-              BlendMode.srcIn,
-            ),
-          ),
-        ),
+        borderRadius: BorderRadius.circular(10),
+        animate: false,
+        baseColor: context.color.territoryColor.withOpacity(0.1),
+        highlightColor: context.color.territoryColor.withOpacity(0.2),
       );
     }
 

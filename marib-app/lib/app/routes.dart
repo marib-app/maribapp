@@ -116,7 +116,6 @@ import 'package:marib/ui/screens/classified_ads/service_requests_screen.dart';
 import 'package:marib/ui/screens/home_screen/section/section_screen/widgets/map_search/map_search_screen.dart'; // عدّل المسار حسب موقع الملف الفعلي
 import 'package:marib/ui/screens/wallet/wallet_screen.dart';
 import 'package:marib/ui/screens/cart/orders_list_screen.dart';
-import 'package:marib/ui/screens/auth/sign_up/account_type_selection_screen.dart';
 
 
 
@@ -163,7 +162,6 @@ class Routes {
   static const onboarding = 'onboarding';
   static const login = 'login';
   static const forgotPassword = 'forgotPassword';
-  static const accountTypeSelection = 'accountTypeSelection';
   static const signup = 'signup';
   static const signupMainScreen = 'signUpMainScreen';
   static const mobileSignUp = 'mobileSignUp';

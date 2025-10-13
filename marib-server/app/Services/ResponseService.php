@@ -6,7 +6,6 @@ use App\Exceptions\ResponseServiceTestException;
 use Exception;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\Pagination\Paginator as PaginatorContract;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Redirector;
@@ -184,10 +183,14 @@ class ResponseService
         if ($data instanceof PaginatorContract) {
             [$items, $pagination] = self::formatPaginator($data);
 
-            $data = [
-                $itemsKey   => $items,
-                'pagination' => $pagination,
-            ];
+            $data = array_merge(
+                [
+                    $itemsKey => $items,
+                ],
+                $pagination
+            );
+
+            $data['pagination'] = $pagination;
         }
 
         if (!empty($appendToData)) {
@@ -218,6 +221,18 @@ class ResponseService
      */
     private static function formatPaginator(PaginatorContract $paginator): array
     {
+
+
+
+        $paginatorArray = $paginator->toArray();
+
+        $items = $paginatorArray['data'] ?? $paginator->items();
+
+        if (! is_array($items)) {
+            $items = $paginator->items();
+        }
+
+
         $items = array_map(static function ($item) {
             if (is_array($item)) {
                 return $item;
@@ -228,56 +243,16 @@ class ResponseService
             }
 
             return $item;
-        }, $paginator->items());
+        }, $items);
 
-        $meta = [
-            'current_page' => method_exists($paginator, 'currentPage') ? $paginator->currentPage() : null,
-            'per_page' => method_exists($paginator, 'perPage') ? $paginator->perPage() : null,
-            'has_more_pages' => method_exists($paginator, 'hasMorePages') ? $paginator->hasMorePages() : null,
-            'from' => method_exists($paginator, 'firstItem') ? $paginator->firstItem() : null,
-            'to' => method_exists($paginator, 'lastItem') ? $paginator->lastItem() : null,
-        ];
+        unset($paginatorArray['data']);
 
-        if ($paginator instanceof LengthAwarePaginator) {
-            $meta['last_page'] = $paginator->lastPage();
-            $meta['total'] = $paginator->total();
+
+        if (method_exists($paginator, 'hasMorePages')) {
+            $paginatorArray['has_more_pages'] = $paginator->hasMorePages();
         }
+        return [$items, $paginatorArray];
 
-        $meta = array_filter($meta, static fn ($value) => $value !== null);
-
-        $links = [
-            'first' => method_exists($paginator, 'url') ? $paginator->url(1) : null,
-            'prev' => method_exists($paginator, 'previousPageUrl') ? $paginator->previousPageUrl() : null,
-            'next' => method_exists($paginator, 'nextPageUrl') ? $paginator->nextPageUrl() : null,
-        ];
-
-        if ($paginator instanceof LengthAwarePaginator && method_exists($paginator, 'url')) {
-            $links['last'] = $paginator->url($paginator->lastPage());
-        }
-
-        $links = array_filter($links, static fn ($value) => $value !== null && $value !== false);
-
-
-        $pagination = array_merge(
-            $meta,
-            [
-                'first_page_url' => $links['first'] ?? null,
-                'last_page_url' => $links['last'] ?? null,
-                'prev_page_url' => $links['prev'] ?? null,
-                'next_page_url' => $links['next'] ?? null,
-                'path' => method_exists($paginator, 'path') ? $paginator->path() : null,
-            ]
-        );
-
-        if (!empty($links)) {
-            $pagination['links'] = $links;
-        }
-
-
-
-        $pagination = array_filter($pagination, static fn ($value) => $value !== null);
-
-        return [$items, $pagination];
     }
 
 

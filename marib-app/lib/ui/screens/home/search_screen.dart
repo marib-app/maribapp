@@ -893,12 +893,12 @@ typedef DebounceScope = _DebounceScope;
 
 
 class _SearchDebounceCoordinator {
-  _SearchDebounceCoordinator(this.duration)
-      : _timers = <_DebounceScope, Timer>{};
+  _SearchDebounceCoordinator(this.duration);
+
 
 
   final Duration duration;
-  final Map<_DebounceScope, Timer> _timers;
+  final Map<_DebounceScope, Timer> _timers = <_DebounceScope, Timer>{};
 
 
   void run(_DebounceScope scope, VoidCallback action) {

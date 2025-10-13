@@ -77,6 +77,7 @@ class SystemRepository {
     if (dataMap != null) {
       meta = _mapify(dataMap['meta']);
       meta ??= _mapify(dataMap['pagination']);
+      meta ??= _extractPaginationMeta(dataMap);
       extras ??= _mapify(dataMap['extras']);
     }
 
@@ -89,6 +90,43 @@ class SystemRepository {
       extras: extras,
     );
   }
+
+  Map<String, dynamic>? _extractPaginationMeta(Map<String, dynamic> source) {
+    const Set<String> keys = <String>{
+      'current_page',
+      'per_page',
+      'from',
+      'to',
+      'last_page',
+      'total',
+      'first_page_url',
+      'last_page_url',
+      'next_page_url',
+      'prev_page_url',
+      'path',
+      'has_more_pages',
+    };
+
+    final Map<String, dynamic> meta = <String, dynamic>{};
+
+    for (final String key in keys) {
+      if (source.containsKey(key)) {
+        meta[key] = source[key];
+      }
+    }
+
+    final dynamic links = source['links'];
+    if (links != null) {
+      meta['links'] = links;
+    }
+
+    if (meta.isEmpty) {
+      return null;
+    }
+
+    return meta;
+  }
+
 
   static Map<String, dynamic> normalizeSettingsPayload(dynamic payload) {
     final Map<String, dynamic> values = <String, dynamic>{};
@@ -154,6 +192,14 @@ class SystemRepository {
           'current_page',
           'last_page',
           'has_more_pages',
+          'total',
+          'from',
+          'to',
+          'first_page_url',
+          'last_page_url',
+          'next_page_url',
+          'prev_page_url',
+          'path',
           'pagination',
         };
 
@@ -166,7 +212,15 @@ class SystemRepository {
             continue;
           }
 
-          if (!skipKeys.contains(key) && !values.containsKey(key)) {
+          if (skipKeys.contains(key)) {
+            if ((value is Map || value is Iterable) && key != 'links') {
+              inspect(value);
+            }
+            continue;
+          }
+
+          if (!values.containsKey(key)) {
+
             values[key] = value;
           }
 

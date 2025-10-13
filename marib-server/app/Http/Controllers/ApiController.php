@@ -543,8 +543,15 @@ class ApiController extends Controller {
 
     public function getSystemSettings(Request $request) {
         try {
-            $perPage = $this->resolvePerPage($request, 15, 50);
+            $perPage = $request->integer('per_page', 15) ?? 15;
 
+            if ($perPage <= 0) {
+                $perPage = 15;
+            }
+
+            $perPage = min($perPage, 50);
+
+            
             $settingsQuery = Setting::select(['name', 'value', 'type'])->orderBy('name');
 
 

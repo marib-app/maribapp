@@ -14,6 +14,8 @@ class CategoryRepository {
     List<int>? categoryIds,
     bool onlyAllowed = false,
     Iterable<int> ensureCategoryIds = const <int>[],
+    Iterable<int> allowedCategoryIds = const <int>[],
+
   }) async {
     try {
       Map<String, dynamic> parameters = {
@@ -38,7 +40,9 @@ class CategoryRepository {
       List<CategoryModel> items = parsed.items;
       if (onlyAllowed) {
         final Set<int> required = _normalizeCategoryIds(ensureCategoryIds);
-        items = _filterAllowedCategories(items, required);
+        final Set<int> allowed = _normalizeCategoryIds(allowedCategoryIds);
+        allowed.addAll(required);
+        items = _filterAllowedCategories(items, required, allowed);
       }
 
       return DataOutput(
@@ -134,20 +138,26 @@ class CategoryRepository {
   List<CategoryModel> _filterAllowedCategories(
       Iterable<CategoryModel> categories,
       Set<int> ensureCategoryIds,
+      Set<int> allowedCategoryIds,
       ) {
     final List<CategoryModel> filtered = <CategoryModel>[];
+    final bool restrictByAllowed = allowedCategoryIds.isNotEmpty;
 
     for (final CategoryModel category in categories) {
       final List<CategoryModel> children = _filterAllowedCategories(
         category.children ?? const <CategoryModel>[],
         ensureCategoryIds,
+        allowedCategoryIds,
       );
 
       final int? id = category.id;
       final bool isRequired = id != null && ensureCategoryIds.contains(id);
       final bool childRetained = children.isNotEmpty;
-      final bool isAllowed = _isInterfaceAllowed(category.interfaceType);
-
+      final bool interfaceAllowed = _isInterfaceAllowed(category.interfaceType);
+      final bool explicitlyAllowed = !restrictByAllowed ||
+          (id != null && allowedCategoryIds.contains(id));
+      final bool isAllowed = interfaceAllowed ||
+          (restrictByAllowed && explicitlyAllowed);
       if (!(isAllowed || isRequired || childRetained)) {
         continue;
       }

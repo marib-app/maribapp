@@ -26,6 +26,7 @@ class FetchCategorySuccess extends FetchCategoryState {
   final List<int>? categoryIds;
   final bool onlyAllowed;
   final List<int>? ensureCategoryIds;
+  final List<int>? allowedCategoryIds;
 
 
   FetchCategorySuccess({
@@ -39,6 +40,7 @@ class FetchCategorySuccess extends FetchCategoryState {
     this.categoryIds,
     this.onlyAllowed = false,
     this.ensureCategoryIds,
+    this.allowedCategoryIds,
   });
 
   FetchCategorySuccess copyWith({
@@ -49,6 +51,7 @@ class FetchCategorySuccess extends FetchCategoryState {
     List<CategoryModel>? categories,
     bool? onlyAllowed,
     List<int>? ensureCategoryIds,
+    allowedCategoryIds: allowedCategoryIds ?? this.allowedCategoryIds,
   }) {
     return FetchCategorySuccess(
       total: total ?? this.total,
@@ -61,6 +64,7 @@ class FetchCategorySuccess extends FetchCategoryState {
       categoryIds: categoryIds ?? this.categoryIds,
       onlyAllowed: onlyAllowed ?? this.onlyAllowed,
       ensureCategoryIds: ensureCategoryIds ?? this.ensureCategoryIds,
+      allowedCategoryIds: allowedCategoryIds ?? this.allowedCategoryIds,
     );
   }
 
@@ -76,6 +80,7 @@ class FetchCategorySuccess extends FetchCategoryState {
       'categoryIds': categoryIds,
       'onlyAllowed': onlyAllowed,
       'ensureCategoryIds': ensureCategoryIds,
+      'allowedCategoryIds': allowedCategoryIds,
     };
   }
 
@@ -99,6 +104,9 @@ class FetchCategorySuccess extends FetchCategoryState {
       ensureCategoryIds: (map['ensureCategoryIds'] as List<dynamic>?)
           ?.map((dynamic e) => e as int)
           .toList(),
+      allowedCategoryIds: (map['allowedCategoryIds'] as List<dynamic>?)
+          ?.map((dynamic e) => e as int)
+          .toList(),
     );
   }
 
@@ -109,7 +117,8 @@ class FetchCategorySuccess extends FetchCategoryState {
 
   @override
   String toString() {
-    return 'FetchCategorySuccess(total: $total,  page: $page, isLoadingMore: $isLoadingMore, hasError: $hasError, interfaceType: $interfaceType, categoryId: $categoryId, categoryIds: $categoryIds, onlyAllowed: $onlyAllowed, ensureCategoryIds: $ensureCategoryIds, categories: $categories)';  }
+    return 'FetchCategorySuccess(total: $total,  page: $page, isLoadingMore: $isLoadingMore, hasError: $hasError, interfaceType: $interfaceType, categoryId: $categoryId, categoryIds: $categoryIds, onlyAllowed: $onlyAllowed, ensureCategoryIds: $ensureCategoryIds, allowedCategoryIds: $allowedCategoryIds, categories: $categories)';
+  }
 }
 
 class FetchCategoryFailure extends FetchCategoryState {
@@ -133,8 +142,16 @@ class FetchCategoryCubit extends Cubit<FetchCategoryState> {
     List<int>? categoryIds,
     bool onlyAllowed = false,
     Iterable<int> ensureCategoryIds = const <int>[],
+    Iterable<int> allowedCategoryIds = const <int>[],
   }) async {
     final List<int> normalizedEnsureIds = ensureCategoryIds.toList();
+    final List<int> normalizedAllowedIds = <int>[];
+
+    for (final int id in allowedCategoryIds) {
+      if (id > 0 && !normalizedAllowedIds.contains(id)) {
+        normalizedAllowedIds.add(id);
+      }
+    }
 
     try {
       if (state is FetchCategorySuccess && forceRefresh != true) {
@@ -146,13 +163,16 @@ class FetchCategoryCubit extends Cubit<FetchCategoryState> {
             current.categoryIds,
             categoryIds);
         final bool sameOnlyAllowed = current.onlyAllowed == onlyAllowed;
-        final bool sameEnsured = _sameEnsureIds(
+        final bool sameEnsured = _sameIdList(
           current.ensureCategoryIds,
           normalizedEnsureIds,
         );
+        final bool sameAllowed = _sameIdList(
+          current.allowedCategoryIds,
+          normalizedAllowedIds,
+        );
         if (sameInterface && sameCategoryId && sameCategoryIds &&
-            sameOnlyAllowed && sameEnsured) {
-
+            sameOnlyAllowed && sameEnsured && sameAllowed) {
           return;
         }
       }
@@ -166,6 +186,7 @@ class FetchCategoryCubit extends Cubit<FetchCategoryState> {
         categoryIds: categoryIds,
         onlyAllowed: onlyAllowed,
         ensureCategoryIds: normalizedEnsureIds,
+        allowedCategoryIds: normalizedAllowedIds,
       );
 
       emit(FetchCategorySuccess(
@@ -183,6 +204,9 @@ class FetchCategoryCubit extends Cubit<FetchCategoryState> {
         ensureCategoryIds: normalizedEnsureIds.isEmpty
             ? null
             : List<int>.from(normalizedEnsureIds),
+        allowedCategoryIds: normalizedAllowedIds.isEmpty
+            ? null
+            : List<int>.from(normalizedAllowedIds),
       ));
     } catch (e) {
       emit(FetchCategoryFailure(e.toString()));
@@ -214,7 +238,8 @@ class FetchCategoryCubit extends Cubit<FetchCategoryState> {
               onlyAllowed: current.onlyAllowed,
               ensureCategoryIds:
               current.ensureCategoryIds ?? const <int>[],
-        );
+              allowedCategoryIds: current.allowedCategoryIds ?? const <int>[],
+            );
 
         FetchCategorySuccess categoryState = (state as FetchCategorySuccess);
         categoryState.categories.addAll(result.modelList);
@@ -234,6 +259,7 @@ class FetchCategoryCubit extends Cubit<FetchCategoryState> {
           categoryIds: current.categoryIds,
           onlyAllowed: current.onlyAllowed,
           ensureCategoryIds: current.ensureCategoryIds,
+          allowedCategoryIds: current.allowedCategoryIds,
         ));
       }
     } catch (e) {
@@ -248,7 +274,7 @@ class FetchCategoryCubit extends Cubit<FetchCategoryState> {
     return a == b;
   }
 
-  bool _sameEnsureIds(List<int>? current, List<int> requested) {
+  bool _sameIdList(List<int>? current, List<int> requested) {
     if ((current == null || current.isEmpty) && requested.isEmpty) {
       return true;
     }

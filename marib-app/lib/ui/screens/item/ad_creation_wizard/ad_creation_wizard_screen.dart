@@ -34,12 +34,31 @@ class AdCreationWizardArguments {
     this.draftId,
     this.interfaceType,
     List<int>? initialCategoryIds,
-  }) : initialCategoryIds = initialCategoryIds ?? const <int>[];
+    this.accountTypeCode,
+    Set<String>? permittedDelegateSections,
+    Set<String>? blockedDelegateSections,
+    Set<int>? allowedCategoryIds,
+  })  : initialCategoryIds = initialCategoryIds ?? const <int>[],
+        permittedDelegateSections = Set<String>.unmodifiable(
+          _normalizeStringIterable(permittedDelegateSections ?? const <String>{}),
+        ),
+        blockedDelegateSections = Set<String>.unmodifiable(
+          _normalizeStringIterable(blockedDelegateSections ?? const <String>{}),
+        ),
+        allowedCategoryIds = Set<int>.unmodifiable(
+          _normalizeIntIterable(allowedCategoryIds ?? const <int>{}),
+        );
+
 
 
   final String? draftId;
   final String? interfaceType;
   final List<int> initialCategoryIds;
+  final String? accountTypeCode;
+  final Set<String> permittedDelegateSections;
+  final Set<String> blockedDelegateSections;
+  final Set<int> allowedCategoryIds;
+
 
   factory AdCreationWizardArguments.fromMap(Map<dynamic, dynamic> raw) {
     final Map<String, dynamic> normalized = <String, dynamic>{};
@@ -55,10 +74,26 @@ class AdCreationWizardArguments {
         _stringArgument(normalized['interfaceType']) ?? _stringArgument(normalized['interface_type']);
     final List<int> categoryIds = _parseCategoryIds(normalized);
 
+    final String? accountTypeCode =
+        _stringArgument(normalized['accountTypeCode']) ?? _stringArgument(normalized['account_type_code']);
+    final Set<String> permittedSections = _parseStringSet(
+      normalized['permittedDelegateSections'] ?? normalized['permitted_sections'],
+    );
+    final Set<String> blockedSections = _parseStringSet(
+      normalized['blockedDelegateSections'] ?? normalized['blocked_sections'],
+    );
+    final Set<int> allowedCategories = _parseIntSet(
+      normalized['allowedCategoryIds'] ?? normalized['allowed_category_ids'],
+    );
+
     return AdCreationWizardArguments(
       draftId: draftId,
       interfaceType: interfaceType,
       initialCategoryIds: categoryIds,
+      accountTypeCode: accountTypeCode,
+      permittedDelegateSections: permittedSections,
+      blockedDelegateSections: blockedSections,
+      allowedCategoryIds: allowedCategories,
     );
   }
 
@@ -127,6 +162,99 @@ class AdCreationWizardArguments {
     return null;
   }
 
+
+  static Set<String> _parseStringSet(dynamic raw) {
+    final Set<String> values = <String>{};
+
+    void consume(dynamic value) {
+      if (value == null) {
+        return;
+      }
+      if (value is Iterable) {
+        for (final dynamic entry in value) {
+          consume(entry);
+        }
+        return;
+      }
+      if (value is Map) {
+        for (final dynamic entry in value.values) {
+          consume(entry);
+        }
+        return;
+      }
+      final String text = value.toString().trim();
+      if (text.isEmpty) {
+        return;
+      }
+      for (final String token in text.split(RegExp(r'[\s,]+'))) {
+        final String normalized = token.trim().toLowerCase();
+        if (normalized.isEmpty) {
+          continue;
+        }
+        values.add(normalized);
+      }
+    }
+
+    consume(raw);
+    return values;
+  }
+
+  static Set<int> _parseIntSet(dynamic raw) {
+    final Set<int> values = <int>{};
+
+    void consume(dynamic value) {
+      if (value == null) {
+        return;
+      }
+      if (value is Iterable) {
+        for (final dynamic entry in value) {
+          consume(entry);
+        }
+        return;
+      }
+      if (value is Map) {
+        for (final dynamic entry in value.values) {
+          consume(entry);
+        }
+        return;
+      }
+      if (value is num) {
+        final int candidate = value.toInt();
+        if (candidate > 0) {
+          values.add(candidate);
+        }
+        return;
+      }
+      final String text = value.toString().trim();
+      if (text.isEmpty) {
+        return;
+      }
+      for (final String token in text.split(RegExp(r'[\s,]+'))) {
+        final String trimmed = token.trim();
+        if (trimmed.isEmpty) {
+          continue;
+        }
+        final int? parsed = int.tryParse(trimmed);
+        if (parsed != null && parsed > 0) {
+          values.add(parsed);
+        }
+      }
+    }
+
+    consume(raw);
+    return values;
+  }
+
+  static Iterable<String> _normalizeStringIterable(Iterable<String> raw) {
+    return raw
+        .map((String value) => value.trim().toLowerCase())
+        .where((String value) => value.isNotEmpty);
+  }
+
+  static Iterable<int> _normalizeIntIterable(Iterable<int> raw) {
+    return raw.where((int value) => value > 0);
+  }
+
 }
 
 class AdCreationWizardScreen extends StatefulWidget {
@@ -165,12 +293,20 @@ class AdCreationWizardScreen extends StatefulWidget {
         interfaceType = resolvedArguments.interfaceType,
         initialCategoryIds = List<int>.unmodifiable(
           resolvedArguments.initialCategoryIds,
-        );
+        ),
+        accountTypeCode = resolvedArguments.accountTypeCode,
+        permittedDelegateSections = resolvedArguments.permittedDelegateSections,
+        blockedDelegateSections = resolvedArguments.blockedDelegateSections,
+        allowedCategoryIds = resolvedArguments.allowedCategoryIds;
 
 
   final String? initialDraftId;
   final String? interfaceType;
   final List<int> initialCategoryIds;
+  final String? accountTypeCode;
+  final Set<String> permittedDelegateSections;
+  final Set<String> blockedDelegateSections;
+  final Set<int> allowedCategoryIds;
   final RouteSettings? routeSettings;
   final AdCreationWizardArguments resolvedArguments;
 
@@ -200,6 +336,10 @@ class AdCreationWizardScreen extends StatefulWidget {
     String? explicitDraftId,
     String? explicitInterfaceType,
     List<int>? explicitCategoryIds,
+    String? explicitAccountTypeCode,
+    Iterable<String>? explicitPermittedSections,
+    Iterable<String>? explicitBlockedSections,
+    Iterable<int>? explicitAllowedCategoryIds,
     Object? raw,
   }) {
     final AdCreationWizardArguments routeArgs = _resolveArguments(raw);
@@ -224,10 +364,43 @@ class AdCreationWizardScreen extends StatefulWidget {
     consume(routeArgs.initialCategoryIds);
     consume(explicitCategoryIds);
 
+
+    final String? resolvedAccountTypeCode =
+        routeArgs.accountTypeCode ?? AdCreationWizardArguments._stringArgument(explicitAccountTypeCode);
+
+    final LinkedHashSet<String> permittedSet = LinkedHashSet<String>()
+      ..addAll(routeArgs.permittedDelegateSections);
+    if (explicitPermittedSections != null) {
+      permittedSet.addAll(
+        AdCreationWizardArguments._normalizeStringIterable(explicitPermittedSections),
+      );
+    }
+
+    final LinkedHashSet<String> blockedSet = LinkedHashSet<String>()
+      ..addAll(routeArgs.blockedDelegateSections);
+    if (explicitBlockedSections != null) {
+      blockedSet.addAll(
+        AdCreationWizardArguments._normalizeStringIterable(explicitBlockedSections),
+      );
+    }
+
+    final LinkedHashSet<int> allowedSet = LinkedHashSet<int>()
+      ..addAll(routeArgs.allowedCategoryIds);
+    if (explicitAllowedCategoryIds != null) {
+      allowedSet.addAll(
+        AdCreationWizardArguments._normalizeIntIterable(explicitAllowedCategoryIds),
+      );
+    }
+
+
     return AdCreationWizardArguments(
       draftId: resolvedDraftId,
       interfaceType: resolvedInterfaceType,
       initialCategoryIds: categorySet.toList(growable: false),
+      accountTypeCode: resolvedAccountTypeCode,
+      permittedDelegateSections: permittedSet,
+      blockedDelegateSections: blockedSet,
+      allowedCategoryIds: allowedSet,
     );
   }
 
@@ -562,6 +735,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   List<int> _collectEnsuredCategoryIds() {
     final LinkedHashSet<int> ensured = LinkedHashSet<int>();
     ensured.addAll(_preferredCategoryPath);
+    ensured.addAll(widget.allowedCategoryIds);
     final _MainCategoryOption? main = _selectedMainCategory;
     if (main != null) {
       ensured.add(main.id);
@@ -593,6 +767,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       forceRefresh: forceRefresh,
       onlyAllowed: true,
       ensureCategoryIds: ensuredCategoryIds,
+      allowedCategoryIds: widget.allowedCategoryIds,
     );
     _hasRequestedCategoryFetch = true;
   }

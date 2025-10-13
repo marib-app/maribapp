@@ -31,7 +31,6 @@ import 'package:marib/data/model/metal_rate.dart';
 import 'package:marib/data/model/preference_option.dart';
 
 
-
 class CurrencyScreenUI extends StatelessWidget {
   const CurrencyScreenUI({
     super.key,
@@ -54,8 +53,6 @@ class CurrencyScreenUI extends StatelessWidget {
     required this.onNotificationFrequencyChanged,
 
 
-
-
   });
 
   final CurrencyViewState state;
@@ -76,7 +73,11 @@ class CurrencyScreenUI extends StatelessWidget {
 
   final List<TextInputFormatter> amountInputFormatters;
   final SystemUiOverlayStyle systemUiOverlayStyle;
-  bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
+
+  bool _isDark(BuildContext c) =>
+      Theme
+          .of(c)
+          .brightness == Brightness.dark;
 
   @override
   Widget build(BuildContext context) {
@@ -110,10 +111,8 @@ class CurrencyScreenUI extends StatelessWidget {
   }
 
 
-
-
-  Widget _buildGovernorateSelector(
-      BuildContext context, Color brand, Color bg, Color onBg) {
+  Widget _buildGovernorateSelector(BuildContext context, Color brand, Color bg,
+      Color onBg) {
     final theme = Theme.of(context);
     final border = _isDark(context) ? Colors.white12 : Colors.black12;
     const defaultValue = '_default_';
@@ -226,8 +225,8 @@ class CurrencyScreenUI extends StatelessWidget {
     );
   }
 
-  Widget _buildPreferencesBar(
-      BuildContext context, Color brand, Color bg, Color onBg) {
+  Widget _buildPreferencesBar(BuildContext context, Color brand, Color bg,
+      Color onBg) {
     final theme = Theme.of(context);
     final border = _isDark(context) ? Colors.white12 : Colors.black12;
     final options = state.notificationOptions;
@@ -295,13 +294,14 @@ class CurrencyScreenUI extends StatelessWidget {
               iconEnabledColor: brand,
               items: options
                   .map(
-                    (PreferenceOption option) => DropdownMenuItem<String>(
-                  value: option.value,
-                  child: Text(
-                    option.label,
-                    textDirection: TextDirection.rtl,
-                  ),
-                ),
+                    (PreferenceOption option) =>
+                    DropdownMenuItem<String>(
+                      value: option.value,
+                      child: Text(
+                        option.label,
+                        textDirection: TextDirection.rtl,
+                      ),
+                    ),
               )
                   .toList(growable: false),
               onChanged: (String? value) {
@@ -317,8 +317,8 @@ class CurrencyScreenUI extends StatelessWidget {
   }
 
   // ——— تبويبات موحدة الخط ———
-  Widget _buildSegmentedTabs(
-      BuildContext context, Color brand, Color bg, Color onBg) {
+  Widget _buildSegmentedTabs(BuildContext context, Color brand, Color bg,
+      Color onBg) {
     final theme = Theme.of(context);
     final isDark = _isDark(context);
     final border = isDark ? Colors.white12 : Colors.black12;
@@ -404,8 +404,10 @@ class CurrencyScreenUI extends StatelessWidget {
   Widget _buildLoadingShimmer(BuildContext context) {
     final isDark = _isDark(context);
     // ألوان خفيفة جدًا
-    final base = isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.06);
-    final highlight = isDark ? Colors.white.withOpacity(0.16) : Colors.black.withOpacity(0.12);
+    final base = isDark ? Colors.white.withOpacity(0.08) : Colors.black
+        .withOpacity(0.06);
+    final highlight = isDark ? Colors.white.withOpacity(0.16) : Colors.black
+        .withOpacity(0.12);
 
     return Shimmer.fromColors(
       baseColor: base,
@@ -424,37 +426,43 @@ class CurrencyScreenUI extends StatelessWidget {
           // عناصر قائمة (٦ صفوف)
           SliverList.separated(
             itemCount: 6,
-            itemBuilder: (ctx, i) => Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Row(
-                children: [
-                  _skeletonCircle(size: 28),
-                  const SizedBox(width: 10),
-                  // اسم العملة (سطر طويل قليلًا)
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _skeletonLine(widthFactor: 0.45, height: 12, radius: 6),
-                        const SizedBox(height: 10),
-                        // شارتا سعر صغيرتان يمينًا
-                        Row(
+            itemBuilder: (ctx, i) =>
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 10),
+                  child: Row(
+                    children: [
+                      _skeletonCircle(size: 28),
+                      const SizedBox(width: 10),
+                      // اسم العملة (سطر طويل قليلًا)
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _skeletonPill(width: 70, height: 22, radius: 999),
-                            const SizedBox(width: 8),
-                            _skeletonPill(width: 70, height: 22, radius: 999),
+                            _skeletonLine(
+                                widthFactor: 0.45, height: 12, radius: 6),
+                            const SizedBox(height: 10),
+                            // شارتا سعر صغيرتان يمينًا
+                            Row(
+                              children: [
+                                _skeletonPill(
+                                    width: 70, height: 22, radius: 999),
+                                const SizedBox(width: 8),
+                                _skeletonPill(
+                                    width: 70, height: 22, radius: 999),
+                              ],
+                            ),
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-            separatorBuilder: (_, __) => Divider(
-              height: 1,
-              color: isDark ? Colors.white12 : Colors.black12,
-            ),
+                ),
+            separatorBuilder: (_, __) =>
+                Divider(
+                  height: 1,
+                  color: isDark ? Colors.white12 : Colors.black12,
+                ),
           ),
           // سطر ملاحظة سفلي
           SliverToBoxAdapter(
@@ -491,7 +499,8 @@ class CurrencyScreenUI extends StatelessWidget {
     );
   }
 
-  Widget _skeletonLine({double widthFactor = 1, double height = 10, double radius = 6}) {
+  Widget _skeletonLine(
+      {double widthFactor = 1, double height = 10, double radius = 6}) {
     return FractionallySizedBox(
       widthFactor: widthFactor,
       child: Container(
@@ -504,7 +513,8 @@ class CurrencyScreenUI extends StatelessWidget {
     );
   }
 
-  Widget _skeletonPill({required double width, required double height, double radius = 999}) {
+  Widget _skeletonPill(
+      {required double width, required double height, double radius = 999}) {
     return Container(
       width: width,
       height: height,
@@ -517,9 +527,6 @@ class CurrencyScreenUI extends StatelessWidget {
 }
 
 
-
-
-
 class RatesTabView extends StatelessWidget {
   const RatesTabView({
     super.key,
@@ -530,8 +537,6 @@ class RatesTabView extends StatelessWidget {
     required this.onToggleCurrencyWatchlist,
 
 
-
-
   });
 
   final CurrencyViewState state;
@@ -539,7 +544,10 @@ class RatesTabView extends StatelessWidget {
   final Color brand;
   final void Function(int) onToggleCurrencyWatchlist;
 
-  bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
+  bool _isDark(BuildContext c) =>
+      Theme
+          .of(c)
+          .brightness == Brightness.dark;
 
   // ---------- Header (بسيط بدون إطارات ثقيلة) ----------
   Widget _header(BuildContext context) {
@@ -547,8 +555,11 @@ class RatesTabView extends StatelessWidget {
     final onBg = _isDark(context) ? Colors.white : Colors.black;
 
     final hasTime = state.lastUpdatedAt != null;
-    final dateStr = hasTime ? DateFormat('yyyy-MM-dd').format(state.lastUpdatedAt!) : 'غير متاح';
-    final timeStr = hasTime ? DateFormat('HH:mm').format(state.lastUpdatedAt!) : '--:--';
+    final dateStr = hasTime ? DateFormat('yyyy-MM-dd').format(
+        state.lastUpdatedAt!) : 'غير متاح';
+    final timeStr = hasTime
+        ? DateFormat('HH:mm').format(state.lastUpdatedAt!)
+        : '--:--';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
@@ -604,7 +615,9 @@ class RatesTabView extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
-                'تم استخدام أسعار ${state.appliedGovernorateName} بدلًا من ${state.requestedGovernorateName}.',
+                'تم استخدام أسعار ${state
+                    .appliedGovernorateName} بدلًا من ${state
+                    .requestedGovernorateName}.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: brand,
                   fontWeight: FontWeight.w600,
@@ -618,16 +631,15 @@ class RatesTabView extends StatelessWidget {
   }
 
   // ---------- صفّ العملة (نظيف مع عرض بيع/شراء احترافي) ----------
-  Widget _row(
-      BuildContext context, {
-        required String name,
-        required String sell,
-        required String buy,
-        String? iconUrl,
-        String? iconAlt,
-        required bool isWatchlisted,
-        required VoidCallback onToggleWatchlist,
-      }) {
+  Widget _row(BuildContext context, {
+    required String name,
+    required String sell,
+    required String buy,
+    String? iconUrl,
+    String? iconAlt,
+    required bool isWatchlisted,
+    required VoidCallback onToggleWatchlist,
+  }) {
     final theme = Theme.of(context);
     final onBg = _isDark(context) ? Colors.white : Colors.black;
     final divider = _isDark(context) ? Colors.white12 : Colors.black12;
@@ -653,7 +665,8 @@ class RatesTabView extends StatelessWidget {
           shape: BoxShape.circle,
           border: Border.all(color: onBg.withOpacity(0.20)),
         ),
-        child: Icon(Icons.account_balance_wallet_outlined, size: 17, color: brand),
+        child: Icon(
+            Icons.account_balance_wallet_outlined, size: 17, color: brand),
       );
     }
 
@@ -735,8 +748,6 @@ class RatesTabView extends StatelessWidget {
     }
 
 
-
-
     final NumberFormat changeFormatter = NumberFormat('+#0.##;-#0.##;0', 'en');
     final NumberFormat highLowFormatter = NumberFormat('#,##0.###', 'en');
 
@@ -781,8 +792,6 @@ class RatesTabView extends StatelessWidget {
         : null;
 
 
-
-
     final Widget star = IconButton(
       onPressed: onToggleWatchlist,
       icon: Icon(
@@ -799,315 +808,324 @@ class RatesTabView extends StatelessWidget {
 
 
     return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {},
-        splashColor: brand.withOpacity(0.06),
-        highlightColor: brand.withOpacity(0.03),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: divider, width: 1)),
-          ),
-          child: LayoutBuilder(
-            builder: (ctx, cons) {
-              final bool narrow = cons.maxWidth < 360;
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {},
+          splashColor: brand.withOpacity(0.06),
+          highlightColor: brand.withOpacity(0.03),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: divider, width: 1)),
+            ),
+            child: LayoutBuilder(
+              builder: (ctx, cons) {
+                final bool narrow = cons.maxWidth < 360;
 
 
+                final Widget leading = Row(
 
-              final Widget leading = Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    leadingIcon,
 
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  leadingIcon,
-
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      name,
-                      style: nameStyle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textDirection: TextDirection.rtl,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        name,
+                        style: nameStyle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textDirection: TextDirection.rtl,
+                      ),
                     ),
-                  ),
-                ],
-              );
+                  ],
+                );
 
-              final Widget sellBlock = priceStat('بيع', sell, Colors.redAccent);
-              final Widget buyBlock = priceStat('شراء', buy, Colors.green);
+                final Widget sellBlock = priceStat(
+                    'بيع', sell, Colors.redAccent);
+                final Widget buyBlock = priceStat('شراء', buy, Colors.green);
 
-              final Widget priceContent = narrow
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        sellBlock,
-                        const SizedBox(height: 6),
-                        buyBlock,
-                      ],
+                final Widget priceContent = narrow
+                    ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    sellBlock,
+                    const SizedBox(height: 6),
+                    buyBlock,
+                  ],
+                )
+                    : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    sellBlock,
+                    // فاصل عمودي خافت بين البيع والشراء
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 10),
+                      width: 1,
+                      height: 22,
+                      color: onBg.withOpacity(0.12),
+                    ),
+                    buyBlock,
+                  ],
+                );
+
+                Widget buildHistorySection(double availableWidth) {
+                  if (!hasSparkline && changeText == '--') {
+                    return Container(
+                      width: availableWidth,
+                      height: 40,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: onBg.withOpacity(0.12)),
+                      ),
+                      child: Text(
+                        'لا يوجد سجل',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: onBg.withOpacity(0.5),
+                          fontWeight: FontWeight.w600,
+                        ) ??
+                            TextStyle(color: onBg.withOpacity(0.5),
+                                fontSize: 12),
+                      ),
+                    );
+                  }
+
+                  final List<Widget> children = <Widget>[
+                    hasSparkline
+                        ? SizedBox(
+                      width: availableWidth,
+                      height: 40,
+                      child: _MiniTrendChart(
+                        values: sparklineValues,
+                        color: trendColor,
+                      ),
                     )
-                  : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        sellBlock,
-                        // فاصل عمودي خافت بين البيع والشراء
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 10),
-                          width: 1,
-                          height: 22,
-                          color: onBg.withOpacity(0.12),
-                        ),
-                        buyBlock,
-                      ],
-              );
+                        : Container(
+                      width: availableWidth,
+                      height: 40,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: onBg.withOpacity(0.12)),
+                      ),
+                      child: Icon(
+                        Icons.trending_flat,
+                        color: trendColor,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: trendColor.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(trendIcon, size: 14, color: trendColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            changeText,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: trendColor,
+                              fontWeight: FontWeight.w700,
+                            ) ??
+                                TextStyle(color: trendColor,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ];
 
-              Widget buildHistorySection(double availableWidth) {
-                if (!hasSparkline && changeText == '--') {
-                  return Container(
-                    width: availableWidth,
-                    height: 40,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: onBg.withOpacity(0.12)),
-                    ),
-                    child: Text(
-                      'لا يوجد سجل',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: onBg.withOpacity(0.5),
-                        fontWeight: FontWeight.w600,
-                      ) ??
-                          TextStyle(color: onBg.withOpacity(0.5), fontSize: 12),
-                    ),
+                  if (highText != null && lowText != null) {
+                    children.addAll([
+                      const SizedBox(height: 4),
+                      Text(
+                        'أعلى: $highText | أدنى: $lowText',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: onBg.withOpacity(0.6),
+                          fontWeight: FontWeight.w600,
+                        ) ??
+                            TextStyle(color: onBg.withOpacity(0.6),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600),
+                        textDirection: TextDirection.rtl,
+                      ),
+                    ]);
+                  }
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: children,
                   );
                 }
 
+                if (narrow) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: leading),
+                          star,
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      priceContent,
+                      const SizedBox(height: 12),
+                      buildHistorySection(cons.maxWidth),
+                    ],
+                  );
+                }
+                );
+
+                Widget buildHistorySection(double availableWidth) {
+                if (!hasSparkline && changeText == '--') {
+                return Container(
+                width: availableWidth,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: onBg.withOpacity(0.12)),
+                ),
+                child: Text(
+                'لا يوجد سجل',
+                style: theme.textTheme.labelSmall?.copyWith(
+                color: onBg.withOpacity(0.5),
+                fontWeight: FontWeight.w600,
+                ) ??
+                TextStyle(color: onBg.withOpacity(0.5), fontSize: 12),
+                ),
+                );
+                }
+
                 final List<Widget> children = <Widget>[
-                  hasSparkline
-                      ? SizedBox(
-                    width: availableWidth,
-                    height: 40,
-                    child: _MiniTrendChart(
-                      values: sparklineValues,
-                      color: trendColor,
-                    ),
-                  )
-                      : Container(
-                    width: availableWidth,
-                    height: 40,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: onBg.withOpacity(0.12)),
-                    ),
-                    child: Icon(
-                      Icons.trending_flat,
-                      color: trendColor,
-                      size: 18,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: trendColor.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(trendIcon, size: 14, color: trendColor),
-                        const SizedBox(width: 4),
-                        Text(
-                          changeText,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: trendColor,
-                            fontWeight: FontWeight.w700,
-                          ) ??
-                              TextStyle(color: trendColor, fontWeight: FontWeight.w700, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
+                hasSparkline
+                ? SizedBox(
+                width: availableWidth,
+                height: 40,
+                child: _MiniTrendChart(
+                values: sparklineValues,
+                color: trendColor,
+                ),
+                )
+                    : Container(
+                width: availableWidth,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: onBg.withOpacity(0.12)),
+                ),
+                child: Icon(
+                Icons.trending_flat,
+                color: trendColor,
+                size: 18,
+                ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                color: trendColor.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                Icon(trendIcon, size: 14, color: trendColor),
+                const SizedBox(width: 4),
+                Text(
+                changeText,
+                style: theme.textTheme.labelSmall?.copyWith(
+                color: trendColor,
+                fontWeight: FontWeight.w700,
+                ) ??
+                TextStyle(color: trendColor, fontWeight: FontWeight.w700, fontSize: 12),
+                ),
+                ],
+                ),
+                ),
                 ];
 
                 if (highText != null && lowText != null) {
-                  children.addAll([
-                    const SizedBox(height: 4),
-                    Text(
-                      'أعلى: $highText | أدنى: $lowText',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: onBg.withOpacity(0.6),
-                        fontWeight: FontWeight.w600,
-                      ) ??
-                          TextStyle(color: onBg.withOpacity(0.6), fontSize: 11, fontWeight: FontWeight.w600),
-                      textDirection: TextDirection.rtl,
-                    ),
-                  ]);
+                children.addAll([
+                const SizedBox(height: 4),
+                Text(
+                'أعلى: $highText | أدنى: $lowText',
+                style: theme.textTheme.labelSmall?.copyWith(
+                color: onBg.withOpacity(0.6),
+                fontWeight: FontWeight.w600,
+                ) ??
+                TextStyle(color: onBg.withOpacity(0.6), fontSize: 11, fontWeight: FontWeight.w600),
+                textDirection: TextDirection.rtl,
+                ),
+                ]);
                 }
 
                 return Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: children,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: children,
                 );
-              }
+                }
 
-              if (narrow) {
+                if (narrow) {
                 return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(child: leading),
-                        star,
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    priceContent,
-                    const SizedBox(height: 12),
-                    buildHistorySection(cons.maxWidth),
-                  ],
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                Expanded(child: leading),
+                star,
+                ],
+                ),
+                const SizedBox(height: 8),
+                priceContent,
+                const SizedBox(height: 12),
+                buildHistorySection(cons.maxWidth),
+                ],
                 );
-              }
-              );
-
-              Widget buildHistorySection(double availableWidth) {
-              if (!hasSparkline && changeText == '--') {
-              return Container(
-              width: availableWidth,
-              height: 40,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: onBg.withOpacity(0.12)),
-              ),
-              child: Text(
-              'لا يوجد سجل',
-              style: theme.textTheme.labelSmall?.copyWith(
-              color: onBg.withOpacity(0.5),
-              fontWeight: FontWeight.w600,
-              ) ??
-              TextStyle(color: onBg.withOpacity(0.5), fontSize: 12),
-              ),
-              );
-              }
-
-              final List<Widget> children = <Widget>[
-              hasSparkline
-              ? SizedBox(
-              width: availableWidth,
-              height: 40,
-              child: _MiniTrendChart(
-              values: sparklineValues,
-              color: trendColor,
-              ),
-              )
-                  : Container(
-              width: availableWidth,
-              height: 40,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: onBg.withOpacity(0.12)),
-              ),
-              child: Icon(
-              Icons.trending_flat,
-              color: trendColor,
-              size: 18,
-              ),
-              ),
-              const SizedBox(height: 6),
-              Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-              color: trendColor.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-              Icon(trendIcon, size: 14, color: trendColor),
-              const SizedBox(width: 4),
-              Text(
-              changeText,
-              style: theme.textTheme.labelSmall?.copyWith(
-              color: trendColor,
-              fontWeight: FontWeight.w700,
-              ) ??
-              TextStyle(color: trendColor, fontWeight: FontWeight.w700, fontSize: 12),
-              ),
-              ],
-              ),
-              ),
-              ];
-
-              if (highText != null && lowText != null) {
-              children.addAll([
-              const SizedBox(height: 4),
-              Text(
-              'أعلى: $highText | أدنى: $lowText',
-              style: theme.textTheme.labelSmall?.copyWith(
-              color: onBg.withOpacity(0.6),
-              fontWeight: FontWeight.w600,
-              ) ??
-              TextStyle(color: onBg.withOpacity(0.6), fontSize: 11, fontWeight: FontWeight.w600),
-              textDirection: TextDirection.rtl,
-              ),
-              ]);
-              }
-
-              return Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: children,
-              );
-              }
-
-              if (narrow) {
-              return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-              Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-              Expanded(child: leading),
-              star,
-              ],
-              ),
-              const SizedBox(height: 8),
-              priceContent,
-              const SizedBox(height: 12),
-              buildHistorySection(cons.maxWidth),
-              ],
-              );
-              }
+                }
 
 
-              return Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+                return Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
 
                 children: [
-              Expanded(
-              child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-              Expanded(child: leading),
-              const SizedBox(width: 12),
-              priceContent,
-              const SizedBox(width: 16),
-              SizedBox(width: 140, child: buildHistorySection(140)),
-              ],
-                    ),
-              ),
-                  star,
+                Expanded(
+                child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                Expanded(child: leading),
+                const SizedBox(width: 12),
+                priceContent,
+                const SizedBox(width: 16),
+                SizedBox(width: 140, child: buildHistorySection(140)),
                 ],
-              );
-            },
+                ),
+                )
+                ,
+                star
+                ,
+                ]
+                ,
+                );
+              },
+            ),
           ),
-        ),
 
-    );
-  }
+        );
+    }
 
   // ---------- بطاقة الملاحظة (احتفظنا بها كما أعجبتك) ----------
   Widget _noteCard(BuildContext context) {
@@ -1170,7 +1188,7 @@ class RatesTabView extends StatelessWidget {
 
     String _name(d) => (d as dynamic).currencyName?.toString() ?? '';
     String _sell(d) => (d as dynamic).sellPrice?.toString() ?? '';
-    String _buy(d)  => (d as dynamic).buyPrice?.toString() ?? '';
+    String _buy(d) => (d as dynamic).buyPrice?.toString() ?? '';
     String? _icon(d) => (d as dynamic).iconUrl?.toString();
     String? _iconAlt(d) => (d as dynamic).iconAlt?.toString();
     CurrencyHistoryBundle? _history(d) => d is CurrencyRate ? d.history : null;
@@ -1190,7 +1208,11 @@ class RatesTabView extends StatelessWidget {
                     ? 'قائمة المراقبة فارغة حاليًا'
                     : 'لا توجد بيانات حالياً',
 
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                style: Theme
+                    .of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(
                   color: onBg,
                   fontWeight: FontWeight.w700,
                 ),
@@ -1209,7 +1231,9 @@ class RatesTabView extends StatelessWidget {
         if (i == 0) return _header(context);
         if (i == rates.length + 1) return _noteCard(context);
         final dynamic r = rates[i - 1];
-        final int rateId = (r as dynamic).id is int ? (r as dynamic).id as int : 0;
+        final int rateId = (r as dynamic).id is int
+            ? (r as dynamic).id as int
+            : 0;
         final bool isWatchlisted = state.currencyWatchlist.contains(rateId);
         return _row(
           context,
@@ -1226,15 +1250,6 @@ class RatesTabView extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-
-
-
 
 
 // ===================================================================
@@ -1264,11 +1279,15 @@ class ConvertTabView extends StatelessWidget {
   final List<TextInputFormatter> amountInputFormatters;
   final Color brand;
 
-  bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
+  bool _isDark(BuildContext c) =>
+      Theme
+          .of(c)
+          .brightness == Brightness.dark;
 
   // ——— دوال داخلية ———
 
   List<MetalRate> get _rates => state.goldRates;
+
   DateTime? get _lastUpdated => state.metalsLastUpdatedAt;
 
   String _format(double value) => NumberFormat('#,##0.000').format(value);
@@ -1353,7 +1372,8 @@ class ConvertTabView extends StatelessWidget {
     );
   }
 
-  Widget _primaryBtn(BuildContext context, {required String label, required IconData icon, required VoidCallback onPressed}) {
+  Widget _primaryBtn(BuildContext context,
+      {required String label, required IconData icon, required VoidCallback onPressed}) {
     return FilledButton.icon(
       onPressed: onPressed,
       icon: Icon(icon),
@@ -1368,7 +1388,8 @@ class ConvertTabView extends StatelessWidget {
     );
   }
 
-  Widget _ghostBtn(BuildContext context, {required String label, required IconData icon, required VoidCallback onPressed}) {
+  Widget _ghostBtn(BuildContext context,
+      {required String label, required IconData icon, required VoidCallback onPressed}) {
     final onBg = _isDark(context) ? Colors.white : Colors.black;
     return OutlinedButton.icon(
       onPressed: onPressed,
@@ -1422,7 +1443,8 @@ class ConvertTabView extends StatelessWidget {
                 border: _border(context),
                 enabledBorder: _border(context),
                 focusedBorder: _border(context),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 12),
               ),
             ),
           ),
@@ -1444,7 +1466,8 @@ class ConvertTabView extends StatelessWidget {
                 border: _border(context),
                 enabledBorder: _border(context),
                 focusedBorder: _border(context),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 12),
               ),
             ),
           ),
@@ -1465,7 +1488,8 @@ class ConvertTabView extends StatelessWidget {
                 border: _border(context),
                 enabledBorder: _border(context),
                 focusedBorder: _border(context),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 14),
               ),
             ),
           ),
@@ -1475,7 +1499,8 @@ class ConvertTabView extends StatelessWidget {
           _resultStrip(
             context,
             state.hasCalculated
-                ? "${NumberFormat('#,##0.##').format(state.convertedAmount)} ${state.toCurrency}"
+                ? "${NumberFormat('#,##0.##').format(
+                state.convertedAmount)} ${state.toCurrency}"
                 : "---",
           ),
           const SizedBox(height: 12),
@@ -1484,11 +1509,15 @@ class ConvertTabView extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _primaryBtn(context, label: "تحويل", icon: Icons.check, onPressed: onConvert),
+                child: _primaryBtn(context, label: "تحويل",
+                    icon: Icons.check,
+                    onPressed: onConvert),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _ghostBtn(context, label: "تصفير", icon: Icons.refresh, onPressed: onReset),
+                child: _ghostBtn(context, label: "تصفير",
+                    icon: Icons.refresh,
+                    onPressed: onReset),
               ),
             ],
           ),
@@ -1510,6 +1539,7 @@ class GoldTabView extends StatelessWidget {
     required this.onToggleMetalWatchlist,
 
   });
+
   final void Function(int) onToggleMetalWatchlist;
 
   final CurrencyViewState state;
@@ -1519,9 +1549,13 @@ class GoldTabView extends StatelessWidget {
 
   DateTime? get _lastUpdated => state.metalsLastUpdatedAt;
 
-  bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
+  bool _isDark(BuildContext c) =>
+      Theme
+          .of(c)
+          .brightness == Brightness.dark;
 
   String _format(double value) => NumberFormat('#,##0.000').format(value);
+
   // ——— دوال داخلية ———
   Widget _header(BuildContext context) {
     final onBg = _isDark(context) ? Colors.white : Colors.black;
@@ -1539,12 +1573,17 @@ class GoldTabView extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.workspace_premium_outlined, size: 18, color: onBg.withOpacity(0.7)),
+          Icon(Icons.workspace_premium_outlined, size: 18,
+              color: onBg.withOpacity(0.7)),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               'أسعار الذهب — $updatedLabel',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              style: Theme
+                  .of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(
                 color: onBg.withOpacity(0.85),
                 fontWeight: FontWeight.w700,
               ),
@@ -1566,15 +1605,22 @@ class GoldTabView extends StatelessWidget {
   }
 
   Widget _row(BuildContext context, MetalRate rate, bool isWatchlisted) {
-
     final onBg = _isDark(context) ? Colors.white : Colors.black;
 
-    final nameStyle = Theme.of(context).textTheme.titleSmall?.copyWith(
+    final nameStyle = Theme
+        .of(context)
+        .textTheme
+        .titleSmall
+        ?.copyWith(
       color: onBg,
       fontWeight: FontWeight.w800,
     ) ??
         TextStyle(color: onBg, fontWeight: FontWeight.w800, fontSize: 15.5);
-    final labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+    final labelStyle = Theme
+        .of(context)
+        .textTheme
+        .labelSmall
+        ?.copyWith(
       color: onBg.withOpacity(0.6),
       fontWeight: FontWeight.w700,
     ) ??
@@ -1596,21 +1642,26 @@ class GoldTabView extends StatelessWidget {
     );
 
 
-    Widget chip(String value, Color color) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withOpacity(0.5)),
-      ),
-      child: Text(
-        value,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: color,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 0.2,
-        ),
-      ),
-    );
+    Widget chip(String value, Color color) =>
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: color.withOpacity(0.5)),
+          ),
+          child: Text(
+            value,
+            style: Theme
+                .of(context)
+                .textTheme
+                .labelLarge
+                ?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.2,
+            ),
+          ),
+        );
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1625,7 +1676,8 @@ class GoldTabView extends StatelessWidget {
               shape: BoxShape.circle,
               border: Border.all(color: onBg.withOpacity(0.25)),
             ),
-            child: Icon(Icons.workspace_premium, size: 16, color: Colors.amber[700]),
+            child: Icon(
+                Icons.workspace_premium, size: 16, color: Colors.amber[700]),
           ),
           const SizedBox(width: 10),
 
@@ -1669,7 +1721,6 @@ class GoldTabView extends StatelessWidget {
   }
 
 
-
   Widget _empty(BuildContext context) {
     final onBg = _isDark(context) ? Colors.white : Colors.black;
     return Center(
@@ -1683,7 +1734,11 @@ class GoldTabView extends StatelessWidget {
                 ? 'لا توجد عناصر مراقبة في الذهب حالياً'
                 : 'لا توجد بيانات ذهب حالياً',
 
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            style: Theme
+                .of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(
               color: onBg,
               fontWeight: FontWeight.w700,
             ),
@@ -1729,12 +1784,16 @@ class SilverTabView extends StatelessWidget {
     required this.onToggleMetalWatchlist,
 
   });
+
   final void Function(int) onToggleMetalWatchlist;
 
   final CurrencyViewState state;
   final Color brand;
 
-  bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
+  bool _isDark(BuildContext c) =>
+      Theme
+          .of(c)
+          .brightness == Brightness.dark;
 
   List<MetalRate> get _rates => state.displaySilverRates;
 
@@ -1761,7 +1820,11 @@ class SilverTabView extends StatelessWidget {
           Expanded(
             child: Text(
               'أسعار الفضة — $updatedLabel',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              style: Theme
+                  .of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(
                 color: onBg.withOpacity(0.85),
                 fontWeight: FontWeight.w700,
               ),
@@ -1777,12 +1840,20 @@ class SilverTabView extends StatelessWidget {
 
   Widget _row(BuildContext context, MetalRate rate, bool isWatchlisted) {
     final onBg = _isDark(context) ? Colors.white : Colors.black;
-    final nameStyle = Theme.of(context).textTheme.titleSmall?.copyWith(
+    final nameStyle = Theme
+        .of(context)
+        .textTheme
+        .titleSmall
+        ?.copyWith(
       color: onBg,
       fontWeight: FontWeight.w800,
     ) ??
         TextStyle(color: onBg, fontWeight: FontWeight.w800, fontSize: 15.5);
-    final labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+    final labelStyle = Theme
+        .of(context)
+        .textTheme
+        .labelSmall
+        ?.copyWith(
       color: onBg.withOpacity(0.6),
       fontWeight: FontWeight.w700,
     ) ??
@@ -1803,21 +1874,26 @@ class SilverTabView extends StatelessWidget {
     );
 
 
-    Widget chip(String value, Color color) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withOpacity(0.5)),
-      ),
-      child: Text(
-        value,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: color,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 0.2,
-        ),
-      ),
-    );
+    Widget chip(String value, Color color) =>
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: color.withOpacity(0.5)),
+          ),
+          child: Text(
+            value,
+            style: Theme
+                .of(context)
+                .textTheme
+                .labelLarge
+                ?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.2,
+            ),
+          ),
+        );
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1885,7 +1961,11 @@ class SilverTabView extends StatelessWidget {
             state.showWatchlistOnly
                 ? 'قائمة مراقبة الفضة فارغة حالياً'
                 : 'لا توجد بيانات فضة حالياً',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            style: Theme
+                .of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(
               color: onBg,
               fontWeight: FontWeight.w700,
             ),
@@ -1922,6 +2002,7 @@ class SilverTabView extends StatelessWidget {
     );
   }
 }
+
 class _MiniTrendChart extends StatelessWidget {
   const _MiniTrendChart({required this.values, required this.color});
 
@@ -1935,7 +2016,10 @@ class _MiniTrendChart extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: Theme.of(context).dividerColor.withOpacity(0.12),
+            color: Theme
+                .of(context)
+                .dividerColor
+                .withOpacity(0.12),
           ),
         ),
       );
@@ -1945,7 +2029,9 @@ class _MiniTrendChart extends StatelessWidget {
       painter: _MiniTrendChartPainter(
         values: values,
         color: color,
-        background: Theme.of(context).canvasColor,
+        background: Theme
+            .of(context)
+            .canvasColor,
       ),
     );
   }
@@ -1968,8 +2054,14 @@ class _MiniTrendChartPainter extends CustomPainter {
       return;
     }
 
-    final double minValue = values.reduce((double a, double b) => a < b ? a : b);
-    final double maxValue = values.reduce((double a, double b) => a > b ? a : b);
+    final double minValue = values.reduce((double a, double b) =>
+    a < b
+        ? a
+        : b);
+    final double maxValue = values.reduce((double a, double b) =>
+    a > b
+        ? a
+        : b);
     final double range = (maxValue - minValue).abs() < 0.0001
         ? 1
         : (maxValue - minValue);
@@ -1995,8 +2087,7 @@ class _MiniTrendChartPainter extends CustomPainter {
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
 
     final Path areaPath = Path.from(path)
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
+      ..lineTo(size.width, size.height)..lineTo(0, size.height)
       ..close();
 
     canvas.drawPath(areaPath, fillPaint);
@@ -2012,6 +2103,7 @@ class _MiniTrendChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _MiniTrendChartPainter oldDelegate) {
-    return !listEquals(oldDelegate.values, values) || oldDelegate.color != color;
+    return !listEquals(oldDelegate.values, values) ||
+        oldDelegate.color != color;
   }
 }

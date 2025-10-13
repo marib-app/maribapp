@@ -181,16 +181,18 @@ class ResponseService
         }
 
         if ($data instanceof PaginatorContract) {
-            [$items, $pagination] = self::formatPaginator($data);
+            [$items, $meta, $links, $linkItems] = self::formatPaginator($data);
 
-            $data = array_merge(
-                [
-                    $itemsKey => $items,
-                ],
-                $pagination
-            );
+            $pagination = array_merge($meta, $links);
+            $pagination['links'] = $linkItems;
 
-            $data['pagination'] = $pagination;
+            $data = [
+                $itemsKey => $items,
+                'meta' => $meta,
+                'links' => $links,
+                'link_items' => $linkItems,
+                'pagination' => $pagination,
+            ];
         }
 
         if (!empty($appendToData)) {
@@ -217,7 +219,7 @@ class ResponseService
 
 
     /**
-     * @return array{0: array<int, mixed>, 1: array<string, mixed>}
+     * @return array{0: array<int, mixed>, 1: array<string, mixed>, 2: array<string, mixed>, 3: array<int, array<string, mixed>>}
      */
     private static function formatPaginator(PaginatorContract $paginator): array
     {
@@ -245,13 +247,56 @@ class ResponseService
             return $item;
         }, $items);
 
-        unset($paginatorArray['data']);
+        $currentPage = $paginatorArray['current_page'] ?? (method_exists($paginator, 'currentPage') ? $paginator->currentPage() : null);
+        $perPage = $paginatorArray['per_page'] ?? (method_exists($paginator, 'perPage') ? $paginator->perPage() : null);
+        $from = $paginatorArray['from'] ?? (method_exists($paginator, 'firstItem') ? $paginator->firstItem() : null);
+        $to = $paginatorArray['to'] ?? (method_exists($paginator, 'lastItem') ? $paginator->lastItem() : null);
+        $lastPage = $paginatorArray['last_page'] ?? (method_exists($paginator, 'lastPage') ? $paginator->lastPage() : null);
+        $total = $paginatorArray['total'] ?? (method_exists($paginator, 'total') ? $paginator->total() : null);
 
+        $meta = [
+            'current_page' => $currentPage,
+            'from' => $from,
+            'last_page' => $lastPage,
+            'per_page' => $perPage,
+            'to' => $to,
+            'total' => $total,
+        ];
 
         if (method_exists($paginator, 'hasMorePages')) {
-            $paginatorArray['has_more_pages'] = $paginator->hasMorePages();
+            $meta['has_more_pages'] = $paginator->hasMorePages();
         }
-        return [$items, $paginatorArray];
+
+        if (method_exists($paginator, 'hasPages')) {
+            $meta['has_pages'] = $paginator->hasPages();
+        }
+
+        $path = $paginatorArray['path'] ?? (method_exists($paginator, 'path') ? $paginator->path() : null);
+        $firstPageUrl = null;
+        $lastPageUrl = null;
+
+        if (method_exists($paginator, 'url')) {
+            $firstPageUrl = $paginator->url(1);
+
+            if ($lastPage !== null && $lastPage >= 1) {
+                $lastPageUrl = $paginator->url($lastPage);
+            }
+        }
+
+        $links = [
+            'first_page_url' => $paginatorArray['first_page_url'] ?? $firstPageUrl,
+            'last_page_url' => $paginatorArray['last_page_url'] ?? $lastPageUrl,
+            'next_page_url' => $paginatorArray['next_page_url'] ?? $paginator->nextPageUrl(),
+            'prev_page_url' => $paginatorArray['prev_page_url'] ?? $paginator->previousPageUrl(),
+            'path' => $path,
+        ];
+
+        $linkItems = $paginatorArray['links'] ?? [];
+
+        if (! is_array($linkItems)) {
+            $linkItems = [];
+        }
+        return [$items, $meta, $links, $linkItems];
 
     }
 

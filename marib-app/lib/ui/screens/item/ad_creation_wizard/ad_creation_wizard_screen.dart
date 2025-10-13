@@ -7,6 +7,16 @@ import 'models/custom_field_schema.dart';
 import 'services/category_inventory_service.dart';
 import 'widgets/dynamic_custom_fields_form.dart';
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/utils/helper_utils.dart';
+import 'package:marib/utils/imagePicker.dart';
 
 
 
@@ -31,12 +41,35 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _contactController = TextEditingController();
+  final _priceController = TextEditingController();
+  final _videoLinkFieldController = TextEditingController();
+  final _sheinProductLinkController = TextEditingController();
+  final _sheinReviewLinkController = TextEditingController();
+
+  String? _selectedCurrency = 'YER';
+
+  final PickImage _imagePicker = PickImage();
+  final ImagePicker _videoPicker = ImagePicker();
+
+  final List<_PendingMedia> _mediaFiles = <_PendingMedia>[];
+  final List<String> _videoLinks = <String>[];
+
+  bool _isPickingImages = false;
+  bool _isPickingVideo = false;
+
+  final GlobalKey<FormState> _textDetailsFormKey = GlobalKey<FormState>();
+
+  static const Map<String, String> _currencyOptions = <String, String>{
+    'YER': 'ريال يمني',
+    'SAR': 'ريال سعودي',
+    'USD': 'دولار أمريكي',
+  };
   final List<_WizardStep> _steps = const <_WizardStep>[
     _WizardStep(label: 'الفئة الرئيسية'),
     _WizardStep(label: 'الفئة الفرعية'),
     _WizardStep(label: 'الحقول المخصّصة'),
-    _WizardStep(label: 'الوسائط'),
-    _WizardStep(label: 'التفاصيل النصية'),
+    _WizardStep(label: 'المرحلة 4A: الوسائط'),
+    _WizardStep(label: 'المرحلة 4B: التفاصيل النصية'),
     _WizardStep(label: 'الخريطة / إدارة المنتج'),
     _WizardStep(label: 'المراجعة النهائية'),
   ];
@@ -86,6 +119,20 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     _titleController.addListener(_markDirty);
     _descriptionController.addListener(_markDirty);
     _contactController.addListener(_markDirty);
+    _priceController.addListener(_markDirty);
+    _sheinProductLinkController.addListener(_markDirty);
+    _sheinReviewLinkController.addListener(_markDirty);
+
+    _imagePicker.listener((dynamic files) {
+      if (!mounted) {
+        return;
+      }
+      if (files is List<File>) {
+        _addImageFiles(files);
+      } else if (files is File) {
+        _addImageFiles(<File>[files]);
+      }
+    });
   }
 
   @override
@@ -94,6 +141,11 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     _titleController.dispose();
     _descriptionController.dispose();
     _contactController.dispose();
+    _priceController.dispose();
+    _videoLinkFieldController.dispose();
+    _sheinProductLinkController.dispose();
+    _sheinReviewLinkController.dispose();
+    _imagePicker.dispose();
     super.dispose();
   }
 
@@ -102,6 +154,239 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     _autoSaveTimer?.cancel();
     _autoSaveTimer = Timer(const Duration(seconds: 3), _autoSaveDraft);
   }
+
+
+  bool get _isSheinInterface =>
+      _selectedMainCategory?.interfaceType == 'shein_products';
+
+  void _addImageFiles(List<File> files) {
+    if (files.isEmpty) {
+      return;
+    }
+
+    bool didAdd = false;
+    setState(() {
+      for (final File file in files) {
+        if (_mediaFiles.any((media) => media.file.path == file.path)) {
+          continue;
+        }
+        _mediaFiles.add(_PendingMedia.image(file));
+        didAdd = true;
+      }
+    });
+
+    if (didAdd) {
+      _markDirty();
+    }
+  }
+
+  Future<void> _pickImages() async {
+    if (_isPickingImages) {
+      return;
+    }
+    setState(() => _isPickingImages = true);
+    try {
+      await _imagePicker.pick(
+        context: context,
+        pickMultiple: true,
+        imageLimit: 25,
+        maxLength: _mediaFiles.where((media) => media.isImage).length,
+      );
+    } catch (error) {
+      if (mounted) {
+        _showMessage('تعذّر اختيار الصور: $error');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isPickingImages = false);
+      }
+    }
+  }
+
+  Future<void> _pickVideo() async {
+    if (_isPickingVideo) {
+      return;
+    }
+    setState(() => _isPickingVideo = true);
+    try {
+      final XFile? picked = await _videoPicker.pickVideo(
+        source: ImageSource.gallery,
+      );
+      if (picked == null) {
+        return;
+      }
+
+      final File file = File(picked.path);
+      bool didAdd = false;
+      setState(() {
+        if (_mediaFiles.any((media) => media.file.path == file.path)) {
+          return;
+        }
+        _mediaFiles.add(_PendingMedia.video(file));
+        didAdd = true;
+      });
+
+      if (didAdd) {
+        _markDirty();
+      }
+    } catch (error) {
+      if (mounted) {
+        _showMessage('تعذّر اختيار الفيديو: $error');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isPickingVideo = false);
+      }
+    }
+  }
+
+  void _removeMediaFile(_PendingMedia media) {
+    setState(() {
+      _mediaFiles.remove(media);
+    });
+    _markDirty();
+  }
+
+  void _addVideoLink() {
+    final String raw = _videoLinkFieldController.text.trim();
+    if (raw.isEmpty) {
+      _showMessage('أدخل رابط الفيديو أولًا.');
+      return;
+    }
+    if (!_isValidVideoLink(raw)) {
+      _showMessage('يرجى إدخال رابط فيديو صالح (يوتيوب أو ملف فيديو مباشر).');
+      return;
+    }
+    if (_videoLinks.contains(raw)) {
+      _showMessage('تمت إضافة هذا الرابط مسبقًا.');
+      return;
+    }
+
+    setState(() {
+      _videoLinks.add(raw);
+      _videoLinkFieldController.clear();
+    });
+    FocusScope.of(context).unfocus();
+    _markDirty();
+  }
+
+  void _removeVideoLink(String link) {
+    setState(() {
+      _videoLinks.remove(link);
+    });
+    _markDirty();
+  }
+
+  bool _isValidVideoLink(String value) {
+    final String trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return false;
+    }
+    final Uri? uri = Uri.tryParse(trimmed);
+    if (uri == null) {
+      return false;
+    }
+    if (!uri.hasScheme || (uri.scheme != 'http' && uri.scheme != 'https')) {
+      return false;
+    }
+    if (HelperUtils.isYoutubeVideo(trimmed)) {
+      return true;
+    }
+    final String host = uri.host.toLowerCase();
+    if (host.contains('vimeo.com') || host.contains('dailymotion.com')) {
+      return true;
+    }
+    const List<String> allowedExtensions = <String>['.mp4', '.mov', '.m4v', '.webm'];
+    return allowedExtensions.any(
+          (String ext) => uri.path.toLowerCase().endsWith(ext),
+    );
+  }
+
+  bool _validateMediaStep() {
+    if (_mediaFiles.isEmpty && _videoLinks.isEmpty) {
+      _showMessage('يرجى إضافة صورة أو فيديو واحد على الأقل قبل المتابعة.');
+      return false;
+    }
+    for (final String link in _videoLinks) {
+      if (!_isValidVideoLink(link)) {
+        _showMessage('أحد روابط الفيديو غير صالح. يرجى التحقق منه.');
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool _validateTextDetailsStep() {
+    final FormState? form = _textDetailsFormKey.currentState;
+    if (form == null) {
+      return true;
+    }
+    if (!form.validate()) {
+      _showMessage('يرجى التحقق من الحقول النصية قبل المتابعة.');
+      return false;
+    }
+    return true;
+  }
+
+  String? _validateTitle(String? value) {
+    final String trimmed = value?.trim() ?? '';
+    if (trimmed.length < 10 || trimmed.length > 90) {
+      return 'العنوان يجب أن يكون بين 10 و90 حرفًا.';
+    }
+    return null;
+  }
+
+  String? _validateDescription(String? value) {
+    final String trimmed = value?.trim() ?? '';
+    if (trimmed.length < 30) {
+      return 'الوصف يجب أن يحتوي على 30 حرفًا على الأقل.';
+    }
+    if (trimmed.length > 1200) {
+      return 'الوصف طويل جدًا. يرجى تقليصه إلى 1200 حرف كحد أقصى.';
+    }
+    return null;
+  }
+
+  String? _validatePrice(String? value) {
+    final String trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return 'يرجى إدخال السعر.';
+    }
+    final num? parsed = num.tryParse(trimmed);
+    if (parsed == null || parsed <= 0) {
+      return 'يرجى إدخال سعر صالح أكبر من صفر.';
+    }
+    return null;
+  }
+
+  String? _validateContact(String? value) {
+    final String trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return 'يرجى إدخال رقم للتواصل.';
+    }
+    final String normalized = trimmed.startsWith('+') ? trimmed.substring(1) : trimmed;
+    if (normalized.length < 6 || normalized.length > 15) {
+      return 'رقم التواصل يجب أن يكون بين 6 و15 رقمًا.';
+    }
+    if (!RegExp(r'^[0-9]+$').hasMatch(normalized)) {
+      return 'رقم التواصل يجب أن يحتوي على أرقام فقط بعد المقدمة.';
+    }
+    return null;
+  }
+
+  String? _validateSheinUrl(String? value) {
+    final String trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    final Uri? uri = Uri.tryParse(trimmed);
+    if (uri == null || !uri.hasScheme || uri.scheme == 'file') {
+      return 'يرجى إدخال رابط صالح.';
+    }
+    return null;
+  }
+
+
 
   Future<void> _autoSaveDraft() async {
     if (!_hasUnsavedChanges || _isSavingDraft) {
@@ -148,8 +433,10 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         return;
       }
     }
-    if (_currentStep == 4 && _titleController.text.trim().isEmpty) {
-      _showMessage('يرجى إدخال عنوان للإعلان قبل المتابعة.');
+    if (_currentStep == 3 && !_validateMediaStep()) {
+      return;
+    }
+    if (_currentStep == 4 && !_validateTextDetailsStep()) {
       return;
     }
     setState(() => _currentStep += 1);
@@ -276,7 +563,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       case 2:
         return _buildCustomFieldsStep();
       case 3:
-        return const Center(child: Text('ارفع صورك أو فيديو الإعلان.'));
+        return _buildMediaStep();
 
       case 4:
         return _buildTextDetailsStep();
@@ -399,6 +686,14 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       _customFieldValues = <String, dynamic>{};
       _customFieldError = null;
       _isLoadingCustomFields = false;
+      if (category.interfaceType != 'shein_products') {
+        if (_sheinProductLinkController.text.isNotEmpty) {
+          _sheinProductLinkController.clear();
+        }
+        if (_sheinReviewLinkController.text.isNotEmpty) {
+          _sheinReviewLinkController.clear();
+        }
+      }
     });
     _customFieldsFormKey.currentState?.clearValidationErrors();
     _markDirty();
@@ -539,13 +834,45 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       'title': _titleController.text.trim(),
       'description': _descriptionController.text.trim(),
       'contact': _contactController.text.trim(),
+      'price': _priceController.text.trim(),
+      'currency': _selectedCurrency,
       'status': isDraft ? 'draft' : 'pending',
       'has_custom_fields': _customFieldSchemas.isNotEmpty,
     };
 
+
+    final List<_PendingMedia> images =
+    _mediaFiles.where((media) => media.isImage).toList(growable: false);
+    final List<_PendingMedia> videos =
+    _mediaFiles.where((media) => media.isVideo).toList(growable: false);
+
+    if (images.isNotEmpty || videos.isNotEmpty || _videoLinks.isNotEmpty) {
+      payload['media'] = <String, dynamic>{
+        if (images.isNotEmpty)
+          'images': images.map((media) => media.toPayload()).toList(growable: false),
+        if (videos.isNotEmpty)
+          'videos': videos.map((media) => media.toPayload()).toList(growable: false),
+        if (_videoLinks.isNotEmpty) 'video_links': List<String>.from(_videoLinks),
+      };
+    }
+
+
     if (_customFieldValues.isNotEmpty) {
       payload['custom_fields'] = Map<String, dynamic>.from(_customFieldValues);
     }
+
+
+    if (_isSheinInterface) {
+      final String productLink = _sheinProductLinkController.text.trim();
+      final String reviewLink = _sheinReviewLinkController.text.trim();
+      if (productLink.isNotEmpty) {
+        payload['product_link'] = productLink;
+      }
+      if (reviewLink.isNotEmpty) {
+        payload['review_link'] = reviewLink;
+      }
+    }
+
 
     payload.removeWhere((String key, dynamic value) {
       if (value == null) {
@@ -563,6 +890,145 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     return payload;
   }
 
+
+
+
+  Widget _buildMediaStep() {
+    final ThemeData theme = Theme.of(context);
+    final List<_PendingMedia> images =
+    _mediaFiles.where((media) => media.isImage).toList(growable: false);
+    final List<_PendingMedia> videos =
+    _mediaFiles.where((media) => media.isVideo).toList(growable: false);
+    final bool canAddLink = _videoLinkFieldController.text.trim().isNotEmpty;
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text('أضف وسائط إعلانك', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 8),
+        Text(
+          'يمكنك رفع الصور والفيديوهات بشكل مؤقت أو إضافة روابط فيديو قبل الإرسال.',
+          style: theme.textTheme.bodySmall,
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            FilledButton.icon(
+              onPressed: _isPickingImages ? null : _pickImages,
+              icon: _isPickingImages
+                  ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+                  : const Icon(Icons.image_outlined),
+              label: const Text('إضافة صور'),
+            ),
+            FilledButton.icon(
+              onPressed: _isPickingVideo ? null : _pickVideo,
+              icon: _isPickingVideo
+                  ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+                  : const Icon(Icons.videocam_outlined),
+              label: const Text('إضافة فيديو'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        if (images.isEmpty && videos.isEmpty)
+          _buildInfoCard('لم يتم إضافة ملفات وسائط بعد.'),
+        if (images.isNotEmpty) ...[
+          Text('الصور (${images.length})', style: theme.textTheme.titleSmall),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              for (final _PendingMedia media in images)
+                _MediaPreviewCard(
+                  key: ValueKey<String>('image_${media.file.path}'),
+                  media: media,
+                  onRemove: () => _removeMediaFile(media),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+        ],
+        if (videos.isNotEmpty) ...[
+          Text('الفيديوهات (${videos.length})', style: theme.textTheme.titleSmall),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              for (final _PendingMedia media in videos)
+                _MediaPreviewCard(
+                  key: ValueKey<String>('video_${media.file.path}'),
+                  media: media,
+                  onRemove: () => _removeMediaFile(media),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+        ],
+        const Divider(height: 32),
+        Text('روابط الفيديو', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 12),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _videoLinkFieldController,
+                keyboardType: TextInputType.url,
+                decoration: const InputDecoration(
+                  labelText: 'أدخل رابط فيديو (يوتيوب أو ملف مباشر)',
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
+            const SizedBox(width: 12),
+            FilledButton.icon(
+              onPressed: canAddLink ? _addVideoLink : null,
+              icon: const Icon(Icons.add_link),
+              label: const Text('إضافة'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (_videoLinks.isEmpty)
+          Text('لا توجد روابط فيديو مضافة.', style: theme.textTheme.bodySmall)
+        else
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final String link in _videoLinks)
+                InputChip(
+                  label: SizedBox(
+                    width: 220,
+                    child: Text(
+                      link,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  onDeleted: () => _removeVideoLink(link),
+                ),
+            ],
+          ),
+      ],
+    );
+  }
+
+
+
+
+
   Future<void> _publishAd() async {
     if (_selectedMainCategory == null) {
       _showMessage('يرجى اختيار الفئة الرئيسية قبل النشر.');
@@ -579,8 +1045,10 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         return;
       }
     }
-    if (_titleController.text.trim().isEmpty) {
-      _showMessage('يرجى إدخال عنوان الإعلان قبل النشر.');
+    if (!_validateMediaStep()) {
+      return;
+    }
+    if (!_validateTextDetailsStep()) {
       return;
     }
 
@@ -610,10 +1078,13 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   Widget _buildTextDetailsStep() {
 
     final ThemeData theme = Theme.of(context);
+    final bool isShein = _isSheinInterface;
+
     final List<Widget> customFieldWidgets = <Widget>[];
     for (final CustomFieldSchema field in _customFieldSchemas) {
       final dynamic value = _customFieldValues[field.id];
-      final String displayValue = field.formatValue(value).isEmpty ? 'غير محدد' : field.formatValue(value);
+      final String formatted = field.formatValue(value);
+      final String displayValue = formatted.isEmpty ? 'غير محدد' : formatted;
       customFieldWidgets
         ..add(Text(
           field.label,
@@ -623,6 +1094,186 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         ..add(Text(displayValue))
         ..add(const SizedBox(height: 12));
     }
+
+
+    final TextStyle? sectionStyle = theme.textTheme.titleMedium;
+
+    return Form(
+      key: _textDetailsFormKey,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text('المراجعة النهائية', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 12),
+          _buildInfoCard('تحقق من التفاصيل قبل الإرسال. يمكنك العودة لتعديل أي خطوة.'),
+          const SizedBox(height: 16),
+          Text('معلومات الإعلان', style: theme.textTheme.titleMedium),
+
+          const SizedBox(height: 8),
+          Text('العنوان: ${_titleController.text.isEmpty ? 'غير محدد' : _titleController.text}'),
+          const SizedBox(height: 6),
+          Text('الوصف: ${_descriptionController.text.isEmpty ? 'غير محدد' : _descriptionController.text}'),
+          const SizedBox(height: 6),
+          Text('السعر: ${_priceController.text.isEmpty ? 'غير محدد' : _priceController.text} $currencyLabel'),
+          const SizedBox(height: 6),
+          Text('رقم التواصل: ${_contactController.text.isEmpty ? 'غير محدد' : _contactController.text}'),
+          const SizedBox(height: 16),
+          Text('الفئات المختارة', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 8),
+
+          Text('الفئة الرئيسية: ${_selectedMainCategory?.name ?? 'غير محدد'}'),
+          Text('الفئة الفرعية: ${_selectedSubCategory?.name ?? 'غير محدد'}'),
+          Text('واجهة العرض: ${_selectedMainCategory?.interfaceType ?? 'غير محدد'}'),
+          const SizedBox(height: 16),
+          Text('الحقول المخصّصة', style: sectionStyle),
+          const SizedBox(height: 8),
+          if (customFieldSummary.isEmpty)
+            Text('لا توجد قيم محفوظة للحقول المخصّصة.', style: theme.textTheme.bodySmall)
+          else
+            ...customFieldSummary,
+          const Divider(height: 32),
+          Text('معلومات الإعلان', style: sectionStyle),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _titleController,
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(
+              labelText: 'عنوان الإعلان',
+              helperText: '10 - 90 حرفًا',
+            ),
+            maxLength: 90,
+            validator: _validateTitle,
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _descriptionController,
+            minLines: 4,
+            maxLines: 6,
+            textInputAction: TextInputAction.newline,
+            decoration: const InputDecoration(
+              labelText: 'الوصف التفصيلي',
+              helperText: 'يُنصح بوصف واضح لا يقل عن 30 حرفًا.',
+            ),
+            validator: _validateDescription,
+          ),
+          const SizedBox(height: 16),
+          Text('التسعير والعملات', style: sectionStyle),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: TextFormField(
+                  controller: _priceController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'السعر',
+                  ),
+                  inputFormatters: <TextInputFormatter>[
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                  ],
+                  validator: _validatePrice,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: DropdownButtonFormField<String>(
+                  value: _selectedCurrency,
+                  decoration: const InputDecoration(
+                    labelText: 'العملة',
+                  ),
+                  items: _currencyOptions.entries
+                      .map(
+                        (MapEntry<String, String> entry) => DropdownMenuItem<String>(
+                      value: entry.key,
+                      child: Text(entry.value),
+                    ),
+                  )
+                      .toList(growable: false),
+                  onChanged: (String? value) {
+                    setState(() => _selectedCurrency = value);
+                    _markDirty();
+                  },
+                  validator: (String? value) => value == null ? 'يرجى اختيار العملة.' : null,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text('بيانات التواصل', style: sectionStyle),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _contactController,
+            keyboardType: TextInputType.phone,
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(
+              labelText: 'رقم التواصل',
+              helperText: 'يمكن أن يبدأ بعلامة + ثم أرقام فقط.',
+            ),
+            maxLength: 16,
+            inputFormatters: <TextInputFormatter>[
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
+            ],
+            validator: _validateContact,
+          ),
+          if (isShein) ...[
+            const SizedBox(height: 16),
+            Text('روابط شي إن', style: sectionStyle),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _sheinProductLinkController,
+              keyboardType: TextInputType.url,
+              textInputAction: TextInputAction.next,
+              decoration: const InputDecoration(
+                labelText: 'رابط المنتج في شي إن',
+              ),
+              validator: _validateSheinUrl,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _sheinReviewLinkController,
+              keyboardType: TextInputType.url,
+              textInputAction: TextInputAction.next,
+              decoration: const InputDecoration(
+                labelText: 'رابط مراجعة موثوقة (اختياري)',
+              ),
+              validator: _validateSheinUrl,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReviewStep() {
+    final ThemeData theme = Theme.of(context);
+    final List<_PendingMedia> images =
+    _mediaFiles.where((media) => media.isImage).toList(growable: false);
+    final List<_PendingMedia> videos =
+    _mediaFiles.where((media) => media.isVideo).toList(growable: false);
+    final bool isShein = _isSheinInterface;
+    final String currencyLabel =
+        _currencyOptions[_selectedCurrency] ?? (_selectedCurrency ?? 'غير محدد');
+
+    final List<Widget> customFieldSummary = <Widget>[];
+    for (final CustomFieldSchema field in _customFieldSchemas) {
+      final dynamic value = _customFieldValues[field.id];
+      final String formatted = field.formatValue(value);
+      customFieldSummary
+        ..add(Text(
+          field.label,
+          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+        ))
+        ..add(const SizedBox(height: 4))
+        ..add(Text(formatted.isEmpty ? 'غير محدد' : formatted))
+        ..add(const SizedBox(height: 12));
+    }
+
+
+
+
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -640,44 +1291,176 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         else
           ...customFieldWidgets,
         const Divider(height: 32),
-        TextField(
-          controller: _titleController,
-          decoration: const InputDecoration(
-            labelText: 'عنوان الإعلان',
-            helperText: '10 - 90 حرفًا',
-          ),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _descriptionController,
-          minLines: 4,
-          maxLines: 6,
-          decoration: const InputDecoration(
-            labelText: 'الوصف التفصيلي',
-          ),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _contactController,
-          keyboardType: TextInputType.phone,
-          decoration: const InputDecoration(
-            labelText: 'رقم التواصل',
-          ),
-        ),
+        Text('الوسائط', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 8),
+        if (images.isEmpty && videos.isEmpty && _videoLinks.isEmpty)
+          Text('لم تتم إضافة وسائط.', style: theme.textTheme.bodySmall)
+        else ...[
+          if (images.isNotEmpty)
+            Text('عدد الصور: ${images.length}', style: theme.textTheme.bodyMedium),
+          if (videos.isNotEmpty)
+            Text('عدد الفيديوهات: ${videos.length}', style: theme.textTheme.bodyMedium),
+          if (_videoLinks.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text('روابط الفيديو:', style: theme.textTheme.bodyMedium),
+            const SizedBox(height: 4),
+            ..._videoLinks.map((String link) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(link, style: theme.textTheme.bodySmall),
+            )),
+          ],
+        ],
+        if (isShein) ...[
+          const Divider(height: 32),
+          Text('تفاصيل قسم شي إن', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Text('رابط المنتج: ${_sheinProductLinkController.text.isEmpty ? 'غير متوفر' : _sheinProductLinkController.text}'),
+          const SizedBox(height: 6),
+          Text('رابط المراجعة: ${_sheinReviewLinkController.text.isEmpty ? 'غير متوفر' : _sheinReviewLinkController.text}'),
+        ],
       ],
     );
   }
+}
 
-  Widget _buildReviewStep() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Text('العنوان: ${_titleController.text}'),
-        const SizedBox(height: 8),
-        Text('الوصف: ${_descriptionController.text}'),
-        const SizedBox(height: 8),
-        Text('التواصل: ${_contactController.text}'),
-      ],
+
+enum _PendingMediaType { image, video }
+
+class _PendingMedia {
+  _PendingMedia._(this.file, this.type, this.sizeInBytes);
+
+  factory _PendingMedia.image(File file) =>
+      _PendingMedia._(file, _PendingMediaType.image, _resolveSize(file));
+
+  factory _PendingMedia.video(File file) =>
+      _PendingMedia._(file, _PendingMediaType.video, _resolveSize(file));
+
+  final File file;
+  final _PendingMediaType type;
+  final int sizeInBytes;
+
+  static int _resolveSize(File file) {
+    try {
+      return file.lengthSync();
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  bool get isImage => type == _PendingMediaType.image;
+  bool get isVideo => type == _PendingMediaType.video;
+
+  String get displayName {
+    final List<String> segments = file.uri.pathSegments;
+    if (segments.isNotEmpty) {
+      return segments.last;
+    }
+    return file.path;
+  }
+
+  Map<String, dynamic> toPayload() => <String, dynamic>{
+    'type': type.name,
+    'path': file.path,
+    'size': sizeInBytes,
+    'name': displayName,
+  };
+}
+
+class _MediaPreviewCard extends StatelessWidget {
+  const _MediaPreviewCard({super.key, required this.media, required this.onRemove});
+
+  final _PendingMedia media;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colors = theme.colorScheme;
+
+    Widget buildPreview() {
+      if (media.isImage) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.file(
+            media.file,
+            fit: BoxFit.cover,
+            errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) {
+              return Container(
+                color: colors.surfaceVariant,
+                alignment: Alignment.center,
+                child: const Icon(Icons.broken_image_outlined),
+              );
+            },
+          ),
+        );
+      }
+      return Container(
+        decoration: BoxDecoration(
+          color: colors.secondaryContainer,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        alignment: Alignment.center,
+        child: Icon(Icons.play_circle_fill, size: 42, color: colors.tertiary),
+      );
+    }
+
+    return SizedBox(
+      width: 148,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AspectRatio(
+            aspectRatio: 1,
+            child: Stack(
+              children: [
+                Positioned.fill(child: buildPreview()),
+                Positioned(
+                  top: 6,
+                  right: 6,
+                  child: Material(
+                    color: colors.error.withOpacity(0.9),
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: onRemove,
+                      child: const Padding(
+                        padding: EdgeInsets.all(4),
+                        child: Icon(Icons.close, size: 16, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            media.displayName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            HelperUtils.getFileSizeString(bytes: media.sizeInBytes, decimals: 1),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+          if (media.isVideo)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.movie_filter_outlined, size: 16, color: colors.tertiary),
+                  const SizedBox(width: 4),
+                  Text('ملف فيديو', style: theme.textTheme.bodySmall),
+                ],
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

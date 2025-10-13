@@ -1896,12 +1896,6 @@ class ApiController extends Controller {
                 'items.updated_at',
             ];
 
-            $summaryRelations = [
-                'user:id,name,profile,is_verified,show_personal_details,country_code',
-                'category:id,name,image',
-                'area:id,name',
-            ];
-
 
 
             $detailRelations = [
@@ -1921,8 +1915,8 @@ class ApiController extends Controller {
                     ->withCount('review as ratings_count')
                     ->select('items.*');
             } else {
-                $sql = Item::with($summaryRelations)
-                    ->select($summarySelectColumns);
+                $sql = Item::query()->select($summarySelectColumns);
+
             }
 
             $sql = $sql

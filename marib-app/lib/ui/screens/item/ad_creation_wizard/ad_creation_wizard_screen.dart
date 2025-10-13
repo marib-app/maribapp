@@ -1916,8 +1916,9 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+    HelperUtils.showSnackBarMessage(
+      context,
+      message,
     );
   }
 
@@ -2055,22 +2056,32 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
-                    onPressed: _isSavingDraft ? null : _autoSaveDraft,
-                    child: _isSavingDraft
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('حفظ كمسودة'),
+                  child: UiUtils.buildButton(
+                    context,
+                    onPressed: _autoSaveDraft,
+                    buttonTitle: 'حفظ كمسودة',
+                    isInProgress: _isSavingDraft,
+                    showProgressTitle: false,
+                    buttonColor: colors.secondaryColor,
+                    textColor: colors.territoryColor,
+                    border: BorderSide(color: colors.territoryColor),
+                    showElevation: false,
+                    progressWidth: 18,
+                    progressHeight: 18,
+                    disabledColor: colors.secondaryColor.withOpacity(0.7),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: OutlinedButton(
+                  child: UiUtils.buildButton(
+                    context,
                     onPressed: () => Navigator.maybePop(context),
-                    child: const Text('إلغاء'),
+                    buttonTitle: 'إلغاء',
+                    buttonColor: colors.secondaryColor,
+                    textColor:
+                    theme.textTheme.bodyLarge?.color ?? colors.textColor,
+                    border: BorderSide(color: colors.borderColor),
+                    showElevation: false,
                   ),
                 ),
               ],
@@ -2079,29 +2090,33 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
-                    onPressed: currentStepIndex == 0 ? null : _goPrevious,
-                    child: const Text('رجوع'),
+                  child: UiUtils.buildButton(
+                    context,
+                    onPressed: _goPrevious,
+                    buttonTitle: 'رجوع',
+                    buttonColor: colors.secondaryColor,
+                    textColor: colors.territoryColor,
+                    border: BorderSide(color: colors.territoryColor),
+                    showElevation: false,
+                    disabled: currentStepIndex == 0,
+                    disabledColor: colors.secondaryColor.withOpacity(0.6),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: _isPublishing
-                        ? null
-                        : (currentStepIndex == steps.length - 1
-                            ? _publishAd
-                            : _goNext),
-                    child: currentStepIndex == steps.length - 1
-                        ? (_isPublishing
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: Colors.white),
-                              )
-                            : const Text('نشر'))
-                        : const Text('التالي'),
+                  child: UiUtils.buildButton(
+                    context,
+                    onPressed: currentStepIndex == steps.length - 1
+                        ? _publishAd
+                        : _goNext,
+                    buttonTitle: currentStepIndex == steps.length - 1
+                        ? 'نشر'
+                        : 'التالي',
+                    isInProgress:
+                    _isPublishing && currentStepIndex == steps.length - 1,
+                    disabled: _isPublishing,
+                    progressWidth: 18,
+                    progressHeight: 18,
                   ),
                 ),
               ],

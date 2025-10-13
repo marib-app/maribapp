@@ -26,6 +26,7 @@ import 'package:marib/utils/extensions/extensions.dart'; // context.color
 
 import 'currency_screen.dart' show CurrencyViewState, CurrencyPageStatus;
 import 'package:marib/data/model/metal_rate.dart';
+import 'package:marib/data/model/preference_option.dart';
 
 
 
@@ -382,7 +383,12 @@ class CurrencyScreenUI extends StatelessWidget {
               amountInputFormatters: amountInputFormatters,
               brand: brand,
             ),
-            GoldTabView(state: state, onShareRates: onShareRates, brand: brand),
+            GoldTabView(
+              state: state,
+              onShareRates: onShareRates,
+              brand: brand,
+              onToggleMetalWatchlist: onToggleMetalWatchlist,
+            ),
             SilverTabView(
               state: state,
               brand: brand,
@@ -1234,8 +1240,12 @@ class GoldTabView extends StatelessWidget {
   final VoidCallback onShareRates;
   final Color brand;
 
+
+  DateTime? get _lastUpdated => state.metalsLastUpdatedAt;
+
   bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
 
+  String _format(double value) => NumberFormat('#,##0.000').format(value);
   // ——— دوال داخلية ———
   Widget _header(BuildContext context) {
     final onBg = _isDark(context) ? Colors.white : Colors.black;
@@ -1382,6 +1392,8 @@ class GoldTabView extends StatelessWidget {
     );
   }
 
+
+
   Widget _empty(BuildContext context) {
     final onBg = _isDark(context) ? Colors.white : Colors.black;
     return Center(
@@ -1421,8 +1433,8 @@ class GoldTabView extends StatelessWidget {
             itemCount: rates.length,
             itemBuilder: (ctx, i) {
               final MetalRate rate = rates[i];
-              final bool isWatchlisted =
-              state.metalWatchlist.contains(rate.id);
+              final bool isWatchlisted = state.metalWatchlist.contains(rate.id);
+
               return _row(ctx, rate, isWatchlisted);
             },
             separatorBuilder: (_, __) => Divider(height: 1, color: divider),
@@ -1487,7 +1499,7 @@ class SilverTabView extends StatelessWidget {
     );
   }
 
-  Widget _row(BuildContext context, MetalRate rate) {
+  Widget _row(BuildContext context, MetalRate rate, bool isWatchlisted) {
     final onBg = _isDark(context) ? Colors.white : Colors.black;
     final nameStyle = Theme.of(context).textTheme.titleSmall?.copyWith(
       color: onBg,
@@ -1543,8 +1555,11 @@ class SilverTabView extends StatelessWidget {
               shape: BoxShape.circle,
               border: Border.all(color: onBg.withOpacity(0.25)),
             ),
-            child:
-            Icon(Icons.diamond, size: 16, color: Colors.grey[400] ?? Colors.grey),
+            child: Icon(
+              Icons.diamond,
+              size: 16,
+              color: Colors.grey[400] ?? Colors.grey,
+            ),
 
           ),
           const SizedBox(width: 10),

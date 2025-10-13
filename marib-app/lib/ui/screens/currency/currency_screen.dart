@@ -11,7 +11,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart' show DateFormat;
+import 'package:intl/intl.dart' show DateFormat, NumberFormat;
 import 'package:share_plus/share_plus.dart';
 
 import 'package:marib/ui/theme/theme.dart';
@@ -519,16 +519,17 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
         } else if (state is CurrencySuccess) {
           final rates = state.currencyRates;
           final goldRates = state.metalRates
+
+              .where((rate) => rate.isGold)
+              .toList(growable: false);
+          final silverRates = state.metalRates
+              .where((rate) => rate.isSilver)
+              .toList(growable: false);
           final displayRates = state.visibleCurrencyRates;
           final displayGoldRates = state.visibleMetalRates
               .where((rate) => rate.isGold)
               .toList(growable: false);
           final displaySilverRates = state.visibleMetalRates
-              .where((rate) => rate.isSilver)
-              .toList(growable: false);
-          .where((rate) => rate.isGold)
-              .toList(growable: false);
-          final silverRates = state.metalRates
               .where((rate) => rate.isSilver)
               .toList(growable: false);
           _ensureInitialSelection(rates);

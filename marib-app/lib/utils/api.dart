@@ -428,6 +428,7 @@ class Api {
   static String renewItemApi = "renew-item";
   static String usersByAccountTypeApi = "users-by-account-type";
   static String userProfileStatsApi = "user-profile-stats";
+  static String userPreferencesApi = "user/preferences";
 
   // OTP module apis
   static String sendOtpApi = "send-otp";

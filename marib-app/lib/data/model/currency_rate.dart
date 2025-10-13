@@ -95,8 +95,6 @@ class CurrencyRate {
       quoteIsDefault: json['quote_is_default'] == true,
       quoteUsedFallback: json['quote_used_fallback'] == true,
 
-      isWatchlisted: json['is_watchlisted'] == true,
-
     );
   }
 }

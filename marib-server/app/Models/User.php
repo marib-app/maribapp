@@ -192,10 +192,17 @@ class User extends Authenticatable {
 
 
 
-        public function cartItems()
+    public function cartItems()
     {
         return $this->hasMany(CartItem::class);
     }
+
+    public function preference(): HasOne
+    {
+        return $this->hasOne(UserPreference::class);
+    }
+
+
 
     public function cartCouponSelection(): HasOne
     {

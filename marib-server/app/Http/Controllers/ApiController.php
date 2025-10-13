@@ -82,7 +82,9 @@ use App\Models\DepartmentTicket;
 use App\Services\DepartmentSupportService;
 use App\Exceptions\UnknownFeaturedSectionSlugException;
 use App\Services\FeaturedSectionService;
-
+use App\Enums\NotificationFrequency;
+use App\Http\Resources\UserPreferenceResource;
+use App\Models\UserPreference;
 use App\Models\RequestDevice;
 use App\Models\Order;
 use App\Services\CachingService;
@@ -551,7 +553,7 @@ class ApiController extends Controller {
 
             $perPage = min($perPage, 50);
 
-            
+
             $settingsQuery = Setting::select(['name', 'value', 'type'])->orderBy('name');
 
 
@@ -6918,9 +6920,55 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
                 ResponseService::validationError($validator->errors()->first());
             }
 
+
+            $requestedGovernorateCode = $request->input('governorate_code');
+
+            $preferenceData = [
+                'favorite_governorate_code' => null,
+                'currency_watchlist' => [],
+                'metal_watchlist' => [],
+                'notification_frequency' => NotificationFrequency::DAILY->value,
+            ];
+
+            $currencyWatchlist = collect();
+            $metalWatchlist = collect();
+
+            if (Auth::check()) {
+                $user = Auth::user();
+
+                /** @var UserPreference|null $preference */
+                $preference = $user->preference()->with('favoriteGovernorate')->first();
+
+                if (!$preference) {
+                    $preference = $user->preference()->create([
+                        'currency_watchlist' => [],
+                        'metal_watchlist' => [],
+                        'notification_frequency' => NotificationFrequency::DAILY->value,
+                    ])->fresh(['favoriteGovernorate']);
+                }
+
+                $preferenceResource = new UserPreferenceResource($preference);
+                $preferenceData = $preferenceResource->resolve($request);
+
+                if (!$requestedGovernorateCode && !empty($preferenceData['favorite_governorate_code'])) {
+                    $requestedGovernorateCode = $preferenceData['favorite_governorate_code'];
+                }
+
+                $currencyWatchlist = collect($preferenceData['currency_watchlist'] ?? [])
+                    ->map(static fn ($id) => (int) $id)
+                    ->filter(static fn ($id) => $id > 0)
+                    ->values();
+
+                $metalWatchlist = collect($preferenceData['metal_watchlist'] ?? [])
+                    ->map(static fn ($id) => (int) $id)
+                    ->filter(static fn ($id) => $id > 0)
+                    ->values();
+            }
+
+
             $requestedGovernorate = null;
-            if ($request->filled('governorate_code')) {
-                $requestedGovernorate = Governorate::where('code', $request->governorate_code)->first();
+            if (!empty($requestedGovernorateCode)) {
+                $requestedGovernorate = Governorate::where('code', $requestedGovernorateCode)->first();
 
                 if ($requestedGovernorate && !$requestedGovernorate->is_active) {
                     $requestedGovernorate = null;
@@ -6969,6 +7017,9 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
                     'quote_quoted_at' => optional($quote?->quoted_at)->toIso8601String(),
                     'quote_is_default' => (bool) ($quote?->is_default ?? false),
                     'quote_used_fallback' => $usedFallback,
+                    'is_watchlisted' => $currencyWatchlist->contains((int) $currency->id),
+
+
                 ];
             }
 
@@ -6981,6 +7032,11 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
                 'code' => $appliedGovernorate->code,
                 'name' => $appliedGovernorate->name,
             ] : null;
+            $notificationOptions = collect(NotificationFrequency::cases())
+                ->map(static fn (NotificationFrequency $frequency) => [
+                    'value' => $frequency->value,
+                    'label' => $frequency->label(),
+                ])->values();
 
             ResponseService::successResponse(
                 "Currency rates fetched successfully.",
@@ -6993,7 +7049,11 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
                     'requested_governorate' => $requestedGovernorateData,
                     'applied_governorate' => $appliedGovernorateData,
                     'used_fallback' => $anyFallback,
-                    'requested_governorate_code' => $request->input('governorate_code'),
+                    'requested_governorate_code' => $requestedGovernorate?->code ?? $requestedGovernorateCode,
+                    'preferences' => $preferenceData,
+                    'preference_options' => [
+                        'notification_frequencies' => $notificationOptions,
+                    ],
                 ]
             );
 

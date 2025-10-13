@@ -67,9 +67,12 @@ class FetchItemSummaryFailure extends FetchItemSummaryState {
 }
 
 class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
-  FetchItemSummaryCubit() : super(FetchItemSummaryInitial());
+  FetchItemSummaryCubit({ItemRepository? itemRepository})
+      : _itemRepository = itemRepository ?? ItemRepository(),
+        super(FetchItemSummaryInitial());
 
-  final ItemRepository _itemRepository = ItemRepository();
+  final ItemRepository _itemRepository;
+
 
   Future<void> fetchSummaries({
     required int categoryId,

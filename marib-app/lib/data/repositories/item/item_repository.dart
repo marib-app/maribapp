@@ -6,6 +6,7 @@ import 'package:marib/utils/api.dart';
 import 'package:marib/data/model/data_output.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:path/path.dart' as path;
+import 'package:meta/meta.dart';
 
 /// ---------------------------------------------------------------------------
 /// ItemRepository
@@ -14,6 +15,24 @@ import 'package:path/path.dart' as path;
 /// ---------------------------------------------------------------------------
 
 class ItemRepository {
+
+  ItemRepository({
+    Future<Map<String, dynamic>> Function({
+    required String url,
+    Map<String, dynamic>? queryParameters,
+    bool? useBaseUrl,
+    bool enableEtagCache,
+    })?
+    getRequest,
+  }) : _getRequest = getRequest ?? Api.get;
+
+  final Future<Map<String, dynamic>> Function({
+  required String url,
+  Map<String, dynamic>? queryParameters,
+  bool? useBaseUrl,
+  bool enableEtagCache,
+  }) _getRequest;
+
   /// -------------------------------------------------------------------------
   /// createItem
   /// إنشاء إعلان جديد مع صورة رئيسية (إلزامية) + صور إضافية (اختيارية)
@@ -115,16 +134,25 @@ class ItemRepository {
     if (search != null) parameters[Api.search] = search;
     if (sortBy != null) parameters[Api.sortBy] = sortBy;
 
-    final Map<String, dynamic> response =
-    await Api.get(url: Api.getItemApi, queryParameters: parameters);
+    final Map<String, dynamic> response = await _getRequest(
+      url: Api.getItemApi,
+      queryParameters: parameters,
+      enableEtagCache: false,
+    );
 
-    final List<ItemSummary> items = (response['data']['data'] as List)
-        .whereType<Map<String, dynamic>>()
-        .map(ItemSummary.fromJson)
-        .toList();
+    final Iterable<Map<String, dynamic>> itemMaps =
+    ItemRepository.resolvePaginatedMapList(response);
+
+    final List<ItemSummary> items =
+    itemMaps.map(ItemSummary.fromJson).toList();
+
+    final int total = ItemRepository.resolveTotalCount(
+      response,
+      items.length,
+    );
 
     return DataOutput(
-      total: response['data']['total'] ?? 0,
+      total: total,
       modelList: items,
     );
   }
@@ -309,6 +337,141 @@ class ItemRepository {
   }
 
 
+  @visibleForTesting
+  static Iterable<Map<String, dynamic>> resolvePaginatedMapList(
+      Map<String, dynamic> response,
+      ) {
+    final Iterable<dynamic> dataItems = _extractIterable(response['data']);
+    if (dataItems.isNotEmpty || _isExplicitCollection(response['data'])) {
+      return dataItems.whereType<Map<String, dynamic>>();
+    }
+
+    final Iterable<dynamic> items = _extractIterable(response['items']);
+    if (items.isNotEmpty || _isExplicitCollection(response['items'])) {
+      return items.whereType<Map<String, dynamic>>();
+    }
+
+    final Iterable<dynamic> results = _extractIterable(response['results']);
+    if (results.isNotEmpty || _isExplicitCollection(response['results'])) {
+      return results.whereType<Map<String, dynamic>>();
+    }
+
+    return const Iterable<Map<String, dynamic>>.empty();
+  }
+
+  @visibleForTesting
+  static int resolveTotalCount(
+      Map<String, dynamic> response,
+      int fallbackCount,
+      ) {
+    final int? totalFromData = _parseTotal(response['data']);
+    if (totalFromData != null) {
+      return totalFromData;
+    }
+
+    final int? totalFromItems = _parseTotal(response['items']);
+    if (totalFromItems != null) {
+      return totalFromItems;
+    }
+
+    final int? totalFromRoot = _parseTotal(response);
+    return totalFromRoot ?? fallbackCount;
+  }
+
+  static Iterable<dynamic> _extractIterable(dynamic value) {
+    if (value == null) {
+      return const Iterable<dynamic>.empty();
+    }
+    if (value is Iterable<dynamic>) {
+      return value;
+    }
+    if (value is Map<String, dynamic>) {
+      if (value.containsKey('data')) {
+        final dynamic nested = value['data'];
+        final Iterable<dynamic> nestedIterable = _extractIterable(nested);
+        if (nestedIterable.isNotEmpty || _isExplicitCollection(nested)) {
+          return nestedIterable;
+        }
+      }
+      if (value.containsKey('items')) {
+        final dynamic nested = value['items'];
+        final Iterable<dynamic> nestedIterable = _extractIterable(nested);
+        if (nestedIterable.isNotEmpty || _isExplicitCollection(nested)) {
+          return nestedIterable;
+        }
+      }
+      if (value.containsKey('results')) {
+        final dynamic nested = value['results'];
+        final Iterable<dynamic> nestedIterable = _extractIterable(nested);
+        if (nestedIterable.isNotEmpty || _isExplicitCollection(nested)) {
+          return nestedIterable;
+        }
+      }
+      if (value.containsKey('item')) {
+        final dynamic nested = value['item'];
+        final Iterable<dynamic> nestedIterable = _extractIterable(nested);
+        if (nestedIterable.isNotEmpty || _isExplicitCollection(nested)) {
+          return nestedIterable;
+        }
+      }
+      return <Map<String, dynamic>>[value];
+    }
+    return const Iterable<dynamic>.empty();
+  }
+
+  static bool _isExplicitCollection(dynamic value) {
+    if (value == null) {
+      return false;
+    }
+    if (value is Iterable<dynamic>) {
+      return true;
+    }
+    if (value is Map<String, dynamic>) {
+      return value.containsKey('data') ||
+          value.containsKey('items') ||
+          value.containsKey('results') ||
+          value.containsKey('item');
+    }
+    return false;
+  }
+
+  static int? _parseTotal(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      for (final String key in const <String>{
+        'total',
+        'total_count',
+        'totalItems',
+        'total_items',
+        'count',
+      }) {
+        final int? parsed = _tryParseInt(value[key]);
+        if (parsed != null) {
+          return parsed;
+        }
+      }
+
+      final int? paginationTotal = _parseTotal(value['pagination']);
+      if (paginationTotal != null) {
+        return paginationTotal;
+      }
+
+      final int? metaTotal = _parseTotal(value['meta']);
+      if (metaTotal != null) {
+        return metaTotal;
+      }
+    }
+    return null;
+  }
+
+  static int? _tryParseInt(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+    if (value is String) {
+      return int.tryParse(value);
+    }
+    return null;
+  }
 
 
 

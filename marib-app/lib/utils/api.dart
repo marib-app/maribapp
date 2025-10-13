@@ -356,6 +356,7 @@ class Api {
   static String getFeaturedSectionApi = "get-featured-section";
   static String updateItemApi = "update-item";
   static String addItemApi = "add-item";
+  static String adDraftsApi = "ad-drafts";
   static String deleteItemApi = "delete-item";
   static String setItemTotalClickApi = "set-item-total-click";
   static String makeItemFeaturedApi = "make-item-featured";

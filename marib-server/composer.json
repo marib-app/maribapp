@@ -14,7 +14,6 @@
         "ext-zip": "*",
         "cerbero/json-parser": "^1.1",
         "dacoto/laravel-wizard-installer": "^1.0",
-        "barryvdh/laravel-dompdf": "^2.0",
         "devaslanphp/auto-translate": "*",
         "doctrine/dbal": "3.10",
         "doctrine/deprecations": "1",
@@ -96,6 +95,9 @@
         "optimize-autoloader": true,
         "preferred-install": "dist",
         "sort-packages": true,
+                "platform": {
+            "php": "8.3.0"
+        },
         "allow-plugins": {
             "pestphp/pest-plugin": true
         }

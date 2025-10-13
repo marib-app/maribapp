@@ -1,4 +1,8 @@
 import 'dart:math';
+import 'package:dio/dio.dart';
+import 'package:marib/data/model/ad_draft_model.dart';
+import 'package:marib/data/repositories/item/ad_draft_local_store.dart';
+import 'package:marib/data/repositories/item/ad_draft_repository.dart';
 
 import '../models/custom_field_schema.dart';
 
@@ -119,12 +123,121 @@ final Map<String, List<Map<String, dynamic>>> _mockedSchemas = <String, List<Map
 };
 
 /// Simple service to simulate saving or publishing an advertisement.
+
+class DraftSaveOfflineException implements Exception {
+  DraftSaveOfflineException(this.cause);
+
+  final DioException cause;
+
+  @override
+  String toString() =>
+      'DraftSaveOfflineException(${cause.message ?? cause.error ?? 'unknown'})';
+}
+
+/// Service responsible for synchronising draft data with the backend.
+
 class AdPublishingService {
-  Future<void> saveDraft(Map<String, dynamic> payload) async {
-    await Future<void>.delayed(const Duration(milliseconds: 200));
-    // In production this would POST to the draft endpoint. Here we simply log.
-    // ignore: avoid_print
-    print('Draft saved with payload: $payload');
+  AdPublishingService({
+    AdDraftRepository? draftRepository,
+    AdDraftLocalStore? localStore,
+  })  : _draftRepository = draftRepository ?? AdDraftRepository(),
+        _localStore = localStore ?? AdDraftLocalStore();
+
+  final AdDraftRepository _draftRepository;
+  final AdDraftLocalStore _localStore;
+
+  Future<AdDraftModel> saveDraft({
+    String? draftId,
+    required Map<String, dynamic> payload,
+    required Map<String, dynamic> stepPayload,
+    required Map<String, dynamic> temporaryMedia,
+    required String currentStep,
+    required String cacheKey,
+  }) async {
+    try {
+      final AdDraftModel draft = await _draftRepository.saveDraft(
+        draftId: draftId,
+        payload: payload,
+        currentStep: currentStep,
+        stepPayload: stepPayload,
+        temporaryMedia: temporaryMedia,
+      );
+      await _localStore.saveSnapshot(cacheKey, draft);
+      await _localStore.clearPending(cacheKey);
+      return draft;
+    } on DioException catch (error) {
+      if (_isConnectivityError(error)) {
+        await _localStore.savePending(cacheKey, <String, dynamic>{
+          'draft_id': draftId,
+          'current_step': currentStep,
+          'payload': payload,
+          'step_payload': stepPayload,
+          'temporary_media': temporaryMedia,
+        });
+        throw DraftSaveOfflineException(error);
+      }
+      rethrow;
+    }
+  }
+
+  Future<AdDraftModel> fetchDraft(String draftId) {
+    return _draftRepository.fetchDraft(draftId);
+  }
+
+  Future<AdDraftModel?> syncPending({
+    required String cacheKey,
+    String? fallbackDraftId,
+  }) async {
+    final Map<String, dynamic>? pending = await _localStore.readPending(cacheKey);
+    if (pending == null) {
+      return null;
+    }
+
+    final Map<String, dynamic> payload = _mapOf(pending['payload']);
+    if (payload.isEmpty) {
+      await _localStore.clearPending(cacheKey);
+      return null;
+    }
+
+    final Map<String, dynamic> stepPayload = _mapOf(pending['step_payload']);
+    final Map<String, dynamic> temporaryMedia = _mapOf(pending['temporary_media']);
+    final String currentStep = _stringOrNull(pending['current_step']) ?? 'review';
+    final String? draftId =
+        _stringOrNull(pending['draft_id']) ?? _stringOrNull(fallbackDraftId);
+
+    try {
+      final AdDraftModel draft = await _draftRepository.saveDraft(
+        draftId: draftId,
+        payload: payload,
+        currentStep: currentStep,
+        stepPayload: stepPayload,
+        temporaryMedia: temporaryMedia,
+      );
+      await _localStore.saveSnapshot(cacheKey, draft);
+      await _localStore.clearPending(cacheKey);
+      return draft;
+    } on DioException catch (error) {
+      if (_isConnectivityError(error)) {
+        return null;
+      }
+      rethrow;
+    }
+  }
+
+  Future<AdDraftModel?> readCachedDraft(String cacheKey) {
+    return _localStore.readSnapshot(cacheKey);
+  }
+
+  Future<Map<String, dynamic>?> readPending(String cacheKey) {
+    return _localStore.readPending(cacheKey);
+  }
+
+  Future<void> rememberDraft(String cacheKey, AdDraftModel draft) {
+    return _localStore.saveSnapshot(cacheKey, draft);
+  }
+
+  Future<void> migrateCache({required String from, required String to}) {
+    return _localStore.migrate(from: from, to: to);
   }
 
   Future<void> publish(Map<String, dynamic> payload) async {
@@ -132,4 +245,36 @@ class AdPublishingService {
     // ignore: avoid_print
     print('Ad published with payload: $payload');
   }
+
+
+  bool _isConnectivityError(DioException error) {
+    if (error.type == DioExceptionType.connectionError ||
+        error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.sendTimeout) {
+      return true;
+    }
+    final Object? underlying = error.error;
+    return underlying is Exception &&
+        underlying.toString().toLowerCase().contains('socket');
+  }
+
+  Map<String, dynamic> _mapOf(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(value);
+    }
+    if (value is Map) {
+      return Map<String, dynamic>.from(value as Map);
+    }
+    return <String, dynamic>{};
+  }
+
+  String? _stringOrNull(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    final String candidate = value.toString();
+    return candidate.isEmpty ? null : candidate;
+  }
+
 }

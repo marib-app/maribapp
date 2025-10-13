@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\DeliveryPriceCalculatorController;
 use App\Http\Controllers\Api\MetalRateController as PublicMetalRateController;
 use App\Http\Controllers\Api\MetalRateManagementController;
 use App\Http\Controllers\WifiCabinApiController;
+use App\Http\Controllers\Api\AdDraftController;
 use App\Http\Controllers\WifiPaymentGatewayController;
 use App\Http\Controllers\ApiController;
 use Illuminate\Support\Facades\Route;
@@ -324,3 +325,6 @@ Route::group([
             ->whereNumber('metalRateUpdate')
             ->middleware('permission:metal-rate-schedule');
     });
+    Route::post('ad-drafts', [AdDraftController::class, 'store']);
+    Route::put('ad-drafts/{draft}', [AdDraftController::class, 'update'])->whereNumber('draft');
+    Route::get('ad-drafts/{draft}', [AdDraftController::class, 'show'])->whereNumber('draft');

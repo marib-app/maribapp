@@ -10,7 +10,11 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/imagePicker.dart';
-
+import 'package:dio/dio.dart';
+import 'package:marib/data/model/ad_draft_model.dart';
+import 'package:marib/data/model/ad_draft_model.dart';
+import 'package:marib/data/repositories/item/ad_draft_local_store.dart';
+import 'package:marib/data/repositories/item/ad_draft_repository.dart';
 
 import 'models/custom_field_schema.dart';
 import 'services/category_inventory_service.dart';
@@ -19,12 +23,22 @@ import 'widgets/dynamic_custom_fields_form.dart';
 
 /// Simplified ad creation wizard showcasing a multi-step flow with
 /// progress indicator, navigation guards and auto-save hooks.
+
+class AdCreationWizardArguments {
+  const AdCreationWizardArguments({this.draftId});
+
+  final String? draftId;
+}
+
+
 class AdCreationWizardScreen extends StatefulWidget {
-  const AdCreationWizardScreen({super.key});
+  const AdCreationWizardScreen({super.key, this.initialDraftId});
+
+  final String? initialDraftId;
 
   static Route<void> route(RouteSettings settings) {
     return MaterialPageRoute(
-      builder: (_) => const AdCreationWizardScreen(),
+      builder: (_) => AdCreationWizardScreen(initialDraftId: draftId),
       settings: settings,
     );
   }
@@ -202,6 +216,11 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   int _currentStep = 0;
   bool _hasUnsavedChanges = false;
   bool _isSavingDraft = false;
+  String? _draftId;
+  bool _isLoadingDraft = false;
+  bool _isSyncingPending = false;
+  bool _isHydratingState = false;
+
 
   @override
   void initState() {
@@ -225,6 +244,10 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         _addImageFiles(<File>[files]);
       }
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeDraft();
+    });
+
   }
 
   @override
@@ -254,6 +277,458 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       _hasUnsavedChanges = true;
     }
     _autoSaveTimer = Timer(const Duration(seconds: 3), _autoSaveDraft);
+  }
+
+  String get _draftCacheKey => _cacheKeyFor(_draftId ?? widget.initialDraftId);
+
+  String _cacheKeyFor(String? draftId) => 'ad_wizard_${draftId ?? 'new'}';
+
+  Future<void> _initializeDraft() async {
+    String activeCacheKey = _cacheKeyFor(widget.initialDraftId);
+    setState(() => _isLoadingDraft = true);
+    try {
+      Map<String, dynamic>? pending =
+      await _adPublishingService.readPending(activeCacheKey);
+      AdDraftModel? snapshot =
+      await _adPublishingService.readCachedDraft(activeCacheKey);
+      AdDraftModel? remote;
+
+      final String? initialDraftId = widget.initialDraftId;
+      if (initialDraftId != null && initialDraftId.isNotEmpty) {
+        try {
+          remote = await _adPublishingService.fetchDraft(initialDraftId);
+          final String remoteCacheKey =
+          _cacheKeyFor(remote.id ?? initialDraftId);
+          await _adPublishingService.rememberDraft(remoteCacheKey, remote);
+          if (remoteCacheKey != activeCacheKey) {
+            await _adPublishingService.migrateCache(
+              from: activeCacheKey,
+              to: remoteCacheKey,
+            );
+            activeCacheKey = remoteCacheKey;
+            pending ??= await _adPublishingService.readPending(activeCacheKey);
+            snapshot =
+                await _adPublishingService.readCachedDraft(activeCacheKey) ??
+                    remote;
+          }
+          _draftId = remote.id ?? initialDraftId;
+        } on DioException catch (error) {
+          if (pending == null && snapshot == null && mounted) {
+            _showMessage(
+              'تعذّر تحميل المسودة: ${error.message ?? error.toString()}',
+            );
+          }
+        }
+      }
+
+      if (pending != null) {
+        _draftId =
+            _extractDraftIdFromPending(pending) ?? _draftId ?? initialDraftId;
+        _applyDraftPayload(
+          payload: _mapOf(pending['payload']),
+          temporaryMedia: _mapOf(pending['temporary_media']),
+          currentStepName: _stringOrNull(pending['current_step']),
+        );
+      } else if (snapshot != null) {
+        _draftId = snapshot.id ?? _draftId ?? initialDraftId;
+        _applyDraftPayload(
+          payload: snapshot.payload,
+          temporaryMedia: snapshot.temporaryMedia,
+          currentStepName: snapshot.currentStep,
+        );
+      } else if (remote != null) {
+        _draftId = remote.id ?? _draftId ?? initialDraftId;
+        _applyDraftPayload(
+          payload: remote.payload,
+          temporaryMedia: remote.temporaryMedia,
+          currentStepName: remote.currentStep,
+        );
+      }
+
+      await _syncPendingDraftIfNeeded(cacheKey: activeCacheKey);
+    } catch (error) {
+      if (mounted) {
+        _showMessage('تعذّر تحميل المسودة: $error');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingDraft = false);
+      }
+    }
+  }
+
+  Future<void> _syncPendingDraftIfNeeded({String? cacheKey}) async {
+    if (_isSyncingPending) {
+      return;
+    }
+    final String resolvedKey = cacheKey ?? _draftCacheKey;
+    _isSyncingPending = true;
+    try {
+      final AdDraftModel? synced = await _adPublishingService.syncPending(
+        cacheKey: resolvedKey,
+        fallbackDraftId: _draftId ?? widget.initialDraftId,
+      );
+      if (synced != null) {
+        final String newCacheKey =
+        _cacheKeyFor(synced.id ?? _draftId ?? widget.initialDraftId);
+        if (newCacheKey != resolvedKey) {
+          await _adPublishingService.migrateCache(
+            from: resolvedKey,
+            to: newCacheKey,
+          );
+        }
+        if (mounted) {
+          setState(() {
+            _draftId = synced.id ?? _draftId;
+            _hasUnsavedChanges = false;
+          });
+        }
+      }
+    } on DioException catch (error) {
+      if (mounted) {
+        _showMessage('تعذّر مزامنة المسودة: ${error.message ?? error.toString()}');
+      }
+    } finally {
+      _isSyncingPending = false;
+    }
+  }
+
+  void _applyDraftPayload({
+    required Map<String, dynamic> payload,
+    Map<String, dynamic>? temporaryMedia,
+    String? currentStepName,
+  }) {
+    _isHydratingState = true;
+    _autoSaveTimer?.cancel();
+
+    final _MainCategoryOption? mainCategory = _resolveMainCategory(payload);
+    final _SubCategoryOption? subCategory =
+    _resolveSubCategory(mainCategory, payload);
+    final Map<String, dynamic> customFields = _mapOf(payload['custom_fields']);
+    final Map<String, dynamic> location = _mapOf(payload['location']);
+    final Map<String, dynamic> media = _mapOf(payload['media']);
+    final Map<String, dynamic> inventory = _mapOf(payload['inventory']);
+    final Map<String, dynamic> mediaCache =
+    temporaryMedia != null ? Map<String, dynamic>.from(temporaryMedia) : <String, dynamic>{};
+
+    final List<_PendingMedia> mediaFiles =
+    _composePendingMedia(media, mediaCache);
+    final List<String> videoLinks = _collectVideoLinks(media, mediaCache);
+    final List<_InventoryVariation> variations = _buildVariations(inventory);
+    final String? currency = _stringOrNull(payload['currency']);
+
+    try {
+      _titleController.text = _stringOrNull(payload['title']) ?? '';
+      _descriptionController.text =
+          _stringOrNull(payload['description']) ?? '';
+      _contactController.text = _stringOrNull(payload['contact']) ?? '';
+      _priceController.text = _stringOrNull(payload['price']) ?? '';
+      _sheinProductLinkController.text =
+          _stringOrNull(payload['product_link']) ?? '';
+      _sheinReviewLinkController.text =
+          _stringOrNull(payload['review_link']) ?? '';
+      _locationAddressController.text =
+          _stringOrNull(location['address']) ?? '';
+      _locationLatitudeController.text =
+          _stringOrNull(location['latitude']) ?? '';
+      _locationLongitudeController.text =
+          _stringOrNull(location['longitude']) ?? '';
+    } finally {
+      _isHydratingState = false;
+    }
+
+    setState(() {
+      _selectedMainCategory = mainCategory;
+      _selectedSubCategory = subCategory;
+      _selectedCurrency = currency ?? _selectedCurrency;
+      _customFieldValues = customFields;
+      _mediaFiles
+        ..clear()
+        ..addAll(mediaFiles);
+      _videoLinks
+        ..clear()
+        ..addAll(videoLinks);
+      _inventoryVariations = variations;
+      _hasUnsavedChanges = false;
+      _recomputeCurrentStepBounds();
+    });
+
+    if (mainCategory != null && subCategory != null) {
+      _fetchCustomFieldSchema();
+    }
+
+    final _WizardStepId? stepId = _wizardStepFromName(currentStepName);
+    if (stepId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          return;
+        }
+        final List<_WizardStep> steps = _visibleSteps;
+        final int index = steps.indexWhere((step) => step.id == stepId);
+        if (index >= 0) {
+          setState(() {
+            _currentStep = index;
+          });
+        }
+      });
+    }
+  }
+
+  _MainCategoryOption? _resolveMainCategory(Map<String, dynamic> payload) {
+    final int? categoryId = _intFrom(payload['main_category_id']);
+    final String? interfaceType = _stringOrNull(payload['interface_type']);
+    if (categoryId != null) {
+      for (final _MainCategoryOption option in _mainCategories) {
+        if (option.id == categoryId) {
+          return option;
+        }
+      }
+    }
+    if (interfaceType != null) {
+      for (final _MainCategoryOption option in _mainCategories) {
+        if (option.interfaceType == interfaceType) {
+          return option;
+        }
+      }
+    }
+    return null;
+  }
+
+  _SubCategoryOption? _resolveSubCategory(
+      _MainCategoryOption? mainCategory,
+      Map<String, dynamic> payload,
+      ) {
+    if (mainCategory == null) {
+      return null;
+    }
+    final int? subCategoryId = _intFrom(payload['sub_category_id']);
+    if (subCategoryId == null) {
+      return null;
+    }
+    for (final _SubCategoryOption sub in mainCategory.subCategories) {
+      if (sub.id == subCategoryId) {
+        return sub;
+      }
+    }
+    return null;
+  }
+
+  Map<String, dynamic> _buildStepPayload(
+      _WizardStepId step,
+      Map<String, dynamic> payload,
+      ) {
+    switch (step) {
+      case _WizardStepId.mainCategory:
+        return <String, dynamic>{
+          if (payload.containsKey('interface_type'))
+            'interface_type': payload['interface_type'],
+          if (payload.containsKey('main_category_id'))
+            'main_category_id': payload['main_category_id'],
+        };
+      case _WizardStepId.subCategory:
+        return <String, dynamic>{
+          if (payload.containsKey('sub_category_id'))
+            'sub_category_id': payload['sub_category_id'],
+        };
+      case _WizardStepId.customFields:
+        return <String, dynamic>{
+          if (payload.containsKey('custom_fields'))
+            'custom_fields': payload['custom_fields'],
+        };
+      case _WizardStepId.media:
+        return <String, dynamic>{
+          if (payload.containsKey('media')) 'media': payload['media'],
+        };
+      case _WizardStepId.textDetails:
+        return <String, dynamic>{
+          if (payload.containsKey('title')) 'title': payload['title'],
+          if (payload.containsKey('description'))
+            'description': payload['description'],
+          if (payload.containsKey('contact')) 'contact': payload['contact'],
+          if (payload.containsKey('price')) 'price': payload['price'],
+          if (payload.containsKey('currency')) 'currency': payload['currency'],
+          if (payload.containsKey('product_link'))
+            'product_link': payload['product_link'],
+          if (payload.containsKey('review_link'))
+            'review_link': payload['review_link'],
+        };
+      case _WizardStepId.locationInventory:
+        return <String, dynamic>{
+          if (payload.containsKey('location'))
+            'location': payload['location'],
+          if (payload.containsKey('inventory'))
+            'inventory': payload['inventory'],
+        };
+      case _WizardStepId.review:
+        final Map<_WizardStepId, bool> completion =
+        _calculateStepCompletion(_visibleSteps);
+        return <String, dynamic>{
+          'completed_steps': <String, bool>{
+            for (final MapEntry<_WizardStepId, bool> entry in completion.entries)
+              entry.key.name: entry.value,
+          },
+          'ready': !_hasUnsavedChanges,
+        };
+    }
+  }
+
+  Map<String, dynamic> _buildTemporaryMediaSnapshot() {
+    final Map<String, dynamic> snapshot = <String, dynamic>{};
+    final List<Map<String, dynamic>> pending = _mediaFiles
+        .map((media) => media.toPayload())
+        .toList(growable: false);
+    if (pending.isNotEmpty) {
+      snapshot['pending'] = pending;
+    }
+    if (_videoLinks.isNotEmpty) {
+      snapshot['video_links'] = List<String>.from(_videoLinks);
+    }
+    return snapshot;
+  }
+
+  List<_PendingMedia> _composePendingMedia(
+      Map<String, dynamic> media,
+      Map<String, dynamic> temporaryMedia,
+      ) {
+    final List<_PendingMedia> result = <_PendingMedia>[];
+    final Set<String> seen = <String>{};
+
+    void addDescriptor(Map<String, dynamic> descriptor) {
+      final String? type = _stringOrNull(descriptor['type']);
+      final String? path = _stringOrNull(descriptor['path']);
+      if (type == null || path == null) {
+        return;
+      }
+      final String key = '$type::$path';
+      if (!seen.add(key)) {
+        return;
+      }
+      final File file = File(path);
+      if (type == 'image') {
+        result.add(_PendingMedia.image(file));
+      } else if (type == 'video') {
+        result.add(_PendingMedia.video(file));
+      }
+    }
+
+    final List<dynamic>? images = media['images'] as List<dynamic>?;
+    if (images != null) {
+      for (final dynamic raw in images) {
+        addDescriptor(_mapOf(raw));
+      }
+    }
+    final List<dynamic>? videos = media['videos'] as List<dynamic>?;
+    if (videos != null) {
+      for (final dynamic raw in videos) {
+        addDescriptor(_mapOf(raw));
+      }
+    }
+
+    final List<dynamic>? pending = temporaryMedia['pending'] as List<dynamic>?;
+    if (pending != null) {
+      for (final dynamic raw in pending) {
+        addDescriptor(_mapOf(raw));
+      }
+    }
+
+    return result;
+  }
+
+  List<String> _collectVideoLinks(
+      Map<String, dynamic> media,
+      Map<String, dynamic> temporaryMedia,
+      ) {
+    final Set<String> links = <String>{};
+    final List<dynamic>? existing = media['video_links'] as List<dynamic>?;
+    if (existing != null) {
+      for (final dynamic raw in existing) {
+        final String? link = _stringOrNull(raw);
+        if (link != null) {
+          links.add(link);
+        }
+      }
+    }
+    final List<dynamic>? pending =
+    temporaryMedia['video_links'] as List<dynamic>?;
+    if (pending != null) {
+      for (final dynamic raw in pending) {
+        final String? link = _stringOrNull(raw);
+        if (link != null) {
+          links.add(link);
+        }
+      }
+    }
+    return links.toList(growable: false);
+  }
+
+  List<_InventoryVariation> _buildVariations(
+      Map<String, dynamic> inventory,
+      ) {
+    final List<dynamic>? rawVariations = inventory['variations'] as List<dynamic>?;
+    if (rawVariations == null) {
+      return <_InventoryVariation>[];
+    }
+    return rawVariations.map((dynamic raw) {
+      final Map<String, dynamic> data = _mapOf(raw);
+      return _InventoryVariation(
+        id: _stringOrNull(data['id']) ??
+            DateTime.now().microsecondsSinceEpoch.toString(),
+        name: _stringOrNull(data['name']) ?? '',
+        sku: _stringOrNull(data['sku']) ?? '',
+        priceText: _stringOrNull(data['price']) ?? '',
+        quantityText: _stringOrNull(data['quantity']) ?? '',
+      );
+    }).toList(growable: false);
+  }
+
+  Map<String, dynamic> _mapOf(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(value);
+    }
+    if (value is Map) {
+      return Map<String, dynamic>.from(value as Map);
+    }
+    return <String, dynamic>{};
+  }
+
+  int? _intFrom(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is int) {
+      return value;
+    }
+    if (value is String) {
+      return int.tryParse(value);
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+    return null;
+  }
+
+  String? _stringOrNull(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    final String candidate = value.toString();
+    return candidate.isEmpty ? null : candidate;
+  }
+
+  String? _extractDraftIdFromPending(Map<String, dynamic> pending) {
+    return _stringOrNull(pending['draft_id']);
+  }
+
+  _WizardStepId? _wizardStepFromName(String? name) {
+    if (name == null) {
+      return null;
+    }
+    for (final _WizardStepId step in _WizardStepId.values) {
+      if (step.name == name) {
+        return step;
+      }
+    }
+    return null;
   }
 
 
@@ -587,16 +1062,58 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     if (!_hasUnsavedChanges || _isSavingDraft) {
       return;
     }
+
+    final List<_WizardStep> steps = _visibleSteps;
+    final int currentIndex = _clampCurrentStepIndex(steps);
+    final _WizardStepId currentStepId =
+    steps.isEmpty ? _WizardStepId.mainCategory : steps[currentIndex].id;
+    final String previousCacheKey =
+    _cacheKeyFor(_draftId ?? widget.initialDraftId);
+
+    final Map<String, dynamic> payload = _buildAdPayload(isDraft: true);
+    final Map<String, dynamic> stepPayload =
+    _buildStepPayload(currentStepId, payload);
+    final Map<String, dynamic> temporaryMedia =
+    _buildTemporaryMediaSnapshot();
+
+
     setState(() => _isSavingDraft = true);
     try {
-      final Map<String, dynamic> payload = _buildAdPayload(isDraft: true);
-      await _adPublishingService.saveDraft(payload);
+      await _syncPendingDraftIfNeeded(cacheKey: previousCacheKey);
+      final AdDraftModel draft = await _adPublishingService.saveDraft(
+        draftId: _draftId,
+        payload: payload,
+        stepPayload: stepPayload,
+        temporaryMedia: temporaryMedia,
+        currentStep: currentStepId.name,
+        cacheKey: previousCacheKey,
+      );
+
+      final String newCacheKey =
+      _cacheKeyFor(draft.id ?? _draftId ?? widget.initialDraftId);
+      if (newCacheKey != previousCacheKey) {
+        await _adPublishingService.migrateCache(
+          from: previousCacheKey,
+          to: newCacheKey,
+        );
+      }
+
       if (!mounted) {
         return;
       }
       setState(() {
+        _draftId = draft.id ?? _draftId;
+
         _hasUnsavedChanges = false;
       });
+    } on DraftSaveOfflineException {
+      if (mounted) {
+        _showMessage('تم حفظ التغييرات محليًا. سيتم المزامنة عند توفر الاتصال.');
+      }
+    } on DioException catch (error) {
+      if (mounted) {
+        _showMessage('تعذّر حفظ المسودة: ${error.message ?? error.toString()}');
+      }
     } catch (error) {
       if (mounted) {
         _showMessage('تعذّر حفظ المسودة: $error');
@@ -867,7 +1384,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                LinearProgressIndicator(value: progress),
+                LinearProgressIndicator(value: _isLoadingDraft ? null : progress),
                 const SizedBox(height: 12),
                 Wrap(
                   spacing: 8,

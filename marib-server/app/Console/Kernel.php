@@ -16,6 +16,7 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\OrdersSettlementReminder::class,
         \App\Console\Commands\SyncServiceCustomFieldLabelsCommand::class,
         \App\Console\Commands\PruneStaleUserFcmTokens::class,
+        \App\Console\Commands\CaptureCurrencyRateSnapshotsCommand::class,
 
     ];
     /**
@@ -34,6 +35,11 @@ class Kernel extends ConsoleKernel
         $schedule->command('fcm:prune-tokens')
             ->dailyAt('03:00')
             ->withoutOverlapping();
+
+        $schedule->command('currency:history-snapshot')
+            ->hourly()
+            ->withoutOverlapping();
+
 
     }
 

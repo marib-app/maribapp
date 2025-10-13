@@ -13,6 +13,7 @@ import 'package:marib/data/repositories/currency_repository.dart';
 import 'package:marib/data/repositories/metal_repository.dart';
 import 'package:marib/data/repositories/preferences/user_preference_repository.dart';
 import 'package:marib/utils/hive_utils.dart';
+import 'package:marib/data/model/currency_history.dart';
 
 
 
@@ -106,10 +107,28 @@ class CurrencyCubit extends Cubit<CurrencyState> {
         await _persistPreferences(updated, syncRemote: true);
       }
 
+      final List<int> currencyIds = bundle.rates
+          .map((CurrencyRate rate) => rate.id)
+          .where((int id) => id > 0)
+          .toSet()
+          .toList(growable: false);
+
+      Map<int, CurrencyHistoryBundle> historyMap = <int, CurrencyHistoryBundle>{};
+
+      if (currencyIds.isNotEmpty) {
+        historyMap = await _currencyRepository.getCurrencyHistory(
+          currencyIds: currencyIds,
+          governorateCode: resolvedGovernorateCode,
+        );
+      }
+
+
       final List<CurrencyRate> currencyRates = bundle.rates
           .map((CurrencyRate rate) => rate.copyWith(
         isWatchlisted:
         _preferences.currencyWatchlist.contains(rate.id),
+        history: historyMap[rate.id],
+
       ))
           .toList(growable: false);
 

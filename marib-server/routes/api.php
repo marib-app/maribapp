@@ -267,6 +267,7 @@ Route::get('seo-settings', [ApiController::class, 'seoSettings']);
 Route::get('get-seller', [ApiController::class, 'getSeller']);
 Route::get('get-services', [ApiController::class, 'getServices']);
 Route::get('currency-rates', [ApiController::class, 'getCurrencyRates']);
+Route::get('currency-rates/history', [\App\Http\Controllers\CurrencyHistoryController::class, 'index']);
 Route::get('service-reviews', [ApiController::class, 'getServiceReviews']);
 
 

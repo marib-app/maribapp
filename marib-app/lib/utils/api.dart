@@ -406,6 +406,7 @@ class Api {
   static String myServiceManageApi(int id) => "my-services/$id";
 
   static String getCurrencyRatesApi = "currency-rates";
+  static String getCurrencyHistoryApi = "currency-rates/history";
   static String getMetalRatesApi = "metal-rates";
   static String getFaqApi = "faq";
   static String challengesApi = "challenges";

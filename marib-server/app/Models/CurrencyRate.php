@@ -59,6 +59,20 @@ class CurrencyRate extends Model
         return $this->hasOne(CurrencyRateQuote::class)->where('is_default', true);
     }
 
+
+
+    public function hourlyHistories(): HasMany
+    {
+        return $this->hasMany(CurrencyRateHourlyHistory::class);
+    }
+
+    public function dailyHistories(): HasMany
+    {
+        return $this->hasMany(CurrencyRateDailyHistory::class);
+    }
+
+
+
     /**
      * @return array{0: CurrencyRateQuote|null, 1: Governorate|null, 2: bool}
      */

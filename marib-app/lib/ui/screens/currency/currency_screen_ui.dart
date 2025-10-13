@@ -23,7 +23,9 @@ import 'package:shimmer/shimmer.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/extensions/extensions.dart'; // context.color
-
+import 'package:flutter/foundation.dart';
+import 'package:marib/data/model/currency_history.dart';
+import 'package:marib/data/model/currency_rate.dart';
 import 'currency_screen.dart' show CurrencyViewState, CurrencyPageStatus;
 import 'package:marib/data/model/metal_rate.dart';
 import 'package:marib/data/model/preference_option.dart';
@@ -74,7 +76,6 @@ class CurrencyScreenUI extends StatelessWidget {
 
   final List<TextInputFormatter> amountInputFormatters;
   final SystemUiOverlayStyle systemUiOverlayStyle;
-
   bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
 
   @override
@@ -733,6 +734,55 @@ class RatesTabView extends StatelessWidget {
       );
     }
 
+
+
+
+    final NumberFormat changeFormatter = NumberFormat('+#0.##;-#0.##;0', 'en');
+    final NumberFormat highLowFormatter = NumberFormat('#,##0.###', 'en');
+
+    final CurrencyHistoryRange? preferredRange =
+        history?.range(7) ?? history?.range(3) ?? history?.range(1);
+    final CurrencyHistorySummary? summary = preferredRange?.summary;
+    final List<double> sparklineValues = preferredRange?.points
+        .map((CurrencyHistoryPoint point) => point.sellPrice)
+        .where((double value) => value.isFinite)
+        .toList(growable: false) ??
+        <double>[];
+
+    final bool hasSparkline = sparklineValues.length >= 2;
+    final Color positiveColor = Colors.green;
+    final Color negativeColor = Colors.redAccent;
+    final Color neutralColor = onBg.withOpacity(0.6);
+    final Color trendColor = summary == null
+        ? neutralColor
+        : summary.isNegativeTrend
+        ? negativeColor
+        : summary.isPositiveTrend
+        ? positiveColor
+        : neutralColor;
+
+    final IconData trendIcon = summary == null
+        ? Icons.trending_flat
+        : summary.isNegativeTrend
+        ? Icons.arrow_downward_rounded
+        : summary.isPositiveTrend
+        ? Icons.arrow_upward_rounded
+        : Icons.trending_flat;
+
+    final String changeText = summary?.changeSellPercent != null
+        ? '${changeFormatter.format(summary!.changeSellPercent)}%'
+        : '--';
+
+    final String? highText = summary?.highSell != null
+        ? highLowFormatter.format(summary!.highSell)
+        : null;
+    final String? lowText = summary?.lowSell != null
+        ? highLowFormatter.format(summary!.lowSell)
+        : null;
+
+
+
+
     final Widget star = IconButton(
       onPressed: onToggleWatchlist,
       icon: Icon(
@@ -811,20 +861,242 @@ class RatesTabView extends StatelessWidget {
                       ],
               );
 
+              Widget buildHistorySection(double availableWidth) {
+                if (!hasSparkline && changeText == '--') {
+                  return Container(
+                    width: availableWidth,
+                    height: 40,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: onBg.withOpacity(0.12)),
+                    ),
+                    child: Text(
+                      'لا يوجد سجل',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: onBg.withOpacity(0.5),
+                        fontWeight: FontWeight.w600,
+                      ) ??
+                          TextStyle(color: onBg.withOpacity(0.5), fontSize: 12),
+                    ),
+                  );
+                }
+
+                final List<Widget> children = <Widget>[
+                  hasSparkline
+                      ? SizedBox(
+                    width: availableWidth,
+                    height: 40,
+                    child: _MiniTrendChart(
+                      values: sparklineValues,
+                      color: trendColor,
+                    ),
+                  )
+                      : Container(
+                    width: availableWidth,
+                    height: 40,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: onBg.withOpacity(0.12)),
+                    ),
+                    child: Icon(
+                      Icons.trending_flat,
+                      color: trendColor,
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: trendColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(trendIcon, size: 14, color: trendColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          changeText,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: trendColor,
+                            fontWeight: FontWeight.w700,
+                          ) ??
+                              TextStyle(color: trendColor, fontWeight: FontWeight.w700, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ];
+
+                if (highText != null && lowText != null) {
+                  children.addAll([
+                    const SizedBox(height: 4),
+                    Text(
+                      'أعلى: $highText | أدنى: $lowText',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: onBg.withOpacity(0.6),
+                        fontWeight: FontWeight.w600,
+                      ) ??
+                          TextStyle(color: onBg.withOpacity(0.6), fontSize: 11, fontWeight: FontWeight.w600),
+                      textDirection: TextDirection.rtl,
+                    ),
+                  ]);
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: children,
+                );
+              }
+
+              if (narrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: leading),
+                        star,
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    priceContent,
+                    const SizedBox(height: 12),
+                    buildHistorySection(cons.maxWidth),
+                  ],
+                );
+              }
+              );
+
+              Widget buildHistorySection(double availableWidth) {
+              if (!hasSparkline && changeText == '--') {
+              return Container(
+              width: availableWidth,
+              height: 40,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: onBg.withOpacity(0.12)),
+              ),
+              child: Text(
+              'لا يوجد سجل',
+              style: theme.textTheme.labelSmall?.copyWith(
+              color: onBg.withOpacity(0.5),
+              fontWeight: FontWeight.w600,
+              ) ??
+              TextStyle(color: onBg.withOpacity(0.5), fontSize: 12),
+              ),
+              );
+              }
+
+              final List<Widget> children = <Widget>[
+              hasSparkline
+              ? SizedBox(
+              width: availableWidth,
+              height: 40,
+              child: _MiniTrendChart(
+              values: sparklineValues,
+              color: trendColor,
+              ),
+              )
+                  : Container(
+              width: availableWidth,
+              height: 40,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: onBg.withOpacity(0.12)),
+              ),
+              child: Icon(
+              Icons.trending_flat,
+              color: trendColor,
+              size: 18,
+              ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+              color: trendColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+              Icon(trendIcon, size: 14, color: trendColor),
+              const SizedBox(width: 4),
+              Text(
+              changeText,
+              style: theme.textTheme.labelSmall?.copyWith(
+              color: trendColor,
+              fontWeight: FontWeight.w700,
+              ) ??
+              TextStyle(color: trendColor, fontWeight: FontWeight.w700, fontSize: 12),
+              ),
+              ],
+              ),
+              ),
+              ];
+
+              if (highText != null && lowText != null) {
+              children.addAll([
+              const SizedBox(height: 4),
+              Text(
+              'أعلى: $highText | أدنى: $lowText',
+              style: theme.textTheme.labelSmall?.copyWith(
+              color: onBg.withOpacity(0.6),
+              fontWeight: FontWeight.w600,
+              ) ??
+              TextStyle(color: onBg.withOpacity(0.6), fontSize: 11, fontWeight: FontWeight.w600),
+              textDirection: TextDirection.rtl,
+              ),
+              ]);
+              }
+
+              return Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: children,
+              );
+              }
+
+              if (narrow) {
+              return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+              Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+              Expanded(child: leading),
+              star,
+              ],
+              ),
+              const SizedBox(height: 8),
+              priceContent,
+              const SizedBox(height: 12),
+              buildHistorySection(cons.maxWidth),
+              ],
+              );
+              }
+
+
               return Row(
-                crossAxisAlignment:
-                narrow ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+
                 children: [
               Expanded(
               child: Row(
-              crossAxisAlignment: narrow
-                ? CrossAxisAlignment.start
-                : CrossAxisAlignment.center,
-                children: [
-                  Expanded(child: leading),
-                  const SizedBox(width: 12),
-                  priceContent,
-                ],
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+              Expanded(child: leading),
+              const SizedBox(width: 12),
+              priceContent,
+              const SizedBox(width: 16),
+              SizedBox(width: 140, child: buildHistorySection(140)),
+              ],
                     ),
               ),
                   star,
@@ -833,7 +1105,7 @@ class RatesTabView extends StatelessWidget {
             },
           ),
         ),
-      ),
+
     );
   }
 
@@ -901,6 +1173,9 @@ class RatesTabView extends StatelessWidget {
     String _buy(d)  => (d as dynamic).buyPrice?.toString() ?? '';
     String? _icon(d) => (d as dynamic).iconUrl?.toString();
     String? _iconAlt(d) => (d as dynamic).iconAlt?.toString();
+    CurrencyHistoryBundle? _history(d) => d is CurrencyRate ? d.history : null;
+
+
     if (rates.isEmpty) {
       final onBg = _isDark(context) ? Colors.white : Colors.black;
       return ListView(
@@ -945,6 +1220,7 @@ class RatesTabView extends StatelessWidget {
           iconAlt: _iconAlt(r),
           isWatchlisted: isWatchlisted,
           onToggleWatchlist: () => onToggleCurrencyWatchlist(rateId),
+          history: _history(r),
         );
       },
     );
@@ -1644,5 +1920,98 @@ class SilverTabView extends StatelessWidget {
           ),
       ],
     );
+  }
+}
+class _MiniTrendChart extends StatelessWidget {
+  const _MiniTrendChart({required this.values, required this.color});
+
+  final List<double> values;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    if (values.length < 2) {
+      return Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: Theme.of(context).dividerColor.withOpacity(0.12),
+          ),
+        ),
+      );
+    }
+
+    return CustomPaint(
+      painter: _MiniTrendChartPainter(
+        values: values,
+        color: color,
+        background: Theme.of(context).canvasColor,
+      ),
+    );
+  }
+}
+
+class _MiniTrendChartPainter extends CustomPainter {
+  _MiniTrendChartPainter({
+    required this.values,
+    required this.color,
+    required this.background,
+  });
+
+  final List<double> values;
+  final Color color;
+  final Color background;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.length < 2) {
+      return;
+    }
+
+    final double minValue = values.reduce((double a, double b) => a < b ? a : b);
+    final double maxValue = values.reduce((double a, double b) => a > b ? a : b);
+    final double range = (maxValue - minValue).abs() < 0.0001
+        ? 1
+        : (maxValue - minValue);
+
+    final Path path = Path();
+    for (int i = 0; i < values.length; i++) {
+      final double x = (i / (values.length - 1)) * size.width;
+      final double normalized = (values[i] - minValue) / range;
+      final double y = size.height - (normalized * size.height);
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+
+    final Paint fillPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..shader = LinearGradient(
+        colors: [color.withOpacity(0.18), color.withOpacity(0.05)],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    final Path areaPath = Path.from(path)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+
+    canvas.drawPath(areaPath, fillPaint);
+
+    final Paint linePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round
+      ..color = color;
+
+    canvas.drawPath(path, linePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MiniTrendChartPainter oldDelegate) {
+    return !listEquals(oldDelegate.values, values) || oldDelegate.color != color;
   }
 }

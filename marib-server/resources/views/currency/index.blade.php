@@ -110,6 +110,10 @@
                                         <th scope="col" data-field="buy_price" data-sortable="true">{{ __('Buy Price') }}</th>
                                         <th scope="col" data-field="icon_url" data-formatter="iconFormatter">{{ __('Icon') }}</th>
                                         <th scope="col" data-field="last_updated_at" data-sortable="true" data-formatter="dateFormatter">{{ __('Last Updated') }}</th>
+                                        <th scope="col" data-field="history" data-formatter="historyHourlyFormatter">{{ __('Last Hourly Snapshot') }}</th>
+                                        <th scope="col" data-field="history" data-formatter="historyDailyFormatter">{{ __('Last Daily Aggregate') }}</th>
+                                        <th scope="col" data-field="history" data-formatter="historyQualityFormatter">{{ __('Source Quality') }}</th>شيلبيسيب
+
                                         @can('currency-rate-edit')
                                             <th scope="col" data-field="operate" data-events="currencyEvents"
                                                 data-escape="false" data-formatter="operateFormatter">{{ __('Action') }}</th>
@@ -292,6 +296,46 @@
         }
 
 
+
+        function historyHourlyFormatter(value, row) {
+            const timestamp = row?.history?.last_hourly_at;
+            if (!timestamp) {
+                return '<span class="text-muted">—</span>';
+            }
+
+            return moment(timestamp).isValid()
+                ? moment(timestamp).format('YYYY-MM-DD HH:mm')
+                : timestamp;
+        }
+
+        function historyDailyFormatter(value, row) {
+            const timestamp = row?.history?.last_daily_at;
+            if (!timestamp) {
+                return '<span class="text-muted">—</span>';
+            }
+
+            return moment(timestamp).isValid()
+                ? moment(timestamp).format('YYYY-MM-DD')
+                : timestamp;
+        }
+
+        function historyQualityFormatter(value, row) {
+            const quality = (row?.history?.source_quality || 'unknown').toLowerCase();
+
+            const map = {
+                fresh: { label: '{{ __('Fresh') }}', class: 'badge bg-success-subtle text-success fw-semibold' },
+                warning: { label: '{{ __('Warning') }}', class: 'badge bg-warning-subtle text-warning-emphasis fw-semibold' },
+                stale: { label: '{{ __('Stale') }}', class: 'badge bg-danger-subtle text-danger fw-semibold' },
+                unknown: { label: '{{ __('Unknown') }}', class: 'badge bg-secondary-subtle text-secondary fw-semibold' },
+            };
+
+            const meta = map[quality] || map.unknown;
+            const source = row?.history?.source ? `<span class="d-block text-muted small mt-1">${row.history.source}</span>` : '';
+
+            return `<span class="${meta.class}">${meta.label}</span>${source}`;
+        }
+
+
         function operateFormatter(value, row, index) {
             var buttons = [
                 '<a class="edit-currency btn btn-sm btn-primary me-1" href="javascript:void(0)" title="تعديل">',
@@ -306,6 +350,14 @@
                 '</a>'
             );
             @endcan
+
+
+            buttons.push(
+                '<button class="backfill-history btn btn-sm btn-outline-secondary ms-1" title="{{ __('Backfill history') }}">',
+                '<i class="bi bi-clock-history"></i>',
+                '</button>'
+            );
+
             
             return buttons.join('');
         }
@@ -358,6 +410,48 @@
                         }
                     });
                 }
+
+
+           },
+            'click .backfill-history': function (e, value, row) {
+                e.preventDefault();
+                const defaultDays = row?.history?.range_hint ?? 7;
+                const input = prompt('{{ __('Enter number of days to backfill (max 365)') }}', defaultDays);
+
+                if (input === null) {
+                    return;
+                }
+
+                const parsed = parseInt(input, 10);
+                if (Number.isNaN(parsed) || parsed < 1 || parsed > 365) {
+                    alert('{{ __('Please enter a valid number of days between 1 and 365.') }}');
+                    return;
+                }
+
+                $.ajax({
+                    url: `/currency/${row.id}/history/backfill`,
+                    type: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    data: {
+                        range_days: parsed
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            $('#table_list').bootstrapTable('refresh');
+                            showSuccessToast(response.message);
+                        } else if (response.message) {
+                            showErrorToast(response.message);
+                        }
+                    },
+                    error: function (xhr) {
+                        const message = xhr?.responseJSON?.message || '{{ __('Unable to backfill history at the moment.') }}';
+                        showErrorToast(message);
+                        console.error(xhr);
+                    }
+                });
+
             }
         };
 

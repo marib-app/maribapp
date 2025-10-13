@@ -1,3 +1,7 @@
+import 'currency_history.dart';
+
+
+
 class CurrencyRate {
   final String currencyName;
   final double sellPrice;
@@ -13,6 +17,7 @@ class CurrencyRate {
   final bool quoteUsedFallback;
   final int id;
   final bool isWatchlisted;
+  final CurrencyHistoryBundle? history;
 
 
 
@@ -31,6 +36,7 @@ class CurrencyRate {
     this.quoteUsedFallback = false,
     required this.id,
     this.isWatchlisted = false,
+    this.history,
 
 
 
@@ -94,7 +100,11 @@ class CurrencyRate {
           : null,
       quoteIsDefault: json['quote_is_default'] == true,
       quoteUsedFallback: json['quote_used_fallback'] == true,
-
+      history: json['history'] is Map<String, dynamic>
+          ? CurrencyHistoryBundle.fromJson(
+        Map<String, dynamic>.from(json['history'] as Map),
+      )
+          : null,
     );
   }
 }

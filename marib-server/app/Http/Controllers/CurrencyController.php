@@ -2,6 +2,11 @@
 
 namespace App\Http\Controllers;
 
+
+
+use App\Jobs\BackfillCurrencyRateHistory;
+use App\Services\CurrencyRateHistoryService;
+use App\Services\ResponseService;
 use App\Models\CurrencyRateQuote;
 use App\Models\Governorate;
 use App\Services\CurrencyIconStorageService;
@@ -17,7 +22,12 @@ use Illuminate\Validation\ValidationException;
 class CurrencyController extends Controller
 {
 
-    public function __construct(private readonly CurrencyIconStorageService $iconStorageService)
+    public function __construct(
+        private readonly CurrencyIconStorageService $iconStorageService,
+        private readonly CurrencyRateHistoryService $historyService
+    )
+    
+    
     {
     }
 
@@ -207,13 +217,28 @@ class CurrencyController extends Controller
 
 
         $total = $query->count();
+        $historyService = $this->historyService;
 
         $currencies = $query->orderBy($sort, $order)
             ->offset($offset)
             ->limit($limit)
             ->get()
-            ->map(function (CurrencyRate $currency) {
+             ->map(function (CurrencyRate $currency) use ($historyService) {
+
                 [$defaultQuote] = $currency->resolveQuoteForGovernorate(null);
+
+
+                $latestHourly = $currency->hourlyHistories()
+                    ->latest('hour_start')
+                    ->first();
+
+                $latestDaily = $currency->dailyHistories()
+                    ->latest('day_start')
+                    ->first();
+
+                $capturedAt = $latestHourly?->captured_at ?? $latestHourly?->hour_start;
+                $sourceQuality = $historyService->determineSourceQuality($capturedAt);
+
 
                 return [
                     'id' => $currency->id,
@@ -234,6 +259,18 @@ class CurrencyController extends Controller
                         'quoted_at' => optional($quote->quoted_at)->toIso8601String(),
                         'is_default' => $quote->is_default,
                     ])->values(),
+
+                    'history' => [
+                        'last_hourly_at' => optional($latestHourly?->hour_start)->toIso8601String(),
+                        'last_daily_at' => optional($latestDaily?->day_start)->toDateString(),
+                        'last_captured_at' => optional($capturedAt)->toIso8601String(),
+                        'source_quality' => $sourceQuality,
+                        'source' => $latestHourly?->source,
+                        'daily_change_sell_percent' => $latestDaily?->change_sell_percent,
+                        'daily_change_buy_percent' => $latestDaily?->change_buy_percent,
+                        'range_hint' => 7,
+                    ],
+
                 ];
             });
 
@@ -243,6 +280,39 @@ class CurrencyController extends Controller
 
         ]);
     }
+
+
+    public function backfillHistory(Request $request, CurrencyRate $currency): \Illuminate\Http\JsonResponse
+    {
+        ResponseService::noAnyPermissionThenSendJson(['currency-rate-edit']);
+
+        $validator = Validator::make($request->all(), [
+            'range_days' => 'required|integer|min:1|max:365',
+            'governorate_id' => 'nullable|integer|exists:governorates,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
+
+        $rangeDays = (int) $request->integer('range_days');
+        $governorateId = $request->input('governorate_id');
+
+        $end = now();
+        $start = (clone $end)->subDays($rangeDays - 1)->startOfDay();
+
+        BackfillCurrencyRateHistory::dispatchSync($start, $end, $currency->id, $governorateId ? (int) $governorateId : null);
+
+        return response()->json([
+            'success' => true,
+            'message' => __('History backfill has been queued successfully.'),
+        ]);
+    }
+
+
 
     private function extractIconData(Request $request, ?CurrencyRate $currency = null): array
     {

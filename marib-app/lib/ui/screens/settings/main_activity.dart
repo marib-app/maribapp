@@ -355,43 +355,46 @@ class MainActivityState extends State<MainActivity> with TickerProviderStateMixi
   }
 
 
-  void _goRealEstate() {
+  void _openAdCreationWizard({String? interfaceType, Map<String, dynamic>? initialData}) {
+    final Map<String, dynamic> args = <String, dynamic>{
+      if (interfaceType != null) 'interfaceType': interfaceType,
+      if (initialData != null) ...initialData,
+    };
+
+
     Navigator.pushNamed(
       context,
-      Routes.section_screen,
-      arguments: {
-        'catID': "1",
-        'catName': "realEstateservices".translate(context),
-        "categoryIds": ["1"],
-        "interfaceType": "real_estate_services",
-      },
-
+      Routes.adCreationWizard,
+      arguments: args.isEmpty ? const <String, dynamic>{} : args,
     ).then((_) => _refreshListingLimit());
 
   }
 
 
-  void _goPublicAds() {
-    Navigator.pushNamed(
-      context,
-      Routes.CategoryPublic,
-      arguments: {
-        'catId': 6,
-        'catName': "publicAds".translate(context),
-        "interfaceType": "public_ads",
+  void _goRealEstate() {
+    _openAdCreationWizard(
+      interfaceType: 'real_estate_services',
+      initialData: <String, dynamic>{
+        'catID': '1',
+        'catName': 'realEstateservices'.translate(context),
+        'categoryIds': <String>['1'],
       },
+    );
+  }
 
-    ).then((_) => _refreshListingLimit());
+  void _goPublicAds() {
+    _openAdCreationWizard(
+      interfaceType: 'public_ads',
+      initialData: <String, dynamic>{
+        'catId': 6,
+        'catName': 'publicAds'.translate(context),
 
-
+      },
+    );
   }
 
   void _goAllCategoriesTemporarily() {
-    // TODO: لاحقًا اربطها بتقييد أقسام الحسابات التجارية فقط
-    Navigator.pushNamed(context, Routes.selectCategoryScreen,
-        arguments: const <String, dynamic>{})
-        .then((_) => _refreshListingLimit());
-
+    _openAdCreationWizard();
 
   }
 

@@ -9,6 +9,7 @@ class MetalRate {
   final DateTime? quotedAt;
   final DateTime? updatedAt;
   final DateTime? createdAt;
+  final bool isWatchlisted;
 
   const MetalRate({
     required this.id,
@@ -21,6 +22,8 @@ class MetalRate {
     required this.quotedAt,
     required this.updatedAt,
     required this.createdAt,
+    this.isWatchlisted = false,
+
   });
 
   bool get isGold => metalType.toLowerCase() == 'gold';
@@ -46,6 +49,8 @@ class MetalRate {
     DateTime? quotedAt,
     DateTime? updatedAt,
     DateTime? createdAt,
+    bool? isWatchlisted,
+
   }) {
     return MetalRate(
       id: id ?? this.id,
@@ -58,6 +63,8 @@ class MetalRate {
       quotedAt: quotedAt ?? this.quotedAt,
       updatedAt: updatedAt ?? this.updatedAt,
       createdAt: createdAt ?? this.createdAt,
+      isWatchlisted: isWatchlisted ?? this.isWatchlisted,
+
     );
   }
 
@@ -91,6 +98,8 @@ class MetalRate {
       quotedAt: _parseDate(json['quoted_at'] ?? json['quotedAt']),
       updatedAt: _parseDate(json['updated_at'] ?? json['updatedAt']),
       createdAt: _parseDate(json['created_at'] ?? json['createdAt']),
+      isWatchlisted: json['is_watchlisted'] == true,
+
     );
   }
 }

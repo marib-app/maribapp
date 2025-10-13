@@ -1,5 +1,9 @@
 import 'package:marib/data/model/currency_rate.dart';
 import 'package:marib/data/model/governorate.dart';
+import 'package:marib/data/model/preference_option.dart';
+import 'package:marib/data/model/user_preferences.dart';
+
+
 
 class CurrencyRatesBundle {
   final List<CurrencyRate> rates;
@@ -8,6 +12,9 @@ class CurrencyRatesBundle {
   final Governorate? appliedGovernorate;
   final bool usedFallback;
   final String? requestedGovernorateCode;
+  final UserPreferences? preferences;
+  final List<PreferenceOption> notificationOptions;
+
 
   const CurrencyRatesBundle({
     required this.rates,
@@ -16,6 +23,9 @@ class CurrencyRatesBundle {
     this.appliedGovernorate,
     required this.usedFallback,
     this.requestedGovernorateCode,
+    this.preferences,
+    this.notificationOptions = const <PreferenceOption>[],
+
   });
 
   factory CurrencyRatesBundle.fromApi(
@@ -43,6 +53,32 @@ class CurrencyRatesBundle {
       }
       return null;
     }
+
+
+
+    final dynamic preferencesJson = payload['preferences'];
+    final UserPreferences? preferences =
+    preferencesJson is Map<String, dynamic>
+        ? UserPreferences.fromJson(preferencesJson)
+        : null;
+
+    final List<PreferenceOption> notificationOptions = <PreferenceOption>[];
+    final dynamic preferenceOptions = payload['preference_options'];
+    if (preferenceOptions is Map<String, dynamic>) {
+      final dynamic frequencies =
+      preferenceOptions['notification_frequencies'];
+      if (frequencies is List) {
+        notificationOptions.addAll(
+          frequencies
+              .whereType<Map>()
+              .map((dynamic entry) => PreferenceOption.fromJson(
+            Map<String, dynamic>.from(entry as Map<dynamic, dynamic>),
+          ))
+              .toList(),
+        );
+      }
+    }
+
 
     return CurrencyRatesBundle(
       rates: rates,

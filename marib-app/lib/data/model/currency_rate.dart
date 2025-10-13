@@ -11,6 +11,8 @@ class CurrencyRate {
   final DateTime? quoteQuotedAt;
   final bool quoteIsDefault;
   final bool quoteUsedFallback;
+  final int id;
+  final bool isWatchlisted;
 
 
 
@@ -27,15 +29,40 @@ class CurrencyRate {
     this.quoteQuotedAt,
     this.quoteIsDefault = false,
     this.quoteUsedFallback = false,
-
-
-
-
+    required this.id,
+    this.isWatchlisted = false,
 
 
 
 
   });
+
+
+
+
+
+
+  CurrencyRate copyWith({
+    bool? isWatchlisted,
+  }) {
+    return CurrencyRate(
+      id: id,
+      currencyName: currencyName,
+      sellPrice: sellPrice,
+      buyPrice: buyPrice,
+      lastUpdatedAt: lastUpdatedAt,
+      iconUrl: iconUrl,
+      iconAlt: iconAlt,
+      quoteGovernorateCode: quoteGovernorateCode,
+      quoteGovernorateName: quoteGovernorateName,
+      quoteSource: quoteSource,
+      quoteQuotedAt: quoteQuotedAt,
+      quoteIsDefault: quoteIsDefault,
+      quoteUsedFallback: quoteUsedFallback,
+      isWatchlisted: isWatchlisted ?? this.isWatchlisted,
+    );
+  }
+
 
   factory CurrencyRate.fromJson(Map<String, dynamic> json) {
     // Safe parsing for numeric values that might be returned as strings
@@ -49,7 +76,9 @@ class CurrencyRate {
     }
 
     return CurrencyRate(
-      currencyName: json['currency_name'] as String,
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      currencyName: (json['currency_name'] ?? '').toString(),
+      isWatchlisted: json['is_watchlisted'] == true,
       sellPrice: parseSafeDouble(json['sell_price']),
       buyPrice: parseSafeDouble(json['buy_price']),
       lastUpdatedAt: json['last_updated_at'] != null
@@ -66,6 +95,7 @@ class CurrencyRate {
       quoteIsDefault: json['quote_is_default'] == true,
       quoteUsedFallback: json['quote_used_fallback'] == true,
 
+      isWatchlisted: json['is_watchlisted'] == true,
 
     );
   }

@@ -13,17 +13,26 @@ class CurrencySuccess extends CurrencyState {
   final Governorate? appliedGovernorate;
   final bool usedFallback;
   final String? requestedGovernorateCode;
+  final UserPreferences preferences;
+  final List<PreferenceOption> notificationOptions;
+  final bool showWatchlistOnly;
+  final List<CurrencyRate> visibleCurrencyRates;
   final List<MetalRate> metalRates;
+  final List<MetalRate> visibleMetalRates;
   final DateTime? metalsLastUpdatedAt;
-
 
   CurrencySuccess({
     required this.currencyRates,
     required this.governorates,
     this.requestedGovernorate,
-    this.appliedGovernorate,
+    required this.visibleCurrencyRates,
     required this.metalRates,
+    required this.visibleMetalRates,
     required this.metalsLastUpdatedAt,
+    this.appliedGovernorate,
+    required this.preferences,
+    required this.notificationOptions,
+    required this.showWatchlistOnly,
     required this.usedFallback,
     this.requestedGovernorateCode,
   });

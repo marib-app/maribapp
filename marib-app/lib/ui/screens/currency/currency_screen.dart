@@ -27,6 +27,13 @@ import 'currency_screen_ui.dart' show CurrencyScreenUI;
 import 'package:marib/data/repositories/preferences/governorate_preference_repository.dart';
 import 'package:marib/data/model/metal_rate.dart';
 import 'package:marib/data/repositories/metal_repository.dart';
+
+import 'package:marib/data/model/preference_option.dart';
+import 'package:marib/data/repositories/metal_repository.dart';
+import 'package:marib/data/repositories/preferences/user_preference_repository.dart';
+
+
+
 /// حالة صفحة العملات
 enum CurrencyPageStatus { loading, error, ready }
 
@@ -56,24 +63,38 @@ class CurrencyViewState {
   final double convertedAmount;
   final bool hasCalculated;
 
-  const CurrencyViewState({
+
+
+
+
+
+
+  final Set<int> currencyWatchlist;
+  final Set<int> metalWatchlist;
+  final bool showWatchlistOnly;
+  final String notificationFrequency;
+  final List<PreferenceOption> notificationOptions;
+  final List<dynamic> displayRates;
+  final List<MetalRate> displayGoldRates;
+  final List<MetalRate> displaySilverRates;
+
+
+
+
+
+  CurrencyViewState({
+
     required this.status,
     this.errorMessage,
-    required this.goldRates,
-    required this.silverRates,
-    required this.metalsLastUpdatedAt,
-    required this.rates,
+    required List<dynamic> rates,
+    required List<dynamic> displayRates,
     required this.lastUpdatedAt,
-    required this.amountText,
-    required this.fromCurrency,
-    required this.toCurrency,
-    required this.convertedAmount,
-    required this.hasCalculated,
-
-
-
-
-    required this.governorates,
+    required List<MetalRate> goldRates,
+    required List<MetalRate> displayGoldRates,
+    required List<MetalRate> silverRates,
+    required List<MetalRate> displaySilverRates,
+    required this.metalsLastUpdatedAt,
+    required List<Map<String, String?>> governorates,
     required this.selectedGovernorateCode,
     required this.appliedGovernorateCode,
     required this.appliedGovernorateName,
@@ -81,7 +102,31 @@ class CurrencyViewState {
     required this.requestedGovernorateName,
     required this.usedFallback,
 
-  });
+    required Set<int> currencyWatchlist,
+    required Set<int> metalWatchlist,
+    required this.showWatchlistOnly,
+    required this.notificationFrequency,
+    required List<PreferenceOption> notificationOptions,
+    required this.amountText,
+    required this.fromCurrency,
+    required this.toCurrency,
+    required this.convertedAmount,
+    required this.hasCalculated,
+  })  : rates = List<dynamic>.unmodifiable(rates),
+        displayRates = List<dynamic>.unmodifiable(displayRates),
+        goldRates = List<MetalRate>.unmodifiable(goldRates),
+        displayGoldRates = List<MetalRate>.unmodifiable(displayGoldRates),
+        silverRates = List<MetalRate>.unmodifiable(silverRates),
+        displaySilverRates = List<MetalRate>.unmodifiable(displaySilverRates),
+        governorates = List<Map<String, String?>>.unmodifiable(
+          governorates.map(
+                (entry) => Map<String, String?>.unmodifiable(entry),
+          ),
+        ),
+        currencyWatchlist = Set<int>.unmodifiable(currencyWatchlist),
+        metalWatchlist = Set<int>.unmodifiable(metalWatchlist),
+        notificationOptions =
+        List<PreferenceOption>.unmodifiable(notificationOptions);
 
   CurrencyViewState copyWith({
     CurrencyPageStatus? status,
@@ -96,20 +141,55 @@ class CurrencyViewState {
     String? toCurrency,
     double? convertedAmount,
     bool? hasCalculated,
+
+    Set<int>? currencyWatchlist,
+    Set<int>? metalWatchlist,
+    bool? showWatchlistOnly,
+    String? notificationFrequency,
+    List<PreferenceOption>? notificationOptions,
+    List<Map<String, String?>>? governorates,
+    String? selectedGovernorateCode,
+    String? appliedGovernorateCode,
+    String? appliedGovernorateName,
+    String? requestedGovernorateCode,
+    String? requestedGovernorateName,
+    bool? usedFallback,
+    List<MetalRate>? displaySilverRates,
+    List<MetalRate>? displayGoldRates,
+    List<dynamic>? displayRates,
+
+
+
+
   }) {
     return CurrencyViewState(
       status: status ?? this.status,
-      errorMessage: errorMessage ?? this.errorMessage,
-      rates: rates ?? this.rates,
-      lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt,
+
+      displayRates: displayRates ?? this.displayRates,
+      displayGoldRates: displayGoldRates ?? this.displayGoldRates,
+      displaySilverRates: displaySilverRates ?? this.displaySilverRates,
+      currencyWatchlist: currencyWatchlist ?? this.currencyWatchlist,
+      metalWatchlist: metalWatchlist ?? this.metalWatchlist,
+      showWatchlistOnly: showWatchlistOnly ?? this.showWatchlistOnly,
+      notificationFrequency:
+      notificationFrequency ?? this.notificationFrequency,
+      notificationOptions: notificationOptions ?? this.notificationOptions,
       amountText: amountText ?? this.amountText,
-      goldRates: goldRates ?? this.goldRates,
-      silverRates: silverRates ?? this.silverRates,
-      metalsLastUpdatedAt: metalsLastUpdatedAt ?? this.metalsLastUpdatedAt,
       fromCurrency: fromCurrency ?? this.fromCurrency,
       toCurrency: toCurrency ?? this.toCurrency,
       convertedAmount: convertedAmount ?? this.convertedAmount,
       hasCalculated: hasCalculated ?? this.hasCalculated,
+
+
+
+      errorMessage: errorMessage ?? this.errorMessage,
+      rates: rates ?? this.rates,
+      lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt,
+
+      goldRates: goldRates ?? this.goldRates,
+      silverRates: silverRates ?? this.silverRates,
+      metalsLastUpdatedAt: metalsLastUpdatedAt ?? this.metalsLastUpdatedAt,
+
       governorates: governorates ?? this.governorates,
       selectedGovernorateCode:
       selectedGovernorateCode ?? this.selectedGovernorateCode,
@@ -143,8 +223,8 @@ class CurrencyScreen extends StatelessWidget {
       child: BlocProvider(
         create: (_) => CurrencyCubit(
           CurrencyRepository(),
+          UserPreferenceRepository(),
           MetalRepository(),
-          GovernoratePreferenceRepository(),
         )..initialize(),
 
         child: const _CurrencyScreenLogic(),
@@ -236,9 +316,9 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
   }
 
   void _onShareRates(CurrencyViewState viewState) {
-    final currencyRates = viewState.rates;
-    final goldRates = viewState.goldRates;
-    final silverRates = viewState.silverRates;
+    final currencyRates = viewState.displayRates;
+    final goldRates = viewState.displayGoldRates;
+    final silverRates = viewState.displaySilverRates;
 
     if (currencyRates.isEmpty && goldRates.isEmpty && silverRates.isEmpty) {
       return;
@@ -306,6 +386,27 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
 
   }
 
+
+
+
+  void _onToggleWatchlistFilter(bool enabled) {
+    context.read<CurrencyCubit>().toggleWatchlistFilter(enabled);
+  }
+
+  void _onToggleCurrencyWatchlist(int currencyId) {
+    context.read<CurrencyCubit>().toggleCurrencyWatchlist(currencyId);
+  }
+
+  void _onToggleMetalWatchlist(int metalId) {
+    context.read<CurrencyCubit>().toggleMetalWatchlist(metalId);
+  }
+
+  void _onNotificationFrequencyChanged(String value) {
+    context.read<CurrencyCubit>().changeNotificationFrequency(value);
+  }
+
+
+
   // ————— أدوات مساعدة داخلية —————
 
   String? _firstOtherCurrency({
@@ -351,12 +452,22 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
           viewState = CurrencyViewState(
             status: CurrencyPageStatus.loading,
             rates: const [],
+
+
+            displayRates: const [],
+            displayGoldRates: const [],
+            displaySilverRates: const [],
+            metalsLastUpdatedAt: null,
+            currencyWatchlist: const <int>{},
+            metalWatchlist: const <int>{},
+            showWatchlistOnly: false,
+            notificationFrequency: 'daily',
+            notificationOptions: const <PreferenceOption>[],
             lastUpdatedAt: null,
             amountText: _amountController.text,
             fromCurrency: _fromCurrency,
             goldRates: const [],
             silverRates: const [],
-              metalsLastUpdatedAt: null,
             toCurrency: _toCurrency,
             convertedAmount: _convertedAmount,
             hasCalculated: _hasCalculated,
@@ -370,6 +481,21 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
           );
         } else if (state is CurrencyError) {
           viewState = CurrencyViewState(
+
+
+            currencyWatchlist: const <int>{},
+            metalWatchlist: const <int>{},
+            showWatchlistOnly: false,
+            notificationFrequency: 'daily',
+            notificationOptions: const <PreferenceOption>[],
+            displayGoldRates: const [],
+            displaySilverRates: const [],
+            displayRates: const [],
+
+
+
+
+
             status: CurrencyPageStatus.error,
             errorMessage: state.message,
             rates: const [],
@@ -393,7 +519,14 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
         } else if (state is CurrencySuccess) {
           final rates = state.currencyRates;
           final goldRates = state.metalRates
+          final displayRates = state.visibleCurrencyRates;
+          final displayGoldRates = state.visibleMetalRates
               .where((rate) => rate.isGold)
+              .toList(growable: false);
+          final displaySilverRates = state.visibleMetalRates
+              .where((rate) => rate.isSilver)
+              .toList(growable: false);
+          .where((rate) => rate.isGold)
               .toList(growable: false);
           final silverRates = state.metalRates
               .where((rate) => rate.isSilver)
@@ -444,6 +577,16 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
             status: CurrencyPageStatus.ready,
             rates: rates,
             lastUpdatedAt: updatedAt,
+
+            displayGoldRates: displayGoldRates,
+            displaySilverRates: displaySilverRates,
+            displayRates: displayRates,
+            currencyWatchlist: state.preferences.currencyWatchlist,
+            metalWatchlist: state.preferences.metalWatchlist,
+            showWatchlistOnly: state.showWatchlistOnly,
+            notificationFrequency: state.preferences.notificationFrequency,
+            notificationOptions: state.notificationOptions,
+
             governorates: governorateOptions,
             selectedGovernorateCode: selectedCode,
             goldRates: goldRates,
@@ -468,6 +611,17 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
             errorMessage: 'حدث خطأ ما',
             rates: const [],
             lastUpdatedAt: null,
+
+            displayRates: const [],
+            displayGoldRates: const [],
+            displaySilverRates: const [],
+            currencyWatchlist: const <int>{},
+            metalWatchlist: const <int>{},
+            showWatchlistOnly: false,
+            notificationFrequency: 'daily',
+            notificationOptions: const <PreferenceOption>[],
+
+
             governorates: const [],
             goldRates: const [],
             silverRates: const [],
@@ -494,9 +648,15 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
           onChangeTo: _onChangeTo,
           onAmountChanged: _onAmountChanged,
           onReset: _onReset,
+
           onConvert: () => _onConvert(context.read<CurrencyCubit>()),
           onShareRates: () => _onShareRates(viewState),
           onGovernorateChanged: _onGovernorateChanged,
+
+          onToggleWatchlistFilter: _onToggleWatchlistFilter,
+          onToggleCurrencyWatchlist: _onToggleCurrencyWatchlist,
+          onToggleMetalWatchlist: _onToggleMetalWatchlist,
+          onNotificationFrequencyChanged: _onNotificationFrequencyChanged,
           // 🔧 لا تستخدم const هنا
           amountInputFormatters: [
             FilteringTextInputFormatter.digitsOnly,

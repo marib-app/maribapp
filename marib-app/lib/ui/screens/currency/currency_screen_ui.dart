@@ -44,10 +44,22 @@ class CurrencyScreenUI extends StatelessWidget {
     required this.onShareRates,
     required this.amountInputFormatters,
     required this.systemUiOverlayStyle,
+
+    required this.onToggleWatchlistFilter,
+    required this.onToggleCurrencyWatchlist,
+    required this.onToggleMetalWatchlist,
+    required this.onNotificationFrequencyChanged,
+
+
+
+
   });
 
   final CurrencyViewState state;
-
+  final void Function(bool) onToggleWatchlistFilter;
+  final void Function(int) onToggleCurrencyWatchlist;
+  final void Function(int) onToggleMetalWatchlist;
+  final void Function(String) onNotificationFrequencyChanged;
   final TabController tabController;
   final TextEditingController amountController;
 
@@ -83,6 +95,8 @@ class CurrencyScreenUI extends StatelessWidget {
           children: [
             const SizedBox(height: 8),
             _buildGovernorateSelector(context, brand, bg, onBg),
+            const SizedBox(height: 8),
+            _buildPreferencesBar(context, brand, bg, onBg),
             const SizedBox(height: 8),
             _buildSegmentedTabs(context, brand, bg, onBg),
             const SizedBox(height: 4),
@@ -210,7 +224,95 @@ class CurrencyScreenUI extends StatelessWidget {
     );
   }
 
+  Widget _buildPreferencesBar(
+      BuildContext context, Color brand, Color bg, Color onBg) {
+    final theme = Theme.of(context);
+    final border = _isDark(context) ? Colors.white12 : Colors.black12;
+    final options = state.notificationOptions;
 
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'عرض قائمة المراقبة فقط',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: onBg,
+                  ),
+                  textDirection: TextDirection.rtl,
+                ),
+              ),
+              Switch(
+                value: state.showWatchlistOnly,
+                activeColor: brand,
+                onChanged: onToggleWatchlistFilter,
+              ),
+            ],
+          ),
+          if (options.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              'تواتر الإشعارات',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: onBg.withOpacity(0.7),
+                fontWeight: FontWeight.w600,
+              ),
+              textDirection: TextDirection.rtl,
+            ),
+            const SizedBox(height: 6),
+            DropdownButtonFormField<String>(
+              value: state.notificationFrequency.isNotEmpty
+                  ? state.notificationFrequency
+                  : options.first.value,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: _isDark(context)
+                    ? Colors.white.withOpacity(0.04)
+                    : Colors.black.withOpacity(0.02),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: border),
+                ),
+              ),
+              dropdownColor: bg,
+              iconEnabledColor: brand,
+              items: options
+                  .map(
+                    (PreferenceOption option) => DropdownMenuItem<String>(
+                  value: option.value,
+                  child: Text(
+                    option.label,
+                    textDirection: TextDirection.rtl,
+                  ),
+                ),
+              )
+                  .toList(growable: false),
+              onChanged: (String? value) {
+                if (value != null && value.isNotEmpty) {
+                  onNotificationFrequencyChanged(value);
+                }
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 
   // ——— تبويبات موحدة الخط ———
   Widget _buildSegmentedTabs(
@@ -247,7 +349,6 @@ class CurrencyScreenUI extends StatelessWidget {
         labelColor: onBg,
         unselectedLabelColor: onBg.withOpacity(0.5),
         overlayColor: MaterialStateProperty.all(Colors.transparent),
-        SilverTabView(state: state, brand: brand),
       ),
     );
   }
@@ -264,7 +365,12 @@ class CurrencyScreenUI extends StatelessWidget {
           controller: tabController,
           physics: const BouncingScrollPhysics(),
           children: [
-            RatesTabView(state: state, onShareRates: onShareRates, brand: brand),
+            RatesTabView(
+              state: state,
+              onShareRates: onShareRates,
+              brand: brand,
+              onToggleCurrencyWatchlist: onToggleCurrencyWatchlist,
+            ),
             ConvertTabView(
               state: state,
               amountController: amountController,
@@ -277,6 +383,11 @@ class CurrencyScreenUI extends StatelessWidget {
               brand: brand,
             ),
             GoldTabView(state: state, onShareRates: onShareRates, brand: brand),
+            SilverTabView(
+              state: state,
+              brand: brand,
+              onToggleMetalWatchlist: onToggleMetalWatchlist,
+            ),
           ],
         );
     }
@@ -408,11 +519,18 @@ class RatesTabView extends StatelessWidget {
     required this.state,
     required this.onShareRates,
     required this.brand,
+
+    required this.onToggleCurrencyWatchlist,
+
+
+
+
   });
 
   final CurrencyViewState state;
   final VoidCallback onShareRates;
   final Color brand;
+  final void Function(int) onToggleCurrencyWatchlist;
 
   bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
 
@@ -500,7 +618,8 @@ class RatesTabView extends StatelessWidget {
         required String buy,
         String? iconUrl,
         String? iconAlt,
-
+        required bool isWatchlisted,
+        required VoidCallback onToggleWatchlist,
       }) {
     final theme = Theme.of(context);
     final onBg = _isDark(context) ? Colors.white : Colors.black;
@@ -518,6 +637,111 @@ class RatesTabView extends StatelessWidget {
     ) ??
         TextStyle(color: onBg, fontWeight: FontWeight.w800, fontSize: 15.5);
 
+    Widget fallbackIcon() {
+      return Container(
+        width: 32,
+        height: 32,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: onBg.withOpacity(0.20)),
+        ),
+        child: Icon(Icons.account_balance_wallet_outlined, size: 17, color: brand),
+      );
+    }
+
+    Widget leadingIcon;
+
+    if (iconUrl != null && iconUrl.isNotEmpty) {
+      leadingIcon = Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: onBg.withOpacity(0.20)),
+        ),
+        clipBehavior: Clip.hardEdge,
+        child: Semantics(
+          label: iconAlt?.isNotEmpty == true ? iconAlt : 'أيقونة $name',
+          child: Image.network(
+            iconUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => fallbackIcon(),
+            loadingBuilder: (ctx, child, progress) {
+              if (progress == null) return child;
+              return Center(
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(brand),
+                    value: progress.expectedTotalBytes != null
+                        ? progress.cumulativeBytesLoaded /
+                        (progress.expectedTotalBytes ?? 1)
+                        : null,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    } else {
+      leadingIcon = fallbackIcon();
+    }
+
+    Widget priceStat(String label, String value, Color accent) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: onBg.withOpacity(0.6),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 2, height: 18, color: accent.withOpacity(0.9)),
+              const SizedBox(width: 6),
+              Text(
+                _fmt(value),
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: accent,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.2,
+                ) ??
+                    TextStyle(
+                      color: accent,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.2,
+                      fontSize: 15.5,
+                    ),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    final Widget star = IconButton(
+      onPressed: onToggleWatchlist,
+      icon: Icon(
+        isWatchlisted ? Icons.star_rounded : Icons.star_outline_rounded,
+        color: isWatchlisted ? Colors.amber : onBg.withOpacity(0.35),
+      ),
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+      splashRadius: 20,
+      tooltip: isWatchlisted
+          ? 'إزالة من قائمة المراقبة'
+          : 'إضافة إلى قائمة المراقبة',
+    );
+
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -531,72 +755,18 @@ class RatesTabView extends StatelessWidget {
           ),
           child: LayoutBuilder(
             builder: (ctx, cons) {
-              final narrow = cons.maxWidth < 360; // استجابة للشاشات الصغيرة
-
-              // أيقونة عامة مناسبة لكل العملات
-
-              Widget fallbackIcon() {
-                return Container(
-                  width: 32,
-                  height: 32,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: onBg.withOpacity(0.20)),
-                  ),
-                  child: Icon(Icons.account_balance_wallet_outlined, size: 17, color: brand),
-                );
-              }
-
-              Widget leadingIcon;
-
-              if (iconUrl != null && iconUrl.isNotEmpty) {
-                leadingIcon = Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: onBg.withOpacity(0.20)),
-                  ),
-                  clipBehavior: Clip.hardEdge,
-                  child: Semantics(
-                    label: iconAlt?.isNotEmpty == true ? iconAlt : 'أيقونة $name',
-                    child: Image.network(
-                      iconUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => fallbackIcon(),
-                      loadingBuilder: (ctx, child, progress) {
-                        if (progress == null) return child;
-                        return Center(
-                          child: SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(brand),
-                              value: progress.expectedTotalBytes != null
-                                  ? progress.cumulativeBytesLoaded / (progress.expectedTotalBytes ?? 1)
-                                  : null,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                );
-              } else {
-                leadingIcon = fallbackIcon();
-              }
+              final bool narrow = cons.maxWidth < 360;
 
 
-              final leading = Row(
+
+              final Widget leading = Row(
+
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   leadingIcon,
 
                   const SizedBox(width: 8),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 170),
+                  Expanded(
                     child: Text(
                       name,
                       style: nameStyle,
@@ -608,53 +778,11 @@ class RatesTabView extends StatelessWidget {
                 ],
               );
 
-              // مقطع سعر واحد (Label فوق + قيمة واضحة) بدون حشوات لونية
-              Widget priceStat(String label, String value, Color accent) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      label,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: onBg.withOpacity(0.6),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // فاصل رأسي رفيع ملوّن يعطي لمسة احترافية
-                        Container(width: 2, height: 18, color: accent.withOpacity(0.9)),
-                        const SizedBox(width: 6),
-                        Text(
-                          _fmt(value),
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            color: accent,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.2,
-                          ) ??
-                              TextStyle(
-                                color: accent,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 0.2,
-                                fontSize: 15.5,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ],
-                );
-              }
+              final Widget sellBlock = priceStat('بيع', sell, Colors.redAccent);
+              final Widget buyBlock = priceStat('شراء', buy, Colors.green);
 
-              final sellBlock = priceStat("بيع", sell, Colors.redAccent);
-              final buyBlock = priceStat("شراء", buy, Colors.green);
-
-              return Row(
-                children: [
-                  Expanded(child: leading),
-                  const SizedBox(width: 10),
-                  if (narrow)
-                    Column(
+              final Widget priceContent = narrow
+                  ? Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         sellBlock,
@@ -662,8 +790,7 @@ class RatesTabView extends StatelessWidget {
                         buyBlock,
                       ],
                     )
-                  else
-                    Row(
+                  : Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         sellBlock,
@@ -676,7 +803,25 @@ class RatesTabView extends StatelessWidget {
                         ),
                         buyBlock,
                       ],
+              );
+
+              return Row(
+                crossAxisAlignment:
+                narrow ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+                children: [
+              Expanded(
+              child: Row(
+              crossAxisAlignment: narrow
+                ? CrossAxisAlignment.start
+                : CrossAxisAlignment.center,
+                children: [
+                  Expanded(child: leading),
+                  const SizedBox(width: 12),
+                  priceContent,
+                ],
                     ),
+              ),
+                  star,
                 ],
               );
             },
@@ -743,7 +888,7 @@ class RatesTabView extends StatelessWidget {
   // ---------- Build ----------
   @override
   Widget build(BuildContext context) {
-    final rates = state.rates;
+    final rates = state.displayRates;
 
     String _name(d) => (d as dynamic).currencyName?.toString() ?? '';
     String _sell(d) => (d as dynamic).sellPrice?.toString() ?? '';
@@ -760,7 +905,10 @@ class RatesTabView extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 40),
             child: Center(
               child: Text(
-                'لا توجد بيانات حالياً',
+                state.showWatchlistOnly
+                    ? 'قائمة المراقبة فارغة حاليًا'
+                    : 'لا توجد بيانات حالياً',
+
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: onBg,
                   fontWeight: FontWeight.w700,
@@ -779,7 +927,9 @@ class RatesTabView extends StatelessWidget {
       itemBuilder: (ctx, i) {
         if (i == 0) return _header(context);
         if (i == rates.length + 1) return _noteCard(context);
-        final r = rates[i - 1];
+        final dynamic r = rates[i - 1];
+        final int rateId = (r as dynamic).id is int ? (r as dynamic).id as int : 0;
+        final bool isWatchlisted = state.currencyWatchlist.contains(rateId);
         return _row(
           context,
           name: _name(r),
@@ -787,6 +937,8 @@ class RatesTabView extends StatelessWidget {
           buy: _buy(r),
           iconUrl: _icon(r),
           iconAlt: _iconAlt(r),
+          isWatchlisted: isWatchlisted,
+          onToggleWatchlist: () => onToggleCurrencyWatchlist(rateId),
         );
       },
     );
@@ -1073,7 +1225,10 @@ class GoldTabView extends StatelessWidget {
     required this.state,
     required this.onShareRates,
     required this.brand,
+    required this.onToggleMetalWatchlist,
+
   });
+  final void Function(int) onToggleMetalWatchlist;
 
   final CurrencyViewState state;
   final VoidCallback onShareRates;
@@ -1124,7 +1279,7 @@ class GoldTabView extends StatelessWidget {
     );
   }
 
-  Widget _row(BuildContext context, MetalRate rate) {
+  Widget _row(BuildContext context, MetalRate rate, bool isWatchlisted) {
 
     final onBg = _isDark(context) ? Colors.white : Colors.black;
 
@@ -1138,6 +1293,22 @@ class GoldTabView extends StatelessWidget {
       fontWeight: FontWeight.w700,
     ) ??
         TextStyle(color: onBg.withOpacity(0.6), fontWeight: FontWeight.w700);
+
+
+    final star = IconButton(
+      onPressed: () => onToggleMetalWatchlist(rate.id),
+      icon: Icon(
+        isWatchlisted ? Icons.star_rounded : Icons.star_outline_rounded,
+        color: isWatchlisted ? Colors.amber : onBg.withOpacity(0.35),
+      ),
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+      splashRadius: 20,
+      tooltip: isWatchlisted
+          ? 'إزالة من قائمة المراقبة'
+          : 'إضافة إلى قائمة المراقبة',
+    );
+
 
     Widget chip(String value, Color color) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -1181,6 +1352,7 @@ class GoldTabView extends StatelessWidget {
               textDirection: TextDirection.rtl,
             ),
           ),
+          star,
 
           const SizedBox(width: 10),
 
@@ -1219,7 +1391,10 @@ class GoldTabView extends StatelessWidget {
           Icon(Icons.info_outline, color: brand),
           const SizedBox(height: 8),
           Text(
-            'لا توجد بيانات ذهب حالياً',
+            state.showWatchlistOnly
+                ? 'لا توجد عناصر مراقبة في الذهب حالياً'
+                : 'لا توجد بيانات ذهب حالياً',
+
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: onBg,
               fontWeight: FontWeight.w700,
@@ -1233,7 +1408,7 @@ class GoldTabView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final divider = _isDark(context) ? Colors.white12 : Colors.black12;
-    final rates = _rates;
+    final rates = state.displayGoldRates;
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
@@ -1244,7 +1419,12 @@ class GoldTabView extends StatelessWidget {
         else
           SliverList.separated(
             itemCount: rates.length,
-            itemBuilder: (ctx, i) => _row(ctx, rates[i]),
+            itemBuilder: (ctx, i) {
+              final MetalRate rate = rates[i];
+              final bool isWatchlisted =
+              state.metalWatchlist.contains(rate.id);
+              return _row(ctx, rate, isWatchlisted);
+            },
             separatorBuilder: (_, __) => Divider(height: 1, color: divider),
           ),
       ],
@@ -1258,14 +1438,17 @@ class SilverTabView extends StatelessWidget {
     super.key,
     required this.state,
     required this.brand,
+    required this.onToggleMetalWatchlist,
+
   });
+  final void Function(int) onToggleMetalWatchlist;
 
   final CurrencyViewState state;
   final Color brand;
 
   bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
 
-  List<MetalRate> get _rates => state.silverRates;
+  List<MetalRate> get _rates => state.displaySilverRates;
 
   String _format(double value) => NumberFormat('#,##0.000').format(value);
 
@@ -1317,6 +1500,21 @@ class SilverTabView extends StatelessWidget {
     ) ??
         TextStyle(color: onBg.withOpacity(0.6), fontWeight: FontWeight.w700);
 
+    final star = IconButton(
+      onPressed: () => onToggleMetalWatchlist(rate.id),
+      icon: Icon(
+        isWatchlisted ? Icons.star_rounded : Icons.star_outline_rounded,
+        color: isWatchlisted ? Colors.amber : onBg.withOpacity(0.35),
+      ),
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+      splashRadius: 20,
+      tooltip: isWatchlisted
+          ? 'إزالة من قائمة المراقبة'
+          : 'إضافة إلى قائمة المراقبة',
+    );
+
+
     Widget chip(String value, Color color) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
@@ -1345,7 +1543,9 @@ class SilverTabView extends StatelessWidget {
               shape: BoxShape.circle,
               border: Border.all(color: onBg.withOpacity(0.25)),
             ),
-            child: Icon(Icons.diamond, size: 16, color: Colors.grey[400] ?? Colors.grey),
+            child:
+            Icon(Icons.diamond, size: 16, color: Colors.grey[400] ?? Colors.grey),
+
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -1375,6 +1575,8 @@ class SilverTabView extends StatelessWidget {
               chip(_format(rate.buyPrice), Colors.indigoAccent),
             ],
           ),
+          const SizedBox(width: 8),
+          star,
         ],
       ),
     );
@@ -1389,7 +1591,9 @@ class SilverTabView extends StatelessWidget {
           Icon(Icons.info_outline, color: brand),
           const SizedBox(height: 8),
           Text(
-            'لا توجد بيانات فضة حالياً',
+            state.showWatchlistOnly
+                ? 'قائمة مراقبة الفضة فارغة حالياً'
+                : 'لا توجد بيانات فضة حالياً',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: onBg,
               fontWeight: FontWeight.w700,
@@ -1415,7 +1619,12 @@ class SilverTabView extends StatelessWidget {
         else
           SliverList.separated(
             itemCount: rates.length,
-            itemBuilder: (ctx, i) => _row(ctx, rates[i]),
+            itemBuilder: (ctx, i) {
+              final MetalRate rate = rates[i];
+              final bool isWatchlisted =
+              state.metalWatchlist.contains(rate.id);
+              return _row(ctx, rate, isWatchlisted);
+            },
             separatorBuilder: (_, __) => Divider(height: 1, color: divider),
           ),
       ],

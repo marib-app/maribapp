@@ -391,6 +391,84 @@ class ApiController extends Controller {
 
 
 
+
+    private function notifyDelegatesAboutRequestDevice(RequestDevice $requestDevice): void
+    {
+        $section = $requestDevice->section ?: 'computer';
+
+        $delegateIds = $this->delegateAuthorizationService->getDelegatesForSection($section);
+
+        if ($delegateIds === []) {
+            return;
+        }
+
+        $tokens = UserFcmToken::query()
+            ->whereIn('user_id', $delegateIds)
+            ->pluck('fcm_token')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($tokens === []) {
+            return;
+        }
+
+        $departmentLabel = trans('departments.' . $section, [], 'ar');
+
+        if ($departmentLabel === 'departments.' . $section) {
+            $departmentLabel = $section;
+        }
+
+        $orderReference = '#' . $requestDevice->getKey();
+        $subject = trim((string) ($requestDevice->subject ?? ''));
+
+        $title = 'طلب شراء جديد يحتاج إلى مراجعة';
+        $body = sprintf(
+            'لديك طلب شراء في قسم %s رقم الطلب %s يحتاج إلى مراجعة.',
+            $departmentLabel,
+            $orderReference
+        );
+
+        if ($subject !== '') {
+            $body .= ' الموضوع: ' . $subject;
+        }
+
+        $deeplink = $this->resolveRequestDeviceManagementUrl($section, $requestDevice);
+
+        $payload = [
+            'type' => 'request_device',
+            'section' => $section,
+            'request_device_id' => $requestDevice->getKey(),
+            'order_reference' => $orderReference,
+            'subject' => $subject,
+            'phone' => $requestDevice->phone,
+            'deeplink' => $deeplink,
+            'click_action' => $deeplink,
+            'message_preview' => $body,
+        ];
+
+        NotificationService::sendFcmNotification($tokens, $title, $body, 'request_device', $payload);
+    }
+
+
+    private function resolveRequestDeviceManagementUrl(string $section, RequestDevice $requestDevice): ?string
+    {
+        try {
+            return match ($section) {
+                'shein' => route('item.shein.custom-orders.show', ['id' => $requestDevice->getKey()]),
+                'computer' => route('item.computer.custom-orders.show', ['id' => $requestDevice->getKey()]),
+                default => null,
+            };
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+
+
+
+
     /**
      * @return array<int, string>
      */
@@ -7888,6 +7966,22 @@ public function storeRequestDevice(Request $request)
     }
 
     $requestDevice = RequestDevice::create($data);
+
+
+
+
+    try {
+        $this->notifyDelegatesAboutRequestDevice($requestDevice);
+    } catch (Throwable $exception) {
+        Log::warning('api.request_device.notification_failed', [
+            'request_device_id' => $requestDevice->getKey(),
+            'section' => $requestDevice->section,
+            'error' => $exception->getMessage(),
+        ]);
+    }
+
+
+
 
     return response()->json([
         'status' => true,

@@ -1770,20 +1770,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     return completion;
   }
 
-  Color _segmentColor(
-    ColorScheme colors,
-    bool isCompleted,
-    bool isCurrent,
-    bool isBeforeCurrent,
-  ) {
-    if (isCompleted || isBeforeCurrent) {
-      return colors.territoryColor;
-    }
-    if (isCurrent) {
-      return colors.territoryColor.withOpacity(0.6);
-    }
-    return colors.borderColor.withOpacity(0.28);
-  }
+
 
   bool _isNonReviewStepComplete(_WizardStepId id) {
     switch (id) {
@@ -1926,8 +1913,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   Widget build(BuildContext context) {
     final List<_WizardStep> steps = _visibleSteps;
     final int currentStepIndex = _effectiveCurrentStepIndex(steps);
-    final Map<_WizardStepId, bool> completionByStep =
-        _calculateStepCompletion(steps);
+
     final double stepProgress =
         steps.isEmpty ? 0 : (currentStepIndex + 1) / steps.length;
     final int progressPercent = (stepProgress * 100).clamp(0, 100).round();
@@ -1935,61 +1921,57 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         steps.isNotEmpty ? steps[currentStepIndex].isOptional : false;
     final ThemeData theme = Theme.of(context);
     final ColorScheme colors = context.color;
-    final String dynamicTitle = steps.isEmpty
+    final String appBarTitle = steps.isEmpty
         ? 'معالج إنشاء إعلان'
         : '${steps[currentStepIndex].label} • $progressPercent%';
-
-    return Scaffold(
-      appBar: UiUtils.buildAppBar(
-        context,
-        showBackButton: true,
-        title: dynamicTitle,
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: _isLoadingDraft ? null : stepProgress,
-                    minHeight: 6,
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(colors.territoryColor),
-                    backgroundColor: colors.borderColor
-                        .withOpacity(_isLoadingDraft ? 0.2 : 0.12),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 6,
-                  child: Row(
-                    children: [
-                      for (int i = 0; i < steps.length; i++)
-                        Expanded(
-                          child: Container(
-                            margin: EdgeInsetsDirectional.only(
-                              end: i == steps.length - 1 ? 0 : 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _segmentColor(
-                                colors,
-                                completionByStep[steps[i].id] ?? false,
-                                i == currentStepIndex,
-                                i < currentStepIndex,
+    final List<Widget>? appBarActions =
+    (!_hasUnsavedChanges && !_isSavingDraft)
+        ? null
+        : <Widget>[
+    Padding(
+    padding: const EdgeInsetsDirectional.only(end: 12),
+    child: TextButton(
+    onPressed: _isSavingDraft || !_hasUnsavedChanges
+    ? null
+        : _autoSaveDraft,
+    style: TextButton.styleFrom(
+    foregroundColor: colors.territoryColor,
+    disabledForegroundColor:
+    colors.deactivateColor.withOpacity(0.7),
+    textStyle: theme.textTheme.labelLarge?.copyWith(
+    fontWeight: FontWeight.w600,
+    ),
+    padding: const EdgeInsets.symmetric(
+    horizontal: 16,
+    vertical: 10,
+    ),
+    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    ),
+    child: _isSavingDraft
+    ? SizedBox(
+    height: 18,
+    width: 18,
+    child: CircularProgressIndicator(
+    strokeWidth: 2,
+    valueColor: AlwaysStoppedAnimation<Color>(
+    colors.territoryColor,
                               ),
-                              borderRadius: BorderRadius.circular(3),
                             ),
-                          ),
-                        ),
-                    ],
+    )
+        : const Text('حفظ كمسودة'),
                   ),
                 ),
-                if (steps.isNotEmpty) ...[
-                  const SizedBox(height: 12),
+    ];
+    final double appBarBottomHeight = steps.isEmpty ? 0 : 96;
+    final List<Widget>? appBarBottom = steps.isEmpty
+        ? null
+        : <Widget>[
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 20, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
                   Row(
                     children: [
                       Container(
@@ -2034,15 +2016,44 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
                           ),
                         ),
                       ),
+                      const Spacer(),
+                      Text(
+                        '$progressPercent% مكتمل',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: colors.textDefaultColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ],
                   ),
-                ],
-              ],
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: _isLoadingDraft ? null : stepProgress,
+                minHeight: 6,
+                valueColor:
+                AlwaysStoppedAnimation<Color>(colors.territoryColor),
+                backgroundColor: colors.borderColor
+                    .withOpacity(_isLoadingDraft ? 0.2 : 0.12),
+              ),
             ),
-          ),
-          Expanded(child: _buildStepBody(steps, currentStepIndex)),
-        ],
+                ],
+    ),
+
+            ),
+    ];
+
+    return Scaffold(
+      appBar: UiUtils.buildAppBar(
+        context,
+        showBackButton: true,
+        title: appBarTitle,
+        actions: appBarActions,
+        bottomHeight: appBarBottomHeight,
+        bottom: appBarBottom,
       ),
+      body: _buildStepBody(steps, currentStepIndex),
       bottomNavigationBar: Padding(
         padding: EdgeInsets.fromLTRB(
           16.0,
@@ -2050,76 +2061,38 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
           16.0,
           12.0 + MediaQuery.of(context).viewPadding.bottom,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Row(
+
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: UiUtils.buildButton(
-                    context,
-                    onPressed: _autoSaveDraft,
-                    buttonTitle: 'حفظ كمسودة',
-                    isInProgress: _isSavingDraft,
-                    showProgressTitle: false,
-                    buttonColor: colors.secondaryColor,
-                    textColor: colors.territoryColor,
-                    border: BorderSide(color: colors.territoryColor),
-                    showElevation: false,
-                    progressWidth: 18,
-                    progressHeight: 18,
-                    disabledColor: colors.secondaryColor.withOpacity(0.7),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: UiUtils.buildButton(
-                    context,
-                    onPressed: () => Navigator.maybePop(context),
-                    buttonTitle: 'إلغاء',
-                    buttonColor: colors.secondaryColor,
-                    textColor:
-                    theme.textTheme.bodyLarge?.color ?? colors.textColor,
-                    border: BorderSide(color: colors.borderColor),
-                    showElevation: false,
-                  ),
-                ),
-              ],
+            Expanded(
+              child: UiUtils.buildButton(
+                context,
+                onPressed: _goPrevious,
+                buttonTitle: 'رجوع',
+                buttonColor: colors.secondaryColor,
+                textColor: colors.territoryColor,
+                border: BorderSide(color: colors.territoryColor),
+                showElevation: false,
+                disabled: currentStepIndex == 0,
+                disabledColor: colors.secondaryColor.withOpacity(0.6),
+              ),
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: UiUtils.buildButton(
-                    context,
-                    onPressed: _goPrevious,
-                    buttonTitle: 'رجوع',
-                    buttonColor: colors.secondaryColor,
-                    textColor: colors.territoryColor,
-                    border: BorderSide(color: colors.territoryColor),
-                    showElevation: false,
-                    disabled: currentStepIndex == 0,
-                    disabledColor: colors.secondaryColor.withOpacity(0.6),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: UiUtils.buildButton(
-                    context,
-                    onPressed: currentStepIndex == steps.length - 1
-                        ? _publishAd
-                        : _goNext,
-                    buttonTitle: currentStepIndex == steps.length - 1
-                        ? 'نشر'
-                        : 'التالي',
-                    isInProgress:
+            const SizedBox(width: 12),
+            Expanded(
+              child: UiUtils.buildButton(
+                context,
+                onPressed: currentStepIndex == steps.length - 1
+                    ? _publishAd
+                    : _goNext,
+                buttonTitle: currentStepIndex == steps.length - 1
+                    ? 'نشر'
+                    : 'التالي',
+                isInProgress:
                     _isPublishing && currentStepIndex == steps.length - 1,
-                    disabled: _isPublishing,
-                    progressWidth: 18,
-                    progressHeight: 18,
-                  ),
-                ),
-              ],
+                disabled: _isPublishing,
+                progressWidth: 18,
+                progressHeight: 18,
+              ),
             ),
           ],
         ),

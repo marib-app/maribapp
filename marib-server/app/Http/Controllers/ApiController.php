@@ -7597,30 +7597,57 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
 
 
 
-    public function getChallenges(Request $request) 
+    public function getChallenges(Request $request)
     {
         try {
-            $challenges = Challenge::where('is_active', true)->get();
-            
-            // حساب إجمالي النقاط في جميع التحديات النشطة
-            $totalPoints = $challenges->sum('points_per_referral');
-            
-            // حساب إجمالي الإحالات المطلوبة
-            $totalRequiredReferrals = $challenges->sum('required_referrals');
-            
-            return response()->json([
-                'status' => true,
-                'message' => 'Challenges retrieved successfully',
-                'data' => $challenges,
-                'total_points' => $totalPoints,
-                'total_required_referrals' => $totalRequiredReferrals,
-                'max_points' => $totalPoints // للتوافق مع الكود الحالي
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => false,
-                'message' => $e->getMessage(),
-            ], 500);
+            $challenges = Challenge::query()
+                ->where('is_active', true)
+                ->orderBy('required_referrals')
+                ->get([
+                    'id',
+                    'title',
+                    'description',
+                    'required_referrals',
+                    'points_per_referral',
+                    'is_active',
+                    'created_at',
+                    'updated_at',
+                ]);
+
+            $totalRequiredReferrals = (int) $challenges->sum('required_referrals');
+            $maxRequiredReferrals = (int) ($challenges->max('required_referrals') ?? 0);
+            $totalPoints = (int) $challenges->reduce(
+                static function (int $carry, Challenge $challenge): int {
+                    return $carry + ($challenge->required_referrals * $challenge->points_per_referral);
+                },
+                0
+            );
+
+            $challengePayload = $challenges->map(static function (Challenge $challenge): array {
+                return [
+                    'id' => $challenge->id,
+                    'title' => $challenge->title,
+                    'description' => $challenge->description,
+                    'required_referrals' => (int) $challenge->required_referrals,
+                    'points_per_referral' => (int) $challenge->points_per_referral,
+                    'is_active' => (bool) $challenge->is_active,
+                    'created_at' => optional($challenge->created_at)?->toIso8601String(),
+                    'updated_at' => optional($challenge->updated_at)?->toIso8601String(),
+                ];
+            })->values();
+
+            ResponseService::successResponse(
+                'Challenges retrieved successfully',
+                [
+                    'challenges' => $challengePayload,
+                    'total_points' => $totalPoints,
+                    'total_required_referrals' => $totalRequiredReferrals,
+                    'max_points' => $maxRequiredReferrals,
+                ]
+            );
+        } catch (\Throwable $th) {
+            ResponseService::logErrorResponse($th, 'API Controller -> getChallenges', 'Failed to retrieve challenges');
+            ResponseService::errorResponse('Failed to retrieve challenges');
         }
     }
     
@@ -7633,38 +7660,75 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
     public function getUserReferralPoints(Request $request)
     {
         try {
-            $user = auth()->user();
-            
-            if (!$user) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'User not authenticated',
-                ], 401);
+            $user = $request->user();
+
+            if (! $user) {
+                ResponseService::errorResponse('User not authenticated', null, HttpResponse::HTTP_UNAUTHORIZED);
+
+                return;
             }
             
-            // Get total points from all referrals where user is the referrer
-            $totalPoints = Referral::where('referrer_id', $user->id)->sum('points');
-            
-            // Get count of users referred
-            $referredUsersCount = Referral::where('referrer_id', $user->id)->count();
-            
-            // Get user's referral code
+
+            if (empty($user->referral_code)) {
+                $user->referral_code = User::generateReferralCode();
+                $user->save();
+            }
+
+            $referralQuery = Referral::query()->where('referrer_id', $user->id);
+            $referredUsersCount = (int) $referralQuery->count();
+            $totalPoints = (int) $referralQuery->sum('points');
+
+            $activeChallenges = Challenge::query()
+                ->where('is_active', true)
+                ->orderBy('required_referrals')
+                ->get(['id', 'title', 'required_referrals', 'points_per_referral']);
+
+            $maxRequiredReferrals = (int) ($activeChallenges->max('required_referrals') ?? 0);
+
+            $nextChallenge = $activeChallenges->first(static function (Challenge $challenge) use ($referredUsersCount) {
+                return $challenge->required_referrals > $referredUsersCount;
+            });
+
+            $remainingForNext = $nextChallenge
+                ? max($nextChallenge->required_referrals - $referredUsersCount, 0)
+                : 0;
+
+            $nextRewardMessage = $nextChallenge
+                ? __('Invite :count more friends to unlock ":title".', [
+                    'count' => $remainingForNext,
+                    'title' => $nextChallenge->title,
+                ])
+                : __('You have unlocked all available referral rewards.');
+
+
+
             $referralCode = $user->referral_code;
             
-            return response()->json([
-                'status' => true,
-                'message' => 'User referral points retrieved successfully',
-                'data' => [
-                    'total_points' => $totalPoints,
-                    'referred_users_count' => $referredUsersCount,
-                    'referral_code' => $referralCode
-                ]
+            $referralUrl = url('/referral/' . $referralCode);
+            $inviteFriendMessage = __('Join me on the Marib app and use my referral code :code to earn rewards! :url', [
+                'code' => $referralCode,
+                'url' => $referralUrl,
             ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => false,
-                'message' => $e->getMessage(),
-            ], 500);
+
+            ResponseService::successResponse(
+                'User referral points retrieved successfully',
+                [
+
+
+                    'total_points' => $totalPoints,
+                    'current_points' => $referredUsersCount,
+                    'max_points' => $maxRequiredReferrals,
+
+                    'referred_users_count' => $referredUsersCount,
+                    'referral_code' => $referralCode,
+                    'next_reward_message' => $nextRewardMessage,
+                    'invite_friend_message' => $inviteFriendMessage,
+                    'qr_code_data' => $referralUrl,
+                ]
+            );
+        } catch (\Throwable $th) {
+            ResponseService::logErrorResponse($th, 'API Controller -> getUserReferralPoints', 'Failed to retrieve user referral points');
+            ResponseService::errorResponse('Failed to retrieve user referral points');
         }
     }
     

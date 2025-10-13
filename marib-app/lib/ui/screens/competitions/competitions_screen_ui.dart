@@ -16,6 +16,8 @@ import 'package:marib/app/routes.dart';
 import 'package:marib/data/model/challenge_model.dart'; // Challenge
 import 'context_extensions.dart'; // context.isDarkMode / context.color
 import 'competitions_screen.dart'; // CompetitionState/Logic/Actions
+import 'package:marib/data/cubits/competition_cubit.dart';
+import 'competition_support.dart'; // CompetitionLogic / CompetitionActions
 
 /// واجهة العرض الرئيسية: تربط الحالة + المنطق + الإجراءات بالكلاسات المرئية.
 class CompetitionScreenUI extends StatelessWidget {

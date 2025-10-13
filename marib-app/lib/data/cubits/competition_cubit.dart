@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/model/challenge_model.dart';
 import 'package:marib/ui/screens/competitions/user_referral_points.dart';
 import 'package:marib/data/repositories/competition_repository.dart';
+import 'package:flutter/foundation.dart';
 
 
 // الحالة الأساسية للكوبت
@@ -70,8 +71,14 @@ class CompetitionCubit extends Cubit<CompetitionState> {
       await _competitionRepository.getUserReferralPoints();
       final envelope = await _competitionRepository.getChallenges();
 
-      final paymentTransactions =
-      await _competitionRepository.getRecentPaymentTransactions();
+      List<dynamic> paymentTransactions = <dynamic>[];
+      try {
+        paymentTransactions =
+        await _competitionRepository.getRecentPaymentTransactions();
+      } catch (e) {
+        debugPrint('Failed to load recent payment transactions: $e');
+        paymentTransactions = <dynamic>[];
+      }
 
       // التحويل إلى نماذج فعلية
       final referralPoints = UserReferralPoints.fromJson(referralPointsRaw);

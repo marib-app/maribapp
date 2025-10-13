@@ -130,21 +130,37 @@ class AdCreationWizardArguments {
 }
 
 class AdCreationWizardScreen extends StatefulWidget {
-  AdCreationWizardScreen({
-    super.key,
+  factory AdCreationWizardScreen({
+    Key? key,
     String? initialDraftId,
     String? interfaceType,
     List<int>? initialCategoryIds,
 
 
     RouteSettings? routeSettings,
+  }) {
+    final AdCreationWizardArguments mergedArguments = _mergeArguments(
+      explicitDraftId: initialDraftId,
+      explicitInterfaceType: interfaceType,
+      explicitCategoryIds: initialCategoryIds,
+      raw: routeSettings?.arguments,
+    );
+
+    return AdCreationWizardScreen._(
+      key: key,
+      routeSettings: routeSettings,
+      resolvedArguments: mergedArguments,
+    );
+  }
+
+  AdCreationWizardScreen._({
+    super.key,
+
+    RouteSettings? routeSettings,
+    required this.resolvedArguments,
+
   })  : routeSettings = routeSettings,
-        resolvedArguments = _mergeArguments(
-          explicitDraftId: initialDraftId,
-          explicitInterfaceType: interfaceType,
-          explicitCategoryIds: initialCategoryIds,
-          raw: routeSettings?.arguments,
-        ),
+
         initialDraftId = resolvedArguments.draftId,
         interfaceType = resolvedArguments.interfaceType,
         initialCategoryIds = List<int>.unmodifiable(

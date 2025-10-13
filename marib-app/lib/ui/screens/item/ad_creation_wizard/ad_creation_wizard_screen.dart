@@ -16,7 +16,7 @@ import 'package:marib/data/model/ad_draft_model.dart';
 import 'package:marib/data/repositories/item/ad_draft_local_store.dart';
 import 'package:marib/data/repositories/item/ad_draft_repository.dart';
 import 'package:marib/utils/app_telemetry.dart';
-
+import 'package:marib/utils/ui_utils.dart';
 import 'models/custom_field_schema.dart';
 import 'services/category_inventory_service.dart';
 import 'widgets/dynamic_custom_fields_form.dart';
@@ -1413,6 +1413,23 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     return completion;
   }
 
+
+  Color _segmentColor(
+      ColorScheme colors,
+      bool isCompleted,
+      bool isCurrent,
+      bool isBeforeCurrent,
+      ) {
+    if (isCompleted || isBeforeCurrent) {
+      return colors.territoryColor;
+    }
+    if (isCurrent) {
+      return colors.territoryColor.withOpacity(0.6);
+    }
+    return colors.borderColor.withOpacity(0.28);
+  }
+
+
   bool _isNonReviewStepComplete(_WizardStepId id) {
     switch (id) {
       case _WizardStepId.mainCategory:
@@ -1556,14 +1573,23 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     final int currentStepIndex = _effectiveCurrentStepIndex(steps);
     final Map<_WizardStepId, bool> completionByStep =
     _calculateStepCompletion(steps);
-    final int completedSteps =
-        completionByStep.values.where((bool value) => value).length;
-    final double progress =
-    steps.isEmpty ? 0 : completedSteps / steps.length;
+    final double stepProgress =
+    steps.isEmpty ? 0 : (currentStepIndex + 1) / steps.length;
+    final int progressPercent =
+    (stepProgress * 100).clamp(0, 100).round();
+    final bool isCurrentStepOptional =
+    steps.isNotEmpty ? steps[currentStepIndex].isOptional : false;
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colors = context.color;
+    final String dynamicTitle = steps.isEmpty
+        ? 'معالج إنشاء إعلان'
+        : '${steps[currentStepIndex].label} • $progressPercent%';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('معالج إنشاء إعلان'),
+      appBar: UiUtils.buildAppBar(
+        context,
+        showBackButton: true,
+        title: dynamicTitle,
       ),
       body: Column(
         children: [
@@ -1572,22 +1598,93 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                LinearProgressIndicator(value: _isLoadingDraft ? null : progress),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    for (int i = 0; i < steps.length; i++)
-                      _StepChip(
-                        label: steps[i].label,
-                        index: i,
-                        isCurrent: i == currentStepIndex,
-                        isCompleted:
-                        completionByStep[steps[i].id] ?? false,
-                        isOptional: steps[i].isOptional,
-                      ),
-                  ],
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: _isLoadingDraft ? null : stepProgress,
+                    minHeight: 6,
+                    valueColor:
+                    AlwaysStoppedAnimation<Color>(colors.territoryColor),
+                    backgroundColor:
+                    colors.borderColor.withOpacity(_isLoadingDraft ? 0.2 : 0.12),
+                  ),
                 ),
+                const SizedBox(height: 12),
+                SizedBox(
+                height: 6,
+                child: Row(
+                children: [
+                for (int i = 0; i < steps.length; i++)
+                Expanded(
+                child: Container(
+                margin: EdgeInsetsDirectional.only(
+                end: i == steps.length - 1 ? 0 : 4,
+                ),
+              decoration: BoxDecoration(
+                color: _segmentColor(
+                colors,
+                completionByStep[steps[i].id] ?? false,
+                i == currentStepIndex,
+                i < currentStepIndex,
+                ),
+                borderRadius: BorderRadius.circular(3),
+    ),
+    ),
+    ),
+    ],
+    ),
+    ),
+    if (steps.isNotEmpty) ...[
+    const SizedBox(height: 12),
+    Row(
+    children: [
+    Container(
+    padding: const EdgeInsets.symmetric(
+    horizontal: 12,
+    vertical: 4,
+    ),
+    decoration: BoxDecoration(
+    color: colors.secondaryColor,
+    borderRadius: BorderRadius.circular(14),
+    border: Border.all(
+    color: colors.borderColor.withOpacity(0.35),
+    ),
+    ),
+    child: Text(
+    'المرحلة ${currentStepIndex + 1}/${steps.length}',
+    style: theme.textTheme.labelMedium?.copyWith(
+    color: colors.textDefaultColor,
+    fontWeight: FontWeight.w600,
+    ),
+    ),
+
+
+    ),
+    const SizedBox(width: 8),
+    Container(
+    padding: const EdgeInsets.symmetric(
+    horizontal: 10,
+    vertical: 3,
+    ),
+    decoration: BoxDecoration(
+    color: isCurrentStepOptional
+    ? colors.deactivateColor.withOpacity(0.16)
+        : colors.territoryColor.withOpacity(0.16),
+    borderRadius: BorderRadius.circular(12),
+    ),
+    child: Text(
+    isCurrentStepOptional ? 'اختياري' : 'مطلوب',
+    style: theme.textTheme.labelSmall?.copyWith(
+    color: isCurrentStepOptional
+    ? colors.textDefaultColor
+        : colors.territoryColor,
+    fontWeight: FontWeight.w600,
+    ),
+    ),
+    ),
+    ],
+    ),
+
               ],
             ),
           ),

@@ -33,6 +33,17 @@ class AdCreationWizardScreen extends StatefulWidget {
   State<AdCreationWizardScreen> createState() => _AdCreationWizardScreenState();
 }
 
+enum _WizardStepId {
+  mainCategory,
+  subCategory,
+  customFields,
+  media,
+  textDetails,
+  locationInventory,
+  review,
+}
+
+
 class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -2382,6 +2393,7 @@ class _StepChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme colors = context.color;
+    final ThemeData theme = Theme.of(context);
     final Color background = isCompleted
         ? colors.territoryColor.withOpacity(0.1)
         : isCurrent

@@ -39,6 +39,7 @@ import 'AdImagesHeader.dart';
 
 import 'ad_details_screen.dart';
 import 'package:marib/utils/geo_rules.dart';
+import 'ad_image_source.dart';
 
 
 
@@ -276,6 +277,7 @@ class OwnerAdDetailsBody extends StatelessWidget {
 
   final ItemModel model;
   final List<String?> images;
+  final List<AdImageSource> imageSources;
   final PageController pageController;
   final int currentIndex;
   final ValueChanged<int> onPageChanged;
@@ -294,6 +296,7 @@ class OwnerAdDetailsBody extends StatelessWidget {
     super.key,
     required this.model,
     required this.images,
+    required this.imageSources,
     required this.pageController,
     required this.currentIndex,
     required this.onPageChanged,
@@ -380,7 +383,7 @@ class OwnerAdDetailsBody extends StatelessWidget {
             ],
             background: AdImageHeader(
               currentImageIndex: currentIndex,
-              images: images.whereType<String>().toList(),
+              images: imageSources,
               pageController: pageController,
               currentIndex: currentIndex,
               onPageChanged: onPageChanged,

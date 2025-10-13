@@ -106,6 +106,7 @@ import 'package:marib/utils/color_palette_utils.dart';
 import 'package:marib/utils/ecommerce_department.dart';
 import 'package:marib/utils/item_category_ids.dart';
 import 'package:meta/meta.dart';
+import 'ad_image_source.dart';
 
 
 class _AdItemDetailsRepository implements details.ItemDetailsRepository {
@@ -409,6 +410,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   bool isShowReportAds = true;
   final PageController pageController = PageController();
   final List<String?> images = [];
+  final List<AdImageSource> imageSources = [];
   final Completer<GoogleMapController> _controller =
       Completer<GoogleMapController>();
   late final ScrollController _pageScrollController = ScrollController();
@@ -1505,23 +1507,59 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   void combineImages() {
     final item = _currentItem;
     final List<String?> combined = <String?>[];
+    final List<AdImageSource> optimized = <AdImageSource>[];
+    final Set<String> seenFallbacks = <String>{};
 
-    void addIfUnique(String? value) {
-      if (value == null || value.isEmpty) {
+
+    String? sanitize(String? value) {
+      if (value == null) {
+        return null;
+      }
+      final String trimmed = value.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+
+    void addImageVariant({String? detailUrl, String? fallbackUrl}) {
+      final String? safeDetail = sanitize(detailUrl);
+      final String? safeFallback = sanitize(fallbackUrl);
+      if (safeDetail == null && safeFallback == null) {
         return;
       }
-      if (!combined.contains(value)) {
-        combined.add(value);
+
+      final AdImageSource source = AdImageSource.from(
+        detailUrl: safeDetail,
+        fallbackUrl: safeFallback ?? safeDetail,
+      );
+
+      if (seenFallbacks.add(source.fallbackDisplayUrl)) {
+        optimized.add(source);
+        combined.add(source.displayUrl);
       }
     }
 
-    addIfUnique(item.image);
+    addImageVariant(
+      detailUrl: item.detailImageUrl,
+      fallbackUrl: item.detailImageFallbackUrl ?? item.image,
+    );
 
     if (item.galleryImages != null && item.galleryImages!.isNotEmpty) {
       for (final element in item.galleryImages!) {
-        addIfUnique(element.image);
+        addImageVariant(
+          detailUrl: element.detailImageUrl,
+          fallbackUrl: element.detailImageFallbackUrl ?? element.image,
+        );
       }
     }
+
+    if (optimized.isEmpty && sanitize(item.image) != null) {
+      addImageVariant(detailUrl: item.image, fallbackUrl: item.image);
+    }
+
+    imageSources
+      ..clear()
+      ..addAll(optimized);
+
+
     images
       ..clear()
       ..addAll(combined.isEmpty ? <String?>[item.image] : combined);
@@ -2459,6 +2497,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     return OwnerAdDetailsBody(
       model: _currentItem,
       images: images,
+      imageSources: imageSources,
       pageController: pageController,
       currentIndex: currentIndex,
       onPageChanged: (i) => setState(() => currentIndex = i),
@@ -2590,7 +2629,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
               // عرض السلايدر
               currentIndex: currentIndex,
               currentImageIndex: currentIndex,
-              images: images.whereType<String>().toList(),
+              images: imageSources,
               pageController: pageController,
               onImagePageChanged: (i) => setState(() => currentIndex = i),
 

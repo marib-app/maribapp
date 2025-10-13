@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 
 import 'fullscreen_gallery.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
+import 'ad_image_source.dart';
 
 
 
@@ -89,7 +90,7 @@ class _HeaderCircleShimmer extends StatelessWidget {
 
 
 class AdImageHeader extends StatefulWidget {
-  final List<String> images;
+  final List<AdImageSource> images;
   final String? modelId;
   final PageController? pageController;
   final int currentImageIndex;
@@ -135,7 +136,7 @@ class AdImageHeader extends StatefulWidget {
 
   static Widget sliver({
     required BuildContext context,
-    required List<String> images,
+    required List<AdImageSource> images,
     required int currentIndex,
     required int currentImageIndex,
     required bool isFavorite,
@@ -332,15 +333,36 @@ class _AdImageHeaderState extends State<AdImageHeader> {
       },
       physics: const BouncingScrollPhysics(),
       itemBuilder: (context, index) {
+        final AdImageSource imageSource = widget.images[index];
+        final String imageUrl = imageSource.displayUrl;
         return Hero(
           tag: widget.modelId != null
               ? 'ad-image-${widget.modelId}-$index'
               : 'ad-image-$index',
           child: CachedNetworkImage(
-            imageUrl: widget.images[index],
+            imageUrl: imageUrl,
             fit: BoxFit.cover,
+            memCacheWidth: kAdDetailImageMaxEdge,
+            memCacheHeight: kAdDetailImageMaxEdge,
+            maxWidthDiskCache: kAdDetailImageMaxEdge,
+            maxHeightDiskCache: kAdDetailImageMaxEdge,
             placeholder: (context, url) => Container(color: Colors.grey[200]),
-            errorWidget: (context, url, error) => const Icon(Icons.error),
+            errorWidget: (context, url, error) {
+              if (imageSource.hasOptimizedVariant) {
+                return CachedNetworkImage(
+                  imageUrl: imageSource.fallbackDisplayUrl,
+                  fit: BoxFit.cover,
+                  memCacheWidth: kAdDetailImageMaxEdge,
+                  memCacheHeight: kAdDetailImageMaxEdge,
+                  maxWidthDiskCache: kAdDetailImageMaxEdge,
+                  maxHeightDiskCache: kAdDetailImageMaxEdge,
+                  placeholder:
+                      (context, _) => Container(color: Colors.grey[200]),
+                  errorWidget: (context, _, __) => const Icon(Icons.error),
+                );
+              }
+              return const Icon(Icons.error);
+            },
           ),
         );
       },

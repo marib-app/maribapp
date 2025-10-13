@@ -436,12 +436,11 @@ bool _parseBool(dynamic raw) {
   if (raw is String) {
     final String normalized = raw.trim().toLowerCase();
     if (normalized.isEmpty) return false;
-    if (normalized == 'true' || normalized == '1' || normalized == 'yes') {
-      return true;
-    }
-    if (normalized == 'false' || normalized == '0' || normalized == 'no') {
+    const Set<String> falsyValues = <String>{'false', '0', 'no'};
+    if (falsyValues.contains(normalized)) {
       return false;
     }
+    return true;
   }
   return false;
 }

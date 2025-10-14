@@ -251,9 +251,15 @@ class AdDetailsScreen extends StatefulWidget {
           ),
           BlocProvider(
             create: (context) {
-              final ItemRepository repository =
-                  RepositoryProvider.maybeOf<ItemRepository>(context) ??
-                      ItemRepository();
+              late final ItemRepository repository;
+              try {
+                repository = RepositoryProvider.of<ItemRepository>(
+                  context,
+                  listen: false,
+                );
+              } on ProviderNotFoundException {
+                repository = ItemRepository();
+              }
 
               return FetchItemDetailsCubit(
                 _ItemDetailsRepositoryImpl(

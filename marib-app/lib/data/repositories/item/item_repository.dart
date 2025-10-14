@@ -106,6 +106,10 @@ class ItemRepository {
     String? search,
     String? sortBy,
     ItemFilterModel? filter,
+    String? country,
+    String? state,
+    String? city,
+    int? areaId,
   }) async {
     final Map<String, dynamic> parameters = {
       Api.categoryId: categoryId,
@@ -134,6 +138,10 @@ class ItemRepository {
 
     if (search != null) parameters[Api.search] = search;
     if (sortBy != null) parameters[Api.sortBy] = sortBy;
+    if (country?.isNotEmpty ?? false) parameters['country'] = country;
+    if (state?.isNotEmpty ?? false) parameters['state'] = state;
+    if (city?.isNotEmpty ?? false) parameters['city'] = city;
+    if (areaId != null) parameters['area_id'] = areaId;
 
     final Map<String, dynamic> response = await _getRequest(
       url: Api.getItemApi,
@@ -358,58 +366,17 @@ class ItemRepository {
     String? city,
     int? areaId,
     ItemFilterModel? filter,
-  }) async {
-    final Map<String, dynamic> parameters = {
-      Api.categoryId: categoryId,
-      Api.page: page,
-    };
-
-    if (filter != null) {
-      parameters.addAll(filter.toMap());
-
-      if (filter.areaId == null) {
-        parameters.remove('area_id');
-      }
-      parameters.remove('area');
-
-      if (filter.customFields != null) {
-        filter.customFields!.forEach((key, value) {
-          if (value is List) {
-            parameters[key] = value.map((v) => v.toString()).join(',');
-          } else {
-            parameters[key] = value.toString();
-          }
-        });
-      }
-    }
-
-    if (search != null) parameters[Api.search] = search;
-    if (sortBy != null) parameters[Api.sortBy] = sortBy;
-
-    final Map<String, dynamic> response = await _getRequest(
-      url: Api.getItemApi,
-      queryParameters: parameters,
-      enableEtagCache: false,
-    );
-
-    final Iterable<dynamic> rawItems =
-    ItemRepository._extractItemsOrData(response);
-
-    final List<ItemSummary> items = ItemRepository._mapJsonListToModels(
-      rawItems,
-      ItemSummary.fromJson,
-      ItemRepository._itemSummaryExpectedFields,
-      'fetchItemFromCatId',
-    );
-
-    final int total = ItemRepository.resolveTotalCount(
-      response,
-      items.length,
-    );
-
-    return DataOutput(
-      total: total,
-      modelList: items,
+  }) {
+    return fetchItemSummariesFromCatId(
+      categoryId: categoryId,
+      page: page,
+      search: search,
+      sortBy: sortBy,
+      filter: filter,
+      country: country,
+      state: state,
+      city: city,
+      areaId: areaId,
     );
   }
 

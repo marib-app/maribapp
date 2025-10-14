@@ -71,7 +71,7 @@ class FetchRelatedItemsCubit extends Cubit<FetchRelatedItemsState> {
       emit(FetchRelatedItemsInProgress());
 
       DataOutput<ItemSummary> result =
-      await _itemRepository.fetchItemFromCatId(
+      await _itemRepository.fetchItemSummariesFromCatId(
           categoryId: categoryId, page: 1);
 
       emit(
@@ -111,8 +111,8 @@ class FetchRelatedItemsCubit extends Cubit<FetchRelatedItemsState> {
         state as FetchRelatedItemsSuccess;
 
         DataOutput<ItemSummary> result =
-        await _itemRepository.fetchItemFromCatId(
-          categoryId: categoryId,
+        await _itemRepository.fetchItemSummariesFromCatId(
+        categoryId: categoryId,
           page: currentState.page + 1,
         );
 

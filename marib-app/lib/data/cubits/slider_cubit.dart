@@ -437,20 +437,13 @@ bool _parseBool(dynamic raw) {
     final String normalized = raw.trim().toLowerCase();
     if (normalized.isEmpty) return false;
 
-    const Set<String> truthyValues = <String>{
-      'true',
-      '1',
-      'yes',
-      'on',
-      'image',
-      'video',
-      'shimmer',
+    const Set<String> falsyValues = <String>{
+      'false',
+      '0',
+      'no',
+      'off',
     };
-    if (truthyValues.contains(normalized)) {
-      return true;
-    }
 
-    const Set<String> falsyValues = <String>{'false', '0', 'no'};
     if (falsyValues.contains(normalized)) {
       return false;
     }

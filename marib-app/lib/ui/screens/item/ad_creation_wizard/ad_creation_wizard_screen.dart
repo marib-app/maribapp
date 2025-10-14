@@ -41,7 +41,7 @@ class AdCreationWizardArguments {
     required this.allowedCategoryIds,
   });
 
-  const AdCreationWizardArguments()
+  const AdCreationWizardArguments.empty()
       : this._(
     initialCategoryIds: const <int>[],
     permittedDelegateSections: const <String>{},
@@ -357,7 +357,7 @@ class AdCreationWizardScreen extends StatefulWidget {
       return AdCreationWizardArguments.fromMap(
           Map<dynamic, dynamic>.from(raw as Map));
     }
-    return const AdCreationWizardArguments();
+    return const AdCreationWizardArguments.empty();
   }
 
   static AdCreationWizardArguments _mergeArguments({

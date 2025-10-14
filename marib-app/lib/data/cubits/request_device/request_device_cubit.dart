@@ -28,6 +28,7 @@ class RequestDeviceCubit extends Cubit<RequestDeviceState> {
     required String phone,
     required String subject,
     required String message,
+    required String section,
   }) async {
     try {
       emit(RequestDeviceInProgress());
@@ -36,6 +37,7 @@ class RequestDeviceCubit extends Cubit<RequestDeviceState> {
         phone: phone,
         subject: subject,
         message: message,
+        section: section,
       );
 
       emit(RequestDeviceSuccess('تم إرسال الطلب بنجاح'));

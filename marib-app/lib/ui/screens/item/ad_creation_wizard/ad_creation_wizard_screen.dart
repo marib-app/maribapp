@@ -30,24 +30,52 @@ import 'widgets/dynamic_custom_fields_form.dart';
 /// progress indicator, navigation guards and auto-save hooks.
 
 class AdCreationWizardArguments {
-  const AdCreationWizardArguments({
+  const AdCreationWizardArguments._({
     this.draftId,
     this.interfaceType,
-    List<int>? initialCategoryIds,
+    required this.initialCategoryIds,
     this.accountTypeCode,
+
+    required this.permittedDelegateSections,
+    required this.blockedDelegateSections,
+    required this.allowedCategoryIds,
+  });
+
+  const AdCreationWizardArguments()
+      : this._(
+    initialCategoryIds: const <int>[],
+    permittedDelegateSections: const <String>{},
+    blockedDelegateSections: const <String>{},
+    allowedCategoryIds: const <int>{},
+  );
+
+  factory AdCreationWizardArguments({
+    String? draftId,
+    String? interfaceType,
+    List<int>? initialCategoryIds,
+    String? accountTypeCode,
+
     Set<String>? permittedDelegateSections,
     Set<String>? blockedDelegateSections,
     Set<int>? allowedCategoryIds,
-  })  : initialCategoryIds = initialCategoryIds ?? const <int>[],
-        permittedDelegateSections = Set<String>.unmodifiable(
-          _normalizeStringIterable(permittedDelegateSections ?? const <String>{}),
-        ),
-        blockedDelegateSections = Set<String>.unmodifiable(
-          _normalizeStringIterable(blockedDelegateSections ?? const <String>{}),
-        ),
-        allowedCategoryIds = Set<int>.unmodifiable(
-          _normalizeIntIterable(allowedCategoryIds ?? const <int>{}),
-        );
+  }) {
+    return AdCreationWizardArguments._(
+      draftId: draftId,
+      interfaceType: interfaceType,
+      initialCategoryIds:
+      List<int>.unmodifiable(initialCategoryIds ?? const <int>[]),
+      accountTypeCode: accountTypeCode,
+      permittedDelegateSections: Set<String>.unmodifiable(
+        _normalizeStringIterable(permittedDelegateSections ?? const <String>{}),
+      ),
+      blockedDelegateSections: Set<String>.unmodifiable(
+        _normalizeStringIterable(blockedDelegateSections ?? const <String>{}),
+      ),
+      allowedCategoryIds: Set<int>.unmodifiable(
+        _normalizeIntIterable(allowedCategoryIds ?? const <int>{}),
+      ),
+    );
+  }
 
 
 

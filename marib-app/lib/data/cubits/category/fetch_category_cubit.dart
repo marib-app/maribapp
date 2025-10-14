@@ -51,7 +51,7 @@ class FetchCategorySuccess extends FetchCategoryState {
     List<CategoryModel>? categories,
     bool? onlyAllowed,
     List<int>? ensureCategoryIds,
-    allowedCategoryIds: allowedCategoryIds ?? this.allowedCategoryIds,
+    List<int>? allowedCategoryIds,
   }) {
     return FetchCategorySuccess(
       total: total ?? this.total,

@@ -41,6 +41,7 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/svg/svg_edit.dart';
+import 'package:marib/utils/hive_utils.dart';
 
 // الواجهة (ملف منفصل للعرض فقط)
 import 'main_activity_ui.dart' show MainActivityUI, MainTab;

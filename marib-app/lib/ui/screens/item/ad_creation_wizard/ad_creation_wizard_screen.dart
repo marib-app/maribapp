@@ -296,18 +296,26 @@ class AdCreationWizardArguments {
 class AdCreationWizardScreen extends StatefulWidget {
   factory AdCreationWizardScreen({
     Key? key,
-    String? initialDraftId,
+    String? draftId,
     String? interfaceType,
     List<int>? initialCategoryIds,
-
+    String? accountTypeCode,
+    Iterable<String>? permittedDelegateSections,
+    Iterable<String>? blockedDelegateSections,
+    Iterable<int>? allowedCategoryIds,
+    AdCreationWizardArguments? arguments,
 
     RouteSettings? routeSettings,
   }) {
     final AdCreationWizardArguments mergedArguments = _mergeArguments(
-      explicitDraftId: initialDraftId,
+      explicitDraftId: draftId,
       explicitInterfaceType: interfaceType,
       explicitCategoryIds: initialCategoryIds,
-      raw: routeSettings?.arguments,
+      explicitAccountTypeCode: accountTypeCode,
+      explicitPermittedSections: permittedDelegateSections,
+      explicitBlockedSections: blockedDelegateSections,
+      explicitAllowedCategoryIds: allowedCategoryIds,
+      raw: arguments ?? routeSettings?.arguments,
     );
 
     return AdCreationWizardScreen._(
@@ -347,10 +355,14 @@ class AdCreationWizardScreen extends StatefulWidget {
   final AdCreationWizardArguments resolvedArguments;
 
   static Route<void> route(RouteSettings settings) {
+    final AdCreationWizardArguments resolvedArguments =
+    _resolveArguments(settings.arguments);
+
 
     return MaterialPageRoute(
       builder: (_) => AdCreationWizardScreen(
         routeSettings: settings,
+        arguments: resolvedArguments,
 
       ),
       settings: settings,

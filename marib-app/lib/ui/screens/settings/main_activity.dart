@@ -387,11 +387,31 @@ class MainActivityState extends State<MainActivity> with TickerProviderStateMixi
     );
 
 
-    Navigator.pushNamed(
-      context,
-      Routes.adCreationWizard,
+    final RouteSettings routeSettings = RouteSettings(
+      name: Routes.adCreationWizard,
       arguments: arguments,
-    ).then((_) => _refreshListingLimit());
+    );
+
+    Navigator.of(context)
+        .push(
+      MaterialPageRoute(
+        builder: (_) => AdCreationWizardScreen(
+          draftId: draftId,
+          interfaceType: resolvedInterfaceType,
+          initialCategoryIds:
+          mergedInitialCategoryIds.isEmpty ? null : mergedInitialCategoryIds,
+          accountTypeCode: accountTypeCode,
+          permittedDelegateSections: permittedSections,
+          blockedDelegateSections: blockedSections,
+          allowedCategoryIds: allowedCategoryIds,
+          arguments: arguments,
+          routeSettings: routeSettings,
+        ),
+        settings: routeSettings,
+      ),
+    )
+        .then((_) => _refreshListingLimit());
+
   }
   List<int> _extractInitialCategoryIds(Map<String, dynamic>? source) {
     if (source == null || source.isEmpty) {

@@ -109,7 +109,8 @@ class _TextDetailsStepContent extends StatelessWidget {
                     labelText: 'العملة',
                     errorText: screen._serverFieldErrors['currency'],
                   ),
-                  items: screen._currencyOptions.entries
+                  items: _AdCreationWizardScreenState._currencyOptions.entries
+
                       .map(
                         (MapEntry<String, String> entry) => DropdownMenuItem<String>(
                       value: entry.key,

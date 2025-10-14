@@ -40,7 +40,9 @@ extension _MainCategoryStepView on _AdCreationWizardScreenState {
     if (normalized.isEmpty) {
       return 'واجهة عامة';
     }
-    return _interfaceTypeLabels[normalized] ?? interfaceType ?? 'واجهة عامة';
+    return _AdCreationWizardScreenState._interfaceTypeLabels[normalized] ??
+        interfaceType ??
+        'واجهة عامة';
   }
 
   Widget _buildMainCategoryCard(_MainCategoryOption category) {

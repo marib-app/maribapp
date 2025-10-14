@@ -50,142 +50,128 @@ extension _MainCategoryStepView on _AdCreationWizardScreenState {
     final ColorScheme colors = theme.colorScheme;
     final bool isSelected = _selectedMainCategory?.id == category.id;
     final String interfaceLabel = _interfaceDisplayName(category.interfaceType);
+    final bool isPressed = _pressedMainCategoryId == category.id;
+    final BorderRadius radius = BorderRadius.circular(16);
 
-    return InkWell(
-      onTap: () => _onMainCategorySelected(category),
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: 220,
-        margin: const EdgeInsetsDirectional.only(end: 12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: isSelected ? colors.primaryContainer : colors.surface,
-          border: Border.all(
-            color: isSelected ? colors.primary : colors.outlineVariant,
-            width: isSelected ? 2 : 1,
-          ),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: colors.shadow.withOpacity(0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-              child: category.imageUrl != null &&
-                  category.imageUrl!.trim().isNotEmpty
-                  ? LazyNetworkImage(
-                imageUrl: category.imageUrl!,
-                height: 120,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              )
-                  : Container(
-                height: 120,
-                width: double.infinity,
-                color: colors.surfaceVariant,
-                alignment: Alignment.center,
-                child: Icon(
-                  Icons.category_outlined,
-                  color: colors.onSurfaceVariant,
-                  size: 40,
+
+    return Padding(
+        padding: const EdgeInsetsDirectional.only(end: 12),
+        child: AnimatedScale(
+          scale: isPressed ? 0.97 : 1.0,
+          duration: const Duration(milliseconds: 140),
+          curve: Curves.easeOut,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: radius,
+              onHighlightChanged: (bool value) {
+                if (!mounted) {
+                  return;
+                }
+                if (value) {
+                  setState(() => _pressedMainCategoryId = category.id);
+                } else if (_pressedMainCategoryId == category.id) {
+                  setState(() => _pressedMainCategoryId = null);
+                }
+              },
+              onTap: () => _onMainCategorySelected(category),
+              child: Ink(
+                width: 220,
+                decoration: BoxDecoration(
+                  borderRadius: radius,
+                  color: isSelected ? colors.primaryContainer : colors.surface,
+                  border: Border.all(
+                    color: isSelected ? colors.primary : colors.outlineVariant,
+                    width: isSelected ? 2 : 1,
                 ),
+                  boxShadow: <BoxShadow>[
+                    BoxShadow(
+                      color: colors.shadow.withOpacity(0.08),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
+
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(
-                    category.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: isSelected
-                          ? colors.onPrimaryContainer
-                          : colors.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    interfaceLabel,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: isSelected
-                          ? colors.onPrimaryContainer.withOpacity(0.85)
-                          : colors.onSurfaceVariant,
-                    ),
-                  ),
-                  if (category.subCategories.isNotEmpty) ...<Widget>[
-                    const SizedBox(height: 8),
-                    Text(
-                      '${category.subCategories.length} فئات فرعية',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: isSelected
-                            ? colors.onPrimaryContainer.withOpacity(0.7)
-                            : colors.onSurfaceVariant,
+                  ClipRRect(
+                    borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
+                    child: category.imageUrl != null &&
+                        category.imageUrl!.trim().isNotEmpty
+                        ? LazyNetworkImage(
+                      imageUrl: category.imageUrl!,
+                      height: 120,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    )
+                        : Container(
+                      height: 120,
+                      width: double.infinity,
+                      color: colors.surfaceVariant,
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.category_outlined,
+                        color: colors.onSurfaceVariant,
+                        size: 40,
                       ),
                     ),
-                  ],
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          category.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: isSelected
+                                ? colors.onPrimaryContainer
+                                : colors.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          interfaceLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: isSelected
+                                ? colors.onPrimaryContainer.withOpacity(0.85)
+                                : colors.onSurfaceVariant,
+                          ),
+                        ),
+                        if (category.subCategories.isNotEmpty) ...<Widget>[
+                          const SizedBox(height: 8),
+                          Text(
+                            '${category.subCategories.length} فئات فرعية',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: isSelected
+                                  ? colors.onPrimaryContainer
+                                  .withOpacity(0.7)
+                                  : colors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+
                 ],
               ),
             ),
-          ],
+            ),
         ),
       ),
     );
   }
 
-  Widget _buildMainCategoryChip(_MainCategoryOption category) {
-    final bool isSelected = _selectedMainCategory?.id == category.id;
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme colors = theme.colorScheme;
-    final String interfaceLabel =
-    category.interfaceType.isEmpty ? 'غير محددة' : category.interfaceType;
-    final int subCount = category.subCategories.length;
 
-    return ChoiceChip(
-      selected: isSelected,
-      onSelected: (_) => _onMainCategorySelected(category),
-      showCheckmark: false,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      label: SizedBox(
-        width: 200,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              category.name,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'واجهة: $interfaceLabel',
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: colors.onSurfaceVariant),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'الفئات الفرعية: $subCount',
-              style: theme.textTheme.labelSmall
-                  ?.copyWith(color: colors.onSurfaceVariant),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _MainCategoryStepContent extends StatelessWidget {
@@ -195,6 +181,15 @@ class _MainCategoryStepContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
+    if (!screen._hasRequestedCategoryFetch) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (screen.mounted && !screen._hasRequestedCategoryFetch) {
+          screen._triggerCategoryFetch();
+        }
+      });
+    }
+
     return BlocBuilder<FetchCategoryCubit, FetchCategoryState>(
       builder: (BuildContext context, FetchCategoryState fetchState) {
         final bool isLoading = fetchState is FetchCategoryInProgress;
@@ -234,7 +229,6 @@ class _MainCategoryStepContent extends StatelessWidget {
         }
 
         final ThemeData theme = Theme.of(context);
-        final _MainCategoryOption? selected = screen._selectedMainCategory;
         final List<_MainCategoryOption> displayCategories =
             screen._filteredMainCategories;
         final bool hasSearchTerm =
@@ -288,45 +282,19 @@ class _MainCategoryStepContent extends StatelessWidget {
               )
             else ...[
               SizedBox(
-                height: 220,
-                child: ListView.separated(
+                height: 236,
+                child: ListView.builder(
                   scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsetsDirectional.only(start: 4, end: 4),
+                  itemCount: displayCategories.length,
                   itemBuilder: (BuildContext context, int index) {
                     final _MainCategoryOption option = displayCategories[index];
                     return screen._buildMainCategoryCard(option);
                   },
-                  separatorBuilder: (_, __) => const SizedBox(width: 12),
-                  itemCount: displayCategories.length,
+
                 ),
-              ),
-              const SizedBox(height: 20),
-              DropdownButtonFormField<int>(
-                value: selected?.id,
-                decoration: const InputDecoration(
-                  labelText: 'الفئة الرئيسية',
-                  border: OutlineInputBorder(),
-                ),
-                items: screen._mainCategories
-                    .map((category) => DropdownMenuItem<int>(
-                  value: category.id,
-                  child: Text(category.name),
-                ))
-                    .toList(growable: false),
-                onChanged: (int? value) {
-                  final _MainCategoryOption? option =
-                  screen._findMainCategoryById(screen._mainCategories, value);
-                  if (option != null) {
-                    screen._onMainCategorySelected(option);
-                  }
-                },
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: displayCategories
-                    .map(screen._buildMainCategoryChip)
-                    .toList(growable: false),
+
               ),
             ],
             if (fetchState is FetchCategoryFailure &&

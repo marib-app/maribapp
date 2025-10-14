@@ -626,6 +626,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   <String, List<CustomFieldSchema>>{};
   _MainCategoryOption? _selectedMainCategory;
   _SubCategoryOption? _selectedSubCategory;
+  int? _pressedMainCategoryId;
   List<CustomFieldSchema> _customFieldSchemas = const <CustomFieldSchema>[];
   Map<String, dynamic> _customFieldValues = <String, dynamic>{};
   bool _isLoadingCustomFields = false;
@@ -964,7 +965,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       if (!mounted) {
         return;
       }
-      _onMainCategorySelected(target);
+      _onMainCategorySelected(target, advanceToNextStep: false);
+
       _applyPendingSubCategorySelection();
     });
   }
@@ -2925,7 +2927,9 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   }
 
 
-  void _onMainCategorySelected(_MainCategoryOption category) {
+  void _onMainCategorySelected(_MainCategoryOption category,
+      {bool advanceToNextStep = true}) {
+
     if (_selectedMainCategory?.id == category.id) {
       return;
     }
@@ -2967,6 +2971,38 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     if (_pendingInitialSubCategoryId != null) {
       _applyPendingSubCategorySelection();
     }
+
+    if (advanceToNextStep) {
+      _scheduleAdvanceFromMainCategory();
+    }
+  }
+
+  void _scheduleAdvanceFromMainCategory() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      final List<_WizardStep> steps = _visibleSteps;
+      if (steps.isEmpty) {
+        return;
+      }
+      final int mainIndex =
+      steps.indexWhere((step) => step.id == _WizardStepId.mainCategory);
+      if (mainIndex == -1 || mainIndex >= steps.length - 1) {
+        return;
+      }
+      if (!_canProceedFromStep(_WizardStepId.mainCategory)) {
+        return;
+      }
+      final _WizardStepId nextStepId = steps[mainIndex + 1].id;
+      if (_currentStep == mainIndex) {
+        setState(() => _currentStep = mainIndex + 1);
+      } else {
+        _jumpToStep(nextStepId);
+      }
+    });
+
+
   }
 
   void _onSubCategorySelected(_SubCategoryOption subCategory) {

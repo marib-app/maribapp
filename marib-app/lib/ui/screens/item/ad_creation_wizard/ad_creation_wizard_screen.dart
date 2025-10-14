@@ -95,6 +95,21 @@ class AdCreationWizardArguments {
   final Set<String> blockedDelegateSections;
   final Set<int> allowedCategoryIds;
 
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      if (draftId != null) 'draftId': draftId,
+      if (interfaceType != null) 'interfaceType': interfaceType,
+      if (initialCategoryIds.isNotEmpty) 'initialCategoryIds': initialCategoryIds,
+      if (accountTypeCode != null) 'accountTypeCode': accountTypeCode,
+      if (permittedDelegateSections.isNotEmpty)
+        'permittedDelegateSections': permittedDelegateSections.toList(growable: false),
+      if (blockedDelegateSections.isNotEmpty)
+        'blockedDelegateSections': blockedDelegateSections.toList(growable: false),
+      if (allowedCategoryIds.isNotEmpty)
+        'allowedCategoryIds': allowedCategoryIds.toList(growable: false),
+    };
+  }
+
 
   factory AdCreationWizardArguments.fromMap(Map<dynamic, dynamic> raw) {
     final Map<String, dynamic> normalized = <String, dynamic>{};
@@ -303,6 +318,7 @@ class AdCreationWizardScreen extends StatefulWidget {
     Iterable<String>? permittedDelegateSections,
     Iterable<String>? blockedDelegateSections,
     Iterable<int>? allowedCategoryIds,
+    Map<String, dynamic>? routeArgumentMap,
     AdCreationWizardArguments? arguments,
 
     RouteSettings? routeSettings,
@@ -315,13 +331,25 @@ class AdCreationWizardScreen extends StatefulWidget {
       explicitPermittedSections: permittedDelegateSections,
       explicitBlockedSections: blockedDelegateSections,
       explicitAllowedCategoryIds: allowedCategoryIds,
-      raw: arguments ?? routeSettings?.arguments,
+      raw: arguments ?? routeArgumentMap ?? routeSettings?.arguments,
+    );
+
+    final Map<String, dynamic> resolvedRouteArgumentMap =
+    Map<String, dynamic>.unmodifiable(
+      _buildRouteArgumentMap(
+        explicit: routeArgumentMap,
+        rawRouteArguments: routeSettings?.arguments,
+        resolvedArguments: mergedArguments,
+        providedArguments: arguments,
+      ),
+
     );
 
     return AdCreationWizardScreen._(
       key: key,
       routeSettings: routeSettings,
       resolvedArguments: mergedArguments,
+      routeArgumentMap: resolvedRouteArgumentMap,
     );
   }
 
@@ -330,10 +358,11 @@ class AdCreationWizardScreen extends StatefulWidget {
 
     RouteSettings? routeSettings,
     required this.resolvedArguments,
+    required Map<String, dynamic> routeArgumentMap,
 
   })  : routeSettings = routeSettings,
 
-        initialDraftId = resolvedArguments.draftId,
+        draftId = resolvedArguments.draftId,
         interfaceType = resolvedArguments.interfaceType,
         initialCategoryIds = List<int>.unmodifiable(
           resolvedArguments.initialCategoryIds,
@@ -341,10 +370,11 @@ class AdCreationWizardScreen extends StatefulWidget {
         accountTypeCode = resolvedArguments.accountTypeCode,
         permittedDelegateSections = resolvedArguments.permittedDelegateSections,
         blockedDelegateSections = resolvedArguments.blockedDelegateSections,
-        allowedCategoryIds = resolvedArguments.allowedCategoryIds;
+        allowedCategoryIds = resolvedArguments.allowedCategoryIds,
+        routeArgumentsMap = Map<String, dynamic>.unmodifiable(routeArgumentMap);
 
 
-  final String? initialDraftId;
+  final String? draftId;
   final String? interfaceType;
   final List<int> initialCategoryIds;
   final String? accountTypeCode;
@@ -353,16 +383,29 @@ class AdCreationWizardScreen extends StatefulWidget {
   final Set<int> allowedCategoryIds;
   final RouteSettings? routeSettings;
   final AdCreationWizardArguments resolvedArguments;
+  final Map<String, dynamic> routeArgumentsMap;
 
   static Route<void> route(RouteSettings settings) {
-    final AdCreationWizardArguments resolvedArguments =
-    _resolveArguments(settings.arguments);
+
+    final Object? rawArguments = settings.arguments;
+    Map<String, dynamic> argumentMap = _normalizeArgumentMap(rawArguments);
+
+    final AdCreationWizardArguments resolvedArguments;
+    if (argumentMap.isNotEmpty) {
+      resolvedArguments = AdCreationWizardArguments.fromMap(
+        Map<dynamic, dynamic>.from(argumentMap),
+      );
+    } else {
+      resolvedArguments = _resolveArguments(rawArguments);
+      argumentMap = _normalizeArgumentMap(resolvedArguments);
+    }
 
 
     return MaterialPageRoute(
       builder: (_) => AdCreationWizardScreen(
         routeSettings: settings,
         arguments: resolvedArguments,
+        routeArgumentMap: argumentMap,
 
       ),
       settings: settings,
@@ -379,6 +422,56 @@ class AdCreationWizardScreen extends StatefulWidget {
     }
     return const AdCreationWizardArguments.empty();
   }
+
+
+
+  static Map<String, dynamic> _normalizeArgumentMap(Object? raw) {
+    if (raw == null) {
+      return <String, dynamic>{};
+    }
+    if (raw is AdCreationWizardArguments) {
+      return raw.toMap();
+    }
+    if (raw is Map) {
+      final Map<String, dynamic> normalized = <String, dynamic>{};
+      raw.forEach((dynamic key, dynamic value) {
+        if (key != null) {
+          normalized[key.toString()] = value;
+        }
+      });
+      return normalized;
+    }
+    return <String, dynamic>{};
+  }
+
+  static Map<String, dynamic> _buildRouteArgumentMap({
+    Map<String, dynamic>? explicit,
+    Object? rawRouteArguments,
+    AdCreationWizardArguments? resolvedArguments,
+    AdCreationWizardArguments? providedArguments,
+  }) {
+    final Map<String, dynamic> result = <String, dynamic>{};
+
+    void merge(Map<String, dynamic>? source) {
+      if (source == null || source.isEmpty) {
+        return;
+      }
+      result.addAll(source);
+    }
+
+    merge(_normalizeArgumentMap(rawRouteArguments));
+    if (resolvedArguments != null) {
+      merge(resolvedArguments.toMap());
+    }
+    if (providedArguments != null) {
+      merge(providedArguments.toMap());
+    }
+    merge(explicit);
+
+    return result;
+  }
+
+
 
   static AdCreationWizardArguments _mergeArguments({
     String? explicitDraftId,
@@ -674,6 +767,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   bool _isSyncingPending = false;
   bool _isHydratingState = false;
   final Map<String, String> _serverFieldErrors = <String, String>{};
+  Map<String, dynamic> get initialRouteArguments => widget.routeArgumentsMap;
 
   @override
   void initState() {
@@ -1140,12 +1234,12 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     return null;
   }
 
-  String get _draftCacheKey => _cacheKeyFor(_draftId ?? widget.initialDraftId);
+  String get _draftCacheKey => _cacheKeyFor(_draftId ?? widget.draftId);
 
   String _cacheKeyFor(String? draftId) => 'ad_wizard_${draftId ?? 'new'}';
 
   Future<void> _initializeDraft() async {
-    String activeCacheKey = _cacheKeyFor(widget.initialDraftId);
+    String activeCacheKey = _cacheKeyFor(widget.draftId);
     setState(() => _isLoadingDraft = true);
     try {
       Map<String, dynamic>? pending =
@@ -1154,7 +1248,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       await _adPublishingService.readCachedDraft(activeCacheKey);
       AdDraftModel? remote;
 
-      final String? initialDraftId = widget.initialDraftId;
+      final String? initialDraftId = widget.draftId;
       if (initialDraftId != null && initialDraftId.isNotEmpty) {
         try {
           remote = await _adPublishingService.fetchDraft(initialDraftId);
@@ -1227,11 +1321,11 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     try {
       final AdDraftModel? synced = await _adPublishingService.syncPending(
         cacheKey: resolvedKey,
-        fallbackDraftId: _draftId ?? widget.initialDraftId,
+        fallbackDraftId: _draftId ?? widget.draftId,
       );
       if (synced != null) {
         final String newCacheKey =
-        _cacheKeyFor(synced.id ?? _draftId ?? widget.initialDraftId);
+        _cacheKeyFor(synced.id ?? _draftId ?? widget.draftId);
         if (newCacheKey != resolvedKey) {
           await _adPublishingService.migrateCache(
             from: resolvedKey,
@@ -1949,7 +2043,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     final _WizardStepId currentStepId =
     steps.isEmpty ? _WizardStepId.mainCategory : steps[currentIndex].id;
     final String previousCacheKey =
-    _cacheKeyFor(_draftId ?? widget.initialDraftId);
+    _cacheKeyFor(_draftId ?? widget.draftId);
 
     final Map<String, dynamic> payload = _buildAdPayload(isDraft: true);
     final Map<String, dynamic> stepPayload =
@@ -1969,7 +2063,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       );
 
       final String newCacheKey =
-      _cacheKeyFor(draft.id ?? _draftId ?? widget.initialDraftId);
+      _cacheKeyFor(draft.id ?? _draftId ?? widget.draftId);
       if (newCacheKey != previousCacheKey) {
         await _adPublishingService.migrateCache(
           from: previousCacheKey,
@@ -3206,6 +3300,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       'video_links': _videoLinks.length,
       'variations': _inventoryVariations.length,
       'has_location': locationPayload != null,
+      if (widget.routeArgumentsMap.isNotEmpty)
+        'initial_route_arguments': widget.routeArgumentsMap,
     };
   }
 

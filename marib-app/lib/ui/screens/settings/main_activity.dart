@@ -386,10 +386,15 @@ class MainActivityState extends State<MainActivity> with TickerProviderStateMixi
       allowedCategoryIds: allowedCategoryIds,
     );
 
+    final Map<String, dynamic> argumentMap = arguments.toMap();
+    if (initialData != null && initialData.isNotEmpty) {
+      argumentMap['initialData'] = Map<String, dynamic>.from(initialData);
+    }
+
 
     final RouteSettings routeSettings = RouteSettings(
       name: Routes.adCreationWizard,
-      arguments: arguments,
+      arguments: argumentMap,
     );
 
     Navigator.of(context)
@@ -406,6 +411,7 @@ class MainActivityState extends State<MainActivity> with TickerProviderStateMixi
           allowedCategoryIds: allowedCategoryIds,
           arguments: arguments,
           routeSettings: routeSettings,
+          routeArgumentMap: argumentMap,
         ),
         settings: routeSettings,
       ),

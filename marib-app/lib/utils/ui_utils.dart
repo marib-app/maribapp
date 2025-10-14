@@ -379,8 +379,8 @@ class UiUtils {
           top: 12,
           bottom: 12,
         );
-    final double resolvedBottomHeight =
-    hasBottom ? (bottomHeight ?? 0.0) : 0.0;
+    final double resolvedBottomHeight = hasBottom ? (bottomHeight ?? 0.0) : 0.0;
+
     final double totalHeight = toolbarHeight + resolvedBottomHeight;
     Widget? resolvedLeading;
     if (leading != null) {
@@ -447,8 +447,8 @@ class UiUtils {
 
     return PreferredSize(
       preferredSize: Size.fromHeight(totalHeight),
-      child: ConstrainedBox(
-        constraints: BoxConstraints.tightFor(height: totalHeight),
+      child: SizedBox(
+        height: totalHeight,
         child: Material(
           color: Colors.transparent,
           child: SafeArea(

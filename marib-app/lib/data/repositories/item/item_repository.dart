@@ -7,6 +7,7 @@ import 'package:marib/data/model/data_output.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:path/path.dart' as path;
 import 'package:meta/meta.dart';
+import 'package:marib/utils/logger.dart';
 
 /// ---------------------------------------------------------------------------
 /// ItemRepository
@@ -140,11 +141,15 @@ class ItemRepository {
       enableEtagCache: false,
     );
 
-    final Iterable<Map<String, dynamic>> itemMaps =
-    ItemRepository._resolveItemsFromResponse(response);
+    final Iterable<dynamic> rawItems =
+    ItemRepository._extractItemsOrData(response);
 
-    final List<ItemSummary> items =
-    itemMaps.map(ItemSummary.fromJson).toList();
+    final List<ItemSummary> items = ItemRepository._mapJsonListToModels(
+      rawItems,
+      ItemSummary.fromJson,
+      ItemRepository._itemSummaryExpectedFields,
+      'fetchItemSummariesFromCatId',
+    );
 
 
     final int total = ItemRepository.resolveTotalCount(
@@ -354,13 +359,116 @@ class ItemRepository {
     int? areaId,
     ItemFilterModel? filter,
   }) async {
-    return fetchItemSummariesFromCatId(
-      categoryId: categoryId,
-      page: page,
-      search: search,
-      sortBy: sortBy,
-      filter: filter,
+    final Map<String, dynamic> parameters = {
+      Api.categoryId: categoryId,
+      Api.page: page,
+    };
+
+    if (filter != null) {
+      parameters.addAll(filter.toMap());
+
+      if (filter.areaId == null) {
+        parameters.remove('area_id');
+      }
+      parameters.remove('area');
+
+      if (filter.customFields != null) {
+        filter.customFields!.forEach((key, value) {
+          if (value is List) {
+            parameters[key] = value.map((v) => v.toString()).join(',');
+          } else {
+            parameters[key] = value.toString();
+          }
+        });
+      }
+    }
+
+    if (search != null) parameters[Api.search] = search;
+    if (sortBy != null) parameters[Api.sortBy] = sortBy;
+
+    final Map<String, dynamic> response = await _getRequest(
+      url: Api.getItemApi,
+      queryParameters: parameters,
+      enableEtagCache: false,
     );
+
+    final Iterable<dynamic> rawItems =
+    ItemRepository._extractItemsOrData(response);
+
+    final List<ItemSummary> items = ItemRepository._mapJsonListToModels(
+      rawItems,
+      ItemSummary.fromJson,
+      ItemRepository._itemSummaryExpectedFields,
+      'fetchItemFromCatId',
+    );
+
+    final int total = ItemRepository.resolveTotalCount(
+      response,
+      items.length,
+    );
+
+    return DataOutput(
+      total: total,
+      modelList: items,
+    );
+  }
+
+  @visibleForTesting
+  static const List<String> _itemSummaryExpectedFields = <String>['id', 'name'];
+
+  static Iterable<dynamic> _extractItemsOrData(
+      Map<String, dynamic> response,
+      ) {
+    final dynamic itemsSection = response['items'];
+    if (itemsSection != null) {
+      final Iterable<dynamic> extracted = _extractIterable(itemsSection);
+      if (extracted.isNotEmpty || _isExplicitCollection(itemsSection)) {
+        return extracted;
+      }
+    }
+
+    final dynamic dataSection = response['data'];
+    if (dataSection != null) {
+      final Iterable<dynamic> extracted = _extractIterable(dataSection);
+      if (extracted.isNotEmpty || _isExplicitCollection(dataSection)) {
+        return extracted;
+      }
+    }
+
+    return const Iterable<dynamic>.empty();
+  }
+
+  static List<T> _mapJsonListToModels<T>(
+      Iterable<dynamic> rawItems,
+      T Function(Map<String, dynamic>) factory,
+      List<String> expectedFields,
+      String context,
+      ) {
+    final List<T> models = <T>[];
+    for (final dynamic rawItem in rawItems) {
+      if (rawItem is! Map<String, dynamic>) {
+        Logger.debug(
+          '[WARNING][$context] Expected Map<String, dynamic> but received ${rawItem.runtimeType}',
+          name: 'ItemRepository',
+        );
+        continue;
+      }
+
+      final Iterable<String> missingFields = expectedFields.where(
+            (String key) => !rawItem.containsKey(key),
+      );
+
+      if (missingFields.isNotEmpty) {
+        Logger.debug(
+          '[WARNING][$context] Missing fields: ${missingFields.join(', ')}',
+          name: 'ItemRepository',
+        );
+      }
+
+      models.add(factory(rawItem));
+    }
+
+    return models;
   }
 
 

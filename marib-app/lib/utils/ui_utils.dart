@@ -14,6 +14,7 @@ import 'package:marib/utils/constant.dart';
 import 'hive_utils.dart';
 import 'package:timeago/timeago.dart' as timeago_ar show setLocaleMessages;
 import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -388,7 +389,7 @@ class UiUtils {
         onPressed: onBackPress ?? () => Navigator.of(context).maybePop(),
         foregroundColor: resolvedForegroundColor,
         backgroundColor: resolvedForegroundColor.withOpacity(0.08),
-        isRtl: textDirection == TextDirection.rtl,
+        isRtl: textDirection == ui.TextDirection.rtl,
       );
     }
 
@@ -1387,7 +1388,7 @@ class _AppBarBackButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final BorderRadius radius = BorderRadius.circular(12);
     final IconData icon =
-    isRtl ? Icons.arrow_forward_ios_new_rounded : Icons.arrow_back_ios_new_rounded;
+    isRtl ? Icons.arrow_forward_ios : Icons.arrow_back_ios;
     final String tooltip = MaterialLocalizations.of(context).backButtonTooltip;
 
     return Tooltip(

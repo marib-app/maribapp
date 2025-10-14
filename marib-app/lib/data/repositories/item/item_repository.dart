@@ -259,18 +259,30 @@ class ItemRepository {
   /// يعيد: DataOutput<ItemModel> من البينات الراجعة (data.data)
   /// -------------------------------------------------------------------------
   Future<DataOutput<ItemModel>> fetchItemFromItemSlug(String slug) async {
-    final Map<String, dynamic> parameters = {"slug": slug};
+    final Map<String, dynamic> parameters = {
+      'slug': slug,
+      'view': 'detail',
+    };
 
     final Map<String, dynamic> response = await Api.get(
       url: Api.getItemApi,
       queryParameters: parameters,
     );
 
-    final List<ItemModel> modelList = (response['data']['data'] as List)
-        .map((e) => ItemModel.fromJson(e))
-        .toList();
 
-    return DataOutput(total: modelList.length, modelList: modelList);
+    final Iterable<Map<String, dynamic>> itemMaps =
+    ItemRepository.resolvePaginatedMapList(response);
+
+    final List<ItemModel> modelList =
+    itemMaps.map(ItemModel.fromJson).toList();
+
+    final int total =
+    ItemRepository.resolveTotalCount(response, modelList.length);
+
+    return DataOutput(total: total, modelList: modelList);
+
+
+
   }
 
   /// -------------------------------------------------------------------------

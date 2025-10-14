@@ -11,7 +11,7 @@ class RequestDeviceRepository {
       'phone': phone,
       'subject': subject,
       'message': message,
-
+      'section': section,
     };
     parameters['section'] = section;
 

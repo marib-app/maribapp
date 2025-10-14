@@ -456,7 +456,8 @@ class SpecialRequestCard extends StatelessWidget {
   }
 
   String _resolveSectionForRequest() {
-    switch (sectionSlug) {
+    final normalized = sectionSlug.trim().toLowerCase();
+    switch (normalized) {
       case 'shein':
         return 'shein';
       case 'computer':

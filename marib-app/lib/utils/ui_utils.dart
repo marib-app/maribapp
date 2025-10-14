@@ -881,27 +881,24 @@ class UiUtils {
       return true;
     }());
 
-    final scheme = Theme
-        .of(context)
-        .colorScheme;
 
     final bool blockInput = (disabled ?? false) || (isInProgress == true);
     final Color baseButtonColor = buttonColor ?? context.color.territoryColor;
     final Color disabledBackgroundColor =
         disabledColor ?? UiUtils.makeColorLight(baseButtonColor);
-    final Color backgroundColor =
-    blockInput ? disabledBackgroundColor : baseButtonColor;
+    final Color bg = blockInput ? disabledBackgroundColor : baseButtonColor;
+
 
     // لون النص/الأيقونات/السبينر
-    final Color defaultForeground = textColor ?? scheme.onPrimary;
+    final Color fg = textColor ?? context.color.textAutoAdapt(bg);
     final Color disabledForeground = textColor != null
         ? UiUtils.makeColorLight(textColor!)
         : UiUtils.makeColorDark(disabledBackgroundColor);
-    final Color contentColor =
-    blockInput ? disabledForeground : defaultForeground;
+    final Color contentColor = blockInput ? disabledForeground : fg;
+
 
     final bool useWhiteProgress =
-        backgroundColor.computeLuminance() < 0.5;
+        bg.computeLuminance() < 0.5;
     final Color progressColor =
     useWhiteProgress ? Colors.white : contentColor;
     final String title =
@@ -927,8 +924,8 @@ class UiUtils {
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
               elevation: (showElevation ?? true) ? 1 : 0,
-              backgroundColor: backgroundColor,
-              foregroundColor: defaultForeground,
+              backgroundColor: bg,
+              foregroundColor: fg,
               disabledBackgroundColor: disabledBackgroundColor,
               disabledForegroundColor: disabledForeground,
               minimumSize: Size(

@@ -48,7 +48,9 @@ class CustomTextFormField extends StatelessWidget {
   final EdgeInsetsGeometry? contentPadding;
   final bool autofocus;
   final FocusNode? focusNode;
-
+  final Color? customStyleFillColor;
+  final Color? customStyleTextColor;
+  final Color? customStyleDividerColor;
   const CustomTextFormField({
     super.key,
     this.hintText,
@@ -79,7 +81,9 @@ class CustomTextFormField extends StatelessWidget {
     this.isCustomStyle = false,
     this.textAlign,
     this.contentPadding,
-
+    this.customStyleFillColor,
+    this.customStyleTextColor,
+    this.customStyleDividerColor,
 
   });
 
@@ -97,7 +101,7 @@ class CustomTextFormField extends StatelessWidget {
       onTapOutside: (PointerDownEvent event) {
         FocusManager.instance.primaryFocus?.unfocus();
       },
-      keyboardAppearance: Brightness.light,
+      keyboardAppearance: Theme.of(context).brightness,
       textCapitalization: capitalization ?? TextCapitalization.none,
       readOnly: isReadOnly ?? false,
       style: TextStyle(
@@ -178,22 +182,24 @@ class CustomTextFormField extends StatelessWidget {
       decoration: isCustomStyle
           ? InputDecoration(
               filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
+        fillColor: customStyleFillColor ??
+            Theme.of(context).colorScheme.surface,
+        border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
                 borderSide: BorderSide.none,
               ),
         contentPadding: contentPadding ??
             const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               prefixIcon: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       hintText ?? '',
                       style: TextStyle(
-                        color: context.color.forthColor,
+                        color: customStyleTextColor ??
+                            Theme.of(context).colorScheme.onSurface,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -201,7 +207,8 @@ class CustomTextFormField extends StatelessWidget {
                     Container(
                       width: 2,
                       height: 24,
-                      color: context.color.chatSenderColor,
+                      color: customStyleDividerColor ??
+                          Theme.of(context).colorScheme.outline,
                     ),
                     SizedBox(width: 8),
                   ],

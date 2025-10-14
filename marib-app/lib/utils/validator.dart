@@ -78,6 +78,21 @@ class Validator {
     }
   }
 
+
+  static String? validateMaxLength({
+    String? value,
+    required int maxLength,
+    required BuildContext context,
+  }) {
+    final String text = value ?? '';
+
+    if (text.length > maxLength) {
+      return "${"maxCharactersAllowed".translate(context)} $maxLength";
+    }
+
+    return null;
+  }
+
   static String? nullCheckValidator(String? value,
       {int? requiredLength, required BuildContext context}) {
     if (value!.isEmpty) {

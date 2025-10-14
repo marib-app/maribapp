@@ -113,9 +113,17 @@ class CustomTextFormField extends StatelessWidget {
         }
 
         if (validator == CustomTextFieldValidator.maxFifty) {
-          if ((value ??= "").length > 100) {
-            return "youCanEnter23LettersMax".translate(context);
-          } else if ((value).length == 0) {
+          final String textValue = value ?? '';
+          final int effectiveMaxLength = maxLength ?? 50;
+          final String? maxLengthError = Validator.validateMaxLength(
+            value: textValue,
+            maxLength: effectiveMaxLength,
+            context: context,
+          );
+
+          if (maxLengthError != null) {
+            return maxLengthError;
+          } else if (textValue.isEmpty) {
             return "fieldMustNotBeEmpty".translate(context);
           } else {
             return null;

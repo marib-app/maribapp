@@ -388,6 +388,7 @@
   "youCanAdd": "You can add",
   "numMinRequired": "minimum numbers is required",
   "maximumNumbersOnly": "maximum numbers only",
+  "maxCharactersAllowed": "Maximum characters allowed:",
   "featureAd": "Feature ad",
   "soldOut": "Sold out",
   "deactivate": "Deactivate",

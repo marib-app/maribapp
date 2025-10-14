@@ -85,6 +85,7 @@ import 'fetch_item_details_cubit.dart';
 import 'package:marib/data/model/home/home_screen_section.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
 import 'package:marib/utils/featured_section_utils.dart';
+import 'special_request_card.dart';
 
 //==============================================================================
 ///                                   HomeTabView
@@ -100,6 +101,7 @@ class HomeTabView extends StatefulWidget {
   // وضع العرض الخارجي (Grid/List)
   final ValueListenable<ViewMode> viewModeListenable;
 
+  final String? specialRequestSectionSlug;
 
   // NEW: لا تبني/تجلب السلايدر إلا بعد Success
   final bool enableAdSlider;
@@ -123,6 +125,9 @@ class HomeTabView extends StatefulWidget {
     required this.categoryId,
     required this.searchController,
     required this.viewModeListenable,
+
+    this.specialRequestSectionSlug,
+
     this.enableAdSlider = false, // افتراضي: مخفي
     this.adInterfaceType,
     // NEW 👇
@@ -796,6 +801,19 @@ class _HomeTabViewState extends State<HomeTabView> {
 
               // فاصل صغير
               SliverToBoxAdapter(child: SizedBox(height: gapSmall)),
+
+              if (widget.specialRequestSectionSlug != null) ...[
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: SpecialRequestCard(
+                      sectionSlug: widget.specialRequestSectionSlug!,
+                    ),
+                  ),
+                ),
+                SliverToBoxAdapter(child: SizedBox(height: gapSmall)),
+              ],
+
 
               // ============= التصنيفات الفرعية (دائمًا ظاهرة) =============
 

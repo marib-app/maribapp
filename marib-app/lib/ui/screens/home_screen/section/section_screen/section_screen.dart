@@ -107,6 +107,7 @@ class Section_screenState extends State<Section_screen> {
   bool _showAdSlider = false;
   bool _requestedSlider = false;
 
+  late final String? _requestSectionSlug;
 
   ItemFilterModel _buildEffectiveFilter({
     ItemFilterModel? base,
@@ -229,6 +230,8 @@ class Section_screenState extends State<Section_screen> {
     _initialFilter = effectiveFilter;
     filter = effectiveFilter;
 
+    _requestSectionSlug = _resolveRequestSectionSlug();
+
     unawaited(
       _refreshData(
         baseFilter: effectiveFilter,
@@ -278,6 +281,29 @@ class Section_screenState extends State<Section_screen> {
   }
 
 
+  String? _resolveRequestSectionSlug() {
+    if (_catId == Constant.sheinRootCategoryId) {
+      return 'shein';
+    }
+    if (_catId == Constant.computerRootCategoryId) {
+      return 'computer';
+    }
+
+    final String? normalizedInterfaceType =
+        SliderInterfaceMapper.normalize(widget.interfaceType) ??
+            widget.interfaceType?.trim().toLowerCase();
+
+    switch (normalizedInterfaceType) {
+      case 'shein':
+      case 'shein_products':
+        return 'shein';
+      case 'computer':
+      case 'computer_section':
+        return 'computer';
+      default:
+        return null;
+    }
+  }
 
 
 
@@ -458,6 +484,7 @@ class Section_screenState extends State<Section_screen> {
                         selectedCategoryId: selectedCategoryId,
                         showShimmer: showShimmer,
                         searchController: searchController,
+                        specialRequestSectionSlug: _requestSectionSlug,
                         enableTopBar: _showSlider,
                         enableAdSlider: _showAdSlider,        // إن كانت موجودة عندك
                         adInterfaceType: _sliderInterfaceType, // ← تمرير الواجهة المعتمدة دائمًا

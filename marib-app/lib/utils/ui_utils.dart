@@ -446,77 +446,77 @@ class UiUtils {
         .withOpacity(theme.brightness == Brightness.dark ? 0.45 : 0.12);
 
     return PreferredSize(
-        preferredSize: Size.fromHeight(totalHeight),
-        child: ConstrainedBox(
-          constraints: BoxConstraints.tightFor(height: totalHeight),
-          child: Material(
-            color: Colors.transparent,
-            child: SafeArea(
-              bottom: false,
-              child: Container(
-                decoration: BoxDecoration(
-              borderRadius: borderRadiusShape,
-              boxShadow: [
+      preferredSize: Size.fromHeight(totalHeight),
+      child: ConstrainedBox(
+        constraints: BoxConstraints.tightFor(height: totalHeight),
+        child: Material(
+          color: Colors.transparent,
+          child: SafeArea(
+            bottom: false,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: borderRadiusShape,
+                boxShadow: [
                 BoxShadow(
-                  color: shadowColor,
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: borderRadiusShape,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: resolvedBackgroundColor,
-                  border: border,
-                ),
-                child: IconTheme.merge(
-                  data: IconThemeData(
-                    color: resolvedForegroundColor,
-                    size: 22,
+                color: shadowColor,
+                blurRadius: 18,
+                offset: const Offset(0, 8),
                   ),
-                  child: DefaultTextStyle(
-                    style: defaultTitleStyle,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: borderRadiusShape,
+                child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: resolvedBackgroundColor,
+                      border: border,
+                    ),
+                    child: IconTheme.merge(
+                      data: IconThemeData(
+                        color: resolvedForegroundColor,
+                        size: 22,
+                      ),
+                      child: DefaultTextStyle(
+                        style: defaultTitleStyle,
+                        child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
                         ConstrainedBox(
-                          constraints:
-                          BoxConstraints(minHeight: toolbarHeight),
-                          child: Padding(
-                            padding: resolvedPadding,
-                            child: NavigationToolbar(
-                              leading: resolvedLeading != null
-                                  ? Padding(
-                                padding:
-                                const EdgeInsetsDirectional.only(
-                                  end: 12,
-                                ),
-                                child: resolvedLeading,
-                              )
-                                  : null,
-                              middle: resolvedTitleWidget,
-                              trailing: trailingActions != null
-                                  ? Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: trailingActions,
-                              )
-                                  : null,
-                              centerMiddle: centerTitle,
+                        constraints:
+                        BoxConstraints(minHeight: toolbarHeight),
+                        child: Padding(
+                          padding: resolvedPadding,
+                          child: NavigationToolbar(
+                            leading: resolvedLeading != null
+                                ? Padding(
+                              padding:
+                              const EdgeInsetsDirectional.only(
+                                end: 12,
+                              ),
+                              child: resolvedLeading,
+                            )
+                                : null,
+                            middle: resolvedTitleWidget,
+                            trailing: trailingActions != null
+                                ? Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: trailingActions,
+                            )
+                                : null,
+                            centerMiddle: centerTitle,
+                          ),
                             ),
                           ),
+                              if (hasBottom) ...bottom!,
+                            ],
                         ),
-                        if (hasBottom) ...bottom!,
-                      ],
                     ),
                   ),
                 ),
               ),
             ),
           ),
-         ),
-          ),
+        ),
       ),
     );
   }

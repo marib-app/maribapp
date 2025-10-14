@@ -23,8 +23,8 @@ class CustomTextFormField extends StatelessWidget {
   final int? minLine;
   final int? maxLine;
   final bool? isReadOnly;
-  final List<TextInputFormatter>? formaters;
-  final List<TextInputFormatter>? formatters;
+  final List<TextInputFormatter>? inputFormatters;
+
 
   final CustomTextFieldValidator? validator;
   final Color? fillColor;
@@ -55,8 +55,7 @@ class CustomTextFormField extends StatelessWidget {
     this.controller,
     this.minLine,
     this.maxLine,
-    this.formaters,
-    this.formatters,
+    this.inputFormatters,
     this.autofocus = false,
     this.focusNode,
     this.isReadOnly,
@@ -90,7 +89,7 @@ class CustomTextFormField extends StatelessWidget {
       autofocus: autofocus,
       focusNode: focusNode,
       controller: controller,
-      inputFormatters: formatters ?? formaters,
+      inputFormatters: inputFormatters,
       obscureText: obscureText ?? false,
       textInputAction: action,
       textAlign: textAlign ?? TextAlign.start,

@@ -30,7 +30,7 @@ class CustomTextFieldDynamic extends StatefulWidget {
   final String hintText;
   final TextInputType? keyboardType;
   final TextInputAction? action;
-  final List<TextInputFormatter>? formaters;
+  final List<TextInputFormatter>? inputFormatters;
   final bool? required;
   final CustomTextFieldValidator? validator;
   final int? minLen;
@@ -47,7 +47,7 @@ class CustomTextFieldDynamic extends StatefulWidget {
     required this.hintText,
     this.keyboardType,
     this.action,
-    this.formaters,
+    this.inputFormatters,
     this.required,
     this.validator,
     this.minLen,
@@ -77,7 +77,7 @@ class CustomTextFieldDynamicState extends State<CustomTextFieldDynamic> {
     return CustomTextFormField(
       hintText: widget.hintText,
       action: widget.action,
-      formaters: widget.formaters,
+      inputFormatters: widget.inputFormatters,
       isRequired: widget.required,
       validator: widget.validator!,
       keyboard: widget.keyboardType,

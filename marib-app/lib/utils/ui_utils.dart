@@ -1,11 +1,9 @@
 
 import 'dart:math';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/app_icon.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:marib/app/app_localization.dart';
 import 'package:marib/app/app_theme.dart';
@@ -24,14 +22,12 @@ import 'package:flutter_svg/svg.dart';
 import 'package:intl/intl.dart';
 import 'package:lottie/lottie.dart';
 import 'package:mime_type/mime_type.dart';
-import 'dart:ui' as ui;
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:marib/ui/screens/widgets/full_screen_image_view.dart';
 import 'package:marib/ui/screens/widgets/gallery_view.dart';
 import 'package:marib/data/cubits/home/fetch_home_all_items_cubit.dart';
 import 'package:marib/data/cubits/home/fetch_home_screen_cubit.dart';
-import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:intl/intl.dart';
@@ -41,8 +37,8 @@ import 'package:marib/utils/responsiveSize.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:marib/data/model/subscription_package_limit.dart';
 
-import 'dart:ui' show ImageFilter;          // للـ blur
-import 'package:flutter/gestures.dart';     // للروابط
+import 'dart:ui' show ImageFilter;
+import 'package:flutter/gestures.dart';
 import 'package:marib/utils/scroll/low_spec_scroll_physics.dart';
 import 'dart:collection';
 
@@ -343,92 +339,199 @@ class UiUtils {
   }
 
 
-  static PreferredSizeWidget buildAppBar(BuildContext context,
-      {String? title,
-        bool? showBackButton,
+  static PreferredSizeWidget buildAppBar(
+      BuildContext context, {
+        String? title,
+        Widget? titleWidget,
+        bool showBackButton = false,
+        Widget? leading,
         List<Widget>? actions,
         List<Widget>? bottom,
         double? bottomHeight,
         bool? hideTopBorder,
         VoidCallback? onBackPress,
-        Color? backgroundColor}) {
-    return PreferredSize(
-      preferredSize: Size.fromHeight(55 + (bottomHeight ?? 0)),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Expanded(
-            child: RoundedBorderOnSomeSidesWidget(
-              borderColor: context.color.borderColor,
-              borderRadius: 0,
-              borderWidth: 1.5,
-              contentBackgroundColor:
-              backgroundColor ?? context.color.secondaryColor,
-              bottomLeft: true,
-              bottomRight: true,
-              topLeft: false,
-              topRight: false,
-              child: Container(
-                alignment: AlignmentDirectional.bottomStart,
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: (showBackButton ?? false) ? 0 : 20,
-                      vertical: (showBackButton ?? false) ? 0 : 18),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (showBackButton ?? false) ...[
-                        Material(
-                          clipBehavior: Clip.antiAlias,
-                          color: Colors.transparent,
-                          type: MaterialType.circle,
-                          child: InkWell(
-                            onTap: () {
-                              if (onBackPress != null) {
-                                onBackPress.call();
-                              } else {
-                                Navigator.pop(context);
-                              }
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.all(18.0),
-                              child: Directionality(
-                                textDirection: Directionality.of(context),
-                                child: RotatedBox(
-                                  quarterTurns: Directionality.of(context) ==
-                                      ui.TextDirection.rtl ? 2 : -4,
+        Color? backgroundColor,
+        Color? foregroundColor,
+        Color? borderColor,
+        EdgeInsetsGeometry? contentPadding,
+        bool centerTitle = false,
+        double? height,
+        double borderRadius = 18,
+        double borderStrokeWidth = 1.0,
+      }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final bool shouldHideTopBorder = hideTopBorder ?? true;
+    final double toolbarHeight = height ?? kToolbarHeight;
+    final Color resolvedBackgroundColor =
+        backgroundColor ?? colorScheme.secondaryColor;
+    final Color resolvedBorderColor =
+        borderColor ?? colorScheme.borderColor;
+    final Color resolvedForegroundColor = foregroundColor ??
+        colorScheme.textAutoAdapt(resolvedBackgroundColor);
+    final bool hasBottom = bottom != null && bottom.isNotEmpty;
+    final bool hasLeading = leading != null || showBackButton;
+    final EdgeInsetsGeometry resolvedPadding = contentPadding ??
+        EdgeInsetsDirectional.only(
+          start: hasLeading ? 12 : 20,
+          end: actions?.isNotEmpty == true ? 12 : 20,
+          top: 12,
+          bottom: 12,
+        );
 
-                                  child: UiUtils.getSvg(AppIcons.arrowLeft,
-                                      fit: BoxFit.none,
-                                      color: context.color.textDefaultColor),
+    Widget? resolvedLeading;
+    if (leading != null) {
+      resolvedLeading = leading;
+    } else if (showBackButton) {
+      final textDirection = Directionality.of(context);
+      resolvedLeading = _AppBarBackButton(
+        onPressed: onBackPress ?? () => Navigator.of(context).maybePop(),
+        foregroundColor: resolvedForegroundColor,
+        backgroundColor: resolvedForegroundColor.withOpacity(0.08),
+        isRtl: textDirection == TextDirection.rtl,
+      );
+    }
+
+    final List<Widget>? trailingActions = actions?.isNotEmpty == true
+        ? _withSpacing(actions!, const SizedBox(width: 12))
+        : null;
+
+    final Widget? resolvedTitleWidget = titleWidget ??
+        (title != null
+            ? Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        )
+            : null);
+
+    final TextStyle defaultTitleStyle = theme.textTheme.titleMedium?.copyWith(
+      fontWeight: FontWeight.w600,
+      fontSize: actions?.isNotEmpty == true ? 16 : 20,
+      color: resolvedForegroundColor,
+    ) ??
+        TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: actions?.isNotEmpty == true ? 16 : 20,
+          color: resolvedForegroundColor,
+        );
+
+    final BorderRadius borderRadiusShape = BorderRadius.only(
+      topLeft:
+      shouldHideTopBorder ? Radius.zero : Radius.circular(borderRadius),
+      topRight:
+      shouldHideTopBorder ? Radius.zero : Radius.circular(borderRadius),
+      bottomLeft: Radius.circular(borderRadius),
+      bottomRight: Radius.circular(borderRadius),
+    );
+
+    final BorderSide defaultBorderSide = BorderSide(
+      color: resolvedBorderColor,
+      width: borderStrokeWidth,
+    );
+
+    final Border border = Border(
+      top: shouldHideTopBorder ? BorderSide.none : defaultBorderSide,
+      left: defaultBorderSide,
+      right: defaultBorderSide,
+      bottom: defaultBorderSide,
+    );
+
+    final Color shadowColor = (theme.brightness == Brightness.dark
+        ? Colors.black
+        : Colors.black.withOpacity(0.25))
+        .withOpacity(theme.brightness == Brightness.dark ? 0.45 : 0.12);
+
+    return PreferredSize(
+      preferredSize:
+      Size.fromHeight(toolbarHeight + (bottomHeight ?? 0.0)),
+      child: Material(
+        color: Colors.transparent,
+        child: SafeArea(
+          bottom: false,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: borderRadiusShape,
+              boxShadow: [
+                BoxShadow(
+                  color: shadowColor,
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: borderRadiusShape,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: resolvedBackgroundColor,
+                  border: border,
+                ),
+                child: IconTheme.merge(
+                  data: IconThemeData(
+                    color: resolvedForegroundColor,
+                    size: 22,
+                  ),
+                  child: DefaultTextStyle(
+                    style: defaultTitleStyle,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ConstrainedBox(
+                          constraints:
+                          BoxConstraints(minHeight: toolbarHeight),
+                          child: Padding(
+                            padding: resolvedPadding,
+                            child: NavigationToolbar(
+                              leading: resolvedLeading != null
+                                  ? Padding(
+                                padding:
+                                const EdgeInsetsDirectional.only(
+                                  end: 12,
                                 ),
-                              ),
+                                child: resolvedLeading,
+                              )
+                                  : null,
+                              middle: resolvedTitleWidget,
+                              trailing: trailingActions != null
+                                  ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: trailingActions,
+                              )
+                                  : null,
+                              centerMiddle: centerTitle,
                             ),
                           ),
                         ),
-                      ],
-                      Expanded(
-                        child: Text(
-                          title ?? "",
-                          overflow: TextOverflow.ellipsis,
-                          softWrap: true,
-                        )
-                            .color(context.color.textDefaultColor)
-                            .bold(weight: FontWeight.w600)
-                            .size(actions != null ? 14 : 18),
-                      ),
-                      if (actions != null) ...[const Spacer(), ...actions],
-                      const SizedBox(width: 5),
-                    ],
+                  if (hasBottom) ...bottom!,
+                       ],
+                     ),
                   ),
                 ),
               ),
             ),
           ),
-          ...bottom ?? [const SizedBox.shrink()]
-        ],
+         ),
       ),
     );
+  }
+
+
+
+
+  static List<Widget> _withSpacing(List<Widget> widgets, Widget spacer) {
+    if (widgets.length <= 1) {
+      return List<Widget>.from(widgets);
+    }
+
+    final List<Widget> spaced = [];
+    for (var i = 0; i < widgets.length; i++) {
+      if (i > 0) {
+        spaced.add(spacer);
+      }
+      spaced.add(widgets[i]);
+    }
+    return spaced;
   }
 
 
@@ -1267,7 +1370,53 @@ class UiUtils {
 }
 
 
+class _AppBarBackButton extends StatelessWidget {
+  const _AppBarBackButton({
+    required this.onPressed,
+    required this.foregroundColor,
+    required this.backgroundColor,
+    required this.isRtl,
+  });
 
+  final VoidCallback onPressed;
+  final Color foregroundColor;
+  final Color backgroundColor;
+  final bool isRtl;
+
+  @override
+  Widget build(BuildContext context) {
+    final BorderRadius radius = BorderRadius.circular(12);
+    final IconData icon =
+    isRtl ? Icons.arrow_forward_ios_new_rounded : Icons.arrow_back_ios_new_rounded;
+    final String tooltip = MaterialLocalizations.of(context).backButtonTooltip;
+
+    return Tooltip(
+      message: tooltip,
+      child: Semantics(
+        button: true,
+        label: tooltip,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: radius,
+          child: Container(
+            height: 40,
+            width: 40,
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: radius,
+            ),
+            alignment: Alignment.center,
+            child: Icon(
+              icon,
+              color: foregroundColor,
+              size: 18,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 
 ///Format string

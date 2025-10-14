@@ -250,12 +250,18 @@ class AdDetailsScreen extends StatefulWidget {
             create: (context) => MakeAnOfferItemCubit(),
           ),
           BlocProvider(
-            create: (context) => FetchItemDetailsCubit(
-              _ItemDetailsRepositoryImpl(
-                ItemRepository(),
-                initialItem: config.initialModel,
-              ),
-            ),
+            create: (context) {
+              final ItemRepository repository =
+                  RepositoryProvider.maybeOf<ItemRepository>(context) ??
+                      ItemRepository();
+
+              return FetchItemDetailsCubit(
+                _ItemDetailsRepositoryImpl(
+                  repository,
+                  initialItem: config.initialModel,
+                ),
+              );
+            },
           ),
 
           BlocProvider(

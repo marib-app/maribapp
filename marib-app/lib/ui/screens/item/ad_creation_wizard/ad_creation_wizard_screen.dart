@@ -477,6 +477,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   final _sheinReviewLinkController = TextEditingController();
   final TextEditingController _categorySearchController =
   TextEditingController();
+  final TextEditingController _subCategorySearchController =
+  TextEditingController();
   String? _selectedCurrency = 'YER';
 
   final PickImage _imagePicker = PickImage();
@@ -498,7 +500,9 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
 
   final GlobalKey<FormState> _textDetailsFormKey = GlobalKey<FormState>();
   Timer? _categorySearchDebounce;
+  Timer? _subCategorySearchDebounce;
   String _categorySearchQuery = '';
+  String _subCategorySearchQuery = '';
 
 
   static const Map<String, String> _currencyOptions = <String, String>{
@@ -627,6 +631,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   _MainCategoryOption? _selectedMainCategory;
   _SubCategoryOption? _selectedSubCategory;
   int? _pressedMainCategoryId;
+  int? _pressedSubCategoryId;
   List<CustomFieldSchema> _customFieldSchemas = const <CustomFieldSchema>[];
   Map<String, dynamic> _customFieldValues = <String, dynamic>{};
   bool _isLoadingCustomFields = false;
@@ -643,6 +648,22 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         .where((option) => option.name.toLowerCase().contains(normalized))
         .toList(growable: false);
   }
+
+
+  List<_SubCategoryOption> _filteredSubCategories(
+      _MainCategoryOption? mainCategory) {
+    if (mainCategory == null) {
+      return const <_SubCategoryOption>[];
+    }
+    final String normalized = _subCategorySearchQuery.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return mainCategory.subCategories;
+    }
+    return mainCategory.subCategories
+        .where((option) => option.name.toLowerCase().contains(normalized))
+        .toList(growable: false);
+  }
+
 
   Timer? _autoSaveTimer;
   int _currentStep = 0;
@@ -721,6 +742,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
 
     _autoSaveTimer?.cancel();
     _categorySearchDebounce?.cancel();
+    _subCategorySearchDebounce?.cancel();
 
     _titleController.dispose();
     _descriptionController.dispose();
@@ -731,6 +753,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     _sheinReviewLinkController.dispose();
     _locationAddressController.dispose();
     _categorySearchController.dispose();
+    _subCategorySearchController.dispose();
     _locationLatitudeController.dispose();
     _locationLongitudeController.dispose();
     _imagePicker.dispose();
@@ -2933,6 +2956,12 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     if (_selectedMainCategory?.id == category.id) {
       return;
     }
+
+    _subCategorySearchDebounce?.cancel();
+    if (_subCategorySearchController.text.isNotEmpty) {
+      _subCategorySearchController.clear();
+    }
+
     _registerPreferredInterfaceType(category.interfaceType);
     _preferredCategoryPath
       ..clear()
@@ -2940,11 +2969,13 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     setState(() {
       _selectedMainCategory = category;
       _selectedSubCategory = null;
+      _pressedSubCategoryId = null;
       _customFieldSchemas = const <CustomFieldSchema>[];
       _customFieldValues = <String, dynamic>{};
       _customFieldError = null;
       _isLoadingCustomFields = false;
       _inventoryVariations = <_InventoryVariation>[];
+      _subCategorySearchQuery = '';
       if (category.interfaceType != 'shein_products') {
         if (_sheinProductLinkController.text.isNotEmpty) {
           _sheinProductLinkController.clear();
@@ -3025,6 +3056,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       _customFieldError = null;
       _inventoryVariations = <_InventoryVariation>[];
       _recomputeCurrentStepBounds();
+      _pressedSubCategoryId = null;
     });
 
     _locationFormKey.currentState?.reset();

@@ -347,6 +347,7 @@ class _MainCategoryOption {
         .map((CategoryModel child) => _SubCategoryOption(
       id: child.id!,
       name: resolveName(child.name),
+      imageUrl: child.url,
     ))
         .toList(growable: false);
 
@@ -367,8 +368,14 @@ class _MainCategoryOption {
 }
 
 class _SubCategoryOption {
-  const _SubCategoryOption({required this.id, required this.name});
+  const _SubCategoryOption({
+    required this.id,
+    required this.name,
+    this.imageUrl,
+  });
+
 
   final int id;
   final String name;
+  final String? imageUrl;
 }

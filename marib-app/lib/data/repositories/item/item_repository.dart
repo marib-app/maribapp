@@ -435,6 +435,15 @@ class ItemRepository {
       }
     }
 
+
+    final dynamic resultsSection = response['results'];
+    if (resultsSection != null) {
+      final Iterable<dynamic> extracted = _extractIterable(resultsSection);
+      if (extracted.isNotEmpty || _isExplicitCollection(resultsSection)) {
+        return extracted;
+      }
+    }
+
     return const Iterable<dynamic>.empty();
   }
 

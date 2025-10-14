@@ -13,7 +13,7 @@ class RequestDeviceRepository {
       'message': message,
       'section': section,
     };
-    parameters['section'] = section;
+
 
     Map<String, dynamic> response = await Api.post(
       url: Api.requestDeviceApi,

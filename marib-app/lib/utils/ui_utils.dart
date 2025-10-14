@@ -379,7 +379,9 @@ class UiUtils {
           top: 12,
           bottom: 12,
         );
-
+    final double resolvedBottomHeight =
+    hasBottom ? (bottomHeight ?? 0.0) : 0.0;
+    final double totalHeight = toolbarHeight + resolvedBottomHeight;
     Widget? resolvedLeading;
     if (leading != null) {
       resolvedLeading = leading;
@@ -444,14 +446,15 @@ class UiUtils {
         .withOpacity(theme.brightness == Brightness.dark ? 0.45 : 0.12);
 
     return PreferredSize(
-      preferredSize:
-      Size.fromHeight(toolbarHeight + (bottomHeight ?? 0.0)),
-      child: Material(
-        color: Colors.transparent,
-        child: SafeArea(
-          bottom: false,
-          child: Container(
-            decoration: BoxDecoration(
+        preferredSize: Size.fromHeight(totalHeight),
+        child: ConstrainedBox(
+          constraints: BoxConstraints.tightFor(height: totalHeight),
+          child: Material(
+            color: Colors.transparent,
+            child: SafeArea(
+              bottom: false,
+              child: Container(
+                decoration: BoxDecoration(
               borderRadius: borderRadiusShape,
               boxShadow: [
                 BoxShadow(
@@ -504,15 +507,16 @@ class UiUtils {
                             ),
                           ),
                         ),
-                  if (hasBottom) ...bottom!,
-                       ],
-                     ),
+                        if (hasBottom) ...bottom!,
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
          ),
+          ),
       ),
     );
   }

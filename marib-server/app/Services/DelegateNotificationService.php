@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\RequestDevice;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -46,6 +47,7 @@ class DelegateNotificationService
             'section' => $section,
             'request_device_id' => $requestDevice->getKey(),
             'order_reference' => $orderReference,
+            'department_label' => $departmentLabel,
             'subject' => $subject,
             'phone' => $requestDevice->phone,
             'deeplink' => $deeplink,
@@ -54,6 +56,14 @@ class DelegateNotificationService
         ];
 
         NotificationService::sendFcmNotification($tokens, $title, $body, 'request_device', $payload);
+
+        Log::info('delegate_notifications.request_device_dispatched', [
+            'section' => $section,
+            'department_label' => $departmentLabel,
+            'request_device_id' => $requestDevice->getKey(),
+            'token_count' => count($tokens),
+        ]);
+
     }
 
     public function notifyNewOrder(Order $order): void
@@ -80,6 +90,7 @@ class DelegateNotificationService
         $payload = [
             'type' => 'order',
             'department' => $department,
+            'department_label' => $departmentLabel,
             'order_id' => $order->getKey(),
             'order_number' => $orderNumber,
             'deeplink' => $deeplink,
@@ -88,6 +99,15 @@ class DelegateNotificationService
         ];
 
         NotificationService::sendFcmNotification($tokens, $title, $body, 'order', $payload);
+
+        Log::info('delegate_notifications.order_dispatched', [
+            'department' => $department,
+            'department_label' => $departmentLabel,
+            'order_id' => $order->getKey(),
+            'order_number' => $orderNumber,
+            'token_count' => count($tokens),
+        ]);
+
     }
 
     /**

@@ -1829,6 +1829,9 @@ class ApiController extends Controller {
 
 
     public function getItem(Request $request) {
+                if ($request->query->has('view')) {
+            $request->query->set('view', strtolower((string) $request->query('view')));
+        }
         $validator = Validator::make($request->all(), [
             'limit'          => 'nullable|integer',
             'offset'         => 'nullable|integer',
@@ -1856,6 +1859,7 @@ class ApiController extends Controller {
             'posted_since'   => 'nullable|in:all-time,today,within-1-week,within-2-week,within-1-month,within-3-month',
             'promoted'       => 'nullable|boolean',
             'interface_type' => ['nullable', Rule::in(self::interfaceTypes(includeLegacy: true))],
+            'view'           => ['nullable', Rule::in(['summary', 'detail'])],
 
         ]);
 

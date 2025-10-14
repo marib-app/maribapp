@@ -381,7 +381,7 @@ class SpecialRequestCard extends StatelessWidget {
                                           phone: phoneController.text.trim(),
                                           subject: composeSubject(),
                                           message: composeMessage(),
-                                          section: sectionSlug,
+                                          section: _resolveSectionForRequest(),
                                         );
                                       }
                                     },
@@ -454,4 +454,16 @@ class SpecialRequestCard extends StatelessWidget {
       style: TextStyle(color: rootContext.color.textDefaultColor),
     );
   }
+
+  String _resolveSectionForRequest() {
+    switch (sectionSlug) {
+      case 'shein':
+        return 'shein';
+      case 'computer':
+        return 'computer';
+      default:
+        return 'computer';
+    }
+  }
+
 }

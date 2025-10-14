@@ -37,7 +37,7 @@ class RequestDeviceCubit extends Cubit<RequestDeviceState> {
         phone: phone,
         subject: subject,
         message: message,
-        section: section,
+        section: section.trim(),
       );
 
       emit(RequestDeviceSuccess('تم إرسال الطلب بنجاح'));

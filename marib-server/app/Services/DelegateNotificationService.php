@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\RequestDevice;
-use App\Models\UserFcmToken;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -96,19 +95,8 @@ class DelegateNotificationService
      */
     private function resolveDelegateTokens(string $department): array
     {
-        $delegateIds = $this->delegateAuthorizationService->getDelegatesForSection($department);
-
-        if ($delegateIds === []) {
-            return [];
-        }
-
-        return UserFcmToken::query()
-            ->whereIn('user_id', $delegateIds)
-            ->pluck('fcm_token')
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
+        return $this->delegateAuthorizationService
+            ->getDelegateNotificationTokensForSection($department);
     }
 
     private function resolveDepartmentLabel(string $department): string

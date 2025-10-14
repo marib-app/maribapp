@@ -25,6 +25,7 @@ use App\Services\DelegateAuthorizationService;
 use App\Services\NotificationService;
 use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Support\Facades\Route;
+use App\Services\DelegateNotificationService;
 
 use Throwable;
 
@@ -75,6 +76,7 @@ class OrderCheckoutService
         private readonly ItemPurchaseOptionsService $itemPurchaseOptionsService,
         private readonly DelegateAuthorizationService $delegateAuthorizationService,
         private readonly Translator $translator,
+        private readonly DelegateNotificationService $delegateNotificationService,
 
     ) {
     }
@@ -323,6 +325,7 @@ class OrderCheckoutService
 
             
             $order = $order->refreshOrderNumber();
+            $this->delegateNotificationService->notifyNewOrder($order);
 
             $this->db->afterCommit(function () use ($order) {
                 $this->notifyDelegatesAboutOrder($order);

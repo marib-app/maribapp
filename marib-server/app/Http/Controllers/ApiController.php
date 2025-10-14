@@ -52,6 +52,7 @@ use App\Models\ServiceRequest;
 use App\Models\ServiceReview;
 use App\Models\Setting;
 use Illuminate\Pagination\AbstractPaginator;
+use App\Services\DelegateNotificationService;
 use App\Models\Slider;
 use App\Models\SocialLogin;
 use App\Models\State;
@@ -337,8 +338,8 @@ class ApiController extends Controller {
 
         private WalletService $walletService,
         private MaribBoundaryService $maribBoundaryService,
-        private ReferralAuditLogger $referralAuditLogger
-
+        private ReferralAuditLogger $referralAuditLogger,
+        private DelegateNotificationService $delegateNotificationService
 
 
     ) {
@@ -392,67 +393,9 @@ class ApiController extends Controller {
 
 
 
-    private function notifyDelegatesAboutRequestDevice(RequestDevice $requestDevice): void
-    {
-        $section = $requestDevice->section ?: 'computer';
-
-        $tokens = $this->delegateAuthorizationService->getDelegateNotificationTokensForSection($section);
 
 
-        if ($tokens === []) {
-            return;
-        }
 
-        $departmentLabel = trans('departments.' . $section, [], 'ar');
-
-        if ($departmentLabel === 'departments.' . $section) {
-            $departmentLabel = $section;
-        }
-
-        $orderReference = '#' . $requestDevice->getKey();
-        $subject = trim((string) ($requestDevice->subject ?? ''));
-
-        $title = 'طلب شراء جديد يحتاج إلى مراجعة';
-        $body = sprintf(
-            'لديك طلب شراء في قسم %s رقم الطلب %s يحتاج إلى مراجعة.',
-            $departmentLabel,
-            $orderReference
-        );
-
-        if ($subject !== '') {
-            $body .= ' الموضوع: ' . $subject;
-        }
-
-        $deeplink = $this->resolveRequestDeviceManagementUrl($section, $requestDevice);
-
-        $payload = [
-            'type' => 'request_device',
-            'section' => $section,
-            'request_device_id' => $requestDevice->getKey(),
-            'order_reference' => $orderReference,
-            'subject' => $subject,
-            'phone' => $requestDevice->phone,
-            'deeplink' => $deeplink,
-            'click_action' => $deeplink,
-            'message_preview' => $body,
-        ];
-
-        NotificationService::sendFcmNotification($tokens, $title, $body, 'request_device', $payload);
-    }
-
-
-    private function resolveRequestDeviceManagementUrl(string $section, RequestDevice $requestDevice): ?string
-    {
-        try {
-            return match ($section) {
-                'shein' => route('item.shein.custom-orders.show', ['id' => $requestDevice->getKey()]),
-                'computer' => route('item.computer.custom-orders.show', ['id' => $requestDevice->getKey()]),
-                default => null,
-            };
-        } catch (Throwable) {
-            return null;
-        }
-    }
 
 
 
@@ -7991,7 +7934,7 @@ public function storeRequestDevice(Request $request)
 
 
     try {
-        $this->notifyDelegatesAboutRequestDevice($requestDevice);
+        $this->delegateNotificationService->notifyRequestDevice($requestDevice);
     } catch (Throwable $exception) {
         Log::warning('api.request_device.notification_failed', [
             'request_device_id' => $requestDevice->getKey(),

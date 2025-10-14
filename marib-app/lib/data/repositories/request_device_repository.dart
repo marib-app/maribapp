@@ -15,7 +15,7 @@ class RequestDeviceRepository {
     };
 
 
-    Map<String, dynamic> response = await Api.post(
+    final Map<String, dynamic> response = await Api.post(
       url: Api.requestDeviceApi,
       parameter: parameters,
       useBaseUrl: true,

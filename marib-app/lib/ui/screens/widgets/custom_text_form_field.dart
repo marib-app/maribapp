@@ -131,17 +131,19 @@ class CustomTextFormField extends StatelessWidget {
         }
 
         if (validator == CustomTextFieldValidator.minAndMixLen) {
-          if (isRequired == true && value == "") {
-            return Validator.nullCheckValidator(value, context: context);
+          final String text = value ?? '';
+
+          if (isRequired == true && text.isEmpty) {
+            return Validator.nullCheckValidator(text, context: context);
           }
 
           if (isRequired == true &&
-              (maxLength != null && value!.length > maxLength!)) {
+              (maxLength != null && text.length > maxLength!)) {
             return "${"youCanAdd".translate(context)} \t $maxLength \t ${"maximumNumbersOnly".translate(context)}";
           }
 
           if (isRequired == true &&
-              (minLength != null && value!.length < minLength!)) {
+              (minLength != null && text.length < minLength!)) {
             return "$minLength \t ${"numMinRequired".translate(context)}";
           }
           return null;

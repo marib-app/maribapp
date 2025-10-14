@@ -141,10 +141,11 @@ class ItemRepository {
     );
 
     final Iterable<Map<String, dynamic>> itemMaps =
-    ItemRepository.resolvePaginatedMapList(response);
+    ItemRepository._resolveItemsFromResponse(response);
 
     final List<ItemSummary> items =
     itemMaps.map(ItemSummary.fromJson).toList();
+
 
     final int total = ItemRepository.resolveTotalCount(
       response,
@@ -180,12 +181,19 @@ class ItemRepository {
         queryParameters: parameters, /*useAuthToken: true*/
       );
 
-      final List<ItemModel> itemList = (response['data']['data'] as List)
-          .map((element) => ItemModel.fromJson(element))
-          .toList();
+      final Iterable<Map<String, dynamic>> itemMaps =
+      ItemRepository._resolveItemsFromResponse(response);
+
+      final List<ItemModel> itemList =
+      itemMaps.map(ItemModel.fromJson).toList();
+
+      final int total = ItemRepository.resolveTotalCount(
+        response,
+        itemList.length,
+      );
 
       return DataOutput(
-        total: response['data']['total'] ?? 0,
+        total: total,
         modelList: itemList,
       );
     } catch (e) {
@@ -218,12 +226,19 @@ class ItemRepository {
         queryParameters: parameters, /*useAuthToken: true*/
       );
 
-      final List<ItemModel> itemList = (response['data']['data'] as List)
-          .map((element) => ItemModel.fromJson(element))
-          .toList();
+      final Iterable<Map<String, dynamic>> itemMaps =
+      ItemRepository._resolveItemsFromResponse(response);
+
+      final List<ItemModel> itemList =
+      itemMaps.map(ItemModel.fromJson).toList();
+
+      final int total = ItemRepository.resolveTotalCount(
+        response,
+        itemList.length,
+      );
 
       return DataOutput(
-        total: response['data']['total'] ?? 0,
+        total: total,
         modelList: itemList,
       );
     } catch (e) {
@@ -370,6 +385,61 @@ class ItemRepository {
 
     return const Iterable<Map<String, dynamic>>.empty();
   }
+
+  static Iterable<Map<String, dynamic>> _resolveItemsFromResponse(
+      Map<String, dynamic> response,
+      ) {
+    final Iterable<Map<String, dynamic>> dataItems =
+    _extractItemMapsFromSection(response['data']);
+    if (dataItems.isNotEmpty) {
+      return dataItems;
+    }
+
+    final Iterable<Map<String, dynamic>> fallback =
+    ItemRepository.resolvePaginatedMapList(response);
+    if (fallback.isNotEmpty) {
+      return fallback;
+    }
+
+    return const Iterable<Map<String, dynamic>>.empty();
+  }
+
+  static Iterable<Map<String, dynamic>> _extractItemMapsFromSection(
+      dynamic section,
+      ) {
+    if (section == null) {
+      return const Iterable<Map<String, dynamic>>.empty();
+    }
+
+    if (section is Iterable) {
+      return section.whereType<Map<String, dynamic>>();
+    }
+
+    if (section is Map<String, dynamic>) {
+      for (final String key in const <String>{'items', 'data', 'results', 'item'}) {
+        if (!section.containsKey(key)) {
+          continue;
+        }
+
+        final dynamic nested = section[key];
+
+        if (nested is Iterable) {
+          return nested.whereType<Map<String, dynamic>>();
+        }
+
+        if (nested is Map<String, dynamic>) {
+          return <Map<String, dynamic>>[nested];
+        }
+      }
+
+      if (section.containsKey('id')) {
+        return <Map<String, dynamic>>[section];
+      }
+    }
+
+    return const Iterable<Map<String, dynamic>>.empty();
+  }
+
 
   @visibleForTesting
   static int resolveTotalCount(
@@ -555,12 +625,19 @@ class ItemRepository {
     final Map<String, dynamic> response =
     await Api.get(url: Api.getItemApi, queryParameters: parameters);
 
-    final List<ItemModel> items = (response['data']['data'] as List)
-        .map((e) => ItemModel.fromJson(e))
-        .toList();
+    final Iterable<Map<String, dynamic>> itemMaps =
+    ItemRepository._resolveItemsFromResponse(response);
+
+    final List<ItemModel> items =
+    itemMaps.map(ItemModel.fromJson).toList();
+
+    final int total = ItemRepository.resolveTotalCount(
+      response,
+      items.length,
+    );
 
     return DataOutput(
-      total: response['data']['total'] ?? 0,
+      total: total,
       modelList: items,
     );
   }
@@ -689,12 +766,19 @@ class ItemRepository {
     final Map<String, dynamic> response =
     await Api.get(url: Api.getItemApi, queryParameters: parameters);
 
-    final List<ItemModel> items = (response['data']['data'] as List)
-        .map((e) => ItemModel.fromJson(e))
-        .toList();
+    final Iterable<Map<String, dynamic>> itemMaps =
+    ItemRepository._resolveItemsFromResponse(response);
+
+    final List<ItemModel> items =
+    itemMaps.map(ItemModel.fromJson).toList();
+
+    final int total = ItemRepository.resolveTotalCount(
+      response,
+      items.length,
+    );
 
     return DataOutput(
-      total: response['data']['total'] ?? 0,
+      total: total,
       modelList: items,
     );
   }

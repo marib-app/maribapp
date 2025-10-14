@@ -881,93 +881,108 @@ class UiUtils {
       return true;
     }());
 
-    final scheme = Theme.of(context).colorScheme;
+    final scheme = Theme
+        .of(context)
+        .colorScheme;
 
-    final bool isDisabled = (disabled ?? false) || (isInProgress == true);
-    final Color bg = isDisabled
-        ? (disabledColor ?? context.color.territoryColor)
-        : (buttonColor ?? context.color.territoryColor);
+    final bool blockInput = (disabled ?? false) || (isInProgress == true);
+    final Color baseButtonColor = buttonColor ?? context.color.territoryColor;
+    final Color disabledBackgroundColor =
+        disabledColor ?? UiUtils.makeColorLight(baseButtonColor);
+    final Color backgroundColor =
+    blockInput ? disabledBackgroundColor : baseButtonColor;
 
     // لون النص/الأيقونات/السبينر
-    final Color fg = textColor ?? scheme.onPrimary;
+    final Color defaultForeground = textColor ?? scheme.onPrimary;
+    final Color disabledForeground = textColor != null
+        ? UiUtils.makeColorLight(textColor!)
+        : UiUtils.makeColorDark(disabledBackgroundColor);
+    final Color contentColor =
+    blockInput ? disabledForeground : defaultForeground;
 
     final String title =
     (isInProgress == true) ? (titleWhenProgress ?? buttonTitle) : buttonTitle;
 
-    Widget buildText(String t, Color c) => Flexible(
-      child: Text(
-        t,
-        overflow: TextOverflow.ellipsis,
-        softWrap: true,
-        textAlign: TextAlign.center,
-      ).color(c).size(fontSize ?? context.font.larger),
-    );
+    Widget buildText(String t, Color c) =>
+        Flexible(
+          child: Text(
+            t,
+            overflow: TextOverflow.ellipsis,
+            softWrap: true,
+            textAlign: TextAlign.center,
+          ).color(c).size(fontSize ?? context.font.larger),
+        );
 
     return Padding(
       padding: outerPadding ?? EdgeInsets.zero,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          elevation: (showElevation ?? true) ? 1 : 0,
-          backgroundColor: bg,
-          foregroundColor: fg,
-          disabledBackgroundColor:
-          disabledColor ?? context.color.territoryColor,
-          minimumSize: Size(
-            autoWidth == true ? 0 : (width ?? double.infinity),
-            height ?? 56.rh(context),
-          ),
-          padding:
-          padding ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radius ?? 16),
-            side: border ?? BorderSide.none,
-          ),
-        ),
-        onPressed: isDisabled
-            ? () {
-          if (disabled == true) onTapDisabledButton?.call();
-        }
-            : () {
-          HelperUtils.unfocus();
-          onPressed.call();
-        },
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 250),
-          transitionBuilder: (child, anim) =>
-              FadeTransition(opacity: anim, child: child),
-          child: Row(
-            key: ValueKey("$isInProgress-$isSuccess-$isError-$title"),
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (isInProgress == true)
-                UiUtils.progress(
-                  width: progressWidth ?? 18,
-                  height: progressHeight ?? 18,
-                  showWhite: fg.computeLuminance() < 0.5,
-                ),
-
-              if (isSuccess == true)
-                Icon(Icons.check_circle, color: fg, size: 22),
-
-              if (isError == true)
-                Icon(Icons.error_outline, color: fg, size: 22),
-
-              if ((isInProgress == true || isSuccess == true || isError == true))
-                const SizedBox(width: 8),
-
-              if (isInProgress == true && (showProgressTitle ?? false))
-                buildText(title, fg),
-
-              if (isInProgress != true && isSuccess != true && isError != true) ...[
-                if (prefixWidget != null) ...[
-                  IconTheme.merge(
-                      data: IconThemeData(color: fg), child: prefixWidget),
-                  const SizedBox(width: 8),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: (blockInput && disabled == true) ? onTapDisabledButton : null,
+        child: IgnorePointer(
+          ignoring: blockInput,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              elevation: (showElevation ?? true) ? 1 : 0,
+              backgroundColor: backgroundColor,
+              foregroundColor: defaultForeground,
+              disabledBackgroundColor: disabledBackgroundColor,
+              disabledForegroundColor: disabledForeground,
+              minimumSize: Size(
+                autoWidth == true ? 0 : (width ?? double.infinity),
+                height ?? 56.rh(context),
+              ),
+              padding: padding ??
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(radius ?? 16),
+                side: border ?? BorderSide.none,
+              ),
+            ),
+            onPressed: blockInput
+                ? null
+                : () {
+              HelperUtils.unfocus();
+              onPressed.call();
+            },
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              transitionBuilder: (child, anim) =>
+                  FadeTransition(opacity: anim, child: child),
+              child: Row(
+                key: ValueKey("$isInProgress-$isSuccess-$isError-$title"),
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (isInProgress == true)
+                    UiUtils.progress(
+                      width: progressWidth ?? 18,
+                      height: progressHeight ?? 18,
+                      showWhite: contentColor.computeLuminance() < 0.5,
+                    ),
+                  if (isSuccess == true)
+                    Icon(Icons.check_circle, color: contentColor, size: 22),
+                  if (isError == true)
+                    Icon(Icons.error_outline, color: contentColor, size: 22),
+                  if (isInProgress == true || isSuccess == true ||
+                      isError == true)
+                    const SizedBox(width: 8),
+                  if (isInProgress == true && (showProgressTitle ?? false))
+                    buildText(title, contentColor),
+                  if (isInProgress != true &&
+                      isSuccess != true &&
+                      isError != true) ...[
+                    if (prefixWidget != null) ...[
+                      IconTheme.merge(
+                        data: IconThemeData(color: contentColor),
+                        child: prefixWidget!,
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    buildText(title, contentColor),
+                  ],
                 ],
-                buildText(title, fg),
-              ],
-            ],
+              ),
+            ),
           ),
         ),
       ),
@@ -1156,7 +1171,7 @@ class UiUtils {
 
 
 // وظيفتها عرض نافذة حوار (Dialog) مع تأثير ضبابي (Blur) خلفها،
-  
+
   static Future showBlurredDialoge(
       BuildContext context, {
         required BlurDialoge dialoge,

@@ -900,6 +900,10 @@ class UiUtils {
     final Color contentColor =
     blockInput ? disabledForeground : defaultForeground;
 
+    final bool useWhiteProgress =
+        backgroundColor.computeLuminance() < 0.5;
+    final Color progressColor =
+    useWhiteProgress ? Colors.white : contentColor;
     final String title =
     (isInProgress == true) ? (titleWhenProgress ?? buttonTitle) : buttonTitle;
 
@@ -957,7 +961,9 @@ class UiUtils {
                     UiUtils.progress(
                       width: progressWidth ?? 18,
                       height: progressHeight ?? 18,
-                      showWhite: contentColor.computeLuminance() < 0.5,
+                      showWhite: useWhiteProgress,
+                      normalProgressColor: progressColor,
+
                     ),
                   if (isSuccess == true)
                     Icon(Icons.check_circle, color: contentColor, size: 22),

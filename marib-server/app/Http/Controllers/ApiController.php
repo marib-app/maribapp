@@ -396,19 +396,8 @@ class ApiController extends Controller {
     {
         $section = $requestDevice->section ?: 'computer';
 
-        $delegateIds = $this->delegateAuthorizationService->getDelegatesForSection($section);
+        $tokens = $this->delegateAuthorizationService->getDelegateNotificationTokensForSection($section);
 
-        if ($delegateIds === []) {
-            return;
-        }
-
-        $tokens = UserFcmToken::query()
-            ->whereIn('user_id', $delegateIds)
-            ->pluck('fcm_token')
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
 
         if ($tokens === []) {
             return;

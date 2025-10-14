@@ -4,10 +4,12 @@ namespace App\Services;
 
 use App\Models\DepartmentDelegate;
 use Illuminate\Support\Arr;
+use App\Models\User;
+use App\Models\UserFcmToken;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use App\Models\User;
-use Illuminate\Support\Carbon;
+
 
 class DelegateAuthorizationService
 {
@@ -35,6 +37,22 @@ class DelegateAuthorizationService
     }
 
 
+    public function getDelegateNotificationTokensForSection(string $section): array
+    {
+        $delegateIds = $this->getDelegatesForSection($section);
+
+        if ($delegateIds === []) {
+            return [];
+        }
+
+        return UserFcmToken::query()
+            ->whereIn('user_id', $delegateIds)
+            ->pluck('fcm_token')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
 
 
     public function getSectionState(string $section): array

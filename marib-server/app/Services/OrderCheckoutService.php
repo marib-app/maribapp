@@ -21,7 +21,10 @@ use App\Support\OrderNumberGenerator;
 use App\Support\DepositCalculator;
 use App\Services\LegalNumberingService;
 use App\Services\ItemPurchaseOptionsService;
-
+use App\Services\DelegateAuthorizationService;
+use App\Services\NotificationService;
+use Illuminate\Contracts\Translation\Translator;
+use Illuminate\Support\Facades\Route;
 
 use Throwable;
 
@@ -70,7 +73,8 @@ class OrderCheckoutService
         private readonly TelemetryService $telemetry,
         private readonly LegalNumberingService $legalNumbering,
         private readonly ItemPurchaseOptionsService $itemPurchaseOptionsService,
-
+        private readonly DelegateAuthorizationService $delegateAuthorizationService,
+        private readonly Translator $translator,
 
     ) {
     }
@@ -320,7 +324,9 @@ class OrderCheckoutService
             
             $order = $order->refreshOrderNumber();
 
-
+            $this->db->afterCommit(function () use ($order) {
+                $this->notifyDelegatesAboutOrder($order);
+            });
 
 
             if ($coupon) {
@@ -404,6 +410,52 @@ class OrderCheckoutService
     }
 
 
+    private function notifyDelegatesAboutOrder(Order $order): void
+    {
+        $department = (string) ($order->department ?? '');
+
+        if ($department === '') {
+            return;
+        }
+
+        $tokens = $this->delegateAuthorizationService->getDelegateNotificationTokensForSection($department);
+
+        if ($tokens === []) {
+            return;
+        }
+
+        $departmentLabel = $this->translator->get('departments.' . $department, [], 'ar');
+
+        if (! is_string($departmentLabel) || $departmentLabel === '' || $departmentLabel === 'departments.' . $department) {
+            $departmentLabel = $department;
+        }
+
+        $orderReference = $order->order_number ?: ('#' . $order->getKey());
+
+        $title = 'طلب شراء جديد قيد المعالجة';
+        $body = sprintf(
+            'تم استلام طلب جديد في قسم %s رقم الطلب %s. يرجى مراجعته.',
+            $departmentLabel,
+            $orderReference
+        );
+
+        $deeplink = Route::has('orders.show')
+            ? route('orders.show', ['order' => $order->getKey()])
+            : null;
+
+        $payload = [
+            'type' => 'order',
+            'order_id' => $order->getKey(),
+            'order_number' => $orderReference,
+            'department' => $department,
+            'department_label' => $departmentLabel,
+            'deeplink' => $deeplink,
+            'click_action' => $deeplink,
+            'message_preview' => $body,
+        ];
+
+        NotificationService::sendFcmNotification($tokens, $title, $body, 'order', $payload);
+    }
 
 
 

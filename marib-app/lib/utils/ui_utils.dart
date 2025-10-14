@@ -479,36 +479,36 @@ class UiUtils {
                       child: DefaultTextStyle(
                         style: defaultTitleStyle,
                         child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                        ConstrainedBox(
-                        constraints:
-                        BoxConstraints(minHeight: toolbarHeight),
-                        child: Padding(
-                          padding: resolvedPadding,
-                          child: NavigationToolbar(
-                            leading: resolvedLeading != null
-                                ? Padding(
-                              padding:
-                              const EdgeInsetsDirectional.only(
-                                end: 12,
-                              ),
-                              child: resolvedLeading,
-                            )
-                                : null,
-                            middle: resolvedTitleWidget,
-                            trailing: trailingActions != null
-                                ? Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: trailingActions,
-                            )
-                                : null,
-                            centerMiddle: centerTitle,
-                          ),
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                          SizedBox(
+                          height: toolbarHeight,
+                          child: Padding(
+                            padding: resolvedPadding,
+                            child: NavigationToolbar(
+                              leading: resolvedLeading != null
+                                  ? Padding(
+                                padding:
+                                const EdgeInsetsDirectional.only(
+                                  end: 12,
+                                ),
+                                child: resolvedLeading,
+                              )
+                                  : null,
+                              middle: resolvedTitleWidget,
+                              trailing: trailingActions != null
+                                  ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: trailingActions,
+                              )
+                                  : null,
+                              centerMiddle: centerTitle,
                             ),
-                          ),
-                              if (hasBottom) ...bottom!,
-                            ],
+                              ),
+
+                            ),
+                            if (hasBottom) ...bottom!,
+                          ],
                         ),
                     ),
                   ),

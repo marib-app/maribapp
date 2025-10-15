@@ -1,19 +1,9 @@
-import 'package:flutter/material.dart';
-
-import 'ad_creation_wizard_models.dart';
+part of 'ad_creation_wizard_screen.dart';
 
 
-class ReviewStep extends StatelessWidget {
-  const ReviewStep({
-    super.key,
-    required this.controller,
-  });
 
-  final AdCreationWizardController controller;
-
-
-  @override
-  Widget build(BuildContext context) {
+extension _ReviewStepBuilder on _AdCreationWizardScreenState {
+  Widget _buildReviewStep() {
     final ThemeData theme = Theme.of(context);
     final ColorScheme colors = theme.colorScheme;
 
@@ -22,17 +12,23 @@ class ReviewStep extends StatelessWidget {
       return trimmed.isEmpty ? placeholder : trimmed;
     }
 
-    final List<PendingMedia> images = controller.mediaFiles
-        .where((PendingMedia media) => media.isImage)
-        .toList(growable: false);
-    final List<PendingMedia> videos = controller.mediaFiles
-        .where((PendingMedia media) => media.isVideo)
-        .toList(growable: false);
-    final bool isShein = controller.isSheinInterface;
-    final String currencyLabel = controller.currencyLabel;
-    final Map<String, dynamic>? locationSummary = controller.locationSummary;
-    final List<InventoryVariation> inventorySummary =
-    controller.inventoryVariations.toList(growable: false);
+    final List<_PendingMedia> images =
+    _mediaFiles.where((media) => media.isImage).toList(growable: false);
+    final List<_PendingMedia> videos =
+    _mediaFiles.where((media) => media.isVideo).toList(growable: false);
+    final bool isShein = _isSheinInterface;
+    final String currencyLabel = _currencyLabel;
+    final _MainCategoryOption? mainCategory = _selectedMainCategory;
+    final _SubCategoryOption? subCategory = _selectedSubCategory;
+    final List<_InventoryVariation> inventorySummary =
+    _inventoryVariations.toList(growable: false);
+
+    final String locationAddress = _locationAddressController.text.trim();
+    final String locationLatitude = _locationLatitudeController.text.trim();
+    final String locationLongitude = _locationLongitudeController.text.trim();
+    final bool hasLocationSummary = locationAddress.isNotEmpty ||
+        locationLatitude.isNotEmpty ||
+        locationLongitude.isNotEmpty;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -51,33 +47,33 @@ class ReviewStep extends StatelessWidget {
                 Text('ملخص الإعلان', style: theme.textTheme.titleLarge),
                 const SizedBox(height: 8),
                 Text(
-                  'العنوان: ${displayValue(controller.titleController.text)}',
+                  'العنوان: ${displayValue(_titleController.text)}',
                   style: theme.textTheme.bodyMedium,
                 ),
                 Text(
-                  'الفئة الرئيسية: ${controller.selectedMainCategory?.name ?? 'غير محدد'}',
+                  'الفئة الرئيسية: ${mainCategory?.name ?? 'غير محدد'}',
                   style: theme.textTheme.bodyMedium,
                 ),
                 Text(
-                  'الفئة الفرعية: ${controller.selectedSubCategory?.name ?? 'غير محدد'}',
+                  'الفئة الفرعية: ${subCategory?.name ?? 'غير محدد'}',
                   style: theme.textTheme.bodyMedium,
                 ),
                 Text(
-                  'السعر: ${displayValue(controller.priceController.text)} $currencyLabel',
+                  'السعر: ${displayValue(_priceController.text)} $currencyLabel',
                   style: theme.textTheme.bodyMedium,
                 ),
                 Text(
-                  'رقم التواصل: ${displayValue(controller.contactController.text)}',
+                  'رقم التواصل: ${displayValue(_contactController.text)}',
                   style: theme.textTheme.bodyMedium,
                 ),
                 if (isShein) ...<Widget>[
                   const SizedBox(height: 12),
                   Text('معلومات شي إن', style: theme.textTheme.titleMedium),
                   Text(
-                    'رابط المنتج: ${displayValue(controller.sheinProductLinkController.text, 'غير متوفر')}',
+                    'رابط المنتج: ${displayValue(_sheinProductLinkController.text, 'غير متوفر')}',
                   ),
                   Text(
-                    'رابط المراجعة: ${displayValue(controller.sheinReviewLinkController.text, 'غير متوفر')}',
+                    'رابط المراجعة: ${displayValue(_sheinReviewLinkController.text, 'غير متوفر')}',
                   ),
                 ],
               ],
@@ -94,17 +90,19 @@ class ReviewStep extends StatelessWidget {
               children: <Widget>[
                 Text('الوسائط المرفقة', style: theme.textTheme.titleMedium),
                 const SizedBox(height: 12),
-                if (images.isEmpty && videos.isEmpty && controller.videoLinks.isEmpty)
-                  Text('لم يتم إضافة وسائط بعد.', style: theme.textTheme.bodySmall)
+                if (images.isEmpty && videos.isEmpty && _videoLinks.isEmpty)
+                  Text('لم يتم إضافة وسائط بعد.',
+                      style: theme.textTheme.bodySmall)
                 else ...<Widget>[
                   if (images.isNotEmpty) ...<Widget>[
-                    Text('الصور (${images.length})', style: theme.textTheme.bodySmall),
+                    Text('الصور (${images.length})',
+                        style: theme.textTheme.bodySmall),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: <Widget>[
-                        for (final PendingMedia media in images)
+                        for (final _PendingMedia media in images)
                           Chip(
                             label: SizedBox(
                               width: 180,
@@ -119,13 +117,14 @@ class ReviewStep extends StatelessWidget {
                     const SizedBox(height: 8),
                   ],
                   if (videos.isNotEmpty) ...<Widget>[
-                    Text('الملفات المرئية (${videos.length})', style: theme.textTheme.bodySmall),
+                    Text('الملفات المرئية (${videos.length})',
+                        style: theme.textTheme.bodySmall),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: <Widget>[
-                        for (final PendingMedia media in videos)
+                        for (final _PendingMedia media in videos)
                           Chip(
                             label: SizedBox(
                               width: 180,
@@ -139,15 +138,15 @@ class ReviewStep extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                   ],
-                  if (controller.videoLinks.isNotEmpty) ...<Widget>[
-                    Text('روابط الفيديو (${controller.videoLinks.length})',
+                  if (_videoLinks.isNotEmpty) ...<Widget>[
+                    Text('روابط الفيديو (${_videoLinks.length})',
                         style: theme.textTheme.bodySmall),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: <Widget>[
-                        for (final String link in controller.videoLinks)
+                        for (final String link in _videoLinks)
                           Chip(
                             avatar: const Icon(Icons.link, size: 16),
                             label: SizedBox(
@@ -166,11 +165,11 @@ class ReviewStep extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 16),
-        if (locationSummary != null)
+    if (hasLocationSummary) ...<Widget>[
+    const SizedBox(height: 16),
           Card(
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+    shape:
+    RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -179,19 +178,20 @@ class ReviewStep extends StatelessWidget {
 
                   Text('موقع الإعلان', style: theme.textTheme.titleMedium),
                   const SizedBox(height: 8),
-                  Text('العنوان: ${locationSummary['address']}'),
-                  Text('خط العرض: ${locationSummary['latitude']}'),
-                  Text('خط الطول: ${locationSummary['longitude']}'),
+    Text('العنوان: ${displayValue(locationAddress)}'),
+    Text('خط العرض: ${displayValue(locationLatitude)}'),
+    Text('خط الطول: ${displayValue(locationLongitude)}'),
                 ],
               ),
             ),
           ),
+    ],
         if (inventorySummary.isNotEmpty) ...<Widget>[
 
           const SizedBox(height: 16),
           Card(
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+            shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -200,7 +200,7 @@ class ReviewStep extends StatelessWidget {
 
                   Text('تنويعات المخزون', style: theme.textTheme.titleMedium),
                   const SizedBox(height: 12),
-                  for (final InventoryVariation variation in inventorySummary)
+                  for (final _InventoryVariation variation in inventorySummary)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Column(

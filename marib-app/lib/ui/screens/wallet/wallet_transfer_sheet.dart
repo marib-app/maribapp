@@ -13,6 +13,7 @@ import 'package:marib/utils/currency_utils.dart';
 import 'package:marib/data/model/wallet/wallet_summary.dart';
 import 'package:marib/data/model/wallet/wallet_summary.dart';
 import 'package:marib/data/cubits/wallet/wallet_summary_cubit.dart';
+import 'package:bloc/bloc.dart';
 
 class WalletTransferSheet extends StatefulWidget {
   const WalletTransferSheet({

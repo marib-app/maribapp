@@ -62,8 +62,7 @@ extension _SubCategoryStepView on _AdCreationWizardScreenState {
       topEnd: Radius.circular(16),
       bottomEnd: Radius.circular(16),
     ).resolve(Directionality.of(context));
-    final BorderRadius radius = BorderRadius.circular(16);
-    final String? imageUrl = category.imageUrl?.trim();
+
 
     Widget buildThumbnail() {
       final String? imageUrl = category.imageUrl?.trim();
@@ -111,24 +110,26 @@ extension _SubCategoryStepView on _AdCreationWizardScreenState {
           child: Ink(
             decoration: BoxDecoration(
               borderRadius: radius,
-              color:
-              isSelected ? colors.secondaryContainer : colors.surface,
+              color: isSelected ? colors.secondaryContainer : colors.surface,
+
               border: Border.all(
-                color:
-                isSelected ? colors.secondary : colors.outlineVariant,
+                color: isSelected ? colors.secondary : colors.outlineVariant,
+
                 width: isSelected ? 2 : 1,
-                boxShadow: <BoxShadow>[
-                  BoxShadow(
-                    color: colors.shadow.withOpacity(0.08),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
+
               ),
-              child: SizedBox(
-                height: cardHeight,
-                child: Row(
-                  textDirection: TextDirection.rtl,
+              boxShadow: <BoxShadow>[
+                BoxShadow(
+                  color: colors.shadow.withOpacity(0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: SizedBox(
+              height: cardHeight,
+              child: Row(
+                textDirection: TextDirection.rtl,
                 children: <Widget>[
                   ClipRRect(
                     borderRadius: imageRadius,

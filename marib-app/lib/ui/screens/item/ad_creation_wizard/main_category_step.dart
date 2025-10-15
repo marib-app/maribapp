@@ -51,7 +51,8 @@ extension _MainCategoryStepView on _AdCreationWizardScreenState {
     final bool isSelected = _selectedMainCategory?.id == category.id;
     final String interfaceLabel = _interfaceDisplayName(category.interfaceType);
     final bool isPressed = _pressedMainCategoryId == category.id;
-    const double cardHeight = 104;
+    const double cardHeight = 82;
+    const double thumbnailSize = 64;
     final BorderRadius radius = BorderRadius.circular(16);
     final BorderRadius imageRadius = const BorderRadiusDirectional.only(
       topStart: Radius.circular(16),
@@ -64,13 +65,13 @@ extension _MainCategoryStepView on _AdCreationWizardScreenState {
       if (imageUrl != null && imageUrl.isNotEmpty) {
         return LazyNetworkImage(
           imageUrl: imageUrl,
-          height: cardHeight,
+          height: double.infinity,
           width: double.infinity,
           fit: BoxFit.cover,
         );
       }
       return Container(
-        height: cardHeight,
+        height: double.infinity,
         width: double.infinity,
         color: colors.surfaceVariant,
         alignment: Alignment.center,
@@ -103,37 +104,30 @@ extension _MainCategoryStepView on _AdCreationWizardScreenState {
             onTap: () => _onMainCategorySelected(category),
             child: Ink(
               decoration: BoxDecoration(
-              borderRadius: radius,
-                color: isSelected ? colors.primaryContainer : colors.surface,
-                border: Border.all(
-                  color: isSelected ? colors.primary : colors.outlineVariant,
-                  width: isSelected ? 2 : 1,
-              ),
-                boxShadow: <BoxShadow>[
-                  BoxShadow(
-                    color: colors.shadow.withOpacity(0.08),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
+                borderRadius: radius,
+                color: isSelected
+                    ? colors.territoryColor.withOpacity(0.12)
+                    : colors.secondaryColor,
+                border: Border.all(color: colors.borderColor),
               ),
               child: SizedBox(
                 height: cardHeight,
                 child: Row(
                   textDirection: TextDirection.rtl,
-                children: <Widget>[
+                  children: <Widget>[
                   ClipRRect(
-                    borderRadius: imageRadius,
-                    child: SizedBox(
-                      width: 104,
-                      child: buildThumbnail(),
-                    ),
+                  borderRadius: imageRadius,
+                  child: SizedBox.square(
+                    dimension: thumbnailSize,
+                    child: buildThumbnail(),
+                  ),
+
                   ),
                   Expanded(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
+                          horizontal: 14,
+                          vertical: 12,
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -143,42 +137,44 @@ extension _MainCategoryStepView on _AdCreationWizardScreenState {
                         textDirection: TextDirection.rtl,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            Expanded(
-                              child: Text(
-                                category.name,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: isSelected
-                                      ? colors.onPrimaryContainer
-                                      : colors.onSurface,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Icon(
-                              Icons.chevron_left,
-                              color: isSelected
-                                  ? colors.onPrimaryContainer
-                                  : colors.onSurfaceVariant,
-                              size: 20,
-                            ),
-                          ],
+                        Expanded(
+                        child: Text(
+                          category.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: isSelected
+                                ? colors.onPrimaryContainer
+                                : colors.onSurface,
                           ),
+                        ),
+                      ),
+                    const SizedBox(width: 8),
+                    Icon(
+                      Icons.chevron_left,
+                      color: isSelected
+                          ? colors.onPrimaryContainer
+                          : colors.onSurfaceVariant,
+                      size: 20,
+                    ),
+                          ],
+                            ),
+
                             const SizedBox(height: 6),
 
-                          Text(
-                            interfaceLabel,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: isSelected
-                                  ? colors.onPrimaryContainer.withOpacity(0.85)
-
-                                  : colors.onSurfaceVariant,
-                            ),
+                        Text(
+                          interfaceLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: isSelected
+                                ? colors.onPrimaryContainer
+                                .withOpacity(0.85)
+                                : colors.onSurfaceVariant,
                           ),
+                            ),
+
                             if (category.subCategories.isNotEmpty) ...<Widget>[
                               const SizedBox(height: 6),
                               Text(
@@ -195,13 +191,13 @@ extension _MainCategoryStepView on _AdCreationWizardScreenState {
                         ),
                     ),
                   ),
-
-                ],
+                  ],
+                ),
               ),
             ),
             ),
         ),
-      ),
+
     );
   }
 

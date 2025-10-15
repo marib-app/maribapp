@@ -56,7 +56,8 @@ extension _SubCategoryStepView on _AdCreationWizardScreenState {
     final ColorScheme colors = theme.colorScheme;
     final bool isSelected = _selectedSubCategory?.id == category.id;
     final bool isPressed = _pressedSubCategoryId == category.id;
-    const double cardHeight = 104;
+    const double cardHeight = 82;
+    const double thumbnailSize = 64;
     final BorderRadius radius = BorderRadius.circular(16);
     final BorderRadius imageRadius = const BorderRadiusDirectional.only(
       topStart: Radius.circular(16),
@@ -70,13 +71,13 @@ extension _SubCategoryStepView on _AdCreationWizardScreenState {
       if (imageUrl != null && imageUrl.isNotEmpty) {
         return LazyNetworkImage(
           imageUrl: imageUrl,
-          height: cardHeight,
+          height: double.infinity,
           width: double.infinity,
           fit: BoxFit.cover,
         );
       }
       return Container(
-        height: cardHeight,
+        height: double.infinity,
         width: double.infinity,
         color: colors.surfaceVariant,
         alignment: Alignment.center,
@@ -110,21 +111,10 @@ extension _SubCategoryStepView on _AdCreationWizardScreenState {
           child: Ink(
             decoration: BoxDecoration(
               borderRadius: radius,
-              color: isSelected ? colors.secondaryContainer : colors.surface,
-
-              border: Border.all(
-                color: isSelected ? colors.secondary : colors.outlineVariant,
-
-                width: isSelected ? 2 : 1,
-
-              ),
-              boxShadow: <BoxShadow>[
-                BoxShadow(
-                  color: colors.shadow.withOpacity(0.08),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
-                ),
-              ],
+              color: isSelected
+                  ? colors.territoryColor.withOpacity(0.12)
+                  : colors.secondaryColor,
+              border: Border.all(color: colors.borderColor),
             ),
             child: SizedBox(
               height: cardHeight,
@@ -133,16 +123,16 @@ extension _SubCategoryStepView on _AdCreationWizardScreenState {
                 children: <Widget>[
                   ClipRRect(
                     borderRadius: imageRadius,
-                    child: SizedBox(
-                      width: 104,
+                    child: SizedBox.square(
+                      dimension: thumbnailSize,
                       child: buildThumbnail(),
                     ),
                   ),
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
+                        horizontal: 14,
+                        vertical: 12,
                       ),
                       child: Row(
                         textDirection: TextDirection.rtl,

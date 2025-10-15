@@ -31,6 +31,10 @@ class WalletWithdrawalRequestResource extends JsonResource
         }
 
         $transaction = $this->transaction;
+        $currency = $this->account?->currency
+            ?? $transaction?->currency
+            ?? config('app.currency', 'SAR');
+
 
         return [
             'id' => $this->id,
@@ -39,7 +43,7 @@ class WalletWithdrawalRequestResource extends JsonResource
                 ? $this->statusLabel()
                 : $this->status,
             'amount' => isset($this->amount) ? (float) $this->amount : 0.0,
-            'currency' => strtoupper(config('app.currency', 'SAR')),
+            'currency' => strtoupper((string) $currency),
             'method' => array_filter($method, static fn ($value) => $value !== null && $value !== ''),
             'notes' => $this->notes,
             'meta' => $this->meta ?? [],

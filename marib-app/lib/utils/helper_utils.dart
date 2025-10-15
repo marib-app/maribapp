@@ -59,28 +59,89 @@ class HelperUtils {
       return '';
     }
 
-    if (value.startsWith('http://') || value.startsWith('https://')) {
+    final Uri? parsed = Uri.tryParse(value);
+    final bool hasScheme = parsed?.hasScheme ?? false;
+    if (hasScheme) {
+
       return value;
     }
+
+
+    final Uri? hostOrigin = _resolveHostOrigin();
+
+    if (value.startsWith('//')) {
+      if (hostOrigin != null) {
+        return '${hostOrigin.scheme}:$value';
+      }
+      return 'https:$value';
+    }
+
+    final bool isStoragePath =
+        value.startsWith('storage/') || value.startsWith('/storage/');
+    final bool isRelativePath = !hasScheme;
+
+    if (hostOrigin != null && (isStoragePath || isRelativePath)) {
+      return hostOrigin.resolve(value).toString();
+    }
+
+
 
     final String base = Constant.baseUrl;
     if (base.isEmpty) {
       return value;
     }
 
-    final bool baseEndsWithSlash = base.endsWith('/');
-    final bool pathStartsWithSlash = value.startsWith('/');
+    final Uri? fallbackBase = Uri.tryParse(base);
+    if (fallbackBase != null && fallbackBase.hasAuthority && fallbackBase.hasScheme) {
+      final Uri normalized = fallbackBase.replace(path: '/', query: null, fragment: null);
+      return normalized.resolve(value).toString();
+    }
 
-    if (baseEndsWithSlash && pathStartsWithSlash) {
+
+    if (base.endsWith('/') && value.startsWith('/')) {
       return base.substring(0, base.length - 1) + value;
     }
 
-    if (!baseEndsWithSlash && !pathStartsWithSlash) {
+    if (!base.endsWith('/') && !value.startsWith('/')) {
+
       return '$base/$value';
     }
 
     return '$base$value';
   }
+
+  static Uri? _resolveHostOrigin() {
+    Uri? parseAndNormalize(String? candidate) {
+      final String raw = (candidate ?? '').trim();
+      if (raw.isEmpty) {
+        return null;
+      }
+
+      final Uri? uri = Uri.tryParse(raw);
+      if (uri == null || !uri.hasScheme || !uri.hasAuthority) {
+        return null;
+      }
+
+      if (uri.scheme != 'http' && uri.scheme != 'https') {
+        return null;
+      }
+
+      return uri.replace(path: '/', query: null, fragment: null);
+    }
+
+    final Uri? host = parseAndNormalize(AppSettings.hostUrl);
+    if (host != null) {
+      return host;
+    }
+
+    final Uri? base = parseAndNormalize(Constant.baseUrl);
+    if (base != null) {
+      return base;
+    }
+
+    return null;
+  }
+
 
 
   static String formatPhoneNumber(String fullNumber, String countryCode) {

@@ -3695,7 +3695,7 @@ class ApiController extends Controller {
             );
 
             $query = WalletWithdrawalRequest::query()
-                ->with('transaction')
+                ->with(['transaction', 'account'])
                 ->where('wallet_account_id', $walletAccount->getKey())
                 ->latest('created_at');
 

@@ -209,22 +209,26 @@ class LoginScreenState extends State<LoginScreen> {
       simCode = await DeviceRegion.getSIMCountryCode();
     } catch (_) {}
 
-    Country simCountry = list.firstWhere(
-          (e) =>
-      Constant.isDemoModeOn
-          ? list.any((x) => x.phoneCode == Constant.defaultCountryCode)
-          : e.phoneCode == simCode,
-      orElse: () =>
-      list
-          .where((e) => e.phoneCode == Constant.defaultCountryCode)
-          .first,
+    final normalizedSimCode = simCode?.toUpperCase();
+    final Country fallback = list.firstWhere(
+          (e) => e.phoneCode == Constant.defaultCountryCode,
+      orElse: () => list.first,
     );
 
+    Country simCountry = fallback;
+
+    if (normalizedSimCode != null && normalizedSimCode.isNotEmpty) {
+      simCountry = list.firstWhere(
+            (e) => e.countryCode.toUpperCase() == normalizedSimCode,
+        orElse: () => fallback,
+      );
+    }
+
     if (Constant.isDemoModeOn) {
-      simCountry =
-          list
-              .where((e) => e.phoneCode == Constant.demoCountryCode)
-              .first;
+      return list.firstWhere(
+            (e) => e.phoneCode == Constant.demoCountryCode,
+        orElse: () => fallback,
+      );
     }
     return simCountry;
   }

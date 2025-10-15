@@ -65,6 +65,21 @@ extension _SubCategoryStepView on _AdCreationWizardScreenState {
     ).resolve(Directionality.of(context));
 
 
+    Widget buildCategoryFallback() {
+      return Container(
+        height: double.infinity,
+        width: double.infinity,
+        color: colors.territoryColor.withOpacity(0.12),
+        alignment: Alignment.center,
+        child: Icon(
+          Icons.category,
+          color: colors.onSurfaceVariant,
+          size: 32,
+        ),
+      );
+    }
+
+
     Widget buildThumbnail() {
       final String? imageUrl = category.imageUrl?.trim();
 
@@ -74,6 +89,8 @@ extension _SubCategoryStepView on _AdCreationWizardScreenState {
           height: double.infinity,
           width: double.infinity,
           fit: BoxFit.cover,
+          placeholder: buildCategoryFallback(),
+          errorWidget: buildCategoryFallback(),
         );
       }
       return Container(

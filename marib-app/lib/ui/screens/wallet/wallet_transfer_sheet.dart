@@ -173,7 +173,7 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
     }
 
     final WalletSummaryCubit? summaryCubit =
-    BlocProvider.maybeOf<WalletSummaryCubit>(context);
+    _maybeReadCubit<WalletSummaryCubit>(context);
     final WalletSummaryState? summaryState = summaryCubit?.state;
 
     WalletSummary? summary;
@@ -207,6 +207,13 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
     return null;
   }
 
+  T? _maybeReadCubit<T>(BuildContext context) {
+    try {
+      return BlocProvider.of<T>(context, listen: false);
+    } catch (_) {
+      return null;
+    }
+  }
 
   bool _validateAmount(double? amount) {
     if (amount == null) {

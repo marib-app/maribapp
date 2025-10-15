@@ -22,7 +22,7 @@ class WalletTransactionResource extends JsonResource
             'amount' => $amount,
             'balance_before' => $balanceBefore,
             'balance_after' => $balanceAfter,
-            'currency' => strtoupper(config('app.currency', 'SAR')),
+            'currency' => $this->resolveCurrency(),
             'reason' => data_get($this->meta, 'reason'),
             'meta' => $this->meta ?? [],
             'manual_payment_request_id' => $this->manual_payment_request_id,
@@ -57,5 +57,21 @@ class WalletTransactionResource extends JsonResource
         }
 
         return (string) $this->type;
+    }
+    private function resolveCurrency(): string
+    {
+        $currency = $this->currency;
+
+        if (!is_string($currency) || trim($currency) === '') {
+            $currency = $this->account?->currency;
+        }
+
+        if (!is_string($currency) || trim($currency) === '') {
+            $currency = config('app.currency', 'SAR');
+        }
+
+        $currency = strtoupper(trim((string) $currency));
+
+        return $currency !== '' ? $currency : 'SAR';
     }
 }

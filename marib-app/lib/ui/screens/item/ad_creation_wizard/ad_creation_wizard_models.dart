@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:marib/data/model/ad_draft_model.dart';
 
-import '../services/category_inventory_service.dart';
+import 'services/category_inventory_service.dart';
 import 'models/custom_field_schema.dart';
 
 /// Ordered steps used inside the wizard.

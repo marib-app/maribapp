@@ -20,6 +20,7 @@ import 'package:marib/utils/ui_utils.dart';
 import 'models/custom_field_schema.dart';
 import 'services/category_inventory_service.dart';
 import 'widgets/dynamic_custom_fields_form.dart';
+import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 
 part 'main_category_step.dart';
 part 'sub_category_step.dart';

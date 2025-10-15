@@ -3421,21 +3421,33 @@ class ApiController extends Controller {
     {
         try {
             $user = Auth::user();
+            $defaultCurrency = strtoupper((string) config('app.currency', 'SAR'));
 
             $walletAccount = WalletAccount::query()->firstOrCreate(
                 ['user_id' => $user->id],
-                ['balance' => 0]
+                [
+                    'balance' => 0,
+                    'currency' => $defaultCurrency,
+                ]
+            
             );
 
             $latestTransaction = $walletAccount->transactions()
                 ->latest('created_at')
                 ->first();
 
+
+            $currency = strtoupper((string) ($walletAccount->currency
+                ?? $latestTransaction?->currency
+                ?? $defaultCurrency));
+
+
             $data = [
                 'account_id' => $walletAccount->getKey(),
                 'balance' => [
                     'current' => (float) $walletAccount->balance,
-                    'currency' => strtoupper(config('app.currency', 'SAR')),
+                    'currency' => $currency,
+
                 ],
                 'last_transaction_at' => optional($latestTransaction?->created_at)->toIso8601String(),
                 'updated_at' => optional($walletAccount->updated_at)->toIso8601String(),
@@ -3469,15 +3481,25 @@ class ApiController extends Controller {
 
         try {
             $user = Auth::user();
+            $defaultCurrency = strtoupper((string) config('app.currency', 'SAR'));
 
             $walletAccount = WalletAccount::query()->firstOrCreate(
                 ['user_id' => $user->id],
-                ['balance' => 0]
+                [
+                    'balance' => 0,
+                    'currency' => $defaultCurrency,
+                ]
+            
             );
 
             $latestTransaction = $walletAccount->transactions()
                 ->latest('created_at')
                 ->first();
+
+            $currency = strtoupper((string) ($walletAccount->currency
+                ?? $latestTransaction?->currency
+                ?? $defaultCurrency));
+
 
             $query = WalletTransaction::query()
                 ->where('wallet_account_id', $walletAccount->getKey())
@@ -3495,7 +3517,7 @@ class ApiController extends Controller {
                 'account_id' => $walletAccount->getKey(),
                 'balance' => [
                     'current' => (float) $walletAccount->balance,
-                    'currency' => strtoupper(config('app.currency', 'SAR')),
+                    'currency' => $currency,
                 ],
                 'filters' => $this->buildWalletFilterPayload($filter),
 
@@ -3525,7 +3547,19 @@ class ApiController extends Controller {
     public function walletWithdrawalOptions(): void
     {
         try {
+
+            $user = Auth::user();
+            $defaultCurrency = strtoupper((string) config('app.currency', 'SAR'));
+            $walletAccount = WalletAccount::query()->firstOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'balance' => 0,
+                    'currency' => $defaultCurrency,
+                ]
+            );
+
             $methods = array_values($this->getWalletWithdrawalMethods());
+            $currency = strtoupper((string) ($walletAccount->currency ?? $defaultCurrency));
 
             $data = [
                 'methods' => array_map(static function (array $method) {
@@ -3550,7 +3584,7 @@ class ApiController extends Controller {
                 
                 }, $methods),
                 'minimum_amount' => (float) config('wallet.withdrawals.minimum_amount', 1),
-                'currency' => strtoupper(config('app.currency', 'SAR')),
+                'currency' => $currency,
             ];
 
             ResponseService::successResponse('Wallet withdrawal options fetched successfully', $data);
@@ -3588,10 +3622,14 @@ class ApiController extends Controller {
 
         try {
             $user = Auth::user();
+            $defaultCurrency = strtoupper((string) config('app.currency', 'SAR'));
 
             $walletAccount = WalletAccount::query()->firstOrCreate(
                 ['user_id' => $user->id],
-                ['balance' => 0]
+                [
+                    'balance' => 0,
+                    'currency' => $defaultCurrency,
+                ]
             );
 
             $amount = round((float) $validated['amount'], 2);
@@ -3633,12 +3671,18 @@ class ApiController extends Controller {
                 'meta' => $withdrawalMeta,
             ]);
 
+
+            $currency = strtoupper((string) ($walletAccount->currency
+                ?? $transaction->currency
+                ?? $defaultCurrency));
+
             $data = [
                 'id' => $withdrawalRequest->getKey(),
                 'status' => $withdrawalRequest->status,
                 'status_label' => $withdrawalRequest->statusLabel(),
                 'amount' => (float) $withdrawalRequest->amount,
-                'currency' => strtoupper(config('app.currency', 'SAR')),
+                'currency' => $currency,
+
                 'preferred_method' => [
                     'key' => $method['key'],
                     'name' => $method['name'],
@@ -3688,10 +3732,15 @@ class ApiController extends Controller {
 
         try {
             $user = Auth::user();
+            $defaultCurrency = strtoupper((string) config('app.currency', 'SAR'));
 
             $walletAccount = WalletAccount::query()->firstOrCreate(
                 ['user_id' => $user->id],
-                ['balance' => 0]
+                [
+                    'balance' => 0,
+                    'currency' => $defaultCurrency,
+                ]
+            
             );
 
             $query = WalletWithdrawalRequest::query()
@@ -3714,12 +3763,21 @@ class ApiController extends Controller {
                 ->values()
                 ->all();
 
+            $firstWithdrawal = $withdrawals[0] ?? null;
+            $withdrawalCurrency = is_array($firstWithdrawal) ? ($firstWithdrawal['currency'] ?? null) : null;
+
+            $currency = strtoupper((string) ($walletAccount->currency
+                ?? $withdrawalCurrency
+                ?? $defaultCurrency));
+
+
             $data = [
                 'account_id' => $walletAccount->getKey(),
                 'filters' => [
                     'applied_status' => $status ?? 'all',
                     'available_statuses' => WalletWithdrawalRequest::statuses(),
                 ],
+                'currency' => $currency,
                 'withdrawals' => $withdrawals,
                 'pagination' => [
                     'current_page' => $paginator->currentPage(),

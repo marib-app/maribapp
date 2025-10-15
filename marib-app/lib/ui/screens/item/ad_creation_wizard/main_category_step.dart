@@ -255,7 +255,12 @@ class _MainCategoryStepContent extends StatelessWidget {
 
         if (screen._mainCategories.isEmpty) {
           if (isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return ListView(
+              padding: const EdgeInsets.all(16),
+              children: const <Widget>[
+                _CategoryListShimmer(),
+              ],
+            );
           }
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -297,13 +302,11 @@ class _MainCategoryStepContent extends StatelessWidget {
               ),
             const SizedBox(height: 12),
             screen._buildCategorySearchField(),
-            if (isLoading)
-              const Padding(
-                padding: EdgeInsets.only(top: 12),
-                child: LinearProgressIndicator(),
-              ),
+
             const SizedBox(height: 16),
-            if (displayCategories.isEmpty)
+            if (isLoading)
+              const _CategoryListShimmer()
+            else if (displayCategories.isEmpty)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -351,6 +354,104 @@ class _MainCategoryStepContent extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _CategoryListShimmer extends StatelessWidget {
+  const _CategoryListShimmer({this.itemCount = 6});
+
+  final int itemCount;
+
+  @override
+  Widget build(BuildContext context) {
+    const double cardHeight = 82;
+    const double thumbnailSize = 64;
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colors = theme.colorScheme;
+    final BorderRadius radius = BorderRadius.circular(16);
+    final BorderRadius imageRadius = const BorderRadiusDirectional.only(
+      topStart: Radius.circular(16),
+      bottomStart: Radius.circular(16),
+    ).resolve(Directionality.of(context));
+
+    return Column(
+      children: List<Widget>.generate(itemCount, (int index) {
+        return Padding(
+          padding: EdgeInsets.only(top: index == 0 ? 0 : 12),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              color: colors.secondaryColor,
+              border: Border.all(color: colors.borderColor),
+            ),
+            child: SizedBox(
+              height: cardHeight,
+              child: Row(
+                textDirection: TextDirection.rtl,
+                children: <Widget>[
+                  ClipRRect(
+                    borderRadius: imageRadius,
+                    child: SizedBox(
+                      width: thumbnailSize,
+                      height: cardHeight,
+                      child: ShimmerBox(
+                        borderRadius: imageRadius,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          Row(
+                            textDirection: TextDirection.rtl,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Expanded(
+                                child: ShimmerBox(
+                                  height: 18,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ShimmerBox(
+                                width: 20,
+                                height: 20,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          ShimmerBox(
+                            height: 14,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          const SizedBox(height: 6),
+                          Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: ShimmerBox(
+                              width: 120,
+                              height: 12,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }),
     );
   }
 }

@@ -34,7 +34,19 @@ class WalletOperationsRepository {
       'payload',
     ]);
 
-    final withdrawals = rows.map(WalletWithdrawal.fromJson).toList();
+    final responseCurrency = _unwrapCurrency(response);
+
+    final withdrawals = rows
+        .map((row) {
+      final map = Map<String, dynamic>.from(row);
+      final existing = map['currency'] ?? map['currency_code'];
+      final hasCurrency = existing != null && existing.toString().trim().isNotEmpty;
+      if (!hasCurrency && responseCurrency != null) {
+        map['currency'] = responseCurrency;
+      }
+      return WalletWithdrawal.fromJson(map);
+    })
+        .toList();
 
     final metaMap = _unwrapMeta(response);
     final currentPage = _parseInt(metaMap['current_page']) ?? page;
@@ -226,6 +238,40 @@ class WalletOperationsRepository {
         return candidate.map((key, value) => MapEntry(key.toString(), value));
       }
     }
+    return null;
+  }
+
+
+  String? _unwrapCurrency(Map<String, dynamic> response) {
+    String? normalize(dynamic value) {
+      if (value == null) return null;
+      final text = value.toString().trim();
+      return text.isEmpty ? null : text;
+    }
+
+    final direct = normalize(response['currency']);
+    if (direct != null) return direct;
+
+    final data = response['data'];
+    if (data is Map<String, dynamic>) {
+      final nested = normalize(data['currency'] ?? data['currency_code']);
+      if (nested != null) return nested;
+    } else if (data is Map) {
+      final map = data.map((key, value) => MapEntry(key.toString(), value));
+      final nested = normalize(map['currency'] ?? map['currency_code']);
+      if (nested != null) return nested;
+    }
+
+    final meta = response['meta'];
+    if (meta is Map<String, dynamic>) {
+      final nested = normalize(meta['currency'] ?? meta['currency_code']);
+      if (nested != null) return nested;
+    } else if (meta is Map) {
+      final map = meta.map((key, value) => MapEntry(key.toString(), value));
+      final nested = normalize(map['currency'] ?? map['currency_code']);
+      if (nested != null) return nested;
+    }
+
     return null;
   }
 

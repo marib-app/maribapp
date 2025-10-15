@@ -354,6 +354,7 @@ class UiUtils {
         Color? backgroundColor,
         Color? foregroundColor,
         Color? borderColor,
+        Color? backButtonBackgroundColor,
         EdgeInsetsGeometry? contentPadding,
         bool centerTitle = true,
         double? height,
@@ -392,7 +393,7 @@ class UiUtils {
       resolvedLeading = _AppBarBackButton(
         onPressed: onBackPress ?? () => Navigator.of(context).maybePop(),
         foregroundColor: resolvedForegroundColor,
-        backgroundColor: resolvedForegroundColor.withOpacity(0.08),
+        backgroundColor: backButtonBackgroundColor,
         isRtl: textDirection == ui.TextDirection.rtl,
       );
     }
@@ -1392,22 +1393,26 @@ class _AppBarBackButton extends StatelessWidget {
   const _AppBarBackButton({
     required this.onPressed,
     required this.foregroundColor,
-    required this.backgroundColor,
+    this.backgroundColor,
     required this.isRtl,
   });
 
   final VoidCallback onPressed;
   final Color foregroundColor;
-  final Color backgroundColor;
+  final Color? backgroundColor;
   final bool isRtl;
 
   @override
   Widget build(BuildContext context) {
-    final BorderRadius radius = BorderRadius.circular(12);
-    final IconData icon =
-    isRtl ? Icons.arrow_forward_ios : Icons.arrow_back_ios;
-    final String tooltip = MaterialLocalizations.of(context).backButtonTooltip;
+    final theme = Theme.of(context);
 
+    final BorderRadius radius = BorderRadius.circular(12);
+    final IconData icon = isRtl
+        ? Icons.arrow_forward_ios_rounded
+        : Icons.arrow_back_ios_new_rounded;
+    final String tooltip = MaterialLocalizations.of(context).backButtonTooltip;
+    final Color resolvedBackgroundColor =
+        backgroundColor ?? theme.colorScheme.surfaceVariant;
     return Tooltip(
       message: tooltip,
       child: Semantics(
@@ -1420,14 +1425,14 @@ class _AppBarBackButton extends StatelessWidget {
             height: 40,
             width: 40,
             decoration: BoxDecoration(
-              color: backgroundColor,
+              color: resolvedBackgroundColor,
               borderRadius: radius,
             ),
             alignment: Alignment.center,
             child: Icon(
               icon,
               color: foregroundColor,
-              size: 18,
+              size: 24,
             ),
           ),
         ),

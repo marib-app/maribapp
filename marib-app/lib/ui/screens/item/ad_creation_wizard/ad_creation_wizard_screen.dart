@@ -1105,7 +1105,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         return;
       }
       _pendingInitialSubCategoryId = null;
-      _onSubCategorySelected(target);
+      _onSubCategorySelected(target, advanceToNextStep: false);
     });
   }
 
@@ -2175,6 +2175,21 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     }
   }
 
+
+  bool _shouldHideNavigationForStep(_WizardStepId stepId) {
+    switch (stepId) {
+      case _WizardStepId.mainCategory:
+      case _WizardStepId.subCategory:
+        return true;
+      case _WizardStepId.customFields:
+      case _WizardStepId.media:
+      case _WizardStepId.textDetails:
+      case _WizardStepId.locationInventory:
+      case _WizardStepId.review:
+        return false;
+    }
+  }
+
   int _clampCurrentStepIndex(List<_WizardStep> steps) {
     if (steps.isEmpty) {
       return 0;
@@ -2509,6 +2524,13 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       ),
     ];
 
+
+    final _WizardStepId? currentStepId =
+    steps.isNotEmpty ? steps[currentStepIndex].id : null;
+    final bool shouldShowBottomNavigation = currentStepId != null &&
+        !_shouldHideNavigationForStep(currentStepId);
+
+
     return Scaffold(
       appBar: UiUtils.buildAppBar(
         context,
@@ -2519,7 +2541,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         bottom: appBarBottom,
       ),
       body: _buildStepBody(steps, currentStepIndex),
-      bottomNavigationBar: Padding(
+      bottomNavigationBar: shouldShowBottomNavigation
+          ? Padding(
         padding: EdgeInsets.fromLTRB(
           16.0,
           12.0,
@@ -2528,7 +2551,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
               .of(context)
               .viewPadding
               .bottom,
-        ),
+              ),
         child: Row(
 
           children: [
@@ -2563,8 +2586,9 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
               ),
             ),
           ],
-        ),
-      ),
+              ),
+      )
+          : null,
     );
   }
 
@@ -3119,18 +3143,58 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       if (!_canProceedFromStep(_WizardStepId.mainCategory)) {
         return;
       }
-      final _WizardStepId nextStepId = steps[mainIndex + 1].id;
+      int targetIndex = mainIndex + 1;
+      if (targetIndex >= steps.length) {
+        return;
+      }
+      if (steps[targetIndex].id == _WizardStepId.subCategory &&
+          ((_selectedMainCategory?.subCategories.isEmpty ?? true))) {
+        targetIndex += 1;
+      }
+      if (targetIndex >= steps.length) {
+        return;
+      }
+      final _WizardStepId targetStepId = steps[targetIndex].id;
+
       if (_currentStep == mainIndex) {
-        setState(() => _currentStep = mainIndex + 1);
+        setState(() => _currentStep = targetIndex);
+
       } else {
-        _jumpToStep(nextStepId);
+        _jumpToStep(targetStepId);
       }
     });
 
 
   }
 
-  void _onSubCategorySelected(_SubCategoryOption subCategory) {
+  void _scheduleAdvanceFromSubCategory() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      final List<_WizardStep> steps = _visibleSteps;
+      if (steps.isEmpty) {
+        return;
+      }
+      final int subIndex =
+      steps.indexWhere((step) => step.id == _WizardStepId.subCategory);
+      if (subIndex == -1 || subIndex >= steps.length - 1) {
+        return;
+      }
+      if (!_canProceedFromStep(_WizardStepId.subCategory)) {
+        return;
+      }
+      final _WizardStepId nextStepId = steps[subIndex + 1].id;
+      if (_currentStep == subIndex) {
+        setState(() => _currentStep = subIndex + 1);
+      } else {
+        _jumpToStep(nextStepId);
+      }
+    });
+  }
+
+  void _onSubCategorySelected(_SubCategoryOption subCategory,
+      {bool advanceToNextStep = true}) {
     if (_selectedSubCategory?.id == subCategory.id) {
       return;
     }
@@ -3168,6 +3232,9 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     _customFieldsFormKey.currentState?.clearValidationErrors();
     _markDirty();
     _fetchCustomFieldSchema();
+    if (advanceToNextStep) {
+      _scheduleAdvanceFromSubCategory();
+    }
   }
 
   Future<void> _fetchCustomFieldSchema() async {

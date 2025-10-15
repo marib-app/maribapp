@@ -383,7 +383,9 @@ class UiUtils {
         ? (bottomHeight != null && bottomHeight > 0 ? bottomHeight : null)
         : null;
 
-    final double totalHeight = toolbarHeight + (resolvedBottomHeight ?? 0.0);
+    final double bottomSectionHeight = resolvedBottomHeight ?? 0.0;
+    final double totalHeight = toolbarHeight + bottomSectionHeight;
+
     Widget? resolvedLeading;
     if (leading != null) {
       resolvedLeading = leading;
@@ -505,11 +507,16 @@ class UiUtils {
                               )
                                   : null,
                               centerMiddle: centerTitle,
-                            ),
+                                ),
+
                               ),
 
                             ),
-                            if (hasBottom) ...bottom!,
+                            if (hasBottom)
+                              _AppBarBottomSection(
+                                children: bottom!,
+                                height: resolvedBottomHeight,
+                              ),
                           ],
                         ),
                     ),
@@ -1957,6 +1964,40 @@ class _GalleryViewState extends State<GalleryView> {
           ),
         ],
       ),
+    );
+  }
+}
+
+
+
+
+
+
+class _AppBarBottomSection extends StatelessWidget {
+  const _AppBarBottomSection({
+    required this.children,
+    this.height,
+  });
+
+  final List<Widget> children;
+  final double? height;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget content = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: children,
+    );
+
+    if (height == null) {
+      return content;
+    }
+
+    return SizedBox(
+      height: height,
+      width: double.infinity,
+      child: content,
     );
   }
 }

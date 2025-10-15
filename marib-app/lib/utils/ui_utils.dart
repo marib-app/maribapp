@@ -383,8 +383,6 @@ class UiUtils {
         ? (bottomHeight != null && bottomHeight > 0 ? bottomHeight : null)
         : null;
 
-    final double bottomSectionHeight = resolvedBottomHeight ?? 0.0;
-    final double totalHeight = toolbarHeight + bottomSectionHeight;
 
     Widget? resolvedLeading;
     if (leading != null) {
@@ -448,6 +446,9 @@ class UiUtils {
         ? Colors.black
         : Colors.black.withOpacity(0.25))
         .withOpacity(theme.brightness == Brightness.dark ? 0.45 : 0.12);
+
+    final double totalHeight = toolbarHeight + (resolvedBottomHeight ?? 0.0);
+
 
     return PreferredSize(
       preferredSize: Size.fromHeight(totalHeight),

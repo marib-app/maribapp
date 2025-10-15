@@ -270,15 +270,24 @@ class ItemRepository {
       'view': 'detail',
     };
 
-    final Map<String, dynamic> response = await Api.get(
+    final Map<String, dynamic> response = await _getRequest(
+
       url: Api.getItemApi,
       queryParameters: parameters,
+      enableEtagCache: false,
     );
 
-    final List<ItemModel> modelList =
-    (response['data'] as List).map((e) => ItemModel.fromJson(e)).toList();
+    final Iterable<Map<String, dynamic>> itemMaps =
+    ItemRepository._extractItemMaps(response);
 
-    return DataOutput(total: modelList.length, modelList: modelList);
+    final List<ItemModel> modelList =
+    itemMaps.map(ItemModel.fromJson).toList(growable: false);
+
+    final int total =
+    ItemRepository.resolveTotalCount(response, modelList.length);
+
+    return DataOutput(total: total, modelList: modelList);
+
   }
 
   /// -------------------------------------------------------------------------
@@ -292,17 +301,20 @@ class ItemRepository {
       'view': 'detail',
     };
 
-    final Map<String, dynamic> response = await Api.get(
+    final Map<String, dynamic> response = await _getRequest(
+
       url: Api.getItemApi,
       queryParameters: parameters,
+      enableEtagCache: false,
     );
 
 
     final Iterable<Map<String, dynamic>> itemMaps =
-    ItemRepository.resolvePaginatedMapList(response);
+    ItemRepository._extractItemMaps(response);
 
     final List<ItemModel> modelList =
-    itemMaps.map(ItemModel.fromJson).toList();
+    itemMaps.map(ItemModel.fromJson).toList(growable: false);
+
 
     final int total =
     ItemRepository.resolveTotalCount(response, modelList.length);
@@ -486,6 +498,32 @@ class ItemRepository {
     }
 
     return const Iterable<Map<String, dynamic>>.empty();
+  }
+
+
+  @visibleForTesting
+  static Iterable<Map<String, dynamic>> _extractItemMaps(
+      Map<String, dynamic> response,
+      ) {
+    final Iterable<Map<String, dynamic>> fromItems =
+    _extractItemMapsFromSection(response['items']);
+    if (fromItems.isNotEmpty) {
+      return fromItems;
+    }
+
+    final Iterable<Map<String, dynamic>> fromData =
+    _extractItemMapsFromSection(response['data']);
+    if (fromData.isNotEmpty) {
+      return fromData;
+    }
+
+    final Iterable<Map<String, dynamic>> fromResults =
+    _extractItemMapsFromSection(response['results']);
+    if (fromResults.isNotEmpty) {
+      return fromResults;
+    }
+
+    return _extractItemMapsFromSection(response);
   }
 
   static Iterable<Map<String, dynamic>> _extractItemMapsFromSection(

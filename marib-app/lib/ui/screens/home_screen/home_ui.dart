@@ -964,53 +964,49 @@ class AllItemsWidget extends StatelessWidget {
       builder: (context, state) {
         if (state is FetchHomeAllItemsSuccess) {
           if (state.items.isNotEmpty) {
-            return Column(
-              children: [
-                GridListAdapter(
-                  type: ListUiType.Mixed,
-                  mixMode: true,
-                  crossAxisCount: 2,
-                  height: (MediaQuery.of(context).size.height / 3.5).rh(context),
-                  builder: (context, int index, bool isGrid) {
-                    final ItemModel item = state.items[index]; // ✅ غير nullable
+            return GridListAdapter(
+                type: ListUiType.Mixed,
+                mixMode: true,
+                crossAxisCount: 2,
+                height: (MediaQuery.of(context).size.height / 3.5).rh(context),
+                total: state.items.length,
+                trailing: state.isLoadingMore ? UiUtils.progress() : null,
+                builder: (context, int index, bool isGrid) {
+                  final ItemModel item = state.items[index];
 
-                    if (isGrid) {
-                      return ICard(item: item, width: 192);
-                    } else {
-                      return InkWell(
-                        onTap: () {
-                          Navigator.pushNamed(
-                            context,
-                            Routes.adDetailsScreen,
-                            arguments: {'model': item},
-                          );
-                        },
-                        child: ItemHorizontalCard(
-                          item: item,
-                          showLikeButton: true,
-                          additionalImageWidth: 8,
-                        ),
+                  if (isGrid) {
+                    return ICard(item: item, width: 192);
+                  }
+
+                  return InkWell(
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        Routes.adDetailsScreen,
+                        arguments: {'model': item},
                       );
-                    }
                   },
-                  total: state.items.length,
-                ),
-                if (state.isLoadingMore) UiUtils.progress(),
-              ],
+                    child: ItemHorizontalCard(
+                      item: item,
+                      showLikeButton: true,
+                      additionalImageWidth: 8,
+                    ),
+                  );
+                },
             );
           } else {
-            return const SizedBox.shrink();
+            return const SliverToBoxAdapter(child: SizedBox.shrink());
           }
         }
         if (state is FetchHomeAllItemsFail) {
           if (state.error is ApiException) {
             if (state.error.error == "no-internet") {
-              return const Center(child: NoInternet());
+              return const SliverToBoxAdapter(child: Center(child: NoInternet()));
             }
           }
-          return const SomethingWentWrong();
+          return const SliverToBoxAdapter(child: SomethingWentWrong());
         }
-        return const SizedBox.shrink();
+        return const SliverToBoxAdapter(child: SizedBox.shrink());
       },
     );
   }

@@ -254,12 +254,12 @@ class AdDetailsScreen extends StatefulWidget {
               late final ItemRepository repository;
               try {
                 final providedRepository =
-                RepositoryProvider.maybeOf<ItemRepository>(
+                RepositoryProvider.of<ItemRepository>(
 
                   context,
                   listen: false,
                 );
-                repository = providedRepository ?? ItemRepository();
+                repository = providedRepository;
               } on ProviderNotFoundException {
                 repository = ItemRepository();
               } on TypeError {

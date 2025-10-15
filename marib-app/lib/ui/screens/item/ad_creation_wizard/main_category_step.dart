@@ -51,114 +51,148 @@ extension _MainCategoryStepView on _AdCreationWizardScreenState {
     final bool isSelected = _selectedMainCategory?.id == category.id;
     final String interfaceLabel = _interfaceDisplayName(category.interfaceType);
     final bool isPressed = _pressedMainCategoryId == category.id;
+    const double cardHeight = 104;
     final BorderRadius radius = BorderRadius.circular(16);
+    final BorderRadius imageRadius = const BorderRadiusDirectional.only(
+      topEnd: Radius.circular(16),
+      bottomEnd: Radius.circular(16),
+    ).resolve(Directionality.of(context));
 
 
-    return Padding(
-        padding: const EdgeInsetsDirectional.only(end: 12),
-        child: AnimatedScale(
-          scale: isPressed ? 0.97 : 1.0,
-          duration: const Duration(milliseconds: 140),
-          curve: Curves.easeOut,
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
+    Widget buildThumbnail() {
+      final String? imageUrl = category.imageUrl?.trim();
+      if (imageUrl != null && imageUrl.isNotEmpty) {
+        return LazyNetworkImage(
+          imageUrl: imageUrl,
+          height: cardHeight,
+          width: double.infinity,
+          fit: BoxFit.cover,
+        );
+      }
+      return Container(
+        height: cardHeight,
+        width: double.infinity,
+        color: colors.surfaceVariant,
+        alignment: Alignment.center,
+        child: Icon(
+          Icons.category_outlined,
+          color: colors.onSurfaceVariant,
+          size: 36,
+        ),
+      );
+    }
+
+    return AnimatedScale(
+        scale: isPressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 140),
+        curve: Curves.easeOut,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: radius,
+            onHighlightChanged: (bool value) {
+              if (!mounted) {
+                return;
+              }
+              if (value) {
+                setState(() => _pressedMainCategoryId = category.id);
+              } else if (_pressedMainCategoryId == category.id) {
+                setState(() => _pressedMainCategoryId = null);
+              }
+            },
+            onTap: () => _onMainCategorySelected(category),
+            child: Ink(
+              decoration: BoxDecoration(
               borderRadius: radius,
-              onHighlightChanged: (bool value) {
-                if (!mounted) {
-                  return;
-                }
-                if (value) {
-                  setState(() => _pressedMainCategoryId = category.id);
-                } else if (_pressedMainCategoryId == category.id) {
-                  setState(() => _pressedMainCategoryId = null);
-                }
-              },
-              onTap: () => _onMainCategorySelected(category),
-              child: Ink(
-                width: 220,
-                decoration: BoxDecoration(
-                  borderRadius: radius,
-                  color: isSelected ? colors.primaryContainer : colors.surface,
-                  border: Border.all(
-                    color: isSelected ? colors.primary : colors.outlineVariant,
-                    width: isSelected ? 2 : 1,
-                ),
-                  boxShadow: <BoxShadow>[
-                    BoxShadow(
-                      color: colors.shadow.withOpacity(0.08),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
+                color: isSelected ? colors.primaryContainer : colors.surface,
+                border: Border.all(
+                  color: isSelected ? colors.primary : colors.outlineVariant,
+                  width: isSelected ? 2 : 1,
               ),
-
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                boxShadow: <BoxShadow>[
+                  BoxShadow(
+                    color: colors.shadow.withOpacity(0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: SizedBox(
+                height: cardHeight,
+                child: Row(
+                  textDirection: TextDirection.rtl,
                 children: <Widget>[
                   ClipRRect(
-                    borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(16)),
-                    child: category.imageUrl != null &&
-                        category.imageUrl!.trim().isNotEmpty
-                        ? LazyNetworkImage(
-                      imageUrl: category.imageUrl!,
-                      height: 120,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    )
-                        : Container(
-                      height: 120,
-                      width: double.infinity,
-                      color: colors.surfaceVariant,
-                      alignment: Alignment.center,
-                      child: Icon(
-                        Icons.category_outlined,
-                        color: colors.onSurfaceVariant,
-                        size: 40,
-                      ),
+                    borderRadius: imageRadius,
+                    child: SizedBox(
+                      width: 104,
+                      child: buildThumbnail(),
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          category.name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: isSelected
-                                ? colors.onPrimaryContainer
-                                : colors.onSurface,
-                          ),
+                  Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          interfaceLabel,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: isSelected
-                                ? colors.onPrimaryContainer.withOpacity(0.85)
-                                : colors.onSurfaceVariant,
-                          ),
-                        ),
-                        if (category.subCategories.isNotEmpty) ...<Widget>[
-                          const SizedBox(height: 8),
-                          Text(
-                            '${category.subCategories.length} فئات فرعية',
-                            style: theme.textTheme.labelSmall?.copyWith(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: <Widget>[
+                        Row(
+                        textDirection: TextDirection.rtl,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Expanded(
+                              child: Text(
+                                category.name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: isSelected
+                                      ? colors.onPrimaryContainer
+                                      : colors.onSurface,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(
+                              Icons.chevron_left,
                               color: isSelected
                                   ? colors.onPrimaryContainer
-                                  .withOpacity(0.7)
+                                  : colors.onSurfaceVariant,
+                              size: 20,
+                            ),
+                          ],
+                          ),
+                            const SizedBox(height: 6),
+
+                          Text(
+                            interfaceLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: isSelected
+                                  ? colors.onPrimaryContainer.withOpacity(0.85)
+
                                   : colors.onSurfaceVariant,
                             ),
                           ),
+                            if (category.subCategories.isNotEmpty) ...<Widget>[
+                              const SizedBox(height: 6),
+                              Text(
+                                '${category.subCategories.length} فئات فرعية',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: isSelected
+                                      ? colors.onPrimaryContainer
+                                      .withOpacity(0.7)
+                                      : colors.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
                         ],
-                      ],
+                        ),
                     ),
                   ),
 
@@ -281,20 +315,16 @@ class _MainCategoryStepContent extends StatelessWidget {
                 ],
               )
             else ...[
-              SizedBox(
-                height: 236,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsetsDirectional.only(start: 4, end: 4),
-                  itemCount: displayCategories.length,
-                  itemBuilder: (BuildContext context, int index) {
-                    final _MainCategoryOption option = displayCategories[index];
-                    return screen._buildMainCategoryCard(option);
-                  },
-
-                ),
-
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.zero,
+                itemCount: displayCategories.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (BuildContext context, int index) {
+                  final _MainCategoryOption option = displayCategories[index];
+                  return screen._buildMainCategoryCard(option);
+                },
               ),
             ],
             if (fetchState is FetchCategoryFailure &&

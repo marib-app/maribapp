@@ -56,65 +56,67 @@ extension _SubCategoryStepView on _AdCreationWizardScreenState {
     final ColorScheme colors = theme.colorScheme;
     final bool isSelected = _selectedSubCategory?.id == category.id;
     final bool isPressed = _pressedSubCategoryId == category.id;
+    const double cardHeight = 104;
+    final BorderRadius radius = BorderRadius.circular(16);
+    final BorderRadius imageRadius = const BorderRadiusDirectional.only(
+      topEnd: Radius.circular(16),
+      bottomEnd: Radius.circular(16),
+    ).resolve(Directionality.of(context));
     final BorderRadius radius = BorderRadius.circular(16);
     final String? imageUrl = category.imageUrl?.trim();
 
     Widget buildThumbnail() {
+      final String? imageUrl = category.imageUrl?.trim();
+
       if (imageUrl != null && imageUrl.isNotEmpty) {
         return LazyNetworkImage(
           imageUrl: imageUrl,
-          height: 100,
+          height: cardHeight,
           width: double.infinity,
           fit: BoxFit.cover,
         );
       }
       return Container(
-        height: 100,
+        height: cardHeight,
         width: double.infinity,
         color: colors.surfaceVariant,
         alignment: Alignment.center,
         child: Icon(
           Icons.category,
           color: colors.onSurfaceVariant,
-          size: 36,
+          size: 32,
         ),
       );
     }
 
-    return Padding(
-      padding: const EdgeInsetsDirectional.only(end: 12),
-      child: AnimatedScale(
-        scale: isPressed ? 0.97 : 1.0,
-        duration: const Duration(milliseconds: 140),
-        curve: Curves.easeOut,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: radius,
-            onHighlightChanged: (bool value) {
-              if (!mounted) {
-                return;
-              }
-              if (value) {
-                setState(() => _pressedSubCategoryId = category.id);
-              } else if (_pressedSubCategoryId == category.id) {
-                setState(() => _pressedSubCategoryId = null);
-              }
-            },
-            onTap: () => _onSubCategorySelected(category),
-            child: Ink(
-              width: 180,
-              decoration: BoxDecoration(
-                borderRadius: radius,
-                color: isSelected
-                    ? colors.secondaryContainer
-                    : colors.surface,
-                border: Border.all(
-                  color: isSelected
-                      ? colors.secondary
-                      : colors.outlineVariant,
-                  width: isSelected ? 2 : 1,
-                ),
+    return AnimatedScale(
+      scale: isPressed ? 0.97 : 1.0,
+      duration: const Duration(milliseconds: 140),
+      curve: Curves.easeOut,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: radius,
+          onHighlightChanged: (bool value) {
+            if (!mounted) {
+              return;
+            }
+            if (value) {
+              setState(() => _pressedSubCategoryId = category.id);
+            } else if (_pressedSubCategoryId == category.id) {
+              setState(() => _pressedSubCategoryId = null);
+            }
+          },
+          onTap: () => _onSubCategorySelected(category),
+          child: Ink(
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              color:
+              isSelected ? colors.secondaryContainer : colors.surface,
+              border: Border.all(
+                color:
+                isSelected ? colors.secondary : colors.outlineVariant,
+                width: isSelected ? 2 : 1,
                 boxShadow: <BoxShadow>[
                   BoxShadow(
                     color: colors.shadow.withOpacity(0.08),
@@ -123,25 +125,56 @@ extension _SubCategoryStepView on _AdCreationWizardScreenState {
                   ),
                 ],
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: SizedBox(
+                height: cardHeight,
+                child: Row(
+                  textDirection: TextDirection.rtl,
                 children: <Widget>[
                   ClipRRect(
-                    borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(16)),
-                    child: buildThumbnail(),
+                    borderRadius: imageRadius,
+                    child: SizedBox(
+                      width: 104,
+                      child: buildThumbnail(),
+                    ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Text(
-                      category.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: isSelected
-                            ? colors.onSecondaryContainer
-                            : colors.onSurface,
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      child: Row(
+                        textDirection: TextDirection.rtl,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: <Widget>[
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: <Widget>[
+                                Text(
+                                  category.name,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: isSelected
+                                        ? colors.onSecondaryContainer
+                                        : colors.onSurface,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            Icons.chevron_left,
+                            color: isSelected
+                                ? colors.onSecondaryContainer
+                                : colors.onSurfaceVariant,
+                            size: 20,
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -209,18 +242,16 @@ class _SubCategoryStepContent extends StatelessWidget {
             ],
           )
         else
-          SizedBox(
-            height: 200,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsetsDirectional.only(start: 4, end: 4),
-              itemCount: displayCategories.length,
-              itemBuilder: (BuildContext context, int index) {
-                final _SubCategoryOption option = displayCategories[index];
-                return screen._buildSubCategoryCard(option);
-              },
-            ),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
+            itemCount: displayCategories.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (BuildContext context, int index) {
+              final _SubCategoryOption option = displayCategories[index];
+              return screen._buildSubCategoryCard(option);
+            },
           ),
       ],
     );

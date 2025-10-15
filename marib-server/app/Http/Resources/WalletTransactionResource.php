@@ -9,16 +9,17 @@ class WalletTransactionResource extends JsonResource
 {
     public function toArray($request): array
     {
-        $amount = isset($this->amount) ? (float) $this->amount : 0.0;
-        $balanceAfter = isset($this->balance_after) ? (float) $this->balance_after : 0.0;
-        $balanceBefore = $this->type === 'credit'
-            ? round($balanceAfter - $amount, 2)
-            : round($balanceAfter + $amount, 2);
+        $currency = $this->resolveCurrency();
+        $decimals = $this->resolveCurrencyPrecision($currency);
+
+        $amount = $this->normalizeMoney($this->amount, $decimals);
+        $balanceAfter = $this->normalizeMoney($this->balance_after, $decimals);
+        $balanceBefore = $this->calculateBalanceBefore($amount, $balanceAfter, $decimals);
 
         return [
             'id' => $this->id,
             'type' => $this->type,
-            'category' => $this->resolveCategory(),
+            'currency' => $currency,
             'amount' => $amount,
             'balance_before' => $balanceBefore,
             'balance_after' => $balanceAfter,
@@ -73,5 +74,36 @@ class WalletTransactionResource extends JsonResource
         $currency = strtoupper(trim((string) $currency));
 
         return $currency !== '' ? $currency : 'SAR';
+    }
+
+    private function resolveCurrencyPrecision(string $currency): int
+    {
+        $precision = config('wallet.currency_precision.' . strtoupper($currency));
+
+        if (is_numeric($precision)) {
+            $precision = (int) $precision;
+
+            if ($precision >= 0 && $precision <= 6) {
+                return $precision;
+            }
+        }
+
+        return 2;
+    }
+
+    private function normalizeMoney($value, int $decimals): float
+    {
+        $numericValue = is_numeric($value) ? (float) $value : 0.0;
+
+        return (float) number_format($numericValue, $decimals, '.', '');
+    }
+
+    private function calculateBalanceBefore(float $amount, float $balanceAfter, int $decimals): float
+    {
+        $balance = $this->type === 'credit'
+            ? $balanceAfter - $amount
+            : $balanceAfter + $amount;
+
+        return (float) number_format($balance, $decimals, '.', '');
     }
 }

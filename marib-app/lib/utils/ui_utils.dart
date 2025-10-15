@@ -379,9 +379,11 @@ class UiUtils {
           top: 12,
           bottom: 12,
         );
-    final double resolvedBottomHeight = hasBottom ? (bottomHeight ?? 0.0) : 0.0;
+    final double? resolvedBottomHeight = hasBottom
+        ? (bottomHeight != null && bottomHeight > 0 ? bottomHeight : null)
+        : null;
 
-    final double totalHeight = toolbarHeight + resolvedBottomHeight;
+    final double totalHeight = toolbarHeight + (resolvedBottomHeight ?? 0.0);
     Widget? resolvedLeading;
     if (leading != null) {
       resolvedLeading = leading;

@@ -232,11 +232,8 @@ class _MainCategoryStepContent extends StatelessWidget {
   Widget build(BuildContext context) {
 
     if (!screen._hasRequestedCategoryFetch) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (screen.mounted && !screen._hasRequestedCategoryFetch) {
-          screen._triggerCategoryFetch();
-        }
-      });
+      screen._scheduleCategoryFetch();
+
     }
 
     return BlocBuilder<FetchCategoryCubit, FetchCategoryState>(

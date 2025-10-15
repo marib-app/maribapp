@@ -823,10 +823,10 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     final bool matchesPreferences =
     _categoryStateMatchesPreferences(currentState);
     if (!_hasRequestedCategoryFetch) {
-      _triggerCategoryFetch();
+      _scheduleCategoryFetch();
     } else if (!matchesPreferences &&
         currentState is! FetchCategoryInProgress) {
-      _triggerCategoryFetch(forceRefresh: true);
+      _scheduleCategoryFetch(forceRefresh: true);
     }
   }
 
@@ -913,6 +913,21 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     return ensured.toList(growable: false);
   }
 
+  void _scheduleCategoryFetch({bool forceRefresh = false}) {
+    if (!forceRefresh && _hasRequestedCategoryFetch) {
+      return;
+    }
+
+    _hasRequestedCategoryFetch = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      _triggerCategoryFetch(forceRefresh: forceRefresh);
+    });
+  }
 
   void _triggerCategoryFetch({bool forceRefresh = false}) {
     final FetchCategoryCubit? cubit =

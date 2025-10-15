@@ -355,7 +355,7 @@ class UiUtils {
         Color? foregroundColor,
         Color? borderColor,
         EdgeInsetsGeometry? contentPadding,
-        bool centerTitle = false,
+        bool centerTitle = true,
         double? height,
         double borderRadius = 18,
         double borderStrokeWidth = 1.0,
@@ -447,7 +447,9 @@ class UiUtils {
         : Colors.black.withOpacity(0.25))
         .withOpacity(theme.brightness == Brightness.dark ? 0.45 : 0.12);
 
-    final double totalHeight = toolbarHeight + (resolvedBottomHeight ?? 0.0);
+    final double topPadding = MediaQuery.of(context).padding.top;
+    final double totalHeight =
+        toolbarHeight + (resolvedBottomHeight ?? 0.0) + topPadding;
 
 
     return PreferredSize(
@@ -457,6 +459,7 @@ class UiUtils {
         child: Material(
           color: Colors.transparent,
           child: SafeArea(
+            top: true,
             bottom: false,
             child: Container(
               decoration: BoxDecoration(

@@ -59,8 +59,8 @@ extension _SubCategoryStepView on _AdCreationWizardScreenState {
     const double cardHeight = 104;
     final BorderRadius radius = BorderRadius.circular(16);
     final BorderRadius imageRadius = const BorderRadiusDirectional.only(
-      topEnd: Radius.circular(16),
-      bottomEnd: Radius.circular(16),
+      topStart: Radius.circular(16),
+      bottomStart: Radius.circular(16),
     ).resolve(Directionality.of(context));
 
 

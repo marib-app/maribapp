@@ -346,18 +346,23 @@ class _MainCategoryOption {
     final List<_SubCategoryOption> subCategories =
     (model.children ?? const <CategoryModel>[])
         .where((CategoryModel child) => child.id != null)
-        .map((CategoryModel child) => _SubCategoryOption(
-      id: child.id!,
-      name: resolveName(child.name),
-      imageUrl: child.url,
-    ))
+        .map((CategoryModel child) {
+      final String resolvedUrl = HelperUtils.absoluteImage(child.url);
+      return _SubCategoryOption(
+        id: child.id!,
+        name: resolveName(child.name),
+        imageUrl: resolvedUrl.isEmpty ? null : resolvedUrl,
+      );
+    })
         .toList(growable: false);
+
+    final String resolvedMainImage = HelperUtils.absoluteImage(model.url);
 
     return _MainCategoryOption(
       id: model.id!,
       name: resolveName(model.name),
       interfaceType: (model.interfaceType ?? '').trim(),
-      imageUrl: model.url,
+      imageUrl: resolvedMainImage.isEmpty ? null : resolvedMainImage,
       subCategories: subCategories,
     );
   }

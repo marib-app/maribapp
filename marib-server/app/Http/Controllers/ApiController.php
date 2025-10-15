@@ -177,6 +177,49 @@ class ApiController extends Controller {
         'refunds',
     ];
 
+
+
+    private const CURRENCY_SYNONYMS = [
+        'yer' => 'YER',
+        'ريال يمني' => 'YER',
+        'ريال يمنى' => 'YER',
+        'ر.ي' => 'YER',
+        'ر. ي.' => 'YER',
+        'sar' => 'SAR',
+        'ريال سعودي' => 'SAR',
+        'ر.س' => 'SAR',
+        'ر. س.' => 'SAR',
+        'sar ر.س' => 'SAR',
+        'omr' => 'OMR',
+        'ريال عماني' => 'OMR',
+        'ر.ع' => 'OMR',
+        'aed' => 'AED',
+        'درهم اماراتي' => 'AED',
+        'د.إ' => 'AED',
+        'kwd' => 'KWD',
+        'دينار كويتي' => 'KWD',
+        'د.ك' => 'KWD',
+        'bhd' => 'BHD',
+        'دينار بحريني' => 'BHD',
+        'د.ب' => 'BHD',
+        'egp' => 'EGP',
+        'جنيه مصري' => 'EGP',
+        'ج.م' => 'EGP',
+        'usd' => 'USD',
+        'دولار' => 'USD',
+        'دولار امريكي' => 'USD',
+        '$' => 'USD',
+        'eur' => 'EUR',
+        '€' => 'EUR',
+        'جنيه استرليني' => 'GBP',
+        'gbp' => 'GBP',
+        '£' => 'GBP',
+        'try' => 'TRY',
+        '₺' => 'TRY',
+        'ليرة تركية' => 'TRY',
+    ];
+
+
     protected function getWalletWithdrawalMethods(): array
     {
         $configuredMethods = config('wallet.withdrawals.methods', []);
@@ -3833,6 +3876,7 @@ class ApiController extends Controller {
             'client_tag' => ['required', 'string', 'max:64'],
             'reference' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'currency' => ['nullable', 'string', 'max:16'],
         ]);
 
         if ($validator->fails()) {
@@ -3853,6 +3897,15 @@ class ApiController extends Controller {
             $clientTag = $validated['client_tag'];
             $reference = $validated['reference'] ?? null;
             $notes = $validated['notes'] ?? null;
+            
+            $currencyInput = $validated['currency'] ?? null;
+            $normalizedCurrency = $this->normalizeCurrencyCode($currencyInput);
+
+            if ($currencyInput !== null && $normalizedCurrency === null) {
+                ResponseService::validationError('Invalid currency provided.');
+            }
+
+
 
             $idempotencyKey = $this->buildWalletTransferIdempotencyKey($sender, $recipient, $amount, $clientTag);
 
@@ -3862,14 +3915,21 @@ class ApiController extends Controller {
                 $amount,
                 $idempotencyKey,
                 $clientTag,
+                $normalizedCurrency,
                 $reference,
                 $notes
             );
 
+            $responseCurrency = $debitTransaction->currency
+                ?? $creditTransaction->currency
+                ?? $normalizedCurrency
+                ?? config('app.currency', 'SAR');
+
+
             $data = [
                 'idempotency_key' => $idempotencyKey,
                 'amount' => round($amount, 2),
-                'currency' => strtoupper(config('app.currency', 'SAR')),
+                'currency' => Str::upper((string) $responseCurrency),
                 'sender' => [
                     'id' => $sender->id,
                     'name' => $sender->name,
@@ -5316,10 +5376,11 @@ class ApiController extends Controller {
         float $amount,
         string $idempotencyKey,
         string $clientTag,
+        ?string $currency = null,
         ?string $reference = null,
         ?string $notes = null
     ): array {
-        return DB::transaction(function () use ($sender, $recipient, $amount, $idempotencyKey, $clientTag, $reference, $notes) {
+        return DB::transaction(function () use ($sender, $recipient, $amount, $idempotencyKey, $clientTag, $currency, $reference, $notes) {
             $debitKey = $this->buildDirectionalWalletTransferKey($idempotencyKey, 'debit');
             $creditKey = $this->buildDirectionalWalletTransferKey($idempotencyKey, 'credit');
 
@@ -5350,13 +5411,26 @@ class ApiController extends Controller {
             $debitMeta = $this->buildWalletTransferMeta('outgoing', $idempotencyKey, $clientTag, $reference, $notes, $recipient);
             $creditMeta = $this->buildWalletTransferMeta('incoming', $idempotencyKey, $clientTag, $reference, $notes, $sender);
 
-            $debitTransaction = $this->walletService->debit($sender, $debitKey, $amount, [
+            $debitOptions = [
                 'meta' => $debitMeta,
-            ]);
+            ];
 
-            $creditTransaction = $this->walletService->credit($recipient, $creditKey, $amount, [
+            if ($currency !== null) {
+                $debitOptions['currency'] = $currency;
+            }
+
+            $debitTransaction = $this->walletService->debit($sender, $debitKey, $amount, $debitOptions);
+
+            $creditOptions = [
+
                 'meta' => $creditMeta,
-            ]);
+            ];
+
+            if ($currency !== null) {
+                $creditOptions['currency'] = $currency;
+            }
+
+            $creditTransaction = $this->walletService->credit($recipient, $creditKey, $amount, $creditOptions);
 
             return [$debitTransaction, $creditTransaction, false];
         });
@@ -5410,6 +5484,44 @@ class ApiController extends Controller {
             md5($clientTag)
         );
     }
+
+
+    private function normalizeCurrencyCode(?string $currency): ?string
+    {
+        if ($currency === null) {
+            return null;
+        }
+
+        $trimmed = trim($currency);
+
+        if ($trimmed === '') {
+            return null;
+        }
+
+        $lower = Str::lower($trimmed);
+
+        if (isset(self::CURRENCY_SYNONYMS[$lower])) {
+            return self::CURRENCY_SYNONYMS[$lower];
+        }
+
+        $tokens = preg_split('/[\s\-_/\\()]+/u', $trimmed, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        foreach ($tokens as $token) {
+            $tokenLower = Str::lower($token);
+
+            if (isset(self::CURRENCY_SYNONYMS[$tokenLower])) {
+                return self::CURRENCY_SYNONYMS[$tokenLower];
+            }
+        }
+
+        if (preg_match('/[A-Z]{3}/i', strtoupper($trimmed), $matches) === 1) {
+            return strtoupper($matches[0]);
+        }
+
+        return null;
+    }
+
+
 
 
     private function buildWalletIdempotencyKey(string $context, int $userId, int|string $subjectId): string

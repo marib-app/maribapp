@@ -9,6 +9,10 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/utils/currency_utils.dart';
+import 'package:marib/data/model/wallet/wallet_summary.dart';
+import 'package:marib/data/model/wallet/wallet_summary.dart';
+import 'package:marib/data/cubits/wallet/wallet_summary_cubit.dart';
 
 class WalletTransferSheet extends StatefulWidget {
   const WalletTransferSheet({
@@ -151,8 +155,58 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
       payload['amount'] = amountValue;
     }
 
+    final String? activeCurrency = _resolveActiveCurrency();
+    if (activeCurrency != null && !payload.containsKey('currency')) {
+      payload['currency'] = activeCurrency;
+    }
+
+
     return payload;
   }
+
+
+
+  String? _resolveActiveCurrency() {
+    final String? fromProp = CurrencyUtils.normalizeCurrencyCode(widget.currency);
+    if (fromProp != null) {
+      return fromProp;
+    }
+
+    final WalletSummaryCubit? summaryCubit =
+    BlocProvider.maybeOf<WalletSummaryCubit>(context);
+    final WalletSummaryState? summaryState = summaryCubit?.state;
+
+    WalletSummary? summary;
+    if (summaryState is WalletSummaryLoadSuccess) {
+      summary = summaryState.summary;
+    } else if (summaryState is WalletSummaryLoading &&
+        summaryState.previous != null) {
+      summary = summaryState.previous!.summary;
+    }
+
+    if (summary != null) {
+      final String? directCode = summary.currencyCode;
+      if (directCode != null && directCode.trim().isNotEmpty) {
+        return CurrencyUtils.normalizeCurrencyCode(directCode) ?? directCode;
+      }
+
+      final String? normalized =
+      CurrencyUtils.normalizeCurrencyCode(summary.currency);
+      if (normalized != null) {
+        return normalized;
+      }
+
+      final parsed = CurrencyUtils.parseCurrency(summary.raw);
+      final String? parsedCode = parsed.code ??
+          CurrencyUtils.normalizeCurrencyCode(parsed.display);
+      if (parsedCode != null) {
+        return parsedCode;
+      }
+    }
+
+    return null;
+  }
+
 
   bool _validateAmount(double? amount) {
     if (amount == null) {

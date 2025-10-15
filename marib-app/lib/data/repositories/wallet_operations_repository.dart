@@ -5,6 +5,7 @@ import 'package:marib/utils/api.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/payment/manual_payment.dart';
 import 'package:marib/data/model/wallet/manual_payment_requests_summary.dart';
+import 'package:marib/utils/currency_utils.dart';
 
 class WalletOperationsRepository {
   Future<WalletWithdrawalsResult> fetchWithdrawals({
@@ -115,10 +116,25 @@ class WalletOperationsRepository {
 
   Future<Map<String, dynamic>> submitTransfer({
     required Map<String, dynamic> payload,
+    String? currency,
+
   }) async {
+    final Map<String, dynamic> parameter = Map<String, dynamic>.from(payload);
+
+    final String? normalizedCurrency = CurrencyUtils.normalizeCurrencyCode(
+      currency ?? parameter['currency']?.toString(),
+    );
+
+    if (normalizedCurrency != null) {
+      parameter['currency'] = normalizedCurrency;
+    } else if (currency != null && currency.trim().isNotEmpty) {
+      parameter['currency'] = currency.trim();
+    }
+
     final response = await Api.post(
       url: Api.walletTransfersApi,
-      parameter: payload,
+      parameter: parameter,
+
     );
 
     return Map<String, dynamic>.from(response);

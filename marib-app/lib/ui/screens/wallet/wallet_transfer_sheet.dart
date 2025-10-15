@@ -208,12 +208,8 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
     return null;
   }
 
-  T? _maybeReadCubit<T>(BuildContext context) {
-    try {
-      return BlocProvider.of<T>(context, listen: false);
-    } catch (_) {
-      return null;
-    }
+  T? _maybeReadCubit<T extends StateStreamableSource<Object?>>(BuildContext context) {
+    return BlocProvider.maybeOf<T>(context);
   }
 
   bool _validateAmount(double? amount) {

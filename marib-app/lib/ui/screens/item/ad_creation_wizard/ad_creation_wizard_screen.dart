@@ -2397,13 +2397,17 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     final double stepProgress =
     steps.isEmpty ? 0 : (currentStepIndex + 1) / steps.length;
     final int progressPercent = (stepProgress * 100).clamp(0, 100).round();
+    final int stepPosition = steps.isEmpty ? 0 : currentStepIndex + 1;
+    final String progressPercentLabel = '$progressPercent% مكتمل';
+    final String stepPositionLabel =
+    steps.isEmpty ? '' : 'المرحلة $stepPosition/${steps.length}';
     final bool isCurrentStepOptional =
     steps.isNotEmpty ? steps[currentStepIndex].isOptional : false;
     final ThemeData theme = Theme.of(context);
     final ColorScheme colors = context.color;
     final String appBarTitle = steps.isEmpty
         ? 'معالج إنشاء إعلان'
-        : '${steps[currentStepIndex].label} • $progressPercent%';
+        : steps[currentStepIndex].label;
     final List<Widget>? appBarActions =
     (!_hasUnsavedChanges && !_isSavingDraft)
         ? null
@@ -2467,7 +2471,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
                     ),
                   ),
                   child: Text(
-                    'المرحلة ${currentStepIndex + 1}/${steps.length}',
+                    stepPositionLabel,
                     style: theme.textTheme.labelMedium?.copyWith(
                       color: colors.textDefaultColor,
                       fontWeight: FontWeight.w600,
@@ -2498,7 +2502,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
                 ),
                 const Spacer(),
                 Text(
-                  '$progressPercent% مكتمل',
+                  progressPercentLabel,
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: colors.textDefaultColor,
                     fontWeight: FontWeight.w600,

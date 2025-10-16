@@ -9157,15 +9157,11 @@ public function storeRequestDevice(Request $request)
 
 
         $rawPaymentMethod = $request->input('payment_method');
+        $normalizedPaymentMethod = $this->normalizeManualPaymentGateway($rawPaymentMethod);
 
-        if ($rawPaymentMethod === null) {
+        if ($normalizedPaymentMethod === null) {
             $normalizedPaymentMethod = 'manual_bank';
-        } else {
-            $normalizedPaymentMethod = $this->normalizeManualPaymentGateway($rawPaymentMethod);
 
-            if ($normalizedPaymentMethod === null) {
-                $normalizedPaymentMethod = 'manual_bank';
-            }
         }
 
         $request->merge(['payment_method' => $normalizedPaymentMethod]);
@@ -9402,9 +9398,19 @@ public function storeRequestDevice(Request $request)
                 }
             }
 
+            $resolvedManualBankName = $paymentMethod === 'manual_bank'
+                ? $manualBankName
+                : null;
+
+            $resolvedManualBankAccountName = $paymentMethod === 'manual_bank'
+                ? $manualBankAccountName
+                : null;
+            $paymentGatewayName = $paymentMethod === 'manual_bank'
+                ? $manualBankName
+                : null;
 
             $manualPaymentAttributes = [
-                'user_id'        => $user->id,
+                'user_id' => $user->id,
 
                 'manual_bank_id' => $paymentMethod === 'manual_bank'
                     ? $resolvedManualBankId
@@ -9412,27 +9418,24 @@ public function storeRequestDevice(Request $request)
 
                     : null,
                  
-                'amount'         => $request->amount,
-                'currency'       => $currency,
-
-
-                'reference'      => $request->reference,
-                'user_note'      => $request->user_note,
-                'receipt_path'   => $receiptPath,
-                'status'         => ManualPaymentRequest::STATUS_PENDING,
-                'payable_type'   => $resolvedPayableType,
-                'payable_id'     => $payableId,
-                'department'     => $department,
-                'meta'           => empty($metaPayload) ? null : $metaPayload,
+                'amount' => $request->amount,
+                'currency' => $currency,
+                'reference' => $request->reference,
+                'user_note' => $request->user_note,
+                'receipt_path' => $receiptPath,
+                'status' => ManualPaymentRequest::STATUS_PENDING,
+                'payable_type' => $resolvedPayableType,
+                'payable_id' => $payableId,
+                'department' => $department,
+                'meta' => empty($metaPayload) ? null : $metaPayload,
+                'bank_name' => $resolvedManualBankName,
+                'bank_account_name' => $resolvedManualBankAccountName,
+                'gateway_name' => $paymentGatewayName,
             ];
 
 
 
-            $manualPaymentAttributes = array_merge($manualPaymentAttributes, [
-                'bank_name'         => $manualBank?->name,
-                'bank_account_name' => $manualBank?->beneficiary_name,
-                'gateway_name'      => $manualBank?->name,
-            ]);
+
 
 
             if ($existingManualPaymentRequest) {
@@ -9461,7 +9464,9 @@ public function storeRequestDevice(Request $request)
                         'amount' => $manualPaymentRequest->amount,
                         'currency' => $currency,
                         'receipt_path' => $receiptPath,
-                        'payment_gateway' => 'wallet',
+                        'payment_gateway' => $paymentMethod,
+                        'payment_gateway_name' => $paymentGatewayName,
+                        
                         'payable_type' => ($resolvedPayableType && $resolvedPayableType !== ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP)
                             ? $resolvedPayableType
                             : null,
@@ -9480,7 +9485,9 @@ public function storeRequestDevice(Request $request)
                         'amount'                    => $manualPaymentRequest->amount,
                         'currency'                  => $currency,
                         'receipt_path'              => $receiptPath,
-                        'payment_gateway'           => 'wallet',
+                        'payment_gateway'           => $paymentMethod,
+                        'payment_gateway_name'      => $paymentGatewayName,
+                        
                         'payment_status'            => 'pending',
                         'payable_type'              => ($resolvedPayableType && $resolvedPayableType !== ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP)
                             ? $resolvedPayableType
@@ -9603,7 +9610,9 @@ public function storeRequestDevice(Request $request)
                     'amount'                    => $manualPaymentRequest->amount,
                     'currency'                  => $currency,
                     'receipt_path'              => $receiptPath,
-                    'payment_gateway'           => 'east_yemen_bank',
+                    'payment_gateway'           => $paymentMethod,
+                    'payment_gateway_name'      => $paymentGatewayName,
+                    
                     'payment_status'            => 'succeed',
                     'payable_type'              => ($resolvedPayableType && $resolvedPayableType !== ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP)
                         ? $resolvedPayableType
@@ -9710,6 +9719,9 @@ public function storeRequestDevice(Request $request)
                 'currency'                  => $currency,
                 'receipt_path'              => $receiptPath,
                 'payment_gateway'           => $paymentMethod,
+                'payment_gateway_name'      => $paymentGatewayName,
+
+
                 'payment_status'            => 'pending',
                 'payable_type'              => ($resolvedPayableType && $resolvedPayableType !== ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP)
                     ? $resolvedPayableType

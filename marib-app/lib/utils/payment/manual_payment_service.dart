@@ -88,59 +88,61 @@ String formatManualPaymentAmount(double amount, String currencyCode) {
   return amount.toStringAsFixed(decimals);
 }
 
+const Map<String, String> _canonicalPaymentMethodValues = <String, String>{
+  'manual': 'manual_bank',
+  'manual_bank': 'manual_bank',
+  'manual-bank': 'manual_bank',
+  'manual banks': 'manual_bank',
+  'manual_banks': 'manual_bank',
+  'manualbanks': 'manual_bank',
+  'manualbank': 'manual_bank',
+  'bank': 'manual_bank',
+  'bank_transfer': 'manual_bank',
+  'bank-transfer': 'manual_bank',
+  'bank transfer': 'manual_bank',
+  'banktransfer': 'manual_bank',
+  'manual_payment': 'manual_bank',
+  'manual-payment': 'manual_bank',
+  'manual payment': 'manual_bank',
+  'offline': 'manual_bank',
+  'internal': 'manual_bank',
+  'bank_alsharq': 'east_yemen_bank',
+  'bank-alsharq': 'east_yemen_bank',
+  'bank alsharq': 'east_yemen_bank',
+  'east': 'east_yemen_bank',
+  'east_yemen_bank': 'east_yemen_bank',
+  'east-yemen-bank': 'east_yemen_bank',
+  'east yemen bank': 'east_yemen_bank',
+  'eastyemenbank': 'east_yemen_bank',
+  'wallet': 'wallet',
+  'wallet_balance': 'wallet',
+  'wallet-balance': 'wallet',
+  'wallet balance': 'wallet',
+  'wallet_gateway': 'wallet',
+  'wallet-gateway': 'wallet',
+  'wallet gateway': 'wallet',
+  'wallet_top_up': 'wallet',
+  'wallet-top-up': 'wallet',
+  'wallet top up': 'wallet',
+  'walletpayment': 'wallet',
+  'wallet_payment': 'wallet',
+  'wallet-payment': 'wallet',
+  'wallet payment': 'wallet',
+  'wallettopup': 'wallet',
+};
+
+
+
 
 String _apiPaymentMethod(String uiValue) {
   final trimmed = uiValue.trim();
   if (trimmed.isEmpty) {
     return trimmed;
   }
-  final lowercase = trimmed.toLowerCase();
-  const manualAliases = {
-    'manual',
-    'manual_bank',
-    'manual-bank',
-    'manual_banks',
-    'manualbanks',
-    'manualbank',
-    'bank',
-    'bank_transfer',
-    'banktransfer',
-    'manual_payment',
-    'offline',
-    'internal',
-  };
-  if (manualAliases.contains(lowercase)) {
-    return 'manual_bank';
-  }
-  const eastYemenAliases = {
-    'east',
-    'east_yemen_bank',
-    'east-yemen-bank',
-    'eastyemenbank',
-    'bank_alsharq',
-  };
-  if (eastYemenAliases.contains(lowercase)) {
-    return 'east_yemen_bank';
-  }
-  const walletAliases = {
-    'wallet',
-    'wallet_balance',
-    'wallet-balance',
-    'wallet balance',
-    'wallet_gateway',
-    'wallet-gateway',
-    'wallet gateway',
-    'wallet_top_up',
-    'wallet-top-up',
-    'wallet top up',
-    'walletpayment',
-    'wallet_payment',
-    'wallet-payment',
-    'wallet payment',
-    'wallettopup',
-  };
-  if (walletAliases.contains(lowercase)) {
-    return 'wallet';
+  final lookupKey = trimmed.toLowerCase();
+  final canonical = _canonicalPaymentMethodValues[lookupKey];
+  if (canonical != null) {
+    return canonical;
   }
   return trimmed;
 }
@@ -1244,9 +1246,13 @@ class ManualPaymentService {
     final formattedAmount =
     formatManualPaymentAmount(amount, normalizedCurrency);
 
+    final String manualBankMethod =
+    ManualPaymentService.paymentMethodForApi('manual_bank');
+
 
     final Map<String, dynamic> formMap = {
-      'payment_method': ManualPaymentService.paymentMethodForApi('manual_bank'),
+      'payment_method': manualBankMethod,
+
 
       'bank_id': bankId,
       'bank_account_id': bankId,
@@ -1310,7 +1316,7 @@ class ManualPaymentService {
         resolvedIntentId != null && resolvedIntentId.isNotEmpty) {
       result = await _confirmPayment(
         token: token,
-        paymentMethod: 'manual_bank',
+        paymentMethod: manualBankMethod,
         intentId: resolvedIntentId,
         transactionId: resolvedTransactionId,
       );
@@ -1487,9 +1493,13 @@ class ManualPaymentService {
     _writeMetadataFields(metadataFields, metadata);
     additionalData.addAll(metadataFields);
 
+    final String walletMethod =
+    ManualPaymentService.paymentMethodForApi('wallet');
+
     return _confirmPayment(
       token: token,
-      paymentMethod: 'wallet',
+      paymentMethod: walletMethod,
+
       intentId: trimmedIntentId,
       transactionId: trimmedTransactionId,
       additionalData: additionalData.isEmpty ? null : additionalData,
@@ -1519,15 +1529,38 @@ class ManualPaymentService {
       case 'manual':
       case 'manual-bank':
       case 'manual_bank':
+      case 'manual-banks':
+      case 'manual_banks':
+      case 'manual banks':
+      case 'manualbanks':
       case 'manualbank':
         return 'manual_bank';
+      case 'bank_alsharq':
+      case 'bank-alsharq':
+      case 'bank alsharq':
       case 'east':
       case 'east_yemen_bank':
       case 'east-yemen-bank':
+      case 'east yemen bank':
+
       case 'eastyemenbank':
         return 'east_yemen_bank';
       case 'wallet':
         return 'wallet';
+      case 'wallet_balance':
+      case 'wallet-balance':
+      case 'wallet balance':
+      case 'wallet_gateway':
+      case 'wallet-gateway':
+      case 'wallet gateway':
+      case 'wallet_top_up':
+      case 'wallet-top-up':
+      case 'wallet top up':
+      case 'walletpayment':
+      case 'wallet_payment':
+      case 'wallet-payment':
+      case 'wallet payment':
+      case 'wallettopup':
       default:
         return normalized;
     }

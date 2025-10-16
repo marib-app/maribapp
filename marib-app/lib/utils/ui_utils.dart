@@ -466,64 +466,64 @@ class UiUtils {
               decoration: BoxDecoration(
                 borderRadius: borderRadiusShape,
                 boxShadow: [
-                BoxShadow(
-                color: shadowColor,
-                blurRadius: 18,
-                offset: const Offset(0, 8),
+                  BoxShadow(
+                    color: shadowColor,
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),
               child: ClipRRect(
                 borderRadius: borderRadiusShape,
                 child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: resolvedBackgroundColor,
-                      border: border,
+                  decoration: BoxDecoration(
+                    color: resolvedBackgroundColor,
+                    border: border,
+                  ),
+                  child: IconTheme.merge(
+                    data: IconThemeData(
+                      color: resolvedForegroundColor,
+                      size: 22,
                     ),
-                    child: IconTheme.merge(
-                      data: IconThemeData(
-                        color: resolvedForegroundColor,
-                        size: 22,
-                      ),
-                      child: DefaultTextStyle(
-                        style: defaultTitleStyle,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
+                    child: DefaultTextStyle(
+                      style: defaultTitleStyle,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
                           SizedBox(
-                          height: toolbarHeight,
-                          child: Padding(
-                            padding: resolvedPadding,
-                            child: NavigationToolbar(
-                              leading: resolvedLeading != null
-                                  ? Padding(
-                                padding:
-                                const EdgeInsetsDirectional.only(
-                                  end: 12,
-                                ),
-                                child: resolvedLeading,
-                              )
-                                  : null,
-                              middle: resolvedTitleWidget,
-                              trailing: trailingActions != null
-                                  ? Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: trailingActions,
-                              )
-                                  : null,
-                              centerMiddle: centerTitle,
-                                ),
-
+                            height: toolbarHeight,
+                            child: Padding(
+                              padding: resolvedPadding,
+                              child: NavigationToolbar(
+                                leading: resolvedLeading != null
+                                    ? Padding(
+                                  padding:
+                                  const EdgeInsetsDirectional.only(
+                                    end: 12,
+                                  ),
+                                  child: resolvedLeading,
+                                )
+                                    : null,
+                                middle: resolvedTitleWidget,
+                                trailing: trailingActions != null
+                                    ? Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: trailingActions,
+                                )
+                                    : null,
+                                centerMiddle: centerTitle,
                               ),
 
                             ),
-                            if (hasBottom)
-                              _AppBarBottomSection(
-                                children: bottom!,
-                                height: resolvedBottomHeight,
-                              ),
-                          ],
-                        ),
+
+                          ),
+                          if (hasBottom)
+                            _AppBarBottomSection(
+                              children: bottom!,
+                              height: resolvedBottomHeight,
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -972,146 +972,156 @@ class UiUtils {
 
 
   static Widget buildButton(
-      BuildContext context, {
-        double? height,
-        double? width,
-        BorderSide? border,
-        String? titleWhenProgress,
-        bool? isInProgress,
-        bool? isSuccess,
-        bool? isError,
-        double? fontSize,
-        double? radius,
-        bool? autoWidth,
-        Widget? prefixWidget,
-        EdgeInsetsGeometry? padding,
-        required VoidCallback onPressed,
-        required String buttonTitle,
-        bool? showProgressTitle,
-        double? progressWidth,
-        double? progressHeight,
-        bool? showElevation,
-        Color? textColor,
-        Color? buttonColor,
-        EdgeInsets? outerPadding,
-        Color? disabledColor,
-        VoidCallback? onTapDisabledButton,
-        bool? disabled,
-      }) {
-    assert(() {
-      debugPrint('UiUtils.buildButton v3 ✔️');
-      return true;
-    }());
+  BuildContext context, {
+  double? height,
+  double? width,
+  BorderSide? border,
+  String? titleWhenProgress,
+  bool? isInProgress,
+  bool? isSuccess,
+  bool? isError,
+  double? fontSize,
+  double? radius,
+  bool? autoWidth,
+  Widget? prefixWidget,
+  EdgeInsetsGeometry? padding,
+  /// Legacy alias for
+  [buttonColor]. Prefer using [buttonColor].
+  Color? backgroundColor,
+  required VoidCallback? onPressed,
+  required String buttonTitle,
+  bool? showProgressTitle,
+  double? progressWidth,
+  double? progressHeight,
+  bool? showElevation,
+  Color? textColor,
+  Color? buttonColor,
+  EdgeInsets? outerPadding,
+  Color? disabledColor,
+  VoidCallback? onTapDisabledButton,
+  bool? disabled,
+  }) {
+  assert(() {
+  debugPrint('UiUtils.buildButton v3 ✔️');
+  return true;
+  }());
 
 
-    final bool blockInput = (disabled ?? false) || (isInProgress == true);
-    final Color baseButtonColor = buttonColor ?? context.color.territoryColor;
-    final Color disabledBackgroundColor =
-        disabledColor ?? UiUtils.makeColorLight(baseButtonColor);
-    final Color bg = blockInput ? disabledBackgroundColor : baseButtonColor;
+
+  final Color resolvedButtonColor = buttonColor ?? backgroundColor;
+  final bool blockInput =
+  (disabled ?? false) || (isInProgress == true) || onPressed == null;
+  final Color baseButtonColor =
+  resolvedButtonColor ?? context.color.territoryColor;
 
 
-    // لون النص/الأيقونات/السبينر
-    final Color fg = textColor ?? context.color.textAutoAdapt(bg);
-    final Color disabledForeground = textColor != null
-        ? UiUtils.makeColorLight(textColor!)
-        : UiUtils.makeColorDark(disabledBackgroundColor);
-    final Color contentColor = blockInput ? disabledForeground : fg;
+
+  final Color disabledBackgroundColor =
+  disabledColor ?? UiUtils.makeColorLight(baseButtonColor);
+  final Color bg = blockInput ? disabledBackgroundColor : baseButtonColor;
 
 
-    final bool useWhiteProgress =
-        bg.computeLuminance() < 0.5;
-    final Color progressColor =
-    useWhiteProgress ? Colors.white : contentColor;
-    final String title =
-    (isInProgress == true) ? (titleWhenProgress ?? buttonTitle) : buttonTitle;
+  // لون النص/الأيقونات/السبينر
+  final Color fg = textColor ?? context.color.textAutoAdapt(bg);
+  final Color disabledForeground = textColor != null
+  ? UiUtils.makeColorLight(textColor!)
+      : UiUtils.makeColorDark(disabledBackgroundColor);
+  final Color contentColor = blockInput ? disabledForeground : fg;
 
-    Widget buildText(String t, Color c) =>
-        Flexible(
-          child: Text(
-            t,
-            overflow: TextOverflow.ellipsis,
-            softWrap: true,
-            textAlign: TextAlign.center,
-          ).color(c).size(fontSize ?? context.font.larger),
-        );
 
-    return Padding(
-      padding: outerPadding ?? EdgeInsets.zero,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: (blockInput && disabled == true) ? onTapDisabledButton : null,
-        child: IgnorePointer(
-          ignoring: blockInput,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              elevation: (showElevation ?? true) ? 1 : 0,
-              backgroundColor: bg,
-              foregroundColor: fg,
-              disabledBackgroundColor: disabledBackgroundColor,
-              disabledForegroundColor: disabledForeground,
-              minimumSize: Size(
-                autoWidth == true ? 0 : (width ?? double.infinity),
-                height ?? 56.rh(context),
-              ),
-              padding: padding ??
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(radius ?? 16),
-                side: border ?? BorderSide.none,
-              ),
-            ),
-            onPressed: blockInput
-                ? null
-                : () {
-              HelperUtils.unfocus();
-              onPressed.call();
-            },
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              transitionBuilder: (child, anim) =>
-                  FadeTransition(opacity: anim, child: child),
-              child: Row(
-                key: ValueKey("$isInProgress-$isSuccess-$isError-$title"),
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (isInProgress == true)
-                    UiUtils.progress(
-                      width: progressWidth ?? 18,
-                      height: progressHeight ?? 18,
-                      showWhite: useWhiteProgress,
-                      normalProgressColor: progressColor,
+  final bool useWhiteProgress = bg.computeLuminance() < 0.5;
 
-                    ),
-                  if (isSuccess == true)
-                    Icon(Icons.check_circle, color: contentColor, size: 22),
-                  if (isError == true)
-                    Icon(Icons.error_outline, color: contentColor, size: 22),
-                  if (isInProgress == true || isSuccess == true ||
-                      isError == true)
-                    const SizedBox(width: 8),
-                  if (isInProgress == true && (showProgressTitle ?? false))
-                    buildText(title, contentColor),
-                  if (isInProgress != true &&
-                      isSuccess != true &&
-                      isError != true) ...[
-                    if (prefixWidget != null) ...[
-                      IconTheme.merge(
-                        data: IconThemeData(color: contentColor),
-                        child: prefixWidget!,
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                    buildText(title, contentColor),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+  final Color progressColor =
+  useWhiteProgress ? Colors.white : contentColor;
+  final String title =
+  (isInProgress == true) ? (titleWhenProgress ?? buttonTitle) : buttonTitle;
+
+  Widget buildText(String t, Color c) =>
+  Flexible(
+  child: Text(
+  t,
+  overflow: TextOverflow.ellipsis,
+  softWrap: true,
+  textAlign: TextAlign.center,
+  ).color(c).size(fontSize ?? context.font.larger),
+  );
+
+  return Padding(
+  padding: outerPadding ?? EdgeInsets.zero,
+  child: GestureDetector(
+  behavior: HitTestBehavior.opaque,
+  onTap: (blockInput && disabled == true) ? onTapDisabledButton : null,
+  child: IgnorePointer(
+  ignoring: blockInput,
+  child: ElevatedButton(
+  style: ElevatedButton.styleFrom(
+  elevation: (showElevation ?? true) ? 1 : 0,
+  backgroundColor: bg,
+  foregroundColor: fg,
+  disabledBackgroundColor: disabledBackgroundColor,
+  disabledForegroundColor: disabledForeground,
+  minimumSize: Size(
+  autoWidth == true ? 0 : (width ?? double.infinity),
+  height ?? 56.rh(context),
+  ),
+  padding: padding ??
+  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+  shape: RoundedRectangleBorder(
+  borderRadius: BorderRadius.circular(radius ?? 16),
+  side: border ?? BorderSide.none,
+  ),
+  ),
+  onPressed: blockInput
+  ? null
+      : () {
+  HelperUtils.unfocus();
+  onPressed?.call();
+  },
+  child: AnimatedSwitcher(
+  duration: const Duration(milliseconds: 250),
+  transitionBuilder: (child, anim) =>
+  FadeTransition(opacity: anim, child: child),
+  child: Row(
+  key: ValueKey("$isInProgress-$isSuccess-$isError-$title"),
+  mainAxisAlignment: MainAxisAlignment.center,
+  mainAxisSize: MainAxisSize.min,
+  children: [
+  if (isInProgress == true)
+  UiUtils.progress(
+  width: progressWidth ?? 18,
+  height: progressHeight ?? 18,
+  showWhite: useWhiteProgress,
+  normalProgressColor: progressColor,
+
+  ),
+  if (isSuccess == true)
+  Icon(Icons.check_circle, color: contentColor, size: 22),
+  if (isError == true)
+  Icon(Icons.error_outline, color: contentColor, size: 22),
+  if (isInProgress == true || isSuccess == true ||
+  isError == true)
+  const SizedBox(width: 8),
+  if (isInProgress == true && (showProgressTitle ?? false))
+  buildText(title, contentColor),
+  if (isInProgress != true &&
+  isSuccess != true &&
+  isError != true) ...[
+  if (prefixWidget != null) ...[
+  IconTheme.merge(
+  data: IconThemeData(color: contentColor),
+  child: prefixWidget!,
+  ),
+  const SizedBox(width: 8),
+  ],
+  buildText(title, contentColor),
+  ],
+  ],
+  ),
+  ),
+  ),
+  ),
+  ),
+  );
   }
 
 
@@ -1129,193 +1139,193 @@ class UiUtils {
   static NetworkToLocalSvg networkToLocalSvg = NetworkToLocalSvg();
 
   static Widget imageType(String url,
-      {double? width, double? height, BoxFit? fit, Color? color}) {
-    String? extension = mime(url);
+  {double? width, double? height, BoxFit? fit, Color? color}) {
+  String? extension = mime(url);
 
-    if (extension == "image/svg+xml") {
-      return getSvgImage(
-        url,
-        fit: fit,
-        height: height,
-        width: width,
-        color: color,
-      );
-    } else {
-      return getImage(
-        url,
-        fit: fit,
-        height: height,
-        width: width,
-      );
-    }
+  if (extension == "image/svg+xml") {
+  return getSvgImage(
+  url,
+  fit: fit,
+  height: height,
+  width: width,
+  color: color,
+  );
+  } else {
+  return getImage(
+  url,
+  fit: fit,
+  height: height,
+  width: width,
+  );
+  }
   }
 
 
   static void showFullScreenImage(BuildContext context,
-      {required ImageProvider provider, VoidCallback? then}) {
-    Navigator.of(context)
-        .push(BlurredRouter(
-        sigmaX: 10,
-        sigmaY: 10,
-        barrierDismiss: true,
-        builder: (BuildContext context) =>
-            FullScreenImageView(
-              provider: provider,
-            )))
-        .then((value) {
-      then?.call();
-    });
+  {required ImageProvider provider, VoidCallback? then}) {
+  Navigator.of(context)
+      .push(BlurredRouter(
+  sigmaX: 10,
+  sigmaY: 10,
+  barrierDismiss: true,
+  builder: (BuildContext context) =>
+  FullScreenImageView(
+  provider: provider,
+  )))
+      .then((value) {
+  then?.call();
+  });
   }
 
 
   static Future<void> openBottomSheet({
-    required BuildContext context,
-    required Widget child,
+  required BuildContext context,
+  required Widget child,
   }) {
-    return showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent, // يجعل الخلفية شفافة
-      builder: (_) {
-        return ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Theme
-                  .of(context)
-                  .scaffoldBackgroundColor,
-              borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(20)),
-            ),
-            child: child,
-          ),
-        );
-      },
-    );
+  return showModalBottomSheet(
+  context: context,
+  isScrollControlled: true,
+  backgroundColor: Colors.transparent, // يجعل الخلفية شفافة
+  builder: (_) {
+  return ClipRRect(
+  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+  child: Container(
+  decoration: BoxDecoration(
+  color: Theme
+      .of(context)
+      .scaffoldBackgroundColor,
+  borderRadius: const BorderRadius.vertical(
+  top: Radius.circular(20)),
+  ),
+  child: child,
+  ),
+  );
+  },
+  );
   }
 
 
   // عرض نافذة حوار (Dialog) منبثقة للمستخدم في حال عدم وجود باقة متاحة (مثل اشتراك أو خطة).
 
   static void noPackageAvailableDialog(
-      BuildContext context, {
-        SubscriptionPackageLimit? limit,
-      }) async {
+  BuildContext context, {
+  SubscriptionPackageLimit? limit,
+  }) async {
 
-    UiUtils.showBlurredDialoge(
-      context,
-      dialoge: BlurredDialogBox(
-        title: 'noPackage'.translate(context),
-        acceptButtonName: 'subscribe'.translate(context),
-        cancelButtonName: 'cancelLbl'.translate(context),
-        acceptButtonColor: context.color.territoryColor,
-        acceptTextColor: context.color.secondaryColor,
-        content: StatefulBuilder(builder: (context, update) {
+  UiUtils.showBlurredDialoge(
+  context,
+  dialoge: BlurredDialogBox(
+  title: 'noPackage'.translate(context),
+  acceptButtonName: 'subscribe'.translate(context),
+  cancelButtonName: 'cancelLbl'.translate(context),
+  acceptButtonColor: context.color.territoryColor,
+  acceptTextColor: context.color.secondaryColor,
+  content: StatefulBuilder(builder: (context, update) {
 
-          final theme = Theme.of(context);
-          final textTheme = theme.textTheme;
-          final children = <Widget>[
-            Text('plsSubscribe'.translate(context)),
-          ];
+  final theme = Theme.of(context);
+  final textTheme = theme.textTheme;
+  final children = <Widget>[
+  Text('plsSubscribe'.translate(context)),
+  ];
 
-          if (limit != null) {
-            final blockedLabel =
-            getTranslatedLabel(context, 'subscriptionLimitActionBlocked');
-            if (blockedLabel.trim().isNotEmpty) {
-              children.add(const SizedBox(height: 12));
-              children.add(
-                Text(
-                  blockedLabel,
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.error,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              );
-            }
+  if (limit != null) {
+  final blockedLabel =
+  getTranslatedLabel(context, 'subscriptionLimitActionBlocked');
+  if (blockedLabel.trim().isNotEmpty) {
+  children.add(const SizedBox(height: 12));
+  children.add(
+  Text(
+  blockedLabel,
+  style: textTheme.bodyMedium?.copyWith(
+  color: theme.colorScheme.error,
+  fontWeight: FontWeight.w600,
+  ),
+  ),
+  );
+  }
 
-            final summary =
-            subscriptionLimitSummary(context, limit, includeExpiry: false);
-            if (summary != null && summary.isNotEmpty) {
-              children.add(const SizedBox(height: 8));
-              children.add(
-                Text(
-                  summary,
-                  style: textTheme.bodyMedium,
-                ),
-              );
-            }
+  final summary =
+  subscriptionLimitSummary(context, limit, includeExpiry: false);
+  if (summary != null && summary.isNotEmpty) {
+  children.add(const SizedBox(height: 8));
+  children.add(
+  Text(
+  summary,
+  style: textTheme.bodyMedium,
+  ),
+  );
+  }
 
-            final expiry = subscriptionLimitExpiry(context, limit);
-            if (expiry != null && expiry.isNotEmpty) {
-              children.add(const SizedBox(height: 4));
-              children.add(
-                Text(
-                  expiry,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.7),
-                  ),
-                ),
-              );
-            }
-          }
+  final expiry = subscriptionLimitExpiry(context, limit);
+  if (expiry != null && expiry.isNotEmpty) {
+  children.add(const SizedBox(height: 4));
+  children.add(
+  Text(
+  expiry,
+  style: textTheme.bodySmall?.copyWith(
+  color: theme.colorScheme.onSurface.withOpacity(0.7),
+  ),
+  ),
+  );
+  }
+  }
 
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: children,
-          );
+  return Column(
+  mainAxisSize: MainAxisSize.min,
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: children,
+  );
 
 
-        }),
-        isAcceptContainesPush: false,
-        onAccept: () async {
-          Future.delayed(Duration(seconds: 1), () {
-            Navigator.pushNamed(context, Routes.subscriptionPackageListRoute);
-          });
-        },
-      ),
-    );
+  }),
+  isAcceptContainesPush: false,
+  onAccept: () async {
+  Future.delayed(Duration(seconds: 1), () {
+  Navigator.pushNamed(context, Routes.subscriptionPackageListRoute);
+  });
+  },
+  ),
+  );
   }
 
 
 
 
   static void imageGallaryView(BuildContext context,
-      {required List images, VoidCallback? then, required int initalIndex}) {
-    Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (context) =>
-                GalleryView(
-                  images: images.cast<String>(), // ✅ تحويل القائمة لنوع String
-                  initialIndex: initalIndex,
-                )
-        ));
+  {required List images, VoidCallback? then, required int initalIndex}) {
+  Navigator.push(
+  context,
+  MaterialPageRoute(
+  builder: (context) =>
+  GalleryView(
+  images: images.cast<String>(), // ✅ تحويل القائمة لنوع String
+  initialIndex: initalIndex,
+  )
+  ));
   }
 
 
 // وظيفتها عرض نافذة حوار (Dialog) مع تأثير ضبابي (Blur) خلفها،
 
   static Future showBlurredDialoge(
-      BuildContext context, {
-        required BlurDialoge dialoge,
-        double? sigmaX,
-        double? sigmaY,
-      }) async {
-    return await Navigator.push(
-      context,
-      BlurredRouter(
-        barrierDismiss: true,
-        builder: (context) {
-          // يكفي نتأكد إنه Widget ونرجعه
-          if (dialoge is Widget) return dialoge as Widget;
-          return const SizedBox.shrink();
-        },
-        sigmaX: sigmaX,
-        sigmaY: sigmaY,
-      ),
-    );
+  BuildContext context, {
+  required BlurDialoge dialoge,
+  double? sigmaX,
+  double? sigmaY,
+  }) async {
+  return await Navigator.push(
+  context,
+  BlurredRouter(
+  barrierDismiss: true,
+  builder: (context) {
+  // يكفي نتأكد إنه Widget ونرجعه
+  if (dialoge is Widget) return dialoge as Widget;
+  return const SizedBox.shrink();
+  },
+  sigmaX: sigmaX,
+  sigmaY: sigmaY,
+  ),
+  );
   }
 
 
@@ -1332,59 +1342,59 @@ class UiUtils {
 
 //AAA is color theory's point it means if color is AAA then it will be perfect for your app
   static bool isColorMatchAAA(Color textColor, Color background) {
-    double contrastRatio = (textColor.computeLuminance() + 0.05) /
-        (background.computeLuminance() + 0.05);
-    if (contrastRatio < 4.5) {
-      return false;
-    } else {
-      return true;
-    }
+  double contrastRatio = (textColor.computeLuminance() + 0.05) /
+  (background.computeLuminance() + 0.05);
+  if (contrastRatio < 4.5) {
+  return false;
+  } else {
+  return true;
+  }
   }
 
   static double getRadiansFromDegree(double radians) {
-    return radians * 180 / pi;
+  return radians * 180 / pi;
   }
 
   static Color getAdaptiveTextColor(Color color) {
-    int d = 0;
+  int d = 0;
 
 // Counting the perceptive luminance - human eye favors green color...
-    double luminance =
-        (0.299 * color.red + 0.587 * color.green + 0.114 * color.blue) / 255;
+  double luminance =
+  (0.299 * color.red + 0.587 * color.green + 0.114 * color.blue) / 255;
 
-    if (luminance > 0.5) {
-      d = 0;
-    } else {
-      d = 255;
-    } // dark colors - white font
+  if (luminance > 0.5) {
+  d = 0;
+  } else {
+  d = 255;
+  } // dark colors - white font
 
-    return Color.fromARGB(color.alpha, d, d, d);
+  return Color.fromARGB(color.alpha, d, d, d);
   }
 
 
 
 
   static String formatTimeWithDateTime(DateTime dateTime, {bool is24 = true}) {
-    if (is24) {
-      return DateFormat("kk:mm").format(dateTime);
-    } else {
-      return DateFormat("hh:mm a").format(dateTime);
-    }
+  if (is24) {
+  return DateFormat("kk:mm").format(dateTime);
+  } else {
+  return DateFormat("hh:mm a").format(dateTime);
+  }
   }
 
 
 
   static String time24to12hour(String time24) {
-    DateTime tempDate = DateFormat("hh:mm").parse(time24);
-    var dateFormat = DateFormat("h:mm a");
-    return dateFormat.format(tempDate);
+  DateTime tempDate = DateFormat("hh:mm").parse(time24);
+  var dateFormat = DateFormat("h:mm a");
+  return dateFormat.format(tempDate);
   }
 
   static String monthYearDate(String date) {
-    DateTime dateTime = DateTime.parse(date);
+  DateTime dateTime = DateTime.parse(date);
 
-    // Format the date into "MMMM yyyy" (i.e., April 2024)
-    return DateFormat('MMMM yyyy').format(dateTime);
+  // Format the date into "MMMM yyyy" (i.e., April 2024)
+  return DateFormat('MMMM yyyy').format(dateTime);
   }
 }
 

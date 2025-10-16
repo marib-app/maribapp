@@ -411,11 +411,13 @@ class UiUtils {
         foregroundColor ?? colorScheme.textAutoAdapt(resolvedBackgroundColor);
     final bool hasBottom = bottom != null && bottom.isNotEmpty;
     final bool hasLeading = leading != null || showBackButton;
+    final double systemTopInset = MediaQuery.of(context).padding.top;
+
     final EdgeInsetsGeometry resolvedPadding = contentPadding ??
         EdgeInsetsDirectional.only(
           start: hasLeading ? 12 : 20,
           end: actions?.isNotEmpty == true ? 12 : 20,
-          top: 12,
+          top: max(0.0, 12 - systemTopInset),
           bottom: 12,
         );
     final double? resolvedBottomHeight = hasBottom
@@ -485,9 +487,8 @@ class UiUtils {
             : Colors.black.withOpacity(0.25))
         .withOpacity(theme.brightness == Brightness.dark ? 0.45 : 0.12);
 
-    final double topPadding = MediaQuery.of(context).padding.top;
     final double totalHeight =
-        toolbarHeight + (resolvedBottomHeight ?? 0.0) + topPadding;
+        toolbarHeight + (resolvedBottomHeight ?? 0.0) + systemTopInset;
 
     return PreferredSize(
       preferredSize: Size.fromHeight(totalHeight),

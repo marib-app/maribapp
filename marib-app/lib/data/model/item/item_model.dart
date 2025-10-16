@@ -15,6 +15,7 @@ class ItemSummary {
   final String? description;
   final double? price;
   final String? image;
+  final String? thumbnailUrl;
   final String? productLink;
   final dynamic watermarkImage;
   final double? latitude;
@@ -42,6 +43,7 @@ class ItemSummary {
     this.description,
     this.price,
     this.image,
+    this.thumbnailUrl,
     this.productLink,
     this.watermarkImage,
     this.latitude,
@@ -70,7 +72,8 @@ class ItemSummary {
       slug: json['slug'],
       description: json['description'],
       price: ItemModel._toDouble(json['price']),
-      image: json['image'],
+      image: json['image'] ?? json['thumbnail_url'] ?? json['thumbnail'],
+      thumbnailUrl: json['thumbnail_url'] ?? json['thumbnail'],
       productLink: json['product_link'],
       watermarkImage: json['watermark_image'],
       latitude: ItemModel._toDouble(json['latitude'] ?? json['lat']),
@@ -101,6 +104,7 @@ class ItemSummary {
       'description': description,
       'price': price,
       'image': image,
+      'thumbnail_url': thumbnailUrl,
       'product_link': productLink,
       'watermark_image': watermarkImage,
       'latitude': latitude,

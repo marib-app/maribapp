@@ -714,6 +714,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   String? _preferredInterfaceTypeOriginal;
   String? _preferredInterfaceTypeNormalized;
   int? _pendingInitialSubCategoryId;
+  int? _pendingSubCategoryFetchParentId;
   bool _appliedInitialCategorySelection = false;
   bool _hasRequestedCategoryFetch = false;
   FetchCategoryCubit? _categoryCubit;
@@ -930,6 +931,31 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     });
   }
 
+  void _ensureSubCategoryFetch(int parentId) {
+    if (parentId <= 0) {
+      return;
+    }
+    if (_pendingSubCategoryFetchParentId == parentId) {
+      return;
+    }
+
+    _pendingSubCategoryFetchParentId = parentId;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      if (_selectedMainCategory?.id != parentId) {
+        if (_pendingSubCategoryFetchParentId == parentId) {
+          _pendingSubCategoryFetchParentId = null;
+        }
+        return;
+      }
+      _scheduleCategoryFetch(forceRefresh: true);
+    });
+  }
+
+
   void _triggerCategoryFetch({bool forceRefresh = false}) {
     final FetchCategoryCubit? cubit =
         _categoryCubit ?? context.read<FetchCategoryCubit>();
@@ -1012,6 +1038,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         _mainCategories = options;
         _selectedMainCategory = retainedMain;
         _selectedSubCategory = retainedSub;
+        _pendingSubCategoryFetchParentId = null;
       });
 
       if (!_appliedInitialCategorySelection) {
@@ -3114,6 +3141,7 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       _isLoadingCustomFields = false;
       _inventoryVariations = <_InventoryVariation>[];
       _subCategorySearchQuery = '';
+      _pendingSubCategoryFetchParentId = null;
       if (category.interfaceType != 'shein_products') {
         if (_sheinProductLinkController.text.isNotEmpty) {
           _sheinProductLinkController.clear();

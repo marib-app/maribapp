@@ -219,8 +219,15 @@ class _SubCategoryStepContent extends StatelessWidget {
     if (mainCategory.subCategories.isEmpty) {
 
 
-      return screen
-          ._buildPlaceholderMessage('لا توجد فئات فرعية متاحة لهذه الفئة.');
+      screen._ensureSubCategoryFetch(mainCategory.id);
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: const <Widget>[
+          Text('جارٍ تحميل الفئات الفرعية المتاحة...'),
+          SizedBox(height: 16),
+          _CategoryListShimmer(itemCount: 4),
+        ],
+      );
     }
 
     return ListView(

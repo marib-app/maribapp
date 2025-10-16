@@ -53,6 +53,9 @@ extension StringCasingExtension on String {
 
 class HelperUtils {
 
+
+
+
   static String absoluteImage(String? path) {
     final String value = (path ?? '').trim();
     if (value.isEmpty) {

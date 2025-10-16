@@ -179,80 +179,53 @@ class _PlansSheetState extends State<_PlansSheet> {
                         ),
                       );
                     }
-                    final List<Widget> listChildren = <Widget>[];
-
-                    if (_isLoading) {
-                      listChildren.add(
-                        const Padding(
-                          padding: EdgeInsets.only(bottom: 12),
-                          child: LinearProgressIndicator(minHeight: 2),
-                        ),
-                      );
-                    }
-
-                    if (_error != null) {
-                      listChildren.add(
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: color.error.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  _error!,
-                                  style: TextStyle(
-                                    color: color.error,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () => _fetchPlans(force: true),
-                                child: const Text('تحديث'),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-
-                    if (widget.network.loginScreenshotUrl != null) {
-                      listChildren.addAll(
-                        [
-                          _LoginScreenshotPreview(
-                            imageUrl: widget.network.loginScreenshotUrl!,
-                          ),
-                          const SizedBox(height: 12),
-                        ],
-                      );
-                    }
-
-                    for (int i = 0; i < _plans.length; i++) {
-                      if (i > 0) {
-                        listChildren.add(const SizedBox(height: 10));
-                      }
-                      listChildren.add(
-                        _PlanTile(
-                          plan: _plans[i],
-                          onSelect: () => _openCheckout(context, _plans[i]),
-                        ),
-                      );
-                    }
-
-                    listChildren.add(const SizedBox(height: 16));
-
                     return RefreshIndicator(
                       onRefresh: () => _fetchPlans(force: true),
                       child: ListView(
                         controller: controller,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        children: listChildren,
-
+                        children: [
+                          if (_isLoading)
+                            const Padding(
+                              padding: EdgeInsets.only(bottom: 12),
+                              child: LinearProgressIndicator(minHeight: 2),
+                            ),
+                          if (_error != null)
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                color: color.error.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      _error!,
+                                      style: TextStyle(
+                                        color: color.error,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => _fetchPlans(force: true),
+                                    child: const Text('تحديث'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          for (int i = 0; i < _plans.length; i++) ...[
+                            if (i > 0) const SizedBox(height: 10),
+                            _PlanTile(
+                              plan: _plans[i],
+                              onSelect: () => _openCheckout(context, _plans[i]),
+                            ),
+                          ],
+                          const SizedBox(height: 16),
+                        ],
                       ),
                     );
                   },
@@ -346,8 +319,6 @@ class _PlanTile extends StatelessWidget {
                 fontSize: 12,
               ),
             ),
-            _SheetPlanHighlights(plan: plan),
-
             const SizedBox(height: 12),
             Row(
               children: [
@@ -367,186 +338,4 @@ class _PlanTile extends StatelessWidget {
       ),
     );
   }
-
-
-}
-
-
-class _SheetPlanHighlights extends StatelessWidget {
-  const _SheetPlanHighlights({required this.plan});
-
-  final WifiPlan plan;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = context.color;
-    final List<String> labels = <String>[];
-
-    if (plan.isUnlimited) {
-      labels.add('بيانات غير محدودة');
-    } else if (plan.dataCapGb != null) {
-      final num cap = plan.dataCapGb!;
-      if (cap >= 1) {
-        final bool hasFraction = cap % 1 != 0;
-        labels.add('${cap.toStringAsFixed(hasFraction ? 1 : 0)} جيجابايت');
-      } else {
-        final num mb = (cap * 1024).round();
-        labels.add('$mb ميجابايت');
-      }
-    }
-
-    if (plan.durationDays != null && plan.durationDays! > 0) {
-      labels.add('صلاحية ${plan.durationDays} يوم');
-    }
-
-    if (labels.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 6,
-        children: labels
-            .map(
-              (label) => Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: color.backgroundColor,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: color.secondaryColor.withOpacity(0.35)),
-            ),
-            child: Text(
-              label,
-              style: TextStyle(
-                color: color.textDefaultColor.withOpacity(0.85),
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        )
-            .toList(),
-      ),
-    );
-  }
-}
-
-class _LoginScreenshotPreview extends StatelessWidget {
-  const _LoginScreenshotPreview({required this.imageUrl});
-
-  final String imageUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = context.color;
-
-    return GestureDetector(
-      onTap: () => _showFullScreen(context),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: AspectRatio(
-              aspectRatio: 16 / 9,
-              child: Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, progress) {
-                  if (progress == null) return child;
-                  return Container(
-                    color: color.secondaryColor.withOpacity(0.2),
-                    alignment: Alignment.center,
-                    child: const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2.4),
-                    ),
-                  );
-                },
-                errorBuilder: (context, _, __) {
-                  return Container(
-                    color: color.secondaryColor.withOpacity(0.2),
-                    alignment: Alignment.center,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.image_not_supported,
-                          color: color.textDefaultColor.withOpacity(0.6),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'تعذّر تحميل صورة صفحة الدخول',
-                          style: TextStyle(
-                            color: color.textDefaultColor.withOpacity(0.7),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'تأكد من تطابق صفحة الدخول قبل الشراء',
-            style: TextStyle(
-              color: color.textDefaultColor,
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'اضغط على الصورة لعرضها بالحجم الكامل والتحقق من هوية الشبكة.',
-            style: TextStyle(
-              color: color.textDefaultColor.withOpacity(0.75),
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showFullScreen(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return Dialog(
-          backgroundColor: Colors.black,
-          insetPadding: const EdgeInsets.all(16),
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: InteractiveViewer(
-                  child: Image.network(
-                    imageUrl,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, _, __) => const Center(
-                      child: Icon(Icons.broken_image, color: Colors.white70),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white),
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
 }

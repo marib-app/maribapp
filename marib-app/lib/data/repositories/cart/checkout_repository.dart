@@ -291,8 +291,6 @@ class CheckoutRepository {
         if (item.vendorLng != null) 'vendor_lng': item.vendorLng,
         if (item.section.isNotEmpty) 'section': item.section,
         if (item.variantId != null) 'variant_id': item.variantId,
-        if (item.variantKey != null && item.variantKey!.trim().isNotEmpty)
-          'variant_key': item.variantKey,
         if (item.variantAttributes != null && item.variantAttributes!.isNotEmpty)
           'variant_attributes': item.variantAttributes,
         if (item.stockSnapshot != null && item.stockSnapshot!.isNotEmpty)

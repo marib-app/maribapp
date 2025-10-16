@@ -25,45 +25,32 @@ class ChatRepostiory {
     /* Map<String, dynamic> response = await Api.get(
         url: Api.getChatListApi, queryParameters: {*/ /*"page": page, */ /*"type": "buyer"});*/
 
-    final Map<String, dynamic> response = await Api.get(
-      url: Api.getChatListApi,
-      queryParameters: {"type": "buyer", "page": page},
-    );
+    Map<String, dynamic> response = await Api.get(
+        url: Api.getChatListApi,
+        queryParameters: {"type": "buyer", "page": page});
 
+    List<ChatedUser> modelList = (response['data']['data'] as List).map(
+      (e) {
+        return ChatedUser.fromJson(e);
+      },
+    ).toList();
 
-    final _ParsedPaginatedMap parsed =
-    _parsePaginatedMap(response['data']);
-
-    final List<ChatedUser> modelList = parsed.items
-        .map(ChatedUser.fromJson)
-        .toList();
-
-
-    return DataOutput(
-      total: parsed.total,
-      modelList: modelList,
-      page: parsed.page,
-    );
+    return DataOutput(total: response['data']['total'], modelList: modelList);
   }
 
   Future<DataOutput<ChatedUser>> fetchSellerChatList(int page) async {
-    final Map<String, dynamic> response = await Api.get(
-      url: Api.getChatListApi,
-      queryParameters: {"page": page, "type": "seller"},
-    );
+    Map<String, dynamic> response = await Api.get(
+        url: Api.getChatListApi,
+        queryParameters: {"page": page, "type": "seller"});
 
-    final _ParsedPaginatedMap parsed =
-    _parsePaginatedMap(response['data']);
-
-    final List<ChatedUser> modelList = parsed.items
-        .map(ChatedUser.fromJson)
-        .toList();
+    List<ChatedUser> modelList = (response['data']["data"] as List).map(
+      (e) {
+        return ChatedUser.fromJson(e /*, context: _setContext*/);
+      },
+    ).toList();
 
     return DataOutput(
-      total: parsed.total,
-      modelList: modelList,
-      page: parsed.page,
-    );
+        total: response['data']['total'] ?? 0, modelList: modelList);
   }
 
   Future<DataOutput<ChatMessage>> getMessagesApi(
@@ -71,12 +58,12 @@ class ChatRepostiory {
     required int itemOfferId,
     required String conversationId}) async {
     Map<String, dynamic> response = await Api.get(
-      url: Api.chatMessagesApi,
-      queryParameters: {
-        "item_offer_id": itemOfferId,
-        "conversation_id": conversationId,
-        "page": page,
-      },
+    url: Api.chatMessagesApi,
+    queryParameters: {
+    "item_offer_id": itemOfferId,
+    "conversation_id": conversationId,
+    "page": page,
+    },
     );
 
     final Map<String, dynamic> responseData =
@@ -363,87 +350,7 @@ class ChatRepostiory {
     );
   }
 
-  _ParsedPaginatedMap _parsePaginatedMap(dynamic payload) {
-    if (payload == null) {
-      return const _ParsedPaginatedMap(
-        items: <Map<String, dynamic>>[],
-        total: 0,
-      );
-    }
 
-    List<Map<String, dynamic>> items = const <Map<String, dynamic>>[];
-    int total = 0;
-    int? page;
 
-    if (payload is List) {
-      items = payload.whereType<Map<String, dynamic>>().toList();
-      total = items.length;
-    } else if (payload is Map<String, dynamic>) {
-      final dynamic candidateItems = payload['items'] ??
-          payload['data'] ??
-          payload['records'] ??
-          payload['results'];
-      items = (candidateItems is List ? candidateItems : const <dynamic>[])
-          .whereType<Map<String, dynamic>>()
-          .toList();
 
-      final Map<String, dynamic>? meta = payload['meta'] is Map<String, dynamic>
-          ? payload['meta'] as Map<String, dynamic>
-          : null;
-      final Map<String, dynamic>? pagination = payload['pagination']
-      is Map<String, dynamic>
-          ? payload['pagination'] as Map<String, dynamic>
-          : null;
-
-      total = _parseInt(payload['total']) ??
-          _parseInt(meta?['total']) ??
-          _parseInt(pagination?['total']) ??
-          items.length;
-
-      page = _parseInt(payload['page']) ??
-          _parseInt(meta?['current_page']) ??
-          _parseInt(pagination?['current_page']) ??
-          _parseInt(payload['current_page']);
-    } else {
-      return const _ParsedPaginatedMap(
-        items: <Map<String, dynamic>>[],
-        total: 0,
-      );
-    }
-
-    return _ParsedPaginatedMap(
-      items: items,
-      total: total,
-      page: page,
-    );
-  }
-
-  int? _parseInt(dynamic source) {
-    if (source == null) {
-      return null;
-    }
-
-    if (source is int) {
-      return source;
-    }
-
-    if (source is String) {
-      return int.tryParse(source);
-    }
-
-    return null;
-  }
-}
-
-class _ParsedPaginatedMap {
-  final List<Map<String, dynamic>> items;
-  final int total;
-  final int? page;
-
-  const _ParsedPaginatedMap({
-  required this.items,
-  required this.total,
-  this.page,
-
-  });
 }

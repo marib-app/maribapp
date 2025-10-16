@@ -14,8 +14,6 @@ class ClassifiedModel {
   String? slug;
   String? description;
   String? image;
-  String? thumbnailUrl;
-  String? thumbnailFallbackUrl;
   String? icon;
   List<String>? tags;
   int? views;
@@ -55,8 +53,6 @@ class ClassifiedModel {
     this.slug,
     this.description,
     this.image,
-    this.thumbnailUrl,
-    this.thumbnailFallbackUrl,
     this.icon,
     this.tags,
     this.views,
@@ -281,19 +277,7 @@ class ClassifiedModel {
     slug        = _asString(json['slug']);
     description = _asString(_pick(json, ['description','desc','details']));
 
-    thumbnailUrl =
-        _asString(_pick(json, ['thumbnail_url', 'thumbnailUrl', 'thumbnail', 'thumb']));
-    thumbnailFallbackUrl = _asString(_pick(json, [
-      'thumbnail_fallback_url',
-      'thumbnailFallbackUrl',
-      'image',
-      'image_url',
-      'thumb_fallback',
-    ]));
-    image = _asString(_pick(json, ['image', 'image_url'])) ??
-        thumbnailFallbackUrl ??
-        thumbnailUrl;
-
+    image       = _asString(_pick(json, ['image','image_url','thumbnail','thumb']));
     icon        = _asString(_pick(json, ['icon','icon_url']));
 
     tags        = _asStringList(json['tags']);
@@ -357,8 +341,6 @@ class ClassifiedModel {
     data['slug'] = slug;
     data['description'] = description;
     data['image'] = image;
-    data['thumbnail_url'] = thumbnailUrl;
-    data['thumbnail_fallback_url'] = thumbnailFallbackUrl;
     data['icon'] = icon;
     data['tags'] = tags;
     data['views'] = views;
@@ -403,8 +385,6 @@ class ClassifiedSummary {
   final int id;
   final String? title;
   final String? image;
-  final String? thumbnailUrl;
-  final String? thumbnailFallbackUrl;
   final bool isMain;
   final bool status;
   final double? rating;
@@ -415,8 +395,6 @@ class ClassifiedSummary {
     required this.id,
     this.title,
     this.image,
-    this.thumbnailUrl,
-    this.thumbnailFallbackUrl,
     this.isMain = false,
     this.status = true,
     this.rating,
@@ -496,13 +474,6 @@ class ClassifiedSummary {
           _asString(json['service_name']),
 
       image: _pickImage(json),
-      thumbnailUrl: _asString(json['thumbnail_url']) ??
-          _asString(json['thumbnail']) ??
-          _asString(json['thumb']),
-      thumbnailFallbackUrl: _asString(json['thumbnail_fallback_url']) ??
-          _asString(json['thumbnailFallbackUrl']) ??
-          _asString(json['image']) ??
-          _asString(json['image_url']),
       isMain: _asBool(json['is_main']) || _asBool(json['isMain']),
       status: _asBool(json['status'], defaultValue: true),
       rating: _asDouble(json['rating']) ?? _asDouble(json['avg_rating']),
@@ -519,8 +490,6 @@ extension ClassifiedMappers on ClassifiedModel {
     id: id ?? 0,
     title: title,
     image: image ?? icon,
-    thumbnailUrl: thumbnailUrl,
-    thumbnailFallbackUrl: thumbnailFallbackUrl,
     isMain: isMain ?? false,
     status: status ?? true,
     rating: rating,
@@ -536,8 +505,6 @@ extension ClassifiedMappers on ClassifiedModel {
       slug: slug,
       description: description,
       image: image ?? s.image,
-      thumbnailUrl: thumbnailUrl ?? s.thumbnailUrl,
-      thumbnailFallbackUrl: thumbnailFallbackUrl ?? s.thumbnailFallbackUrl,
       icon: icon ?? s.image, // كـ fallback
       tags: tags,
       views: views,
@@ -558,8 +525,6 @@ extension ClassifiedSummaryX on ClassifiedSummary {
     id: id,
     title: title,
     image: image,
-    thumbnailUrl: thumbnailUrl,
-    thumbnailFallbackUrl: thumbnailFallbackUrl,
     icon: image,
     isMain: isMain,
     status: status,

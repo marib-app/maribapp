@@ -7,7 +7,6 @@ import 'package:marib/utils/payment/manual_payment.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
-import 'package:marib/data/model/wallet/manual_payment_requests_summary.dart';
 
 class ManualPaymentRequestsSheet extends StatefulWidget {
   const ManualPaymentRequestsSheet({super.key});
@@ -17,20 +16,28 @@ class ManualPaymentRequestsSheet extends StatefulWidget {
 }
 
 class _ManualPaymentRequestsSheetState extends State<ManualPaymentRequestsSheet> {
+  final ScrollController _scrollController = ScrollController();
   final DateFormat _dateFormat = DateFormat('yyyy-MM-dd HH:mm');
 
-  bool _handleScrollNotification(ScrollNotification notification) {
-    if (notification.metrics.axis != Axis.vertical) {
-      return false;
-    }
-    if (notification is ScrollUpdateNotification || notification is OverscrollNotification) {
-      final metrics = notification.metrics;
-      if (metrics.pixels >= metrics.maxScrollExtent - 120) {
-        context.read<ManualPaymentRequestsCubit>().loadMore();
-      }
-    }
-    return false;
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_handleScroll);
+  }
 
+  @override
+  void dispose() {
+    _scrollController.removeListener(_handleScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _handleScroll() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 120) {
+      context.read<ManualPaymentRequestsCubit>().loadMore();
+    }
   }
 
   Future<void> _refresh() async {
@@ -78,67 +85,29 @@ class _ManualPaymentRequestsSheetState extends State<ManualPaymentRequestsSheet>
                       );
                     }
                     if (state is ManualPaymentRequestsSuccess) {
-                      final summary = state.summary;
-                      final hasSummary = summary != null;
-                      final requests = state.requests;
-                      final hasRequests = requests.isNotEmpty;
-                      final headerCount = hasSummary ? 1 : 0;
-                      final emptyCount = hasRequests ? 0 : 1;
-                      final loadingCount = state.isLoadingMore ? 1 : 0;
-                      final totalItems =
-                          headerCount + (hasRequests ? requests.length : 0) + emptyCount + loadingCount;
-
-
+                      if (state.requests.isEmpty) {
+                        return _EmptyView(onRefresh: _refresh);
+                      }
                       return RefreshIndicator(
                         color: context.color.territoryColor,
                         onRefresh: _refresh,
-                        child: NotificationListener<ScrollNotification>(
-                            onNotification: _handleScrollNotification,
-                            child: ListView.builder(
-                                controller: scrollController,
-                                physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-                                padding: const EdgeInsets.only(bottom: 12),
-                                itemCount: totalItems,
-                                itemBuilder: (context, index) {
-                                  var currentIndex = index;
-
-                                  if (hasSummary) {
-                                    if (currentIndex == 0) {
-                                      return Padding(
-                                        padding: const EdgeInsets.fromLTRB(4, 0, 4, 16),
-                                        child: _ManualPaymentSummarySection(summary: summary!),
-                                      );
-                                    }
-                                    currentIndex -= 1;
-                              }
-
-                                  if (!hasRequests) {
-                                    if (currentIndex == 0) {
-                                      return Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 24),
-                                        child: _EmptyView(onRefresh: _refresh),
-                                      );
-                                    }
-                                    return const Padding(
-                                      padding: EdgeInsets.symmetric(vertical: 16),
-                                      child: Center(child: CircularProgressIndicator()),
-                                );
-                              }
-
-                                  if (currentIndex >= requests.length) {
-                                    return const Padding(
-                                      padding: EdgeInsets.symmetric(vertical: 16),
-                                      child: Center(child: CircularProgressIndicator()),
-                                    );
-                                  }
-                                  final request = requests[currentIndex];
-                                  return _ManualPaymentTile(
-                                    payment: request,
-                                    dateFormat: _dateFormat,
-
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                          itemCount: state.requests.length + (state.isLoadingMore ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index >= state.requests.length) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                child: Center(child: CircularProgressIndicator()),
                               );
-                                },
-                            ),
+                            }
+                            final request = state.requests[index];
+                            return _ManualPaymentTile(
+                              payment: request,
+                              dateFormat: _dateFormat,
+                            );
+                          },
                         ),
                       );
                     }
@@ -154,175 +123,6 @@ class _ManualPaymentRequestsSheetState extends State<ManualPaymentRequestsSheet>
   }
 }
 
-
-
-class _ManualPaymentSummarySection extends StatelessWidget {
-  const _ManualPaymentSummarySection({required this.summary});
-
-  final ManualPaymentRequestsSummary summary;
-
-  @override
-  Widget build(BuildContext context) {
-    final statuses = summary.orderedStatuses(const ['pending', 'under_review', 'approved', 'rejected']);
-    final cards = <_SummaryCardConfig>[
-      _SummaryCardConfig(
-        key: 'total',
-        title: 'إجمالي الطلبات',
-        status: summary.total,
-        color: context.color.territoryColor,
-        icon: Icons.receipt_long_outlined,
-      ),
-      for (final status in statuses)
-        _SummaryCardConfig(
-          key: status.key,
-          title: _summaryTitleForKey(status.key),
-          status: status,
-          color: _summaryColorForKey(context, status.key),
-          icon: _summaryIconForKey(status.key),
-        ),
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'نظرة عامة على الطلبات اليدوية',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 12),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final maxWidth = constraints.maxWidth;
-            const spacing = 12.0;
-            final crossAxisCount = _summaryCrossAxisCount(maxWidth);
-            final itemWidth = crossAxisCount == 1
-                ? maxWidth
-                : (maxWidth - spacing * (crossAxisCount - 1)) / crossAxisCount;
-
-            return Wrap(
-              spacing: spacing,
-              runSpacing: spacing,
-              children: cards
-                  .map(
-                    (card) => SizedBox(
-                  width: itemWidth,
-                  child: _ManualPaymentSummaryCard(
-                    title: card.title,
-                    status: card.status,
-                    color: card.color,
-                    icon: card.icon,
-                  ),
-                ),
-              )
-                  .toList(),
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _ManualPaymentSummaryCard extends StatelessWidget {
-  const _ManualPaymentSummaryCard({
-    required this.title,
-    required this.status,
-    required this.color,
-    required this.icon,
-  });
-
-  final String title;
-  final ManualPaymentRequestsSummaryStatus status;
-  final Color color;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final countFormat = NumberFormat.decimalPattern('ar');
-    final amountFormat = NumberFormat.decimalPattern('ar');
-    final amountsLabel = _formatSummaryAmounts(status, amountFormat);
-
-    return Card(
-      elevation: 0,
-      color: color.withOpacity(0.08),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: color.withOpacity(0.12),
-                  child: Icon(icon, color: color, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              countFormat.format(status.count),
-              style: theme.textTheme.headlineSmall?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'عدد الطلبات',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: context.color.onSurfaceVariant,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'إجمالي المبالغ',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: context.color.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              amountsLabel,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: context.color.textDefaultColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SummaryCardConfig {
-  _SummaryCardConfig({
-    required this.key,
-    required this.title,
-    required this.status,
-    required this.color,
-    required this.icon,
-  });
-
-  final String key;
-  final String title;
-  final ManualPaymentRequestsSummaryStatus status;
-  final Color color;
-  final IconData icon;
-}
-
 class _ManualPaymentTile extends StatelessWidget {
   const _ManualPaymentTile({required this.payment, required this.dateFormat});
 
@@ -331,8 +131,7 @@ class _ManualPaymentTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = _manualPaymentStatusColor(context, payment.paymentStatus);
-
+    final statusColor = _statusColor(context, payment.paymentStatus);
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -401,7 +200,19 @@ class _ManualPaymentTile extends StatelessWidget {
     );
   }
 
-
+  Color _statusColor(BuildContext context, String status) {
+    final normalized = status.toLowerCase();
+    if (normalized.contains('success') || normalized.contains('approved')) {
+      return Colors.green.shade600;
+    }
+    if (normalized.contains('pending') || normalized.contains('review')) {
+      return Colors.orange.shade600;
+    }
+    if (normalized.contains('rejected') || normalized.contains('failed')) {
+      return Colors.red.shade600;
+    }
+    return context.color.textDefaultColor;
+  }
 }
 
 class _ErrorView extends StatelessWidget {
@@ -479,91 +290,4 @@ class _EmptyView extends StatelessWidget {
       ),
     );
   }
-}
-
-int _summaryCrossAxisCount(double maxWidth) {
-  if (maxWidth >= 960) {
-    return 4;
-  }
-  if (maxWidth >= 720) {
-    return 3;
-  }
-  if (maxWidth >= 520) {
-    return 2;
-  }
-  return 1;
-}
-
-String _summaryTitleForKey(String key) {
-  switch (key) {
-    case 'pending':
-      return 'بانتظار التحقق';
-    case 'under_review':
-      return 'قيد المراجعة';
-    case 'approved':
-      return 'مدفوع';
-    case 'rejected':
-      return 'مرفوض';
-    default:
-      return '—';
-  }
-}
-
-IconData _summaryIconForKey(String key) {
-  switch (key) {
-    case 'pending':
-      return Icons.hourglass_bottom_outlined;
-    case 'under_review':
-      return Icons.search_outlined;
-    case 'approved':
-      return Icons.verified_outlined;
-    case 'rejected':
-      return Icons.highlight_off_outlined;
-    default:
-      return Icons.receipt_long_outlined;
-  }
-}
-
-Color _summaryColorForKey(BuildContext context, String key) {
-  switch (key) {
-    case 'pending':
-      return _manualPaymentStatusColor(context, 'pending');
-    case 'under_review':
-      return _manualPaymentStatusColor(context, 'under_review');
-    case 'approved':
-      return _manualPaymentStatusColor(context, 'approved');
-    case 'rejected':
-      return _manualPaymentStatusColor(context, 'rejected');
-    default:
-      return context.color.territoryColor;
-  }
-}
-
-String _formatSummaryAmounts(
-    ManualPaymentRequestsSummaryStatus status,
-    NumberFormat format,
-    ) {
-  if (status.amounts.isEmpty) {
-    return '—';
-  }
-  return status.amounts.entries
-      .map((entry) => '${format.format(entry.value)} ${entry.key}')
-      .join(' + ');
-}
-
-Color _manualPaymentStatusColor(BuildContext context, String status) {
-  final normalized = status.toLowerCase();
-  if (normalized.contains('success') || normalized.contains('approved') || normalized.contains('paid')) {
-    return Colors.green.shade600;
-  }
-  if (normalized.contains('rejected') || normalized.contains('failed') || normalized.contains('declined')) {
-    return Colors.red.shade600;
-  }
-  if (normalized.contains('review')) {
-    return Colors.blue.shade600;
-  }
-  if (normalized.contains('pending') || normalized.contains('await') || normalized.contains('wait')) {
-    return Colors.orange.shade600;
-  }
-  return context.color.textDefaultColor;
 }

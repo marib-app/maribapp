@@ -5,17 +5,14 @@ class RequestDeviceRepository {
     required String phone,
     required String subject,
     required String message,
-    required String section,
   }) async {
-    final Map<String, dynamic> parameters = {
+    Map<String, dynamic> parameters = {
       'phone': phone,
       'subject': subject,
       'message': message,
-      'section': section.trim(),
     };
 
-
-    final Map<String, dynamic> response = await Api.post(
+    Map<String, dynamic> response = await Api.post(
       url: Api.requestDeviceApi,
       parameter: parameters,
       useBaseUrl: true,

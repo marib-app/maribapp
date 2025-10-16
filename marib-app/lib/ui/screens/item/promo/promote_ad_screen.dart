@@ -19,8 +19,6 @@ import 'package:marib/data/model/subscription_status.dart';
 import 'package:marib/data/model/item/item_model.dart';
 
 import 'dart:async';
-import 'package:marib/ui/screens/widgets/promoted_widget.dart';
-import 'package:marib/data/cubits/profile/profile_stats_cubit.dart';
 
 
 
@@ -51,8 +49,6 @@ class PromoteAdScreen extends StatefulWidget {
               adId: model.id ?? 0,
             ),
           ),
-          BlocProvider(create: (_) => ProfileStatsCubit()),
-
         ],
 
 
@@ -85,62 +81,6 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
   // اختيار وسيلة الدفع: 0 شرق (فوري) / 1 إيزي كاش / 2 الشبكة
   int? _selectedMethodIndex;
 
-
-
-  SubscriptionStatus? _statusFromPromoteState(PromoteAdState state) {
-    if (state is PromoteAdSubscriberReady) {
-      return state.status;
-    }
-    if (state is PromoteAdNonSubscriber) {
-      return state.status;
-    }
-    if (state is PromoteAdActing) {
-      return state.status;
-    }
-    if (state is PromoteAdError) {
-      return state.status;
-    }
-    if (state is PromoteAdChecking) {
-      return state.previousStatus;
-    }
-    return null;
-  }
-
-  bool _statusHasBalance(SubscriptionStatus status) {
-    final double available = status.availableBalance ?? 0;
-    final int remaining = status.featuredCount ?? status.remaining ?? 0;
-    return available > 0 || remaining > 0;
-  }
-
-  bool _stateHasBalance(PromoteAdState state) {
-    if (state is PromoteAdSubscriberReady) {
-      return state.hasBalance;
-    }
-    final SubscriptionStatus? status = _statusFromPromoteState(state);
-    if (status == null) {
-      return false;
-    }
-    return _statusHasBalance(status);
-  }
-
-  bool _stateIsFeatured(PromoteAdState state) {
-    if (state is PromoteAdSubscriberReady) {
-      return state.isFeatured;
-    }
-    final SubscriptionStatus? status = _statusFromPromoteState(state);
-    return status?.isFeatured ?? false;
-  }
-
-  bool _stateCanPause(PromoteAdState state) {
-    if (state is PromoteAdSubscriberReady) {
-      return state.canPause;
-    }
-    final SubscriptionStatus? status = _statusFromPromoteState(state);
-    return status?.canPause ?? false;
-  }
-
-
-
   @override
   void initState() {
     super.initState();
@@ -154,24 +94,9 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-
-      final int? adId = widget.model.id;
-      if (adId == null || adId <= 0) {
-        HelperUtils.showSnackBarMessage(
-          context,
-          'لا يمكن تحديد الإعلان الحالي',
-          type: MessageType.error,
-        );
-        Navigator.of(context).maybePop();
-        return;
-      }
-
       context
           .read<FetchUserPackageLimitCubit>()
           .fetchUserPackageLimit(packageType: 'advertisement');
-      context.read<PromoteAdCubit>().check();
-
-
     });
 
 
@@ -348,20 +273,43 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
 
 
   Widget _buildSubscriptionDetails() {
-
+    bool statusHasBalance(SubscriptionStatus status) {
+      final double available = status.availableBalance ?? 0;
+      final int remaining = status.featuredCount ?? 0;
+      return available > 0 || remaining > 0;
+    }
 
     return BlocBuilder<PromoteAdCubit, PromoteAdState>(
       builder: (context, state) {
-        final SubscriptionStatus? status = _statusFromPromoteState(state);
+        SubscriptionStatus? status;
+        bool hasBalance = false;
+        bool isFeatured = false;
+        bool canPause = false;
 
+        if (state is PromoteAdSubscriberReady) {
+          status = state.status;
+          hasBalance = state.hasBalance;
+          isFeatured = state.isFeatured;
+          canPause = state.canPause;
+        } else if (state is PromoteAdActing) {
+          status = state.status;
+        } else if (state is PromoteAdError) {
+          status = state.status;
+        } else if (state is PromoteAdChecking) {
+          status = state.previousStatus;
+        } else if (state is PromoteAdNonSubscriber) {
+          status = state.status;
+        }
 
         if (status == null || !status.hasActive) {
           return const SizedBox.shrink();
         }
 
-        final bool hasBalance = _stateHasBalance(state);
-        final bool isFeatured = _stateIsFeatured(state);
-        final bool canPause = _stateCanPause(state);
+        if (state is! PromoteAdSubscriberReady) {
+          hasBalance = statusHasBalance(status);
+          isFeatured = status.isFeatured ?? false;
+          canPause = status.canPause ?? false;
+        }
 
         final theme = Theme.of(context);
         final colorScheme = theme.colorScheme;
@@ -471,196 +419,7 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
   }
 
 
-  Widget _buildFeaturedStatisticsCard() {
-    return BlocBuilder<PromoteAdCubit, PromoteAdState>(
-      builder: (context, promoteState) {
-        if (!_stateIsFeatured(promoteState)) {
-          return const SizedBox.shrink();
-        }
 
-        return BlocBuilder<ProfileStatsCubit, ProfileStatsState>(
-          builder: (context, statsState) {
-            final theme = Theme.of(context);
-            final colorScheme = theme.colorScheme;
-            final textTheme = theme.textTheme;
-
-            Widget content;
-
-            if (statsState is ProfileStatsLoading ||
-                statsState is ProfileStatsInitial) {
-              content = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  _ShimmerBox(height: 64, radius: 14),
-                  SizedBox(height: 8),
-                  _ShimmerBox(height: 64, radius: 14),
-                ],
-              );
-            } else if (statsState is ProfileStatsError) {
-              content = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'تعذّر تحميل الإحصائيات حالياً.',
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurface.withOpacity(0.8),
-                    ),
-                    textDirection: TextDirection.rtl,
-                  ),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton.icon(
-                      onPressed: () {
-                        context
-                            .read<ProfileStatsCubit>()
-                            .fetchProfileStats();
-                      },
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('إعادة المحاولة'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            } else if (statsState is ProfileStatsSuccess) {
-              final metrics = <Map<String, dynamic>>[
-                {
-                  'icon': Icons.inventory_2_outlined,
-                  'label': 'إجمالي الإعلانات',
-                  'value': _formatCount(statsState.totalAds),
-                },
-                {
-                  'icon': Icons.verified_outlined,
-                  'label': 'الإعلانات النشطة',
-                  'value': _formatCount(statsState.activAds),
-                },
-                {
-                  'icon': Icons.favorite_border,
-                  'label': 'عدد المفضلة',
-                  'value': _formatCount(statsState.totalFavorites),
-                },
-                {
-                  'icon': Icons.chat_bubble_outline,
-                  'label': 'المحادثات الجارية',
-                  'value': _formatCount(statsState.totalChats),
-                },
-              ];
-
-              content = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: metrics
-                        .map(
-                          (metric) => _buildFeaturedStatTile(
-                        icon: metric['icon'] as IconData,
-                        label: metric['label'] as String,
-                        value: metric['value'] as String,
-                        theme: theme,
-                        colorScheme: colorScheme,
-                      ),
-                    )
-                        .toList(),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'تُحدَّث هذه الأرقام من نشاط حسابك وتساعدك على متابعة تفاعل المستخدمين مع إعلاناتك بعد التمييز.',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurface.withOpacity(0.65),
-                    ),
-                    textDirection: TextDirection.rtl,
-                  ),
-                ],
-              );
-            } else {
-              content = const SizedBox.shrink();
-            }
-
-            return Container(
-              width: double.infinity,
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: colorScheme.primary.withOpacity(0.06),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: colorScheme.primary.withOpacity(0.2)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.insights, color: colorScheme.primary),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'إحصاءات بعد تمييز إعلانك',
-                          style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                          textDirection: TextDirection.rtl,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  content,
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildFeaturedStatTile({
-    required IconData icon,
-    required String label,
-    required String value,
-    required ThemeData theme,
-    required ColorScheme colorScheme,
-  }) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minWidth: 140, maxWidth: 200),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: colorScheme.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: colorScheme.primary.withOpacity(0.16)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: colorScheme.primary),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: colorScheme.primary,
-              ),
-              textDirection: TextDirection.rtl,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurface.withOpacity(0.7),
-              ),
-              textDirection: TextDirection.rtl,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
 
   // الانتقال لمرحلة الدفع (جلب الطرق فقط هنا)
@@ -756,18 +515,6 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
     return '$withSep ر.ي';
   }
 
-
-  String _formatCount(num value) {
-    final bool isNegative = value < 0;
-    final String digits = value.abs().round().toString();
-    final String withSep = digits.replaceAllMapped(
-      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-          (Match match) => '${match[1]},',
-    );
-    return isNegative ? '-$withSep' : withSep;
-  }
-
-
   String _arabicDays(int d) {
     return (d == 1) ? 'يوم' : (d == 2) ? 'يومان' : (d >= 3 && d <= 10)
         ? 'أيام'
@@ -813,10 +560,6 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
                   type: MessageType.success,
                 );
               }
-              if (state.isFeatured) {
-                context.read<ProfileStatsCubit>().fetchProfileStats();
-              }
-
             } else if (state is PromoteAdNonSubscriber) {
               final String? message = state.message;
               if (message != null && message.isNotEmpty) {
@@ -950,8 +693,7 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
         ),
 
         body: SafeArea(
-          top: false,
-          child: BlocBuilder<PromoteAdCubit, PromoteAdState>(
+            child: BlocBuilder<PromoteAdCubit, PromoteAdState>(
                 builder: (context, promoteState) {
                   final bool showOverlay = promoteState is PromoteAdChecking ||
                       promoteState is PromoteAdActing;
@@ -980,7 +722,6 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
                             _SellingPoints(),
                             const SizedBox(height: 8),
                             _buildSubscriptionDetails(),
-                            _buildFeaturedStatisticsCard(),
                             _ComparisonCard(),
                             const SizedBox(height: 16),
 
@@ -1383,9 +1124,21 @@ class _AdHero extends StatelessWidget {
             Positioned(
               right: 8, // يمين الشاشة للجمهور العربي
               top: 8,
-              child: PromotedCard(
-                type: PromoteCardType.icon,
-                color: badgeColor,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: badgeColor,
+                  borderRadius: BorderRadius.circular(999),
+                  boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8)],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.local_fire_department, size: 16, color: Colors.white),
+                    SizedBox(width: 6),
+                    Text('مُميز', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                  ],
+                ),
               ),
             ),
           ],

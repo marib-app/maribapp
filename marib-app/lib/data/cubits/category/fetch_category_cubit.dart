@@ -7,7 +7,6 @@ import 'package:marib/data/model/data_output.dart';
 import 'package:marib/data/repositories/category_repository.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter/foundation.dart';
 
 abstract class FetchCategoryState {}
 
@@ -21,13 +20,6 @@ class FetchCategorySuccess extends FetchCategoryState {
   final bool isLoadingMore;
   final bool hasError;
   final List<CategoryModel> categories;
-  final String? interfaceType;
-  final int? categoryId;
-  final List<int>? categoryIds;
-  final bool onlyAllowed;
-  final List<int>? ensureCategoryIds;
-  final List<int>? allowedCategoryIds;
-
 
   FetchCategorySuccess({
     required this.total,
@@ -35,12 +27,6 @@ class FetchCategorySuccess extends FetchCategoryState {
     required this.isLoadingMore,
     required this.hasError,
     required this.categories,
-    this.interfaceType,
-    this.categoryId,
-    this.categoryIds,
-    this.onlyAllowed = false,
-    this.ensureCategoryIds,
-    this.allowedCategoryIds,
   });
 
   FetchCategorySuccess copyWith({
@@ -49,9 +35,6 @@ class FetchCategorySuccess extends FetchCategoryState {
     bool? isLoadingMore,
     bool? hasError,
     List<CategoryModel>? categories,
-    bool? onlyAllowed,
-    List<int>? ensureCategoryIds,
-    List<int>? allowedCategoryIds,
   }) {
     return FetchCategorySuccess(
       total: total ?? this.total,
@@ -59,12 +42,6 @@ class FetchCategorySuccess extends FetchCategoryState {
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       hasError: hasError ?? this.hasError,
       categories: categories ?? this.categories,
-      interfaceType: interfaceType ?? this.interfaceType,
-      categoryId: categoryId ?? this.categoryId,
-      categoryIds: categoryIds ?? this.categoryIds,
-      onlyAllowed: onlyAllowed ?? this.onlyAllowed,
-      ensureCategoryIds: ensureCategoryIds ?? this.ensureCategoryIds,
-      allowedCategoryIds: allowedCategoryIds ?? this.allowedCategoryIds,
     );
   }
 
@@ -75,12 +52,6 @@ class FetchCategorySuccess extends FetchCategoryState {
       'isLoadingMore': isLoadingMore,
       'hasError': hasError,
       'categories': categories.map((x) => x.toJson()).toList(),
-      'interfaceType': interfaceType,
-      'categoryId': categoryId,
-      'categoryIds': categoryIds,
-      'onlyAllowed': onlyAllowed,
-      'ensureCategoryIds': ensureCategoryIds,
-      'allowedCategoryIds': allowedCategoryIds,
     };
   }
 
@@ -95,18 +66,6 @@ class FetchCategorySuccess extends FetchCategoryState {
           (x) => CategoryModel.fromJson(x as Map<String, dynamic>),
         ),
       ),
-      interfaceType: map['interfaceType'] as String?,
-      categoryId: map['categoryId'] as int?,
-      categoryIds: (map['categoryIds'] as List<dynamic>?)
-          ?.map((dynamic e) => e as int)
-          .toList(),
-      onlyAllowed: map['onlyAllowed'] as bool? ?? false,
-      ensureCategoryIds: (map['ensureCategoryIds'] as List<dynamic>?)
-          ?.map((dynamic e) => e as int)
-          .toList(),
-      allowedCategoryIds: (map['allowedCategoryIds'] as List<dynamic>?)
-          ?.map((dynamic e) => e as int)
-          .toList(),
     );
   }
 
@@ -117,7 +76,7 @@ class FetchCategorySuccess extends FetchCategoryState {
 
   @override
   String toString() {
-    return 'FetchCategorySuccess(total: $total,  page: $page, isLoadingMore: $isLoadingMore, hasError: $hasError, interfaceType: $interfaceType, categoryId: $categoryId, categoryIds: $categoryIds, onlyAllowed: $onlyAllowed, ensureCategoryIds: $ensureCategoryIds, allowedCategoryIds: $allowedCategoryIds, categories: $categories)';
+    return 'FetchCategorySuccess(total: $total,  page: $page, isLoadingMore: $isLoadingMore, hasError: $hasError, categories: $categories)';
   }
 }
 
@@ -128,86 +87,24 @@ class FetchCategoryFailure extends FetchCategoryState {
 }
 
 class FetchCategoryCubit extends Cubit<FetchCategoryState> {
-  FetchCategoryCubit({CategoryRepository? categoryRepository})
-      : _categoryRepository = categoryRepository ?? CategoryRepository(),
-        super(FetchCategoryInitial());
-  final CategoryRepository _categoryRepository;
+  FetchCategoryCubit() : super(FetchCategoryInitial());
 
+  final CategoryRepository _categoryRepository = CategoryRepository();
 
-  Future<void> fetchCategories({
-    bool? forceRefresh,
-    bool? loadWithoutDelay,
-    String? interfaceType,
-    int? categoryId,
-    List<int>? categoryIds,
-    bool onlyAllowed = false,
-    Iterable<int> ensureCategoryIds = const <int>[],
-    Iterable<int> allowedCategoryIds = const <int>[],
-  }) async {
-    final List<int> normalizedEnsureIds = ensureCategoryIds.toList();
-    final List<int> normalizedAllowedIds = <int>[];
-
-    for (final int id in allowedCategoryIds) {
-      if (id > 0 && !normalizedAllowedIds.contains(id)) {
-        normalizedAllowedIds.add(id);
-      }
-    }
-
+  Future<void> fetchCategories(
+      {bool? forceRefresh, bool? loadWithoutDelay}) async {
     try {
-      if (state is FetchCategorySuccess && forceRefresh != true) {
-        final FetchCategorySuccess current = state as FetchCategorySuccess;
-        final bool sameInterface =
-        _sameInterface(current.interfaceType, interfaceType);
-        final bool sameCategoryId = current.categoryId == categoryId;
-        final bool sameCategoryIds = listEquals(
-            current.categoryIds,
-            categoryIds);
-        final bool sameOnlyAllowed = current.onlyAllowed == onlyAllowed;
-        final bool sameEnsured = _sameIdList(
-          current.ensureCategoryIds,
-          normalizedEnsureIds,
-        );
-        final bool sameAllowed = _sameIdList(
-          current.allowedCategoryIds,
-          normalizedAllowedIds,
-        );
-        if (sameInterface && sameCategoryId && sameCategoryIds &&
-            sameOnlyAllowed && sameEnsured && sameAllowed) {
-          return;
-        }
-      }
       emit(FetchCategoryInProgress());
 
       DataOutput<CategoryModel> categories =
-      await _categoryRepository.fetchCategories(
-        page: 1,
-        interfaceType: interfaceType,
-        categoryId: categoryId,
-        categoryIds: categoryIds,
-        onlyAllowed: onlyAllowed,
-        ensureCategoryIds: normalizedEnsureIds,
-        allowedCategoryIds: normalizedAllowedIds,
-      );
+          await _categoryRepository.fetchCategories(page: 1);
 
       emit(FetchCategorySuccess(
           total: categories.total,
           categories: categories.modelList,
           page: 1,
           hasError: false,
-        isLoadingMore: false,
-        interfaceType: interfaceType?.trim(),
-        categoryId: categoryId,
-        categoryIds: categoryIds == null
-            ? null
-            : List<int>.from(categoryIds),
-        onlyAllowed: onlyAllowed,
-        ensureCategoryIds: normalizedEnsureIds.isEmpty
-            ? null
-            : List<int>.from(normalizedEnsureIds),
-        allowedCategoryIds: normalizedAllowedIds.isEmpty
-            ? null
-            : List<int>.from(normalizedAllowedIds),
-      ));
+          isLoadingMore: false));
     } catch (e) {
       emit(FetchCategoryFailure(e.toString()));
     }
@@ -228,18 +125,10 @@ class FetchCategoryCubit extends Cubit<FetchCategoryState> {
           return;
         }
         emit((state as FetchCategorySuccess).copyWith(isLoadingMore: true));
-        final FetchCategorySuccess current = state as FetchCategorySuccess;
         DataOutput<CategoryModel> result =
             await _categoryRepository.fetchCategories(
-              page: current.page + 1,
-              interfaceType: current.interfaceType,
-              categoryId: current.categoryId,
-              categoryIds: current.categoryIds,
-              onlyAllowed: current.onlyAllowed,
-              ensureCategoryIds:
-              current.ensureCategoryIds ?? const <int>[],
-              allowedCategoryIds: current.allowedCategoryIds ?? const <int>[],
-            );
+          page: (state as FetchCategorySuccess).page + 1,
+        );
 
         FetchCategorySuccess categoryState = (state as FetchCategorySuccess);
         categoryState.categories.addAll(result.modelList);
@@ -252,49 +141,14 @@ class FetchCategoryCubit extends Cubit<FetchCategoryState> {
             isLoadingMore: false,
             hasError: false,
             categories: categoryState.categories,
-            page: current.page + 1,
-            total: result.total,
-            interfaceType: current.interfaceType,
-            categoryId: current.categoryId,
-          categoryIds: current.categoryIds,
-          onlyAllowed: current.onlyAllowed,
-          ensureCategoryIds: current.ensureCategoryIds,
-          allowedCategoryIds: current.allowedCategoryIds,
-        ));
+            page: (state as FetchCategorySuccess).page + 1,
+            total: result.total));
       }
     } catch (e) {
       emit((state as FetchCategorySuccess)
           .copyWith(isLoadingMore: false, hasError: true));
     }
   }
-
-  bool _sameInterface(String? current, String? requested) {
-    final String? a = _normalizeInterface(current);
-    final String? b = _normalizeInterface(requested);
-    return a == b;
-  }
-
-  bool _sameIdList(List<int>? current, List<int> requested) {
-    if ((current == null || current.isEmpty) && requested.isEmpty) {
-      return true;
-    }
-    if (current == null) {
-      return false;
-    }
-    return listEquals(current, requested);
-  }
-
-  String? _normalizeInterface(String? raw) {
-    if (raw == null) {
-      return null;
-    }
-    final String trimmed = raw.trim();
-    if (trimmed.isEmpty) {
-      return null;
-    }
-    return trimmed.toLowerCase();
-  }
-
 
   bool hasMoreData() {
     if (state is FetchCategorySuccess) {

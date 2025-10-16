@@ -21,7 +21,6 @@ import 'package:marib/ui/screens/widgets/errors/no_data_found.dart';
 import 'package:marib/ui/screens/widgets/errors/no_internet.dart';
 import 'package:marib/ui/screens/widgets/errors/something_went_wrong.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
-import 'package:marib/utils/hive_utils.dart';
 
 /// =========
 /// Utils
@@ -45,20 +44,13 @@ class ReadNotifStore {
 
   static String _keyForUser(String userId) => '$_prefix:$userId';
 
-  static Future<Set<String>> load(String? userId) async {
-    if (userId == null || userId.isEmpty) {
-      return <String>{};
-    }
+  static Future<Set<String>> load(String userId) async {
     final prefs = await SharedPreferences.getInstance();
     final list = prefs.getStringList(_keyForUser(userId)) ?? const <String>[];
     return list.toSet();
   }
 
-  static Future<void> save(String? userId, Set<String> ids) async {
-    if (userId == null || userId.isEmpty) {
-      return;
-    }
-
+  static Future<void> save(String userId, Set<String> ids) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_keyForUser(userId), ids.toList(growable: false));
   }
@@ -82,8 +74,8 @@ class Notifications extends StatefulWidget {
 class NotificationsState extends State<Notifications> {
   late final ScrollController _pageScrollController = ScrollController();
 
-  String? _userId;
-
+  // TODO: اربط بالـ userId الحقيقي
+  final String _userId = 'currentUserId';
 
   Set<String> _readIds = <String>{};
   bool _isPaging = false;
@@ -110,14 +102,9 @@ class NotificationsState extends State<Notifications> {
   }
 
   Future<void> _restoreReadState() async {
-    final currentUserId = HiveUtils.getUserId();
-    final saved = await ReadNotifStore.load(currentUserId);
-
+    final saved = await ReadNotifStore.load(_userId);
     if (!mounted) return;
-    setState(() {
-      _userId = currentUserId;
-      _readIds = saved;
-    });
+    setState(() => _readIds = saved);
   }
 
   void _pageScroll() {

@@ -104,7 +104,7 @@ class WifiPurchase extends Equatable {
 
     final Map<String, dynamic> planMap = parseMap(json['plan']);
     final Map<String, dynamic> networkMap = parseMap(json['network']);
-    final Map<String, dynamic> baseMeta = {
+    final Map<String, dynamic> meta = {
       ...parseMap(json['meta']),
       ...parseMap(json['metadata']),
       ...parseMap(json['extras']),
@@ -133,7 +133,7 @@ class WifiPurchase extends Equatable {
 
     final int quantity = parseInt(json['quantity']) ??
         parseInt(json['count']) ??
-        parseInt(baseMeta['quantity']) ??
+        parseInt(meta['quantity']) ??
         1;
 
     final num? total = parseNum(
@@ -141,26 +141,26 @@ class WifiPurchase extends Equatable {
           json['amount'] ??
           json['total_amount'] ??
           json['paid_amount'] ??
-          baseMeta['total'],
+          meta['total'],
     );
 
     final String? currency = (json['currency'] ??
         json['currency_code'] ??
         json['currency_symbol'] ??
-        baseMeta['currency'])
+        meta['currency'])
         ?.toString();
 
     final String? status = (json['status'] ??
         json['purchase_status'] ??
         json['payment_status'] ??
         json['state'] ??
-        baseMeta['status'])
+        meta['status'])
         ?.toString();
 
     final String? gateway = (json['payment_gateway'] ??
         json['payment_method'] ??
         json['gateway'] ??
-        baseMeta['payment_gateway'])
+        meta['payment_gateway'])
         ?.toString();
 
     final DateTime? createdAt = parseDate(
@@ -184,29 +184,6 @@ class WifiPurchase extends Equatable {
         json['payment_reference'] ??
         json['order_reference'])
         ?.toString();
-
-
-    final Map<String, dynamic> derivedMeta = <String, dynamic>{
-      if (json['transaction_id'] != null)
-        'transaction_id': parseInt(json['transaction_id']),
-      if (json['payment_status'] != null)
-        'payment_status': json['payment_status'].toString(),
-      if (json['payment_status_label'] != null)
-        'payment_status_label': json['payment_status_label'].toString(),
-      if (json['status_label'] != null)
-        'status_label': json['status_label'].toString(),
-      if (json['reveal_count'] != null)
-        'reveal_count': parseInt(json['reveal_count']),
-      if (json['revealed_at'] != null)
-        'revealed_at': json['revealed_at'],
-      if (json['code_id'] != null)
-        'code_id': parseInt(json['code_id']),
-    };
-
-    final Map<String, dynamic> meta = <String, dynamic>{
-      ...baseMeta,
-      ...derivedMeta,
-    }..removeWhere((_, value) => value == null);
 
     return WifiPurchase(
       id: id,
@@ -257,14 +234,6 @@ class WifiPurchase extends Equatable {
     );
   }
 
-
-  WifiPurchase withoutCodes() {
-    if (codes.isEmpty) {
-      return this;
-    }
-    return copyWith(codes: const <String>[]);
-  }
-
   bool get isWalletGateway {
     final gateway = paymentGateway?.toLowerCase() ?? '';
     if (gateway.isEmpty) {
@@ -281,33 +250,6 @@ class WifiPurchase extends Equatable {
     }
     return value;
   }
-
-
-  int? get transactionId {
-    final dynamic raw = metadata['transaction_id'] ?? metadata['transactionId'];
-    if (raw is int) return raw;
-    if (raw is num) return raw.toInt();
-    if (raw is String) {
-      final String trimmed = raw.trim();
-      if (trimmed.isEmpty) {
-        return null;
-      }
-      return int.tryParse(trimmed);
-    }
-    return null;
-  }
-
-  String? get paymentStatusLabel {
-    final dynamic raw = metadata['payment_status_label'] ??
-        metadata['payment_status'] ??
-        metadata['status_label'];
-    if (raw == null) {
-      return null;
-    }
-    final String label = raw.toString().trim();
-    return label.isEmpty ? null : label;
-  }
-
 
   @override
   List<Object?> get props => [

@@ -1,6 +1,5 @@
 
 
-
 import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/custom_field.dart';
 
 import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/fields/custom_checkbox_field.dart';
@@ -18,50 +17,25 @@ import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/fie
 import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/fields/custom_text_field.dart';
 
 class KRegisteredFields {
-  CustomField? resolve(Map<dynamic, dynamic> field) {
-    final String type = _normalizeType(field['type']);
-
-    switch (type) {
-      case 'textbox':
-      case 'text':
-      case 'textarea':
-        return CustomFieldText();
-      case 'dropdown':
-      case 'select':
-        return CustomFieldDropdown();
-      case 'number':
-      case 'numeric':
-        return CustomNumberField();
-      case 'checkbox':
-      case 'checkboxes':
-        return CustomCheckboxField();
-      case 'radio':
-      case 'radiobox':
-        return CustomRadioField();
-      case 'fileinput':
-      case 'file':
-        return CustomFileField();
-      case 'color':
-        return CustomColorField();
-
-      default:
-        return null;
-    }
-  }
+  ///ADD NEW FIELD HERE
+  final List<CustomField> _fields = [
+    CustomFieldText(), //text field
+    CustomFieldDropdown(), //dropdown field
+    CustomNumberField(),
+    CustomCheckboxField(),
+    CustomRadioField(),
+    CustomFileField(),
+    CustomColorField()
+  ];
 
   CustomField? get(String type) {
-    return resolve({'type': type});
-  }
-
-  String _normalizeType(dynamic type) {
-    if (type is String) {
-      return type.trim().toLowerCase();
+    CustomField? selectedField;
+    for (CustomField field in _fields) {
+      if (field.type == type) {
+        selectedField = field;
+      }
     }
-    if (type is Enum) {
-      return type.name.toLowerCase();
-    }
-    return type?.toString().trim().toLowerCase() ?? '';
+
+    return selectedField;
   }
-
-
 }

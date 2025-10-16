@@ -1,9 +1,7 @@
+import 'package:marib/utils/constant.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
-import 'package:marib/utils/constant.dart';
-
 
 const double defaultPadding = 20;
 
@@ -21,17 +19,15 @@ Widget setNetworkImg(String? mainUrl,
     fit: boxFit,
     memCacheHeight: 500,
     memCacheWidth: 500,
-    placeholder: (context, url) => ShimmerBox(
-      width: width,
-      height: height,
-      borderRadius: BorderRadius.circular(12),
-    ),
-    errorWidget: (context, url, error) => ShimmerBox(
-      width: width,
-      height: height,
-      borderRadius: BorderRadius.circular(12),
-      animate: false,
-    ),
+    errorWidget: (context, url, error) {
+      return setSVGImage("placeholder",
+          height: height, width: width, boxFit: placeboxfit ??= boxFit);
+    },
+    placeholder: (context, url) {
+      return Center(
+          child: setSVGImage("placeholder",
+              height: height, width: width, boxFit: placeboxfit ??= boxFit));
+    },
   );
 }
 

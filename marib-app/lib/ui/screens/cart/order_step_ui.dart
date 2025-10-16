@@ -18,7 +18,6 @@ class OrderStepData {
     this.isCurrent = false,
     this.outstanding,
     this.onPayOutstanding,
-    this.depositSummary,
 
   });
 
@@ -29,7 +28,6 @@ class OrderStepData {
   final bool isCurrent;
   final OrderOutstandingInfo? outstanding;
   final VoidCallback? onPayOutstanding;
-  final Map<String, dynamic>? depositSummary;
 
 
 
@@ -148,7 +146,6 @@ class OrderStepContent extends StatelessWidget {
   this.invoiceBlockReason,
   this.outstanding,
   this.onPayOutstanding,
-    this.depositSummary,
 
   this.paymentSummary,
   this.deliveryPaymentSummary,
@@ -175,7 +172,6 @@ class OrderStepContent extends StatelessWidget {
   final Map<String, dynamic>? paymentSummary;
   final Map<String, dynamic>? deliveryPaymentSummary;
   final Map<String, dynamic>? depositReceipts;
-  final Map<String, dynamic>? depositSummary;
 
   static const List<String> _depositKeywords = <String>[
     'deposit',
@@ -207,11 +203,6 @@ class OrderStepContent extends StatelessWidget {
     'courier',
     'driver',
     'transport',
-    'cod',
-    'cash_on_delivery',
-    'cash-on-delivery',
-    'on_delivery',
-    'on-delivery',
   ];
 
   static const List<String> _paidKeywords = <String>[
@@ -285,8 +276,7 @@ class OrderStepContent extends StatelessWidget {
           details?.deliveryPaymentSummary ?? resolvedOrder.deliveryPaymentSummary;
       final Map<String, dynamic>? depositReceiptsData =
           depositReceipts ?? details?.depositReceipts;
-      final Map<String, dynamic>? depositSummaryData =
-          depositSummary ?? details?.depositSummary ?? resolvedOrder.depositSummary;
+
       body = _buildContent(
         context,
         resolvedOrder,
@@ -297,7 +287,6 @@ class OrderStepContent extends StatelessWidget {
         paymentSummary: paymentSummaryData,
         deliveryPaymentSummary: deliverySummaryData,
         depositReceipts: depositReceiptsData,
-        depositSummary: depositSummaryData,
       );
     } else if (showShimmer) {
       body = _buildSkeleton(context);
@@ -343,26 +332,22 @@ class OrderStepContent extends StatelessWidget {
         Map<String, dynamic>? paymentSummary,
         Map<String, dynamic>? deliveryPaymentSummary,
         Map<String, dynamic>? depositReceipts,
-        Map<String, dynamic>? depositSummary,
-
       }) {
     final List<OrderStepData> effectiveSteps =
     providedSteps.isNotEmpty ? providedSteps : buildOrderStepData(order);
-    final List<OrderTimelineEntry> timeline = order.effectiveTimeline;
+
 
     final OrderStatusDisplay? statusDisplay = order.statusDisplay;
     final OrderStatusReserveOptions? reserveOptions = order.statusReserveOptions;
     final OrderPolicy? policy = details?.policy;
     final OrderSupport? support = details?.support;
     final OrderActions actions = order.actions;
-    final Map<String, dynamic>? resolvedDepositSummary =
-        depositSummary ?? details?.depositSummary ?? order.depositSummary;
+
     final bool showStatusDisplay = statusDisplay != null && statusDisplay.hasContent;
     final bool showReserveOptions = reserveOptions != null && reserveOptions.hasContent;
     final bool showPolicySection =
         (policy != null && policy.hasReturnPolicy) || (support != null && support.hasContact);
 
-    final Widget? timelineSection = _buildTimelineSection(context, timeline);
 
     final Widget? paymentsSummarySection = _buildFinancialSummarySection(
       context,
@@ -370,8 +355,6 @@ class OrderStepContent extends StatelessWidget {
       paymentSummary: paymentSummary,
       deliveryPaymentSummary: deliveryPaymentSummary,
       depositReceipts: depositReceipts,
-      depositSummary: resolvedDepositSummary,
-
     );
 
     return SingleChildScrollView(
@@ -394,10 +377,6 @@ class OrderStepContent extends StatelessWidget {
           else
             _buildStepsPlaceholder(context),
           const SizedBox(height: 20),
-          if (timelineSection != null) ...<Widget>[
-            timelineSection,
-            const SizedBox(height: 20),
-          ],
           _buildInfoCard(
             context,
             order,
@@ -429,13 +408,11 @@ class OrderStepContent extends StatelessWidget {
         Map<String, dynamic>? paymentSummary,
         Map<String, dynamic>? deliveryPaymentSummary,
         Map<String, dynamic>? depositReceipts,
-        Map<String, dynamic>? depositSummary,
-
       }) {
     final List<_ReceiptEntry> receipts = _parseDepositReceipts(depositReceipts);
 
     final Map<String, dynamic>? depositSource =
-        depositSummary ?? _extractSection(paymentSummary, _depositKeywords);
+    _extractSection(paymentSummary, _depositKeywords);
     final Map<String, dynamic>? goodsCandidate = _extractSection(
       paymentSummary,
       _goodsKeywords,
@@ -446,16 +423,12 @@ class OrderStepContent extends StatelessWidget {
     final Map<String, dynamic>? deliverySource =
         _extractSection(deliveryPaymentSummary, _deliveryKeywords) ??
             deliveryPaymentSummary;
-    final String? depositNoteFallback =
-    _depositSummaryNote(order, depositSource ?? paymentSummary);
+
     final _PaymentBreakdown? depositBreakdown = _summarizeBreakdown(
       title: 'العربون',
       summary: depositSource,
       fallbackSource: paymentSummary,
       receipts: receipts,
-      fallbackPaidValue: order.depositAmountPaid,
-      fallbackDueValue: order.depositRemainingBalance,
-      fallbackNote: depositNoteFallback,
     );
 
     _PaymentBreakdown? goodsBreakdown;
@@ -529,318 +502,6 @@ class OrderStepContent extends StatelessWidget {
       ),
     );
   }
-
-
-
-
-  String? _depositSummaryNote(
-      UserOrder order, Map<String, dynamic>? summary) {
-    Map<String, dynamic>? normalized;
-    if (summary != null && summary.isNotEmpty) {
-      normalized = _normalizeMap(summary as Map<dynamic, dynamic>);
-    }
-
-    double? requiredAmount = order.depositRequiredAmount;
-    double? minimumAmount = order.depositMinimumAmount;
-    double? ratio = order.depositRatio;
-    bool? includesShipping = order.depositIncludesShipping;
-
-    if (normalized != null) {
-      requiredAmount ??=
-          _tryParseNumeric(normalized['required_amount']) ??
-              _tryParseNumeric(normalized['required']);
-      minimumAmount ??= _tryParseNumeric(normalized['minimum_amount']);
-      ratio ??= _tryParseNumeric(normalized['ratio']);
-      includesShipping ??= _boolFromDynamic(
-        normalized['includes_shipping'] ?? normalized['shipping_included'],
-      );
-    }
-
-    final List<String> lines = <String>[];
-    if (requiredAmount != null && requiredAmount > 0) {
-      lines.add(
-        'إجمالي العربون المطلوب: ${_formatCurrency(requiredAmount, order.currency)}',
-      );
-    }
-    if (minimumAmount != null && minimumAmount > 0) {
-      lines.add(
-        'الحد الأدنى للعربون: ${_formatCurrency(minimumAmount, order.currency)}',
-      );
-    }
-    if (ratio != null && ratio > 0) {
-      final double percent = ratio <= 1 ? ratio * 100 : ratio;
-      final NumberFormat percentFormat = NumberFormat('#,##0.##');
-      lines.add(
-        'نسبة العربون من قيمة الطلب: ${percentFormat.format(percent)}%',
-      );
-    }
-    if (includesShipping == true) {
-      lines.add('يشمل العربون رسوم التوصيل.');
-    }
-
-    if (lines.isEmpty) {
-      return null;
-    }
-
-    return lines.join('\n');
-  }
-
-  Widget? _buildTimelineSection(
-      BuildContext context, List<OrderTimelineEntry> timeline) {
-    if (timeline.isEmpty) {
-      return null;
-    }
-
-    final DateFormat timelineFormat = DateFormat(
-      'yyyy/MM/dd HH:mm',
-      dateFormat.locale,
-    );
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.color.primaryColor,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const <BoxShadow>[
-          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 2)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const Text(
-            'سجل التحديثات',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-          const SizedBox(height: 12),
-          for (int i = 0; i < timeline.length; i++) ...<Widget>[
-            _buildTimelineEntry(
-              context,
-              timeline[i],
-              timelineFormat,
-              isLast: i == timeline.length - 1,
-            ),
-            if (i != timeline.length - 1) const SizedBox(height: 12),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTimelineEntry(
-      BuildContext context,
-      OrderTimelineEntry entry,
-      DateFormat timelineFormat, {
-        required bool isLast,
-      }) {
-    final Color accent = _timelineAccentColor(entry);
-    final IconData icon = _resolveTimelineIcon(entry);
-    final String title = (entry.status ?? entry.label).trim().isEmpty
-        ? entry.label
-        : (entry.status ?? entry.label).trim();
-    final String? timestamp = entry.timestamp != null
-        ? timelineFormat.format(entry.timestamp!.toLocal())
-        : null;
-
-    final Map<String, dynamic> raw =
-    entry.raw != null ? _normalizeMap(entry.raw as Map<dynamic, dynamic>) : <String, dynamic>{};
-    final String? display = _stringFromDynamic(raw['display']) ??
-        _stringFromDynamic(raw['message']);
-    final String? comment = entry.description;
-    final String? note = _stringFromDynamic(raw['note'] ?? raw['notes']);
-    final String? metaNote = _stringFromDynamic(raw['meta']);
-
-    final List<String> details = <String>[];
-    void addDetail(String? value) {
-      if (_isMeaningfulText(value)) {
-        final String trimmed = value!.trim();
-        if (!details.contains(trimmed)) {
-          details.add(trimmed);
-        }
-      }
-    }
-
-    addDetail(display);
-    addDetail(comment);
-    addDetail(note);
-    addDetail(metaNote);
-
-    final Map<String, dynamic>? userMap = _asMap(raw['user']);
-    String? recordedBy;
-    if (userMap != null) {
-      recordedBy = _stringFromDynamic(userMap['name']) ??
-          _stringFromDynamic(userMap['full_name']) ??
-          _stringFromDynamic(userMap['username']);
-    }
-    recordedBy ??= _stringFromDynamic(raw['user_name']);
-    recordedBy ??= _stringFromDynamic(raw['recorded_by']);
-    if (recordedBy == null && raw['user_id'] != null) {
-      recordedBy = '#${raw['user_id']}';
-    }
-
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          SizedBox(
-            width: 40,
-            child: Column(
-              children: <Widget>[
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: entry.isCompleted || entry.isCurrent
-                        ? accent
-                        : accent.withOpacity(0.15),
-                    border: Border.all(color: accent, width: 2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    icon,
-                    size: 16,
-                    color: entry.isCompleted || entry.isCurrent
-                        ? Colors.white
-                        : accent,
-                  ),
-                ),
-                if (!isLast)
-                  Expanded(
-                    child: Container(
-                      width: 2,
-                      margin: const EdgeInsets.symmetric(vertical: 4),
-                      color: Colors.grey.shade300,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontWeight:
-                    entry.isCurrent ? FontWeight.bold : FontWeight.w600,
-                    color: entry.isCurrent ? accent : context.color.textColorDark,
-                  ),
-                ),
-                if (timestamp != null || recordedBy != null) ...<Widget>[
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 4,
-                    children: <Widget>[
-                      if (timestamp != null)
-                        _buildTimelineMetaChip(
-                          icon: Icons.schedule,
-                          label: timestamp,
-                        ),
-                      if (recordedBy != null)
-                        _buildTimelineMetaChip(
-                          icon: Icons.person_outline,
-                          label: recordedBy,
-                        ),
-                    ],
-                  ),
-                ],
-                for (final String detail in details) ...<Widget>[
-                  const SizedBox(height: 8),
-                  Text(
-                    detail,
-                    style: TextStyle(
-                      height: 1.5,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTimelineMetaChip({
-    required IconData icon,
-    required String label,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Icon(icon, size: 14, color: Colors.grey.shade700),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  IconData _resolveTimelineIcon(OrderTimelineEntry entry) {
-    final String combined = '${entry.status ?? ''} ${entry.label}'.toLowerCase();
-    if (combined.contains('cancel') || combined.contains('ملغ')) {
-      return Icons.cancel_outlined;
-    }
-    if (combined.contains('fail') || combined.contains('فشل')) {
-      return Icons.error_outline;
-    }
-    if (combined.contains('deliver') || combined.contains('تسليم') ||
-        combined.contains('توصيل') || combined.contains('استلام')) {
-      return Icons.home_outlined;
-    }
-    if (combined.contains('ship') || combined.contains('شحن') ||
-        combined.contains('طريق')) {
-      return Icons.local_shipping_outlined;
-    }
-    if (combined.contains('paid') || combined.contains('مدفوع') ||
-        combined.contains('سداد') || combined.contains('دفع')) {
-      return Icons.payments_outlined;
-    }
-    if (combined.contains('processing') || combined.contains('قيد') ||
-        combined.contains('انتظار')) {
-      return Icons.hourglass_bottom;
-    }
-    return entry.isCompleted ? Icons.check_circle_outline : Icons.radio_button_unchecked;
-  }
-
-  Color _timelineAccentColor(OrderTimelineEntry entry) {
-    if (entry.isCurrent) {
-      return Colors.orange.shade600;
-    }
-    if (entry.isCompleted) {
-      return Colors.green.shade600;
-    }
-    final String combined = '${entry.status ?? ''} ${entry.label}'.toLowerCase();
-    if (combined.contains('cancel') || combined.contains('ملغ')) {
-      return Colors.red.shade600;
-    }
-    if (combined.contains('fail') || combined.contains('فشل')) {
-      return Colors.red.shade400;
-    }
-    if (combined.contains('pending') || combined.contains('قيد') ||
-        combined.contains('انتظار')) {
-      return Colors.blueGrey.shade500;
-    }
-    return Colors.blue.shade600;
-  }
-
 
   Widget _buildDepositReceiptsList(
       BuildContext context, List<_ReceiptEntry> receipts, String? currency) {
@@ -992,17 +653,10 @@ class OrderStepContent extends StatelessWidget {
     Map<String, dynamic>? fallbackSource,
     List<_ReceiptEntry> receipts = const <_ReceiptEntry>[],
     String? currency,
-
-    double? fallbackPaidValue,
-    String? fallbackPaidText,
-    double? fallbackDueValue,
-    String? fallbackDueText,
-    String? fallbackNote,
-
   }) {
     final Map<String, dynamic>? source = summary ?? fallbackSource;
-    _AmountInfo? paidInfo = _scanForAmount(source, _paidKeywords);
-    _AmountInfo? dueInfo = _scanForAmount(source, _dueKeywords);
+    final _AmountInfo? paidInfo = _scanForAmount(source, _paidKeywords);
+    final _AmountInfo? dueInfo = _scanForAmount(source, _dueKeywords);
     final String? note = _extractNote(source);
 
     _AmountInfo? effectivePaid = paidInfo;
@@ -1030,48 +684,9 @@ class OrderStepContent extends StatelessWidget {
       }
     }
 
-
-
-    if ((effectivePaid == null || !effectivePaid.hasContent) &&
-        (fallbackPaidValue != null ||
-            (fallbackPaidText != null && fallbackPaidText.trim().isNotEmpty))) {
-      effectivePaid = _AmountInfo(
-        text: fallbackPaidText,
-        value: fallbackPaidValue,
-      );
-    }
-
-    if ((dueInfo == null || !dueInfo.hasContent) &&
-        (fallbackDueValue != null ||
-            (fallbackDueText != null && fallbackDueText.trim().isNotEmpty))) {
-      dueInfo = _AmountInfo(
-        text: fallbackDueText,
-        value: fallbackDueValue,
-      );
-    }
-
-
     final bool hasPaid = effectivePaid != null && effectivePaid.hasContent;
     final bool hasDue = dueInfo != null && dueInfo.hasContent;
-
-    String? resolvedNote = note;
-    if (resolvedNote != null && resolvedNote.trim().isEmpty) {
-      resolvedNote = null;
-    }
-
-    final String? trimmedFallbackNote =
-    fallbackNote != null && fallbackNote.trim().isNotEmpty
-        ? fallbackNote.trim()
-        : null;
-
-    if (resolvedNote == null) {
-      resolvedNote = trimmedFallbackNote;
-    } else if (trimmedFallbackNote != null &&
-        trimmedFallbackNote != resolvedNote.trim()) {
-      resolvedNote = '${resolvedNote.trim()}\n$trimmedFallbackNote';
-    }
-
-    final bool hasNote = resolvedNote != null && resolvedNote.trim().isNotEmpty;
+    final bool hasNote = note != null && note.trim().isNotEmpty;
 
     if (!hasPaid && !hasDue && !hasNote) {
       return null;
@@ -1083,8 +698,7 @@ class OrderStepContent extends StatelessWidget {
       paidValue: effectivePaid?.value,
       dueText: dueInfo?.text,
       dueValue: dueInfo?.value,
-      note: resolvedNote,
-
+      note: note,
     );
   }
 
@@ -1100,53 +714,36 @@ class OrderStepContent extends StatelessWidget {
     final Map<String, dynamic> normalized =
     _normalizeMap(source as Map<dynamic, dynamic>);
 
-
-    final Map<String, dynamic> directMatches = <String, dynamic>{};
-    Map<String, dynamic>? singleMatchMap;
-    int matchCount = 0;
-
     for (final MapEntry<String, dynamic> entry in normalized.entries) {
-      final String lowerKey = entry.key.toLowerCase();
-      if (_containsKeyword(lowerKey, includeKeywords) &&
-          !_containsKeyword(lowerKey, excludeKeywords)) {
-        matchCount++;
-        final dynamic value = entry.value;
-        final Map<String, dynamic>? asMap = _asMap(value);
+      final String key = entry.key.toLowerCase();
+      if (_containsKeyword(key, includeKeywords) &&
+          !_containsKeyword(key, excludeKeywords)) {
+        final Map<String, dynamic>? asMap = _asMap(entry.value);
         if (asMap != null) {
-          if (matchCount == 1) {
-            singleMatchMap = asMap;
-          } else {
-            singleMatchMap = null;
-          }
-          directMatches[entry.key] = asMap;
-          continue;
+          return asMap;
         }
-        if (value is Iterable) {
-          final List<dynamic> normalizedList = <dynamic>[];
-          for (final dynamic element in value) {
-            normalizedList.add(_asMap(element) ?? element);
+        if (entry.value is Iterable) {
+          for (final dynamic element in entry.value as Iterable) {
+            final Map<String, dynamic>? elementMap = _asMap(element);
+            if (elementMap != null) {
+              return elementMap;
+            }
           }
-          if (matchCount == 1 &&
-              normalizedList.length == 1 &&
-              normalizedList.first is Map<String, dynamic>) {
-            singleMatchMap = normalizedList.first as Map<String, dynamic>;
-          } else {
-            singleMatchMap = null;
-          }
-          directMatches[entry.key] = normalizedList;
-          continue;
         }
-        singleMatchMap = null;
-        directMatches[entry.key] = value;
       }
     }
 
-    if (directMatches.isNotEmpty) {
-      if (matchCount == 1 && singleMatchMap != null) {
-        return singleMatchMap;
+    final Map<String, dynamic> filtered = <String, dynamic>{};
+    normalized.forEach((String key, dynamic value) {
+      final String lower = key.toLowerCase();
+      if (_containsKeyword(lower, includeKeywords) &&
+          !_containsKeyword(lower, excludeKeywords)) {
+        filtered[key] = value;
       }
-      return directMatches;
+    });
 
+    if (filtered.isNotEmpty) {
+      return filtered;
     }
 
     for (final dynamic value in normalized.values) {
@@ -1672,46 +1269,7 @@ class OrderStepContent extends StatelessWidget {
     return null;
   }
 
-  bool? _boolFromDynamic(dynamic value) {
-    if (value == null) {
-      return null;
-    }
-    if (value is bool) {
-      return value;
-    }
-    if (value is num) {
-      return value != 0;
-    }
-    if (value is String) {
-      final String normalized = value.trim().toLowerCase();
-      if (normalized.isEmpty) {
-        return null;
-      }
-      const Set<String> truthy = <String>{
-        '1',
-        'true',
-        'yes',
-        'y',
-        'on',
-        'enabled',
-      };
-      const Set<String> falsy = <String>{
-        '0',
-        'false',
-        'no',
-        'n',
-        'off',
-        'disabled',
-      };
-      if (truthy.contains(normalized)) {
-        return true;
-      }
-      if (falsy.contains(normalized)) {
-        return false;
-      }
-    }
-    return null;
-  }
+
 
   Widget _buildStepsRow(BuildContext context, List<OrderStepData> steps) {
     return Row(
@@ -1819,12 +1377,11 @@ class OrderStepContent extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Expanded(
-                child: OutlinedButton.icon(
+                child: OutlinedButton(
                   onPressed: (!canOpenInvoice || isInvoiceLoading)
                       ? null
                       : () => onOpenInvoice(order),
-                  icon: isInvoiceLoading
-
+                  child: isInvoiceLoading
                       ? SizedBox(
                     height: 18,
                     width: 18,
@@ -1835,18 +1392,15 @@ class OrderStepContent extends StatelessWidget {
                       ),
                     ),
                   )
-                      : const Icon(Icons.picture_as_pdf_outlined),
-                  label: Text(
-                    isInvoiceLoading ? 'جار الفتح…' : 'عرض الفاتورة',
-                  ),
+                      : const Text('عرض فاتورة'),
                 ),
               ),
               if (showCancel) ...<Widget>[
                 const SizedBox(width: 12),
                 Expanded(
-                  child: ElevatedButton.icon(
+                  child: ElevatedButton(
                     onPressed: isCancelling ? null : () => onCancelOrder(order),
-                    icon: isCancelling
+                    child: isCancelling
                         ? const SizedBox(
                       height: 18,
                       width: 18,
@@ -1856,10 +1410,7 @@ class OrderStepContent extends StatelessWidget {
                         AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
-                        : const Icon(Icons.cancel_outlined),
-                    label: Text(
-                      isCancelling ? 'جار الإلغاء…' : actions.cancelButtonLabel,
-                    ),
+                        : Text(actions.cancelButtonLabel),
                   ),
                 ),
               ],
@@ -1869,40 +1420,21 @@ class OrderStepContent extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.orange.shade200),
-                        ),
-                        child: Row(
-                          children: <Widget>[
-                            Icon(
-                              Icons.payments_outlined,
-                              color: Colors.orange.shade700,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'المتبقي للسداد: ${outstanding!.trim()}',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.orange.shade800,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                      Text(
+                        outstanding!,
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
                       ),
                       if (onPayOutstanding != null) ...<Widget>[
                         const SizedBox(height: 8),
-                        ElevatedButton.icon(
+                        ElevatedButton(
                           onPressed: () async {
                             await onPayOutstanding();
                           },
-                          icon: const Icon(Icons.payment),
-                          label: const Text('تسديد المتبقي'),
+                          child: const Text('تسديد المتبقي'),
                         ),
                       ],
                     ],

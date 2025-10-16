@@ -4,8 +4,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 
 import 'fullscreen_gallery.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
-import 'ad_image_source.dart';
-import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 
 
 
@@ -91,7 +89,7 @@ class _HeaderCircleShimmer extends StatelessWidget {
 
 
 class AdImageHeader extends StatefulWidget {
-  final List<AdImageSource> images;
+  final List<String> images;
   final String? modelId;
   final PageController? pageController;
   final int currentImageIndex;
@@ -137,7 +135,7 @@ class AdImageHeader extends StatefulWidget {
 
   static Widget sliver({
     required BuildContext context,
-    required List<AdImageSource> images,
+    required List<String> images,
     required int currentIndex,
     required int currentImageIndex,
     required bool isFavorite,
@@ -187,40 +185,10 @@ class AdImageHeader extends StatefulWidget {
 class _AdImageHeaderState extends State<AdImageHeader> {
   late int currentImageIndex;
 
-  bool get _hasImages => widget.images.isNotEmpty;
-
-
-
   @override
   void initState() {
     super.initState();
     currentImageIndex = widget.currentImageIndex;
-  }
-  @override
-  void didUpdateWidget(covariant AdImageHeader oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final int normalizedIndex = _normalizeIndex(
-      widget.currentImageIndex,
-      widget.images.length,
-    );
-    if (normalizedIndex != currentImageIndex) {
-      setState(() {
-        currentImageIndex = normalizedIndex;
-      });
-    }
-  }
-
-  int _normalizeIndex(int index, int itemCount) {
-    if (itemCount <= 0) {
-      return 0;
-    }
-    if (index < 0) {
-      return 0;
-    }
-    if (index >= itemCount) {
-      return itemCount - 1;
-    }
-    return index;
   }
 
   @override
@@ -231,20 +199,20 @@ class _AdImageHeaderState extends State<AdImageHeader> {
         fit: StackFit.expand,
         children: [
           GestureDetector(
-            onTap: !_hasImages
-                ? null
-                : () {
+            onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => FullscreenGalleryPage(
-                    images: widget.images,
-                    initialIndex: currentImageIndex,
-                    heroTagBuilder: (index) => widget.modelId != null
-                        ? 'ad-image-${widget.modelId}-$index'
-                        : 'ad-image-$index',
-                  ),
+                  builder: (context) =>
+                      FullscreenGalleryPage(
+                        images: widget.images,
+                        initialIndex: currentImageIndex,
+                        heroTagBuilder: (index) =>
+                        widget.modelId != null
+                            ? 'ad-image-${widget.modelId}-$index'
+                            : 'ad-image-$index',
                       ),
+                ),
               );
             },
             child: _buildImageSlider(),
@@ -318,9 +286,6 @@ class _AdImageHeaderState extends State<AdImageHeader> {
   }
 
   Widget _buildImageSlider() {
-    if (!_hasImages) {
-      return _buildPlaceholder();
-    }
     return PageView.builder(
       controller: widget.pageController,
       itemCount: widget.images.length,
@@ -334,107 +299,18 @@ class _AdImageHeaderState extends State<AdImageHeader> {
       },
       physics: const BouncingScrollPhysics(),
       itemBuilder: (context, index) {
-        final AdImageSource imageSource = widget.images[index];
-        final String imageUrl = imageSource.detailUrl;
         return Hero(
           tag: widget.modelId != null
               ? 'ad-image-${widget.modelId}-$index'
               : 'ad-image-$index',
           child: CachedNetworkImage(
-            imageUrl: imageUrl,
+            imageUrl: widget.images[index],
             fit: BoxFit.cover,
-            memCacheWidth: kAdDetailImageMaxEdge,
-            memCacheHeight: kAdDetailImageMaxEdge,
-            maxWidthDiskCache: kAdDetailImageMaxEdge,
-            maxHeightDiskCache: kAdDetailImageMaxEdge,
-            imageBuilder: (context, imageProvider) => Image(
-              image: imageProvider,
-              width: double.infinity,
-              height: double.infinity,
-              fit: BoxFit.cover,
-
-              filterQuality: FilterQuality.high,
-            ),
-            placeholder: (context, url) => const ShimmerBox(
-              width: double.infinity,
-              height: double.infinity,
-              borderRadius: BorderRadius.zero,
-            ),
-            errorWidget: (context, url, error) {
-              if (imageSource.hasOptimizedVariant) {
-                return CachedNetworkImage(
-                  imageUrl: imageSource.fallbackDisplayUrl,
-                  fit: BoxFit.cover,
-                  memCacheWidth: kAdDetailImageMaxEdge,
-                  memCacheHeight: kAdDetailImageMaxEdge,
-                  maxWidthDiskCache: kAdDetailImageMaxEdge,
-                  maxHeightDiskCache: kAdDetailImageMaxEdge,
-                  imageBuilder: (context, imageProvider) => Image(
-                    image: imageProvider,
-                    width: double.infinity,
-                    height: double.infinity,
-                    fit: BoxFit.cover,
-
-                    filterQuality: FilterQuality.high,
-                  ),
-                  placeholder: (context, _) => const ShimmerBox(
-                    width: double.infinity,
-                    height: double.infinity,
-                    borderRadius: BorderRadius.zero,
-                  ),
-                  errorWidget: (context, _, __) => _buildImageErrorPlaceholder(),
-
-                );
-              }
-              return _buildImageErrorPlaceholder();
-
-            },
+            placeholder: (context, url) => Container(color: Colors.grey[200]),
+            errorWidget: (context, url, error) => const Icon(Icons.error),
           ),
         );
       },
-    );
-  }
-
-
-  Widget _buildPlaceholder() {
-    return _buildShimmerFallback(
-      icon: Icons.image_not_supported_outlined,
-      animate: true,
-    );
-  }
-
-  Widget _buildImageErrorPlaceholder() {
-    return _buildShimmerFallback(
-      icon: Icons.broken_image_outlined,
-      animate: false,
-    );
-  }
-
-  Widget _buildShimmerFallback({
-    required IconData icon,
-    required bool animate,
-  }) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final Color iconColor = colorScheme.onSurface.withOpacity(0.65);
-
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-      ShimmerBox(
-      width: double.infinity,
-      height: double.infinity,
-      borderRadius: BorderRadius.zero,
-      animate: animate,
-        ),
-        Center(
-          child: Icon(
-            icon,
-            size: 56,
-            color: iconColor,
-          ),
-        ),
-      ],
     );
   }
 

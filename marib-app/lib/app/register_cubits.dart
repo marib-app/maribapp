@@ -80,8 +80,7 @@ import 'package:marib/data/repositories/otp_repository.dart';
 import 'package:nested/nested.dart';
 
 import 'package:marib/data/cubits/item/fetch_item_summary_cubit.dart';
-import 'package:marib/data/cubits/item/fetch_item_purchase_options_cubit.dart';
-import 'package:marib/data/repositories/item/item_purchase_options_repository.dart';
+
 
 
 
@@ -101,9 +100,7 @@ class RegisterCubits {
     BlocProvider(create: (context) => NotificationCubit()),
     BlocProvider(create: (context) => AppThemeCubit()),
     BlocProvider(create: (context) => FetchItemFromCategoryCubit()),
-    BlocProvider(
-        create: (context) =>
-            FetchItemPurchaseOptionsCubit(ItemPurchaseOptionsRepository())),
+
     BlocProvider(create: (context) => FetchItemSummaryCubit()),
 
     BlocProvider(create: (context) => FetchNotificationsCubit()),

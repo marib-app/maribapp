@@ -44,8 +44,6 @@ import 'package:marib/utils/helper_utils.dart';
 
 import 'home_ui.dart'; // ← الواجهة المنفصلة
 
-
-
 const double sidePadding = 18;
 
 class HomeScreen extends StatefulWidget {
@@ -160,15 +158,107 @@ class HomeScreenState extends State<HomeScreen>
   Widget build(BuildContext context) {
     super.build(context);
 
-    final List<Widget> bodySlivers = <Widget>[
-      _buildHomeContentSliver(),
-      const SliverToBoxAdapter(child: SizedBox(height: 30)),
-    ];
+    /// ✅ RepaintBoundary لتقليل إعادة الرسم على الإطارات وتخفيف التقطيع
+    final Widget bodyContent = RepaintBoundary(
+      child: Column(
+        children: [
+          // ✅ اجعل البناء ثقيل الحالة معزولاً داخل BlocBuilder
+          BlocBuilder<FetchHomeScreenCubit, FetchHomeScreenState>(
+            buildWhen: (prev, curr) => prev.runtimeType != curr.runtimeType,
+            builder: (context, state) {
+              if (state is FetchHomeScreenInProgress) {
+                return homeShimmerEffect(context); // من home_ui.dart
+              }
+
+              if (state is FetchHomeScreenSuccess) {
+                // ✅ عناصر ثابتة جعلناها const قدر الإمكان لتقليل إعادة البناء/التخصيص
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Column(
+                      children: const [
+                        // ملاحظة: AnimatedSearchBar/CategoryWidgetOffline قد لا تقبل const
+                        // سنتركهما بدون const إن تطلب الأمر. SliderWidget أيضاً، لذلك أزلنا const هنا.
+                      ],
+                    ),
+                    // نستدعي العناصر غير الثابتة خارج const:
+                    const SizedBox(height: 0), // placeholder
+
+                    // نضع العناصر غير الثابتة بشكل صريح:
+                    SliderWidget(interfaceType: "homepage"),
+                    AnimatedSearchBar(),
+                    CategoryWidgetOffline(),
+
+                    const SizedBox(height: 8),
+                    ImageWithNavigationWidget(
+                      assetPath: 'assets/sections/1.jpg',
+                      onTap: _goRealEstate,
+                    ),
+                    const SizedBox(height: 8),
+                    ImageWithNavigationWidget(
+                      assetPath: 'assets/sections/2.jpg',
+                      onTap: _goTourism,
+                    ),
+                    const SizedBox(height: 8),
+                    ImageWithNavigationWidget(
+                      assetPath: 'assets/sections/3.jpg',
+                      onTap: _goElectronicStore,
+                    ),
+                    const SizedBox(height: 8),
+                    ImageWithNavigationWidget(
+                      assetPath: 'assets/sections/4.jpg',
+                      onTap: _goShein,
+                    ),
+                    const SizedBox(height: 8),
+                    ImageWithNavigationWidget(
+                      assetPath: 'assets/sections/5.jpg',
+                      onTap: _goComputerSection,
+                    ),
+                    const SizedBox(height: 8),
+                    ImageWithNavigationWidget(
+                      assetPath: 'assets/sections/6.jpg',
+                      onTap: _goPublicAds,
+                    ),
+                  ],
+                );
+              }
+
+              if (state is FetchHomeScreenFail) {
+                // ✅ واجهة فشل واضحة مع زر إعادة المحاولة
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(height: 8),
+                      Text(
+                        'تعذّر تحميل الصفحة الرئيسية',
+                        style: Theme.of(context).textTheme.titleMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      ElevatedButton(
+                        onPressed: () =>
+                            context.read<FetchHomeScreenCubit>().fetch(),
+
+                        child: const Text('إعادة المحاولة'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return const SizedBox.shrink();
+            },
+          ),
+          const SizedBox(height: 30),
+        ],
+      ),
+    );
 
     return HomeScreenUI(
       scrollController: _scrollController,
       onSupportPressed: () => Navigator.pushNamed(context, Routes.support),
-      bodySlivers: bodySlivers,
+      bodyContent: bodyContent,
       userId: HiveUtils.getUserId()?.toString(),
       showWelcomeLine: true,
 
@@ -186,128 +276,6 @@ class HomeScreenState extends State<HomeScreen>
       onInfoTap: () {},
     );
   }
-
-
-
-  Widget _buildHomeContentSliver() {
-    return BlocBuilder<FetchHomeScreenCubit, FetchHomeScreenState>(
-      buildWhen: (prev, curr) => prev.runtimeType != curr.runtimeType,
-      builder: (context, state) {
-        if (state is FetchHomeScreenInProgress) {
-          return SliverToBoxAdapter(child: homeShimmerEffect(context));
-        }
-
-        if (state is FetchHomeScreenSuccess) {
-          final bool canShowShein = HiveUtils.hasDelegateAccess('shein');
-          final bool canShowComputer = HiveUtils.hasDelegateAccess('computer');
-
-          final List<Widget> children = <Widget>[
-            RepaintBoundary(
-              child: SliderWidget(interfaceType: "homepage"),
-            ),
-            const SizedBox(height: 12),
-            RepaintBoundary(child: AnimatedSearchBar()),
-            const SizedBox(height: 12),
-            RepaintBoundary(child: CategoryWidgetOffline()),
-            const SizedBox(height: 16),
-            _buildBannerCard(
-              assetPath: 'assets/sections/1.jpg',
-              onTap: _goRealEstate,
-            ),
-            const SizedBox(height: 8),
-            _buildBannerCard(
-              assetPath: 'assets/sections/2.jpg',
-              onTap: _goTourism,
-            ),
-            const SizedBox(height: 8),
-            _buildBannerCard(
-              assetPath: 'assets/sections/3.jpg',
-              onTap: _goElectronicStore,
-            ),
-          ];
-
-          if (canShowShein) {
-            children
-              ..add(const SizedBox(height: 8))
-              ..add(
-                _buildBannerCard(
-                  assetPath: 'assets/sections/4.jpg',
-                  onTap: _goShein,
-                ),
-              );
-          }
-
-          if (canShowComputer) {
-            children
-              ..add(const SizedBox(height: 8))
-              ..add(
-                _buildBannerCard(
-                  assetPath: 'assets/sections/5.jpg',
-                  onTap: _goComputerSection,
-                ),
-              );
-          }
-
-          children
-            ..add(const SizedBox(height: 8))
-            ..add(
-              _buildBannerCard(
-                assetPath: 'assets/sections/6.jpg',
-                onTap: _goPublicAds,
-              ),
-            );
-
-          return SliverList(
-            delegate: SliverChildListDelegate(
-              children,
-              addAutomaticKeepAlives: false,
-              addRepaintBoundaries: true,
-            ),
-          );
-        }
-
-        if (state is FetchHomeScreenFail) {
-          return SliverToBoxAdapter(
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(height: 8),
-                  Text(
-                    'تعذّر تحميل الصفحة الرئيسية',
-                    style: Theme.of(context).textTheme.titleMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  ElevatedButton(
-                    onPressed: () =>
-                        context.read<FetchHomeScreenCubit>().fetch(),
-                    child: const Text('إعادة المحاولة'),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
-        return const SliverToBoxAdapter(child: SizedBox.shrink());
-      },
-    );
-  }
-
-  Widget _buildBannerCard({
-    required String assetPath,
-    required VoidCallback onTap,
-  }) {
-    return RepaintBoundary(
-      child: ImageWithNavigationWidget(
-        assetPath: assetPath,
-        onTap: onTap,
-      ),
-    );
-  }
-
-
 
   // =======================
   // تنقلات الأقسام (عزل الدوال يقلل إنشاء Closures داخل build)

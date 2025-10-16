@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
-import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 
 class FullScreenImageView extends StatefulWidget {
   final ImageProvider provider;
@@ -47,14 +46,15 @@ class _FullScreenImageViewState extends State<FullScreenImageView> {
                   child: Image(
                     image: widget.provider,
                     errorBuilder: (context, error, stackTrace) {
-                      return ShimmerBox(
-                        width: 100,
-                        height: 100,
-                        borderRadius: BorderRadius.circular(12),
-                        animate: false,
-                        baseColor:
-                        context.color.territoryColor.withOpacity(0.2),
-                      );
+                      return Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                              color:
+                                  context.color.territoryColor.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(10)),
+                          child: UiUtils.getSvg(AppIcons.placeHolder,
+                              color: context.color.territoryColor));
                     },
                     loadingBuilder: (context, child, loadingProgress) {
                       if (loadingProgress == null) return child;

@@ -490,8 +490,14 @@ class _SubscriptionPackageListScreenState
       itemId: null,
     );
 
-    final result = await BankTransferScreen.show(context, args);
-
+    final result = await Navigator.of(context).push(
+      BankTransferScreen.route(
+        RouteSettings(
+          name: '/bank-transfer',
+          arguments: args,
+        ),
+      ),
+    );
 
     if (!mounted) return;
 

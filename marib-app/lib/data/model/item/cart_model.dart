@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/utils/delivery_department.dart';
 import 'package:marib/utils/currency_utils.dart';
-import 'package:marib/utils/variant_key.dart';
 
 
 
@@ -27,7 +26,6 @@ class Cart extends ItemModel {
     this.unitPrice,
     this.subtotalOverride,
     this.variantId,
-    this.variantKey,
     this.variantAttributes,
     this.stockSnapshot,
     this.unitPriceLocked,
@@ -39,15 +37,17 @@ class Cart extends ItemModel {
   }) : super(
 
 
+
+
     id: id,
     name: name,
     image: image,
     price: price,
-    finalPrice: price,
     user: user,
     categoryId: categoryId,
     currency: currency,
     currencyCode: currencyCode,
+
   );
 
 
@@ -76,12 +76,8 @@ class Cart extends ItemModel {
   /// الإجمالي الفرعي المحسوب في الخادم (قبل الضريبة/الرسوم).
   final double? subtotalOverride;
 
-
-  /// المعرف الداخلي للتنويعة كما يعيده الخادم (إن وجد).
+  /// معرف التنويعة (إن وجد).
   final String? variantId;
-
-  /// المفتاح المحسوب للتنويعة (attr=value|...).
-  final String? variantKey;
 
   /// السمات المحددة للتنويعة.
   final Map<String, dynamic>? variantAttributes;
@@ -90,7 +86,7 @@ class Cart extends ItemModel {
   final Map<String, dynamic>? stockSnapshot;
 
   /// يحدد ما إذا كان سعر الوحدة مقفلًا بواسطة الخادم.
-  final double? unitPriceLocked;
+  final bool? unitPriceLocked;
 
 
   /// السعر المعتمد للوحدة عند العرض (يراعي pivot أو سعر السلعة).
@@ -114,11 +110,10 @@ class Cart extends ItemModel {
         double? vendorLat,
         double? vendorLng,
         String? variantId,
-        String? variantKey,
         Map<String, dynamic>? variantAttributes,
         Map<String, dynamic>? stockSnapshot,
         double? unitPrice,
-        double? unitPriceLocked,
+        bool? unitPriceLocked,
         String? currency,
       }) {
     if (item.id == null) {
@@ -136,7 +131,7 @@ class Cart extends ItemModel {
       return (trimmed == null || trimmed.isEmpty) ? null : trimmed;
     }
 
-    final double resolvedUnitPrice = unitPrice ?? item.finalPrice ?? item.price ?? 0;
+    final double resolvedUnitPrice = unitPrice ?? item.price ?? 0;
     final String? explicitCurrency = _trimmed(currency);
     final String? resolvedCurrencyDisplay =
         explicitCurrency ?? _trimmed(item.currency);
@@ -161,12 +156,11 @@ class Cart extends ItemModel {
       unitPrice: resolvedUnitPrice,
       subtotalOverride: resolvedUnitPrice * quantity,
       variantId: variantId,
-      variantKey: variantKey,
       variantAttributes:
       variantAttributes != null ? Map<String, dynamic>.from(variantAttributes) : null,
       stockSnapshot:
       stockSnapshot != null ? Map<String, dynamic>.from(stockSnapshot) : null,
-      unitPriceLocked: unitPriceLocked ?? resolvedUnitPrice,
+      unitPriceLocked: unitPriceLocked,
       currency: resolvedCurrencyDisplay,
       currencyCode: resolvedCurrencyCode,
     );
@@ -306,35 +300,20 @@ class Cart extends ItemModel {
       explicitSection: sectionRaw is String ? sectionRaw : null,
     );
 
-    final double? rawUnitPrice =
-        _parseDouble(json['unit_price']) ?? _parseDouble(pivotMap?['unit_price']);
-    final double? lockedUnitPrice =
-    _parseDouble(json['unit_price_locked'] ?? pivotMap?['unit_price_locked']);
-    final double? finalUnitPrice =
-        _parseDouble(json['final_unit_price']) ?? lockedUnitPrice;
-    final double resolvedUnitPrice = finalUnitPrice ?? rawUnitPrice ??
-        base.finalPrice ?? base.price ?? 0.0;
+    final double unitPrice =
+        _parseDouble(json['unit_price']) ?? _parseDouble(pivotMap?['unit_price']) ??
+            (base.price ?? 0.0);
     final double? subtotal =
         _parseDouble(json['subtotal']) ?? _parseDouble(pivotMap?['subtotal']);
 
     final String? variantId =
     _stringOrNull(json['variant_id'] ?? pivotMap?['variant_id']);
-    String? variantKey =
-    _stringOrNull(json['variant_key'] ?? pivotMap?['variant_key']);
-
-    if (variantKey != null && variantKey.trim().isNotEmpty) {
-      final String normalized = VariantKeyCodec.canonicalize(variantKey);
-      variantKey = normalized.isEmpty ? null : normalized;
-    } else {
-      variantKey = null;
-    }
-
-
     final Map<String, dynamic>? variantAttributes =
     _parseJsonMap(json['variant_attributes'] ?? pivotMap?['variant_attributes']);
     final Map<String, dynamic>? stockSnapshot =
     _parseJsonMap(json['stock_snapshot'] ?? pivotMap?['stock_snapshot']);
-
+    final bool? unitPriceLocked =
+    _parseBool(json['unit_price_locked'] ?? pivotMap?['unit_price_locked']);
 
     CurrencyParseResult currencyInfo = const CurrencyParseResult();
 
@@ -359,7 +338,7 @@ class Cart extends ItemModel {
       id: itemId,
       name: base.name ?? '',
       image: base.image ?? '',
-      price: resolvedUnitPrice,
+      price: unitPrice,
       categoryId: base.categoryId ?? _parseInt(json['category_id']) ?? 0,
       user: resolvedUser,
 
@@ -372,13 +351,12 @@ class Cart extends ItemModel {
       section: resolvedSection,
       cartItemId:
       _parseInt(json['cart_item_id']) ?? _parseInt(pivotMap?['id']) ?? _parseInt(json['id']),
-      unitPrice: finalUnitPrice ?? lockedUnitPrice ?? rawUnitPrice ?? resolvedUnitPrice,
-      subtotalOverride: subtotal ?? resolvedUnitPrice * quantity,
+      unitPrice: unitPrice,
+      subtotalOverride: subtotal ?? unitPrice * quantity,
       variantId: variantId,
-      variantKey: variantKey,
       variantAttributes: variantAttributes,
       stockSnapshot: stockSnapshot,
-      unitPriceLocked: lockedUnitPrice ?? finalUnitPrice,
+      unitPriceLocked: unitPriceLocked,
       currency: currencyDisplay?.isEmpty == true ? null : currencyDisplay,
       currencyCode: currencyCode,
     );
@@ -410,9 +388,6 @@ class Cart extends ItemModel {
 
     if (variantId != null) {
       data['variant_id'] = variantId;
-    }
-    if (variantKey != null && variantKey!.trim().isNotEmpty) {
-      data['variant_key'] = variantKey;
     }
     if (variantAttributes != null && variantAttributes!.isNotEmpty) {
       data['variant_attributes'] = Map<String, dynamic>.from(variantAttributes!);

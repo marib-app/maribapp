@@ -140,7 +140,7 @@ class CustomNumberFieldView extends StatelessWidget {
           maxLen: maxLen,
           minLen: minLen,
           hintText: "", // يمكن تمرير hint من الـ parameters إن وجد
-          inputFormatters: [
+          formaters: [
             FilteringTextInputFormatter.digitsOnly,
           ],
 

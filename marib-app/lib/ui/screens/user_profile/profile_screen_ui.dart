@@ -165,7 +165,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
                     _ServiceItemTile(
                       title: "المحفظة".translate(context),
-                      svg: AppIcons.money,
+                      svg: AppIcons.wallet,
                       onTap: () {
                         UiUtils.checkUser(
                           onNotGuest: () => Navigator.pushNamed(context, Routes.wallet),

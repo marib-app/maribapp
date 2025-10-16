@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shimmer/shimmer.dart';
 
 import 'package:marib/data/cubits/category/fetch_category_cubit.dart';
+import 'package:marib/data/cubits/item/fetch_item_from_category_cubit.dart';
 
 
 const _shimmerBaseColor = Color(0xFFB8BEC9);
@@ -93,7 +94,12 @@ class _PcSliderWidgetState extends State<PcSliderWidget> {
     _centerCurrent(force: true);
     widget.onCategorySelected?.call(id);
 
-
+    if (id != 0) {
+      context.read<FetchItemFromCategoryCubit>().fetchItemFromCategory(
+        categoryId: id,
+        search: "",
+      );
+    }
   }
 
   void _centerCurrent({bool force = false}) {

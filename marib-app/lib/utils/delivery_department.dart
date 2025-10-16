@@ -123,11 +123,6 @@ String? _departmentFromCategoryId(int categoryId) {
     return 'computer';
   }
 
-
-  if (categoryId == Constant.storeRootCategoryId) {
-    return 'store';
-  }
-
   return null;
 }
 

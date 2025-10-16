@@ -21,7 +21,6 @@ import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart';
 
 import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/custom_field.dart';
 import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
-import 'package:marib/ui/screens/item/add_item_screen/widgets/pdf_viewer.dart';
 
 /// =====================
 /// Logic (Controller)
@@ -445,25 +444,11 @@ class _CustomFileFieldViewState extends State<CustomFileFieldView> {
             path: picked,
             openImage: (p, sizeText) =>
                 widget.onOpenImage(p, fileName, sizeText),
-            onOpenPdf: (p) {
-              final Map<String, dynamic> routeArgs = <String, dynamic>{'url': p};
-              HelperUtils.goToNextPage(
-                Routes.pdfViewerScreen,
-                context,
-                false,
-                args: routeArgs,
-                overrideRoute: AppPageRoute.build(
-                  settings: RouteSettings(
-                    name: Routes.pdfViewerScreen,
-                    arguments: routeArgs,
-                  ),
-                  fullscreenDialog: true,
-                  barrierDismissible: false,
-                  barrierColor: Colors.black.withOpacity(0.45),
-                  builder: (_) => PdfViewer(url: p),
-                ),
-              );
-            },
+            onOpenPdf: (p) => Navigator.pushNamed(
+              context,
+              Routes.pdfViewerScreen,
+              arguments: p,
+            ),
             onClear: widget.onClear,
           ),
         ),

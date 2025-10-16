@@ -150,7 +150,6 @@ class PendingCartAddition {
     this.vendorLat,
     this.vendorLng,
     this.variantId,
-    this.variantKey,
     this.variantAttributes,
     this.stockSnapshot,
     this.unitPrice,
@@ -171,7 +170,6 @@ class PendingCartAddition {
       vendorLat: cart.vendorLat,
       vendorLng: cart.vendorLng,
       variantId: cart.variantId,
-      variantKey: cart.variantKey,
       variantAttributes:
       cart.variantAttributes != null ? Map<String, dynamic>.from(cart.variantAttributes!) : null,
       stockSnapshot:
@@ -190,11 +188,10 @@ class PendingCartAddition {
   final double? vendorLat;
   final double? vendorLng;
   final String? variantId;
-  final String? variantKey;
   final Map<String, dynamic>? variantAttributes;
   final Map<String, dynamic>? stockSnapshot;
   final double? unitPrice;
-  final double? unitPriceLocked;
+  final bool? unitPriceLocked;
   final String? currency;
 
   static List<Map<String, dynamic>>? _cloneListOfMaps(
@@ -499,7 +496,6 @@ class CartCubit extends Cubit<CartState> {
         vendorLng: request.vendorLng,
         department: request.department,
         variantId: request.variantId,
-        variantKey: request.variantKey,
         attributes: request.variantAttributes,
         stockSnapshot: request.stockSnapshot,
         unitPrice: request.unitPrice,
@@ -702,13 +698,6 @@ class CartCubit extends Cubit<CartState> {
       itemId: item.id!,
       quantity: quantity,
       cartItemId: item.cartItemId,
-      variantId: item.variantId,
-      variantKey: item.variantKey,
-      attributes: item.variantAttributes,
-      stockSnapshot: item.stockSnapshot,
-      unitPrice: item.unitPrice,
-      unitPriceLocked: item.unitPriceLocked,
-      currency: item.currency,
     );
 
     _syncSection(summary.items);
@@ -771,7 +760,6 @@ class CartCubit extends Cubit<CartState> {
     final CartSummary summary = await _repository.removeItem(
       itemId: item.id!,
       cartItemId: item.cartItemId,
-      variantKey: item.variantKey,
     );
 
     _syncSection(summary.items);

@@ -339,7 +339,6 @@ class SellerProfileScreenState extends State<SellerProfileScreen>
             ),
           ],
           body: SafeArea(
-            top: false,
             bottom: true,
             child: TabBarView(
               controller: _tabController,

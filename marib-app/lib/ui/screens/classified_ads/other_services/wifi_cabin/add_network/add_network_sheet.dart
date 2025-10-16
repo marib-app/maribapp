@@ -1,10 +1,10 @@
 part of 'package:marib/ui/screens/classified_ads/other_services/wifi_cabin/wifi_cabin_screen.dart';
 
 class _AddNetworkSheet extends StatefulWidget {
-  const _AddNetworkSheet({WifiRepository? repository})
+  const _AddNetworkSheet({this.userLatLng, WifiRepository? repository})
       : repository = repository ?? const WifiRepository();
 
-
+  final LatLng? userLatLng;
   final WifiRepository repository;
 
   @override
@@ -12,7 +12,8 @@ class _AddNetworkSheet extends StatefulWidget {
 }
 
 class _AddNetworkSheetState extends _AddNetworkFormState<_AddNetworkSheet> {
-
+  @override
+  LatLng? get userLatLng => widget.userLatLng;
 
   @override
   WifiRepository get repository => widget.repository;

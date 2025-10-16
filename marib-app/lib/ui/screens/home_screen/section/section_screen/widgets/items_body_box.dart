@@ -38,7 +38,6 @@ class ItemsBodyBox extends StatefulWidget {
 
   // جديد: لا تبني شريط التصنيفات/السلايدر إلا إذا true
   final bool enableTopBar;
-  final String? specialRequestSectionSlug;
 
   final bool enableAdSlider;     // ← جديد
   final String? adInterfaceType; // ← جديد
@@ -62,7 +61,6 @@ class ItemsBodyBox extends StatefulWidget {
     this.filter,                   // ← جديد
     this.enableSubcats = true,     // ← جديد (بحالته الافتراضية)
     this.onLoadMore,
-    this.specialRequestSectionSlug,
 
     super.key,
   });

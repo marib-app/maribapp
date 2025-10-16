@@ -60,10 +60,6 @@ class NearbyLocationScreenState extends State<NearbyLocationScreen>
   double? latitude, longitude;
   AddressComponent? formatedAddress;
 
-  bool get _hasValidLocation => latitude != null && longitude != null;
-  bool get _hasResolvedAddress => _hasValidLocation && formatedAddress != null;
-
-
   @override
   void initState() {
     super.initState();
@@ -262,24 +258,16 @@ class NearbyLocationScreenState extends State<NearbyLocationScreen>
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: sidePadding),
           child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Expanded(
-                  child: UiUtils.buildButton(
-                      context,
-                      radius: 8,
-                      fontSize: 16,
-                      disabled: !_hasValidLocation,
-                      onTapDisabledButton: () => UiUtils.showSoftSnackBar(
-                        context,
-                        message: "fetchingLocation".translate(context),
-                      ),
+                  child: UiUtils.buildButton(context, radius: 8, fontSize: 16,
                       onPressed: () {
-                        if (!_hasValidLocation) return;
-                        setState(() {
-                          radius = 1;
-                          _addCircle(LatLng(latitude!, longitude!), radius);
-                        });
-                      },
+                setState(() {
+                  radius = 1;
+                  _addCircle(LatLng(latitude!, longitude!), radius);
+                });
+              },
                       buttonTitle: "reset".translate(context),
                       height: 43,
                       border: BorderSide(color: context.color.territoryColor),
@@ -287,26 +275,11 @@ class NearbyLocationScreenState extends State<NearbyLocationScreen>
                       buttonColor: context.color.secondaryColor)),
               const SizedBox(width: 16),
               Expanded(
-                  child: UiUtils.buildButton(
-                      context,
-                      radius: 8,
-                      fontSize: 16,
-                      disabled: !_hasResolvedAddress,
-                      onTapDisabledButton: () => UiUtils.showSoftSnackBar(
-                        context,
-                        message: "fetchingLocation".translate(context),
-                      ),
+                  child: UiUtils.buildButton(context, radius: 8, fontSize: 16,
                       onPressed: () {
-                        if (!_hasResolvedAddress) {
-                          UiUtils.showSoftSnackBar(
-                            context,
-                            message: "fetchingLocation".translate(context),
-                          );
-                          return;
-                        }
-                        HiveUtils.setNearbyRadius(radius.toInt());
-                        applyOnPressed();
-                      },
+                HiveUtils.setNearbyRadius(radius.toInt());
+                applyOnPressed();
+              },
                       buttonTitle: "apply".translate(context),
                       height: 43,
                       textColor: context.color.secondaryColor,
@@ -320,13 +293,6 @@ class NearbyLocationScreenState extends State<NearbyLocationScreen>
   }
 
   void applyOnPressed() {
-    if (!_hasResolvedAddress) {
-      UiUtils.showSoftSnackBar(
-        context,
-        message: "fetchingLocation".translate(context),
-      );
-      return;
-    }
     if (widget.from == "home") {
       HiveUtils.setLocation(
           city: formatedAddress!.city,
@@ -704,14 +670,12 @@ class NearbyLocationScreenState extends State<NearbyLocationScreen>
               max: 100,
               divisions: 99,
               label: '${radius.toInt()}\t${"km".translate(context)}',
-              onChanged: _hasValidLocation
-                  ? (value) {
+              onChanged: (value) {
                 setState(() {
                   radius = value;
                   _addCircle(LatLng(latitude!, longitude!), radius);
                 });
-              }
-                  : null,
+              },
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: sidePadding),

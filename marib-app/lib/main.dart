@@ -15,10 +15,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'package:marib/data/cubits/system/language_cubit.dart';
-import 'dart:async';
-import 'package:marib/ui/screens/chat/chat_badge_controller.dart';
-import 'package:marib/utils/performance/performance_route_observer.dart';
-import 'package:marib/utils/scroll/low_spec_scroll_physics.dart';
+
 
 
 /////////////
@@ -45,7 +42,6 @@ class EntryPointState extends State<EntryPoint> {
         NotificationService.onBackgroundMessageHandler);
     //ChatMessageHandler.handle();
     ChatGlobals.init();
-    unawaited(ChatBadgeController.init(userId: HiveUtils.getUserId()));
   }
 
   @override
@@ -96,12 +92,10 @@ class _AppState extends State<App> {
           // App will start from here splash screen is first screen,
           navigatorKey: Constant.navigatorKey,
           //This navigator key is used for Navigate users through notification
-          navigatorObservers: [PerformanceRouteObserver()],
           title: Constant.appName,
           debugShowCheckedModeBanner: false,
           onGenerateRoute: Routes.onGenerateRouted,
           theme: appThemeData[currentTheme],
-          scrollBehavior: const GlobalScrollBehavior(),
           builder: (context, child) {
             TextDirection? direction;
 
@@ -172,10 +166,8 @@ class _AppState extends State<App> {
 }
 
 class GlobalScrollBehavior extends ScrollBehavior {
-  const GlobalScrollBehavior();
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) {
-    return const LowSpecScrollPhysics();
-
+    return const BouncingScrollPhysics();
   }
 }

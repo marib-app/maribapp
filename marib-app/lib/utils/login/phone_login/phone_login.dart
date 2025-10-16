@@ -67,12 +67,10 @@ import 'package:marib/utils/login/lib/payloads.dart';
 import 'package:marib/utils/api.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/data/repositories/auth_repository.dart';
-import 'package:flutter/foundation.dart';
 
 class PhoneLogin extends LoginSystem {
   bool _isPhonePasswordLoginSuccess = false;
   UserCredential? userCredential;
-  String? _verificationId;
 
   // إعادة تعيين الحالة قبل كل عملية تسجيل دخول
   void resetState() {
@@ -88,39 +86,37 @@ class PhoneLogin extends LoginSystem {
 
   @override
   Future<UserCredential?> login() async {
-    userCredential = null;
+    UserCredential? userCredential;
 
     if (payload is PhoneLoginPayload) {
-      final payloadData = payload as PhoneLoginPayload;
-      final String? otp = payloadData.getOTP();
+      var payloadData = (payload as PhoneLoginPayload);
+      String phoneNumber = payloadData.phoneNumber;
+      String countryCode = payloadData.countryCode;
 
-      if (otp == null || otp.isEmpty) {
-        emit(MFail('otpRequired'));
-        return null;
-      }
-
-      if (_verificationId == null || _verificationId!.isEmpty) {
-        emit(MFail('verificationIdMissing'));
-        return null;
-      }
-
-      try {
-        emit(MProgress());
-        final PhoneAuthCredential credential = PhoneAuthProvider.credential(
-          verificationId: _verificationId!,
-          smsCode: otp,
-        );
-
-        userCredential = await firebaseAuth.signInWithCredential(credential);
-        emit(MSuccess());
-      } on FirebaseAuthException catch (e) {
-        if (e.code == 'session-expired') {
-          _invalidateVerificationSession();
-        }
-        emit(MFail(e));
-      } catch (e) {
-        emit(MFail(e));
-      }
+      // تسجيل الدخول بـ OTP عبر Firebase
+      await firebaseAuth.verifyPhoneNumber(
+        timeout: const Duration(seconds: 60),
+        phoneNumber: "+$countryCode$phoneNumber",
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          try {
+            userCredential =
+                await firebaseAuth.signInWithCredential(credential);
+            emit(MSuccess());
+          } catch (e) {
+            emit(MFail(e));
+          }
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          emit(MFail(e));
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          AuthRepository.forceResendingToken = resendToken;
+          emit(MVerificationPending());
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {
+          // Handle auto retrieval timeout
+        },
+      );
     } else if (payload is PhoneAndPasswordPayload) {
       var payloadData = (payload as PhoneAndPasswordPayload);
 
@@ -172,8 +168,6 @@ class PhoneLogin extends LoginSystem {
       String countryCode = payloadData.countryCode;
 
       try {
-        emit(MOtpSendInProgress());
-        _verificationId = null;
         await firebaseAuth.verifyPhoneNumber(
           forceResendingToken: AuthRepository.forceResendingToken,
           timeout: const Duration(seconds: 60),
@@ -184,11 +178,9 @@ class PhoneLogin extends LoginSystem {
             emit(MSuccess());
           },
           verificationFailed: (FirebaseAuthException e) {
-            _invalidateVerificationSession();
             emit(MFail(e));
           },
           codeSent: (String verificationId, int? resendToken) {
-            _verificationId = verificationId;
             AuthRepository.forceResendingToken = resendToken;
             emit(MVerificationPending());
           },
@@ -202,15 +194,6 @@ class PhoneLogin extends LoginSystem {
 
   // إضافة دالة للتحقق من نجاح العملية
   bool get isPhonePasswordLoginSuccess => _isPhonePasswordLoginSuccess;
-
-  @visibleForTesting
-  String? get verificationId => _verificationId;
-
-  void _invalidateVerificationSession() {
-    _verificationId = null;
-    AuthRepository.forceResendingToken = null;
-  }
-
 
   @override
   void onEvent(MLoginState state) {}

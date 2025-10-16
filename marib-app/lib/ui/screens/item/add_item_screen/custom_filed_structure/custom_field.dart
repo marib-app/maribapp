@@ -74,17 +74,13 @@ abstract class CustomField {
 
 class CustomFieldBuilder {
   final Map field;
-  final KRegisteredFields _registry = KRegisteredFields();
 
-  CustomFieldBuilder(this.field) {
-    customField = _registry.resolve(field);
-  }
+  CustomFieldBuilder(this.field);
 
-  CustomField? customField;
-
+  ////getting its field type
+  late CustomField? customField = KRegisteredFields().get(field['type']);
 
   void init() {
-    customField ??= _registry.resolve(field);
 
     customField?.parameters = field;
     //Calling init of custom field from here and this init will be called into the UI
@@ -99,14 +95,13 @@ class CustomFieldBuilder {
   Widget build(BuildContext context) {
     ///setting parameters from here
     customField?.parameters = field;
-    customField ??= _registry.resolve(field);
 
 
     ///setting context from here
     customField?.context = context;
 
     //Calling render function so we can get widget
-    final Widget? render = customField?.render();
+    Widget? render = customField?.render();
     return render ?? Container();
   }
 }

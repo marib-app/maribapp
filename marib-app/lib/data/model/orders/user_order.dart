@@ -11,13 +11,6 @@ class UserOrder {
     this.deliveryStatus,
     this.totalFormatted,
     this.totalValue,
-    this.depositSummary,
-    this.depositAmountPaid,
-    this.depositRemainingBalance,
-    this.depositRequiredAmount,
-    this.depositMinimumAmount,
-    this.depositRatio,
-    this.depositIncludesShipping,
     this.currency,
     this.address,
     this.items = const <OrderLine>[],
@@ -50,13 +43,6 @@ class UserOrder {
   final Map<String, dynamic>? deliveryPaymentSummary;
   final Map<String, dynamic>? paymentIntent;
   final String? paymentIntentId;
-  final Map<String, dynamic>? depositSummary;
-  final double? depositAmountPaid;
-  final double? depositRemainingBalance;
-  final double? depositRequiredAmount;
-  final double? depositMinimumAmount;
-  final double? depositRatio;
-  final bool? depositIncludesShipping;
   final OrderStatusDisplay? statusDisplay;
   final OrderStatusReserveOptions? statusReserveOptions;
   final OrderActions actions;
@@ -159,66 +145,6 @@ class UserOrder {
       map['delivery_payment_summary'] ?? map['deliveryPaymentSummary'],
     );
 
-
-
-
-
-    Map<String, dynamic>? depositSummary = _mapify(
-      map['deposit_summary'] ?? map['depositSummary'],
-    );
-
-    final Map<String, dynamic>? paymentPayload = _mapify(
-      map['payment_payload'] ?? map['paymentPayload'],
-    );
-
-    Map<String, dynamic>? depositPayload = depositSummary;
-    if (depositPayload == null && paymentPayload != null) {
-      depositPayload = _mapify(paymentPayload['deposit']);
-    }
-
-    double? depositAmountPaid = _asNum(map['deposit_amount_paid'])?.toDouble();
-    double? depositRemainingBalance =
-    _asNum(map['deposit_remaining_balance'])?.toDouble();
-    double? depositRequiredAmount =
-    _asNum(map['deposit_required_amount'])?.toDouble();
-    double? depositMinimumAmount =
-    _asNum(map['deposit_minimum_amount'])?.toDouble();
-    double? depositRatio = _asNum(map['deposit_ratio'])?.toDouble();
-    bool? depositIncludesShipping =
-    _asBool(map['deposit_includes_shipping']);
-
-    if (depositPayload != null) {
-      depositAmountPaid ??=
-          _asNum(depositPayload['paid_amount'] ?? depositPayload['paid'])
-              ?.toDouble();
-      depositRemainingBalance ??=
-          _asNum(depositPayload['remaining_amount'] ?? depositPayload['remaining'])
-              ?.toDouble();
-      depositRequiredAmount ??=
-          _asNum(depositPayload['required_amount'] ?? depositPayload['required'])
-              ?.toDouble();
-      depositMinimumAmount ??=
-          _asNum(depositPayload['minimum_amount'] ?? depositPayload['minimum'])
-              ?.toDouble();
-      depositRatio ??=
-          _asNum(depositPayload['ratio'] ?? depositPayload['percentage'])
-              ?.toDouble();
-      depositIncludesShipping ??=
-          _asBool(depositPayload['includes_shipping'] ?? depositPayload['shipping_included']);
-    }
-
-    if (depositRequiredAmount == null &&
-        depositAmountPaid != null &&
-        depositRemainingBalance != null) {
-      depositRequiredAmount = depositAmountPaid + depositRemainingBalance;
-    }
-
-    if (depositSummary == null && depositPayload != null) {
-      depositSummary = Map<String, dynamic>.from(depositPayload);
-    }
-
-
-
     final dynamic paymentIntentRaw = map['payment_intent'] ?? map['paymentIntent'];
     final Map<String, dynamic>? paymentIntent = _mapify(paymentIntentRaw);
     final String? paymentIntentId = _asString(
@@ -265,13 +191,6 @@ class UserOrder {
       totalFormatted: totalFormatted,
       totalValue: totalValue,
       currency: currency,
-      depositSummary: depositSummary,
-      depositAmountPaid: depositAmountPaid,
-      depositRemainingBalance: depositRemainingBalance,
-      depositRequiredAmount: depositRequiredAmount,
-      depositMinimumAmount: depositMinimumAmount,
-      depositRatio: depositRatio,
-      depositIncludesShipping: depositIncludesShipping,
       address: address,
       items: lines,
       timeline: timeline,
@@ -383,22 +302,6 @@ class UserOrder {
     if (value is String) {
       final String normalized = value.replaceAll(',', '').trim();
       return num.tryParse(normalized);
-    }
-    return null;
-  }
-
-
-  static bool? _asBool(dynamic value) {
-    if (value == null) return null;
-    if (value is bool) return value;
-    if (value is num) return value != 0;
-    if (value is String) {
-      final String normalized = value.trim().toLowerCase();
-      if (normalized.isEmpty) return null;
-      const List<String> truthy = <String>['1', 'true', 'yes', 'y', 'on', 'enabled'];
-      const List<String> falsy = <String>['0', 'false', 'no', 'n', 'off', 'disabled'];
-      if (truthy.contains(normalized)) return true;
-      if (falsy.contains(normalized)) return false;
     }
     return null;
   }
@@ -565,16 +468,7 @@ class OrderTimelineEntry {
     final DateTime? timestamp = UserOrder._parseDateTime(
       map['timestamp'] ?? map['time'] ?? map['created_at'] ?? map['date'],
     );
-    final String? description = UserOrder._asString(
-      map['description'] ??
-          map['notes'] ??
-          map['comment'] ??
-          map['message'] ??
-          map['detail'] ??
-          map['note'] ??
-          map['body'],
-    );
-
+    final String? description = UserOrder._asString(map['description'] ?? map['notes']);
 
     final String combined = (status ?? label).toLowerCase();
     final bool completed = map['completed'] == true ||
@@ -614,10 +508,7 @@ class OrderDetails {
     this.deliveryPaymentSummary,
     this.depositReceipts,
     this.raw,
-    this.depositSummary,
-
   });
-  final Map<String, dynamic>? depositSummary;
 
   final UserOrder order;
   final OrderPolicy? policy;

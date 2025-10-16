@@ -194,15 +194,6 @@ class ItemImageSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final isNew = _isItemNew(item.created);
 
-    final String? preferredThumb =
-    (item.thumbnailUrl?.trim().isNotEmpty ?? false) ? item.thumbnailUrl : null;
-    final String? fallbackThumb =
-    (item.thumbnailFallbackUrl?.trim().isNotEmpty ?? false)
-        ? item.thumbnailFallbackUrl
-        : item.image;
-    final String resolvedUrl =
-        preferredThumb ?? fallbackThumb ?? item.image ?? '';
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -210,14 +201,17 @@ class ItemImageSection extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: UiUtils.getImage(
-                resolvedUrl,
+              child: CachedNetworkImage(
+                imageUrl: item.image ?? '',
                 height: imageHeight,
                 width: imageWidth,
                 fit: BoxFit.cover,
-                fallbackUrl: fallbackThumb,
-                cacheWidth: 200,
-                cacheHeight: 200,
+                errorWidget: (_, __, ___) => Container(
+                  height: imageHeight,
+                  width: imageWidth,
+                  color: Colors.grey.shade200,
+                  child: Icon(Icons.broken_image, size: 40, color: Colors.grey.shade400),
+                ),
               ),
             ),
             if (item.isFeature ?? false)

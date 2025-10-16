@@ -60,19 +60,9 @@ class WalletFilter {
     if (response is List) {
       return response
           .whereType<dynamic>()
-          .map((e) {
-        if (e is WalletFilter) {
-          return e;
-        }
-        if (e is Map<String, dynamic>) {
-          return WalletFilter.fromJson(e);
-        }
-        if (e is Map) {
-          return WalletFilter.fromJson(Map<String, dynamic>.from(e as Map));
-        }
-        final value = e.toString();
-        return WalletFilter(value: value, label: value);
-      })
+          .map((e) => e is Map<String, dynamic>
+          ? WalletFilter.fromJson(e)
+          : WalletFilter.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
     }
 
@@ -81,15 +71,11 @@ class WalletFilter {
       final candidates = [
         map['filters'],
         map['available_filters'],
-        map['available'],
         map['data'],
         map['options'],
       ].whereNotNull().firstOrNull;
       if (candidates != null) {
         return fromResponse(candidates);
-      }
-      if (map.containsKey('value') || map.containsKey('label')) {
-        return [WalletFilter.fromJson(map)];
       }
     }
 

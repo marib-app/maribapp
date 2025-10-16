@@ -142,7 +142,7 @@ class _NewPasswordDialogState extends State<NewPasswordDialog> {
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: context.color.territoryColor,
-                  foregroundColor: context.color.buttonColor,
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),

@@ -175,65 +175,61 @@ class MainActivityUI extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.color;
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: UiUtils.getSystemUiOverlayStyle(
-        context: context,
-        statusBarColor: colors.primaryColor,
+    return Scaffold(
+      backgroundColor: colors.primaryColor,
+
+      // ✅ زر الإضافة العائم (المنتصف) — مطابق للشكل السابق مع إصلاح الـHero
+      floatingActionButton: Transform.translate(
+        offset: const Offset(0, 5),
+        child: BlocBuilder<FetchUserPackageLimitCubit, FetchUserPackageLimitState>(
+          buildWhen: (prev, curr) => prev.runtimeType != curr.runtimeType,
+          builder: (context, state) {
+            final busy = state is FetchUserPackageLimitInProgress;
+
+            final Widget action =
+                _centerActionBuilderCfg?.call(context) ?? _buildDefaultCenterAction(context, busy);
+
+            return AbsorbPointer(
+              absorbing: busy, // يمنع النقرات المكررة أثناء التحميل
+              child: action,
+
+            );
+          },
+        ),
       ),
-        child: Scaffold(
-          backgroundColor: colors.primaryColor,
 
-          // ✅ زر الإضافة العائم (المنتصف) — مطابق للشكل السابق مع إصلاح الـHero
-          floatingActionButton: Transform.translate(
-            offset: const Offset(0, 5),
-            child: BlocBuilder<FetchUserPackageLimitCubit, FetchUserPackageLimitState>(
-              buildWhen: (prev, curr) => prev.runtimeType != curr.runtimeType,
-              builder: (context, state) {
-                final busy = state is FetchUserPackageLimitInProgress;
+      floatingActionButtonLocation: const _FixedCenterDockedFabLocation(),
 
-                final Widget action = _centerActionBuilderCfg?.call(context) ??
-                    _buildDefaultCenterAction(context, busy);
+      // ✅ الشريط السفلي المعتمد (كما هو)
+      bottomNavigationBar: _maintenanceOnCfg
+          ? null
+          : ValueListenableBuilder<int>(
+        valueListenable: ChatBadgeController.totalUnread,
+        builder: (context, totalUnread, _) {
+          final badges = <MainTab, String>{};
 
-                return AbsorbPointer(
-                  absorbing: busy, // يمنع النقرات المكررة أثناء التحميل
-                  child: action,
-                );
-              },
-            ),
-          ),
-          floatingActionButtonLocation: const _FixedCenterDockedFabLocation(),
+          if (totalUnread > 0) {
+            final chatBadge = totalUnread > 99 ? '99+' : '$totalUnread';
+            badges[MainTab.chat] = chatBadge;
+          }
 
+          return AnimatedBottomBar(
+            items: _navItemsCfg,
+            current: _currentTabCfg,
+            onSelect: _onTabSelectedCfg,
+            centerActionBuilder:
+            _centerActionBuilderCfg ?? (ctx) => const SizedBox.shrink(),
+            background: colors.secondaryColor,
+            showTopShadow: true,
+            badges: badges,
+          );
+        },
+      ),
 
-          // ✅ الشريط السفلي المعتمد (كما هو)
-          bottomNavigationBar: _maintenanceOnCfg
-              ? null
-              : ValueListenableBuilder<int>(
-            valueListenable: ChatBadgeController.totalUnread,
-            builder: (context, totalUnread, _) {
-              final badges = <MainTab, String>{};
-
-              if (totalUnread > 0) {
-                final chatBadge = totalUnread > 99 ? '99+' : '$totalUnread';
-                badges[MainTab.chat] = chatBadge;
-              }
-
-              return AnimatedBottomBar(
-                items: _navItemsCfg,
-                current: _currentTabCfg,
-                onSelect: _onTabSelectedCfg,
-                centerActionBuilder:
-                _centerActionBuilderCfg ?? (ctx) => const SizedBox.shrink(),
-                background: colors.secondaryColor,
-                showTopShadow: true,
-                badges: badges,
-              );
-            },
-          ),
-
-          body: Stack(
-            children: [
-            // ✅ ظل دائري تحت الزر العائم
-            Positioned(
+      body: Stack(
+        children: [
+          // ✅ ظل دائري تحت الزر العائم
+          Positioned(
             bottom: 0,
             left: MediaQuery.of(context).size.width / 2 - 30,
             child: Container(
@@ -250,8 +246,9 @@ class MainActivityUI extends StatelessWidget {
                   ),
                 ],
               ),
-              ),
             ),
+          ),
+
           // ✅ المحتوى (صفحات)
           Positioned.fill(
             child: PageView.builder(
@@ -260,10 +257,10 @@ class MainActivityUI extends StatelessWidget {
               itemCount: _pageCountCfg,
               itemBuilder: _pageBuilderCfg,
             ),
-            ),
-              if (_maintenanceOnCfg) (_maintenanceOverlayCfg ?? const SizedBox.shrink()),
-            ],
           ),
+
+          if (_maintenanceOnCfg) (_maintenanceOverlayCfg ?? const SizedBox.shrink()),
+        ],
       ),
     );
   }

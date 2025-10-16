@@ -268,6 +268,7 @@ class FilterScreenState extends State<FilterScreen> {
                 fontSize: context.font.normal,
                 buttonColor: context.color.secondaryColor,
                 showElevation: false,
+                textColor: context.color.textColorDark,
                 buttonTitle: "reset".translate(context),
               ),
             )

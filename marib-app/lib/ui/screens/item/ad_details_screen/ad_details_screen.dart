@@ -87,7 +87,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'AdImagesHeader.dart';
 import 'package:marib/utils/delivery_department.dart';
 import 'package:marib/utils/app_telemetry.dart';
-import 'package:marib/utils/slider_interface_mapper.dart';
 
 import 'ad_details_screen.dart';
 
@@ -96,18 +95,6 @@ import 'fetch_item_details_cubit.dart';
 import 'package:marib/data/repositories/item/item_repository.dart';
 import 'package:marib/ui/screens/item/ad_details_screen/fetch_item_details_cubit.dart'
     as details;
-import 'package:marib/data/cubits/item/fetch_item_purchase_options_cubit.dart';
-import 'package:marib/data/model/item/cart_model.dart';
-import 'package:marib/data/model/item/purchase_options.dart';
-import 'package:marib/data/repositories/item/item_purchase_options_repository.dart';
-
-import 'package:marib/data/constants/color_catalog.dart';
-import 'package:marib/utils/color_palette_utils.dart';
-import 'package:marib/utils/ecommerce_department.dart';
-import 'package:marib/utils/item_category_ids.dart';
-import 'package:meta/meta.dart';
-import 'ad_image_source.dart';
-
 
 class _AdItemDetailsRepository implements details.ItemDetailsRepository {
   _AdItemDetailsRepository(this._itemRepository, {this.fallbackSlug});
@@ -250,34 +237,12 @@ class AdDetailsScreen extends StatefulWidget {
             create: (context) => MakeAnOfferItemCubit(),
           ),
           BlocProvider(
-            create: (context) {
-              late final ItemRepository repository;
-              try {
-                final providedRepository =
-                RepositoryProvider.of<ItemRepository>(
-
-                  context,
-                  listen: false,
-                );
-                repository = providedRepository;
-              } on ProviderNotFoundException {
-                repository = ItemRepository();
-              } on TypeError {
-                repository = ItemRepository();
-              }
-
-              return FetchItemDetailsCubit(
-                _ItemDetailsRepositoryImpl(
-                  repository,
-                  initialItem: config.initialModel,
-                ),
-              );
-            },
-          ),
-
-          BlocProvider(
-            create: (context) =>
-                FetchItemPurchaseOptionsCubit(ItemPurchaseOptionsRepository()),
+            create: (context) => FetchItemDetailsCubit(
+              _ItemDetailsRepositoryImpl(
+                ItemRepository(),
+                initialItem: config.initialModel,
+              ),
+            ),
           ),
         ],
         child: AdDetailsScreen(
@@ -412,11 +377,6 @@ int? _extractItemId(dynamic value) {
 }
 
 class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
-  static const Set<String> _mapSupportedSections = <String>{
-    'public_ads',
-    'real_estate_services',
-  };
-
   //ImageView
   int currentPage = 0;
   bool? isFeaturedLimit;
@@ -427,7 +387,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   bool isShowReportAds = true;
   final PageController pageController = PageController();
   final List<String?> images = [];
-  final List<AdImageSource> imageSources = [];
   final Completer<GoogleMapController> _controller =
       Completer<GoogleMapController>();
   late final ScrollController _pageScrollController = ScrollController();
@@ -443,20 +402,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   List<CustomFieldBuilder> moreDetailDynamicFields = [];
   late ItemModel _currentItem;
   CartSafetyTipsPayload? _lastCartSafetyTips;
-  ItemPurchaseOptions? _purchaseOptions;
-
-  ItemModel? _initialSummaryModel;
-  bool _initialSummaryModelResolved = false;
-
-
-  bool _purchaseOptionsLoading = false;
-  String? _purchaseOptionsError;
-  Map<String, String> _selectedAttributes = <String, String>{};
-  String? _selectedVariantKey;
-  ItemVariantStockOption? _selectedVariantStock;
-  int? _lastPurchaseOptionsItemId;
-  int _selectedQuantity = 1;
-  bool _isEcommerceItem = false;
 
   bool get isAddedByMe =>
       (_currentItem.user?.id != null
@@ -484,14 +429,14 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
   bool get _hasValidItemId => (_currentItem.id ?? widget.model.id ?? 0) > 0;
 
-  bool _shouldHideQuantitySelectorForItem(ItemModel item) =>
-      _supportsMapSectionForItem(item);
-
 // تبديل حالة الإعجاب + ربطها بكيوبيت المفضلة
   void _onToggleFavorite() {
     if (_currentItem.id == null) return;
     setState(() => isFavorite = !isFavorite);
 
+    // ✅ جرّب واحدة من هذه حسب الكلاس المتوفر عندك
+    // أو:
+    // context.read<FavoriteCubit>().toggleFav(model.id!);
   }
 
   Future<bool> _changeAdStatus(String newStatus) async {
@@ -507,12 +452,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       status: newStatus,
       userId: userId,
     );
-
-
-
-
-
-
 
     final ChangeMyItemStatusState statusState = cubit.state;
     if (statusState is ChangeMyItemStatusSuccess) {
@@ -549,280 +488,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
           .read<FetchCustomFieldsCubit>()
           .fetchCustomFields(categoryIds: categoryIds);
     }
-  }
-
-
-
-
-
-  void _fetchPurchaseOptionsForCurrentItem({bool forceRefresh = false}) {
-    final int? itemId = _currentItem.id ?? widget.model.id;
-    if (itemId == null) {
-      return;
-    }
-
-    if (!forceRefresh &&
-        _lastPurchaseOptionsItemId == itemId &&
-        _purchaseOptions != null) {
-      return;
-    }
-
-    _lastPurchaseOptionsItemId = itemId;
-
-    void updateState() {
-      _purchaseOptionsLoading = true;
-      if (forceRefresh) {
-        _purchaseOptionsError = null;
-      }
-    }
-
-    if (mounted) {
-      setState(updateState);
-    } else {
-      updateState();
-    }
-
-    context
-        .read<FetchItemPurchaseOptionsCubit>()
-        .fetch(itemId: itemId, forceRefresh: forceRefresh);
-  }
-
-  void _handlePurchaseOptionsState(
-      BuildContext context,
-      FetchItemPurchaseOptionsState state,
-      ) {
-    if (state is FetchItemPurchaseOptionsInProgress) {
-      void update() {
-        _purchaseOptionsLoading = true;
-        _purchaseOptionsError = null;
-      }
-
-      if (mounted) {
-        setState(update);
-      } else {
-        update();
-      }
-      return;
-    }
-
-    if (state is FetchItemPurchaseOptionsSuccess) {
-      _applyPurchaseOptions(state.options);
-      return;
-    }
-
-    if (state is FetchItemPurchaseOptionsFailure) {
-      void update() {
-        _purchaseOptionsLoading = false;
-        _purchaseOptionsError = state.message;
-      }
-
-      if (mounted) {
-        setState(update);
-      } else {
-        update();
-      }
-    }
-  }
-
-  void _applyPurchaseOptions(ItemPurchaseOptions options) {
-    final Map<String, String> sanitized = _sanitizeSelections(options);
-
-    void update() {
-      _purchaseOptions = options;
-      _purchaseOptionsLoading = false;
-      _purchaseOptionsError = null;
-      _selectedAttributes = sanitized;
-      _selectedVariantKey = _computeVariantKey(options, sanitized);
-      _selectedVariantStock = _findVariantStock(_selectedVariantKey);
-      _selectedQuantity = 1;
-      _enforceQuantityConstraints();
-      _currentItem = _currentItem.copyWith(
-        price: options.basePrice,
-        finalPrice: options.finalPrice,
-        discount: options.discount ?? _currentItem.discount,
-      );
-    }
-
-    if (mounted) {
-      setState(update);
-    } else {
-      update();
-    }
-  }
-
-  Map<String, String> _sanitizeSelections(
-      ItemPurchaseOptions options, {
-        Map<String, String>? seed,
-      }) {
-    final Map<String, String> source =
-    seed != null ? Map<String, String>.from(seed) : Map<String, String>.from(_selectedAttributes);
-    final Map<String, String> sanitized = <String, String>{};
-
-    for (final ItemPurchaseAttributeOption attribute in options.attributes) {
-      final List<String> allowed = attribute.allowedValues.isNotEmpty
-          ? attribute.allowedValues
-          : attribute.values;
-      final String key = attribute.key;
-      final String? rawValue = source[key]?.trim();
-
-      if (rawValue != null &&
-          rawValue.isNotEmpty &&
-          (allowed.isEmpty || allowed.contains(rawValue))) {
-        sanitized[key] = rawValue;
-        continue;
-      }
-
-      final String? defaultValue = attribute.defaultValue?.trim();
-      if (defaultValue != null &&
-          defaultValue.isNotEmpty &&
-          (allowed.isEmpty || allowed.contains(defaultValue))) {
-        sanitized[key] = defaultValue;
-        continue;
-      }
-
-      if (attribute.requiredForCheckout && allowed.isNotEmpty) {
-        sanitized[key] = allowed.first;
-      }
-    }
-
-    return sanitized;
-  }
-
-  String? _computeVariantKey(
-      ItemPurchaseOptions options,
-      Map<String, String> selections,
-      ) {
-    final List<MapEntry<String, String>> affecting = <MapEntry<String, String>>[];
-
-    for (final ItemPurchaseAttributeOption attribute in options.attributes) {
-      if (!attribute.affectsStock) {
-        continue;
-      }
-
-      final String? value = selections[attribute.key]?.trim();
-      if (value != null && value.isNotEmpty) {
-        affecting.add(MapEntry(attribute.key.trim(), value));
-      }
-    }
-
-    if (affecting.isEmpty) {
-      return null;
-    }
-
-    affecting.sort(
-          (MapEntry<String, String> a, MapEntry<String, String> b) =>
-          a.key.toLowerCase().compareTo(b.key.toLowerCase()),
-    );
-
-    return affecting
-        .map(
-          (MapEntry<String, String> entry) =>
-      '${Uri.encodeComponent(entry.key)}=${Uri.encodeComponent(entry.value)}',
-    )
-        .join('|');
-  }
-
-  ItemVariantStockOption? _findVariantStock(String? variantKey) {
-    if (variantKey == null || variantKey.isEmpty) {
-      return null;
-    }
-
-    final ItemPurchaseOptions? options = _purchaseOptions;
-    if (options == null) {
-      return null;
-    }
-
-    for (final ItemVariantStockOption stock in options.variantStocks) {
-      if (stock.variantKey == variantKey) {
-        return stock;
-      }
-    }
-
-    return null;
-  }
-
-  void _onAttributeSelectionChanged(String key, String? value) {
-    final ItemPurchaseOptions? options = _purchaseOptions;
-    if (options == null) {
-      return;
-    }
-
-    final String normalizedKey = key.trim();
-    final String? normalizedValue = value?.trim();
-    final Map<String, String> nextSelections =
-    Map<String, String>.from(_selectedAttributes);
-
-    if (normalizedValue == null || normalizedValue.isEmpty) {
-      nextSelections.remove(normalizedKey);
-    } else {
-      nextSelections[normalizedKey] = normalizedValue;
-    }
-
-    final Map<String, String> sanitized =
-    _sanitizeSelections(options, seed: nextSelections);
-
-    void update() {
-      _selectedAttributes = sanitized;
-      _selectedVariantKey = _computeVariantKey(options, sanitized);
-      _selectedVariantStock = _findVariantStock(_selectedVariantKey);
-      _enforceQuantityConstraints();
-    }
-
-    if (mounted) {
-      setState(update);
-    } else {
-      update();
-    }
-  }
-  void _enforceQuantityConstraints() {
-    if (_selectedQuantity < 1) {
-      _selectedQuantity = 1;
-    }
-
-    final int? limit = _selectedVariantStock?.availableStock;
-    if (limit != null) {
-      if (limit <= 0) {
-        _selectedQuantity = 1;
-      } else if (_selectedQuantity > limit) {
-        _selectedQuantity = limit;
-      }
-    }
-  }
-
-  void _incrementQuantity() {
-    final int? limit = _selectedVariantStock?.availableStock;
-    if (limit != null) {
-      if (limit <= 0) {
-        _notifyQuantityRestriction(
-          'هذه التوليفة غير متوفرة حالياً في المخزون.',
-          color: Theme.of(context).colorScheme.error,
-        );
-        return;
-      }
-      if (_selectedQuantity >= limit) {
-        _notifyQuantityRestriction(
-          'لقد وصلت للكمية المتاحة لهذه التوليفة.',
-          color: Theme.of(context).colorScheme.primary,
-        );
-        return;
-      }
-    }
-
-    setState(() {
-      _selectedQuantity += 1;
-      _enforceQuantityConstraints();
-    });
-  }
-
-  void _decrementQuantity() {
-    if (_selectedQuantity <= 1) {
-      return;
-    }
-
-    setState(() {
-      _selectedQuantity -= 1;
-      _enforceQuantityConstraints();
-    });
   }
 
   int? _resolveSellerId(ItemModel item) {
@@ -1304,28 +969,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     _currentItem = item;
 
     void updateState() {
-      _isEcommerceItem = isEcommerceItem(_currentItem);
       categoryId = _currentItem.category?.id ?? _currentItem.categoryId;
-      _purchaseOptions = null;
-      _purchaseOptionsError = null;
-      _purchaseOptionsLoading = false;
-      _lastPurchaseOptionsItemId = null;
       combineImages();
-      currentPage = 0;
-      currentIndex = 0;
-      _selectedQuantity = 1;
-      _selectedAttributes = <String, String>{};
-      _selectedVariantKey = null;
-      _selectedVariantStock = null;
-      if (pageController.hasClients) {
-        pageController.jumpToPage(0);
-      } else {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (pageController.hasClients) {
-            pageController.jumpToPage(0);
-          }
-        });
-      }
     }
 
     if (fromInit) {
@@ -1340,9 +985,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
     if (triggerDependentFetches) {
       _fetchCustomFieldsForCurrentItem();
-      if (_isEcommerceItem) {
-        _fetchPurchaseOptionsForCurrentItem(forceRefresh: true);
-      }
       _fetchAuxiliaryDataForCurrentItem();
       setItemClick();
     }
@@ -1356,102 +998,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
           .fetchRelatedItems(categoryId: safeCategoryId);
     }
   }
-
-
-  ItemModel? _resolveInitialSummaryModel() {
-    if (_initialSummaryModelResolved) {
-      return _initialSummaryModel;
-    }
-    _initialSummaryModelResolved = true;
-
-    final Object? summary = widget.initialSummary;
-    if (summary == null) {
-      return _initialSummaryModel;
-    }
-
-    if (summary is ItemModel) {
-      _initialSummaryModel = summary;
-      return _initialSummaryModel;
-    }
-
-    final ItemModel? converted = _tryConvertSummaryToModel(summary);
-    if (converted != null) {
-      _initialSummaryModel = converted;
-      return _initialSummaryModel;
-    }
-
-    if (summary is Map) {
-      String? extractString(dynamic value) {
-        if (value is String) {
-          final String trimmed = value.trim();
-          if (trimmed.isNotEmpty) {
-            return trimmed;
-          }
-        }
-        return null;
-      }
-
-      final Map<dynamic, dynamic> data = summary;
-      final String? department = extractString(data['department']) ??
-          extractString(data['department_slug']) ??
-          extractString(data['section']) ??
-          extractString(data['department_advertiser']);
-
-      final String? itemType =
-          extractString(data['item_type']) ?? extractString(data['itemType']);
-
-      if (department != null || itemType != null) {
-        _initialSummaryModel = ItemModel(
-          departmentSlug: department,
-          itemType: itemType,
-        );
-      }
-    }
-
-    return _initialSummaryModel;
-  }
-
-  bool _supportsMapSectionForItem(ItemModel item) {
-
-
-    final List<int> categoryIds = buildItemCategoryIds(item);
-    final bool belongsToForcedMapRoot = categoryIds.contains(
-      Constant.realEstateRootCategoryId,
-    ) ||
-        categoryIds.contains(Constant.publicRootCategoryId);
-
-    if (belongsToForcedMapRoot) {
-      return true;
-    }
-    return _isMapSupportedInterface(item.departmentSlug) ||
-        _isMapSupportedInterface(item.itemType);
-  }
-
-
-
-  @visibleForTesting
-  bool supportsMapSectionForTesting(ItemModel item) =>
-      _supportsMapSectionForItem(item);
-
-  @visibleForTesting
-  bool shouldHideQuantitySelectorForTesting(ItemModel item) =>
-      _shouldHideQuantitySelectorForItem(item);
-
-
-  bool _isMapSupportedInterface(String? value) {
-    if (value == null) {
-      return false;
-    }
-
-    final String? normalized = SliderInterfaceMapper.normalize(value);
-    if (normalized == null || normalized.isEmpty) {
-      return false;
-    }
-
-    return _mapSupportedSections.contains(normalized);
-  }
-
-
 
   @override
   void initState() {
@@ -1468,26 +1014,9 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     }
 
     pageController.addListener(() {
-      if (!pageController.hasClients) {
-        return;
-      }
-
-      final double? page = pageController.page;
-      if (page == null) {
-        return;
-      }
-
-      final int roundedPage = page.round();
-      if (!mounted) {
-        currentPage = roundedPage;
-        return;
-      }
-
-      if (currentPage != roundedPage) {
-        setState(() {
-          currentPage = roundedPage;
-        });
-      }
+      setState(() {
+        currentPage = pageController.page!.round();
+      });
     });
 
     _pageScrollController.addListener(_pageScroll);
@@ -1523,64 +1052,15 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
   void combineImages() {
     final item = _currentItem;
-    final List<String?> combined = <String?>[];
-    final List<AdImageSource> optimized = <AdImageSource>[];
-    final Set<String> seenFallbacks = <String>{};
-
-
-    String? sanitize(String? value) {
-      if (value == null) {
-        return null;
-      }
-      final String trimmed = value.trim();
-      return trimmed.isEmpty ? null : trimmed;
-    }
-
-    void addImageVariant({String? detailUrl, String? fallbackUrl}) {
-      final String? safeDetail = sanitize(detailUrl);
-      final String? safeFallback = sanitize(fallbackUrl);
-      if (safeDetail == null && safeFallback == null) {
-        return;
-      }
-
-      final AdImageSource source = AdImageSource.from(
-        detailUrl: safeDetail,
-        fallbackUrl: safeFallback ?? safeDetail,
-      );
-
-      if (seenFallbacks.add(source.fallbackDisplayUrl)) {
-        optimized.add(source);
-        combined.add(source.displayUrl);
-      }
-    }
-
-    addImageVariant(
-      detailUrl: item.detailImageUrl,
-      fallbackUrl: item.detailImageFallbackUrl ?? item.image,
-    );
+    images
+      ..clear()
+      ..add(item.image);
 
     if (item.galleryImages != null && item.galleryImages!.isNotEmpty) {
       for (final element in item.galleryImages!) {
-        addImageVariant(
-          detailUrl: element.detailImageUrl,
-          fallbackUrl: element.detailImageFallbackUrl ?? element.image,
-        );
+        images.add(element.image);
       }
     }
-
-    if (optimized.isEmpty && sanitize(item.image) != null) {
-      addImageVariant(detailUrl: item.image, fallbackUrl: item.image);
-    }
-
-    imageSources
-      ..clear()
-      ..addAll(optimized);
-
-
-    images
-      ..clear()
-      ..addAll(combined.isEmpty ? <String?>[item.image] : combined);
-
 
     youtubeVideoThumbnail = "";
 
@@ -1618,778 +1098,21 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     }
   }
 
-  Widget _buildPurchaseOptionsSection() {
-    if (!_isEcommerceItem) {
-      return const SizedBox.shrink();
-    }
-
-
-    final bool hideQuantitySelector =
-    _shouldHideQuantitySelectorForItem(_currentItem);
-
-
-    if (_purchaseOptionsLoading && _purchaseOptions == null) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 16),
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (_purchaseOptionsError != null && _purchaseOptions == null) {
-      final ThemeData theme = Theme.of(context);
-      final ColorScheme colorScheme = theme.colorScheme;
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: colorScheme.error.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: colorScheme.error.withOpacity(0.25), width: 1),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.error_outline, color: colorScheme.error, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'تعذر تحميل خيارات المنتج حالياً. تأكد من اتصالك بالإنترنت ثم أعد المحاولة.',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.error,
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('إعادة المحاولة'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: colorScheme.error,
-                    side: BorderSide(color: colorScheme.error.withOpacity(0.5)),
-                  ),
-                  onPressed: () =>
-                      _fetchPurchaseOptionsForCurrentItem(forceRefresh: true),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final ItemPurchaseOptions? options = _purchaseOptions;
-    if (options == null) {
-
-      if (hideQuantitySelector) {
-        return const SizedBox.shrink();
-      }
-
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: _buildQuantitySelector(),
-      );
-    }
-
-    final List<Widget> children = <Widget>[];
-
-    if (_purchaseOptionsLoading) {
-      children.add(const LinearProgressIndicator());
-      children.add(const SizedBox(height: 12));
-    }
-
-    if (!hideQuantitySelector && options.attributes.isNotEmpty) {
-      children.add(
-        Text(
-          'خيارات الشراء',
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(fontWeight: FontWeight.w600),
-        ),
-      );
-      children.add(const SizedBox(height: 12));
-
-      for (final ItemPurchaseAttributeOption attribute in options.attributes) {
-        children.add(_buildAttributeSelector(attribute));
-        children.add(const SizedBox(height: 12));
-      }
-
-      if (_selectedVariantStock != null) {
-        final ItemVariantStockOption stock = _selectedVariantStock!;
-        children.add(
-          Text(
-            'الكمية المتاحة: ${stock.availableStock}',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: stock.availableStock > 0 ? Colors.green : Colors.red,
-            ),
-          ),
-        );
-      } else if (options.variantStocks.isNotEmpty) {
-        children.add(
-          Text(
-            'اختر التوليفة المناسبة لمعرفة الكمية المتوفرة في المخزون.',
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: Theme.of(context).hintColor),
-          ),
-        );
-      }
-    }
-
-
-    final ItemDiscount? discount = options.discount;
-    if (!hideQuantitySelector) {
-      if (children.isNotEmpty) {
-        children.add(const SizedBox(height: 20));
-      }
-      children.add(_buildQuantitySelector());
-    }
-
-
-    if (discount != null) {
-      if (children.isNotEmpty) {
-        children.add(const SizedBox(height: 20));
-      }
-
-      final bool active =
-          discount.isActive || options.finalPrice < options.basePrice;
-      children.add(
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceVariant,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'تفاصيل الخصم',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'السعر بعد الخصم: ${_formatPrice(options.finalPrice)}',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              Text(
-                'السعر الأساسي: ${_formatPrice(options.basePrice)}',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: Theme.of(context).hintColor),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                active
-                    ? 'الخصم مفعل حالياً.'
-                    : 'الخصم غير مفعل في الوقت الحالي.',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(
-                  color:
-                  active ? Colors.green : Theme.of(context).hintColor,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (children.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: children,
-      ),
-    );
-  }
-
-  Widget _buildAttributeSelector(ItemPurchaseAttributeOption attribute) {
-    final ThemeData theme = Theme.of(context);
-    final List<String> values = attribute.allowedValues.isNotEmpty
-        ? attribute.allowedValues
-        : attribute.values;
-
-    if (values.isEmpty) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '${attribute.name}${attribute.requiredForCheckout ? ' *' : ''}',
-            style:
-            theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'لا توجد قيم محددة لهذه السمة.',
-            style:
-            theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
-          ),
-        ],
-      );
-    }
-
-    final bool isColorAttribute = _isColorAttribute(attribute);
-
-    if (isColorAttribute) {
-      return _buildColorAttributeSelector(attribute, values);
-    }
-
-    final bool isRequired = attribute.requiredForCheckout;
-    final String? currentValueRaw = _selectedAttributes[attribute.key];
-    final String effectiveValue = currentValueRaw == null ||
-        (currentValueRaw.isEmpty && !isRequired)
-        ? (isRequired && values.isNotEmpty ? values.first : '')
-        : currentValueRaw;
-
-    final List<_AttributeValueDescriptor> descriptors = <_AttributeValueDescriptor>[
-
-      if (!isRequired)
-        const _AttributeValueDescriptor(
-
-          value: '',
-          label: 'بدون اختيار',
-          isOptional: true,
-        ),
-      ...values.map(
-            (String value) => _AttributeValueDescriptor(
-              value: value,
-              label: value,
-              isOptional: false,
-        ),
-      ),
-    ];
-
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '${attribute.name}${isRequired ? ' *' : ''}',
-          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 10),
-        SizedBox(
-          height: 56,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            padding: EdgeInsets.zero,
-            itemBuilder: (BuildContext context, int index) {
-              final _AttributeValueDescriptor descriptor = descriptors[index];
-              final bool selected = descriptor.value == effectiveValue;
-              return _AttributeChoiceChip(
-                label: descriptor.label,
-                selected: selected,
-                isOptional: descriptor.isOptional,
-                onTap: () =>
-                    _onAttributeSelectionChanged(attribute.key, descriptor.value),
-              );
-            },
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
-            itemCount: descriptors.length,
-          ),
-        ),
-      ],
-    );
-  }
-
-
-  bool _isColorAttribute(ItemPurchaseAttributeOption attribute) {
-    final String key = attribute.key.toLowerCase();
-    final String? type = attribute.type?.toLowerCase();
-    final String? uiType = attribute.uiType?.toLowerCase();
-
-    if (type == 'color' || uiType == 'color') {
-      return true;
-    }
-
-    if (key.contains('color') || key.contains('colour') || key.contains('اللون')) {
-      return true;
-    }
-
-    final String name = attribute.name.toLowerCase();
-    if (name.contains('color') || name.contains('colour') || name.contains('اللون')) {
-      return true;
-    }
-
-    return false;
-  }
-
-
-
-
-  Widget _buildColorAttributeSelector(
-      ItemPurchaseAttributeOption attribute,
-      List<String> values,
-      ) {
-    final ThemeData theme = Theme.of(context);
-    final TextStyle? labelStyle =
-    theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600);
-
-    final String? currentValue = _selectedAttributes[attribute.key];
-
-    final Set<String> seenValues = <String>{};
-    final List<_ColorChoiceDescriptor> descriptors = <_ColorChoiceDescriptor>[];
-
-    for (final String value in values) {
-      if (value.isEmpty) {
-        continue;
-      }
-      if (!seenValues.add(value)) {
-        continue;
-      }
-
-      final _ColorChoiceDescriptor descriptor =
-      _ColorChoiceDescriptor.fromRawValue(
-        rawValue: value,
-        context: context,
-      );
-
-      if (descriptor.displayLabel.isNotEmpty) {
-        descriptors.add(descriptor);
-      }
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '${attribute.name}${attribute.requiredForCheckout ? ' *' : ''}',
-          style: labelStyle,
-        ),
-        const SizedBox(height: 10),
-        if (descriptors.isEmpty)
-          Text(
-            'لا توجد قيم محددة لهذه السمة.',
-            style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
-          )
-        else
-          SizedBox(
-            height: 88,
-            child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.zero,
-                itemBuilder: (BuildContext context, int index) {
-                  final _ColorChoiceDescriptor descriptor = descriptors[index];
-                  final bool selected = currentValue == descriptor.rawValue;
-                  return _ColorSwatchChip(
-                    descriptor: descriptor,
-                    selected: selected,
-                    onTap: () => _onAttributeSelectionChanged(
-                      attribute.key,
-                      descriptor.rawValue,
-                  ),
-                  );
-                },
-              separatorBuilder: (_, __) => const SizedBox(width: 14),
-              itemCount: descriptors.length,
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildQuantitySelector() {
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme colorScheme = theme.colorScheme;
-    final TextStyle? labelStyle =
-    theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600);
-
-
-    final int? stockLimit = _selectedVariantStock?.availableStock;
-    final bool isStockTracked = stockLimit != null;
-
-
-    final bool isOutOfStock = stockLimit != null && stockLimit <= 0;
-
-    final bool canIncrement;
-    if (stockLimit == null) {
-      canIncrement = true;
-    } else if (stockLimit <= 0) {
-      canIncrement = false;
-    } else {
-      canIncrement = _selectedQuantity < stockLimit;
-    }
-
-    final int? remainingAfterSelection = stockLimit != null
-        ? (stockLimit - _selectedQuantity)
-        : null;
-
-    final TextStyle valueStyle = (theme.textTheme.headlineSmall ??
-        theme.textTheme.titleLarge ??
-        theme.textTheme.titleMedium ??
-        const TextStyle(fontSize: 20))
-        .copyWith(
-      fontWeight: FontWeight.w700,
-      color: colorScheme.onSurface,
-    );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-        Text('الكمية', style: labelStyle),
-    if (isStockTracked) ...[
-    const SizedBox(width: 10),
-    _buildQuantityPill(
-    icon: Icons.inventory_2_rounded,
-    label: 'متاح: ${stockLimit!.clamp(0, 9999)}',
-    foreground:
-    isOutOfStock ? colorScheme.error : colorScheme.primary,
-    background: (isOutOfStock
-    ? colorScheme.error
-        : colorScheme.primary)
-        .withOpacity(0.12),
-              ),
-            ],
-        ],
-        ),
-    const SizedBox(height: 12),
-    LayoutBuilder(
-    builder: (BuildContext context, BoxConstraints constraints) {
-    final bool compact = constraints.maxWidth < 320;
-    final double buttonSize = compact ? 44 : 48;
-
-    return Container(
-    width: double.infinity,
-    padding: EdgeInsets.symmetric(
-    horizontal: compact ? 12 : 16,
-    vertical: compact ? 10 : 14,
-    ),
-    decoration: BoxDecoration(
-    color: colorScheme.surface,
-    borderRadius: BorderRadius.circular(16),
-    border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
-    boxShadow: [
-    BoxShadow(
-    color: colorScheme.primary.withOpacity(0.05),
-    blurRadius: 12,
-    offset: const Offset(0, 6),
-    ),
-    ],
-    ),
-    child: Row(
-    children: [
-    _QuantityActionButton(
-    icon: Icons.remove_rounded,
-    onTap: _selectedQuantity > 1 ? _decrementQuantity : null,
-    onDisabledTap: _selectedQuantity <= 1
-    ? () => _notifyQuantityRestriction(
-    'الحد الأدنى للشراء هو قطعة واحدة.',
-    color: colorScheme.primary,
-    )
-        : null,
-    dimension: buttonSize,
-    ),
-    Expanded(
-    child: Center(
-    child: AnimatedDefaultTextStyle(
-    duration: const Duration(milliseconds: 180),
-    style: valueStyle.copyWith(
-    fontSize: compact ? 20 : valueStyle.fontSize,
-    ),
-    child: Text('$_selectedQuantity'),
-                      ),
-                    ),
-                  ),
-      _QuantityActionButton(
-        icon: Icons.add_rounded,
-        onTap: canIncrement ? _incrementQuantity : null,
-        onDisabledTap: !canIncrement
-            ? () => _notifyQuantityRestriction(
-          isOutOfStock
-              ? 'هذه التوليفة غير متوفرة حالياً في المخزون.'
-              : 'لقد وصلت للكمية المتاحة لهذه التوليفة.',
-          color: isOutOfStock
-              ? colorScheme.error
-              : colorScheme.primary,
-        )
-            : null,
-        dimension: buttonSize,
-      ),
-    ],
-    ),
-    );
-    },
-    ),
-        if (!isOutOfStock &&
-            remainingAfterSelection != null &&
-            remainingAfterSelection > 0) ...[
-          const SizedBox(height: 10),
-          _buildQuantityPill(
-            icon: Icons.timelapse_rounded,
-            label: 'المتبقي بعد اختيارك: ${remainingAfterSelection.clamp(0, 9999)}',
-            foreground: theme.hintColor,
-            background: theme.hintColor.withOpacity(0.14),
-          ),
-        ],
-        if (isOutOfStock) ...[
-          const SizedBox(height: 10),
-          _buildInlineBanner(
-            icon: Icons.error_outline_rounded,
-            message:
-            'هذه التوليفة غير متوفرة حالياً في المخزون. الرجاء اختيار سمة مختلفة أو العودة لاحقاً.',
-            foreground: colorScheme.error,
-            background: colorScheme.error.withOpacity(0.12),
-          ),
-        ] else if (remainingAfterSelection != null &&
-            remainingAfterSelection <= 0) ...[
-          const SizedBox(height: 10),
-          _buildInlineBanner(
-            icon: Icons.info_rounded,
-            message: 'لا يمكنك تجاوز الكمية المتاحة حالياً لهذا المنتج.',
-            foreground: colorScheme.primary,
-            background: colorScheme.primary.withOpacity(0.10),
-          ),
-        ],
-      ],
-    );
-  }
-
-  void _notifyQuantityRestriction(String message, {Color? color}) {
-    if (!mounted) {
-      return;
-    }
-    final ThemeData theme = Theme.of(context);
-    UiUtils.showSoftSnackBar(
-      context,
-      message: message,
-      backgroundColor: (color ?? theme.colorScheme.error),
-      backgroundOpacity: 0.88,
-      textColor: Colors.white,
-    );
-  }
-
-  Widget _buildQuantityPill({
-    required IconData icon,
-    required String label,
-    required Color foreground,
-    required Color background,
-  }) {
-    final ThemeData theme = Theme.of(context);
-    return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: background,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: foreground),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: foreground,
-                fontWeight: FontWeight.w600,
-            ),
-          ),
-          ],
-        ),
-    );
-  }
-
-  Widget _buildInlineBanner({
-    required IconData icon,
-    required String message,
-    required Color foreground,
-    required Color background,
-  }) {
-    final ThemeData theme = Theme.of(context);
-    return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: background,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 20, color: foreground),
-            const SizedBox(width: 10),
-            Expanded(
-            child: Text(
-              message,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: foreground,
-                height: 1.4,
-              ),
-            ),
-          ),
-          ],
-        ),
-    );
-  }
-
-
-  String _formatPrice(double value) {
-    final NumberFormat formatter = NumberFormat.currency(
-      locale: 'ar',
-      symbol: '',
-      decimalDigits: 2,
-    );
-    final String formatted = formatter.format(value).trim();
-    final String? currency = _currentItem.currency?.trim();
-    if (currency == null || currency.isEmpty) {
-      return formatted;
-    }
-    return '$formatted $currency';
-  }
-
-  Cart _buildCartItemForCurrentSelection({
-    List<Map<String, dynamic>>? selectedCustomFields,
-  }) {
-    final ItemModel item = _currentItem;
-    if (item.id == null) {
-      throw CartBuildException('لا يمكن إضافة هذا المنتج إلى السلة حالياً.');
-    }
-
-    final ItemPurchaseOptions? options = _purchaseOptions;
-    if (_purchaseOptionsLoading && options == null) {
-      throw CartBuildException(
-          'يتم تحميل خيارات المنتج، يرجى الانتظار قليلاً قبل الإضافة.');
-    }
-
-    final Map<String, String> selections = options != null
-        ? _sanitizeSelections(options, seed: _selectedAttributes)
-        : Map<String, String>.from(_selectedAttributes);
-
-    if (options != null) {
-      for (final ItemPurchaseAttributeOption attribute in options.attributes) {
-        final String key = attribute.key;
-        final String displayName =
-        attribute.name.isNotEmpty ? attribute.name : key;
-        final String value = selections[key]?.trim() ?? '';
-
-        if (attribute.requiredForCheckout && value.isEmpty) {
-          throw CartBuildException(
-            'الرجاء اختيار قيمة للسمة "$displayName" قبل المتابعة.',
-          );
-
-        }
-        if (attribute.affectsStock && options.variantStocks.isNotEmpty) {
-          if (value.isEmpty) {
-            throw CartBuildException(
-              'اختر قيمة للسمة "$displayName" لتحديد التوليفة المتاحة في المخزون.',
-            );
-          }
-        }
-      }
-    }
-
-    final String? variantKey = options != null
-        ? _computeVariantKey(options, selections)
-        : _selectedVariantKey;
-
-    final ItemVariantStockOption? stockOption =
-    options != null ? _findVariantStock(variantKey) : _selectedVariantStock;
-
-    if (stockOption != null && stockOption.availableStock <= 0) {
-      throw CartBuildException('التوليفة المحددة غير متوفرة حالياً في المخزون.');
-    }
-
-    if (variantKey != null && options != null &&
-        options.variantStocks.isNotEmpty && stockOption == null) {
-      throw CartBuildException('لم يتم العثور على مخزون للتوليفة المحددة.');
-    }
-
-
-    if (stockOption != null &&
-        stockOption.availableStock > 0 &&
-        _selectedQuantity > stockOption.availableStock) {
-      throw CartBuildException(
-          'الكمية المطلوبة تتجاوز المتاح للتوليفة الحالية.');
-    }
-
-
-
-    final double unitPrice = options?.finalPrice ??
-        item.finalPrice ??
-        item.price ??
-        0.0;
-
-    final Map<String, dynamic>? variantAttributes = selections.isEmpty
-        ? null
-        : Map<String, dynamic>.from(selections);
-
-    final Map<String, dynamic>? stockSnapshot = stockOption != null
-        ? <String, dynamic>{
-      'variant_key': stockOption.variantKey,
-      'stock': stockOption.stock,
-      'reserved_stock': stockOption.reservedStock,
-      'available_stock': stockOption.availableStock,
-    }
-        : null;
-
-    final List<Map<String, dynamic>>? customFields =
-    (selectedCustomFields == null || selectedCustomFields.isEmpty)
-        ? null
-        : selectedCustomFields;
-
-    return Cart.fromItemModel(
-      item,
-      quantity: _selectedQuantity,
-      selectedCustomFields: customFields,
-      variantKey: variantKey,
-      variantAttributes: variantAttributes,
-      stockSnapshot: stockSnapshot,
-      unitPrice: unitPrice,
-      unitPriceLocked: unitPrice,
-      currency: item.currency,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return MultiBlocListener(
-      listeners: [
-        BlocListener<FetchItemDetailsCubit, FetchItemDetailsState>(
-          listener: (context, state) {
-            if (state is FetchItemDetailsSuccess) {
-              _setCurrentItem(
-                state.item,
-                triggerDependentFetches: true,
-              );
-            } else if (state is FetchItemDetailsFailure &&
-                isAddedByMe &&
-                _hasLocalItemDetails) {
-              context.read<FetchItemDetailsCubit>().seed(_currentItem);
-            }
-          },
-        ),
-        BlocListener<FetchItemPurchaseOptionsCubit,
-            FetchItemPurchaseOptionsState>(
-          listener: _handlePurchaseOptionsState,
-        ),
-      ],
+    return BlocListener<FetchItemDetailsCubit, FetchItemDetailsState>(
+      listener: (context, state) {
+        if (state is FetchItemDetailsSuccess) {
+          _setCurrentItem(
+            state.item,
+            triggerDependentFetches: true,
+          );
+        } else if (state is FetchItemDetailsFailure &&
+            isAddedByMe &&
+            _hasLocalItemDetails) {
+          context.read<FetchItemDetailsCubit>().seed(_currentItem);
+        }
+      },
       child: BlocBuilder<FetchItemDetailsCubit, FetchItemDetailsState>(
         builder: (context, state) {
           return _buildContentForState(context, state);
@@ -2490,11 +1213,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
         // 👇 هذا الجديد
         onMakeOffer: () => makeOfferBottomSheet(_currentItem),
 
-        cartBuilder: ({List<Map<String, dynamic>>? selectedCustomFields}) =>
-            _buildCartItemForCurrentSelection(
-              selectedCustomFields: selectedCustomFields,
-            ),
-
         onUpdateFields: (newFields) {
           setState(() {
             moreDetailDynamicFields = newFields;
@@ -2505,16 +1223,9 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }
 
   Widget _buildOwnerBody(BuildContext context) {
-
-    final bool supportsMapSection = _supportsMapSectionForItem(_currentItem);
-    final bool hideLocation = supportsMapSection
-        ? false
-        : GeoRules.isDisabledForItem(_currentItem);
-
     return OwnerAdDetailsBody(
       model: _currentItem,
       images: images,
-      imageSources: imageSources,
       pageController: pageController,
       currentIndex: currentIndex,
       onPageChanged: (i) => setState(() => currentIndex = i),
@@ -2529,8 +1240,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       featuredSection: (_currentItem.isFeature != true)
           ? createFeaturesAds()
           : const SizedBox.shrink(),
-      hideLocation: hideLocation,
-      supportsMapSection: supportsMapSection,
       addCloudDataFn: (k, v) => addCloudData(k, v),
     );
   }
@@ -2620,12 +1329,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       model: item,
       isAddedByMe: false,
     );
-    final bool supportsMapSection = _supportsMapSectionForItem(item);
-    final bool hideLocation = supportsMapSection
-        ? false
-        : GeoRules.isDisabledForItem(item);
-
-    final List<Widget> statusAlerts = _buildStatusAlerts(item);
+    final bool hideLocation = GeoRules.isDisabledForItem(item);
 
 
     return CustomScrollView(
@@ -2646,7 +1350,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
               // عرض السلايدر
               currentIndex: currentIndex,
               currentImageIndex: currentIndex,
-              images: imageSources,
+              images: images.whereType<String>().toList(),
               pageController: pageController,
               onImagePageChanged: (i) => setState(() => currentIndex = i),
 
@@ -2667,18 +1371,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                 final slug = item.slug ?? "${item.id}";
                 HelperUtils.share(context, slug, model: item);
               },
-              onReport: () {
-                final int? itemId = item.id ?? widget.model.id;
-                if (itemId == null || itemId <= 0) {
-                  HelperUtils.showSnackBarMessage(
-                    context,
-                    'لا يمكن الإبلاغ عن هذا الإعلان حالياً. حاول لاحقاً.',
-                  );
-                  return;
-                }
-                _bottomSheet(itemId);
-              },
-
+              onReport: () => _bottomSheet(item.id!),
               // نفس دالتك الحالية
 
               // ✅ زر إعجاب احترافي متوافق مع الثيم
@@ -2696,11 +1389,12 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
         // =========================
         // 2️⃣ باقي محتوى الإعلان
         // =========================
-        SliverPadding(
-          padding: const EdgeInsets.all(13.0),
-          sliver: SliverList(
-            delegate: SliverChildListDelegate(
-              [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(13.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 // العنوان
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 10),
@@ -2710,17 +1404,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                       .color(context.color.textDefaultColor),
                 ),
 
-                if (statusAlerts.isNotEmpty) ...<Widget>[
-                  ...statusAlerts,
-                  const SizedBox(height: 12),
-                ],
-
-
                 // السعر والحالة
                 adInfo.priceAndStatus(),
-
-                _buildPurchaseOptionsSection(),
-
 
                 // العنوان والتاريخ (لو فيه عنوان)
                 if (!hideLocation && item.address != null)
@@ -2748,7 +1433,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
                 // الخريطة (لو الإحداثيات متوفرة)
                 if (!hideLocation &&
-                    supportsMapSection &&
                     item.latitude != null &&
                     item.longitude != null)
 
@@ -2762,17 +1446,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                       isAddedByMe: false,
                     ).titleAndDate(isDate: false),
                     onTap: () => _navigateToGoogleMapScreen(context),
-                  ),
-
-
-                if (_isEcommerceItem &&
-                    (item.tips?.returnPolicyText?.trim().isNotEmpty ?? false))
-
-                  Padding(
-                    padding: const EdgeInsets.only(top: 18.0),
-                    child: _buildReturnPolicyCard(
-                      item.tips!.returnPolicyText!.trim(),
-                    ),
                   ),
 
                 const SizedBox(height: 8),
@@ -2803,169 +1476,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       ],
     );
   }
-
-
-
-  List<Widget> _buildStatusAlerts(ItemModel item) {
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme colorScheme = theme.colorScheme;
-    final List<Widget> alerts = <Widget>[];
-
-    void addAlert({
-      required IconData icon,
-      required Color color,
-      required String message,
-    }) {
-      alerts.add(
-        Padding(
-          padding: EdgeInsets.only(top: alerts.isEmpty ? 0 : 6),
-          child: _buildStatusAlertBanner(
-            theme: theme,
-            icon: icon,
-            color: color,
-            message: message,
-          ),
-        ),
-      );
-    }
-
-    final String? normalizedStatus = item.status?.toLowerCase().trim();
-    switch (normalizedStatus) {
-      case 'sold out':
-      case 'sold_out':
-        addAlert(
-          icon: Icons.do_not_disturb_alt_rounded,
-          color: theme.colorScheme.error,
-          message: 'تم بيع هذا المنتج بالكامل ولم يعد متاحاً للطلب.',
-        );
-        break;
-      case 'inactive':
-        addAlert(
-          icon: Icons.pause_circle_outline,
-          color: colorScheme.tertiary,
-          message: 'الإعلان متوقف حالياً وقد لا تتوفر إمكانية الطلب حتى عودته.',
-        );
-        break;
-      case 'review':
-        addAlert(
-          icon: Icons.search_rounded,
-          color: colorScheme.primary,
-          message: 'الإعلان قيد المراجعة من فريقنا وقد يتغير توفره قريباً.',
-        );
-        break;
-      case 'rejected':
-        addAlert(
-          icon: Icons.report_gmailerrorred,
-          color: theme.colorScheme.error,
-          message: 'تم رفض هذا الإعلان ولا يمكن إكمال الطلب عليه حالياً.',
-        );
-        break;
-      default:
-        break;
-    }
-
-    if ((item.isPurchased ?? 0) == 1) {
-      addAlert(
-        icon: Icons.shopping_bag,
-        color: colorScheme.secondary,
-        message: 'لقد قمت بشراء هذا المنتج مسبقاً. تحقق من الطلبات لمتابعة التفاصيل.',
-      );
-    }
-
-    return alerts;
-  }
-
-  Widget _buildStatusAlertBanner({
-    required ThemeData theme,
-    required IconData icon,
-    required Color color,
-    required String message,
-  }) {
-    final Color background = color.withOpacity(
-      theme.brightness == Brightness.dark ? 0.18 : 0.12,
-    );
-
-    return Semantics(
-      container: true,
-      label: 'تنبيه مهم: $message',
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: background,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.4), width: 1),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                message,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildReturnPolicyCard(String text) {
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme colorScheme = theme.colorScheme;
-    final Color baseBackground = colorScheme.surfaceVariant;
-    final Color background = baseBackground.withOpacity(
-      theme.brightness == Brightness.dark ? 0.35 : 0.55,
-    );
-
-    return Semantics(
-      container: true,
-      label: 'سياسة الاسترجاع الخاصة بالقسم',
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: background,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: colorScheme.outline.withOpacity(0.35)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.assignment_return, color: colorScheme.primary),
-                const SizedBox(width: 8),
-                Text(
-                  'سياسة الاسترجاع',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              text,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color:
-                theme.textTheme.bodyMedium?.color ?? colorScheme.onSurface,
-                height: 1.5,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
 
   Widget reportedAdsWidget() {
     return BlocBuilder<UpdatedReportItemCubit, UpdatedReportItemState>(
@@ -3013,7 +1523,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       }
 
       if (state is FetchRelatedItemsSuccess) {
-        if (state.itemSummaries.isEmpty || state.itemSummaries.length == 1) {
+        if (state.itemModel.isEmpty || state.itemModel.length == 1) {
           return SizedBox.shrink();
         }
 
@@ -3027,10 +1537,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   /// عرض قائمة الإعلانات المشابهة بطريقة محسنة (تجاهل الإعلان الحالي + عرض نظيف)
   Widget buildRelatedListWidget(FetchRelatedItemsSuccess state) {
     // ✅ تصفية العناصر: نحذف الإعلان الحالي من القائمة قبل البناء
-    final relatedItems = state.itemSummaries
-        .where((summary) => summary.id != _currentItem.id)
-        .map((summary) => summary.toItemModelSkeleton())
-        .toList();
+    final relatedItems =
+        state.itemModel.where((item) => item.id != _currentItem.id).toList();
 
     return Padding(
       padding: const EdgeInsets.only(top: 10.0),
@@ -4701,388 +3209,6 @@ class _LoadingDetailsContent extends StatelessWidget {
     );
   }
 }
-
-
-class _QuantityActionButton extends StatelessWidget {
-  const _QuantityActionButton({
-    required this.icon,
-    this.onTap,
-    this.onDisabledTap,
-    this.dimension,
-  });
-
-  final IconData icon;
-  final VoidCallback? onTap;
-  final VoidCallback? onDisabledTap;
-  final double? dimension;
-
-
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme colorScheme = theme.colorScheme;
-    final bool enabled = onTap != null;
-    final double size = dimension ?? 46;
-
-    final Color backgroundColor = enabled
-        ? colorScheme.primary.withOpacity(0.12)
-        : theme.disabledColor.withOpacity(0.06);
-    final Color borderColor = enabled
-        ? colorScheme.primary.withOpacity(0.45)
-        : colorScheme.outline.withOpacity(0.35);
-    final Color iconColor = enabled
-        ? colorScheme.primary
-        : theme.disabledColor.withOpacity(0.6);
-
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: enabled ? onTap : onDisabledTap,
-          customBorder: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            width: size,
-            height: size,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: borderColor, width: 1.2),
-              boxShadow: enabled
-                  ? [
-                BoxShadow(
-                  color: colorScheme.primary.withOpacity(0.1),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
-                ),
-              ]
-                  : null,
-            ),
-            child: Icon(icon, size: 20, color: iconColor),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ColorChoiceDescriptor {
-  const _ColorChoiceDescriptor({
-    required this.rawValue,
-    required this.displayLabel,
-    required this.swatchColor,
-  });
-
-  final String rawValue;
-  final String displayLabel;
-  final Color? swatchColor;
-
-  static final RegExp _hexPattern = RegExp(r'#?[0-9a-fA-F]{6}');
-
-  factory _ColorChoiceDescriptor.fromRawValue({
-    required String rawValue,
-    required BuildContext context,
-  }) {
-    final String original = rawValue;
-    final String trimmed = rawValue.trim();
-    if (trimmed.isEmpty) {
-      return const _ColorChoiceDescriptor(
-        rawValue: '',
-        displayLabel: '',
-        swatchColor: null,
-      );
-    }
-
-    String label = trimmed;
-    Color? color;
-    String? resolvedHex;
-
-    final RegExpMatch? match = _hexPattern.firstMatch(trimmed);
-    if (match != null) {
-      resolvedHex = ColorCatalog.sanitizeHex(match.group(0)!);
-    } else {
-      final String normalized = trimmed.toLowerCase();
-      for (final ColorPaletteEntry entry in ColorPaletteHelper.entries) {
-        final String fallback = entry.fallbackLabel.toLowerCase();
-        final String englishKey = entry.labelKey
-            .replaceFirst('colorPalette', '')
-            .toLowerCase();
-        if (normalized == fallback || normalized == englishKey) {
-          resolvedHex = entry.normalizedHex;
-          break;
-        }
-      }
-    }
-
-    if (resolvedHex != null && resolvedHex.isNotEmpty) {
-      color = ColorPaletteHelper.tryParseColor(resolvedHex);
-      final String cleaned = trimmed
-          .replaceAll(_hexPattern, '')
-          .replaceAll(RegExp(r'[|:_\-]+'), ' ')
-          .trim();
-
-      final String friendly = ColorCatalog.nameForHex(
-        resolvedHex,
-        context: context,
-      );
-
-      if (cleaned.isNotEmpty) {
-        label = cleaned;
-      } else if (friendly.isNotEmpty) {
-        label = friendly;
-      } else {
-        label = '#$resolvedHex';
-      }
-    } else {
-      final String normalized = label.toLowerCase();
-      for (final ColorPaletteEntry entry in ColorPaletteHelper.entries) {
-        final String fallback = entry.fallbackLabel.toLowerCase();
-        final String englishKey = entry.labelKey
-            .replaceFirst('colorPalette', '')
-            .toLowerCase();
-        if (normalized == fallback || normalized == englishKey) {
-          color = entry.color;
-          final String friendly = entry.label(context);
-          if (friendly.isNotEmpty) {
-            label = friendly;
-          } else {
-            label = entry.fallbackLabel;
-          }
-          break;
-        }
-      }
-    }
-
-    if (label.isEmpty) {
-      label = trimmed.isNotEmpty ? trimmed : original;
-    }
-
-    return _ColorChoiceDescriptor(
-      rawValue: original,
-      displayLabel: label,
-      swatchColor: color,
-    );
-  }
-}
-
-
-
-
-
-
-
-
-class _AttributeValueDescriptor {
-  const _AttributeValueDescriptor({
-    required this.value,
-    required this.label,
-    required this.isOptional,
-  });
-
-  final String value;
-  final String label;
-  final bool isOptional;
-}
-
-class _AttributeChoiceChip extends StatelessWidget {
-  const _AttributeChoiceChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-    required this.isOptional,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-  final bool isOptional;
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme colorScheme = theme.colorScheme;
-    final Color baseTextColor =
-        theme.textTheme.bodyMedium?.color ?? colorScheme.onSurface;
-    final Color textColor = selected ? colorScheme.primary : baseTextColor;
-    final Color backgroundColor = selected
-        ? colorScheme.primary.withOpacity(0.12)
-        : theme.colorScheme.surface;
-    final Color borderColor = selected
-        ? colorScheme.primary
-        : colorScheme.outline.withOpacity(0.3);
-
-    final String semanticsLabel = label.isEmpty ? '—' : label;
-    final String semanticsText = isOptional
-        ? '$semanticsLabel (اختياري)'
-        : semanticsLabel;
-
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: semanticsText,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 170),
-            padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: borderColor, width: 1.2),
-              boxShadow: selected
-                  ? [
-                BoxShadow(
-                  color: colorScheme.primary.withOpacity(0.12),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-                  : null,
-            ),
-            child: Text(
-              label.isEmpty ? '—' : label,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: textColor,
-                fontWeight:
-                selected ? FontWeight.w700 : FontWeight.w500,
-              ) ??
-                  TextStyle(
-                    color: textColor,
-                    fontWeight:
-                    selected ? FontWeight.w700 : FontWeight.w500,
-                  ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ColorSwatchChip extends StatelessWidget {
-  const _ColorSwatchChip({
-    required this.descriptor,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final _ColorChoiceDescriptor descriptor;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme colorScheme = theme.colorScheme;
-    final Color? swatchColor = descriptor.swatchColor;
-    final Color resolvedColor =
-        swatchColor ?? theme.colorScheme.surfaceVariant.withOpacity(0.9);
-    final Color borderColor = selected
-        ? colorScheme.primary
-        : theme.dividerColor.withOpacity(0.3);
-    final Color labelColor = selected
-        ? colorScheme.primary
-        : theme.textTheme.bodySmall?.color ??
-        colorScheme.onSurface.withOpacity(0.8);
-
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: descriptor.displayLabel.isEmpty
-          ? 'لون غير محدد'
-          : 'لون ${descriptor.displayLabel}',
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(32),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: resolvedColor,
-                  border: Border.all(
-                    color: borderColor,
-                    width: selected ? 3 : 1.4,
-                  ),
-                  boxShadow: selected
-                      ? [
-                    BoxShadow(
-                      color: colorScheme.primary.withOpacity(0.18),
-                      blurRadius: 14,
-                      offset: const Offset(0, 6),
-                    ),
-                  ]
-                      : null,
-                ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    if (swatchColor == null)
-                      Icon(Icons.block, size: 22, color: theme.hintColor),
-                    if (selected)
-                      Icon(
-                        Icons.check_rounded,
-                        size: 26,
-                        color: swatchColor == null
-                            ? theme.hintColor
-                            : _foregroundForSwatch(swatchColor),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          if (descriptor.displayLabel.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            SizedBox(
-              width: 70,
-              child: Text(
-                descriptor.displayLabel,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: labelColor,
-                  fontWeight:
-                  selected ? FontWeight.w700 : FontWeight.w500,
-                ) ??
-                    TextStyle(
-                      color: labelColor,
-                      fontWeight:
-                      selected ? FontWeight.w700 : FontWeight.w500,
-                    ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Color _foregroundForSwatch(Color color) {
-    return color.computeLuminance() > 0.5 ? Colors.black87 : Colors.white;
-  }
-}
-
-
-
-
 
 class _FetchErrorView extends StatelessWidget {
   const _FetchErrorView({

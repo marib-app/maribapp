@@ -22,9 +22,7 @@ import 'package:marib/data/model/wifi/wifi_payment_gateway.dart';
 import 'package:intl/intl.dart';
 import 'package:marib/utils/api.dart';
 import 'package:flutter/services.dart';
-import 'dart:typed_data';
-import 'package:dio/dio.dart';
-import 'package:file_picker/file_picker.dart';
+
 
 
 class WifiCabinScreen extends StatefulWidget {
@@ -46,8 +44,6 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
   late final WifiCabinController _controller;
 
   final WifiRepository _repository = const WifiRepository();
-  final TextEditingController _searchController = TextEditingController();
-  final FocusNode _searchFocusNode = FocusNode();
   final ValueNotifier<List<WifiPurchase>> _purchasesNotifier =
   ValueNotifier<List<WifiPurchase>>(<WifiPurchase>[]);
   final ValueNotifier<bool> _purchasesLoadingNotifier =
@@ -77,8 +73,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
     _purchasesLoadingNotifier.dispose();
     _purchasesErrorNotifier.dispose();
     _controller.dispose();
-    _searchController.dispose();
-    _searchFocusNode.dispose();
+
     super.dispose();
   }
 
@@ -91,62 +86,37 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
         animation: _controller,
         builder: (context, _) {
           final state = _controller.viewState;
-          if (_searchController.text != _controller.query) {
-            _searchController.value = _searchController.value.copyWith(
-              text: _controller.query,
-              selection: TextSelection.collapsed(
-                offset: _controller.query.length,
 
-            ),
-            );
-          }
           return Scaffold(
             backgroundColor: context.color.backgroundColor,
             appBar: UiUtils.buildAppBar(
               context,
               showBackButton: true,
               title: 'wifiCabin'.translate(context),
+
             ),
             body: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Column(
                 children: [
-                _SearchHeaderBar(
-                controller: _searchController,
-                focusNode: _searchFocusNode,
-                isLoading: state.status == WifiCabinLoadStatus.loading &&
-                    !state.hasData,
-                onChanged: (value) => _controller.updateQuery(value),
-                onSubmitted: (value) =>
-                    _controller.updateQuery(value, immediate: true),
-                onClear: _controller.clearQuery,
-                onRefresh: () => _controller.refreshNetworks(force: true),
-              ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
-                  switchInCurve: Curves.easeOut,
-                  switchOutCurve: Curves.easeIn,
-                  child: _buildBodyForState(context, state),
+                  _HeaderFilterBar(
+                    locDenied: _controller.locationDenied,
+                    maxKm: _controller.maxKm,
+                    onEnableLocation: () => _controller.enableLocation(),
+                    onKmChanged: _controller.updateMaxKm,
                   ),
-              ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      switchInCurve: Curves.easeOut,
+                      switchOutCurve: Curves.easeIn,
+                      child: _buildBodyForState(context, state),
+                    ),
+                  ),
                 ],
             ),
             ),
-              bottomNavigationBar: SafeArea(
-                minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(52),
-                    backgroundColor: context.color.territoryColor,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () => _openAddNetworkSheet(context),
-                  icon: const Icon(Icons.add),
-                  label: const Text('إضافة شبكة جديدة'),
-            ),
-              ),
           );
         },
     );
@@ -198,8 +168,8 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
       key: key,
       networks: state.networks,
       onSelect: (network) => _openPlansSheet(context, network),
-      onRefresh: () => _controller.refreshNetworks(force: true),
-      searchQuery: _controller.query,
+      locationDenied: _controller.locationDenied,
+      onEnableLocation: () => _controller.enableLocation(),
     );
   }
 
@@ -317,15 +287,6 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
   Future<void> _showCodesDialog(WifiPurchase purchase) async {
     final List<String> codes = purchase.codes;
     if (codes.isEmpty) return;
-    final int codeId = purchase.id;
-
-    if (codeId > 0) {
-      unawaited(
-        _repository
-            .logCodeEvent(codeId: codeId, action: 'view')
-            .catchError((_) {}),
-      );
-    }
     final messenger = ScaffoldMessenger.of(context);
     await showDialog<void>(
       context: context,
@@ -348,13 +309,6 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
                   code: code,
                   onCopy: () {
                     Clipboard.setData(ClipboardData(text: code));
-                    if (codeId > 0) {
-                      unawaited(
-                        _repository
-                            .logCodeEvent(codeId: codeId, action: 'copy')
-                            .catchError((_) {}),
-                      );
-                    }
                     messenger.showSnackBar(
                       SnackBar(content: Text('تم نسخ الكود: $code')),
                     );
@@ -368,13 +322,6 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
               TextButton(
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: codes.join('\n')));
-                  if (codeId > 0) {
-                    unawaited(
-                      _repository
-                          .logCodeEvent(codeId: codeId, action: 'copy')
-                          .catchError((_) {}),
-                    );
-                  }
                   messenger.showSnackBar(
                     const SnackBar(content: Text('تم نسخ جميع الأكواد.')),
                   );
@@ -467,14 +414,14 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
       useSafeArea: true,
       backgroundColor: context.color.backgroundColor,
       builder: (_) => _AddNetworkSheet(
-
+        userLatLng: _controller.currentCenter,
         repository: _repository,
       ),
 
     );
 
     if (result != null) {
-      await _controller.refreshNetworks(force: true);
+      await _controller.refreshNetworks();
       if (!mounted) return;
       String? message;
       if (result is Map) {
@@ -522,106 +469,67 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
 }
 
 
-class _SearchHeaderBar extends StatelessWidget {
-  const _SearchHeaderBar({
-    required this.controller,
-    required this.focusNode,
-    required this.isLoading,
-    required this.onChanged,
-    required this.onSubmitted,
-    required this.onClear,
-    required this.onRefresh,
+class _HeaderFilterBar extends StatelessWidget {
+
+  const _HeaderFilterBar({
+    required this.locDenied,
+    required this.maxKm,
+    required this.onEnableLocation,
+    required this.onKmChanged,
   });
 
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final bool isLoading;
-  final ValueChanged<String> onChanged;
-  final ValueChanged<String> onSubmitted;
-  final VoidCallback onClear;
-  final VoidCallback onRefresh;
+  final bool locDenied;
+  final double maxKm;
+  final VoidCallback onEnableLocation;
+  final ValueChanged<double> onKmChanged;
 
   @override
   Widget build(BuildContext context) {
     final color = context.color;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: color.secondaryColor.withOpacity(0.2),
-
+        color: color.secondaryColor.withOpacity(0.25),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'ابحث عن شبكة Wi-Fi بالاسم',
-            style: TextStyle(
-              color: color.textDefaultColor,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
           Row(
             children: [
-
+              Icon(Icons.wifi_tethering, color: color.textDefaultColor),
+              const SizedBox(width: 8),
               Expanded(
-                child: ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: controller,
-                  builder: (context, value, _) {
-                    return TextField(
-                      controller: controller,
-                      focusNode: focusNode,
-                      onChanged: onChanged,
-                      onSubmitted: onSubmitted,
-                      textInputAction: TextInputAction.search,
-                      decoration: InputDecoration(
-                        hintText: 'مثال: شبكة الحارة أو اسم المقهى',
-                        prefixIcon: const Icon(Icons.search),
-                        suffixIcon: value.text.isEmpty
-                            ? null
-                            : IconButton(
-                          tooltip: 'مسح البحث',
-                          icon: const Icon(Icons.clear),
-                          onPressed: onClear,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: 12),
-              SizedBox(
-                height: 46,
-                width: 46,
-                child: ElevatedButton(
-                  onPressed: isLoading ? null : onRefresh,
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                child: Text(
+                  locDenied
+                      ? 'عطّل الموقع — عرض نتائج عامة'
+                      : 'اعرض الشبكات الأقرب لموقعك',
+                  style: TextStyle(
+                    color: color.textDefaultColor,
+                    fontSize: 13,
                   ),
-                  child: isLoading
-                      ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2.2),
-                  )
-                      : const Icon(Icons.refresh),
                 ),
               ),
+              if (locDenied)
+                TextButton(
+                  onPressed: onEnableLocation,
+                  child: const Text('تشغيل الموقع'),
+                ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
-            'تأكد من مطابقة صورة صفحة الدخول قبل الشراء، وأبلغ صاحب الشبكة عن أي مشكلة.',
-            style: TextStyle(
-              color: color.textDefaultColor.withOpacity(0.75),
-              fontSize: 12.5,
-            ),
+            'النطاق: ${maxKm.toStringAsFixed(0)} كم',
+            style: TextStyle(color: color.textDefaultColor),
+          ),
+          Slider(
+            value: maxKm.clamp(1, 50),
+            min: 1,
+            max: 50,
+            divisions: 49,
+            label: '${maxKm.toStringAsFixed(0)} كم',
+            onChanged: onKmChanged,
           ),
         ],
       ),
@@ -634,27 +542,24 @@ class _NetworksGrid extends StatelessWidget {
     super.key,
     required this.networks,
     required this.onSelect,
-    required this.onRefresh,
-    required this.searchQuery,
+    required this.locationDenied,
+    required this.onEnableLocation,
   });
 
   final List<WifiNetwork> networks;
   final ValueChanged<WifiNetwork> onSelect;
-  final VoidCallback onRefresh;
-  final String searchQuery;
+  final bool locationDenied;
+  final VoidCallback onEnableLocation;
 
   @override
   Widget build(BuildContext context) {
     if (networks.isEmpty) {
-      final String trimmed = searchQuery.trim();
-      final String subtitle = trimmed.isEmpty
-          ? 'ابدأ بالبحث عن اسم الشبكة أو راجع قائمة الشبكات المتاحة من مزودي الخدمة.'
-          : 'لم يتم العثور على نتائج لـ "$trimmed". جرّب جزءًا من الاسم أو تحقق من التهجئة.';
       return _EmptyState(
-        title: 'لم يتم العثور على شبكات',
-        subtitle: subtitle,
-        onAction: onRefresh,
-        actionLabel: 'تحديث القائمة',
+        title: 'لا توجد شبكات ضمن النطاق',
+        subtitle: locationDenied
+            ? 'فعّل خدمات الموقع أو زد نطاق البحث.'
+            : 'جرّب زيادة نطاق البحث بالكيلومترات.',
+        onAction: locationDenied ? onEnableLocation : null,
       );
     }
 
@@ -668,19 +573,16 @@ class _NetworksGrid extends StatelessWidget {
       ),
       itemCount: networks.length,
       itemBuilder: (context, index) {
-        final WifiNetwork network = networks[index];
-        final String subtitle = network.planCount > 0
-            ? 'عدد الفئات: ${network.planCount}'
-            : 'اطلع على تفاصيل الشبكة';
-        final String? currencyBadge = network.currencies.isNotEmpty
-            ? network.currencies.first
-            : null;
+        final network = networks[index];
+        final distance = network.distanceKm;
+        final distanceLabel = distance == null
+            ? 'المسافة غير متاحة'
+            : 'يبعد ${distance.toStringAsFixed(1)} كم';
 
         return _WifiNetworkCard(
           name: network.name,
-          subtitle: subtitle,
-          imageUrl: network.iconUrl ?? network.loginScreenshotUrl,
-          currencyBadge: currencyBadge,
+          distanceText: distanceLabel,
+          rating: network.rating ?? 0,
           onTap: () => onSelect(network),
         );
       },
@@ -692,64 +594,21 @@ class _WifiNetworkCard extends StatelessWidget {
 
   const _WifiNetworkCard({
     required this.name,
-    required this.subtitle,
-    this.imageUrl,
-    this.currencyBadge,
+    required this.distanceText,
+    required this.rating,
     required this.onTap,
   });
 
 
   final String name;
-  final String subtitle;
-  final String? imageUrl;
-  final String? currencyBadge;
+  final String distanceText;
+  final double rating;
   final VoidCallback onTap;
 
 
   @override
   Widget build(BuildContext context) {
     final color = context.color;
-    Widget buildImage() {
-      if (imageUrl == null || imageUrl!.isEmpty) {
-        return Container(
-          height: 70,
-          width: double.infinity,
-          color: color.secondaryColor,
-          alignment: Alignment.center,
-          child: const Icon(Icons.wifi, size: 36),
-        );
-      }
-
-      return Image.network(
-        imageUrl!,
-        height: 70,
-        width: double.infinity,
-        fit: BoxFit.cover,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return Container(
-            height: 70,
-            width: double.infinity,
-            color: color.secondaryColor,
-            alignment: Alignment.center,
-            child: const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-          );
-        },
-        errorBuilder: (context, _, __) {
-          return Container(
-            height: 70,
-            width: double.infinity,
-            color: color.secondaryColor,
-            alignment: Alignment.center,
-            child: const Icon(Icons.wifi, size: 36),
-          );
-        },
-      );
-    }
 
     return Material(
       color: Colors.transparent,
@@ -760,33 +619,12 @@ class _WifiNetworkCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(18),
-              child: Stack(
-                children: [
-                  Positioned.fill(child: buildImage()),
-                  if (currencyBadge != null)
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.6),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          currencyBadge!,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
+              child: Container(
+                height: 70,
+                width: double.infinity,
+                color: color.secondaryColor,
+                alignment: Alignment.center,
+                child: const Icon(Icons.wifi, size: 36), // Placeholder أيقونة الشبكة
               ),
             ),
             const SizedBox(height: 6),
@@ -803,16 +641,30 @@ class _WifiNetworkCard extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              subtitle,
-              maxLines: 2,
+              distanceText,
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
               style: TextStyle(
                 color: color.textDefaultColor.withOpacity(0.8),
                 fontSize: 11,
               ),
             ),
-
+            const SizedBox(height: 2),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.star, size: 14, color: Colors.amber),
+                const SizedBox(width: 4),
+                Text(
+                  rating.toStringAsFixed(1),
+                  style: TextStyle(
+                    color: color.textDefaultColor.withOpacity(0.85),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -1046,12 +898,6 @@ class _PlansSheetState extends State<_PlansSheet> {
                                 ],
                               ),
                             ),
-                          if (widget.network.loginScreenshotUrl != null) ...[
-                            _LoginScreenshotPreview(
-                              imageUrl: widget.network.loginScreenshotUrl!,
-                            ),
-                            const SizedBox(height: 12),
-                          ],
                           for (int i = 0; i < _plans.length; i++) ...[
                             if (i > 0) const SizedBox(height: 10),
                             _PlanTile(
@@ -1118,124 +964,6 @@ class _PlansSheetState extends State<_PlansSheet> {
 
 
 
-class _LoginScreenshotPreview extends StatelessWidget {
-  const _LoginScreenshotPreview({required this.imageUrl});
-
-  final String imageUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = context.color;
-
-    return GestureDetector(
-      onTap: () => _showFullScreen(context),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: AspectRatio(
-              aspectRatio: 16 / 9,
-              child: Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, progress) {
-                  if (progress == null) return child;
-                  return Container(
-                    color: color.secondaryColor.withOpacity(0.2),
-                    alignment: Alignment.center,
-                    child: const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2.4),
-                    ),
-                  );
-                },
-                errorBuilder: (context, _, __) {
-                  return Container(
-                    color: color.secondaryColor.withOpacity(0.2),
-                    alignment: Alignment.center,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.image_not_supported,
-                          color: color.textDefaultColor.withOpacity(0.6),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'تعذّر تحميل صورة صفحة الدخول',
-                          style: TextStyle(
-                            color: color.textDefaultColor.withOpacity(0.7),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'تأكد من تطابق صفحة الدخول قبل الشراء',
-            style: TextStyle(
-              color: color.textDefaultColor,
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'اضغط على الصورة لعرضها بالحجم الكامل والتحقق من هوية الشبكة.',
-            style: TextStyle(
-              color: color.textDefaultColor.withOpacity(0.75),
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showFullScreen(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return Dialog(
-          backgroundColor: Colors.black,
-          insetPadding: const EdgeInsets.all(16),
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: InteractiveViewer(
-                  child: Image.network(
-                    imageUrl,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, _, __) => const Center(
-                      child: Icon(Icons.broken_image, color: Colors.white70),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white),
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-
 
 class _PlanTile extends StatelessWidget {
 
@@ -1278,8 +1006,6 @@ class _PlanTile extends StatelessWidget {
                 fontSize: 12,
               ),
             ),
-            const SizedBox(height: 10),
-            _WifiPlanHighlights(plan: plan),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -1301,66 +1027,7 @@ class _PlanTile extends StatelessWidget {
   }
 }
 
-class _WifiPlanHighlights extends StatelessWidget {
-  const _WifiPlanHighlights({required this.plan});
 
-  final WifiPlan plan;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = context.color;
-    final List<String> labels = <String>[];
-
-    if (plan.isUnlimited) {
-      labels.add('بيانات غير محدودة');
-    } else if (plan.dataCapGb != null) {
-      final num cap = plan.dataCapGb!;
-      if (cap >= 1) {
-        final bool hasFraction = cap % 1 != 0;
-        labels.add('${cap.toStringAsFixed(hasFraction ? 1 : 0)} جيجابايت');
-      } else {
-        final num mb = (cap * 1024).round();
-        labels.add('$mb ميجابايت');
-      }
-    }
-
-    if (plan.durationDays != null && plan.durationDays! > 0) {
-      labels.add('صلاحية ${plan.durationDays} يوم');
-    }
-
-    if (labels.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 6,
-        children: labels
-            .map(
-              (label) => Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: color.backgroundColor,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: color.secondaryColor.withOpacity(0.35)),
-            ),
-            child: Text(
-              label,
-              style: TextStyle(
-                color: color.textDefaultColor.withOpacity(0.85),
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        )
-            .toList(),
-      ),
-    );
-  }
-}
 
 class _CheckoutSheet extends StatefulWidget {
   final WifiPlan plan;
@@ -1382,7 +1049,6 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
   bool _loadingGateways = false;
   String? _gatewaysError;
   bool _isSubmitting = false;
-  bool _acknowledged = false;
 
   num get total => widget.plan.price * _quantity;
 
@@ -1554,10 +1220,6 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
 
   Future<void> _onConfirm() async {
     if (_isSubmitting) return;
-    if (!_acknowledged) {
-      _showErrorMessage('يجب الموافقة على الإقرار قبل المتابعة.');
-      return;
-    }
     FocusScope.of(context).unfocus();
     setState(() {
       _isSubmitting = true;
@@ -1568,7 +1230,6 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
         planId: widget.plan.id,
         quantity: _quantity,
         paymentGateway: _gateway,
-        termsAcknowledged: _acknowledged,
       );
       if (!mounted) return;
       Navigator.of(context).pop(result);
@@ -1745,51 +1406,6 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                               child: const Text('تحديث طرق الدفع'),
                             ),
                           ),
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: color.secondaryColor.withOpacity(0.18),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(
-                                Icons.shield_outlined,
-                                size: 20,
-                                color: color.textDefaultColor.withOpacity(0.8),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'الكرت يباع من صاحب الشبكة مباشرة. التطبيق يوفر وسيط الدفع فقط ولا يضمن صلاحية الكود أو الخدمة.',
-                                  style: TextStyle(
-                                    color: color.textDefaultColor.withOpacity(0.8),
-                                    fontSize: 12.5,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        CheckboxListTile(
-                          value: _acknowledged,
-                          onChanged: _isSubmitting
-                              ? null
-                              : (value) =>
-                              setState(() => _acknowledged = value ?? false),
-                          controlAffinity: ListTileControlAffinity.leading,
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(
-                            'أؤكد أنني تحققت من صورة صفحة الدخول وأقر بأن أي مشكلة تُحل مباشرة مع صاحب الشبكة.',
-                            style: TextStyle(
-                              color: color.textDefaultColor,
-                              fontSize: 12.5,
-                            ),
-                          ),
-                        ),
                       ],
                     ],
                   ),
@@ -1800,8 +1416,7 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton(
-                      onPressed:
-                      (_isSubmitting || !_acknowledged) ? null : _onConfirm,
+                      onPressed: _isSubmitting ? null : _onConfirm,
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 200),
                         child: _isSubmitting
@@ -2470,27 +2085,38 @@ class _PurchaseTile extends StatelessWidget {
 
 
 class _AddNetworkSheet extends StatefulWidget {
-  const _AddNetworkSheet({WifiRepository? repository})
+
+  const _AddNetworkSheet({this.userLatLng, WifiRepository? repository})
       : repository = repository ?? const WifiRepository();
 
 
-
+  final LatLng? userLatLng;
   final WifiRepository repository;
 
   @override
   State<_AddNetworkSheet> createState() => _AddNetworkSheetState();
 }
 
-class _AddNetworkSheetState extends _OwnerRequestFormState<_AddNetworkSheet> {
+class _AddNetworkSheetState extends State<_AddNetworkSheet> {
+  final TextEditingController _nameController = TextEditingController();
+  LatLng? _selected;
+  double _coverage = 3;
+  bool _isSubmitting = false;
+
+  static const LatLng _defaultLatLng = LatLng(15.3694, 44.1910);
 
 
   @override
-  WifiRepository get repository => widget.repository;
-
+  void initState() {
+    super.initState();
+    _selected = widget.userLatLng;
+  }
 
   @override
-  void handleCompletion(Map<String, dynamic> result) {
-    Navigator.of(context).pop(result);
+  void dispose() {
+    _nameController.dispose();
+
+    super.dispose();
   }
 
   @override
@@ -2522,227 +2148,142 @@ class _AddNetworkSheetState extends _OwnerRequestFormState<_AddNetworkSheet> {
               ),
               const SizedBox(height: 12),
               Expanded(
-                child: buildFormContent(controller: controller),
-
+                child: ListView(
+                  controller: controller,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  children: [
+                    Text(
+                      'أضف شبكتك',
+                      style: TextStyle(
+                        color: color.textDefaultColor,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'اسم الشبكة',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    GestureDetector(
+                      onTap: _isSubmitting ? null : _selectLocation,
+                      child: Container(
+                        height: 220,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          color: color.secondaryColor.withOpacity(0.2),
+                        ),
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.map_outlined,
+                              color: color.textDefaultColor.withOpacity(0.65),
+                              size: 42,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              _selected == null
+                                  ? 'اضغط لاختيار الموقع على الخريطة'
+                                  : 'الموقع المحدد: ${_selected!.latitude.toStringAsFixed(4)}, ${_selected!.longitude.toStringAsFixed(4)}',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: color.textDefaultColor.withOpacity(0.85),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'نطاق التغطية (كم)',
+                      style: TextStyle(
+                        color: color.textDefaultColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Slider(
+                      value: _coverage,
+                      min: 1,
+                      max: 10,
+                      divisions: 9,
+                      label: _coverage.toStringAsFixed(0),
+                      onChanged: _isSubmitting
+                          ? null
+                          : (value) {
+                        setState(() => _coverage = value);
+                      },
+                    ),
+                  ],
+                ),
               ),
-              buildSubmitButton(),
-
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: _isSubmitting ? null : _onSubmit,
+                    child: _isSubmitting
+                        ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2.5),
+                    )
+                        : const Text('إرسال الطلب'),
+                  ),
+                ),
+              ),
             ],
           ),
         );
       },
     );
   }
-}
 
-
-class _AddNetworkScreen extends StatefulWidget {
-  const _AddNetworkScreen({WifiRepository? repository})
-      : repository = repository ?? const WifiRepository();
-
-  final WifiRepository repository;
-
-  @override
-  State<_AddNetworkScreen> createState() => _AddNetworkScreenState();
-}
-
-class _AddNetworkScreenState extends _OwnerRequestFormState<_AddNetworkScreen> {
-  @override
-  WifiRepository get repository => widget.repository;
-
-  @override
-  void handleCompletion(Map<String, dynamic> result) {
-    Navigator.of(context).pop(result);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('أضف شبكتك'),
-      ),
-      backgroundColor: context.color.backgroundColor,
-      body: SafeArea(
-        top: false,
-        child: Column(
-          children: [
-            Expanded(
-              child: buildFormContent(
-                padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-              ),
-            ),
-            buildSubmitButton(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-            ),
-          ],
-        ),
+  Future<void> _selectLocation() async {
+    FocusScope.of(context).unfocus();
+    final LatLng initial = _selected ?? widget.userLatLng ?? _defaultLatLng;
+    final LatLng? result = await Navigator.of(context).push<LatLng>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => _NetworkLocationPicker(initialPosition: initial),
       ),
     );
-  }
-}
 
-
-
-
-abstract class _OwnerRequestFormState<T extends StatefulWidget> extends State<T> {
-
-  static const int _maxUploadSizeBytes = 4 * 1024 * 1024;
-  static const List<String> _allowedImageExtensions = <String>['jpg', 'jpeg', 'png', 'webp'];
-
-
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _contactController = TextEditingController();
-  final TextEditingController _notesController = TextEditingController();
-  PlatformFile? _logoFile;
-  PlatformFile? _loginScreenshotFile;
-  bool _isSubmitting = false;
-
-  WifiRepository get repository;
-
-  @protected
-  void handleCompletion(Map<String, dynamic> result);
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _contactController.dispose();
-    _notesController.dispose();
-    super.dispose();
-  }
-
-  Widget buildFormContent({
-    ScrollController? controller,
-    EdgeInsetsGeometry? padding,
-  }) {
-    final color = context.color;
-    final EdgeInsetsGeometry effectivePadding =
-        padding ?? const EdgeInsets.symmetric(horizontal: 16);
-
-    return ListView(
-      controller: controller,
-      padding: effectivePadding,
-      children: [
-        Text(
-          'أضف شبكتك',
-          style: TextStyle(
-            color: color.textDefaultColor,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _nameController,
-          enabled: !_isSubmitting,
-          decoration: const InputDecoration(
-            labelText: 'اسم الشبكة',
-          ),
-        ),
-        const SizedBox(height: 16),
-        _OwnerRequestFilePickerTile(
-          title: 'شعار الشبكة',
-          placeholder: 'ارفع صورة الشعار',
-          fileName: _logoFile?.name,
-          isBusy: _isSubmitting,
-          onTap: () => _pickImage(isLogo: true),
-        ),
-        const SizedBox(height: 16),
-        _OwnerRequestFilePickerTile(
-          title: 'صورة صفحة الدخول',
-          placeholder: 'ارفع صورة توضح صفحة الدخول',
-          fileName: _loginScreenshotFile?.name,
-          isBusy: _isSubmitting,
-          onTap: () => _pickImage(isLogo: false),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _contactController,
-          enabled: !_isSubmitting,
-          decoration: const InputDecoration(
-            labelText: 'وسيلة التواصل',
-            hintText: 'مثال: 777123456 أو @account',
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _notesController,
-          enabled: !_isSubmitting,
-          maxLines: 4,
-          decoration: const InputDecoration(
-            labelText: 'ملاحظات إضافية (اختياري)',
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget buildSubmitButton({EdgeInsetsGeometry padding = const EdgeInsets.all(16)}) {
-    return Padding(
-      padding: padding,
-      child: SizedBox(
-        width: double.infinity,
-        height: 48,
-        child: ElevatedButton(
-          onPressed: _isSubmitting ? null : _onSubmit,
-          child: _isSubmitting
-              ? const SizedBox(
-            width: 22,
-            height: 22,
-            child: CircularProgressIndicator(strokeWidth: 2.5),
-          )
-              : const Text('إرسال الطلب'),
-        ),
-      ),
-    );
+    if (result != null) {
+      setState(() => _selected = result);
+    }
   }
 
   Future<void> _onSubmit() async {
     if (_isSubmitting) return;
-    FocusScope.of(context).unfocus();
-
-    final String name = _nameController.text.trim();
-
+    final name = _nameController.text.trim();
     if (name.isEmpty) {
       _showError('يرجى إدخال اسم الشبكة.');
+
       return;
     }
-
-    final String contact = _contactController.text.trim();
-    if (contact.isEmpty) {
-      _showError('يرجى إدخال وسيلة للتواصل.');
-      return;
-    }
-
-
-
-
-    if (_logoFile == null) {
-      _showError('يرجى رفع صورة شعار الشبكة.');
-      return;
-    }
-
-    if (_loginScreenshotFile == null) {
-      _showError('يرجى رفع صورة لصفحة الدخول.');
-      return;
-    }
-
-    final MultipartFile? logoMultipart = _prepareMultipart(_logoFile!);
-    final MultipartFile? loginMultipart = _prepareMultipart(_loginScreenshotFile!);
-
-    if (logoMultipart == null || loginMultipart == null) {
-
+    if (_selected == null) {
+      _showError('يرجى اختيار موقع الشبكة على الخريطة.');
       return;
     }
 
     setState(() => _isSubmitting = true);
     try {
-
-      final Map<String, dynamic> response = await repository.createOwnerRequest(
+      final double coverage = double.parse(_coverage.toStringAsFixed(1));
+      final Map<String, dynamic> response =
+      await widget.repository.createOwnerRequest(
         name: name,
-        contact: contact,
-        logo: logoMultipart,
-        loginScreenshot: loginMultipart,
-        notes: _stringify(_notesController.text),
+        latitude: _selected!.latitude,
+        longitude: _selected!.longitude,
+        coverageKm: coverage,
       );
 
       Map<String, dynamic> payload = <String, dynamic>{};
@@ -2776,8 +2317,7 @@ abstract class _OwnerRequestFormState<T extends StatefulWidget> extends State<T>
         return;
       }
 
-      setState(() => _isSubmitting = false);
-      handleCompletion(result);
+      Navigator.of(context).pop(result);
     } on ApiException catch (error) {
       if (!mounted) return;
       _showError(error.toString());
@@ -2788,77 +2328,6 @@ abstract class _OwnerRequestFormState<T extends StatefulWidget> extends State<T>
       setState(() => _isSubmitting = false);
     }
   }
-
-
-
-
-  Future<void> _pickImage({required bool isLogo}) async {
-    if (_isSubmitting) return;
-    FocusScope.of(context).unfocus();
-
-    try {
-      final FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: _allowedImageExtensions,
-        withData: kIsWeb,
-      );
-
-      if (result == null) {
-        return;
-      }
-
-      final PlatformFile file = result.files.single;
-      final String extension = (file.extension ?? '').toLowerCase();
-      if (!_allowedImageExtensions.contains(extension)) {
-        _showError('صيغة الملف غير مدعومة. يرجى اختيار صورة بصيغة PNG أو JPG أو WEBP.');
-        return;
-      }
-
-      if (file.size > _maxUploadSizeBytes) {
-        _showError('حجم الملف يتجاوز الحد المسموح (4 ميجابايت).');
-        return;
-      }
-
-      if (!mounted) return;
-
-      setState(() {
-        if (isLogo) {
-          _logoFile = file;
-        } else {
-          _loginScreenshotFile = file;
-        }
-      });
-    } catch (_) {
-      _showError('تعذّر اختيار الملف، حاول مرة أخرى.');
-    }
-  }
-
-  MultipartFile? _prepareMultipart(PlatformFile file) {
-    try {
-      if (!kIsWeb && file.path != null) {
-        return MultipartFile.fromFileSync(
-          file.path!,
-          filename: file.name,
-        );
-      }
-
-      final Uint8List? bytes = file.bytes;
-      if (bytes != null) {
-        return MultipartFile.fromBytes(
-          bytes,
-          filename: file.name,
-        );
-      }
-    } catch (_) {
-      _showError('تعذّر تجهيز الملف المرفوع (${file.name}).');
-      return null;
-    }
-
-    _showError('تعذّر قراءة الملف المرفوع (${file.name}).');
-    return null;
-  }
-
-
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -2874,74 +2343,80 @@ abstract class _OwnerRequestFormState<T extends StatefulWidget> extends State<T>
   }
 }
 
+class _NetworkLocationPicker extends StatefulWidget {
+  const _NetworkLocationPicker({required this.initialPosition});
 
+  final LatLng initialPosition;
 
-class _OwnerRequestFilePickerTile extends StatelessWidget {
-  const _OwnerRequestFilePickerTile({
-    required this.title,
-    required this.placeholder,
-    required this.onTap,
-    required this.isBusy,
-    this.fileName,
-  });
+  @override
+  State<_NetworkLocationPicker> createState() => _NetworkLocationPickerState();
+}
 
-  final String title;
-  final String placeholder;
-  final String? fileName;
-  final VoidCallback onTap;
-  final bool isBusy;
+class _NetworkLocationPickerState extends State<_NetworkLocationPicker> {
+  late LatLng _current;
+  GoogleMapController? _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _current = widget.initialPosition;
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _updateSelection(LatLng value) async {
+    if (!mounted) return;
+    setState(() => _current = value);
+    await _controller?.animateCamera(
+      CameraUpdate.newLatLng(value),
+    );
+  }
+
+  void _confirm() {
+    Navigator.of(context).pop(_current);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final color = context.color;
-    final bool hasFile = fileName != null && fileName!.isNotEmpty;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-      Text(
-      title,
-      style: TextStyle(
-        color: color.textDefaultColor,
-        fontWeight: FontWeight.w600,
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('حدد موقع الشبكة'),
+        actions: [
+          TextButton(
+            onPressed: _confirm,
+            child: const Text('تم'),
           ),
-    ),
-    const SizedBox(height: 8),
-    GestureDetector(
-    onTap: isBusy ? null : onTap,
-    child: Container(
-    height: 72,
-    decoration: BoxDecoration(
-    color: color.secondaryColor,
-    borderRadius: BorderRadius.circular(12),
-    border: Border.all(color: color.borderColor.darken(12)),
-    ),
-    padding: const EdgeInsets.symmetric(horizontal: 16),
-    child: Row(
-    children: [
-    Icon(
-    Icons.cloud_upload_outlined,
-    color: color.territoryColor,
-    size: 28,
-    ),
-    const SizedBox(width: 12),
-    Expanded(
-    child: Text(
-    hasFile ? fileName! : placeholder,
-    maxLines: 2,
-    overflow: TextOverflow.ellipsis,
-    style: TextStyle(
-    color: hasFile
-    ? color.textDefaultColor
-        : color.textDefaultColor.withOpacity(0.6),
-    ),
-    ),
-    ),
-    ],
-    ),
+        ],
+      ),
+      body: GoogleMap(
+        initialCameraPosition: CameraPosition(target: _current, zoom: 14.5),
+        markers: {
+          Marker(
+            markerId: const MarkerId('selected_location'),
+            position: _current,
+            draggable: true,
+            onDragEnd: (value) {
+              unawaited(_updateSelection(value));
+            },
           ),
-    ),
-      ],
+        },
+        onMapCreated: (controller) => _controller = controller,
+        onTap: (value) {
+          unawaited(_updateSelection(value));
+        },
+        zoomControlsEnabled: false,
+        myLocationButtonEnabled: false,
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _confirm,
+        icon: const Icon(Icons.check),
+        label: const Text('تأكيد'),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }
@@ -3043,13 +2518,11 @@ class _EmptyState extends StatelessWidget {
     required this.title,
     required this.subtitle,
     this.onAction,
-    this.actionLabel,
   });
 
   final String title;
   final String subtitle;
   final VoidCallback? onAction;
-  final String? actionLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -3083,7 +2556,7 @@ class _EmptyState extends StatelessWidget {
           if (onAction != null)
             OutlinedButton(
               onPressed: onAction,
-              child: Text(actionLabel ?? 'إعادة المحاولة'),
+              child: const Text('تشغيل الموقع'),
             ),
         ],
       ),

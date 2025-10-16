@@ -111,6 +111,9 @@ class Constant {
   static const int publicRootCategoryId = 6;
   static const int storeRootCategoryId = 6;
 
+  static List<int> delegatesShein = [];
+  static List<int> delegatesComputer = [];
+
 
 
   static List<PostedSinceItem> postedSince = [

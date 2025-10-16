@@ -339,22 +339,6 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
 
       if (prevVal is List) {
         if (isColor) {
-
-          final bool hasColorMaps = prevVal.any((element) {
-            if (element is Map) {
-              final dynamic code = element['code'] ?? element['hex'] ?? element['value'];
-              if (code is String && hexRegExp.hasMatch(ColorCatalog.sanitizeHex(code))) {
-                return true;
-              }
-            }
-            return false;
-          });
-
-          if (hasColorMaps) {
-            CustomField.fieldsData[key] = prevVal;
-            return;
-          }
-
           final hexes = prevVal
               .map((e) => ColorCatalog.sanitizeHex((e ?? '').toString()))
               .where((hex) => hexRegExp.hasMatch(hex))
@@ -368,11 +352,6 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
 
       } else {
         if (isColor) {
-          if (prevVal is Map) {
-            CustomField.fieldsData[key] = [prevVal];
-            return;
-          }
-
           final hex = ColorCatalog.sanitizeHex(prevVal.toString());
           if (!hexRegExp.hasMatch(hex)) return;
           CustomField.fieldsData[key] = [hex];

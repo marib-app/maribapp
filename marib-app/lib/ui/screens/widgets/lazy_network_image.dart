@@ -1,6 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 
 class LazyNetworkImage extends StatelessWidget {
   const LazyNetworkImage({
@@ -49,21 +48,26 @@ class LazyNetworkImage extends StatelessWidget {
   }
 
   Widget _defaultPlaceholder(BuildContext context) {
-    return ShimmerBox(
+    return Container(
       width: width,
       height: height,
-      borderRadius: BorderRadius.circular(12),
+      color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.2),
     );
   }
 
   Widget _defaultError(BuildContext context) {
-    return ShimmerBox(
+    return Container(
       width: width,
       height: height,
-      borderRadius: BorderRadius.circular(12),
-      animate: false,
-      baseColor:
-      Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.35),
+      alignment: Alignment.center,
+      color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.35),
+      child: Icon(
+        Icons.broken_image_outlined,
+        color: Theme.of(context).disabledColor,
+        size: (width != null && height != null)
+            ? (width!.clamp(16, 48))
+            : 24,
+      ),
     );
   }
 }

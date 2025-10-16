@@ -82,7 +82,6 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
 
       /// ✅ محتوى الصفحة
       body: SafeArea(
-        top: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

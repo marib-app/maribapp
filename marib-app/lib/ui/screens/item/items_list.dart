@@ -28,8 +28,7 @@ import 'package:marib/ui/screens/settings/main_activity.dart';
 import 'package:marib/ui/screens/native_ads_screen.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
-import 'package:marib/ui/widgets/slivers/catalog_scroll_view.dart';
-import 'package:marib/ui/widgets/slivers/catalog_section.dart';
+
 class ItemsList extends StatefulWidget {
   final String categoryId, categoryName;
   final List<String> categoryIds;
@@ -59,15 +58,6 @@ class ItemsList extends StatefulWidget {
 }
 
 class ItemsListState extends State<ItemsList> {
-
-  static const double _listItemExtent = 152;
-  static const double _gridMainAxisSpacing = 12;
-  static const double _gridCrossAxisSpacing = 12;
-
-
-
-
-
   late ScrollController controller;
   static TextEditingController searchController = TextEditingController();
   bool isFocused = false;
@@ -337,34 +327,29 @@ class ItemsListState extends State<ItemsList> {
                   ? widget.categoryName
                   : selectedcategoryName),
           bottomNavigationBar: bottomWidget(),
-          body: BlocBuilder<FetchItemFromCategoryCubit,
-              FetchItemFromCategoryState>(
-            builder: (context, state) {
-              final sections = _buildSectionsForState(context, state);
+          body: RefreshIndicator(
+            onRefresh: () async {
+              // Debug log to check if onRefresh is triggered
 
-              return RefreshIndicator(
-                onRefresh: () async {
-                  searchbody = {};
-                  Constant.itemFilter = null;
+              searchbody = {};
+              Constant.itemFilter = null;
 
-                  context
-                      .read<FetchItemFromCategoryCubit>()
-                      .fetchItemFromCategory(
-                    categoryId: int.parse(widget.categoryId),
-                    search: "",
-                  );
-                },
-                color: context.color.territoryColor,
-                child: CatalogScrollView(
-                  controller: controller,
-                  physics: const AlwaysScrollableScrollPhysics(
-                    parent: BouncingScrollPhysics(),
-                  ),
-                  sections: sections,
-                ),
+              context.read<FetchItemFromCategoryCubit>().fetchItemFromCategory(
+                categoryId: int.parse(widget.categoryId),
+                search: "",
               );
             },
-
+            color: context.color.territoryColor,
+            child: Column(
+              children: [
+                SliderWidget(interfaceType: widget.interfaceType),
+                SizedBox(
+                  height: 5,
+                ),
+                searchBarWidget(),
+                Expanded(child: fetchItems()),
+              ],
+            ),
           ),
         ),
       ),
@@ -603,253 +588,136 @@ class ItemsListState extends State<ItemsList> {
     );
   }
 
-  List<CatalogSection> _buildSectionsForState(
-      BuildContext context, FetchItemFromCategoryState state) {
-    final sections = <CatalogSection>[
-      CatalogBoxSection(
-        key: const ValueKey('items_slider_section'),
-        child: SliderWidget(interfaceType: widget.interfaceType),
-      ),
-      const CatalogBoxSection(
-        key: ValueKey('items_slider_spacing'),
-        child: SizedBox(height: 5),
-      ),
-      _buildSearchHeaderSection(context),
-    ];
+  Widget fetchItems() {
+    return BlocBuilder<FetchItemFromCategoryCubit, FetchItemFromCategoryState>(
+        builder: (context, state) {
+          if (state is FetchItemFromCategoryInProgress) {
+            return ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+              itemCount: 10,
+              itemBuilder: (context, index) {
+                return buildItemsShimmer(context);
+              },
+            );
+          }
 
-    if (state is FetchItemFromCategoryInProgress ||
-        state is FetchItemFromCategoryInitial) {
-      sections.addAll(_buildLoadingSections(context));
-      return sections;
-    }
+          if (state is FetchItemFromCategoryFailure) {
+            return Center(
+              child: Text(state.errorMessage),
+            );
+          }
+          if (state is FetchItemFromCategorySuccess) {
+            if (state.itemModel.isEmpty) {
+              return Center(
+                child: NoDataFound(
+                  onTap: () {
+                    context
+                        .read<FetchItemFromCategoryCubit>()
+                        .fetchItemFromCategory(
+                        categoryId: int.parse(
+                          widget.categoryId,
+                        ),
+                        search: searchController.text.toString());
+                  },
+                ),
+              );
+            }
+            return Column(
+              children: [
+                Expanded(child: mainChildren(state.itemModel)
 
-    if (state is FetchItemFromCategoryFailure) {
-      sections.add(_buildFailureSection(context, state.errorMessage));
-      return sections;
-    }
-
-    if (state is FetchItemFromCategorySuccess) {
-      final List<ItemModel> skeletons = state.itemSkeletons;
-
-      if (skeletons.isEmpty) {
-
-        sections.add(_buildEmptySection(context));
-      } else {
-        sections.addAll(_buildSuccessSections(context, skeletons));
-      }
-
-      if (state.isLoadingMore) {
-        sections.add(_buildLoadingMoreSection(context));
-      } else if (state.loadingMoreError) {
-        sections.add(_buildLoadMoreErrorSection(context));
-      }
-
-      return sections;
-    }
-
-    return sections;
+                ),
+                if (state.isLoadingMore) UiUtils.progress()
+              ],
+            );
+          }
+          return Container();
+        });
   }
 
-  CatalogSection _buildSearchHeaderSection(BuildContext context) {
-    final double headerHeight = 56.rh(context) + 24;
-
-    return CatalogPersistentHeaderSection(
-      key: const ValueKey('items_search_header'),
-      pinned: true,
-      delegate: _PinnedHeaderDelegate(
-        height: headerHeight,
-        child: ColoredBox(
-          color: context.color.secondaryColor,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: searchBarWidget(),
-          ),
-        ),
-      ),
+  void _navigateToDetails(BuildContext context, ItemModel item) {
+    Navigator.pushNamed(
+      context,
+      Routes.adDetailsScreen,
+      arguments: {'model': item},
     );
   }
 
-  List<CatalogSection> _buildLoadingSections(BuildContext context) {
-    return [
-      CatalogListSection(
-        key: const ValueKey('items_loading_shimmer'),
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
-        itemCount: 5,
-        itemExtent: _listItemExtent,
-        addAutomaticKeepAlives: false,
-        addRepaintBoundaries: false,
-        itemBuilder: (context, index) => _buildShimmerTile(context),
-      ),
-    ];
-  }
+  Widget mainChildren(List<ItemModel> items) {
+    List<Widget> children = [];
+    int gridCount = Constant.nativeAdsAfterItemNumber;
+    int total = items.length;
 
-  List<CatalogSection> _buildSuccessSections(
-      BuildContext context, List<ItemModel> items) {
-    final sections = <CatalogSection>[];
-    final int step = max(1, Constant.nativeAdsAfterItemNumber);
-
-    for (int start = 0; start < items.length; start += step) {
-      final int count = min(step, items.length - start);
-
+    for (int i = 0; i < total; i += gridCount /* + listCount*/) {
       if (isList) {
-        sections.add(_buildListSection(context, items, start, count));
-
+        children.add(_buildListViewSection(
+            context, i, min(gridCount, total - i), items));
       } else {
-        sections.add(_buildGridSection(context, items, start, count));
-
+        children.add(_buildGridViewSection(
+            context, i, min(gridCount, total - i), items));
       }
 
-      final int nextIndex = start + count;
-      if (nextIndex < items.length) {
-        sections.add(_buildAdSection(nextIndex));
+      int remainingItems = total - i - gridCount;
+      if (remainingItems > 0) {
+        children.add(NativeAdWidget(type: TemplateType.medium));
       }
     }
 
-    return sections;
-
+    return SingleChildScrollView(
+      controller: controller,
+      physics: BouncingScrollPhysics(),
+      child: Column(children: children),
+    );
   }
 
-  CatalogSection _buildListSection(
-      BuildContext context,
-      List<ItemModel> items,
-      int start,
-      int count,
-      ) {
-    return CatalogListSection(
-      key: ValueKey('items_list_${isList}_$start'),
+  Widget _buildListViewSection(BuildContext context, int startIndex,
+      int itemCount, List<ItemModel> items) {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 3),
-      itemCount: count,
-      itemExtent: _listItemExtent,
-      itemBuilder: (context, localIndex) {
-        final int globalIndex = start + localIndex;
-        final ItemModel item = items[globalIndex];
-        final Key cardKey = ValueKey(item.id ?? 'list_$globalIndex');
+      itemCount: itemCount,
+      itemBuilder: (context, index) {
+        ItemModel item = items[startIndex + index];
         return GestureDetector(
           onTap: () => _navigateToDetails(context, item),
-          child: ItemHorizontalCard(
-            key: cardKey,
-            item: item,
-          ),
+          child: ItemHorizontalCard(item: item),
         );
       },
     );
   }
 
-  CatalogSection _buildGridSection(
-      BuildContext context,
-      List<ItemModel> items,
-      int start,
-      int count,
-      ) {
-    return CatalogGridSection(
-      key: ValueKey('items_grid_${isList}_$start'),
+  Widget _buildGridViewSection(BuildContext context, int startIndex,
+      int itemCount, List<ItemModel> items) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
-      itemCount: count,
-
-
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
-        crossAxisCount: 2,
-        height: _gridItemHeight(context),
-        mainAxisSpacing: _gridMainAxisSpacing,
-        crossAxisSpacing: _gridCrossAxisSpacing,
-      ),
-      itemBuilder: (context, localIndex) {
-        final int globalIndex = start + localIndex;
-        final ItemModel item = items[globalIndex];
-        final Key cardKey = ValueKey(item.id ?? 'grid_$globalIndex');
-
-        return ICard(
-          key: cardKey,
-          item: item,
+          crossAxisCount: 2,
+          height: MediaQuery.of(context).size.height / 3.5.rh(context),
+          mainAxisSpacing: 7,
+          crossAxisSpacing: 10),
+      itemCount: itemCount,
+      itemBuilder: (context, index) {
+        ItemModel item = items[startIndex + index];
+        return GestureDetector(
+          onTap: () => _navigateToDetails(context, item),
+          child: ICard(item: item),
         );
       },
     );
   }
 
-  CatalogSection _buildAdSection(int index) {
-    return CatalogBoxSection(
-      key: ValueKey('items_native_ad_$index'),
-      child: NativeAdWidget(
-        key: ValueKey('native_ad_widget_$index'),
-        type: TemplateType.medium,
-      ),
-    );
-  }
-
-  CatalogSection _buildEmptySection(BuildContext context) {
-    return CatalogSliverSection(
-      key: const ValueKey('items_empty_state'),
-      sliver: SliverFillRemaining(
-        hasScrollBody: false,
-        child: Center(
-          child: NoDataFound(
-            onTap: _retryInitialFetch,
-          ),
-        ),
-      ),
-    );
-  }
-
-  CatalogSection _buildFailureSection(BuildContext context, String message) {
-    final String effectiveMessage = message.isEmpty
-        ? 'somethingWentWrong'.translate(context)
-        : message;
-
-    return CatalogSliverSection(
-      key: const ValueKey('items_failure_state'),
-      sliver: SliverFillRemaining(
-        hasScrollBody: false,
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Text(
-              effectiveMessage,
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  CatalogSection _buildLoadingMoreSection(BuildContext context) {
-    return CatalogBoxSection(
-      key: const ValueKey('items_loading_more'),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Center(
-          child: UiUtils.progress(
-            normalProgressColor: context.color.territoryColor,
-          ),
-        ),
-      ),
-    );
-  }
-
-  CatalogSection _buildLoadMoreErrorSection(BuildContext context) {
-    return CatalogBoxSection(
-      key: const ValueKey('items_loading_more_error'),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-        child: Text(
-          'somethingWentWrong'.translate(context),
-          textAlign: TextAlign.center,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildShimmerTile(BuildContext context) {
-
+  Widget buildItemsShimmer(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Container(
         height: 120.rh(context),
         decoration: BoxDecoration(
-          border: Border.all(width: 1.5, color: context.color.borderColor),
-          color: context.color.secondaryColor,
-          borderRadius: BorderRadius.circular(18),
-        ),
+            border: Border.all(width: 1.5, color: context.color.borderColor),
+            color: context.color.secondaryColor,
+            borderRadius: BorderRadius.circular(18)),
         child: Row(
           children: [
             CustomShimmer(
@@ -882,7 +750,7 @@ class ItemsListState extends State<ItemsList> {
                   width: 80.rw(context),
                   height: 10,
                   borderRadius: 7,
-                ),
+                )
               ],
             )
           ],
@@ -890,47 +758,4 @@ class ItemsListState extends State<ItemsList> {
       ),
     );
   }
-
-  void _navigateToDetails(BuildContext context, ItemModel item) {
-    Navigator.pushNamed(
-      context,
-      Routes.adDetailsScreen,
-      arguments: {'model': item},
-    );
-  }
-
-  void _retryInitialFetch() {
-    context.read<FetchItemFromCategoryCubit>().fetchItemFromCategory(
-      categoryId: int.parse(widget.categoryId),
-      search: searchController.text.toString(),
-    );
-  }
-
-  double _gridItemHeight(BuildContext context) => 220.rh(context);
-}
-
-class _PinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
-  _PinnedHeaderDelegate({required this.child, required this.height});
-
-  final Widget child;
-  final double height;
-
-  @override
-  double get minExtent => height;
-
-  @override
-  double get maxExtent => height;
-
-  @override
-  Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return SizedBox.expand(child: child);
-  }
-
-  @override
-  bool shouldRebuild(_PinnedHeaderDelegate oldDelegate) {
-    return oldDelegate.child != child || oldDelegate.height != height;
-  }
-
-
 }

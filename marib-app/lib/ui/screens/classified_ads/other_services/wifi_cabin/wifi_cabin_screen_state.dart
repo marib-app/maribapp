@@ -4,8 +4,6 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
   late final WifiCabinController _controller;
   final WifiRepository _repository = const WifiRepository();
   late final WifiPurchasesManager _purchasesManager;
-  final TextEditingController _searchController = TextEditingController();
-  final FocusNode _searchFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -22,8 +20,6 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
   void dispose() {
     _purchasesManager.dispose();
     _controller.dispose();
-    _searchController.dispose();
-    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -36,16 +32,6 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
       animation: _controller,
       builder: (context, _) {
         final state = _controller.viewState;
-
-        if (_searchController.text != _controller.query) {
-          _searchController.value = _searchController.value.copyWith(
-            text: _controller.query,
-            selection: TextSelection.collapsed(
-              offset: _controller.query.length,
-            ),
-          );
-        }
-
 
         return Scaffold(
           backgroundColor: context.color.backgroundColor,
@@ -69,16 +55,11 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: Column(
               children: [
-                _SearchHeaderBar(
-                  controller: _searchController,
-                  focusNode: _searchFocusNode,
-                  isLoading: state.status == WifiCabinLoadStatus.loading &&
-                      !state.hasData,
-                  onChanged: (value) => _controller.updateQuery(value),
-                  onSubmitted: (value) =>
-                      _controller.updateQuery(value, immediate: true),
-                  onClear: _controller.clearQuery,
-                  onRefresh: () => _controller.refreshNetworks(force: true),
+                _HeaderFilterBar(
+                  locDenied: _controller.locationDenied,
+                  maxKm: _controller.maxKm,
+                  onEnableLocation: () => _controller.enableLocation(),
+                  onKmChanged: _controller.updateMaxKm,
                 ),
                 const SizedBox(height: 12),
                 const _ServiceOverview(),
@@ -157,8 +138,8 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
       key: key,
       networks: state.networks,
       onSelect: (network) => _openPlansSheet(context, network),
-      onRefresh: () => _controller.refreshNetworks(force: true),
-      searchQuery: _controller.query,
+      locationDenied: _controller.locationDenied,
+      onEnableLocation: () => _controller.enableLocation(),
     );
   }
 
@@ -242,66 +223,9 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
   }
 
   Future<void> _showCodesDialog(WifiPurchase purchase) async {
-    List<String> codes = List<String>.from(purchase.codes);
-    int codeId = purchase.id;
-    final int? transactionId = purchase.transactionId;
+    final List<String> codes = purchase.codes;
+    if (codes.isEmpty) return;
     final messenger = ScaffoldMessenger.of(context);
-
-    bool isMasked(String value) {
-      final String trimmed = value.trim();
-      if (trimmed.isEmpty) {
-        return false;
-      }
-      if (!trimmed.contains('*')) {
-        return false;
-      }
-      return trimmed.replaceAll('*', '').trim().isEmpty;
-    }
-
-
-    bool fetchedFromServer = false;
-
-    if ((codes.isEmpty || codes.every(isMasked)) && transactionId != null && transactionId > 0) {
-      try {
-        final WifiPurchase? revealed =
-        await _repository.revealTransactionCode(transactionId);
-        if (revealed == null || revealed.codes.isEmpty) {
-          messenger.showSnackBar(
-            const SnackBar(content: Text('لم يتم إصدار كود بعد لهذه العملية.')),
-          );
-          return;
-        }
-        codes = List<String>.from(revealed.codes);
-        if (revealed.id != 0) {
-          codeId = revealed.id;
-        }
-        fetchedFromServer = true;
-      } catch (_) {
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('تعذّر استرجاع الكود من الخادم. حاول مرة أخرى لاحقاً.'),
-          ),
-        );
-      }
-    }
-
-    if (codes.isEmpty) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('لم يتم إصدار كود بعد لهذه العملية.')),
-      );
-      return;
-    }
-
-    if (!fetchedFromServer && codeId > 0) {
-
-
-      unawaited(
-        _repository
-            .logCodeEvent(codeId: codeId, action: 'view')
-            .catchError((_) {}),
-      );
-    }
-
     await showDialog<void>(
       context: context,
       builder: (dialogContext) {
@@ -318,18 +242,11 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
               itemCount: codes.length,
               separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (_, index) {
-                final String code = codes[index];
+                final code = codes[index];
                 return _CodeTile(
                   code: code,
                   onCopy: () {
                     Clipboard.setData(ClipboardData(text: code));
-                    if (codeId > 0) {
-                      unawaited(
-                        _repository
-                            .logCodeEvent(codeId: codeId, action: 'copy')
-                            .catchError((_) {}),
-                      );
-                    }
                     messenger.showSnackBar(
                       SnackBar(content: Text('تم نسخ الكود: $code')),
                     );
@@ -343,13 +260,6 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
               TextButton(
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: codes.join('\n')));
-                  if (codeId > 0) {
-                    unawaited(
-                      _repository
-                          .logCodeEvent(codeId: codeId, action: 'copy')
-                          .catchError((_) {}),
-                    );
-                  }
                   messenger.showSnackBar(
                     const SnackBar(content: Text('تم نسخ جميع الأكواد.')),
                   );
@@ -370,7 +280,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
     final dynamic result = await Navigator.of(context).push<dynamic>(
       MaterialPageRoute(
         builder: (_) => _AddNetworkScreen(
-
+          userLatLng: _controller.currentCenter,
           repository: _repository,
         ),
       ),
@@ -387,7 +297,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
       backgroundColor: context.color.backgroundColor,
       builder: (_) => _AddNetworkSheet(
         repository: _repository,
-
+        userLatLng: _controller.currentCenter,
       ),
     );
 
@@ -400,8 +310,8 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
       return;
     }
 
-    await _controller.refreshNetworks(force: true);
-    marib-app/lib/utils/api.dart    if (!mounted) return;
+    await _controller.refreshNetworks();
+    if (!mounted) return;
 
     final String? message = _formatNetworkResultMessage(result);
     if (message == null) {

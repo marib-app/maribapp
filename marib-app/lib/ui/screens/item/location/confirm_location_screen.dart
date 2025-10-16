@@ -13,7 +13,6 @@ import 'package:marib/data/cubits/item/manage_item_cubit.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'dart:math' as math;
-import 'package:marib/utils/ecommerce_department.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -117,7 +116,7 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
   double? latitude, longitude;
   CameraPosition? _cameraPosition;
   final Set<Marker> _markers = Set();
-  GoogleMapController? _mapController;
+  late GoogleMapController _mapController;
   var markerMove;
   bool _openedAppSettings = false;
   MapType _mapType = MapType.normal;
@@ -329,6 +328,89 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
 
 
 
+  Future<void> _onPostNowPressed() async {
+    if (latitude == null || longitude == null) {
+      HelperUtils.showSnackBarMessage(context, "يرجى تحديد موقع صالح على الخريطة");
+      return;
+    }
+
+
+    try {
+      final cloudData = (getCloudData("with_more_details") as Map<String, dynamic>?) ??
+          <String, dynamic>{};
+
+      final AddressComponent? selectedAddress = formatedAddress;
+      final cleanedArea = AddressComponent._clean(selectedAddress?.area);
+      final cleanedCity = AddressComponent._clean(selectedAddress?.city);
+      final cleanedState = AddressComponent._clean(selectedAddress?.state);
+      final cleanedCountry = AddressComponent._clean(selectedAddress?.country);
+      final String fallbackAddress =
+          'الموقع المحدد (${latitude!.toStringAsFixed(5)}, ${longitude!.toStringAsFixed(5)})';
+
+
+
+      final String resolvedAddress =
+          AddressComponent._clean(selectedAddress?.mixed) ?? fallbackAddress;
+      cloudData['address'] = resolvedAddress;
+
+      if (cleanedArea != null) {
+        cloudData['area'] = cleanedArea;
+      } else {
+        cloudData.remove('area');
+      }
+
+
+      cloudData['latitude'] = latitude;
+      cloudData['longitude'] = longitude;
+      cloudData['location_latitude'] = latitude;
+      cloudData['location_longitude'] = longitude;
+
+      if (cleanedCountry != null) {
+        cloudData['country'] = cleanedCountry;
+
+      } else {
+        cloudData.remove('country');
+      }
+
+      final String resolvedCity = cleanedCity ?? cleanedArea ?? fallbackAddress;
+      cloudData['city'] = resolvedCity;
+
+      if (cleanedState != null) {
+        cloudData['state'] = cleanedState;
+      } else {
+        cloudData.remove('state');
+
+
+      }
+      if (selectedAddress?.areaId != null) {
+        cloudData['area_id'] = selectedAddress!.areaId;
+      } else {
+        cloudData.remove('area_id');
+      }
+
+      cloudData.removeWhere((key, value) => value == null || (value is String && value.isEmpty));
+
+
+
+      final cubit = context.read<ManageItemCubit>();
+      if (widget.isEdit == true) {
+         cubit.manage(ManageItemType.edit, cloudData, widget.mainImage, widget.otherImage ?? []);
+      } else {
+        if (widget.mainImage == null) {
+          HelperUtils.showSnackBarMessage(context, "يرجى اختيار صورة رئيسية للإعلان");
+          return;
+        }
+         cubit.manage(ManageItemType.add, cloudData, widget.mainImage!, widget.otherImage ?? []);
+      }
+    } catch (e) {
+      HelperUtils.showSnackBarMessage(context, "حدث خطأ غير متوقع");
+    }
+  }
+
+
+
+
+
 
 
   Future<void> _goToUserLocation() async {
@@ -346,9 +428,8 @@ class _ConfirmLocationScreenState extends CloudState<ConfirmLocationScreen>
       });
 
       // حرّك الكاميرا إذا الكنترولر جاهز
-      final controller = _mapController;
-      if (controller != null) {
-        controller.animateCamera(
+      if (_mapController != null) {
+        _mapController!.animateCamera(
           CameraUpdate.newCameraPosition(_cameraPosition!),
         );
       }

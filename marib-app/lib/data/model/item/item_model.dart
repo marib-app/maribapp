@@ -3,7 +3,6 @@ import 'package:marib/data/model/custom_field/custom_field_model.dart';
 import 'package:marib/data/model/seller_ratings_model.dart';
 import 'package:marib/utils/currency_utils.dart';
 import 'package:marib/utils/delivery_department.dart';
-import 'package:marib/utils/slider_interface_mapper.dart';
 
 
 
@@ -15,10 +14,7 @@ class ItemSummary {
   final String? slug;
   final String? description;
   final double? price;
-  final double? finalPrice;
   final String? image;
-  final String? thumbnailUrl;
-  final String? thumbnailFallbackUrl;
   final String? productLink;
   final dynamic watermarkImage;
   final double? latitude;
@@ -38,9 +34,6 @@ class ItemSummary {
   final String? city;
   final String? state;
   final String? country;
-  final ItemDiscount? discount;
-
-
 
   const ItemSummary({
     this.id,
@@ -48,10 +41,7 @@ class ItemSummary {
     this.slug,
     this.description,
     this.price,
-    this.finalPrice,
     this.image,
-    this.thumbnailUrl,
-    this.thumbnailFallbackUrl,
     this.productLink,
     this.watermarkImage,
     this.latitude,
@@ -71,7 +61,6 @@ class ItemSummary {
     this.city,
     this.state,
     this.country,
-    this.discount,
   });
 
   factory ItemSummary.fromJson(Map<String, dynamic> json) {
@@ -81,10 +70,7 @@ class ItemSummary {
       slug: json['slug'],
       description: json['description'],
       price: ItemModel._toDouble(json['price']),
-      finalPrice: ItemModel._toDouble(json['final_price']) ?? ItemModel._toDouble(json['price']),
-      image: json['image'] ?? json['thumbnail_fallback_url'] ?? json['thumbnail_url'],
-      thumbnailUrl: json['thumbnail_url'] ?? json['thumbnail'] ?? json['thumb'],
-      thumbnailFallbackUrl: json['thumbnail_fallback_url'] ?? json['thumbnail_fallback'] ?? json['image'],
+      image: json['image'],
       productLink: json['product_link'],
       watermarkImage: json['watermark_image'],
       latitude: ItemModel._toDouble(json['latitude'] ?? json['lat']),
@@ -104,7 +90,6 @@ class ItemSummary {
       city: json['city'],
       state: json['state'],
       country: json['country'],
-      discount: ItemDiscount.fromJson(json['discount']),
     );
   }
 
@@ -115,10 +100,7 @@ class ItemSummary {
       'slug': slug,
       'description': description,
       'price': price,
-      'final_price': finalPrice,
       'image': image,
-      'thumbnail_url': thumbnailUrl,
-      'thumbnail_fallback_url': thumbnailFallbackUrl,
       'product_link': productLink,
       'watermark_image': watermarkImage,
       'latitude': latitude,
@@ -138,7 +120,6 @@ class ItemSummary {
       'city': city,
       'state': state,
       'country': country,
-      'discount': discount?.toJson(),
     };
   }
 }
@@ -152,8 +133,6 @@ extension ItemSummaryX on ItemSummary {
       description: description,
       price: price,
       image: image,
-      thumbnailUrl: thumbnailUrl,
-      thumbnailFallbackUrl: thumbnailFallbackUrl,
       productLink: productLink,
       watermarkimage: watermarkImage,
       latitude: latitude,
@@ -175,8 +154,6 @@ extension ItemSummaryX on ItemSummary {
       city: city,
       state: state,
       country: country,
-      finalPrice: finalPrice ?? price,
-      discount: discount,
     );
   }
 }
@@ -193,12 +170,7 @@ class ItemModel {
   String? slug;
   String? description;
   double? price;
-  double? finalPrice;
   String? image;
-  String? thumbnailUrl;
-  String? thumbnailFallbackUrl;
-  String? detailImageUrl;
-  String? detailImageFallbackUrl;
   dynamic watermarkimage;
 
   double? _latitude;
@@ -214,13 +186,12 @@ class ItemModel {
   String? videoLink;
   String? reviewLink;
   String? productLink;
-  ItemDiscount? discount;
+
   User? user;
   List<GalleryImages>? galleryImages;
   List<ItemOffers>? itemOffers;
   CategoryModel? category;
   List<CustomFieldModel>? customFields;
-  ItemTipsMetadata? tips;
 
   bool? isLike;
   bool? isFeature;
@@ -262,12 +233,7 @@ class ItemModel {
     this.category,
     this.description,
     this.price,
-    this.finalPrice,
     this.image,
-    String? thumbnailUrl,
-    String? thumbnailFallbackUrl,
-    String? detailImageUrl,
-    String? detailImageFallbackUrl,
     this.watermarkimage,
     dynamic latitude,
     dynamic longitude,
@@ -277,8 +243,6 @@ class ItemModel {
     this.status,
     this.active,
     this.totalLikes,
-    this.discount,
-    this.tips,
     this.currencyCode,
     this.views,
     this.videoLink,
@@ -318,12 +282,7 @@ class ItemModel {
     String? slug,
     String? description,
     double? price,
-    double? finalPrice,
     String? image,
-    String? thumbnailUrl,
-    String? thumbnailFallbackUrl,
-    String? detailImageUrl,
-    String? detailImageFallbackUrl,
     dynamic watermarkimage,
     String? currencyCode,
     dynamic latitude,
@@ -339,7 +298,6 @@ class ItemModel {
     String? videoLink,
     String? reviewLink,
     String? productLink,
-    ItemDiscount? discount,
 
     User? user,
     List<GalleryImages>? galleryImages,
@@ -363,7 +321,6 @@ class ItemModel {
     int? isPurchased,
     String? currency,
     List<UserRatings>? review,
-    ItemTipsMetadata? tips,
   }) {
     return ItemModel(
       id: id ?? this.id,
@@ -372,14 +329,7 @@ class ItemModel {
       category: category ?? this.category,
       description: description ?? this.description,
       price: price ?? this.price,
-      finalPrice: finalPrice ?? this.finalPrice,
       image: image ?? this.image,
-      thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
-      thumbnailFallbackUrl:
-      thumbnailFallbackUrl ?? this.thumbnailFallbackUrl,
-      detailImageUrl: detailImageUrl ?? this.detailImageUrl,
-      detailImageFallbackUrl:
-      detailImageFallbackUrl ?? this.detailImageFallbackUrl,
       watermarkimage: watermarkimage ?? this.watermarkimage,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
@@ -393,7 +343,7 @@ class ItemModel {
       videoLink: videoLink ?? this.videoLink,
       reviewLink: reviewLink ?? this.reviewLink,
       productLink: productLink ?? this.productLink,
-      discount: discount ?? this.discount,
+
       user: user ?? this.user,
       galleryImages: galleryImages ?? this.galleryImages,
       itemOffers: itemOffers ?? this.itemOffers,
@@ -418,7 +368,6 @@ class ItemModel {
       isPurchased: isPurchased ?? this.isPurchased,
       review: review ?? this.review,
       departmentSlug: departmentSlug ?? this.departmentSlug,
-      tips: tips ?? this.tips,
 
     );
   }
@@ -435,7 +384,6 @@ class ItemModel {
 
     // price يدعم int/double/String
     m.price = _toDouble(json['price']);
-    m.finalPrice = _toDouble(json['final_price']) ?? m.price;
 
     m.id = json['id'];
     m.name = json['name'];
@@ -450,15 +398,7 @@ class ItemModel {
     m.views = _toInt(json['clicks']);
     m.description = json['description'];
 
-    m.image = json['image'] ?? json['thumbnail_fallback_url'] ?? json['thumbnail_url'];
-    m.thumbnailUrl = json['thumbnail_url'] ?? json['thumbnail'] ?? json['thumb'];
-    m.thumbnailFallbackUrl =
-        json['thumbnail_fallback_url'] ?? json['thumbnail_fallback'] ?? json['image'];
-    m.detailImageUrl = json['detail_image_url'] ?? json['detailImageUrl'];
-    m.detailImageFallbackUrl = json['detail_image_fallback_url'] ??
-        json['detail_image_fallback'] ??
-        json['detail_image'];
-
+    m.image = json['image'];
     m.watermarkimage = json['watermark_image'];
 
     // يدعم مفاتيح بديلة lat/lng
@@ -473,7 +413,6 @@ class ItemModel {
     m.videoLink = json['video_link'];
     m.reviewLink = json['review_link'];
     m.productLink = json['product_link'];
-    m.discount = ItemDiscount.fromJson(json['discount']);
 
     m.isLike = _toBool(json['is_liked']);
     m.isFeature = _toBool(json['is_feature']);
@@ -498,14 +437,7 @@ class ItemModel {
     m.state = json['state'];
     m.country = json['country'];
     m.isPurchased = _toInt(json['is_purchased']);
-    if (json['tips'] is Map<String, dynamic>) {
-      m.tips = ItemTipsMetadata.fromJson(
-          Map<String, dynamic>.from(json['tips'] as Map<String, dynamic>));
-    } else if (json['tips'] is Map) {
-      m.tips = ItemTipsMetadata.fromJson(
-          (json['tips'] as Map).map((dynamic key, dynamic value) =>
-              MapEntry(key.toString(), value)));
-    }
+
     // review أو seller_review (List أو Map)
     final reviewsRaw = json['review'] ?? json['seller_review'];
     if (reviewsRaw != null) {
@@ -557,14 +489,9 @@ class ItemModel {
     data['slug'] = slug;
     data['description'] = description;
     data['price'] = price;
-    data['final_price'] = finalPrice;
     data['total_likes'] = totalLikes;
     data['clicks'] = views;
     data['image'] = image;
-    data['thumbnail_url'] = thumbnailUrl;
-    data['thumbnail_fallback_url'] = thumbnailFallbackUrl;
-    data['detail_image_url'] = detailImageUrl;
-    data['detail_image_fallback_url'] = detailImageFallbackUrl;
     data['watermark_image'] = watermarkimage;
     data['latitude'] = latitude;
     data['longitude'] = longitude;
@@ -576,9 +503,6 @@ class ItemModel {
     data['video_link'] = videoLink;
     data['review_link'] = reviewLink;
     data['product_link'] = productLink;
-    if (discount != null) {
-      data['discount'] = discount!.toJson();
-    }
     data['is_liked'] = isLike;
     data['is_feature'] = isFeature;
     data['created_at'] = created;
@@ -620,10 +544,6 @@ class ItemModel {
     }
     if (customFields != null) {
       data['custom_fields'] = customFields!.map((v) => v.toMap()).toList();
-    }
-
-    if (tips != null) {
-      data['tips'] = tips!.toJson();
     }
     return data;
   }
@@ -667,118 +587,14 @@ class ItemModel {
     addCandidate(json['department_advertiser']);
 
     for (final String candidate in candidates) {
-      final String? normalizedInterface =
-      SliderInterfaceMapper.normalize(candidate);
-      if (normalizedInterface == 'public_ads' ||
-          normalizedInterface == 'real_estate_services') {
-        return normalizedInterface;
-      }
-
-      final String condensed =
-      _normalizeDepartmentMatchKey(normalizedInterface ?? candidate);
-      if (_looksLikePublicAudience(condensed)) {
-        return 'public_ads';
-      }
-      if (_looksLikeRealEstate(condensed)) {
-        return 'real_estate_services';
-      }
-    }
-
-
-
-
-    for (final String candidate in candidates) {
       final String? normalized = normalizeDeliveryDepartment(candidate);
-      if (normalized == 'shein' ||
-          normalized == 'computer' ||
-          normalized == 'store') {
+      if (normalized != null) {
         return normalized;
       }
     }
 
     return candidates.isNotEmpty ? candidates.first : null;
   }
-
-
-  static String _normalizeDepartmentMatchKey(String? raw) {
-    if (raw == null) {
-      return '';
-    }
-    String value = raw.toLowerCase();
-    value = value.replaceAll(RegExp(r'[إأآٱ]'), 'ا');
-    value = value.replaceAll(RegExp(r'ة'), 'ه');
-    value = value.replaceAll(RegExp(r'ى'), 'ي');
-    value = value.replaceAll(RegExp(r'ؤ'), 'و');
-    value = value.replaceAll(RegExp(r'ئ'), 'ي');
-    value = value.replaceAll(RegExp(r'[\s_\-]+'), '');
-    value = value.replaceAll(RegExp(r'[^a-z0-9\u0621-\u064a]+'), '');
-    return value;
-  }
-
-  static bool _looksLikePublicAudience(String condensed) {
-    if (condensed.isEmpty) {
-      return false;
-    }
-
-    const Set<String> keywords = <String>{
-      'public',
-      'general',
-      'audience',
-      'publicads',
-      'publicaudience',
-      'publicaudienceads',
-      'اعلان',
-      'اعلانات',
-      'الجمهور',
-      'جمهور',
-      'عام',
-      'العام',
-      'عامه',
-      'القسمالعام',
-      'قسمعام',
-      'قسمالجمهور',
-      'قسمالجمهورالعام',
-    };
-
-    for (final String keyword in keywords) {
-      if (condensed.contains(keyword)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  static bool _looksLikeRealEstate(String condensed) {
-    if (condensed.isEmpty) {
-      return false;
-    }
-
-    const Set<String> keywords = <String>{
-      'realestate',
-      'realestateservices',
-      'realestateads',
-      'realestatedepartment',
-      'عقار',
-      'العقار',
-      'عقارات',
-      'العقارات',
-      'عقاريا',
-      'العقاريا',
-      'قسمالعقارات',
-      'قسمالعقاريه',
-      'اراضي',
-      'الاراضي',
-    };
-
-    for (final String keyword in keywords) {
-      if (condensed.contains(keyword)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-
 
   // ===== helpers =====
   static double? _toDouble(dynamic v) {
@@ -808,164 +624,6 @@ class ItemModel {
     return null;
   }
 }
-
-
-
-class ItemDiscount {
-  final String? type;
-  final double? value;
-  final DateTime? start;
-  final DateTime? end;
-  final bool isActive;
-
-  const ItemDiscount({
-    this.type,
-    this.value,
-    this.start,
-    this.end,
-    this.isActive = false,
-  });
-
-  static ItemDiscount? fromJson(dynamic json) {
-    if (json == null) {
-      return null;
-    }
-
-    if (json is! Map) {
-      return null;
-    }
-
-    final Map<String, dynamic> map = Map<String, dynamic>.from(json);
-
-    return ItemDiscount(
-      type: map['type'] as String?,
-      value: ItemModel._toDouble(map['value']),
-      start: _parseDate(map['start']),
-      end: _parseDate(map['end']),
-      isActive: ItemModel._toBool(map['is_active']) ?? false,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return <String, dynamic>{
-      'type': type,
-      'value': value,
-      'start': start?.toIso8601String(),
-      'end': end?.toIso8601String(),
-      'is_active': isActive,
-    };
-  }
-
-  static DateTime? _parseDate(dynamic value) {
-    if (value is String && value.isNotEmpty) {
-      return DateTime.tryParse(value);
-    }
-
-    return null;
-  }
-}
-
-
-
-class ItemTipsMetadata {
-  const ItemTipsMetadata({
-    this.returnPolicyText,
-    this.productLink,
-    this.actions = const <Map<String, dynamic>>[],
-    this.raw,
-  });
-
-  factory ItemTipsMetadata.fromJson(Map<String, dynamic> json) {
-    List<Map<String, dynamic>> _normalizeActions(dynamic value) {
-      if (value is List<Map<String, dynamic>>) {
-        return value;
-      }
-      if (value is List) {
-        return value
-            .whereType<Map>()
-            .map((Map entry) => entry.map(
-              (dynamic key, dynamic val) =>
-              MapEntry(key.toString(), val),
-        ))
-            .toList();
-      }
-      if (value is Map<String, dynamic>) {
-        return value.values
-            .whereType<Map>()
-            .map((Map entry) => entry.map(
-              (dynamic key, dynamic val) =>
-              MapEntry(key.toString(), val),
-        ))
-            .toList();
-      }
-      if (value is Map) {
-        return value.values
-            .whereType<Map>()
-            .map((Map entry) => entry.map(
-              (dynamic key, dynamic val) =>
-              MapEntry(key.toString(), val),
-        ))
-            .toList();
-      }
-      return const <Map<String, dynamic>>[];
-    }
-
-    String? _coerceString(dynamic value) {
-      if (value == null) return null;
-      if (value is String) {
-        final String trimmed = value.trim();
-        return trimmed.isEmpty ? null : trimmed;
-      }
-      return value.toString();
-    }
-
-    final String? returnPolicyText = _coerceString(
-      json['return_policy_text'] ?? json['returnPolicyText'],
-    );
-
-    final String? productLink = _coerceString(
-      json['product_link'] ?? json['productLink'],
-    );
-
-    return ItemTipsMetadata(
-      returnPolicyText: returnPolicyText,
-      productLink: productLink,
-      actions: _normalizeActions(json['actions']),
-      raw: json,
-    );
-  }
-
-  final String? returnPolicyText;
-  final String? productLink;
-  final List<Map<String, dynamic>> actions;
-  final Map<String, dynamic>? raw;
-
-  Map<String, dynamic> toJson() {
-    return <String, dynamic>{
-      if (returnPolicyText != null) 'return_policy_text': returnPolicyText,
-      if (productLink != null) 'product_link': productLink,
-      if (actions.isNotEmpty) 'actions': actions,
-      if (raw != null) ...raw!,
-    };
-  }
-
-  ItemTipsMetadata copyWith({
-    String? returnPolicyText,
-    String? productLink,
-    List<Map<String, dynamic>>? actions,
-    Map<String, dynamic>? raw,
-  }) {
-    return ItemTipsMetadata(
-      returnPolicyText: returnPolicyText ?? this.returnPolicyText,
-      productLink: productLink ?? this.productLink,
-      actions: actions ?? this.actions,
-      raw: raw ?? this.raw,
-    );
-  }
-}
-
-
-
 
 class User {
   int? id;
@@ -1044,35 +702,15 @@ class User {
 class GalleryImages {
   int? id;
   String? image;
-  String? thumbnailUrl;
-  String? thumbnailFallbackUrl;
-  String? detailImageUrl;
-  String? detailImageFallbackUrl;
   String? createdAt;
   String? updatedAt;
   int? itemId;
 
-  GalleryImages({
-    this.id,
-    this.image,
-    this.thumbnailUrl,
-    this.thumbnailFallbackUrl,
-    this.detailImageUrl,
-    this.detailImageFallbackUrl,
-    this.createdAt,
-    this.updatedAt,
-    this.itemId,
-  });
+  GalleryImages({this.id, this.image, this.createdAt, this.updatedAt, this.itemId});
 
   GalleryImages.fromJson(Map<String, dynamic> json) {
     id = ItemModel._toInt(json['id']);
-    image = json['image'] ?? json['thumbnail_fallback_url'] ?? json['thumbnail_url'];
-    thumbnailUrl = json['thumbnail_url'] ?? json['thumbnail'];
-    thumbnailFallbackUrl =
-        json['thumbnail_fallback_url'] ?? json['thumbnail_fallback'] ?? json['image'];
-    detailImageUrl = json['detail_image_url'];
-    detailImageFallbackUrl =
-        json['detail_image_fallback_url'] ?? json['detail_image_fallback'];
+    image = json['image'];
     createdAt = json['created_at'];
     updatedAt = json['updated_at'];
     itemId = ItemModel._toInt(json['item_id']);
@@ -1082,10 +720,6 @@ class GalleryImages {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['id'] = id;
     data['image'] = image;
-    data['thumbnail_url'] = thumbnailUrl;
-    data['thumbnail_fallback_url'] = thumbnailFallbackUrl;
-    data['detail_image_url'] = detailImageUrl;
-    data['detail_image_fallback_url'] = detailImageFallbackUrl;
     data['created_at'] = createdAt;
     data['updated_at'] = updatedAt;
     data['item_id'] = itemId;
@@ -1095,7 +729,6 @@ class GalleryImages {
 
 class ItemOffers {
   int? id;
-
   int? sellerId;
   int? buyerId;
   String? createdAt;

@@ -45,26 +45,14 @@ class CategoryWidgetShein extends StatelessWidget {
             }
             // Split categories into pages of 12 (4 columns x 3 rows)
             final int itemsPerPage = 12;
-            final bool showSpecialTile =
-            (parentCategoryId == null || parentCategoryId == 0);
-            final bool hasCategories = categoriesToShow.isNotEmpty;
-
-            // إذا لم يكن لدينا أي عناصر لنظهرها (ولا حتى الزر الخاص)
-            // فلن ننشئ PageView فارغًا كي لا يتسبب في أخطاء لمس.
-            if (!hasCategories && !showSpecialTile) {
-              return const SizedBox.shrink();
-            }
-
-            final int basePageCount =
+            final int pageCount =
                 (categoriesToShow.length / itemsPerPage).ceil();
-            final int pageCount = basePageCount == 0 ? 1 : basePageCount;
-
             List<List<Object>> pages = List.generate(
               pageCount,
               (page) {
                 final List<Object> pageList = [];
-                if (page == 0 && showSpecialTile) {
-
+                if (page == 0 &&
+                    (parentCategoryId == null || parentCategoryId == 0)) {
                   pageList.add({'special': true});
                 }
                 pageList.addAll(
@@ -76,10 +64,6 @@ class CategoryWidgetShein extends StatelessWidget {
                 return pageList;
               },
             );
-            if (pages.isEmpty) {
-              return const SizedBox.shrink();
-            }
-
             return Padding(
               padding: const EdgeInsets.only(top: 10),
               child: SizedBox(

@@ -6,13 +6,7 @@ import 'package:marib/utils/network/networkAvailability.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:convert';
 import 'package:marib/data/model/social_link_model.dart';
-import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:marib/data/model/social_link_model.dart';
-import 'package:marib/data/repositories/delegate/delegate_sections_repository.dart';
-import 'package:marib/utils/hive_utils.dart';
 
 
 abstract class FetchSystemSettingsState {}
@@ -71,18 +65,8 @@ class FetchSystemSettingsFailure extends FetchSystemSettingsState {
 }
 
 class FetchSystemSettingsCubit extends Cubit<FetchSystemSettingsState> {
-  FetchSystemSettingsCubit({
-    SystemRepository? systemRepository,
-    DelegateSectionsRepository? delegateSectionsRepository,
-  })  : _systemRepository = systemRepository ?? SystemRepository(),
-        _delegateSectionsRepository =
-            delegateSectionsRepository ?? DelegateSectionsRepository(),
-        super(FetchSystemSettingsInitial());
-
-  final SystemRepository _systemRepository;
-  final DelegateSectionsRepository _delegateSectionsRepository;
-  String? _delegateSectionsFetchedForUserId;
-
+  FetchSystemSettingsCubit() : super(FetchSystemSettingsInitial());
+  final SystemRepository _systemRepository = SystemRepository();
 
   Future<void> fetchSettings({bool? forceRefresh}) async {
     try {
@@ -129,36 +113,6 @@ class FetchSystemSettingsCubit extends Cubit<FetchSystemSettingsState> {
       }
     } catch (e, st) {
       emit(FetchSystemSettingsFailure(st.toString()));
-
-    } finally {
-      await _handleDelegateAccessSync();
-    }
-  }
-
-  Future<void> _handleDelegateAccessSync() async {
-    if (!HiveUtils.isUserAuthenticated()) {
-      _delegateSectionsFetchedForUserId = null;
-      await HiveUtils.clearDelegateSectionsCache();
-      return;
-    }
-
-    final String? userId = HiveUtils.getUserId();
-    if (userId == null || userId.isEmpty) {
-      return;
-    }
-
-    if (_delegateSectionsFetchedForUserId == userId) {
-      return;
-    }
-
-    try {
-      await _delegateSectionsRepository.refreshPermissions();
-      _delegateSectionsFetchedForUserId = userId;
-    } catch (error, stackTrace) {
-      if (kDebugMode) {
-        debugPrint('Failed to refresh delegate sections: $error');
-        debugPrintStack(stackTrace: stackTrace);
-      }
     }
   }
 
@@ -230,7 +184,85 @@ class FetchSystemSettingsCubit extends Cubit<FetchSystemSettingsState> {
   }
 
 
+  void _cacheDelegateSettings(Map settings) {
+    if (settings['data'] is! Map) {
+      Constant.delegatesShein = [];
+      Constant.delegatesComputer = [];
+      return;
+    }
 
+    final Map data = settings['data'] as Map;
+    Constant.delegatesShein = _parseDelegateList(data['delegates_shein']);
+    Constant.delegatesComputer =
+        _parseDelegateList(data['delegates_computer']);
+  }
+
+  List<int> _parseDelegateList(dynamic raw) {
+    final Set<int> values = <int>{};
+
+    void addValue(dynamic candidate) {
+      final parsed = _parseDelegateId(candidate);
+      if (parsed != null) {
+        values.add(parsed);
+      }
+    }
+
+    if (raw == null) {
+      return values.toList();
+    }
+
+    if (raw is List) {
+      for (final element in raw) {
+        addValue(element);
+      }
+      return values.toList();
+    }
+
+    if (raw is String) {
+      final trimmed = raw.trim();
+      if (trimmed.isEmpty) {
+        return values.toList();
+      }
+
+      try {
+        final decoded = json.decode(trimmed);
+        if (decoded is List) {
+          for (final element in decoded) {
+            addValue(element);
+          }
+          return values.toList();
+        }
+      } catch (_) {}
+
+      for (final segment in trimmed.split(RegExp(r'[\s,]+'))) {
+        if (segment.trim().isEmpty) {
+          continue;
+        }
+        addValue(segment);
+      }
+      return values.toList();
+    }
+
+    addValue(raw);
+    return values.toList();
+  }
+
+  int? _parseDelegateId(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+
+    if (value is int) {
+      return value;
+    }
+
+    if (value is num) {
+      return value.toInt();
+    }
+
+    final parsed = int.tryParse(value.toString().trim());
+    return parsed;
+  }
 
 
 
@@ -353,6 +385,7 @@ class FetchSystemSettingsCubit extends Cubit<FetchSystemSettingsState> {
     Constant.geoDisabledCategoryIds =
         _parseGeoDisabledCategories(settings);
 
+    _cacheDelegateSettings(settings);
 
     return FetchSystemSettingsSuccess(
       settings: settings,

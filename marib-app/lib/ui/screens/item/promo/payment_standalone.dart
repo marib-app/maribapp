@@ -142,7 +142,6 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
           vertical: vertical,
         ),
         body: SafeArea(
-          top: false,
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             padding: EdgeInsets.fromLTRB(horizontal, vertical, horizontal, (media.viewPadding.bottom + 1).clamp(8.0, 24.0)),

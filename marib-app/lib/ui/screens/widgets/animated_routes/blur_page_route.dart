@@ -6,12 +6,14 @@ class BlurredRouter<T> extends PageRoute<T> {
   final double? sigmaX;
   final double? sigmaY;
   final bool? barrierDismiss;
+  final double? barrierOpacity;
 
   BlurredRouter({
     required this.builder,
     this.barrierDismiss,
     this.sigmaX,
     this.sigmaY,
+    this.barrierOpacity,
     super.settings,
   }) : super(fullscreenDialog: false);
 
@@ -22,10 +24,13 @@ class BlurredRouter<T> extends PageRoute<T> {
   bool get barrierDismissible => barrierDismiss ?? false;
 
   @override
-  Duration get transitionDuration => const Duration(milliseconds: 120); // سريع
+  Duration get transitionDuration => const Duration(milliseconds: 280);
 
   @override
-  Color get barrierColor => Colors.black.withOpacity(0.2);
+  Duration get reverseTransitionDuration => const Duration(milliseconds: 280);
+
+  @override
+  Color get barrierColor => Colors.black.withOpacity(barrierOpacity ?? 0.2);
 
   @override
   String? get barrierLabel => null;
@@ -41,14 +46,44 @@ class BlurredRouter<T> extends PageRoute<T> {
   @override
   Widget buildTransitions(BuildContext context, Animation<double> animation,
       Animation<double> secondaryAnimation, Widget child) {
+
+    final curvedAnimation = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeInOut,
+      reverseCurve: Curves.easeInOut,
+    );
+
+    final curvedSecondaryAnimation = CurvedAnimation(
+      parent: secondaryAnimation,
+      curve: Curves.easeInOut,
+      reverseCurve: Curves.easeInOut,
+    );
+
+    final slideInAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.05),
+      end: Offset.zero,
+    ).animate(curvedAnimation);
+
+    final slideOutAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.02),
+      end: Offset.zero,
+    ).animate(curvedSecondaryAnimation);
+
+
     return FadeTransition(
-      opacity: animation,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: sigmaX ?? 5,
-          sigmaY: sigmaY ?? 10,
+      opacity: curvedAnimation,
+      child: SlideTransition(
+        position: slideInAnimation,
+        child: SlideTransition(
+          position: slideOutAnimation,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(
+              sigmaX: sigmaX ?? 5,
+              sigmaY: sigmaY ?? 10,
+            ),
+            child: child,
+          ),
         ),
-        child: child,
       ),
     );
   }

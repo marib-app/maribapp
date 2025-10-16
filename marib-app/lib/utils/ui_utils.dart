@@ -44,64 +44,6 @@ import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 
-
-
-
-
-
-
-
-class StatusBarAwareScaffold extends StatelessWidget {
-  const StatusBarAwareScaffold({
-    super.key,
-    required this.scaffold,
-    this.statusBarColor,
-    this.overlayStyle,
-  });
-
-  final Scaffold scaffold;
-  final Color? statusBarColor;
-  final SystemUiOverlayStyle? overlayStyle;
-
-  Color _resolveStatusBarColor(BuildContext context) {
-    if (statusBarColor != null) {
-      return statusBarColor!;
-    }
-
-    if (scaffold.backgroundColor != null) {
-      return scaffold.backgroundColor!;
-    }
-
-    if (scaffold.extendBodyBehindAppBar ?? false) {
-      return Colors.transparent;
-    }
-
-    return Theme.of(context).scaffoldBackgroundColor;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final SystemUiOverlayStyle resolvedStyle = overlayStyle ??
-        UiUtils.getSystemUiOverlayStyle(
-          context: context,
-          statusBarColor: _resolveStatusBarColor(context),
-        );
-
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: resolvedStyle,
-      child: scaffold,
-    );
-  }
-}
-
-
-
-
-
-
-
-
-
 class _AdaptiveNetworkImage extends StatefulWidget {
   const _AdaptiveNetworkImage({
     required this.urls,
@@ -411,13 +353,11 @@ class UiUtils {
         foregroundColor ?? colorScheme.textAutoAdapt(resolvedBackgroundColor);
     final bool hasBottom = bottom != null && bottom.isNotEmpty;
     final bool hasLeading = leading != null || showBackButton;
-    final double systemTopInset = MediaQuery.of(context).padding.top;
-
     final EdgeInsetsGeometry resolvedPadding = contentPadding ??
         EdgeInsetsDirectional.only(
           start: hasLeading ? 12 : 20,
           end: actions?.isNotEmpty == true ? 12 : 20,
-          top: max(0.0, 12 - systemTopInset),
+          top: 12,
           bottom: 12,
         );
     final double? resolvedBottomHeight = hasBottom
@@ -487,8 +427,9 @@ class UiUtils {
             : Colors.black.withOpacity(0.25))
         .withOpacity(theme.brightness == Brightness.dark ? 0.45 : 0.12);
 
+    final double topPadding = MediaQuery.of(context).padding.top;
     final double totalHeight =
-        toolbarHeight + (resolvedBottomHeight ?? 0.0) + systemTopInset;
+        toolbarHeight + (resolvedBottomHeight ?? 0.0) + topPadding;
 
     return PreferredSize(
       preferredSize: Size.fromHeight(totalHeight),
@@ -1065,7 +1006,7 @@ class UiUtils {
                 ? null
                 : () {
                     HelperUtils.unfocus();
-                    onPressed.call();
+                    onPressed?.call();
                   },
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 250),

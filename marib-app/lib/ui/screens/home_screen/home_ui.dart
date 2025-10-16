@@ -126,76 +126,70 @@ class HomeScreenUI extends StatelessWidget {
           final int cart = cartCount ?? 0;
           final int notif = notifCount ?? 0;
 
-          return StatusBarAwareScaffold(
-            statusBarColor: context.color.primaryColor,
-            scaffold: Scaffold(
-              backgroundColor:
-              context.color.primaryColor, // لا تغيّر ألوان الـAppBar
-              body: SafeArea(
-                top: false,
-
-                child: NestedScrollView(
+          return AnnotatedRegion<SystemUiOverlayStyle>(
+            value: UiUtils.getSystemUiOverlayStyle(
+              context: context,
+              statusBarColor: context.color.primaryColor,
+            ),
+            child: SafeArea(
+              child: Scaffold(
+                backgroundColor:
+                    context.color.primaryColor, // لا تغيّر ألوان الـAppBar
+                body: NestedScrollView(
                   controller: scrollController,
-                  headerSliverBuilder: (context, _) => [
-                    SliverAppBar(
-                      pinned: true,
-                      stretch: true,
-                      elevation: 0,
-                      backgroundColor: context.color.primaryColor,
-                      systemOverlayStyle: UiUtils.getSystemUiOverlayStyle(
-                        context: context,
-                        statusBarColor: context.color.primaryColor,
-                      ),
-                      expandedHeight: kExpanded,
-                      flexibleSpace: LayoutBuilder(
-                        builder: (ctx, constraints) {
-                          final double current = constraints.biggest.height;
-                          final double denom = (kExpanded - kToolbarHeight);
-                          final double t = denom <= 0
-                              ? 0.0
-                              : ((current - kToolbarHeight) / denom)
-                              .clamp(0.0, 1.0);
 
-                          final Widget header = appBarLeading ??
-                              ProfileHeaderUI(
-                                isAuthenticated: isAuthenticated ?? auth,
-                                name: accountName,
-                                mobile: phone,
-                                profileUrl: avatar,
-                                isVerified: verified,
-                                cartCount: cart,
-                                notifCount: notif,
-                                onAvatarTap: onAvatarTap ?? () {},
-                                onCartTap: onCartTap ?? () {},
-                                onNotificationTap: onNotificationTap ?? () {},
-                                onInfoTap: onInfoTap ?? () {},
-                                shrinkFactor: t,
-                                welcomeText:
-                                (showWelcomeLine && idStr.isNotEmpty)
-                                    ? "مرحبًا بك: $idStr"
-                                    : null,
-                                welcomeColor: Theme.of(context)
-                                    .colorScheme
-                                    .onPrimary
-                                    .withOpacity(.85),
-                              );
+                headerSliverBuilder: (context, _) => [
+                  SliverAppBar(
+                    pinned: true,
+                    stretch: true,
+                    elevation: 0,
+                    backgroundColor: context.color.primaryColor,
+                    expandedHeight: kExpanded,
+                    flexibleSpace: LayoutBuilder(
+                      builder: (ctx, constraints) {
+                        final double current = constraints.biggest.height;
+                        final double denom = (kExpanded - kToolbarHeight);
+                        final double t = denom <= 0
+                            ? 0.0
+                            : ((current - kToolbarHeight) / denom).clamp(0.0, 1.0);
 
-                          return Stack(
+                        final Widget header = appBarLeading ??
+                            ProfileHeaderUI(
+                              isAuthenticated: isAuthenticated ?? auth,
+                              name: accountName,
+                              mobile: phone,
+                              profileUrl: avatar,
+                              isVerified: verified,
+                              cartCount: cart,
+                              notifCount: notif,
+                              onAvatarTap: onAvatarTap ?? () {},
+                              onCartTap: onCartTap ?? () {},
+                              onNotificationTap: onNotificationTap ?? () {},
+                              onInfoTap: onInfoTap ?? () {},
+                              shrinkFactor: t,
+                              welcomeText: (showWelcomeLine && idStr.isNotEmpty)
+                                  ? "مرحبًا بك: $idStr"
+                                  : null,
+                              welcomeColor: Theme.of(context)
+                                  .colorScheme
+                                  .onPrimary
+                                  .withOpacity(.85),
+                            );
+
+                        return Stack(
                             fit: StackFit.expand,
                             children: [
-                              if (appBarBackdrop != null)
-                                Opacity(opacity: t, child: appBarBackdrop!)
-                              else
-                                Opacity(
-                                  opacity: t,
-                                  child: Container(
-                                    color: context.color.primaryColor,
-                                  ),
-                                ),
-                              Align(
-                                alignment: Alignment.bottomCenter,
-                                child: _curvedBottom(context, opacity: t),
-                              ),
+                            if (appBarBackdrop != null)
+                        Opacity(opacity: t, child: appBarBackdrop!)
+                        else
+                        Opacity(
+                        opacity: t,
+                        child: Container(color: context.color.primaryColor),
+                        ),
+                        Align(
+                        alignment: Alignment.bottomCenter,
+                        child: _curvedBottom(context, opacity: t),
+                          ),
                               Align(
                                 alignment: Alignment.bottomCenter,
                                 child: Padding(
@@ -208,15 +202,13 @@ class HomeScreenUI extends StatelessWidget {
                                 ),
                               ),
                             ],
-                          );
-                        },
-                      ),
+                        );
+                      },
                     ),
-                  ],
-                  body: _buildBody(context),
-                ),
-              ),
-
+                  ),
+                ],
+                body: _buildBody(context),
+            ),
               floatingActionButton: hideFabOnScroll
                   ? _FabHider(
                 scrollController: scrollController,
@@ -230,9 +222,10 @@ class HomeScreenUI extends StatelessWidget {
                   height: 26,
                   width: 26,
                   color: Colors.white,
-                      ),
+                ),
               ),
-            ),
+          ),
+                      ),
           );
         },
     );

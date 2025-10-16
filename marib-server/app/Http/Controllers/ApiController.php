@@ -5632,11 +5632,21 @@ class ApiController extends Controller {
             }
         }
 
-        try {
-            return $this->walletService->debit($user, $idempotencyKey, $amount, array_merge([
-                'payment_transaction' => $transaction,
+        $currencyOverride = array_key_exists('currency', $options) ? $options['currency'] : null;
+        $effectiveCurrency = $currencyOverride ?? $transaction->currency;
+        $effectiveCurrency = WalletService::normalizeCurrency($effectiveCurrency);
 
-            ], $options));
+        $optionsWithoutCurrency = $options;
+        unset($optionsWithoutCurrency['currency']);
+
+
+        $debitOptions = array_merge([
+            'payment_transaction' => $transaction,
+            'currency' => $effectiveCurrency,
+        ], $optionsWithoutCurrency);
+
+        try {
+            return $this->walletService->debit($user, $idempotencyKey, $amount, $debitOptions);
 
         } catch (RuntimeException $runtimeException) {
             if (str_contains(strtolower($runtimeException->getMessage()), 'insufficient wallet balance')) {

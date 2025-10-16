@@ -3,11 +3,6 @@ import 'package:marib/ui/screens/auth/signup_flow/signup_flow_screen.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 
 
-
-
-
-
-
 class SignUpMainScreen extends SignupFlowScreen {
   const SignUpMainScreen({super.key, super.arguments});
 

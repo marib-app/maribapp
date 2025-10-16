@@ -126,16 +126,13 @@ class HomeScreenUI extends StatelessWidget {
           final int cart = cartCount ?? 0;
           final int notif = notifCount ?? 0;
 
-          return AnnotatedRegion<SystemUiOverlayStyle>(
-            value: UiUtils.getSystemUiOverlayStyle(
-              context: context,
-              statusBarColor: context.color.primaryColor,
-            ),
-            child: SafeArea(
-              child: Scaffold(
-                backgroundColor:
-                    context.color.primaryColor, // لا تغيّر ألوان الـAppBar
-                body: NestedScrollView(
+          return StatusBarAwareScaffold(
+            statusBarColor: context.color.primaryColor,
+            scaffold: Scaffold(
+              backgroundColor:
+              context.color.primaryColor, // لا تغيّر ألوان الـAppBar
+              body: SafeArea(
+                child: NestedScrollView(
                   controller: scrollController,
 
                 headerSliverBuilder: (context, _) => [
@@ -144,6 +141,10 @@ class HomeScreenUI extends StatelessWidget {
                     stretch: true,
                     elevation: 0,
                     backgroundColor: context.color.primaryColor,
+                    systemOverlayStyle: UiUtils.getSystemUiOverlayStyle(
+                      context: context,
+                      statusBarColor: context.color.primaryColor,
+                    ),
                     expandedHeight: kExpanded,
                     flexibleSpace: LayoutBuilder(
                       builder: (ctx, constraints) {
@@ -209,6 +210,7 @@ class HomeScreenUI extends StatelessWidget {
                 ],
                 body: _buildBody(context),
             ),
+
               floatingActionButton: hideFabOnScroll
                   ? _FabHider(
                 scrollController: scrollController,

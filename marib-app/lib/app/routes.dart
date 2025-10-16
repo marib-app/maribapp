@@ -23,8 +23,8 @@ import 'package:marib/ui/screens/item/viewAll.dart';
 import 'package:marib/ui/screens/soon_screen.dart';
 import 'package:marib/ui/screens/sub_category/sub_category_screen.dart';
 import 'package:marib/ui/screens/auth/login/forgot_password.dart';
-import 'package:marib/ui/screens/auth/sign_up/signup_main_screen.dart';
-import 'package:marib/ui/screens/auth/sign_up/signup_screen.dart';
+import 'package:marib/ui/screens/auth/login_new/login_new_page.dart';
+import 'package:marib/ui/screens/auth/login_new/signup_new_page.dart';
 import 'package:marib/ui/screens/chat/blocked_user_list_screen.dart';
 import 'package:marib/ui/screens/favorite_screen.dart';
 import 'package:marib/ui/screens/item/items_list.dart';
@@ -597,13 +597,29 @@ class Routes {
       case main:
         return MainActivity.route(routeSettings);
       case login:
-        return LoginScreen.route(routeSettings);
+        assert(() {
+          debugPrint('Routes.login forwarded to LoginNewPage (legacy login disabled).');
+          return true;
+        }());
+        return LoginNewPage.route(routeSettings);
       case forgotPassword:
         return ForgotPasswordScreen.route(routeSettings);
       case signup:
-        return SignupScreen.route(routeSettings);
+        assert(() {
+          debugPrint('Routes.signup forwarded to SignupNewPage (legacy signup deprecated).');
+          return true;
+        }());
+        assert(() {
+          debugPrint('Routes.signupMainScreen forwarded to SignupNewPage (legacy main signup disabled).');
+          return true;
+        }());
+        return SignupNewPage.route(routeSettings);
       case signupMainScreen:
-        return SignUpMainScreen.route(routeSettings);
+        assert(() {
+          debugPrint('Routes.mobileSignUp forwarded to SignupNewPage (mobile flow bridged).');
+          return true;
+        }());
+        return SignupNewPage.route(routeSettings);
       case mobileSignUp:
         return MobileSignUpScreen.route(routeSettings);
 

@@ -116,11 +116,24 @@ class LoginNewViewModel extends ValueNotifier<LoginNewUiState> {
     required this.loginCubit,
     required this.authenticationCubit,
     this.userDetailsCubit,
-  }) : super(LoginNewUiState.initial());
-
+    bool isDeleteAccountFlow = false,
+    bool popToCurrent = false,
+    Map<String, dynamic>? legacyArguments,
+  })  : _isDeleteAccountFlow = isDeleteAccountFlow,
+        _popToCurrent = popToCurrent,
+        _legacyArguments = legacyArguments == null
+            ? null
+            : Map<String, dynamic>.unmodifiable(legacyArguments),
+        super(LoginNewUiState.initial());
   final LoginCubit loginCubit;
   final AuthenticationCubit authenticationCubit;
   final UserDetailsCubit? userDetailsCubit;
+
+
+  final bool _isDeleteAccountFlow;
+  final bool _popToCurrent;
+  final Map<String, dynamic>? _legacyArguments;
+
 
   final TextEditingController identifierController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
@@ -139,6 +152,20 @@ class LoginNewViewModel extends ValueNotifier<LoginNewUiState> {
   void initialize(BuildContext context) {
     if (_hasInitialized) return;
     _hasInitialized = true;
+
+
+    assert(() {
+      if (_isDeleteAccountFlow || _popToCurrent || _legacyArguments != null) {
+        debugPrint(
+          'LoginNewViewModel received legacy args: '
+              'isDeleteAccount=$_isDeleteAccountFlow, '
+              'popToCurrent=$_popToCurrent, '
+              'keys=${_legacyArguments?.keys.toList() ?? []}',
+        );
+      }
+      return true;
+    }());
+
 
     final enablePhone = Constant.mobileAuthentication == '1';
     final enableEmail = Constant.emailAuthentication == '1';
@@ -382,7 +409,12 @@ class LoginNewViewModel extends ValueNotifier<LoginNewUiState> {
   }
 
   void goToSignup(BuildContext context) {
-    Navigator.of(context).push(SignupNewPage.route());
+    Navigator.of(context).push(
+      SignupNewPage.route(
+        const RouteSettings(name: Routes.signup),
+      ),
+    );
+
   }
 
   void handleLoginState(BuildContext context, LoginState state) {
@@ -624,6 +656,13 @@ class LoginNewViewModel extends ValueNotifier<LoginNewUiState> {
     final bool isVerified = apiResponse['is_verified'] == 1;
     final bool hasAccountType =
         apiResponse['account_type'] != null && apiResponse['account_type'] != 0;
+
+
+    if (_popToCurrent && (isEmailVerified || isVerified) && hasAccountType) {
+      Navigator.of(context).pop(true);
+      return;
+    }
+
 
     if ((isEmailVerified || isVerified) && hasAccountType) {
       final String? city = HiveUtils.getCityName();

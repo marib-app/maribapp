@@ -98,11 +98,30 @@ class SignupNewViewModel extends ValueNotifier<SignupNewUiState> {
     required AuthRepository authRepository,
     required MultiAuthRepository multiAuthRepository,
     this.userDetailsCubit,
+    int? initialAccountType,
+    String? initialPhoneNumber,
+    String? initialDialCode,
+    bool fromSocialLogin = false,
+    Map<String, dynamic>? legacyArguments,
   })  : _authRepository = authRepository,
         _multiAuthRepository = multiAuthRepository,
+        _initialAccountType = initialAccountType,
+        _initialPhoneNumber = initialPhoneNumber,
+        _initialDialCode = initialDialCode,
+        _fromSocialLogin = fromSocialLogin,
+        _legacyArguments = legacyArguments == null
+            ? null
+            : Map<String, dynamic>.unmodifiable(legacyArguments),
         super(SignupNewUiState.initial());
 
   final AuthRepository _authRepository;
+
+  final int? _initialAccountType;
+  final String? _initialPhoneNumber;
+  final String? _initialDialCode;
+  final bool _fromSocialLogin;
+  final Map<String, dynamic>? _legacyArguments;
+
   final MultiAuthRepository _multiAuthRepository;
   final UserDetailsCubit? userDetailsCubit;
 
@@ -131,19 +150,75 @@ class SignupNewViewModel extends ValueNotifier<SignupNewUiState> {
   void initialize(BuildContext context) {
     if (_hasInitialized) return;
     _hasInitialized = true;
+
+    assert(() {
+      if (_legacyArguments != null) {
+        debugPrint(
+          'SignupNewViewModel received legacy args: '
+              'accountType=${_initialAccountType ?? 'null'}, '
+              'phone=${_initialPhoneNumber ?? 'null'}, '
+              'dial=${_initialDialCode ?? 'null'}, '
+              'keys=${_legacyArguments?.keys.toList() ?? []}',
+        );
+      }
+      return true;
+    }());
+
+    _applyInitialData();
+
     _prefillDemoData();
     _prefillCountryFromSim();
     _evaluateProgress();
   }
 
+
+  void _applyInitialData() {
+    if (_initialAccountType != null) {
+      value = value.copyWith(selectedAccountType: _initialAccountType);
+    }
+
+    if ((_initialPhoneNumber ?? '').trim().isNotEmpty) {
+      phoneController.text = _initialPhoneNumber!.trim();
+    }
+
+    final String? sanitizedDial = _initialDialCode
+        ?.replaceAll(' ', '')
+        .replaceFirst('+', '')
+        .trim();
+    if ((sanitizedDial ?? '').isNotEmpty) {
+      value = value.copyWith(dialCode: sanitizedDial);
+    }
+
+    if (_fromSocialLogin) {
+      assert(() {
+        debugPrint('SignupNewViewModel: social login flow detected');
+        return true;
+      }());
+    }
+  }
+
+
+
   void _prefillDemoData() {
     if (!Constant.isDemoModeOn) return;
-    fullNameController.text = 'Demo User';
-    emailController.text = 'demo.user@example.com';
-    phoneController.text = Constant.demoMobileNumber;
+    if (fullNameController.text.isEmpty) {
+      fullNameController.text = 'Demo User';
+    }
+    if (emailController.text.isEmpty) {
+      emailController.text = 'demo.user@example.com';
+    }
+    if (phoneController.text.isEmpty) {
+      phoneController.text = Constant.demoMobileNumber;
+    }
+
   }
 
   Future<void> _prefillCountryFromSim() async {
+
+    if ((_initialDialCode ?? '').trim().isNotEmpty) {
+      return;
+    }
+
     try {
       final list = _countryService.getAll();
       final code = await DeviceRegion.getSIMCountryCode();

@@ -9,16 +9,33 @@ import 'shared/login_new_view_model.dart';
 import 'login_new_view.dart';
 
 class LoginNewPage extends StatefulWidget {
-  const LoginNewPage({super.key});
+  const LoginNewPage({
+    super.key,
+    this.isDeleteAccountFlow = false,
+    this.popToCurrent = false,
+    this.legacyArguments,
+  });
 
-  static Route<void> route() {
+  final bool isDeleteAccountFlow;
+  final bool popToCurrent;
+  final Map<String, dynamic>? legacyArguments;
+
+  static Route<void> route(RouteSettings settings) {
+    final parsed = _LoginRouteArguments.from(settings.arguments);
+
     return MaterialPageRoute(
+      settings: settings,
+
       builder: (context) => MultiBlocProvider(
         providers: [
           BlocProvider(create: (_) => AuthenticationCubit()),
           BlocProvider(create: (_) => LoginCubit()),
         ],
-        child: const LoginNewPage(),
+        child: LoginNewPage(
+          isDeleteAccountFlow: parsed.isDeleteAccount,
+          popToCurrent: parsed.popToCurrent,
+          legacyArguments: parsed.rawArguments,
+        ),
       ),
     );
   }
@@ -49,6 +66,9 @@ class _LoginNewPageState extends State<LoginNewPage> {
       loginCubit: loginCubit,
       authenticationCubit: authenticationCubit,
       userDetailsCubit: userDetailsCubit,
+      isDeleteAccountFlow: widget.isDeleteAccountFlow,
+      popToCurrent: widget.popToCurrent,
+      legacyArguments: widget.legacyArguments,
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -66,5 +86,41 @@ class _LoginNewPageState extends State<LoginNewPage> {
   @override
   Widget build(BuildContext context) {
     return LoginNewView(viewModel: _viewModel);
+  }
+
+
+
+}
+
+class _LoginRouteArguments {
+  final bool isDeleteAccount;
+  final bool popToCurrent;
+  final Map<String, dynamic>? rawArguments;
+
+  const _LoginRouteArguments({
+    required this.isDeleteAccount,
+    required this.popToCurrent,
+    required this.rawArguments,
+  });
+
+  factory _LoginRouteArguments.from(Object? arguments) {
+    if (arguments is _LoginRouteArguments) {
+      return arguments;
+    }
+
+    if (arguments is Map) {
+      final map = Map<String, dynamic>.from(arguments as Map);
+      return _LoginRouteArguments(
+        isDeleteAccount: (map['isDeleteAccount'] as bool?) ?? false,
+        popToCurrent: (map['popToCurrent'] as bool?) ?? false,
+        rawArguments: map,
+      );
+    }
+
+    return const _LoginRouteArguments(
+      isDeleteAccount: false,
+      popToCurrent: false,
+      rawArguments: null,
+    );
   }
 }

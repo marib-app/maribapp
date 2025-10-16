@@ -1,4 +1,3 @@
-
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -44,7 +43,6 @@ import 'package:marib/utils/scroll/low_spec_scroll_physics.dart';
 import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
-
 
 class _AdaptiveNetworkImage extends StatefulWidget {
   const _AdaptiveNetworkImage({
@@ -133,14 +131,7 @@ class _AdaptiveNetworkImageState extends State<_AdaptiveNetworkImage> {
   }
 }
 
-
-
-
-
-
 class UiUtils {
-
-
   // دالة التحكم في عرض الوقت والتاريخ
 
   static String formatSmartTime(String? dateString) {
@@ -164,7 +155,8 @@ class UiUtils {
     }
   }
 
-  static String formatDate(String? dateString, {String pattern = 'd MMM yyyy - h:mm a'}) {
+  static String formatDate(String? dateString,
+      {String pattern = 'd MMM yyyy - h:mm a'}) {
     if (dateString == null || dateString.isEmpty) return "";
     try {
       final date = DateTime.parse(dateString).toLocal();
@@ -174,20 +166,19 @@ class UiUtils {
     }
   }
 
-
-
   static String? subscriptionLimitSummary(
-      BuildContext context,
-      SubscriptionPackageLimit limit, {
-        bool includeExpiry = true,
-      }) {
+    BuildContext context,
+    SubscriptionPackageLimit limit, {
+    bool includeExpiry = true,
+  }) {
     final bool isUnlimited = limit.isUnlimited;
     String? summary;
 
     if (isUnlimited) {
       summary = getTranslatedLabel(context, 'subscriptionLimitUnlimited');
     } else {
-      final template = getTranslatedLabel(context, 'subscriptionLimitRemaining');
+      final template =
+          getTranslatedLabel(context, 'subscriptionLimitRemaining');
       final remainingText = (limit.remaining ?? 0).toString();
       final totalValue = limit.total;
       final totalText = totalValue != null ? totalValue.toString() : '—';
@@ -243,8 +234,8 @@ class UiUtils {
     final localeName = (languageCode == null || languageCode.isEmpty)
         ? null
         : countryCode == null || countryCode.isEmpty
-        ? languageCode
-        : '${languageCode}_$countryCode';
+            ? languageCode
+            : '${languageCode}_$countryCode';
 
     try {
       if (localeName != null) {
@@ -256,25 +247,18 @@ class UiUtils {
     }
   }
 
-
-
-
-
-
-
   // ✅ إرجاع أيقونة SVG من المسار المحدد
   static SvgPicture getSvg(String path,
       {Color? color, BoxFit? fit, double? width, double? height}) {
     return SvgPicture.asset(
       path,
       colorFilter:
-      color != null ? ColorFilter.mode(color, BlendMode.srcIn) : null,
+          color != null ? ColorFilter.mode(color, BlendMode.srcIn) : null,
       fit: fit ?? BoxFit.contain,
       width: width,
       height: height,
     );
   }
-
 
   static Future<void> launchURL(String url) async {
     if (await canLaunchUrl(Uri.parse(url))) {
@@ -284,27 +268,25 @@ class UiUtils {
     }
   }
 
-
   static void showLoadingDialog(BuildContext context,
       {String title = "جاري التحميل..."}) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) =>
-          AlertDialog(
-            content: Row(
-              children: [
-                const CircularProgressIndicator(),
-                const SizedBox(width: 16),
-                Expanded(child: Text(title)),
-              ],
-            ),
-          ),
+      builder: (_) => AlertDialog(
+        content: Row(
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(width: 16),
+            Expanded(child: Text(title)),
+          ],
+        ),
+      ),
     );
   }
 
-
-  static void showSoftSnackBar(BuildContext context, {
+  static void showSoftSnackBar(
+    BuildContext context, {
     required String message,
     String iconPath = 'assets/image/showSoftSnackBar.png',
     Duration duration = const Duration(seconds: 2),
@@ -325,8 +307,8 @@ class UiUtils {
       duration: duration,
       backgroundColor: backgroundColor ??
           (theme.brightness == Brightness.dark
-              ? Colors.grey[800]
-              : Colors.grey[900])!
+                  ? Colors.grey[800]
+                  : Colors.grey[900])!
               .withOpacity(backgroundOpacity),
       textColor: textColor,
       fontSize: fontSize,
@@ -339,38 +321,36 @@ class UiUtils {
     overlay.insert(entry);
   }
 
-
   static PreferredSizeWidget buildAppBar(
-      BuildContext context, {
-        String? title,
-        Widget? titleWidget,
-        bool showBackButton = false,
-        Widget? leading,
-        List<Widget>? actions,
-        List<Widget>? bottom,
-        double? bottomHeight,
-        bool? hideTopBorder,
-        VoidCallback? onBackPress,
-        Color? backgroundColor,
-        Color? foregroundColor,
-        Color? borderColor,
-        Color? backButtonBackgroundColor,
-        EdgeInsetsGeometry? contentPadding,
-        bool centerTitle = true,
-        double? height,
-        double borderRadius = 18,
-        double borderStrokeWidth = 1.0,
-      }) {
+    BuildContext context, {
+    String? title,
+    Widget? titleWidget,
+    bool showBackButton = false,
+    Widget? leading,
+    List<Widget>? actions,
+    List<Widget>? bottom,
+    double? bottomHeight,
+    bool? hideTopBorder,
+    VoidCallback? onBackPress,
+    Color? backgroundColor,
+    Color? foregroundColor,
+    Color? borderColor,
+    Color? backButtonBackgroundColor,
+    EdgeInsetsGeometry? contentPadding,
+    bool centerTitle = true,
+    double? height,
+    double borderRadius = 18,
+    double borderStrokeWidth = 1.0,
+  }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final bool shouldHideTopBorder = hideTopBorder ?? true;
     final double toolbarHeight = height ?? kToolbarHeight;
     final Color resolvedBackgroundColor =
         backgroundColor ?? colorScheme.secondaryColor;
-    final Color resolvedBorderColor =
-        borderColor ?? colorScheme.borderColor;
-    final Color resolvedForegroundColor = foregroundColor ??
-        colorScheme.textAutoAdapt(resolvedBackgroundColor);
+    final Color resolvedBorderColor = borderColor ?? colorScheme.borderColor;
+    final Color resolvedForegroundColor =
+        foregroundColor ?? colorScheme.textAutoAdapt(resolvedBackgroundColor);
     final bool hasBottom = bottom != null && bottom.isNotEmpty;
     final bool hasLeading = leading != null || showBackButton;
     final EdgeInsetsGeometry resolvedPadding = contentPadding ??
@@ -383,7 +363,6 @@ class UiUtils {
     final double? resolvedBottomHeight = hasBottom
         ? (bottomHeight != null && bottomHeight > 0 ? bottomHeight : null)
         : null;
-
 
     Widget? resolvedLeading;
     if (leading != null) {
@@ -405,17 +384,17 @@ class UiUtils {
     final Widget? resolvedTitleWidget = titleWidget ??
         (title != null
             ? Text(
-          title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        )
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              )
             : null);
 
     final TextStyle defaultTitleStyle = theme.textTheme.titleMedium?.copyWith(
-      fontWeight: FontWeight.w600,
-      fontSize: actions?.isNotEmpty == true ? 16 : 20,
-      color: resolvedForegroundColor,
-    ) ??
+          fontWeight: FontWeight.w600,
+          fontSize: actions?.isNotEmpty == true ? 16 : 20,
+          color: resolvedForegroundColor,
+        ) ??
         TextStyle(
           fontWeight: FontWeight.w600,
           fontSize: actions?.isNotEmpty == true ? 16 : 20,
@@ -424,9 +403,9 @@ class UiUtils {
 
     final BorderRadius borderRadiusShape = BorderRadius.only(
       topLeft:
-      shouldHideTopBorder ? Radius.zero : Radius.circular(borderRadius),
+          shouldHideTopBorder ? Radius.zero : Radius.circular(borderRadius),
       topRight:
-      shouldHideTopBorder ? Radius.zero : Radius.circular(borderRadius),
+          shouldHideTopBorder ? Radius.zero : Radius.circular(borderRadius),
       bottomLeft: Radius.circular(borderRadius),
       bottomRight: Radius.circular(borderRadius),
     );
@@ -444,14 +423,13 @@ class UiUtils {
     );
 
     final Color shadowColor = (theme.brightness == Brightness.dark
-        ? Colors.black
-        : Colors.black.withOpacity(0.25))
+            ? Colors.black
+            : Colors.black.withOpacity(0.25))
         .withOpacity(theme.brightness == Brightness.dark ? 0.45 : 0.12);
 
     final double topPadding = MediaQuery.of(context).padding.top;
     final double totalHeight =
         toolbarHeight + (resolvedBottomHeight ?? 0.0) + topPadding;
-
 
     return PreferredSize(
       preferredSize: Size.fromHeight(totalHeight),
@@ -497,25 +475,23 @@ class UiUtils {
                               child: NavigationToolbar(
                                 leading: resolvedLeading != null
                                     ? Padding(
-                                  padding:
-                                  const EdgeInsetsDirectional.only(
-                                    end: 12,
-                                  ),
-                                  child: resolvedLeading,
-                                )
+                                        padding:
+                                            const EdgeInsetsDirectional.only(
+                                          end: 12,
+                                        ),
+                                        child: resolvedLeading,
+                                      )
                                     : null,
                                 middle: resolvedTitleWidget,
                                 trailing: trailingActions != null
                                     ? Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: trailingActions,
-                                )
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: trailingActions,
+                                      )
                                     : null,
                                 centerMiddle: centerTitle,
                               ),
-
                             ),
-
                           ),
                           if (hasBottom)
                             _AppBarBottomSection(
@@ -535,9 +511,6 @@ class UiUtils {
     );
   }
 
-
-
-
   static List<Widget> _withSpacing(List<Widget> widgets, Widget spacer) {
     if (widgets.length <= 1) {
       return List<Widget>.from(widgets);
@@ -552,7 +525,6 @@ class UiUtils {
     }
     return spaced;
   }
-
 
   /// ويدجت عام لتطبيق تأثير الضغط المائي (Ripple Effect) في جميع أنحاء التطبيق.
   ///
@@ -581,7 +553,6 @@ class UiUtils {
     );
   }
 
-
   static checkUser(
       {required Function() onNotGuest, required BuildContext context}) {
     if (!HiveUtils.isUserAuthenticated()) {
@@ -590,9 +561,6 @@ class UiUtils {
       onNotGuest.call();
     }
   }
-
-
-
 
   // رسالة الزائر
   // تعرض Bottom Sheet (نافذة منبثقة من أسفل الشاشة).
@@ -609,10 +577,7 @@ class UiUtils {
 
         return Container(
           padding: EdgeInsets.only(
-            bottom: MediaQuery
-                .of(context)
-                .viewInsets
-                .bottom,
+            bottom: MediaQuery.of(context).viewInsets.bottom,
             top: 24,
             left: 24,
             right: 24,
@@ -683,17 +648,16 @@ class UiUtils {
     );
   }
 
-
   static String getTranslatedLabel(BuildContext context, String labelKey) {
     return (AppLocalization.of(context)!.getTranslatedValues(labelKey) ??
-        labelKey)
+            labelKey)
         .trim();
   }
 
-  static Map<String, double> getWidgetInfo(BuildContext context,
-      GlobalKey key) {
+  static Map<String, double> getWidgetInfo(
+      BuildContext context, GlobalKey key) {
     final RenderBox renderBox =
-    key.currentContext?.findRenderObject() as RenderBox;
+        key.currentContext?.findRenderObject() as RenderBox;
 
     final Size size = renderBox.size; // or _widgetKey.currentContext?.size
 
@@ -709,7 +673,6 @@ class UiUtils {
     };
   }
 
-
   static Locale getLocaleFromLanguageCode(String languageCode) {
     List<String> result = languageCode.split("-");
     return result.length == 1
@@ -724,18 +687,17 @@ class UiUtils {
     );
   }
 
-
   static Widget getSvgImage(String url,
       {double? width,
-        double? height,
-        BoxFit? fit,
-        String? blurHash,
-        bool? showFullScreenImage,
-        Color? color}) {
+      double? height,
+      BoxFit? fit,
+      String? blurHash,
+      bool? showFullScreenImage,
+      Color? color}) {
     return SvgPicture.network(
       url,
       colorFilter:
-      color != null ? ColorFilter.mode(color, BlendMode.srcIn) : null,
+          color != null ? ColorFilter.mode(color, BlendMode.srcIn) : null,
       width: width,
       height: height,
       fit: fit!,
@@ -749,25 +711,24 @@ class UiUtils {
     );
   }
 
-
   static const int _defaultCacheDimension = 200;
   static const int _minCacheDimension = 160;
   static const int _maxCacheDimension = 240;
   static final RegExp _preferredThumbnailExtension =
-  RegExp(r'\.(avif|webp)(?:\?|#|\b)', caseSensitive: false);
+      RegExp(r'\.(avif|webp)(?:\?|#|\b)', caseSensitive: false);
 
   static Widget getImage(
-      String url, {
-        double? width,
-        double? height,
-        BoxFit? fit,
-        String? blurHash,
-        bool? showFullScreenImage,
-        String? fallbackUrl,
-        List<String>? alternateUrls,
-        int? cacheWidth,
-        int? cacheHeight,
-      }) {
+    String url, {
+    double? width,
+    double? height,
+    BoxFit? fit,
+    String? blurHash,
+    bool? showFullScreenImage,
+    String? fallbackUrl,
+    List<String>? alternateUrls,
+    int? cacheWidth,
+    int? cacheHeight,
+  }) {
     final List<String> candidates = _prepareImageCandidates(
       primary: url,
       alternates: alternateUrls,
@@ -800,7 +761,7 @@ class UiUtils {
         .toList();
 
     final LinkedHashSet<String> deduplicated =
-    LinkedHashSet<String>.from(filtered);
+        LinkedHashSet<String>.from(filtered);
     final List<String> urls = deduplicated.toList();
     if (urls.length <= 1) {
       return urls;
@@ -830,12 +791,12 @@ class UiUtils {
   }
 
   static Widget _buildImagePlaceholder(
-      BuildContext context,
-      double? width,
-      double? height, {
-        BorderRadius? borderRadius,
-        bool animate = true,
-      }) {
+    BuildContext context,
+    double? width,
+    double? height, {
+    BorderRadius? borderRadius,
+    bool animate = true,
+  }) {
     return ShimmerBox(
       width: width,
       height: height,
@@ -851,19 +812,17 @@ class UiUtils {
       width,
       height,
       animate: false,
-    );  }
+    );
+  }
 
-
-
-  static Widget progress({double? width,
-    double? height,
-    Color? normalProgressColor,
-    bool? showWhite}) {
+  static Widget progress(
+      {double? width,
+      double? height,
+      Color? normalProgressColor,
+      bool? showWhite}) {
     if (Constant.useLottieProgress) {
       return LottieBuilder.asset(
-        "assets/lottie/${showWhite == true
-            ? Constant.progressLottieFileWhite
-            : Constant.loadingSuccessLottieFile}",
+        "assets/lottie/${showWhite == true ? Constant.progressLottieFileWhite : Constant.loadingSuccessLottieFile}",
         width: width ?? 70,
         height: height ?? 70,
         delegates: const LottieDelegates(values: []),
@@ -875,7 +834,6 @@ class UiUtils {
     }
   }
 
-
   ///Divider / Container
 
   static SystemUiOverlayStyle getSystemUiOverlayStyle(
@@ -884,34 +842,25 @@ class UiUtils {
         systemNavigationBarDividerColor: Colors.transparent,
         // systemNavigationBarColor: Theme.of(context).colorScheme.secondaryColor,
         systemNavigationBarIconBrightness:
-        context
-            .watch<AppThemeCubit>()
-            .state
-            .appTheme == AppTheme.dark
-            ? Brightness.light
-            : Brightness.dark,
+            context.watch<AppThemeCubit>().state.appTheme == AppTheme.dark
+                ? Brightness.light
+                : Brightness.dark,
         //
         statusBarColor: statusBarColor,
         statusBarBrightness:
-        context
-            .watch<AppThemeCubit>()
-            .state
-            .appTheme == AppTheme.dark
-            ? Brightness.dark
-            : Brightness.light,
+            context.watch<AppThemeCubit>().state.appTheme == AppTheme.dark
+                ? Brightness.dark
+                : Brightness.light,
         statusBarIconBrightness:
-        context
-            .watch<AppThemeCubit>()
-            .state
-            .appTheme == AppTheme.dark
-            ? Brightness.light
-            : Brightness.dark);
+            context.watch<AppThemeCubit>().state.appTheme == AppTheme.dark
+                ? Brightness.light
+                : Brightness.dark);
   }
 
-
-  static setDefaultLocationValue({required bool isCurrent,
-    required bool isHomeUpdate,
-    required BuildContext context}) {
+  static setDefaultLocationValue(
+      {required bool isCurrent,
+      required bool isHomeUpdate,
+      required BuildContext context}) {
     if (isCurrent) {
       HiveUtils.setCurrentLocation(
           area: null,
@@ -919,8 +868,7 @@ class UiUtils {
           state: "",
           country: "Yemen",
           latitude: 15.3694,
-          longitude: 44.1910
-      );
+          longitude: 44.1910);
     } else {
       HiveUtils.setCurrentLocation(
           area: null,
@@ -928,16 +876,15 @@ class UiUtils {
           state: "",
           country: "Yemen",
           latitude: 15.3694,
-          longitude: 44.1910
-      );
+          longitude: 44.1910);
     }
     if (isHomeUpdate) {
       Future.delayed(
         Duration.zero,
-            () {
+        () {
           context.read<FetchHomeScreenCubit>().fetch(
-            city: "Bhuj",
-          );
+                city: "Bhuj",
+              );
           context
               .read<FetchHomeAllItemsCubit>()
               .fetch(city: "Bhuj", radius: HiveUtils.getNearbyRadius());
@@ -945,7 +892,6 @@ class UiUtils {
       );
     }
   }
-
 
   static Color makeColorDark(Color color) {
     Color color0 = color;
@@ -969,435 +915,374 @@ class UiUtils {
         blue.clamp(0, 255));
   }
 
-
-
   static Widget buildButton(
-  BuildContext context, {
-  double? height,
-  double? width,
-  BorderSide? border,
-  String? titleWhenProgress,
-  bool? isInProgress,
-  bool? isSuccess,
-  bool? isError,
-  double? fontSize,
-  double? radius,
-  bool? autoWidth,
-  Widget? prefixWidget,
-  EdgeInsetsGeometry? padding,
-  /// Legacy alias for
-  [buttonColor]. Prefer using [buttonColor].
-  Color? backgroundColor,
-  required VoidCallback? onPressed,
-  required String buttonTitle,
-  bool? showProgressTitle,
-  double? progressWidth,
-  double? progressHeight,
-  bool? showElevation,
-  Color? textColor,
-  Color? buttonColor,
-  EdgeInsets? outerPadding,
-  Color? disabledColor,
-  VoidCallback? onTapDisabledButton,
-  bool? disabled,
+    BuildContext context, {
+    double? height,
+    double? width,
+    BorderSide? border,
+    String? titleWhenProgress,
+    bool? isInProgress,
+    bool? isSuccess,
+    bool? isError,
+    double? fontSize,
+    double? radius,
+    bool? autoWidth,
+    Widget? prefixWidget,
+    EdgeInsetsGeometry? padding,
+    required VoidCallback onPressed,
+    required String buttonTitle,
+    bool? showProgressTitle,
+    double? progressWidth,
+    double? progressHeight,
+    bool? showElevation,
+    Color? textColor,
+    Color? buttonColor,
+    EdgeInsets? outerPadding,
+    Color? disabledColor,
+    VoidCallback? onTapDisabledButton,
+    bool? disabled,
   }) {
-  assert(() {
-  debugPrint('UiUtils.buildButton v3 ✔️');
-  return true;
-  }());
+    assert(() {
+      debugPrint('UiUtils.buildButton v3 ✔️');
+      return true;
+    }());
 
+    final bool blockInput = (disabled ?? false) || (isInProgress == true);
+    final Color baseButtonColor = buttonColor ?? context.color.territoryColor;
 
+    final Color disabledBackgroundColor =
+        disabledColor ?? UiUtils.makeColorLight(baseButtonColor);
+    final Color bg = blockInput ? disabledBackgroundColor : baseButtonColor;
 
-  final Color resolvedButtonColor = buttonColor ?? backgroundColor;
-  final bool blockInput =
-  (disabled ?? false) || (isInProgress == true) || onPressed == null;
-  final Color baseButtonColor =
-  resolvedButtonColor ?? context.color.territoryColor;
+    // لون النص/الأيقونات/السبينر
+    final Color fg = textColor ?? context.color.textAutoAdapt(bg);
+    final Color disabledForeground = textColor != null
+        ? UiUtils.makeColorLight(textColor!)
+        : UiUtils.makeColorDark(disabledBackgroundColor);
+    final Color contentColor = blockInput ? disabledForeground : fg;
 
+    final bool useWhiteProgress = bg.computeLuminance() < 0.5;
 
+    final Color progressColor = useWhiteProgress ? Colors.white : contentColor;
+    final String title = (isInProgress == true)
+        ? (titleWhenProgress ?? buttonTitle)
+        : buttonTitle;
 
-  final Color disabledBackgroundColor =
-  disabledColor ?? UiUtils.makeColorLight(baseButtonColor);
-  final Color bg = blockInput ? disabledBackgroundColor : baseButtonColor;
+    Widget buildText(String t, Color c) => Flexible(
+          child: Text(
+            t,
+            overflow: TextOverflow.ellipsis,
+            softWrap: true,
+            textAlign: TextAlign.center,
+          ).color(c).size(fontSize ?? context.font.larger),
+        );
 
-
-  // لون النص/الأيقونات/السبينر
-  final Color fg = textColor ?? context.color.textAutoAdapt(bg);
-  final Color disabledForeground = textColor != null
-  ? UiUtils.makeColorLight(textColor!)
-      : UiUtils.makeColorDark(disabledBackgroundColor);
-  final Color contentColor = blockInput ? disabledForeground : fg;
-
-
-  final bool useWhiteProgress = bg.computeLuminance() < 0.5;
-
-  final Color progressColor =
-  useWhiteProgress ? Colors.white : contentColor;
-  final String title =
-  (isInProgress == true) ? (titleWhenProgress ?? buttonTitle) : buttonTitle;
-
-  Widget buildText(String t, Color c) =>
-  Flexible(
-  child: Text(
-  t,
-  overflow: TextOverflow.ellipsis,
-  softWrap: true,
-  textAlign: TextAlign.center,
-  ).color(c).size(fontSize ?? context.font.larger),
-  );
-
-  return Padding(
-  padding: outerPadding ?? EdgeInsets.zero,
-  child: GestureDetector(
-  behavior: HitTestBehavior.opaque,
-  onTap: (blockInput && disabled == true) ? onTapDisabledButton : null,
-  child: IgnorePointer(
-  ignoring: blockInput,
-  child: ElevatedButton(
-  style: ElevatedButton.styleFrom(
-  elevation: (showElevation ?? true) ? 1 : 0,
-  backgroundColor: bg,
-  foregroundColor: fg,
-  disabledBackgroundColor: disabledBackgroundColor,
-  disabledForegroundColor: disabledForeground,
-  minimumSize: Size(
-  autoWidth == true ? 0 : (width ?? double.infinity),
-  height ?? 56.rh(context),
-  ),
-  padding: padding ??
-  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-  shape: RoundedRectangleBorder(
-  borderRadius: BorderRadius.circular(radius ?? 16),
-  side: border ?? BorderSide.none,
-  ),
-  ),
-  onPressed: blockInput
-  ? null
-      : () {
-  HelperUtils.unfocus();
-  onPressed?.call();
-  },
-  child: AnimatedSwitcher(
-  duration: const Duration(milliseconds: 250),
-  transitionBuilder: (child, anim) =>
-  FadeTransition(opacity: anim, child: child),
-  child: Row(
-  key: ValueKey("$isInProgress-$isSuccess-$isError-$title"),
-  mainAxisAlignment: MainAxisAlignment.center,
-  mainAxisSize: MainAxisSize.min,
-  children: [
-  if (isInProgress == true)
-  UiUtils.progress(
-  width: progressWidth ?? 18,
-  height: progressHeight ?? 18,
-  showWhite: useWhiteProgress,
-  normalProgressColor: progressColor,
-
-  ),
-  if (isSuccess == true)
-  Icon(Icons.check_circle, color: contentColor, size: 22),
-  if (isError == true)
-  Icon(Icons.error_outline, color: contentColor, size: 22),
-  if (isInProgress == true || isSuccess == true ||
-  isError == true)
-  const SizedBox(width: 8),
-  if (isInProgress == true && (showProgressTitle ?? false))
-  buildText(title, contentColor),
-  if (isInProgress != true &&
-  isSuccess != true &&
-  isError != true) ...[
-  if (prefixWidget != null) ...[
-  IconTheme.merge(
-  data: IconThemeData(color: contentColor),
-  child: prefixWidget!,
-  ),
-  const SizedBox(width: 8),
-  ],
-  buildText(title, contentColor),
-  ],
-  ],
-  ),
-  ),
-  ),
-  ),
-  ),
-  );
+    return Padding(
+      padding: outerPadding ?? EdgeInsets.zero,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: (blockInput && disabled == true) ? onTapDisabledButton : null,
+        child: IgnorePointer(
+          ignoring: blockInput,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              elevation: (showElevation ?? true) ? 1 : 0,
+              backgroundColor: bg,
+              foregroundColor: fg,
+              disabledBackgroundColor: disabledBackgroundColor,
+              disabledForegroundColor: disabledForeground,
+              minimumSize: Size(
+                autoWidth == true ? 0 : (width ?? double.infinity),
+                height ?? 56.rh(context),
+              ),
+              padding: padding ??
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(radius ?? 16),
+                side: border ?? BorderSide.none,
+              ),
+            ),
+            onPressed: blockInput
+                ? null
+                : () {
+                    HelperUtils.unfocus();
+                    onPressed.call();
+                  },
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              transitionBuilder: (child, anim) =>
+                  FadeTransition(opacity: anim, child: child),
+              child: Row(
+                key: ValueKey("$isInProgress-$isSuccess-$isError-$title"),
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (isInProgress == true)
+                    UiUtils.progress(
+                      width: progressWidth ?? 18,
+                      height: progressHeight ?? 18,
+                      showWhite: useWhiteProgress,
+                      normalProgressColor: progressColor,
+                    ),
+                  if (isSuccess == true)
+                    Icon(Icons.check_circle, color: contentColor, size: 22),
+                  if (isError == true)
+                    Icon(Icons.error_outline, color: contentColor, size: 22),
+                  if (isInProgress == true ||
+                      isSuccess == true ||
+                      isError == true)
+                    const SizedBox(width: 8),
+                  if (isInProgress == true && (showProgressTitle ?? false))
+                    buildText(title, contentColor),
+                  if (isInProgress != true &&
+                      isSuccess != true &&
+                      isError != true) ...[
+                    if (prefixWidget != null) ...[
+                      IconTheme.merge(
+                        data: IconThemeData(color: contentColor),
+                        child: prefixWidget!,
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    buildText(title, contentColor),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
-
-
-
-
-
-
-
-
-
-
-
-
 
   static NetworkToLocalSvg networkToLocalSvg = NetworkToLocalSvg();
 
   static Widget imageType(String url,
-  {double? width, double? height, BoxFit? fit, Color? color}) {
-  String? extension = mime(url);
+      {double? width, double? height, BoxFit? fit, Color? color}) {
+    String? extension = mime(url);
 
-  if (extension == "image/svg+xml") {
-  return getSvgImage(
-  url,
-  fit: fit,
-  height: height,
-  width: width,
-  color: color,
-  );
-  } else {
-  return getImage(
-  url,
-  fit: fit,
-  height: height,
-  width: width,
-  );
+    if (extension == "image/svg+xml") {
+      return getSvgImage(
+        url,
+        fit: fit,
+        height: height,
+        width: width,
+        color: color,
+      );
+    } else {
+      return getImage(
+        url,
+        fit: fit,
+        height: height,
+        width: width,
+      );
+    }
   }
-  }
-
 
   static void showFullScreenImage(BuildContext context,
-  {required ImageProvider provider, VoidCallback? then}) {
-  Navigator.of(context)
-      .push(BlurredRouter(
-  sigmaX: 10,
-  sigmaY: 10,
-  barrierDismiss: true,
-  builder: (BuildContext context) =>
-  FullScreenImageView(
-  provider: provider,
-  )))
-      .then((value) {
-  then?.call();
-  });
+      {required ImageProvider provider, VoidCallback? then}) {
+    Navigator.of(context)
+        .push(BlurredRouter(
+            sigmaX: 10,
+            sigmaY: 10,
+            barrierDismiss: true,
+            builder: (BuildContext context) => FullScreenImageView(
+                  provider: provider,
+                )))
+        .then((value) {
+      then?.call();
+    });
   }
-
 
   static Future<void> openBottomSheet({
-  required BuildContext context,
-  required Widget child,
+    required BuildContext context,
+    required Widget child,
   }) {
-  return showModalBottomSheet(
-  context: context,
-  isScrollControlled: true,
-  backgroundColor: Colors.transparent, // يجعل الخلفية شفافة
-  builder: (_) {
-  return ClipRRect(
-  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-  child: Container(
-  decoration: BoxDecoration(
-  color: Theme
-      .of(context)
-      .scaffoldBackgroundColor,
-  borderRadius: const BorderRadius.vertical(
-  top: Radius.circular(20)),
-  ),
-  child: child,
-  ),
-  );
-  },
-  );
+    return showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent, // يجعل الخلفية شفافة
+      builder: (_) {
+        return ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: child,
+          ),
+        );
+      },
+    );
   }
-
 
   // عرض نافذة حوار (Dialog) منبثقة للمستخدم في حال عدم وجود باقة متاحة (مثل اشتراك أو خطة).
 
   static void noPackageAvailableDialog(
-  BuildContext context, {
-  SubscriptionPackageLimit? limit,
+    BuildContext context, {
+    SubscriptionPackageLimit? limit,
   }) async {
+    UiUtils.showBlurredDialoge(
+      context,
+      dialoge: BlurredDialogBox(
+        title: 'noPackage'.translate(context),
+        acceptButtonName: 'subscribe'.translate(context),
+        cancelButtonName: 'cancelLbl'.translate(context),
+        acceptButtonColor: context.color.territoryColor,
+        acceptTextColor: context.color.secondaryColor,
+        content: StatefulBuilder(builder: (context, update) {
+          final theme = Theme.of(context);
+          final textTheme = theme.textTheme;
+          final children = <Widget>[
+            Text('plsSubscribe'.translate(context)),
+          ];
 
-  UiUtils.showBlurredDialoge(
-  context,
-  dialoge: BlurredDialogBox(
-  title: 'noPackage'.translate(context),
-  acceptButtonName: 'subscribe'.translate(context),
-  cancelButtonName: 'cancelLbl'.translate(context),
-  acceptButtonColor: context.color.territoryColor,
-  acceptTextColor: context.color.secondaryColor,
-  content: StatefulBuilder(builder: (context, update) {
+          if (limit != null) {
+            final blockedLabel =
+                getTranslatedLabel(context, 'subscriptionLimitActionBlocked');
+            if (blockedLabel.trim().isNotEmpty) {
+              children.add(const SizedBox(height: 12));
+              children.add(
+                Text(
+                  blockedLabel,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              );
+            }
 
-  final theme = Theme.of(context);
-  final textTheme = theme.textTheme;
-  final children = <Widget>[
-  Text('plsSubscribe'.translate(context)),
-  ];
+            final summary =
+                subscriptionLimitSummary(context, limit, includeExpiry: false);
+            if (summary != null && summary.isNotEmpty) {
+              children.add(const SizedBox(height: 8));
+              children.add(
+                Text(
+                  summary,
+                  style: textTheme.bodyMedium,
+                ),
+              );
+            }
 
-  if (limit != null) {
-  final blockedLabel =
-  getTranslatedLabel(context, 'subscriptionLimitActionBlocked');
-  if (blockedLabel.trim().isNotEmpty) {
-  children.add(const SizedBox(height: 12));
-  children.add(
-  Text(
-  blockedLabel,
-  style: textTheme.bodyMedium?.copyWith(
-  color: theme.colorScheme.error,
-  fontWeight: FontWeight.w600,
-  ),
-  ),
-  );
+            final expiry = subscriptionLimitExpiry(context, limit);
+            if (expiry != null && expiry.isNotEmpty) {
+              children.add(const SizedBox(height: 4));
+              children.add(
+                Text(
+                  expiry,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                ),
+              );
+            }
+          }
+
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: children,
+          );
+        }),
+        isAcceptContainesPush: false,
+        onAccept: () async {
+          Future.delayed(Duration(seconds: 1), () {
+            Navigator.pushNamed(context, Routes.subscriptionPackageListRoute);
+          });
+        },
+      ),
+    );
   }
-
-  final summary =
-  subscriptionLimitSummary(context, limit, includeExpiry: false);
-  if (summary != null && summary.isNotEmpty) {
-  children.add(const SizedBox(height: 8));
-  children.add(
-  Text(
-  summary,
-  style: textTheme.bodyMedium,
-  ),
-  );
-  }
-
-  final expiry = subscriptionLimitExpiry(context, limit);
-  if (expiry != null && expiry.isNotEmpty) {
-  children.add(const SizedBox(height: 4));
-  children.add(
-  Text(
-  expiry,
-  style: textTheme.bodySmall?.copyWith(
-  color: theme.colorScheme.onSurface.withOpacity(0.7),
-  ),
-  ),
-  );
-  }
-  }
-
-  return Column(
-  mainAxisSize: MainAxisSize.min,
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: children,
-  );
-
-
-  }),
-  isAcceptContainesPush: false,
-  onAccept: () async {
-  Future.delayed(Duration(seconds: 1), () {
-  Navigator.pushNamed(context, Routes.subscriptionPackageListRoute);
-  });
-  },
-  ),
-  );
-  }
-
-
-
 
   static void imageGallaryView(BuildContext context,
-  {required List images, VoidCallback? then, required int initalIndex}) {
-  Navigator.push(
-  context,
-  MaterialPageRoute(
-  builder: (context) =>
-  GalleryView(
-  images: images.cast<String>(), // ✅ تحويل القائمة لنوع String
-  initialIndex: initalIndex,
-  )
-  ));
+      {required List images, VoidCallback? then, required int initalIndex}) {
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => GalleryView(
+                  images: images.cast<String>(), // ✅ تحويل القائمة لنوع String
+                  initialIndex: initalIndex,
+                )));
   }
-
 
 // وظيفتها عرض نافذة حوار (Dialog) مع تأثير ضبابي (Blur) خلفها،
 
   static Future showBlurredDialoge(
-  BuildContext context, {
-  required BlurDialoge dialoge,
-  double? sigmaX,
-  double? sigmaY,
+    BuildContext context, {
+    required BlurDialoge dialoge,
+    double? sigmaX,
+    double? sigmaY,
   }) async {
-  return await Navigator.push(
-  context,
-  BlurredRouter(
-  barrierDismiss: true,
-  builder: (context) {
-  // يكفي نتأكد إنه Widget ونرجعه
-  if (dialoge is Widget) return dialoge as Widget;
-  return const SizedBox.shrink();
-  },
-  sigmaX: sigmaX,
-  sigmaY: sigmaY,
-  ),
-  );
+    return await Navigator.push(
+      context,
+      BlurredRouter(
+        barrierDismiss: true,
+        builder: (context) {
+          // يكفي نتأكد إنه Widget ونرجعه
+          if (dialoge is Widget) return dialoge as Widget;
+          return const SizedBox.shrink();
+        },
+        sigmaX: sigmaX,
+        sigmaY: sigmaY,
+      ),
+    );
   }
-
-
-
-
-
-
-
-
-
-
-
-
 
 //AAA is color theory's point it means if color is AAA then it will be perfect for your app
   static bool isColorMatchAAA(Color textColor, Color background) {
-  double contrastRatio = (textColor.computeLuminance() + 0.05) /
-  (background.computeLuminance() + 0.05);
-  if (contrastRatio < 4.5) {
-  return false;
-  } else {
-  return true;
-  }
+    double contrastRatio = (textColor.computeLuminance() + 0.05) /
+        (background.computeLuminance() + 0.05);
+    if (contrastRatio < 4.5) {
+      return false;
+    } else {
+      return true;
+    }
   }
 
   static double getRadiansFromDegree(double radians) {
-  return radians * 180 / pi;
+    return radians * 180 / pi;
   }
 
   static Color getAdaptiveTextColor(Color color) {
-  int d = 0;
+    int d = 0;
 
 // Counting the perceptive luminance - human eye favors green color...
-  double luminance =
-  (0.299 * color.red + 0.587 * color.green + 0.114 * color.blue) / 255;
+    double luminance =
+        (0.299 * color.red + 0.587 * color.green + 0.114 * color.blue) / 255;
 
-  if (luminance > 0.5) {
-  d = 0;
-  } else {
-  d = 255;
-  } // dark colors - white font
+    if (luminance > 0.5) {
+      d = 0;
+    } else {
+      d = 255;
+    } // dark colors - white font
 
-  return Color.fromARGB(color.alpha, d, d, d);
+    return Color.fromARGB(color.alpha, d, d, d);
   }
-
-
-
 
   static String formatTimeWithDateTime(DateTime dateTime, {bool is24 = true}) {
-  if (is24) {
-  return DateFormat("kk:mm").format(dateTime);
-  } else {
-  return DateFormat("hh:mm a").format(dateTime);
+    if (is24) {
+      return DateFormat("kk:mm").format(dateTime);
+    } else {
+      return DateFormat("hh:mm a").format(dateTime);
+    }
   }
-  }
-
-
 
   static String time24to12hour(String time24) {
-  DateTime tempDate = DateFormat("hh:mm").parse(time24);
-  var dateFormat = DateFormat("h:mm a");
-  return dateFormat.format(tempDate);
+    DateTime tempDate = DateFormat("hh:mm").parse(time24);
+    var dateFormat = DateFormat("h:mm a");
+    return dateFormat.format(tempDate);
   }
 
   static String monthYearDate(String date) {
-  DateTime dateTime = DateTime.parse(date);
+    DateTime dateTime = DateTime.parse(date);
 
-  // Format the date into "MMMM yyyy" (i.e., April 2024)
-  return DateFormat('MMMM yyyy').format(dateTime);
+    // Format the date into "MMMM yyyy" (i.e., April 2024)
+    return DateFormat('MMMM yyyy').format(dateTime);
   }
 }
-
 
 class _AppBarBackButton extends StatelessWidget {
   const _AppBarBackButton({
@@ -1451,7 +1336,6 @@ class _AppBarBackButton extends StatelessWidget {
   }
 }
 
-
 ///Format string
 extension FormatAmount on String {
   String formatAmount({bool prefix = false}) {
@@ -1459,7 +1343,6 @@ extension FormatAmount on String {
         ? "${Constant.currencySymbol}${toString()}"
         : "${toString()}${Constant.currencySymbol}"; // \u{20B9}"; //currencySymbol
   }
-
 
   String formatPercentage() {
     return "${toString()} %";
@@ -1479,9 +1362,6 @@ extension FormatAmount on String {
     return (upperCase + suffix);
   }
 }
-
-
-
 
 // دالة اخرى للتحكم في الوقت والتاريخ
 
@@ -1532,7 +1412,7 @@ extension FormatDate on String {
   }
 
   String _convertToArabicNumbers(int number) {
-    final arabicNumbers = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+    final arabicNumbers = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
     return number
         .toString()
         .split('')
@@ -1540,10 +1420,6 @@ extension FormatDate on String {
         .join();
   }
 }
-
-
-
-
 
 //scroll controller extenstion
 
@@ -1557,29 +1433,20 @@ extension ScrollEndListen on ScrollController {
   }
 }
 
-
-
-
-
-
 class RemoveGlow extends ScrollBehavior {
   const RemoveGlow();
-
 
   @override
   Widget buildOverscrollIndicator(
       BuildContext context, Widget child, ScrollableDetails details) {
     return child;
   }
+
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) {
     return const LowSpecScrollPhysics();
   }
 }
-
-
-
-
 
 class RoundedBorderOnSomeSidesWidget extends StatelessWidget {
   /// Color of the content behind this widget
@@ -1609,7 +1476,6 @@ class RoundedBorderOnSomeSidesWidget extends StatelessWidget {
     this.bottomRight = false,
   });
 
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -1620,7 +1486,7 @@ class RoundedBorderOnSomeSidesWidget extends StatelessWidget {
           topRight: topRight ? Radius.circular(borderRadius) : Radius.zero,
           bottomLeft: bottomLeft ? Radius.circular(borderRadius) : Radius.zero,
           bottomRight:
-          bottomRight ? Radius.circular(borderRadius) : Radius.zero,
+              bottomRight ? Radius.circular(borderRadius) : Radius.zero,
         ),
       ),
       child: Container(
@@ -1652,8 +1518,6 @@ class RoundedBorderOnSomeSidesWidget extends StatelessWidget {
     );
   }
 }
-
-
 
 class _SoftSnackBarWidget extends StatefulWidget {
   final String message;
@@ -1712,7 +1576,8 @@ class _SoftSnackBarWidgetState extends State<_SoftSnackBarWidget>
             color: Colors.transparent,
             child: IntrinsicWidth(
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                 decoration: BoxDecoration(
                   color: widget.backgroundColor,
                   borderRadius: BorderRadius.circular(22),
@@ -1759,14 +1624,6 @@ class _SoftSnackBarWidgetState extends State<_SoftSnackBarWidget>
   }
 }
 
-
-
-
-
-
-
-
-
 // لو BlurDialoge معرفة عندك في ملف ثاني، تأكد من import لها
 // import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 
@@ -1807,9 +1664,15 @@ class BlurredRichDialog extends StatelessWidget implements BlurDialoge {
               filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
               child: Container(
                 decoration: BoxDecoration(
-                  color: scheme.surface.withOpacity(theme.brightness == Brightness.dark ? 0.25 : 0.35),
+                  color: scheme.surface.withOpacity(
+                      theme.brightness == Brightness.dark ? 0.25 : 0.35),
                   border: Border.all(color: scheme.onSurface.withOpacity(0.06)),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 18, offset: const Offset(0, 10))],
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 18,
+                        offset: const Offset(0, 10))
+                  ],
                 ),
                 child: SafeArea(
                   minimum: const EdgeInsets.all(12),
@@ -1823,8 +1686,11 @@ class BlurredRichDialog extends StatelessWidget implements BlurDialoge {
                           children: [
                             if (icon != null)
                               Container(
-                                width: 40, height: 40,
-                                decoration: BoxDecoration(color: scheme.primary.withOpacity(0.12), shape: BoxShape.circle),
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                    color: scheme.primary.withOpacity(0.12),
+                                    shape: BoxShape.circle),
                                 child: Icon(icon, color: scheme.primary),
                               ),
                             if (icon != null) const SizedBox(width: 12),
@@ -1833,13 +1699,16 @@ class BlurredRichDialog extends StatelessWidget implements BlurDialoge {
                                 child: Text(
                                   title!,
                                   style: theme.textTheme.titleLarge?.copyWith(
-                                      color: scheme.onSurface, fontWeight: FontWeight.w700),
+                                      color: scheme.onSurface,
+                                      fontWeight: FontWeight.w700),
                                 ),
                               ),
                             IconButton(
-                              tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                              tooltip: MaterialLocalizations.of(context)
+                                  .closeButtonTooltip,
                               onPressed: () => Navigator.of(context).maybePop(),
-                              icon: Icon(Icons.close_rounded, color: scheme.onSurface.withOpacity(0.65)),
+                              icon: Icon(Icons.close_rounded,
+                                  color: scheme.onSurface.withOpacity(0.65)),
                             ),
                           ],
                         ),
@@ -1852,9 +1721,12 @@ class BlurredRichDialog extends StatelessWidget implements BlurDialoge {
                               _linkify(
                                 body,
                                 normal: theme.textTheme.bodyMedium?.copyWith(
-                                    color: scheme.onSurface.withOpacity(0.9), height: 1.5),
+                                    color: scheme.onSurface.withOpacity(0.9),
+                                    height: 1.5),
                                 link: theme.textTheme.bodyMedium?.copyWith(
-                                    color: scheme.primary, decoration: TextDecoration.underline, height: 1.5),
+                                    color: scheme.primary,
+                                    decoration: TextDecoration.underline,
+                                    height: 1.5),
                                 onOpenLink: (url) async {
                                   // افتح الرابط بالطريقة المناسبة لمشروعك
                                 },
@@ -1870,9 +1742,14 @@ class BlurredRichDialog extends StatelessWidget implements BlurDialoge {
                               return ElevatedButton(
                                 style: ElevatedButton.styleFrom(
                                   elevation: 0,
-                                  backgroundColor: a.isPrimary ? scheme.primary : scheme.surface,
-                                  foregroundColor: a.isPrimary ? scheme.onPrimary : scheme.onSurface,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  backgroundColor: a.isPrimary
+                                      ? scheme.primary
+                                      : scheme.surface,
+                                  foregroundColor: a.isPrimary
+                                      ? scheme.onPrimary
+                                      : scheme.onSurface,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12)),
                                 ),
                                 onPressed: a.onPressed,
                                 child: Text(a.label),
@@ -1892,17 +1769,21 @@ class BlurredRichDialog extends StatelessWidget implements BlurDialoge {
   }
 
   TextSpan _linkify(
-      String input, {
-        TextStyle? normal,
-        TextStyle? link,
-        required void Function(String url) onOpenLink,
-      }) {
-    final reg = RegExp(r'((?:https?:\/\/)?(?:www\.)?[^\s]+\.[^\s]{2,}(?:\/[^\s]*)*)', caseSensitive: false);
+    String input, {
+    TextStyle? normal,
+    TextStyle? link,
+    required void Function(String url) onOpenLink,
+  }) {
+    final reg = RegExp(
+        r'((?:https?:\/\/)?(?:www\.)?[^\s]+\.[^\s]{2,}(?:\/[^\s]*)*)',
+        caseSensitive: false);
     final spans = <TextSpan>[];
     int start = 0;
 
     for (final m in reg.allMatches(input)) {
-      if (m.start > start) spans.add(TextSpan(text: input.substring(start, m.start), style: normal));
+      if (m.start > start)
+        spans.add(
+            TextSpan(text: input.substring(start, m.start), style: normal));
       final urlRaw = m.group(0)!;
       final url = urlRaw.startsWith('http') ? urlRaw : 'https://$urlRaw';
       spans.add(TextSpan(
@@ -1912,7 +1793,8 @@ class BlurredRichDialog extends StatelessWidget implements BlurDialoge {
       ));
       start = m.end;
     }
-    if (start < input.length) spans.add(TextSpan(text: input.substring(start), style: normal));
+    if (start < input.length)
+      spans.add(TextSpan(text: input.substring(start), style: normal));
     return TextSpan(children: spans);
   }
 }
@@ -1922,9 +1804,10 @@ class BlurredAction {
   final String label;
   final VoidCallback onPressed;
   final bool isPrimary;
-  const BlurredAction({required this.label, required this.onPressed, this.isPrimary = true});
-}
 
+  const BlurredAction(
+      {required this.label, required this.onPressed, this.isPrimary = true});
+}
 
 class GalleryView extends StatefulWidget {
   final List<String> images;
@@ -1986,11 +1869,6 @@ class _GalleryViewState extends State<GalleryView> {
     );
   }
 }
-
-
-
-
-
 
 class _AppBarBottomSection extends StatelessWidget {
   const _AppBarBottomSection({

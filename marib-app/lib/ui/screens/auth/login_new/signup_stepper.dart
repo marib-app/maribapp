@@ -121,7 +121,7 @@ class _StepHeader extends StatelessWidget {
     final theme = Theme.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: List.generate(_stepTitles.length, (index) {
+      children: List.generate(SignupStepper._stepTitles.length, (index) {
         final bool isActive = index == currentStep;
         final bool isCompleted = index < currentStep;
         final ColorScheme colorScheme = theme.colorScheme;
@@ -140,7 +140,9 @@ class _StepHeader extends StatelessWidget {
         return Expanded(
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            margin: EdgeInsets.only(right: index == _stepTitles.length - 1 ? 0 : 8),
+            margin: EdgeInsets.only(
+                right: index == SignupStepper._stepTitles.length - 1 ? 0 : 8),
+
             padding: const EdgeInsets.symmetric(vertical: 14),
             decoration: BoxDecoration(
               color: background,
@@ -158,7 +160,7 @@ class _StepHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _stepTitles[index],
+                  SignupStepper._stepTitles[index],
                   style: theme.textTheme.titleSmall?.copyWith(
                     color: foreground,
                     fontWeight: FontWeight.w600,

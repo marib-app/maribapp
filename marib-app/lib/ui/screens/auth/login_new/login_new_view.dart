@@ -239,7 +239,7 @@ class _LoginCard extends StatelessWidget {
                 ),
               if (state.enablePhone && !state.showOtpField)
                 TextButton(
-                  onPressed: viewModel.canRequestOtp
+                  onPressed: state.canRequestOtp
                       ? () => viewModel.startOtpFlow(context)
                       : null,
                   child: const Text('Send OTP'),

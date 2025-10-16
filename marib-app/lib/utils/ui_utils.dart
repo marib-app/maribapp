@@ -44,6 +44,64 @@ import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 
+
+
+
+
+
+
+
+class StatusBarAwareScaffold extends StatelessWidget {
+  const StatusBarAwareScaffold({
+    super.key,
+    required this.scaffold,
+    this.statusBarColor,
+    this.overlayStyle,
+  });
+
+  final Scaffold scaffold;
+  final Color? statusBarColor;
+  final SystemUiOverlayStyle? overlayStyle;
+
+  Color _resolveStatusBarColor(BuildContext context) {
+    if (statusBarColor != null) {
+      return statusBarColor!;
+    }
+
+    if (scaffold.backgroundColor != null) {
+      return scaffold.backgroundColor!;
+    }
+
+    if (scaffold.extendBodyBehindAppBar ?? false) {
+      return Colors.transparent;
+    }
+
+    return Theme.of(context).scaffoldBackgroundColor;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final SystemUiOverlayStyle resolvedStyle = overlayStyle ??
+        UiUtils.getSystemUiOverlayStyle(
+          context: context,
+          statusBarColor: _resolveStatusBarColor(context),
+        );
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: resolvedStyle,
+      child: scaffold,
+    );
+  }
+}
+
+
+
+
+
+
+
+
+
 class _AdaptiveNetworkImage extends StatefulWidget {
   const _AdaptiveNetworkImage({
     required this.urls,

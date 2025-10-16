@@ -9172,6 +9172,16 @@ public function storeRequestDevice(Request $request)
 
         $paymentMethod = $normalizedPaymentMethod;
 
+        $manualBankId = null;
+        $manualBank = null;
+        if ($paymentMethod === 'manual_bank') {
+            $requestedManualBankId = $request->input('manual_bank_id');
+            if ($requestedManualBankId !== null && $requestedManualBankId !== '') {
+                $manualBankId = (int) $requestedManualBankId;
+                $manualBank = ManualBank::query()->find($manualBankId);
+            }
+        }
+
 
         $validator = Validator::make($request->all(), [
             'payment_method' => 'nullable|in:manual_bank,east_yemen_bank,wallet',
@@ -9197,6 +9207,26 @@ public function storeRequestDevice(Request $request)
         $validated = $validator->validated();
 
         $paymentMethod = $validated['payment_method'] ?? $paymentMethod;
+
+
+        if ($paymentMethod === 'manual_bank') {
+            $validatedManualBankId = $validated['manual_bank_id'] ?? $manualBankId;
+
+            if ($validatedManualBankId !== null && $validatedManualBankId !== '') {
+                $manualBankId = (int) $validatedManualBankId;
+
+                if ($manualBank === null || $manualBank->getKey() !== $manualBankId) {
+                    $manualBank = ManualBank::query()->find($manualBankId);
+                }
+            } else {
+                $manualBankId = null;
+                $manualBank = null;
+            }
+        } else {
+            $manualBankId = null;
+            $manualBank = null;
+        }
+        
 
         $payableTypeInput = $request->input('payable_type');
         $payableIdInput = $request->input('payable_id');
@@ -9339,12 +9369,47 @@ public function storeRequestDevice(Request $request)
                 $existingManualPaymentRequest
             );
 
+            $resolvedManualBankId = $manualBank?->getKey();
+
+            $manualBankName = null;
+            if ($manualBank) {
+                $rawName = $manualBank->name ?? null;
+                if (is_string($rawName)) {
+                    $trimmedName = trim($rawName);
+                    if ($trimmedName !== '') {
+                        $manualBankName = $trimmedName;
+                    }
+                }
+            }
+
+            $manualBankAccountName = null;
+
+            if ($manualBank) {
+                $accountName = $manualBank->account_name ?? null;
+                if (is_string($accountName)) {
+                    $accountName = trim($accountName);
+                }
+
+                if (!is_string($accountName) || $accountName === '') {
+                    $accountName = $manualBank->beneficiary_name ?? null;
+                }
+
+                if (is_string($accountName)) {
+                    $trimmedAccountName = trim($accountName);
+                    if ($trimmedAccountName !== '') {
+                        $manualBankAccountName = $trimmedAccountName;
+                    }
+                }
+            }
+
 
             $manualPaymentAttributes = [
                 'user_id'        => $user->id,
 
                 'manual_bank_id' => $paymentMethod === 'manual_bank'
-                    ? ($validated['manual_bank_id'] ?? $request->input('manual_bank_id'))
+                    ? $resolvedManualBankId
+
+
                     : null,
                  
                 'amount'         => $request->amount,
@@ -9361,10 +9426,7 @@ public function storeRequestDevice(Request $request)
                 'meta'           => empty($metaPayload) ? null : $metaPayload,
             ];
 
-            $manualBank = null;
-            if ($paymentMethod === 'manual_bank' && $request->manual_bank_id) {
-                $manualBank = ManualBank::query()->find($request->manual_bank_id);
-            }
+
 
             $manualPaymentAttributes = array_merge($manualPaymentAttributes, [
                 'bank_name'         => $manualBank?->name,

@@ -29,8 +29,11 @@ import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 
 
 // واجهة منفصلة بالكامل
-import 'login_screen_ui.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import '../login_new/login_flow_view.dart';
+
+
+
 
 class LoginScreen extends StatefulWidget {
   final bool? isDeleteAccount;
@@ -406,6 +409,39 @@ class LoginScreenState extends State<LoginScreen> {
     setState(() {});
   }
 
+
+  void _handleBackNavigation() {
+    if (widget.isDeleteAccount ?? false) {
+      Navigator.pop(context);
+      return;
+    }
+
+    if (isOtpSent) {
+      setState(() {
+        isOtpSent = false;
+        isMobileNumberField = true;
+        isBack = false;
+      });
+      return;
+    }
+
+    if (sendMailClicked) {
+      setState(() {
+        sendMailClicked = false;
+        isBack = false;
+      });
+      return;
+    }
+
+    if (!isBack) {
+      setState(() => isBack = true);
+      return;
+    }
+
+    Navigator.pop(context);
+  }
+
+
   // Google/Apple: بعد نجاح المصادقة من AuthenticationCubit
   Future<void> _handleSocialLoginFromLogin(AuthenticationSuccess state) async {
     try {
@@ -542,27 +578,16 @@ class LoginScreenState extends State<LoginScreen> {
         .size;
     _setDemoOTP();
 
-    return LoginHeaderSection(
-      isBack: isBack,
-      isOtpSent: isOtpSent,
-      sendMailClicked: sendMailClicked,
-      isDeleteAccount: widget.isDeleteAccount ?? false,
-      onResetOTP: () {
-        setState(() {
-          isOtpSent = false;
-          isMobileNumberField = true;
-        });
+    return PopScope(
+      canPop: isBack,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        _handleBackNavigation();
       },
-      onBack: () {
-        setState(() {
-          sendMailClicked = false;
-        });
-      },
-      updateBackState: (v) => setState(() => isBack = v),
-
-      // محتوى الشاشة (واجهة صافية + منطق BLoC)
-      child: LoginScreenFrame(
-        child: BlocListener<LoginCubit, LoginState>(
+      child: LoginFlowView(
+        showBackButton: Navigator.of(context).canPop(),
+        onBack: _handleBackNavigation,
+        form: BlocListener<LoginCubit, LoginState>(
           listener: (context, state) {
             // إيقاف التحميل عند انتهاء أي عملية
 
@@ -691,7 +716,7 @@ class LoginScreenState extends State<LoginScreen> {
 
                   return Form(
                     key: _formKey,
-                    child: LoginScreenUI(
+                    child: LoginFlowForm(
                   // حالة العرض
                   isOtpSent: isOtpSent,
                   sendMailClicked: sendMailClicked,

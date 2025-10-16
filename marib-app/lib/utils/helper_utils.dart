@@ -28,6 +28,7 @@ import 'package:marib/utils/constant.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/foundation.dart';
 
+import 'package:marib/app/routes.dart';
 
 
 enum MessageType {
@@ -937,17 +938,48 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
     return ((bytes / pow(1024, i)).toStringAsFixed(decimals)) + suffixes[i];
   }
 
-  static killPreviousPages(BuildContext context, var nextpage, var args) {
-    Navigator.of(context)
-        .pushNamedAndRemoveUntil(nextpage, (route) => false, arguments: args);
+  static Route<dynamic> _resolveRoute(
+      String nextPage,
+      Map<String, dynamic>? args,
+      Route<dynamic>? overrideRoute,
+      ) {
+    if (overrideRoute != null) {
+      return overrideRoute;
+    }
+
+    final RouteSettings settings = RouteSettings(
+      name: nextPage,
+      arguments: args,
+    );
+
+    return Routes.onGenerateRouted(settings);
   }
 
-  static goToNextPage(var nextpage, BuildContext bcontext, bool isreplace,
-      {Map? args}) {
+  static void killPreviousPages(
+      BuildContext context,
+      String nextpage,
+      Map<String, dynamic>? args, {
+        Route<dynamic>? overrideRoute,
+      }) {
+    final Route<dynamic> route = _resolveRoute(nextpage, args, overrideRoute);
+    Navigator.of(context).pushAndRemoveUntil(route, (Route<dynamic> _) => false);
+  }
+
+  static void goToNextPage(
+      String nextpage,
+      BuildContext bcontext,
+      bool isreplace, {
+        Map<String, dynamic>? args,
+        Route<dynamic>? overrideRoute,
+      }) {
+    final Route<dynamic> route = _resolveRoute(nextpage, args, overrideRoute);
+
     if (isreplace) {
-      Navigator.of(bcontext).pushReplacementNamed(nextpage, arguments: args);
+      Navigator.of(bcontext).pushReplacement(route);
+
     } else {
-      Navigator.of(bcontext).pushNamed(nextpage, arguments: args);
+      Navigator.of(bcontext).push(route);
+
     }
   }
 

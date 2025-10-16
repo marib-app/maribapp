@@ -24,7 +24,9 @@ import 'dart:math';
 import 'package:marib/data/model/custom_field/custom_field_model.dart';
 import 'package:marib/utils/color_palette_utils.dart';
 import 'package:marib/data/constants/color_catalog.dart';
-
+import 'package:marib/utils/helper_utils.dart';
+import 'package:marib/ui/screens/item/add_item_screen/widgets/pdf_viewer.dart';
+import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 
 
 class CustomFieldsWidget extends StatefulWidget {
@@ -479,8 +481,23 @@ Widget valueContent(
         label: "📄 افتح الملف",
         icon: null,
         onTap: () {
-          Navigator.pushNamed(context, Routes.pdfViewerScreen, arguments: {"url": value[0]});
-        },
+          final Map<String, dynamic> routeArgs = <String, dynamic>{'url': value[0]};
+          HelperUtils.goToNextPage(
+            Routes.pdfViewerScreen,
+            context,
+            false,
+            args: routeArgs,
+            overrideRoute: BlurredRouter(
+              settings: RouteSettings(
+                name: Routes.pdfViewerScreen,
+                arguments: routeArgs,
+              ),
+              barrierDismiss: true,
+              barrierOpacity: 0.32,
+              builder: (_) => PdfViewer(url: value[0]),
+            ),
+          );
+          },
       );
     }
     // ✅ صورة

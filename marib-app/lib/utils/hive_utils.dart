@@ -631,7 +631,7 @@ class HiveUtils {
       Duration.zero,
           () {
         if (isRedirect ?? true) {
-          HelperUtils.killPreviousPages(context, Routes.login, {});
+          HelperUtils.killPreviousPages(context, Routes.login, null);
         }
       },
     );

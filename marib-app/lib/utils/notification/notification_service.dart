@@ -1,4 +1,5 @@
 // ignore_for_file: file_names
+import 'package:marib/ui/screens/settings/notifications.dart';
 
 import 'dart:async';
 import 'dart:developer';
@@ -38,6 +39,9 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/notification/chat_message_handler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:convert';
+import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
+
+
 
 enum UserPresenceEventType { userTyping, userPresenceUpdated }
 
@@ -804,8 +808,22 @@ class NotificationService {
           });*/
         } else {
           Future.delayed(Duration.zero, () {
-            HelperUtils.goToNextPage(Routes.notificationPage,
-                Constant.navigatorKey.currentContext!, false);
+            final BuildContext? targetContext =
+                Constant.navigatorKey.currentContext;
+            if (targetContext == null) {
+              return;
+            }
+            HelperUtils.goToNextPage(
+              Routes.notificationPage,
+              targetContext,
+              false,
+              overrideRoute: BlurredRouter(
+                settings: const RouteSettings(name: Routes.notificationPage),
+                barrierDismiss: true,
+                barrierOpacity: 0.28,
+                builder: (_) => const Notifications(),
+              ),
+            );
           });
         }
       } else if (message.data['type'] == "item-update") {
@@ -823,16 +841,19 @@ class NotificationService {
         DataOutput<ItemModel> item =
         await ItemRepository().fetchItemFromItemId(int.parse(id));
         Future.delayed(Duration.zero, () {
-          Navigator.pushNamed(
-              Constant.navigatorKey.currentContext!, Routes.adDetailsScreen,
-              arguments: {
-                'model': item.modelList[0],
-              });
-          /* HelperUtils.goToNextPage(Routes.adDetailsScreen,
-              Constant.navigatorKey.currentContext!, false,
-              args: {
-                'model': item.modelList[0],
-              });*/
+          final BuildContext? targetContext =
+              Constant.navigatorKey.currentContext;
+          if (targetContext == null) {
+            return;
+          }
+          HelperUtils.goToNextPage(
+            Routes.adDetailsScreen,
+            targetContext,
+            false,
+            args: <String, dynamic>{
+              'model': item.modelList[0],
+            },
+          );
         });
       } else if (message.data['type'] == "payment") {
         if (HiveUtils.isUserAuthenticated()) {
@@ -842,14 +863,42 @@ class NotificationService {
           });
         } else {
           Future.delayed(Duration.zero, () {
-            HelperUtils.goToNextPage(Routes.notificationPage,
-                Constant.navigatorKey.currentContext!, false);
+            final BuildContext? targetContext =
+                Constant.navigatorKey.currentContext;
+            if (targetContext == null) {
+              return;
+            }
+            HelperUtils.goToNextPage(
+              Routes.notificationPage,
+              targetContext,
+              false,
+              overrideRoute: BlurredRouter(
+                settings: const RouteSettings(name: Routes.notificationPage),
+                barrierDismiss: true,
+                barrierOpacity: 0.28,
+                builder: (_) => const Notifications(),
+              ),
+            );
           });
         }
       } else {
         Future.delayed(Duration.zero, () {
-          HelperUtils.goToNextPage(Routes.notificationPage,
-              Constant.navigatorKey.currentContext!, false);
+          final BuildContext? targetContext =
+              Constant.navigatorKey.currentContext;
+          if (targetContext == null) {
+            return;
+          }
+          HelperUtils.goToNextPage(
+            Routes.notificationPage,
+            targetContext,
+            false,
+            overrideRoute: BlurredRouter(
+              settings: const RouteSettings(name: Routes.notificationPage),
+              barrierDismiss: true,
+              barrierOpacity: 0.28,
+              builder: (_) => const Notifications(),
+            ),
+          );
         });
       }
     }

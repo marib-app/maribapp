@@ -488,6 +488,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
 
   Widget _buildActionsPage() {
     return SafeArea(
+      top: false,
       child: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(
           16,

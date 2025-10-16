@@ -208,6 +208,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
         showBackButton: true,
       ),
       body: SafeArea(
+        top: false,
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 1),

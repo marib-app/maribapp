@@ -950,7 +950,8 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
         ),
 
         body: SafeArea(
-            child: BlocBuilder<PromoteAdCubit, PromoteAdState>(
+          top: false,
+          child: BlocBuilder<PromoteAdCubit, PromoteAdState>(
                 builder: (context, promoteState) {
                   final bool showOverlay = promoteState is PromoteAdChecking ||
                       promoteState is PromoteAdActing;

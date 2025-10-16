@@ -132,6 +132,8 @@ class HomeScreenUI extends StatelessWidget {
               backgroundColor:
               context.color.primaryColor, // لا تغيّر ألوان الـAppBar
               body: SafeArea(
+                top: false,
+
                 child: NestedScrollView(
                   controller: scrollController,
                   headerSliverBuilder: (context, _) => [

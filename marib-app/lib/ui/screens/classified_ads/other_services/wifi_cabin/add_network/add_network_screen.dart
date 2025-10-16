@@ -30,6 +30,7 @@ class _AddNetworkScreenState extends _AddNetworkFormState<_AddNetworkScreen> {
       ),
       backgroundColor: context.color.backgroundColor,
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
             Expanded(

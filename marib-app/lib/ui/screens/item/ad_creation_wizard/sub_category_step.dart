@@ -53,6 +53,7 @@ extension _SubCategoryStepView on _AdCreationWizardScreenState {
     final ThemeData theme = Theme.of(context);
     final ColorScheme colors = theme.colorScheme;
     final bool isSelected = _selectedSubCategory?.id == category.id;
+
     final bool isPressed = _pressedSubCategoryId == category.id;
     const double cardHeight = 82;
     const double thumbnailSize = 64;

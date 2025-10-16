@@ -9156,7 +9156,22 @@ public function storeRequestDevice(Request $request)
 
 
 
-        $paymentMethod = $request->input('payment_method', 'manual_bank');
+        $rawPaymentMethod = $request->input('payment_method');
+
+        if ($rawPaymentMethod === null) {
+            $normalizedPaymentMethod = 'manual_bank';
+        } else {
+            $normalizedPaymentMethod = $this->normalizeManualPaymentGateway($rawPaymentMethod);
+
+            if ($normalizedPaymentMethod === null) {
+                $normalizedPaymentMethod = 'manual_bank';
+            }
+        }
+
+        $request->merge(['payment_method' => $normalizedPaymentMethod]);
+
+        $paymentMethod = $normalizedPaymentMethod;
+
 
         $validator = Validator::make($request->all(), [
             'payment_method' => 'nullable|in:manual_bank,east_yemen_bank,wallet',
@@ -9181,6 +9196,7 @@ public function storeRequestDevice(Request $request)
 
         $validated = $validator->validated();
 
+        $paymentMethod = $validated['payment_method'] ?? $paymentMethod;
 
         $payableTypeInput = $request->input('payable_type');
         $payableIdInput = $request->input('payable_id');
@@ -9327,7 +9343,10 @@ public function storeRequestDevice(Request $request)
             $manualPaymentAttributes = [
                 'user_id'        => $user->id,
 
-                'manual_bank_id' => $paymentMethod === 'manual_bank' ? $request->manual_bank_id : null,
+                'manual_bank_id' => $paymentMethod === 'manual_bank'
+                    ? ($validated['manual_bank_id'] ?? $request->input('manual_bank_id'))
+                    : null,
+                 
                 'amount'         => $request->amount,
                 'currency'       => $currency,
 
@@ -9866,10 +9885,37 @@ public function storeRequestDevice(Request $request)
             'manual' => 'manual_bank',
             'manual_bank' => 'manual_bank',
             'manual-bank' => 'manual_bank',
+            'manual_banks' => 'manual_bank',
+            'manualbanks' => 'manual_bank',
+            'manualbank' => 'manual_bank',
+            'manual_payment' => 'manual_bank',
+            'offline' => 'manual_bank',
+            'internal' => 'manual_bank',
+            'bank' => 'manual_bank',
+            'bank_transfer' => 'manual_bank',
+            'banktransfer' => 'manual_bank',
             'east' => 'east_yemen_bank',
             'east_yemen_bank' => 'east_yemen_bank',
             'east-yemen-bank' => 'east_yemen_bank',
+            'eastyemenbank' => 'east_yemen_bank',
+            'bank_alsharq' => 'east_yemen_bank',
+
             'wallet' => 'wallet',
+            'wallet_balance' => 'wallet',
+            'wallet-balance' => 'wallet',
+            'wallet balance' => 'wallet',
+            'wallet_gateway' => 'wallet',
+            'wallet-gateway' => 'wallet',
+            'wallet gateway' => 'wallet',
+            'wallet_top_up' => 'wallet',
+            'wallet-top-up' => 'wallet',
+            'wallet top up' => 'wallet',
+            'walletpayment' => 'wallet',
+            'wallet_payment' => 'wallet',
+            'wallet-payment' => 'wallet',
+            'wallet payment' => 'wallet',
+            'wallettopup' => 'wallet',
+
         ];
 
         return $map[$normalized] ?? $normalized;
@@ -9878,8 +9924,44 @@ public function storeRequestDevice(Request $request)
     private function expandManualPaymentGatewayAliases(string $gateway): array
     {
         return match ($gateway) {
-            'manual_bank' => ['manual_bank', 'manual'],
-            'east_yemen_bank' => ['east_yemen_bank', 'east'],
+            'manual_bank' => [
+                'manual_bank',
+                'manual',
+                'manual-bank',
+                'manual_banks',
+                'manualbanks',
+                'manualbank',
+                'bank',
+                'bank_transfer',
+                'banktransfer',
+                'manual_payment',
+                'offline',
+                'internal',
+            ],
+            'east_yemen_bank' => [
+                'east_yemen_bank',
+                'east',
+                'east-yemen-bank',
+                'eastyemenbank',
+                'bank_alsharq',
+            ],
+            'wallet' => [
+                'wallet',
+                'wallet_balance',
+                'wallet-balance',
+                'wallet balance',
+                'wallet_gateway',
+                'wallet-gateway',
+                'wallet gateway',
+                'wallet_top_up',
+                'wallet-top-up',
+                'wallet top up',
+                'walletpayment',
+                'wallet_payment',
+                'wallet-payment',
+                'wallet payment',
+                'wallettopup',
+            ],
             default => [$gateway],
         };
     }

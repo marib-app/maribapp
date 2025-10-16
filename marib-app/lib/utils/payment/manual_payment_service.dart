@@ -95,13 +95,52 @@ String _apiPaymentMethod(String uiValue) {
     return trimmed;
   }
   final lowercase = trimmed.toLowerCase();
-  if (lowercase == 'manual_bank') {
-
-
-    return 'manual';
+  const manualAliases = {
+    'manual',
+    'manual_bank',
+    'manual-bank',
+    'manual_banks',
+    'manualbanks',
+    'manualbank',
+    'bank',
+    'bank_transfer',
+    'banktransfer',
+    'manual_payment',
+    'offline',
+    'internal',
+  };
+  if (manualAliases.contains(lowercase)) {
+    return 'manual_bank';
   }
-  if (lowercase == 'east_yemen_bank') {
-    return 'bank_alsharq';
+  const eastYemenAliases = {
+    'east',
+    'east_yemen_bank',
+    'east-yemen-bank',
+    'eastyemenbank',
+    'bank_alsharq',
+  };
+  if (eastYemenAliases.contains(lowercase)) {
+    return 'east_yemen_bank';
+  }
+  const walletAliases = {
+    'wallet',
+    'wallet_balance',
+    'wallet-balance',
+    'wallet balance',
+    'wallet_gateway',
+    'wallet-gateway',
+    'wallet gateway',
+    'wallet_top_up',
+    'wallet-top-up',
+    'wallet top up',
+    'walletpayment',
+    'wallet_payment',
+    'wallet-payment',
+    'wallet payment',
+    'wallettopup',
+  };
+  if (walletAliases.contains(lowercase)) {
+    return 'wallet';
   }
   return trimmed;
 }

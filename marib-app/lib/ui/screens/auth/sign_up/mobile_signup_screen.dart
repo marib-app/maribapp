@@ -48,7 +48,7 @@ class MobileSignUpScreen extends StatefulWidget {
 class MobileSignUpScreenState extends State<MobileSignUpScreen> {
   // final TextEditingController mobileTextController = TextEditingController();
   // bool isOtpSent = false;
-  String? phone, otp, countryName, flagEmoji, countryCode;
+  String? phone, otp, countryName, flagEmoji;
 
   // Timer? timer;
   late Size size;
@@ -68,11 +68,6 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
   @override
   void initState() {
     super.initState();
-    countryCode = widget.countryCode ?? Constant.defaultCountryCode;
-    phoneLoginPayload = PhoneLoginPayload(
-      widget.mobile ?? '',
-      countryCode ?? Constant.defaultCountryCode,
-    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _lazyInit();
@@ -97,20 +92,6 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
       }
     });
     getSignature();
-
-
-    getSimCountry().then((value) {
-      if (!mounted) return;
-
-      countryCode = value.phoneCode;
-      flagEmoji = value.flagEmoji;
-      phoneLoginPayload = PhoneLoginPayload(
-        widget.mobile ?? '',
-        countryCode ?? Constant.defaultCountryCode,
-      );
-      setState(() {});
-    });
-
 
   }
 
@@ -193,27 +174,29 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
       simCountryCode = await DeviceRegion.getSIMCountryCode();
     } catch (e) {}
 
-    final normalizedSimCode = simCountryCode?.toUpperCase();
-    final Country fallback = countryList.firstWhere(
-          (element) => element.phoneCode == Constant.defaultCountryCode,
-      orElse: () => countryList.first,
+    Country simCountry = countryList.firstWhere(
+      (element) {
+        if (Constant.isDemoModeOn) {
+          return countryList.any(
+            (element) => element.phoneCode == Constant.defaultCountryCode,
+          );
+        } else {
+          return element.phoneCode == simCountryCode;
+        }
+      },
+      orElse: () {
+        return countryList
+            .where(
+              (element) => element.phoneCode == Constant.defaultCountryCode,
+            )
+            .first;
+      },
     );
 
-    Country simCountry = fallback;
-
-    if (normalizedSimCode != null && normalizedSimCode.isNotEmpty) {
-      simCountry = countryList.firstWhere(
-            (element) => element.countryCode.toUpperCase() == normalizedSimCode,
-        orElse: () => fallback,
-      );
-    }
-
-
     if (Constant.isDemoModeOn) {
-      return countryList.firstWhere(
-            (element) => element.phoneCode == Constant.demoCountryCode,
-        orElse: () => fallback,
-      );
+      simCountry = countryList
+          .where((element) => element.phoneCode == Constant.demoCountryCode)
+          .first;
     }
 
     return simCountry;
@@ -234,11 +217,7 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
   }
 
   void _onTapContinue() {
-    final resolvedCode = countryCode ?? widget.countryCode ?? Constant.defaultCountryCode;
-    phoneLoginPayload = PhoneLoginPayload(
-      widget.mobile ?? '',
-      resolvedCode,
-    );
+    phoneLoginPayload = PhoneLoginPayload(widget.mobile!, widget.countryCode!);
 
     context
         .read<AuthenticationCubit>()
@@ -425,10 +404,7 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
                     // Display the country code as text
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                      child: Text(
-                        "${flagEmoji != null ? "${flagEmoji!} " : ""}+${countryCode ?? widget.countryCode ?? Constant.defaultCountryCode}",
-                      )
-
+                      child: Text("+${widget.countryCode}")
                           .size(context.font.large)
                           .centerAlign(),
                     ),

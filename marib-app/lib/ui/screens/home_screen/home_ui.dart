@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/services.dart';
 
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/home/fetch_home_all_items_cubit.dart';
@@ -125,11 +126,18 @@ class HomeScreenUI extends StatelessWidget {
           final int cart = cartCount ?? 0;
           final int notif = notifCount ?? 0;
 
-          return SafeArea(
-            child: Scaffold(
-              backgroundColor: context.color.primaryColor, // لا تغيّر ألوان الـAppBar
-              body: NestedScrollView(
-                controller: scrollController,
+          return AnnotatedRegion<SystemUiOverlayStyle>(
+            value: UiUtils.getSystemUiOverlayStyle(
+              context: context,
+              statusBarColor: context.color.primaryColor,
+            ),
+            child: SafeArea(
+              child: Scaffold(
+                backgroundColor:
+                    context.color.primaryColor, // لا تغيّر ألوان الـAppBar
+                body: NestedScrollView(
+                  controller: scrollController,
+
                 headerSliverBuilder: (context, _) => [
                   SliverAppBar(
                     pinned: true,
@@ -217,6 +225,7 @@ class HomeScreenUI extends StatelessWidget {
                 ),
               ),
           ),
+                      ),
           );
         },
     );

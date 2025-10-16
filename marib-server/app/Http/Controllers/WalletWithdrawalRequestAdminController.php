@@ -201,13 +201,28 @@ class WalletWithdrawalRequestAdminController extends Controller
 
                 $idempotencyKey = $withdrawalRequest->buildIdempotencyKey('reversal');
 
-                $creditTransaction = $this->walletService->credit($user, $idempotencyKey, (float) $withdrawalRequest->amount, [
+                $creditOptions = [
                     'meta' => [
                         'context' => 'wallet_withdrawal_request_reversal',
                         'withdrawal_request_id' => $withdrawalRequest->getKey(),
                         'original_wallet_transaction_id' => $withdrawalRequest->wallet_transaction_id,
                     ],
-                ]);
+                ];
+
+                $creditCurrency = $withdrawalRequest->account?->currency
+                    ?? $withdrawalRequest->transaction?->currency
+                    ?? null;
+
+                if ($creditCurrency) {
+                    $creditOptions['currency'] = $creditCurrency;
+                }
+
+                $creditTransaction = $this->walletService->credit(
+                    $user,
+                    $idempotencyKey,
+                    (float) $withdrawalRequest->amount,
+                    $creditOptions
+                );
 
                 $withdrawalRequest->forceFill([
                     'status' => WalletWithdrawalRequest::STATUS_REJECTED,

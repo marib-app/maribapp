@@ -19,6 +19,7 @@ import 'dart:async';
 import 'package:marib/ui/screens/chat/chat_badge_controller.dart';
 import 'package:marib/utils/performance/performance_route_observer.dart';
 import 'package:marib/utils/scroll/low_spec_scroll_physics.dart';
+import 'package:flutter/services.dart';
 
 
 /////////////
@@ -89,6 +90,18 @@ class _AppState extends State<App> {
   Widget build(BuildContext context) {
     //Continuously watching theme change
     AppTheme currentTheme = context.watch<AppThemeCubit>().state.appTheme;
+    final Brightness statusBarIconBrightness =
+    currentTheme == AppTheme.dark ? Brightness.light : Brightness.dark;
+    final Brightness statusBarBrightness =
+    currentTheme == AppTheme.dark ? Brightness.dark : Brightness.light;
+
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: statusBarIconBrightness,
+        statusBarBrightness: statusBarBrightness,
+      ),
+    );
     return BlocBuilder<LanguageCubit, LanguageState>(
       builder: (context, languageState) {
         return MaterialApp(

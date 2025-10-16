@@ -56,6 +56,19 @@
                                 <dt class="col-6">{{ __('Total Movements') }}</dt>
                                 <dd class="col-6 text-end">{{ number_format($transactions->total()) }}</dd>
                             </dl>
+
+                            @if($availableCurrencies->count() > 1)
+                                <form method="get" action="{{ route('wallet.show', ['user' => $user->getKey()]) }}" class="mt-3">
+                                    <input type="hidden" name="filter" value="{{ $appliedFilter }}">
+                                    <label for="wallet-currency-selector" class="form-label small text-muted mb-1">{{ __('View currency') }}</label>
+                                    <select id="wallet-currency-selector" name="currency" class="form-select form-select-sm" onchange="this.form.submit()">
+                                        @foreach($availableCurrencies as $currencyOption)
+                                            <option value="{{ $currencyOption }}" @selected($currencyOption === $currency)>{{ $currencyOption }}</option>
+                                        @endforeach
+                                    </select>
+                                </form>
+                            @endif
+
                         </div>
                     </div>
                 </div>
@@ -67,12 +80,23 @@
                     <div class="card-body">
                         <form method="post" action="{{ route('wallet.credit', $user) }}" class="needs-validation" novalidate>
                             @csrf
+
+                            <div class="mb-3">
+                                <label for="currency" class="form-label">{{ __('Currency') }}</label>
+                                <input type="text" class="form-control text-uppercase" id="currency" name="currency" list="wallet-currency-options"
+                                       value="{{ old('currency', $currency) }}" maxlength="3" pattern="[A-Za-z]{3}" required>
+                                <div class="form-text">{{ __('Provide the 3-letter currency code for this credit.') }}</div>
+                                @error('currency')
+                                <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+
                             <div class="mb-3">
                                 <label for="amount" class="form-label">{{ __('Amount') }}</label>
                                 <div class="input-group">
                                     <input type="number" step="0.01" min="0.01" class="form-control" id="amount" name="amount"
                                            value="{{ old('amount') }}" required placeholder="0.00">
-                                    <span class="input-group-text">{{ $currency }}</span>
+                                    <span class="input-group-text">{{ old('currency', $currency) }}</span>
                                 </div>
                                 @error('amount')
                                 <div class="text-danger small mt-1">{{ $message }}</div>
@@ -100,6 +124,16 @@
                                 <i class="bi bi-plus-circle me-1"></i>{{ __('Credit Wallet') }}
                             </button>
                         </form>
+
+
+                        @if($availableCurrencies->isNotEmpty())
+                            <datalist id="wallet-currency-options">
+                                @foreach($availableCurrencies as $currencyOption)
+                                    <option value="{{ $currencyOption }}"></option>
+                                @endforeach
+                            </datalist>
+                        @endif
+
                     </div>
                 </div>
             </div>
@@ -113,6 +147,8 @@
                                 <p class="text-muted small mb-0">{{ __('Filter transactions similar to the mobile wallet view.') }}</p>
                             </div>
                             <form method="get" class="row g-2 align-items-end">
+                                <input type="hidden" name="currency" value="{{ $currency }}">
+
                                 <div class="col-auto">
                                     <label for="filter" class="form-label mb-0">{{ __('Filter') }}</label>
                                 </div>
@@ -126,7 +162,7 @@
                                     </select>
                                 </div>
                                 <div class="col-auto">
-                                    <a href="{{ route('wallet.show', ['user' => $user->getKey()]) }}" class="btn btn-outline-secondary">
+                                    <a href="{{ route('wallet.show', ['user' => $user->getKey(), 'currency' => $currency]) }}" class="btn btn-outline-secondary">
                                         {{ __('Reset') }}
                                     </a>
                                 </div>

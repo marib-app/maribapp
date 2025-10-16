@@ -85,11 +85,47 @@ class WalletAdminController extends Controller
         ResponseService::noPermissionThenRedirect('wallet-manage');
 
         $filter = $this->resolveFilter($request->get('filter'));
+        $requestedCurrency = strtoupper(trim((string) $request->get('currency', '')));
+
+        if ($requestedCurrency !== '' && !preg_match('/^[A-Z]{3}$/', $requestedCurrency)) {
+            $requestedCurrency = '';
+        }
+
+        $availableCurrencies = WalletAccount::query()
+            ->where('user_id', $user->getKey())
+            ->select('currency')
+            ->distinct()
+            ->pluck('currency')
+            ->filter()
+            ->map(static fn ($currency) => strtoupper((string) $currency))
+            ->unique()
+            ->values();
+
+        $currency = $requestedCurrency !== ''
+            ? $requestedCurrency
+            : ($availableCurrencies->first() ?? strtoupper(config('app.currency', 'SAR')));
+
+        $currency = strtoupper($currency);
+
+
 
         $walletAccount = WalletAccount::query()->firstOrCreate(
-            ['user_id' => $user->getKey()],
+            [
+                'user_id' => $user->getKey(),
+                'currency' => $currency,
+            ],
+            
             ['balance' => 0]
         );
+
+        $availableCurrencies = $availableCurrencies
+            ->push($currency)
+            ->map(static fn ($currency) => strtoupper((string) $currency))
+            ->unique()
+            ->sort()
+            ->values();
+
+
 
         $transactionsQuery = WalletTransaction::query()
             ->with(['manualPaymentRequest', 'paymentTransaction'])
@@ -101,7 +137,10 @@ class WalletAdminController extends Controller
         /** @var LengthAwarePaginator $transactions */
         $transactions = $transactionsQuery
             ->paginate(15)
-            ->appends(['filter' => $filter]);
+            ->appends([
+                'filter' => $filter,
+                'currency' => $currency,
+            ]);
 
         $latestTransaction = $walletAccount->transactions()
             ->latest('created_at')
@@ -114,7 +153,9 @@ class WalletAdminController extends Controller
             'latestTransaction' => $latestTransaction,
             'filters' => self::FILTERS,
             'appliedFilter' => $filter,
-            'currency' => strtoupper(config('app.currency', 'SAR')),
+            'currency' => $currency,
+            'availableCurrencies' => $availableCurrencies,
+        
         ]);
     }
 
@@ -125,10 +166,14 @@ class WalletAdminController extends Controller
         $validator = Validator::make($request->all(), [
             'amount' => ['required', 'numeric', 'min:0.01', 'max:1000000'],
             'operation_reference' => ['required', 'string', 'max:191'],
-            'notes' => ['nullable', 'string', 'max:500'],
+            'notes' => ['nullable', 'string', 'max:500'],            
+            'currency' => ['required', 'string', 'size:3'],
+
+
         ], [], [
             'operation_reference' => __('Operation reference'),
             'notes' => __('Administrative notes'),
+            'currency' => __('Currency'),
         ]);
 
         if ($validator->fails()) {
@@ -141,17 +186,20 @@ class WalletAdminController extends Controller
         $validated = $validator->validated();
 
         $operationReference = trim((string) $validated['operation_reference']);
+        $currency = strtoupper((string) $validated['currency']);
         $amount = (float) $validated['amount'];
 
         $idempotencyKey = sprintf(
-            'wallet:admin-manual-credit:%d:%d:%s',
+            'wallet:admin-manual-credit:%d:%d:%s:%s',
             Auth::id(),
             $user->getKey(),
+            $currency,
             md5(Str::lower($operationReference))
         );
 
         try {
             $transaction = $this->walletService->credit($user, $idempotencyKey, $amount, [
+                'currency' => $currency,
                 'meta' => array_filter([
                     'reason' => 'admin_manual_credit',
                     'operation_reference' => $operationReference,
@@ -185,7 +233,7 @@ class WalletAdminController extends Controller
         }
 
         return redirect()
-            ->route('wallet.show', $user)
+            ->route('wallet.show', ['user' => $user->getKey(), 'currency' => $currency])
             ->with('success', __('Wallet credited successfully.'))
             ->with('wallet_transaction_id', $transaction->getKey());
     }

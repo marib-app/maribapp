@@ -29,11 +29,7 @@ import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 
 
 // واجهة منفصلة بالكامل
-import 'package:firebase_messaging/firebase_messaging.dart';
-import '../login_new/login_flow_view.dart';
-
-
-
+import 'login_screen_ui.dart';
 
 class LoginScreen extends StatefulWidget {
   final bool? isDeleteAccount;
@@ -176,35 +172,6 @@ class LoginScreenState extends State<LoginScreen> {
     });
   }
 
-
-  Future<String?> _resolveFcmToken() async {
-    final List<String?> candidates = <String?>[
-      HiveUtils.getUserDetails().fcmId,
-      HiveUtils.getUserDetail<String>(key: Api.fcmId),
-    ];
-
-    for (final String? candidate in candidates) {
-      final String normalized = (candidate ?? '').trim();
-      if (normalized.isNotEmpty) {
-        return normalized;
-      }
-    }
-
-    try {
-      final String? fetched = await FirebaseMessaging.instance.getToken();
-      final String normalized = (fetched ?? '').trim();
-      if (normalized.isEmpty) {
-        return null;
-      }
-
-      await HiveUtils.setUserDetail(key: Api.fcmId, value: normalized);
-      return normalized;
-    } catch (e) {
-      debugPrint('Failed to resolve FCM token: $e');
-      return null;
-    }
-  }
-
   Future<Country> _getSimCountry() async {
     final list = countryCodeService.getAll();
     String? simCode;
@@ -212,26 +179,22 @@ class LoginScreenState extends State<LoginScreen> {
       simCode = await DeviceRegion.getSIMCountryCode();
     } catch (_) {}
 
-    final normalizedSimCode = simCode?.toUpperCase();
-    final Country fallback = list.firstWhere(
-          (e) => e.phoneCode == Constant.defaultCountryCode,
-      orElse: () => list.first,
+    Country simCountry = list.firstWhere(
+          (e) =>
+      Constant.isDemoModeOn
+          ? list.any((x) => x.phoneCode == Constant.defaultCountryCode)
+          : e.phoneCode == simCode,
+      orElse: () =>
+      list
+          .where((e) => e.phoneCode == Constant.defaultCountryCode)
+          .first,
     );
 
-    Country simCountry = fallback;
-
-    if (normalizedSimCode != null && normalizedSimCode.isNotEmpty) {
-      simCountry = list.firstWhere(
-            (e) => e.countryCode.toUpperCase() == normalizedSimCode,
-        orElse: () => fallback,
-      );
-    }
-
     if (Constant.isDemoModeOn) {
-      return list.firstWhere(
-            (e) => e.phoneCode == Constant.demoCountryCode,
-        orElse: () => fallback,
-      );
+      simCountry =
+          list
+              .where((e) => e.phoneCode == Constant.demoCountryCode)
+              .first;
     }
     return simCountry;
   }
@@ -409,39 +372,6 @@ class LoginScreenState extends State<LoginScreen> {
     setState(() {});
   }
 
-
-  void _handleBackNavigation() {
-    if (widget.isDeleteAccount ?? false) {
-      Navigator.pop(context);
-      return;
-    }
-
-    if (isOtpSent) {
-      setState(() {
-        isOtpSent = false;
-        isMobileNumberField = true;
-        isBack = false;
-      });
-      return;
-    }
-
-    if (sendMailClicked) {
-      setState(() {
-        sendMailClicked = false;
-        isBack = false;
-      });
-      return;
-    }
-
-    if (!isBack) {
-      setState(() => isBack = true);
-      return;
-    }
-
-    Navigator.pop(context);
-  }
-
-
   // Google/Apple: بعد نجاح المصادقة من AuthenticationCubit
   Future<void> _handleSocialLoginFromLogin(AuthenticationSuccess state) async {
     try {
@@ -453,9 +383,9 @@ class LoginScreenState extends State<LoginScreen> {
           "platform_type": Platform.isAndroid ? "android" : "ios",
         };
 
-        final String? fcmToken = await _resolveFcmToken();
-        if (fcmToken != null && fcmToken.isNotEmpty) {
-          payload["fcm_id"] = fcmToken;
+        final userDetails = HiveUtils.getUserDetails();
+        if (userDetails.fcmId != null) {
+          payload["fcm_id"] = userDetails.fcmId!;
         }
 
         final response = await Api.post(url: "user-login", parameter: payload);
@@ -497,13 +427,6 @@ class LoginScreenState extends State<LoginScreen> {
           "type": state.type.name,
           "platform_type": Platform.isAndroid ? "android" : "ios",
         };
-
-
-        final String? fcmToken = await _resolveFcmToken();
-        if (fcmToken != null && fcmToken.isNotEmpty) {
-          payload["fcm_id"] = fcmToken;
-        }
-
 
         final response = await Api.post(url: "user-signup", parameter: payload);
 
@@ -578,16 +501,27 @@ class LoginScreenState extends State<LoginScreen> {
         .size;
     _setDemoOTP();
 
-    return PopScope(
-      canPop: isBack,
-      onPopInvoked: (didPop) {
-        if (didPop) return;
-        _handleBackNavigation();
+    return LoginHeaderSection(
+      isBack: isBack,
+      isOtpSent: isOtpSent,
+      sendMailClicked: sendMailClicked,
+      isDeleteAccount: widget.isDeleteAccount ?? false,
+      onResetOTP: () {
+        setState(() {
+          isOtpSent = false;
+          isMobileNumberField = true;
+        });
       },
-      child: LoginFlowView(
-        showBackButton: Navigator.of(context).canPop(),
-        onBack: _handleBackNavigation,
-        form: BlocListener<LoginCubit, LoginState>(
+      onBack: () {
+        setState(() {
+          sendMailClicked = false;
+        });
+      },
+      updateBackState: (v) => setState(() => isBack = v),
+
+      // محتوى الشاشة (واجهة صافية + منطق BLoC)
+      child: LoginScreenFrame(
+        child: BlocListener<LoginCubit, LoginState>(
           listener: (context, state) {
             // إيقاف التحميل عند انتهاء أي عملية
 
@@ -716,7 +650,7 @@ class LoginScreenState extends State<LoginScreen> {
 
                   return Form(
                     key: _formKey,
-                    child: LoginFlowForm(
+                    child: LoginScreenUI(
                   // حالة العرض
                   isOtpSent: isOtpSent,
                   sendMailClicked: sendMailClicked,

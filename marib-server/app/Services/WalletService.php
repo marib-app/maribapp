@@ -25,6 +25,19 @@ use Throwable;
 
 class WalletService
 {
+
+    public static function normalizeCurrency(?string $currency): ?string
+    {
+        if ($currency === null) {
+            return null;
+        }
+
+        $normalized = strtoupper(trim((string) $currency));
+
+        return $normalized !== '' ? $normalized : null;
+    }
+
+
     public function credit(User $user, string $idempotencyKey, float $amount, array $options = []): WalletTransaction
     {
         return $this->record($user, 'credit', $idempotencyKey, $amount, $options);

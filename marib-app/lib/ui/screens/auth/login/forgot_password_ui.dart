@@ -80,10 +80,10 @@ class ForgotPasswordUI extends StatelessWidget {
             children: [
               const SizedBox(height: 40),
               SvgPicture.asset('assets/svg/Logo.svg',
-                  height: 90, color: context.color.buttonColor),
+                  height: 90, color: Colors.white),
               Text("readytoserve".translate(context))
                   .size(context.font.large)
-                  .color(context.color.buttonColor),
+                  .color(context.color.textColor),
               const SizedBox(height: 20),
               Expanded(
                 child: Container(
@@ -308,7 +308,7 @@ class ForgotPasswordUI extends StatelessWidget {
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor:
                                     context.color.territoryColor,
-                                    foregroundColor: context.color.buttonColor,
+                                    foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),

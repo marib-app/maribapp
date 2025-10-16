@@ -118,13 +118,37 @@ class ItemRepository {
     final Map<String, dynamic> response =
     await Api.get(url: Api.getItemApi, queryParameters: parameters);
 
-    final List<ItemSummary> items = (response['data']['data'] as List)
-        .whereType<Map<String, dynamic>>()
-        .map(ItemSummary.fromJson)
-        .toList();
+    final Map<String, dynamic>? data =
+    response['data'] as Map<String, dynamic>?;
+
+    final dynamic rawItems = data?['items'] ?? data?['data'];
+    final List<Map<String, dynamic>> parsedItems = rawItems is List
+        ? rawItems.whereType<Map<String, dynamic>>().toList()
+        : <Map<String, dynamic>>[];
+
+    int _parseTotal(dynamic value, int fallback) {
+      if (value is int) return value;
+      if (value is double) return value.toInt();
+      if (value is String) return int.tryParse(value) ?? fallback;
+      return fallback;
+    }
+
+    final Map<String, dynamic>? pagination =
+    data?['pagination'] as Map<String, dynamic>?;
+    final Map<String, dynamic>? meta =
+    data?['meta'] as Map<String, dynamic>?;
+
+    final int total = _parseTotal(
+      pagination?['total'] ?? meta?['total'],
+      parsedItems.length,
+    );
+
+    final List<ItemSummary> items =
+    parsedItems.map(ItemSummary.fromJson).toList();
 
     return DataOutput(
-      total: response['data']['total'] ?? 0,
+      total: total,
+
       modelList: items,
     );
   }

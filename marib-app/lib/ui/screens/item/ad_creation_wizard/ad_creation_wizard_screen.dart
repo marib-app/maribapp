@@ -1044,40 +1044,132 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     if (!mounted) {
       return;
     }
-    if (state is FetchCategorySuccess) {
-      final List<_MainCategoryOption> options =
-      _buildMainCategoryOptions(state.categories);
-      final _MainCategoryOption? retainedMain = _findMainCategoryById(
-        options,
-        _selectedMainCategory?.id,
-      );
-      final _SubCategoryOption? retainedSub = _selectedSubCategory == null
-          ? null
-          : _findSubCategoryById(
-        retainedMain?.subCategories ?? const <_SubCategoryOption>[],
-        _selectedSubCategory?.id,
-      );
+    if (state is FetchCategoryFailure) {
+      if (_pendingSubCategoryFetchParentId != null) {
+        setState(() {
+          _pendingSubCategoryFetchParentId = null;
+        });
+      }
+      return;
+    }
+    if (state is! FetchCategorySuccess) {
+      return;
+    }
 
-      setState(() {
-        _mainCategories = options;
-        _selectedMainCategory = retainedMain;
-        _selectedSubCategory = retainedSub;
-        _pendingSubCategoryFetchParentId = null;
-        _lastEnsuredSubCategoryFetchParentId = retainedMain?.id;
-      });
+    List<_MainCategoryOption> nextMainCategories = _mainCategories;
+    _MainCategoryOption? nextSelectedMain = _selectedMainCategory;
+    _SubCategoryOption? nextSelectedSub = _selectedSubCategory;
+    final int? rawCategoryId = state.categoryId;
+    final bool hasCategoryId = rawCategoryId != null && rawCategoryId > 0;
+    bool updatedMatchingMain = false;
 
-      if (!_appliedInitialCategorySelection) {
-        _applyInitialCategorySelection(options);
-      } else if (_pendingInitialSubCategoryId != null) {
-        _applyPendingSubCategorySelection();
-      } else if (state is FetchCategoryFailure) {
-        if (_pendingSubCategoryFetchParentId != null) {
-          setState(() {
-            _pendingSubCategoryFetchParentId = null;
-          });
+    if (hasCategoryId) {
+      final int parentId = rawCategoryId!;
+      final _MainCategoryOption? existing =
+      _findMainCategoryById(_mainCategories, parentId);
+      if (existing != null) {
+        final List<_SubCategoryOption> subCategories =
+        _buildSubCategoryOptions(state.categories);
+        final _MainCategoryOption updated = _MainCategoryOption(
+          id: existing.id,
+          name: existing.name,
+          interfaceType: existing.interfaceType,
+          imageUrl: existing.imageUrl,
+          subCategories: subCategories,
+        );
+        nextMainCategories = _mainCategories
+            .map((option) => option.id == parentId ? updated : option)
+            .toList(growable: false);
+        if (nextSelectedMain?.id == parentId) {
+          nextSelectedMain = updated;
+          final int? currentSubId = nextSelectedSub?.id;
+          nextSelectedSub = currentSubId == null
+              ? null
+              : _findSubCategoryById(
+            updated.subCategories,
+            currentSubId,
+          );
+        }
+        updatedMatchingMain = true;
+      } else {
+        final List<_MainCategoryOption> rebuilt =
+        _buildMainCategoryOptions(state.categories);
+        nextMainCategories = rebuilt;
+        final _MainCategoryOption? matched =
+        _findMainCategoryById(rebuilt, nextSelectedMain?.id);
+        if (matched != null) {
+          nextSelectedMain = matched;
+          final int? currentSubId = nextSelectedSub?.id;
+          nextSelectedSub = currentSubId == null
+              ? null
+              : _findSubCategoryById(
+            matched.subCategories,
+            currentSubId,
+          );
         }
       }
+    } else {
+
+
+      final List<_MainCategoryOption> options =
+      _buildMainCategoryOptions(state.categories);
+      nextMainCategories = options;
+      final _MainCategoryOption? matched =
+      _findMainCategoryById(options, nextSelectedMain?.id);
+      if (matched != null) {
+        nextSelectedMain = matched;
+        final int? currentSubId = nextSelectedSub?.id;
+        nextSelectedSub = currentSubId == null
+            ? null
+            : _findSubCategoryById(
+          matched.subCategories,
+          currentSubId,
+        );
+      }
     }
+
+    final int? nextLastEnsured = updatedMatchingMain
+        ? rawCategoryId
+        : (!hasCategoryId
+        ? (nextSelectedMain ?? _selectedMainCategory)?.id
+        : _lastEnsuredSubCategoryFetchParentId);
+
+    setState(() {
+      _mainCategories = nextMainCategories;
+      _selectedMainCategory = nextSelectedMain;
+      _selectedSubCategory = nextSelectedSub;
+      _pendingSubCategoryFetchParentId = null;
+      _lastEnsuredSubCategoryFetchParentId = nextLastEnsured;
+    });
+
+    if (!_appliedInitialCategorySelection) {
+      _applyInitialCategorySelection(nextMainCategories);
+    } else if (_pendingInitialSubCategoryId != null) {
+      _applyPendingSubCategorySelection();
+    }
+  }
+
+  List<_SubCategoryOption> _buildSubCategoryOptions(
+      List<CategoryModel> categories) {
+    final List<_SubCategoryOption> options = <_SubCategoryOption>[];
+    for (final CategoryModel model in categories) {
+      final int? id = model.id;
+      if (id == null) {
+        continue;
+      }
+      final String resolvedName = (model.name ?? '').trim();
+      final String name =
+      resolvedName.isEmpty ? 'فئة بدون اسم' : resolvedName;
+      final String resolvedUrl = HelperUtils.absoluteImage(model.url);
+      options.add(
+        _SubCategoryOption(
+          id: id,
+          name: name,
+          imageUrl: resolvedUrl.isEmpty ? null : resolvedUrl,
+        ),
+      );
+    }
+    return options;
   }
 
   List<_MainCategoryOption> _buildMainCategoryOptions(

@@ -332,6 +332,7 @@ class ManualPaymentRequest extends Model
         'bank_account_number',
         'bank_iban',
         'bank_swift_code',
+        'gateway_name',
         'reference',
         'user_note',
         'receipt_path',

@@ -717,6 +717,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   int? _pendingSubCategoryFetchParentId;
   bool _appliedInitialCategorySelection = false;
   bool _hasRequestedCategoryFetch = false;
+  bool _isCategoryFetchScheduled = false;
+  bool _pendingForcedCategoryRefresh = false;
   FetchCategoryCubit? _categoryCubit;
   StreamSubscription<FetchCategoryState>? _categorySubscription;
   final GlobalKey<DynamicCustomFieldsFormState> _customFieldsFormKey =
@@ -916,18 +918,33 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   }
 
   void _scheduleCategoryFetch({bool forceRefresh = false}) {
+    if (forceRefresh) {
+      _pendingForcedCategoryRefresh = true;
+    }
+
+    if (_isCategoryFetchScheduled) {
+      return;
+    }
+
     if (!forceRefresh && _hasRequestedCategoryFetch) {
       return;
     }
 
-    _hasRequestedCategoryFetch = true;
+    _isCategoryFetchScheduled = true;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
+        _isCategoryFetchScheduled = false;
+        _pendingForcedCategoryRefresh = false;
+
         return;
       }
 
-      _triggerCategoryFetch(forceRefresh: forceRefresh);
+      final bool shouldForceRefresh = forceRefresh || _pendingForcedCategoryRefresh;
+      _pendingForcedCategoryRefresh = false;
+
+      _triggerCategoryFetch(forceRefresh: shouldForceRefresh);
+      _isCategoryFetchScheduled = false;
     });
   }
 

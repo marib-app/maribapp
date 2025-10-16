@@ -9342,6 +9342,18 @@ public function storeRequestDevice(Request $request)
                 'meta'           => empty($metaPayload) ? null : $metaPayload,
             ];
 
+            $manualBank = null;
+            if ($paymentMethod === 'manual_bank' && $request->manual_bank_id) {
+                $manualBank = ManualBank::query()->find($request->manual_bank_id);
+            }
+
+            $manualPaymentAttributes = array_merge($manualPaymentAttributes, [
+                'bank_name'         => $manualBank?->name,
+                'bank_account_name' => $manualBank?->beneficiary_name,
+                'gateway_name'      => $manualBank?->name,
+            ]);
+
+
             if ($existingManualPaymentRequest) {
 
 

@@ -21,6 +21,7 @@ use App\Support\OrderNumberGenerator;
 use App\Support\DepositCalculator;
 use App\Services\LegalNumberingService;
 use App\Services\ItemPurchaseOptionsService;
+use App\Models\ManualPaymentRequest;
 
 use App\Services\DelegateNotificationService;
 
@@ -81,6 +82,10 @@ class OrderCheckoutService
      */
     public function checkout(User $user, array $data): Order
     {
+
+        $data['payment_method'] = $this->normalizePaymentMethod($data['payment_method'] ?? null);
+
+
         return $this->db->transaction(function () use ($user, $data) {
             $cartItems = $this->loadCartItems($user);
 
@@ -246,6 +251,7 @@ class OrderCheckoutService
                 }
             }
 
+            $paymentMethod = $data['payment_method'] ?? null;
 
             $order = Order::create([
                 'user_id' => $user->getKey(),
@@ -258,7 +264,7 @@ class OrderCheckoutService
                 'tax_amount' => $taxAmount,
                 'discount_amount' => $discountAmount,
                 'final_amount' => $finalAmount,
-                'payment_method' => $data['payment_method'] ?? null,
+                'payment_method' => $paymentMethod,
                 'payment_status' => 'pending',
                 'order_status' => Order::STATUS_PROCESSING,
                 'shipping_address' => json_encode($addressSnapshot, JSON_UNESCAPED_UNICODE),
@@ -292,7 +298,7 @@ class OrderCheckoutService
                 ],
                 'status_history' => $statusHistory,
                 'payment_payload' => array_filter([
-                    'requested_method' => $data['payment_method'] ?? null,
+                    'requested_method' => $paymentMethod,
                     'quote_id' => $quoteReference['id'] ?? ($quote['id'] ?? null),
                     'quote_reference' => $quoteReference !== [] ? $quoteReference : null,
                     'quote_expires_at' => $quoteReference['expires_at'] ?? null,
@@ -1476,6 +1482,28 @@ class OrderCheckoutService
         }
 
         return 0.0;
+    }
+
+
+    private function normalizePaymentMethod(?string $paymentMethod): ?string
+    {
+        $canonical = ManualPaymentRequest::canonicalGateway($paymentMethod);
+
+        if ($canonical === null) {
+            return null;
+        }
+
+        $canonical = match ($canonical) {
+            'manual_banks', 'manual_bank', 'manual' => 'manual_bank',
+            'east_yemen_bank', 'bank_alsharq', 'east' => 'east_yemen_bank',
+            'wallet' => 'wallet',
+            'cash' => 'cash',
+            default => $canonical,
+        };
+
+        return in_array($canonical, ['manual_bank', 'east_yemen_bank', 'wallet', 'cash'], true)
+            ? $canonical
+            : null;
     }
 
     private function addressToArray(Address $address): array

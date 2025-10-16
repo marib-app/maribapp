@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:marib/app/app_theme.dart';
-
+import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 
 class AuthScaffold extends StatelessWidget {

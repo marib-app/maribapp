@@ -183,7 +183,6 @@ class LoginFlowForm extends StatelessWidget {
         showApple: showApple,
         onGoogleLogin: onGoogleLogin,
         onAppleLogin: onAppleLogin,
-        onTapContinue: onTapContinue,
         onGoToSignup: onGoToSignup,
         onSkip: onSkip,
       );
@@ -352,6 +351,7 @@ class _LoginOptionsViewState extends State<_LoginOptionsView> {
             onToggleObscure: widget.onToggleObscure,
             onForgotPassword: widget.onForgotPassword,
             onSubmit: widget.onSubmit,
+            onTapContinue: widget.onTapContinue,
           ),
           const SizedBox(height: 20),
           if (widget.showMobileAuth && widget.showEmailAuth)
@@ -375,30 +375,32 @@ class _LoginOptionsViewState extends State<_LoginOptionsView> {
           if (widget.showGoogle)
             UiUtils.buildButton(
               context,
-              onPressed: widget.isLoading ? null : widget.onGoogleLogin,
+              onPressed: widget.onGoogleLogin,
               prefixWidget: SvgPicture.asset(
                 AppIcons.googleIcon,
                 width: 24,
               ),
               buttonTitle: "continueWithGoogle".translate(context),
               radius: 12,
-              backgroundColor: context.color.secondaryColor,
+              buttonColor: context.color.secondaryColor,
               textColor: context.color.textColorDark,
-              borderColor: context.color.borderColor,
+              border: BorderSide(color: context.color.borderColor),
+              disabled: widget.isLoading,
             ),
           if (widget.showGoogle) const SizedBox(height: 12),
           if (widget.showApple && Platform.isIOS)
             UiUtils.buildButton(
               context,
-              onPressed: widget.isLoading ? null : widget.onAppleLogin,
+              onPressed: widget.onAppleLogin,
               prefixWidget: SvgPicture.asset(
                 AppIcons.appleIcon,
                 width: 24,
               ),
               buttonTitle: "continueWithApple".translate(context),
               radius: 12,
-              backgroundColor: context.color.secondaryColor,
+              buttonColor: context.color.secondaryColor,
               textColor: textDarkColor,
+              disabled: widget.isLoading,
             ),
           const SizedBox(height: 16),
           Row(
@@ -575,7 +577,7 @@ class _MobileOrEmailForm extends StatelessWidget {
         const SizedBox(height: 12),
         UiUtils.buildButton(
           context,
-          onPressed: isLoading ? null : onSubmit,
+          onPressed: onSubmit,
           prefixWidget: isLoading
               ? const SizedBox(
             width: 20,
@@ -585,6 +587,7 @@ class _MobileOrEmailForm extends StatelessWidget {
               : null,
           buttonTitle: isLoading ? "" : "signIn".translate(context),
           radius: 12,
+          isInProgress: isLoading,
         ),
         const SizedBox(height: 12),
         FilledButton.tonal(

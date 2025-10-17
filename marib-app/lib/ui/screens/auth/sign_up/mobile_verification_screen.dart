@@ -18,6 +18,7 @@ import 'package:pinput/pinput.dart'; // For OTP input fields
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:io';
 import 'package:marib/utils/api.dart';
+import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
 
 const double sidePadding = 20.0;
 
@@ -330,11 +331,19 @@ class _MobileVerificationScreenState extends State<MobileVerificationScreen> {
                       HiveUtils.getCityName() != "null") {
                     // الموقع محفوظ مسبقاً - الدخول مباشرة للتطبيق
                     HiveUtils.setUserIsAuthenticated(true);
+                    FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
+                      context,
+                      clearCacheBeforeFetch: true,
+                    );
                     HelperUtils.killPreviousPages(
                         context, Routes.main, {"from": "verification"});
                   } else {
                     // الموقع غير محفوظ - الانتقال لشاشة تحديد الموقع
                     HiveUtils.setUserIsAuthenticated(true);
+                    FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
+                      context,
+                      clearCacheBeforeFetch: true,
+                    );
                     Navigator.of(context).pushNamedAndRemoveUntil(
                         Routes.locationPermissionScreen, (route) => false);
                   }

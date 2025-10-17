@@ -1,4 +1,5 @@
 // lib/ui/screens/auth/login_screen.dart
+import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
 
 import 'dart:async';
 import 'dart:io';
@@ -429,6 +430,11 @@ class LoginScreenState extends State<LoginScreen> {
           HiveUtils.setUserData(response['data']);
           HiveUtils.setUserIsAuthenticated(true);
           context.read<UserDetailsCubit>().fill(HiveUtils.getUserDetails());
+          FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
+            context,
+            clearCacheBeforeFetch: true,
+          );
+
 
           if ((HiveUtils.getCityName() ?? "").isNotEmpty &&
               HiveUtils.getCityName() != "null") {
@@ -476,6 +482,11 @@ class LoginScreenState extends State<LoginScreen> {
           HiveUtils.setUserData(response['data']);
           HiveUtils.setUserIsAuthenticated(true);
           context.read<UserDetailsCubit>().fill(HiveUtils.getUserDetails());
+          FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
+            context,
+            clearCacheBeforeFetch: true,
+          );
+
 
           final userData = response['data'];
           final hasAccountType =
@@ -581,6 +592,11 @@ class LoginScreenState extends State<LoginScreen> {
                 HiveUtils.setUserData(api);
                 context.read<UserDetailsCubit>().fill(
                     HiveUtils.getUserDetails());
+                FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
+                  context,
+                  clearCacheBeforeFetch: true,
+                );
+
 
                 final city = HiveUtils.getCityName();
                 if ((city ?? "").isNotEmpty && city != "null") {

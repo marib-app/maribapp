@@ -71,6 +71,8 @@ String currentlyChatingWith = "";
 String currentlyChatItemId = "";
 
 class NotificationService {
+  static const String _pendingFcmTokenKey = '_pending_fcm_token';
+
   static FirebaseMessaging messagingInstance = FirebaseMessaging.instance;
 
   static LocalAwsomeNotification localNotification = LocalAwsomeNotification();
@@ -919,23 +921,43 @@ class NotificationService {
       return;
     }
 
-    await _updateTokenOnServer(refreshedToken);
     await HiveUtils.setUserDetail(key: Api.fcmId, value: refreshedToken);
+    await HiveUtils.setUserDetail(
+        key: _pendingFcmTokenKey, value: refreshedToken);
+    await _updateTokenOnServer(refreshedToken);
+  }
+
+  static String? _normalizeTokenValue(String? token) {
+    final String normalized = (token ?? '').trim();
+    return normalized.isEmpty ? null : normalized;
   }
 
   static Future<void> _updateTokenOnServer(String token) async {
+    final String? normalizedToken = _normalizeTokenValue(token);
+    if (normalizedToken == null) {
+      return;
+    }
+
     if (!HiveUtils.isUserAuthenticated()) {
+      await HiveUtils.setUserDetail(
+          key: _pendingFcmTokenKey, value: normalizedToken);
       return;
     }
     try {
       await Api.post(
         url: Api.updateProfileApi,
         parameter: {
-          Api.fcmId: token,
+          Api.fcmId: normalizedToken,
+
           Api.platformType: Platform.isAndroid ? "android" : "ios",
         },
       );
+      await HiveUtils.setUserDetail(key: Api.fcmId, value: normalizedToken);
+      await HiveUtils.setUserDetail(key: _pendingFcmTokenKey, value: null);
+
     } catch (e, stackTrace) {
+      await HiveUtils.setUserDetail(
+          key: _pendingFcmTokenKey, value: normalizedToken);
       log(
         'Failed to update FCM token on the server: $e',
         name: 'NotificationService',
@@ -943,6 +965,29 @@ class NotificationService {
       );
     }
   }
+
+  static Future<void> resendPendingTokenIfNeeded() async {
+    if (!HiveUtils.isUserAuthenticated()) {
+      return;
+    }
+
+    final String? pendingToken =
+    _normalizeTokenValue(HiveUtils.getUserDetail<String>(key: _pendingFcmTokenKey));
+    final String? fallbackToken =
+    _normalizeTokenValue(HiveUtils.getUserDetail<String>(key: Api.fcmId));
+
+    final String? tokenToResend = pendingToken ?? fallbackToken;
+
+    if (tokenToResend == null || tokenToResend.isEmpty) {
+      return;
+    }
+
+    await HiveUtils.setUserDetail(key: Api.fcmId, value: tokenToResend);
+    await HiveUtils.setUserDetail(
+        key: _pendingFcmTokenKey, value: tokenToResend);
+    await _updateTokenOnServer(tokenToResend);
+  }
+
 
 
   static T? _maybeReadCubit<T extends StateStreamableSource<Object?>>(

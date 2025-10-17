@@ -41,6 +41,7 @@ import 'package:marib/ui/screens/auth/sign_up/sign_up_main_ui.dart'; // ✅
 import 'sign_up_main_ui.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
 
 
 
@@ -317,6 +318,10 @@ class LoginScreenState extends State<SignUpMainScreen> {
                 .isNotEmpty;
 
         context.read<UserDetailsCubit>().fill(HiveUtils.getUserDetails());
+        FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
+          context,
+          clearCacheBeforeFetch: true,
+        );
 
         if (hasAccountType && isEmailVerified && hasCompleteName) {
           HiveUtils.setUserIsAuthenticated(true);
@@ -588,7 +593,10 @@ class LoginScreenState extends State<SignUpMainScreen> {
         HiveUtils.setUserIsAuthenticated(true);
 
         context.read<UserDetailsCubit>().fill(HiveUtils.getUserDetails());
-
+        FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
+          context,
+          clearCacheBeforeFetch: true,
+        );
         Navigator.pushNamed(
           context,
           Routes.otp,

@@ -13,6 +13,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/model/social_link_model.dart';
 import 'package:marib/data/repositories/delegate/delegate_sections_repository.dart';
 import 'package:marib/utils/hive_utils.dart';
+import 'package:flutter/widgets.dart';
 
 
 abstract class FetchSystemSettingsState {}
@@ -82,6 +83,46 @@ class FetchSystemSettingsCubit extends Cubit<FetchSystemSettingsState> {
   final SystemRepository _systemRepository;
   final DelegateSectionsRepository _delegateSectionsRepository;
   String? _delegateSectionsFetchedForUserId;
+
+  Future<void> resetDelegateSectionsSyncState({
+    bool clearCachedSections = false,
+  }) async {
+    _delegateSectionsFetchedForUserId = null;
+    if (clearCachedSections) {
+      await HiveUtils.clearDelegateSectionsCache();
+    }
+  }
+
+  static FetchSystemSettingsCubit? maybeOf(BuildContext context) {
+    return BlocProvider.maybeOf<FetchSystemSettingsCubit>(context);
+  }
+
+  static Future<void> resetDelegateSectionsFor(
+      BuildContext context, {
+        bool clearCachedSections = false,
+      }) async {
+    final FetchSystemSettingsCubit? cubit = maybeOf(context);
+    if (cubit != null) {
+      await cubit.resetDelegateSectionsSyncState(
+        clearCachedSections: clearCachedSections,
+      );
+    }
+  }
+
+  static Future<void> refreshPermissionsForCurrentUser(
+      BuildContext context, {
+        bool clearCacheBeforeFetch = false,
+      }) async {
+    final FetchSystemSettingsCubit? cubit = maybeOf(context);
+    if (cubit == null) {
+      return;
+    }
+    if (clearCacheBeforeFetch) {
+      await cubit.resetDelegateSectionsSyncState(clearCachedSections: true);
+    }
+    await cubit.fetchSettings(forceRefresh: true);
+  }
+
 
 
   Future<void> fetchSettings({bool? forceRefresh}) async {

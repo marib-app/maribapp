@@ -22,6 +22,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'dart:collection';
 import 'dart:convert';
+import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
 
 
 
@@ -882,7 +883,12 @@ class Api {
           .resetState();
       HiveUtils.logoutUser(
         Constant.navigatorKey.currentContext!,
-        onLogout: () {},
+        onLogout: () async {
+          await FetchSystemSettingsCubit.resetDelegateSectionsFor(
+            Constant.navigatorKey.currentContext!,
+            clearCachedSections: true,
+          );
+        },
       );
     });
   }

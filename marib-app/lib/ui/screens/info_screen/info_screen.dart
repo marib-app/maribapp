@@ -386,7 +386,7 @@ class InfoScreenState extends State<InfoScreen> with TickerProviderStateMixin {
         onAccept: () async {
           Future.delayed(
             Duration.zero,
-                () {
+                () async {
               HiveUtils.clear();
               Constant.favoriteItemList.clear();
               context.read<UserDetailsCubit>().clear();
@@ -394,8 +394,13 @@ class InfoScreenState extends State<InfoScreen> with TickerProviderStateMixin {
               context.read<UpdatedReportItemCubit>().clearItem();
               context.read<GetBuyerChatListCubit>().resetState();
               context.read<BlockedUsersListCubit>().resetState();
-              HiveUtils.logoutUser(context, onLogout: () {});
-            },
+              await FetchSystemSettingsCubit.resetDelegateSectionsFor(
+                context,
+                clearCachedSections: true,
+              );
+              await HiveUtils.logoutUser(context, onLogout: () {});
+
+              },
           );
         },
         cancelTextColor: context.color.textColorDark,

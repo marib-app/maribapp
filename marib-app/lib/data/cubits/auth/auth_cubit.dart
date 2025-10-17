@@ -6,6 +6,7 @@ import 'package:marib/utils/hive_utils.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
 
 abstract class AuthState {}
 
@@ -117,10 +118,19 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
-  void signOut(BuildContext context) async {
-    if ((state as Authenticated).isAuthenticated) {
-      HiveUtils.logoutUser(context, onLogout: () {});
-      emit(Unauthenticated());
+  Future<void> signOut(BuildContext context) async {
+    if (state is! Authenticated) {
+      return;
     }
+    final Authenticated authenticatedState = state as Authenticated;
+    if (!authenticatedState.isAuthenticated) {
+      return;
+    }
+    await FetchSystemSettingsCubit.resetDelegateSectionsFor(
+      context,
+      clearCachedSections: true,
+    );
+    await HiveUtils.logoutUser(context, onLogout: () {});
+    emit(Unauthenticated());
   }
 }

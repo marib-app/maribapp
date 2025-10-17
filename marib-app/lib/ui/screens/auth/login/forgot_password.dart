@@ -15,6 +15,9 @@ import 'package:marib/utils/extensions/extensions.dart';
 
 // الواجهة المفصولة
 import 'forgot_password_ui.dart';
+import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
+
+
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -252,6 +255,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             );
             Future.delayed(const Duration(milliseconds: 500), () {
               if (!mounted) return;
+
+              FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
+                context,
+                clearCacheBeforeFetch: true,
+              );
+
               if ((HiveUtils.getCityName() ?? '').isNotEmpty) {
                 HelperUtils.killPreviousPages(
                   context,

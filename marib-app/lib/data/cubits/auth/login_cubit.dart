@@ -10,6 +10,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:marib/data/cubits/auth/authentication_cubit.dart';
+import 'package:marib/utils/notification/notification_service.dart';
 
 abstract class LoginState {}
 
@@ -108,6 +109,7 @@ class LoginCubit extends Cubit<LoginState> {
       }
 
       HiveUtils.setUserData(result['data']);
+      await NotificationService.resendPendingTokenIfNeeded();
 
       emit(LoginSuccessWithoutCredential(
         apiResponse: Map<String, dynamic>.from(result['data']),
@@ -165,6 +167,7 @@ class LoginCubit extends Cubit<LoginState> {
 
       // Storing data to local database {HIVE}
       HiveUtils.setJWT(result['token']);
+      HiveUtils.setUserIsAuthenticated(true);
 
       if ((result['data']['name'] == "" || result['data']['name'] == null) ||
           (result['data']['email'] == "" || result['data']['email'] == null)) {
@@ -173,6 +176,7 @@ class LoginCubit extends Cubit<LoginState> {
         var data = result['data'];
         // data['countryCode'] = countryCode;
         HiveUtils.setUserData(data);
+        await NotificationService.resendPendingTokenIfNeeded();
         emit(LoginSuccess(
           apiResponse: Map<String, dynamic>.from(result['data']),
           isProfileCompleted: false,
@@ -184,6 +188,7 @@ class LoginCubit extends Cubit<LoginState> {
         var data = result['data'];
         // data['countryCode'] = countryCode;
         HiveUtils.setUserData(data);
+        await NotificationService.resendPendingTokenIfNeeded();
         emit(LoginSuccess(
           apiResponse: Map<String, dynamic>.from(result['data']),
           isProfileCompleted: true,

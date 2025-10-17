@@ -39,6 +39,7 @@ import 'widgets/signup_shared_widgets.dart';
 import 'widgets/real_estate_section.dart';
 import 'widgets/business_section.dart';
 import 'dart:async'; // للـ Timer
+import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
 
 
 
@@ -1267,6 +1268,12 @@ class _SignupScreenState extends CloudState<SignupScreen> {
               context
                   .read<UserDetailsCubit>()
                   .fill(HiveUtils.getUserDetails());
+
+              FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
+                context,
+                clearCacheBeforeFetch: true,
+              );
+
             }
           } catch (e) {
             if (kDebugMode) {

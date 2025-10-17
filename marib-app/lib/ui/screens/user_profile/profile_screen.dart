@@ -90,7 +90,7 @@ mixin ProfileScreenLogic<T extends StatefulWidget> on State<T> {
             onAccept: () async {
               Future.delayed(
                 Duration.zero,
-                    () {
+                    () async {
                   HiveUtils.clear();
                   Constant.favoriteItemList.clear();
                   context.read<UserDetailsCubit>().clear();
@@ -98,7 +98,11 @@ mixin ProfileScreenLogic<T extends StatefulWidget> on State<T> {
                   context.read<UpdatedReportItemCubit>().clearItem();
                   context.read<GetBuyerChatListCubit>().resetState();
                   context.read<BlockedUsersListCubit>().resetState();
-                  HiveUtils.logoutUser(
+                  await FetchSystemSettingsCubit.resetDelegateSectionsFor(
+                    context,
+                    clearCachedSections: true,
+                  );
+                  await HiveUtils.logoutUser(
                     context,
                     onLogout: () {},
                   );
@@ -150,6 +154,10 @@ mixin ProfileScreenLogic<T extends StatefulWidget> on State<T> {
     context.read<UpdatedReportItemCubit>().clearItem();
     context.read<GetBuyerChatListCubit>().resetState();
     context.read<BlockedUsersListCubit>().resetState();
+    FetchSystemSettingsCubit.resetDelegateSectionsFor(
+      context,
+      clearCachedSections: true,
+    );
     HiveUtils.logoutUser(context, onLogout: () {});
     Navigator.of(context).pushNamedAndRemoveUntil(Routes.login, (route) => false);
   }
@@ -179,7 +187,12 @@ mixin ProfileScreenLogic<T extends StatefulWidget> on State<T> {
             context.read<GetBuyerChatListCubit>().resetState();
             context.read<BlockedUsersListCubit>().resetState();
 
-            HiveUtils.logoutUser(context, onLogout: () {});
+            await FetchSystemSettingsCubit.resetDelegateSectionsFor(
+              context,
+              clearCachedSections: true,
+            );
+            await HiveUtils.logoutUser(context, onLogout: () {});
+
             Navigator.of(context).pushNamedAndRemoveUntil(Routes.login, (route) => false);
           }
         }
@@ -198,7 +211,12 @@ mixin ProfileScreenLogic<T extends StatefulWidget> on State<T> {
             context.read<GetBuyerChatListCubit>().resetState();
             context.read<BlockedUsersListCubit>().resetState();
 
-            HiveUtils.logoutUser(context, onLogout: () {});
+            await FetchSystemSettingsCubit.resetDelegateSectionsFor(
+              context,
+              clearCachedSections: true,
+            );
+            await HiveUtils.logoutUser(context, onLogout: () {});
+
             Navigator.of(context).pushNamedAndRemoveUntil(Routes.login, (route) => false);
           }
         }

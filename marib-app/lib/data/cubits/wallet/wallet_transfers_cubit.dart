@@ -30,7 +30,11 @@ class WalletTransfersCubit extends Cubit<WalletTransfersState> {
   Future<Map<String, dynamic>> submitTransfer(Map<String, dynamic> payload) async {
     emit(WalletTransferSubmitting());
     try {
-      final response = await _repository.submitTransfer(payload: payload);
+      final response = await _repository.submitTransfer(
+        payload: payload,
+        currency: payload['currency']?.toString(),
+      );
+
       emit(WalletTransferSuccess(response));
       return response;
     } catch (e) {

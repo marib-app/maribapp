@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/model/challenge_model.dart';
 import 'package:marib/ui/screens/competitions/user_referral_points.dart';
 import 'package:marib/data/repositories/competition_repository.dart';
+import 'package:flutter/foundation.dart';
 
 
 // الحالة الأساسية للكوبت
@@ -70,8 +71,14 @@ class CompetitionCubit extends Cubit<CompetitionState> {
       await _competitionRepository.getUserReferralPoints();
       final envelope = await _competitionRepository.getChallenges();
 
-      final paymentTransactions =
-      await _competitionRepository.getRecentPaymentTransactions();
+      List<dynamic> paymentTransactions = <dynamic>[];
+      try {
+        paymentTransactions =
+        await _competitionRepository.getRecentPaymentTransactions();
+      } catch (e) {
+        debugPrint('Failed to load recent payment transactions: $e');
+        paymentTransactions = <dynamic>[];
+      }
 
       // التحويل إلى نماذج فعلية
       final referralPoints = UserReferralPoints.fromJson(referralPointsRaw);
@@ -123,4 +130,60 @@ class CompetitionCubit extends Cubit<CompetitionState> {
       emit(CompetitionFailure(e.toString()));
     }
   }
+
+  Future<void> savePaymentInfo({
+    required List<String> paymentMethods,
+    required Map<String, dynamic> paymentAccountDetails,
+    String? businessName,
+    String? businessWhatsapp,
+    String? businessLocation,
+    List<String>? businessCategories,
+    String? commercialRegister,
+    String? email,
+  }) async {
+    final previousState = state;
+
+    try {
+      await _competitionRepository.savePaymentInfo(
+        accountType: '2',
+        businessName: businessName,
+        businessWhatsapp: businessWhatsapp,
+        businessLocation: businessLocation,
+        businessCategories: businessCategories,
+        commercialRegister: commercialRegister,
+        paymentMethods: paymentMethods,
+        paymentAccountDetails: paymentAccountDetails,
+        email: email,
+      );
+
+      if (previousState is CompetitionSuccess) {
+        List<dynamic> updatedTransactions =
+            previousState.paymentTransactions;
+
+        try {
+          updatedTransactions = List<dynamic>.from(
+            await _competitionRepository.getRecentPaymentTransactions(),
+          );
+        } catch (error) {
+          debugPrint('Failed to refresh payment transactions: $error');
+        }
+
+        emit(CompetitionSuccess(
+          previousState.referralPoints,
+          previousState.challenges,
+          updatedTransactions,
+          previousState.nextChallenge,
+          previousState.maxPoints,
+          previousState.totalPoints,
+          previousState.totalRequiredReferrals,
+        ));
+      } else {
+        await fetchCompetitionData();
+      }
+    } catch (error, stackTrace) {
+      debugPrint('Failed to save payment info: $error');
+      Error.throwWithStackTrace(error, stackTrace);
+    }
+  }
+
 }

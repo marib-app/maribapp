@@ -940,7 +940,6 @@ extension _ChatScreenUi on _ChatScreenState {
                                               key: ValueKey(
                                                   'chat_list_${snapshot.data!.length}'),
                                               reverse: true,
-                                              shrinkWrap: true,
                                               physics:
                                               const AlwaysScrollableScrollPhysics(),
                                               controller: _pageScrollController,

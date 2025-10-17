@@ -17,103 +17,6 @@ class ChatRepostiory {
     return trimmed;
   }
 
-
-
-  Map<String, dynamic>? _asStringKeyedMap(dynamic value) {
-    if (value is Map<String, dynamic>) {
-      return value;
-    }
-
-    if (value is Map) {
-      return value.map((key, dynamic value) => MapEntry(key.toString(), value));
-    }
-
-    return null;
-  }
-
-  List<dynamic>? _extractItemList(Map<String, dynamic>? data) {
-    if (data == null) {
-      return null;
-    }
-
-    final dynamic items = data['items'];
-    if (items is List) {
-      return items;
-    }
-
-    final dynamic legacyItems = data['data'];
-    if (legacyItems is List) {
-      return legacyItems;
-    }
-
-    return null;
-  }
-
-  int? _asInt(dynamic value) {
-    if (value is int) {
-      return value;
-    }
-
-    if (value is num) {
-      return value.toInt();
-    }
-
-    if (value is String) {
-      return int.tryParse(value);
-    }
-
-    return null;
-  }
-
-  int? _extractTotalFromMap(Map<String, dynamic>? data) {
-    if (data == null) {
-      return null;
-    }
-
-    const List<String> candidateKeys = <String>[
-      'total',
-      'total_items',
-      'total_count',
-      'count',
-    ];
-
-    for (final String key in candidateKeys) {
-      final int? parsed = _asInt(data[key]);
-      if (parsed != null) {
-        return parsed;
-      }
-    }
-
-    final Map<String, dynamic>? nestedPagination =
-    _asStringKeyedMap(data['pagination']);
-    if (nestedPagination != null && !identical(nestedPagination, data)) {
-      final int? nested = _extractTotalFromMap(nestedPagination);
-      if (nested != null) {
-        return nested;
-      }
-    }
-
-    return null;
-  }
-
-  int _extractTotalWithFallback(
-      Map<String, dynamic>? data, Map<String, dynamic>? root, int fallback) {
-    final int? dataTotal = _extractTotalFromMap(data);
-    if (dataTotal != null) {
-      return dataTotal;
-    }
-
-    final int? rootTotal = _extractTotalFromMap(root);
-    if (rootTotal != null) {
-      return rootTotal;
-    }
-
-    return fallback;
-  }
-
-
-
-
   void setContext(BuildContext context) {
     _setContext = context;
   }
@@ -122,57 +25,45 @@ class ChatRepostiory {
     /* Map<String, dynamic> response = await Api.get(
         url: Api.getChatListApi, queryParameters: {*/ /*"page": page, */ /*"type": "buyer"});*/
 
-    Map<String, dynamic> response = await Api.get(
-        url: Api.getChatListApi,
-        queryParameters: {"type": "buyer", "page": page});
-
-    final Map<String, dynamic> responseMap =
-        _asStringKeyedMap(response) ?? <String, dynamic>{};
-    final Map<String, dynamic> dataMap =
-        _asStringKeyedMap(responseMap['data']) ?? <String, dynamic>{};
-
-    final List<dynamic> rawItems =
-        _extractItemList(dataMap) ?? <dynamic>[];
+    final Map<String, dynamic> response = await Api.get(
+      url: Api.getChatListApi,
+      queryParameters: {"type": "buyer", "page": page},
+    );
 
 
+    final _ParsedPaginatedMap parsed =
+    _parsePaginatedMap(response['data']);
 
-
-    final List<ChatedUser> modelList = rawItems
-        .map(_asStringKeyedMap)
-        .whereType<Map<String, dynamic>>()
+    final List<ChatedUser> modelList = parsed.items
         .map(ChatedUser.fromJson)
         .toList();
 
-    final int total =
-    _extractTotalWithFallback(dataMap, responseMap, modelList.length);
 
-    return DataOutput(total: total, modelList: modelList);
-
+    return DataOutput(
+      total: parsed.total,
+      modelList: modelList,
+      page: parsed.page,
+    );
   }
 
   Future<DataOutput<ChatedUser>> fetchSellerChatList(int page) async {
-    Map<String, dynamic> response = await Api.get(
-        url: Api.getChatListApi,
-        queryParameters: {"page": page, "type": "seller"});
+    final Map<String, dynamic> response = await Api.get(
+      url: Api.getChatListApi,
+      queryParameters: {"page": page, "type": "seller"},
+    );
 
-    final Map<String, dynamic> responseMap =
-        _asStringKeyedMap(response) ?? <String, dynamic>{};
-    final Map<String, dynamic> dataMap =
-        _asStringKeyedMap(responseMap['data']) ?? <String, dynamic>{};
+    final _ParsedPaginatedMap parsed =
+    _parsePaginatedMap(response['data']);
 
-    final List<dynamic> rawItems =
-        _extractItemList(dataMap) ?? <dynamic>[];
-
-    final List<ChatedUser> modelList = rawItems
-        .map(_asStringKeyedMap)
-        .whereType<Map<String, dynamic>>()
+    final List<ChatedUser> modelList = parsed.items
         .map(ChatedUser.fromJson)
         .toList();
 
-    final int total =
-    _extractTotalWithFallback(dataMap, responseMap, modelList.length);
-
-    return DataOutput(total: total, modelList: modelList);
+    return DataOutput(
+      total: parsed.total,
+      modelList: modelList,
+      page: parsed.page,
+    );
   }
 
   Future<DataOutput<ChatMessage>> getMessagesApi(
@@ -180,31 +71,23 @@ class ChatRepostiory {
     required int itemOfferId,
     required String conversationId}) async {
     Map<String, dynamic> response = await Api.get(
-    url: Api.chatMessagesApi,
-    queryParameters: {
-    "item_offer_id": itemOfferId,
-    "conversation_id": conversationId,
-    "page": page,
-    },
+      url: Api.chatMessagesApi,
+      queryParameters: {
+        "item_offer_id": itemOfferId,
+        "conversation_id": conversationId,
+        "page": page,
+      },
     );
 
-
-    final Map<String, dynamic> responseMap =
-        _asStringKeyedMap(response) ?? <String, dynamic>{};
-
     final Map<String, dynamic> responseData =
-        _asStringKeyedMap(responseMap['data']) ?? <String, dynamic>{};
+        (response['data'] as Map<String, dynamic>?) ?? <String, dynamic>{};
 
     final List<dynamic> resultList =
-        _extractItemList(responseData) ?? <dynamic>[];
+        (responseData['data'] as List<dynamic>?) ?? <dynamic>[];
 
-    final List<ChatMessage> modelList = <ChatMessage>[];
-
-    for (final dynamic result in resultList) {
-      final Map<String, dynamic>? resultMap = _asStringKeyedMap(result);
-      if (resultMap == null || resultMap.isEmpty) {
-        continue;
-      }
+    List<ChatMessage> modelList = resultList.map((result) {
+      final Map<String, dynamic> resultMap =
+      Map<String, dynamic>.from(result as Map);
 
       final dynamic senderIdRaw = resultMap['sender_id'];
       final int senderId = senderIdRaw is int
@@ -236,7 +119,7 @@ class ChatRepostiory {
           ? idRaw
           : int.tryParse(idRaw?.toString() ?? '') ?? 0;
 
-      modelList.add(ChatMessage(
+      return ChatMessage(
         key: ValueKey(id),
         id: id,
         message: message,
@@ -250,14 +133,13 @@ class ChatRepostiory {
         status: status,
         deliveredAt: deliveredAt,
         readAt: readAt,
-      ));
-    }
+      );
+    }).toList();
 
-    final int total = _extractTotalWithFallback(
-      responseData,
-      responseMap,
-      modelList.length,
-    );
+    final dynamic totalRaw = responseData['total'];
+    final int total = totalRaw is int
+        ? totalRaw
+        : int.tryParse(totalRaw?.toString() ?? '') ?? modelList.length;
 
     return DataOutput(total: total, modelList: modelList);
 
@@ -481,7 +363,87 @@ class ChatRepostiory {
     );
   }
 
+  _ParsedPaginatedMap _parsePaginatedMap(dynamic payload) {
+    if (payload == null) {
+      return const _ParsedPaginatedMap(
+        items: <Map<String, dynamic>>[],
+        total: 0,
+      );
+    }
 
+    List<Map<String, dynamic>> items = const <Map<String, dynamic>>[];
+    int total = 0;
+    int? page;
 
+    if (payload is List) {
+      items = payload.whereType<Map<String, dynamic>>().toList();
+      total = items.length;
+    } else if (payload is Map<String, dynamic>) {
+      final dynamic candidateItems = payload['items'] ??
+          payload['data'] ??
+          payload['records'] ??
+          payload['results'];
+      items = (candidateItems is List ? candidateItems : const <dynamic>[])
+          .whereType<Map<String, dynamic>>()
+          .toList();
 
+      final Map<String, dynamic>? meta = payload['meta'] is Map<String, dynamic>
+          ? payload['meta'] as Map<String, dynamic>
+          : null;
+      final Map<String, dynamic>? pagination = payload['pagination']
+      is Map<String, dynamic>
+          ? payload['pagination'] as Map<String, dynamic>
+          : null;
+
+      total = _parseInt(payload['total']) ??
+          _parseInt(meta?['total']) ??
+          _parseInt(pagination?['total']) ??
+          items.length;
+
+      page = _parseInt(payload['page']) ??
+          _parseInt(meta?['current_page']) ??
+          _parseInt(pagination?['current_page']) ??
+          _parseInt(payload['current_page']);
+    } else {
+      return const _ParsedPaginatedMap(
+        items: <Map<String, dynamic>>[],
+        total: 0,
+      );
+    }
+
+    return _ParsedPaginatedMap(
+      items: items,
+      total: total,
+      page: page,
+    );
+  }
+
+  int? _parseInt(dynamic source) {
+    if (source == null) {
+      return null;
+    }
+
+    if (source is int) {
+      return source;
+    }
+
+    if (source is String) {
+      return int.tryParse(source);
+    }
+
+    return null;
+  }
+}
+
+class _ParsedPaginatedMap {
+  final List<Map<String, dynamic>> items;
+  final int total;
+  final int? page;
+
+  const _ParsedPaginatedMap({
+  required this.items,
+  required this.total,
+  this.page,
+
+  });
 }

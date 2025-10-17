@@ -95,11 +95,14 @@ class _EmptyState extends StatelessWidget {
     required this.title,
     required this.subtitle,
     this.onAction,
+    this.actionLabel,
+
   });
 
   final String title;
   final String subtitle;
   final VoidCallback? onAction;
+  final String? actionLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -133,7 +136,7 @@ class _EmptyState extends StatelessWidget {
           if (onAction != null)
             OutlinedButton(
               onPressed: onAction,
-              child: const Text('تشغيل الموقع'),
+              child: Text(actionLabel ?? 'إعادة المحاولة'),
             ),
         ],
       ),

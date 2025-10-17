@@ -84,6 +84,8 @@ import 'package:shimmer/shimmer.dart';
 import 'fetch_item_details_cubit.dart';
 import 'package:marib/data/model/home/home_screen_section.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
+import 'package:marib/utils/featured_section_utils.dart';
+import 'special_request_card.dart';
 
 //==============================================================================
 ///                                   HomeTabView
@@ -99,6 +101,7 @@ class HomeTabView extends StatefulWidget {
   // وضع العرض الخارجي (Grid/List)
   final ValueListenable<ViewMode> viewModeListenable;
 
+  final String? specialRequestSectionSlug;
 
   // NEW: لا تبني/تجلب السلايدر إلا بعد Success
   final bool enableAdSlider;
@@ -122,6 +125,9 @@ class HomeTabView extends StatefulWidget {
     required this.categoryId,
     required this.searchController,
     required this.viewModeListenable,
+
+    this.specialRequestSectionSlug,
+
     this.enableAdSlider = false, // افتراضي: مخفي
     this.adInterfaceType,
     // NEW 👇
@@ -336,24 +342,8 @@ class _HomeTabViewState extends State<HomeTabView> {
 
 
   }) {
-    String? resolved = requestedRootIdentifier?.trim();
-    if (resolved == null || resolved.isEmpty) {
-      for (final HomeScreenSection section in sections) {
-        final String? sectionRoot = section.rootIdentifier?.trim();
-        if (sectionRoot != null && sectionRoot.isNotEmpty) {
-          resolved = sectionRoot;
-          break;
-        }
-      }
-    }
-
-
-
-    if (rootId != null && rootId > 0 && resolved != null && resolved.isNotEmpty) {
-      _rootIdentifierByCategoryId[rootId] = resolved;
-    }
-
-
+    final String? requested = requestedRootIdentifier?.trim();
+    String? canonicalRoot;
 
 
     for (final HomeScreenSection section in sections) {
@@ -363,14 +353,29 @@ class _HomeTabViewState extends State<HomeTabView> {
       if (sectionRoot == null || sectionRoot.isEmpty) {
         continue;
       }
+      canonicalRoot ??= sectionRoot;
 
       if (sectionSlug != null) {
         _slugByRootIdentifier[sectionRoot] = sectionSlug;
+        if (requested != null && requested.isNotEmpty) {
+          _slugByRootIdentifier.putIfAbsent(requested, () => sectionSlug);
+        }
+        if (rootId != null && rootId > 0) {
+          final String? existingRootSlug = _slugByCategoryId[rootId];
+          if (existingRootSlug == null || existingRootSlug.isEmpty) {
+            _slugByCategoryId[rootId] = sectionSlug;
+          }
+        }
+      }
 
-        if (rootId != null && rootId > 0 &&
-            resolved != null && resolved.isNotEmpty &&
-            resolved == sectionRoot) {
-          _slugByCategoryId[rootId] = sectionSlug;
+      if (rootId != null && rootId > 0) {
+        final String? existingRootIdentifier =
+        _rootIdentifierByCategoryId[rootId];
+        if (existingRootIdentifier == null ||
+            existingRootIdentifier.trim().isEmpty ||
+            existingRootIdentifier == rootId.toString() ||
+            existingRootIdentifier.trim() != sectionRoot) {
+          _rootIdentifierByCategoryId[rootId] = sectionRoot;
         }
       }
 
@@ -387,7 +392,10 @@ class _HomeTabViewState extends State<HomeTabView> {
         }
 
         final String? existing = _rootIdentifierByCategoryId[categoryId];
-        if (existing == null || existing.isEmpty) {
+        if (existing == null ||
+            existing.trim().isEmpty ||
+            existing == categoryId.toString() ||
+            existing.trim() != sectionRoot) {
           _rootIdentifierByCategoryId[categoryId] = sectionRoot;
         }
         if (sectionSlug != null) {
@@ -396,6 +404,15 @@ class _HomeTabViewState extends State<HomeTabView> {
             _slugByCategoryId[categoryId] = sectionSlug;
           }
         }
+      }
+    }
+    final String? resolvedRoot =
+        canonicalRoot ?? (requested != null && requested.isNotEmpty ? requested : null);
+
+    if (rootId != null && rootId > 0 && resolvedRoot != null) {
+      final String trimmed = resolvedRoot.trim();
+      if (trimmed.isNotEmpty) {
+        _rootIdentifierByCategoryId[rootId] = trimmed;
       }
     }
   }
@@ -420,9 +437,17 @@ class _HomeTabViewState extends State<HomeTabView> {
 
     _hasRequestedInitialFeatured = true;
     _lastRequestedRootId = rootId;
-    final String? rootIdentifier = _getCachedRootIdentifier(rootId);
+    final String? cachedRootIdentifier = _getCachedRootIdentifier(rootId);
+    final String? rootIdentifier = FeaturedSectionUtils.resolveRootIdentifier(
+      interfaceType: interfaceType,
+      rootCategoryId: rootId,
+      cachedRootIdentifier: cachedRootIdentifier,
+    );
+    String? resolvedSlug = _getSlugForRootIdentifier(rootIdentifier);
 
-    final String? resolvedSlug = _getSlugForRootIdentifier(rootIdentifier);
+    if (resolvedSlug == null && rootId != null && rootId > 0) {
+      resolvedSlug = _slugByCategoryId[rootId];
+    }
 
 
     context.read<FetchHomeScreenCubit>().loadFeaturedSections(
@@ -718,15 +743,14 @@ class _HomeTabViewState extends State<HomeTabView> {
       valueListenable: widget.viewModeListenable,
       builder: (context, mode, _) {
         final bool isList = (mode == ViewMode.list);
-        final String? interfaceType =
+        final String? resolvedInterfaceType =
             SliderInterfaceMapper.normalize(widget.adInterfaceType) ??
-                widget.adInterfaceType;
-        final String? sliderInterfaceType =
-        (interfaceType != null && interfaceType.isNotEmpty)
-            ? interfaceType
-            : null;
-        final bool showAdSlider =
-            widget.enableAdSlider && sliderInterfaceType != null;
+                widget.adInterfaceType?.trim();
+        final String sliderInterfaceType =
+        (resolvedInterfaceType == null || resolvedInterfaceType.isEmpty)
+            ? 'homepage'
+            : resolvedInterfaceType;
+        final bool showAdSlider = widget.enableAdSlider;
 
         // ✅ استمع للتمرير هنا (بدل بعثرة المنطق داخل عناصر داخلية)
         return NotificationListener<ScrollNotification>(
@@ -748,25 +772,27 @@ class _HomeTabViewState extends State<HomeTabView> {
               SliverToBoxAdapter(
                 child: showAdSlider
                     ? Padding(
-          padding:
-          EdgeInsets.symmetric(horizontal: kAdSliderHPad),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(kAdSliderRadius),
-            child: SizedBox(
-              height: _adSliderTotalHeight(context),
-              // صورة + دوتس (نفس الإجمالي)
-              width: double.infinity,
-              child: RepaintBoundary(
-                child: SliderWidget(
-                  key: ValueKey(
-                      'slider_${sliderInterfaceType ?? 'default'}'),
-                  interfaceType: sliderInterfaceType!,
-                ),
-              ),
-            ),
+                  padding:
+                  EdgeInsets.symmetric(horizontal: kAdSliderHPad),
+                  child: ClipRRect(
+                    borderRadius:
+                    BorderRadius.circular(kAdSliderRadius),
+                    child: SizedBox(
+                      height: _adSliderTotalHeight(context),
+                      // صورة + دوتس (نفس الإجمالي)
+                      width: double.infinity,
+                      child: RepaintBoundary(
+                        child: SliderWidget(
+                          key: ValueKey(
+                              'slider_$sliderInterfaceType'),
+                          interfaceType: sliderInterfaceType,
+                        ),
+                      ),
+                    ),
                         ),
                 )
                     : (widget.enableAdSlider
+
                     ? _buildAdSliderShimmer()
                     : const SizedBox.shrink()),
 
@@ -775,6 +801,19 @@ class _HomeTabViewState extends State<HomeTabView> {
 
               // فاصل صغير
               SliverToBoxAdapter(child: SizedBox(height: gapSmall)),
+
+              if (widget.specialRequestSectionSlug != null) ...[
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: SpecialRequestCard(
+                      sectionSlug: widget.specialRequestSectionSlug!,
+                    ),
+                  ),
+                ),
+                SliverToBoxAdapter(child: SizedBox(height: gapSmall)),
+              ],
+
 
               // ============= التصنيفات الفرعية (دائمًا ظاهرة) =============
 

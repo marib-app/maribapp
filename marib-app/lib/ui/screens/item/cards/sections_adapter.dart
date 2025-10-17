@@ -2,8 +2,9 @@ import 'package:marib/app/routes.dart';
 import 'package:marib/ui/screens/home_screen/home_screen.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/responsiveSize.dart';import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/data/repositories/favourites_repository.dart';
+import 'package:marib/utils/responsiveSize.dart';
+import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/data/cubits/favorite/manage_fav_cubit.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:flutter/material.dart';
@@ -56,6 +57,8 @@ class SectionsAdapter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
+
     final data = section.sectionData;
     if (data == null || data.isEmpty) return const SizedBox.shrink();
 
@@ -285,6 +288,28 @@ class _ItemCardState extends State<ICard> {
 
   @override
   Widget build(BuildContext context) {
+
+    final item = widget.item;
+
+    String? preferredThumb;
+    final thumb = item?.thumbnailUrl;
+    if (thumb != null && thumb.trim().isNotEmpty) {
+      preferredThumb = thumb;
+    }
+
+    String? fallbackThumb;
+    final fallbackCandidate = item?.thumbnailFallbackUrl;
+    if (fallbackCandidate != null && fallbackCandidate.trim().isNotEmpty) {
+      fallbackThumb = fallbackCandidate;
+    } else {
+      final image = item?.image;
+      if (image != null && image.trim().isNotEmpty) {
+        fallbackThumb = image;
+      }
+    }
+
+    final resolvedUrl = preferredThumb ?? fallbackThumb ?? '';
+
     return UiUtils.ripple(
       onTap: () {
         final id = widget.item?.id;
@@ -322,11 +347,18 @@ class _ItemCardState extends State<ICard> {
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(18),
-                      child: UiUtils.getImage(
-                        widget.item?.image ?? "assets/image/2.png",
-                        height: widget.imageHeight ?? 147,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
+                      child: RepaintBoundary(
+                        child: UiUtils.getImage(
+                          resolvedUrl.isNotEmpty
+                              ? resolvedUrl
+                              : "assets/image/2.png",
+                          height: widget.imageHeight ?? 147,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          fallbackUrl: fallbackThumb,
+                          cacheWidth: 200,
+                          cacheHeight: 200,
+                        ),
                       ),
                     ),
 

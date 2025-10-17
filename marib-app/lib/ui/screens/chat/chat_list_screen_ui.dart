@@ -92,7 +92,6 @@ extension _ChatListScreenUi on _ChatListScreenState {
                 Expanded(
                   child: ListView.builder(
                     controller: chatBuyerScreenController,
-                    shrinkWrap: true,
                     itemCount: state.chatedUserList.length,
                     padding: const EdgeInsetsDirectional.all(16),
                     itemBuilder: (context, index) {
@@ -211,7 +210,6 @@ extension _ChatListScreenUi on _ChatListScreenState {
                 Expanded(
                   child: ListView.builder(
                     controller: chatSellerScreenController,
-                    shrinkWrap: true,
                     itemCount: state.chatedUserList.length,
                     padding: const EdgeInsetsDirectional.all(16),
                     itemBuilder: (context, index) {

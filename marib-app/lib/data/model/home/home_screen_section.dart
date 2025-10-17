@@ -10,7 +10,8 @@ class HomeScreenSection {
   String? slug;
   int? sequence;
   String? rootIdentifier;
-
+  double? minPrice;
+  double? maxPrice;
   List<ItemModel>? sectionData;
 
   HomeScreenSection(
@@ -20,6 +21,8 @@ class HomeScreenSection {
         this.sectionType,
         this.filter,
         this.slug,
+        this.minPrice,
+        this.maxPrice,
         this.sequence,
         this.rootIdentifier,
       this.totalData,
@@ -36,6 +39,8 @@ class HomeScreenSection {
     rootIdentifier = _asString(json['root_identifier']) ??
         _asString(json['rootIdentifier']);
     totalData = json['total_data'];
+    minPrice = _parseDouble(json['min_price'] ?? json['minPrice']);
+    maxPrice = _parseDouble(json['max_price'] ?? json['maxPrice']);
     if (json['section_data'] != null) {
       sectionData = <ItemModel>[];
       json['section_data'].forEach((v) {
@@ -57,6 +62,17 @@ class HomeScreenSection {
     return value.toString();
   }
 
+  static double? _parseDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is num) return value.toDouble();
+    final String text = value.toString();
+    if (text.trim().isEmpty) {
+      return null;
+    }
+    return double.tryParse(text);
+  }
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
@@ -69,6 +85,8 @@ class HomeScreenSection {
     data['slug'] = slug;
     data['sequence'] = sequence;
     data['root_identifier'] = rootIdentifier;
+    data['min_price'] = minPrice;
+    data['max_price'] = maxPrice;
     if (sectionData != null) {
       data['section_data'] = sectionData!.map((v) => v.toJson()).toList();
     }

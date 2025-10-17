@@ -4,6 +4,8 @@ import 'package:marib/data/model/wallet/wallet_operation_options.dart';
 import 'package:marib/utils/api.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/payment/manual_payment.dart';
+import 'package:marib/data/model/wallet/manual_payment_requests_summary.dart';
+import 'package:marib/utils/currency_utils.dart';
 
 class WalletOperationsRepository {
   Future<WalletWithdrawalsResult> fetchWithdrawals({
@@ -33,7 +35,19 @@ class WalletOperationsRepository {
       'payload',
     ]);
 
-    final withdrawals = rows.map(WalletWithdrawal.fromJson).toList();
+    final responseCurrency = _unwrapCurrency(response);
+
+    final withdrawals = rows
+        .map((row) {
+      final map = Map<String, dynamic>.from(row);
+      final existing = map['currency'] ?? map['currency_code'];
+      final hasCurrency = existing != null && existing.toString().trim().isNotEmpty;
+      if (!hasCurrency && responseCurrency != null) {
+        map['currency'] = responseCurrency;
+      }
+      return WalletWithdrawal.fromJson(map);
+    })
+        .toList();
 
     final metaMap = _unwrapMeta(response);
     final currentPage = _parseInt(metaMap['current_page']) ?? page;
@@ -102,10 +116,25 @@ class WalletOperationsRepository {
 
   Future<Map<String, dynamic>> submitTransfer({
     required Map<String, dynamic> payload,
+    String? currency,
+
   }) async {
+    final Map<String, dynamic> parameter = Map<String, dynamic>.from(payload);
+
+    final String? normalizedCurrency = CurrencyUtils.normalizeCurrencyCode(
+      currency ?? parameter['currency']?.toString(),
+    );
+
+    if (normalizedCurrency != null) {
+      parameter['currency'] = normalizedCurrency;
+    } else if (currency != null && currency.trim().isNotEmpty) {
+      parameter['currency'] = currency.trim();
+    }
+
     final response = await Api.post(
       url: Api.walletTransfersApi,
-      parameter: payload,
+      parameter: parameter,
+
     );
 
     return Map<String, dynamic>.from(response);
@@ -150,16 +179,28 @@ class WalletOperationsRepository {
     final total = _parseInt(metaMap['total']) ?? requests.length;
     final hasMore = _resolveHasMore(metaMap, currentPage, lastPage, perPageValue, requests.length);
 
+
+    final statsMap = _unwrapStats(response);
+    ManualPaymentRequestsSummary? summary;
+    if (statsMap != null && statsMap.isNotEmpty) {
+      summary = ManualPaymentRequestsSummary.fromJson(statsMap);
+    }
+
+    final meta = WalletWithdrawalsMeta(
+      currentPage: currentPage,
+      lastPage: lastPage,
+      hasMore: hasMore,
+      perPage: perPageValue,
+    );
+
     return DataOutput<ManualPayment>(
       total: total,
       modelList: requests,
       page: currentPage,
       extraData: ExtraData(
-        data: WalletWithdrawalsMeta(
-          currentPage: currentPage,
-          lastPage: lastPage,
-          hasMore: hasMore,
-          perPage: perPageValue,
+        data: ManualPaymentRequestsExtraData(
+          meta: meta,
+          summary: summary,
         ),
       ),
     );
@@ -216,6 +257,40 @@ class WalletOperationsRepository {
     return null;
   }
 
+
+  String? _unwrapCurrency(Map<String, dynamic> response) {
+    String? normalize(dynamic value) {
+      if (value == null) return null;
+      final text = value.toString().trim();
+      return text.isEmpty ? null : text;
+    }
+
+    final direct = normalize(response['currency']);
+    if (direct != null) return direct;
+
+    final data = response['data'];
+    if (data is Map<String, dynamic>) {
+      final nested = normalize(data['currency'] ?? data['currency_code']);
+      if (nested != null) return nested;
+    } else if (data is Map) {
+      final map = data.map((key, value) => MapEntry(key.toString(), value));
+      final nested = normalize(map['currency'] ?? map['currency_code']);
+      if (nested != null) return nested;
+    }
+
+    final meta = response['meta'];
+    if (meta is Map<String, dynamic>) {
+      final nested = normalize(meta['currency'] ?? meta['currency_code']);
+      if (nested != null) return nested;
+    } else if (meta is Map) {
+      final map = meta.map((key, value) => MapEntry(key.toString(), value));
+      final nested = normalize(map['currency'] ?? map['currency_code']);
+      if (nested != null) return nested;
+    }
+
+    return null;
+  }
+
   Map<String, dynamic> _unwrapMeta(Map<String, dynamic> response) {
     final candidates = [
       response['meta'],
@@ -235,6 +310,34 @@ class WalletOperationsRepository {
 
     return const {};
   }
+
+
+  Map<String, dynamic>? _unwrapStats(dynamic response) {
+    if (response is Map<String, dynamic>) {
+      final stats = response['stats'];
+      if (stats is Map<String, dynamic>) {
+        return Map<String, dynamic>.from(stats);
+      }
+      if (stats is Map) {
+        return stats.map((key, value) => MapEntry(key.toString(), value));
+      }
+      for (final key in const ['data', 'meta']) {
+        if (response.containsKey(key)) {
+          final nested = _unwrapStats(response[key]);
+          if (nested != null) {
+            return nested;
+          }
+        }
+      }
+      return null;
+    }
+    if (response is Map) {
+      final map = response.map((key, value) => MapEntry(key.toString(), value));
+      return _unwrapStats(map);
+    }
+    return null;
+  }
+
 
   Map<String, dynamic> _unwrapSingle(
       Map<String, dynamic> response,
@@ -346,4 +449,14 @@ class WalletWithdrawalsMeta {
       perPage: perPage ?? this.perPage,
     );
   }
+}
+
+class ManualPaymentRequestsExtraData {
+  const ManualPaymentRequestsExtraData({
+    required this.meta,
+    this.summary,
+  });
+
+  final WalletWithdrawalsMeta meta;
+  final ManualPaymentRequestsSummary? summary;
 }

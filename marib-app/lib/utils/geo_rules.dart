@@ -20,11 +20,28 @@ class GeoRules {
     Constant.storeRootCategoryId,
   };
 
+  static const Set<int> _forceLocationRoots = <int>{
+    Constant.realEstateRootCategoryId,
+    Constant.publicRootCategoryId,
+  };
+
+  static const Set<String> _forceLocationInterfaces = <String>{
+    'public_ads',
+    'real_estate_services',
+  };
+
+  static const Set<String> _mapEnabledInterfaces = <String>{
+    'public_ads',
+    'real_estate_services',
+  };
 
   static bool isDisabled({Iterable<int>? categoryIds, String? interfaceType}) {
     final Set<int> disabledCategories = Constant.geoDisabledCategoryIds;
     if (categoryIds != null) {
       for (final int id in categoryIds) {
+        if (_forceLocationRoots.contains(id)) {
+          continue;
+        }
         if (disabledCategories.contains(id) ||
             _defaultDisabledRoots.contains(id)) {
           return true;
@@ -34,6 +51,9 @@ class GeoRules {
 
     final String? normalized = SliderInterfaceMapper.normalize(interfaceType);
     if (normalized != null) {
+      if (_forceLocationInterfaces.contains(normalized)) {
+        return false;
+      }
       if (_disabledInterfaces.contains(normalized)) {
         return true;
       }
@@ -41,6 +61,9 @@ class GeoRules {
 
     if (interfaceType != null) {
       final String fallback = interfaceType.trim().toLowerCase();
+      if (fallback.isNotEmpty && _forceLocationInterfaces.contains(fallback)) {
+        return false;
+      }
       if (fallback.isNotEmpty && _disabledInterfaces.contains(fallback)) {
         return true;
       }
@@ -50,6 +73,9 @@ class GeoRules {
   }
 
   static bool isDisabledForItem(ItemModel item) {
+    if (isMapEnabledForItem(item)) {
+      return false;
+    }
     if (isDisabled(categoryIds: buildItemCategoryIds(item))) {
       return true;
     }
@@ -71,7 +97,51 @@ class GeoRules {
     }
     final Set<int> disabled = Constant.geoDisabledCategoryIds;
     return categoryIds.any(
-          (int id) => disabled.contains(id) || _defaultDisabledRoots.contains(id),
+          (int id) => !_forceLocationRoots.contains(id) &&
+          (disabled.contains(id) || _defaultDisabledRoots.contains(id)),
     );
+  }
+  static bool isMapEnabledForItem(ItemModel item) {
+
+    final Iterable<int> categoryIds = buildItemCategoryIds(item);
+    if (categoryIds.contains(Constant.realEstateRootCategoryId) ||
+        categoryIds.contains(Constant.publicRootCategoryId)) {
+      return true;
+    }
+
+    if (isMapSupportedInterface(item.departmentSlug)) {
+      return true;
+    }
+
+    if (isMapSupportedInterface(item.itemType)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  static bool _isMapEnabled({String? interfaceType}) {
+    if (interfaceType == null) {
+      return false;
+    }
+
+    final String? normalized = SliderInterfaceMapper.normalize(interfaceType);
+    if (normalized != null && _mapEnabledInterfaces.contains(normalized)) {
+      return true;
+    }
+
+    final String fallback = interfaceType.trim().toLowerCase();
+    if (fallback.isEmpty) {
+      return false;
+    }
+
+    return _mapEnabledInterfaces.contains(fallback);
+  }
+
+  /// Returns `true` when the provided interface type belongs to one of the
+  /// sections that support the map preview component inside the item details
+  /// screen.
+  static bool isMapSupportedInterface(String? interfaceType) {
+    return _isMapEnabled(interfaceType: interfaceType);
   }
 }

@@ -320,7 +320,7 @@ SliderFetchPayload parseSliderPayload(dynamic raw) {
         );
       }
 
-      if (map.containsKey('display') && !_parseBool(map['display'])) {
+      if (_isDisplayManuallyDisabled(map['display'])) {
         return const SliderFetchPayload(
           sliders: <HomeSlider>[],
           fallbackDisplay: 'shimmer',
@@ -436,15 +436,45 @@ bool _parseBool(dynamic raw) {
   if (raw is String) {
     final String normalized = raw.trim().toLowerCase();
     if (normalized.isEmpty) return false;
-    if (normalized == 'true' || normalized == '1' || normalized == 'yes') {
-      return true;
-    }
-    if (normalized == 'false' || normalized == '0' || normalized == 'no') {
+
+    const Set<String> falsyValues = <String>{
+      'false',
+      '0',
+      'no',
+      'off',
+    };
+
+    if (falsyValues.contains(normalized)) {
       return false;
     }
+    return true;
   }
   return false;
 }
+
+
+bool _isDisplayManuallyDisabled(dynamic raw) {
+  if (raw == null) {
+    return false;
+  }
+  if (raw is bool) {
+    return raw == false;
+  }
+  if (raw is num) {
+    return raw == 0;
+  }
+  if (raw is String) {
+    final String normalized = raw.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return true;
+    }
+    const Set<String> falsyValues = <String>{'false', '0', 'no'};
+    return falsyValues.contains(normalized);
+  }
+  return false;
+}
+
+
 
 bool _looksLikeSliderMap(Map<String, dynamic> map) {
   const Set<String> sliderKeys = <String>{

@@ -11,7 +11,9 @@ import 'package:marib/data/model/user_model.dart';
 import 'helper_utils.dart';
 import 'package:marib/utils/hive_keys.dart';
 import 'dart:math';
-
+import 'dart:async';
+import 'package:marib/ui/screens/chat/chat_badge_controller.dart';
+import 'dart:convert';
 
 
 
@@ -30,6 +32,12 @@ class HiveUtils {
   static final Random _sliderSessionRandom = Random();
 
   static Box<dynamic> get _userDetailsBox => Hive.box(HiveKeys.userDetailsBox);
+  static const Map<String, int> _delegateSectionRootIds = <String, int>{
+    'shein': Constant.sheinRootCategoryId,
+    'computer': Constant.computerRootCategoryId,
+    'store': Constant.storeRootCategoryId,
+  };
+
 
   static void _hydrateUserDetailsCache() {
     final box = _userDetailsBox;
@@ -221,19 +229,129 @@ class HiveUtils {
 
 
 
-  static int? getDelegateRootCategoryId({int? userId}) {
+  static Future<void> cacheDelegateSections({
+    required Iterable<String> permitted,
+    Iterable<String> blocked = const <String>[],
+  }) async {
+    final Set<String> permittedSet = {
+      for (final section in permitted)
+        if (_normalizeDelegateSection(section) != null)
+          _normalizeDelegateSection(section)!,
+    };
+
+    final Set<String> blockedSet = {
+      for (final section in blocked)
+        if (_normalizeDelegateSection(section) != null)
+          _normalizeDelegateSection(section)!,
+    }..removeWhere(permittedSet.contains);
+
+    final List<String> permittedList = permittedSet.toList(growable: false);
+    final List<String> blockedList = blockedSet.toList(growable: false);
+
+    await _userDetailsBox.put(HiveKeys.permittedDelegateSections, permittedList);
+    await _userDetailsBox.put(HiveKeys.blockedDelegateSections, blockedList);
+
+    if (_cachedUserDetailsMap != null) {
+      _applyCacheUpdates({
+        HiveKeys.permittedDelegateSections: permittedList,
+        HiveKeys.blockedDelegateSections: blockedList,
+      });
+    }
+  }
+
+  static Future<void> clearDelegateSectionsCache() async {
+    await _userDetailsBox.delete(HiveKeys.permittedDelegateSections);
+    await _userDetailsBox.delete(HiveKeys.blockedDelegateSections);
+    _cachedUserDetailsMap?.remove(HiveKeys.permittedDelegateSections);
+    _cachedUserDetailsMap?.remove(HiveKeys.blockedDelegateSections);
+  }
+
+  static Set<String> getPermittedDelegateSections() {
+    final dynamic cached =
+    _cachedUserDetailsMap?[HiveKeys.permittedDelegateSections];
+    if (cached != null) {
+      return _normalizeDelegateSectionList(cached);
+    }
+    return _normalizeDelegateSectionList(
+      _userDetailsBox.get(HiveKeys.permittedDelegateSections),
+    );
+  }
+
+  static Set<String> getBlockedDelegateSections() {
+    final dynamic cached = _cachedUserDetailsMap?[HiveKeys.blockedDelegateSections];
+    if (cached != null) {
+      return _normalizeDelegateSectionList(cached);
+    }
+    return _normalizeDelegateSectionList(
+      _userDetailsBox.get(HiveKeys.blockedDelegateSections),
+    );
+  }
+
+  static bool hasDelegateAccess(String section) {
+    final String? normalized = _normalizeDelegateSection(section);
+    if (normalized == null) {
+      return false;
+    }
+    final Set<String> permitted = getPermittedDelegateSections();
+
+    final Set<String> blocked = getBlockedDelegateSections();
+    final bool hasDelegateAssignments = permitted.isNotEmpty;
+
+    if (hasDelegateAssignments && blocked.contains(normalized)) {
+      return false;
+    }
+
+
+    if (permitted.contains(normalized)) {
+      return true;
+    }
+
+    // في حالة عدم وجود أقسام مسموح بها صراحةً نعتبر الوصول متاحًا ما لم يتم حظره
+    if (!hasDelegateAssignments) {
+
+
+      return true;
+    }
+
+    return false;
+
+  }
+
+  static bool isDelegateSectionBlocked(String section) {
+    final String? normalized = _normalizeDelegateSection(section);
+    if (normalized == null) {
+      return false;
+    }
+    return getBlockedDelegateSections().contains(normalized);
+  }
+
+  static int? getDelegateRootCategoryId({int? userId, String? section}) {
+
     final int? resolvedUserId = userId ?? _tryReadCurrentUserId();
     if (resolvedUserId == null) {
       _persistDelegateHistory(null);
       return null;
     }
+    final Set<String> permittedSections = getPermittedDelegateSections();
+    if (permittedSections.isEmpty) {
+      _persistDelegateHistory(null);
+      return null;
+    }
+
+
     int? rootId;
-
-
-    if (Constant.delegatesShein.contains(resolvedUserId)) {
-      rootId = Constant.sheinRootCategoryId;
-    } else if (Constant.delegatesComputer.contains(resolvedUserId)) {
-      rootId = Constant.computerRootCategoryId;
+    if (section != null) {
+      final String? normalized = _normalizeDelegateSection(section);
+      if (normalized != null && permittedSections.contains(normalized)) {
+        rootId = _delegateSectionRootIds[normalized];
+      }
+    } else {
+      for (final MapEntry<String, int> entry in _delegateSectionRootIds.entries) {
+        if (permittedSections.contains(entry.key)) {
+          rootId = entry.value;
+          break;
+        }
+      }
     }
 
     _persistDelegateHistory(rootId);
@@ -241,6 +359,11 @@ class HiveUtils {
   }
 
   static bool wasDelegateBefore() {
+
+    if (getPermittedDelegateSections().isNotEmpty) {
+      return true;
+    }
+
     return _userDetailsBox.get(HiveKeys.delegateHistoryFlag) == true;
   }
 
@@ -267,6 +390,75 @@ class HiveUtils {
     await _userDetailsBox.delete(HiveKeys.lastDelegateCategoryId);
     _cachedUserDetailsMap?.remove(HiveKeys.delegateHistoryFlag);
     _cachedUserDetailsMap?.remove(HiveKeys.lastDelegateCategoryId);
+
+    await clearDelegateSectionsCache();
+  }
+
+  static String? _normalizeDelegateSection(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    final String normalized = value.toString().trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return null;
+    }
+    return normalized;
+  }
+
+  static Set<String> _normalizeDelegateSectionList(dynamic raw) {
+    final Set<String> resolved = <String>{};
+
+    void consume(dynamic candidate) {
+      final String? normalized = _normalizeDelegateSection(candidate);
+      if (normalized != null) {
+        resolved.add(normalized);
+      }
+    }
+
+    if (raw == null) {
+      return resolved;
+    }
+
+    if (raw is Iterable) {
+      for (final element in raw) {
+        consume(element);
+      }
+      return resolved;
+    }
+
+    if (raw is String) {
+      final String trimmed = raw.trim();
+      if (trimmed.isEmpty) {
+        return resolved;
+      }
+
+      dynamic decoded;
+      try {
+        decoded = jsonDecode(trimmed);
+      } catch (_) {
+        decoded = null;
+      }
+
+      if (decoded is Iterable) {
+        return _normalizeDelegateSectionList(decoded);
+      }
+
+      for (final String segment in trimmed.split(RegExp(r'[\s,]+'))) {
+        consume(segment);
+      }
+      return resolved;
+    }
+
+    if (raw is Map) {
+      for (final dynamic value in raw.values) {
+        consume(value);
+      }
+      return resolved;
+    }
+
+    consume(raw);
+    return resolved;
+
   }
 
   static int? _tryReadCurrentUserId() {
@@ -394,6 +586,7 @@ class HiveUtils {
         await _resetDelegateHistory();
       }
     }
+    await ChatBadgeController.handleUserChanged(incomingId);
 
   }
 
@@ -404,6 +597,7 @@ class HiveUtils {
 
     await Hive.box(HiveKeys.historyBox).clear();
     HiveUtils.setUserIsAuthenticated(false);
+    await ChatBadgeController.handleUserChanged(null);
   }
 
   /// تسجيل الخروج + تنظيف + إعادة التوجيه (إن لزم)

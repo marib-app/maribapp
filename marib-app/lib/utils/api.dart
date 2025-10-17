@@ -187,13 +187,18 @@ class Api {
 
     return Map<String, dynamic>.from(source);
   }
+  static const Object _contentTypeNotSpecified = Object();
+
+  @visibleForTesting
+  static Dio Function()? dioFactory;
 
 
   static String? _resolveContentType({
-    Object? override,
+    Object? override = _contentTypeNotSpecified,
     Object? base,
   }) {
-    final Object? candidate = override ?? base;
+    final bool hasOverride = !identical(override, _contentTypeNotSpecified);
+    final Object? candidate = hasOverride ? override : base;
 
     if (candidate == null) {
       return null;
@@ -213,10 +218,10 @@ class Api {
     Options? base,
     String? method,
     Map<String, dynamic>? headers,
-    Object? contentType,
+    Object? contentType = _contentTypeNotSpecified,
     bool? followRedirects,
   }) {
-    final Options resolvedBase = base ?? Options();
+    final Options resolvedBase = base ?? Options(contentType: null);
 
     return Options(
       method: method ?? resolvedBase.method,
@@ -330,6 +335,10 @@ class Api {
   static String getSliderApi = "get-slider";
   static String getCategoriesApi = "get-categories";
   static String getItemApi = "get-item";
+  static String productPurchaseOptionsApi(int itemId) => "products/$itemId/purchase-options";
+  static String itemAttributesApi(int itemId) => "items/$itemId/attributes";
+  static String itemStockBulkSetApi(int itemId) => "admin/items/$itemId/stock/bulk-set";
+  static String itemDiscountApi(int itemId) => "items/$itemId/discount";
   static String getMyItemApi = "my-items";
   static String getNotificationListApi = "get-notification-list";
   static String deleteUserApi = "delete-user";
@@ -339,14 +348,15 @@ class Api {
   static String getPaymentSettingsApi = "get-payment-settings";
   static String getSystemSettingsApi = "get-system-settings";
   static String getFavoriteItemApi = "get-favourite-item";
+  static String delegateSectionsApi = "delegates/sections";
   static String updateItemStatusApi = "update-item-status";
   static String getReportReasonsApi = "get-report-reasons";
   static String addReportsApi = "add-reports";
   static String getCustomFieldsApi = "get-customfields";
   static String getFeaturedSectionApi = "get-featured-section";
   static String updateItemApi = "update-item";
-  static String adDraftsApi = "ad-drafts";
   static String addItemApi = "add-item";
+  static String adDraftsApi = "ad-drafts";
   static String deleteItemApi = "delete-item";
   static String setItemTotalClickApi = "set-item-total-click";
   static String makeItemFeaturedApi = "make-item-featured";
@@ -378,12 +388,14 @@ class Api {
 
 
 
-  static String wifiNearbyNetworksApi = "wifi/networks/nearby";
+  static String wifiNetworksApi = "wifi/networks";
   static String wifiNetworkPlansApi(int id) => "wifi/networks/$id/plans";
   static String wifiPaymentGatewaysApi = "wifi/payment-gateways";
   static String wifiPlanPurchaseApi(int planId) => "wifi/plans/$planId/purchase";
+  static String wifiOrderCodeApi(int transactionId) => "wifi/orders/$transactionId/code";
   static String wifiPlanPurchaseWebhookApi = "wifi/plans/purchase/webhook";
   static String wifiPurchasesApi = "wifi/purchases";
+  static String wifiCodeEventsApi(int codeId) => "wifi/codes/$codeId/events";
 
 
 
@@ -395,6 +407,8 @@ class Api {
   static String myServiceManageApi(int id) => "my-services/$id";
 
   static String getCurrencyRatesApi = "currency-rates";
+  static String getCurrencyHistoryApi = "currency-rates/history";
+  static String getMetalRatesApi = "metal-rates";
   static String getFaqApi = "faq";
   static String challengesApi = "challenges";
   static String getItemBuyerListApi = "item-buyer-list";
@@ -416,6 +430,7 @@ class Api {
   static String renewItemApi = "renew-item";
   static String usersByAccountTypeApi = "users-by-account-type";
   static String userProfileStatsApi = "user-profile-stats";
+  static String userPreferencesApi = "user/preferences";
 
   // OTP module apis
   static String sendOtpApi = "send-otp";
@@ -452,7 +467,7 @@ class Api {
   static String clearCartApi = "cart/clear";
   static String cartQuoteShippingApi = "cart/quote-shipping";
 
-  static String getDeliveryPricesApi = "get-delivery-prices";
+  static String getDeliveryPricesApi = "delivery-prices";
   static String userOrdersApi = "orders";
 
 
@@ -479,7 +494,8 @@ class Api {
     'banks',
   ];
 
-
+  static const int _manualBankDefaultPerPage = 50;
+  static const int _manualBankMaxLoops = 20;
 
   // =======================
   // مفاتيح عامة متداولة
@@ -577,6 +593,7 @@ class Api {
   static String v360degImage = "threeD_image";
   static String videoLink = "video_link";
   static String categoryIds = "category_ids";
+  static String interfaceType = "interface_type";
   static String sortBy = "sort_by";
   static String stateId = "state_id";
   static String countryId = "country_id";
@@ -606,7 +623,7 @@ class Api {
         await HiveUtils.ensureSliderSessionId();
       }
 
-      final Dio dio = Dio();
+      final Dio dio = (dioFactory ?? () => Dio())();
 
       dio.options.followRedirects = false;
       dio.options.validateStatus = (_) => true;
@@ -616,10 +633,13 @@ class Api {
 
       dio.interceptors.add(NetworkRequestInterseptor());
 
-      late FormData formData;
+      FormData formData;
+      final bool parameterIsFormData = parameter is FormData;
 
-      if (parameter is Map<String, dynamic>) {
-        Map<String, dynamic> formMap = {};
+      if (parameterIsFormData) {
+        formData = parameter as FormData;
+      } else if (parameter is Map<String, dynamic>) {
+        final Map<String, dynamic> formMap = <String, dynamic>{};
 
         parameter.forEach((key, value) {
           if (value is File) {
@@ -647,9 +667,12 @@ class Api {
           formMap,
           ListFormat.multiCompatible,
         );
+      } else if (parameter == null) {
+        formData = FormData();
       } else {
         throw ArgumentError(
-            'Invalid parameter type. Expected Map<String, dynamic>.');
+          'Invalid parameter type. Expected Map<String, dynamic> or FormData.',
+        );
       }
 
 
@@ -660,12 +683,105 @@ class Api {
         if (optionHeaders != null) ...optionHeaders,
         if (extraHeaders != null) ...extraHeaders,
       };
+
+      if (parameterIsFormData) {
+        mergedHeaders.removeWhere(
+              (String key, dynamic value) =>
+          key.toLowerCase() == HttpHeaders.contentTypeHeader &&
+              value?.toString().toLowerCase() ==
+                  Headers.jsonContentType.toLowerCase(),
+        );
+      }
+
       _ensureSliderSessionHeaders(mergedHeaders);
+
+      final bool requestBodyIsMultipart =
+          parameterIsFormData || formData.files.isNotEmpty;
+
+      String? explicitContentTypeHeaderKey;
+      String? explicitContentTypeHeaderValue;
+
+      mergedHeaders.forEach((String key, dynamic value) {
+        if (key.toLowerCase() == HttpHeaders.contentTypeHeader) {
+          explicitContentTypeHeaderKey ??= key;
+          explicitContentTypeHeaderValue = value?.toString();
+        }
+      });
+
+
+
+      String? normalizedHeaderContentType;
+      if (explicitContentTypeHeaderValue != null) {
+        final String candidate = explicitContentTypeHeaderValue!.trim();
+        if (candidate.isNotEmpty) {
+          normalizedHeaderContentType = candidate.toLowerCase();
+        }
+      }
+
+      final Object? optionContentType = options?.contentType;
+      String? normalizedOptionContentType;
+
+      if (optionContentType != null) {
+        final String candidate = optionContentType.toString().trim();
+        if (candidate.isNotEmpty) {
+          normalizedOptionContentType = candidate.toLowerCase();
+        }
+      }
+
+
+      bool hasCustomContentTypeOption = false;
+      if (normalizedOptionContentType != null) {
+        final String normalized = normalizedOptionContentType;
+
+        final String jsonContentType = Headers.jsonContentType.toLowerCase();
+        final String formUrlEncodedContentType =
+        Headers.formUrlEncodedContentType.toLowerCase();
+        final bool isJsonDefault =
+            normalized == jsonContentType ||
+                normalized.startsWith('application/json');
+        final bool isFormUrlEncoded = normalized == formUrlEncodedContentType;
+        final bool isMultipart = normalized.startsWith('multipart/form-data');
+        hasCustomContentTypeOption =
+        !(isJsonDefault || isFormUrlEncoded || isMultipart);
+      }
+
+      bool hasCustomContentTypeHeader = false;
+      if (normalizedHeaderContentType != null) {
+        final String normalized = normalizedHeaderContentType!;
+        final String jsonContentType = Headers.jsonContentType.toLowerCase();
+        final String formUrlEncodedContentType =
+        Headers.formUrlEncodedContentType.toLowerCase();
+        final bool isJsonDefault =
+            normalized == jsonContentType ||
+                normalized.startsWith('application/json');
+        final bool isFormUrlEncoded = normalized == formUrlEncodedContentType;
+        final bool isMultipart = normalized.startsWith('multipart/form-data');
+        hasCustomContentTypeHeader =
+        !(isJsonDefault || isFormUrlEncoded || isMultipart);      }
+
+      final bool shouldNullifyContentType = requestBodyIsMultipart &&
+          !hasCustomContentTypeHeader &&
+          !hasCustomContentTypeOption;
+
+      if (shouldNullifyContentType && explicitContentTypeHeaderKey != null) {
+        mergedHeaders.remove(explicitContentTypeHeaderKey);
+      }
+
+      if (shouldNullifyContentType) {
+        dio.options.contentType = null;
+      }
+
+
+      final Object? resolvedContentType = parameterIsFormData
+          ? null
+          : shouldNullifyContentType
+          ? null
+          : (options?.contentType ?? _contentTypeNotSpecified);
 
       final Options requestOptions = _buildRequestOptions(
         base: options,
         headers: mergedHeaders,
-        contentType: options?.contentType ?? "multipart/form-data",
+        contentType: resolvedContentType,
         followRedirects: false,
       );
 
@@ -877,19 +993,39 @@ class Api {
 
       final bool hasJsonBody =
           resolvedMethod == 'POST' || resolvedMethod == 'PUT' || resolvedMethod == 'PATCH';
+      final bool dataIsFormData = data is FormData;
+
       if (hasJsonBody) {
-        mergedHeaders[Headers.contentTypeHeader] = Headers.jsonContentType;
+        if (dataIsFormData) {
+          mergedHeaders.removeWhere(
+                (String key, dynamic value) =>
+            key.toLowerCase() == HttpHeaders.contentTypeHeader &&
+                value?.toString().toLowerCase() ==
+                    Headers.jsonContentType.toLowerCase(),
+          );
+        } else {
+          mergedHeaders[Headers.contentTypeHeader] =
+              options?.contentType ?? Headers.jsonContentType;
+        }
       }
 
       _ensureSliderSessionHeaders(mergedHeaders);
+
+      final Object? requestContentType;
+      if (!hasJsonBody) {
+        requestContentType = options?.contentType;
+      } else {
+        requestContentType = dataIsFormData
+            ? null
+            : (options?.contentType ?? Headers.jsonContentType);
+      }
 
       final Options requestOptions = _buildRequestOptions(
         base: options,
         method: resolvedMethod,
         headers: mergedHeaders,
-        contentType: hasJsonBody
-            ? Headers.jsonContentType
-            : options?.contentType,
+        contentType: requestContentType,
+
         followRedirects: false,
 
       );
@@ -1141,30 +1277,56 @@ class Api {
 
     for (final endpoint in _manualBankApiCandidates) {
       try {
-        final res = await Api.get(url: endpoint);
+        final List<BankAccount> collected = <BankAccount>[];
+        int currentPage = 1;
+        int loop = 0;
 
-        // السيرفر قد يرجّع { data: [...] } أو [...] مباشرة
-        final dynamic raw = res is Map<String, dynamic> ? (res['data'] ?? res['banks']) : res;
-        final List<dynamic> list = raw is List ? raw : <dynamic>[];
+        while (true) {
+          final Map<String, dynamic> response = await Api.get(
+            url: endpoint,
+            queryParameters: <String, dynamic>{
+              'per_page': _manualBankDefaultPerPage,
+              'page': currentPage,
+            },
+          );
 
-        if (list.isEmpty && raw is! List) {
-          continue;
+          final _ManualBankPage page = _parseManualBankResponse(response);
+
+          if (page.items.isEmpty && loop == 0) {
+            break;
+          }
+
+
+          collected.addAll(page.items);
+
+
+          final Map<String, dynamic>? meta = page.meta;
+          final int? current = _manualBankAsInt(meta?['current_page']) ?? currentPage;
+          final int? last = _manualBankAsInt(meta?['last_page']);
+          final bool? metaHasMore = _manualBankAsBool(meta?['has_more_pages']);
+
+          final bool canLoop = loop < _manualBankMaxLoops - 1;
+          final bool hasMorePages = metaHasMore != null
+              ? (metaHasMore && canLoop)
+              : (last != null && current != null && current < last && canLoop);
+
+          if (!hasMorePages || current == null) {
+
+            break;
+          }
+
+          currentPage = current + 1;
+          loop += 1;
         }
 
-        final items = list.map<BankAccount>((dynamic e) {
-          final map = e is Map<String, dynamic>
-              ? e
-              : Map<String, dynamic>.from(e as Map);
-          return BankAccount.fromJson(map);
-        }).toList();
-
-        if (items.isNotEmpty || raw is List) {
-          return items;
+        if (collected.isNotEmpty) {
+          return collected;
         }
       } on ApiHttpException catch (error) {
         lastHttpError = error;
 
-        if (error.statusCode != 404 && error.statusCode != 405 &&
+        if (error.statusCode != 404 &&
+            error.statusCode != 405 &&
             error.statusCode != 410) {
           throw error;
         }
@@ -1178,6 +1340,172 @@ class Api {
     throw ApiException('فشل في جلب الحسابات البنكية اليدوية');
   }
 
+
+  static _ManualBankPage _parseManualBankResponse(Map<String, dynamic> response) {
+    final List<BankAccount> accounts = <BankAccount>[];
+    Map<String, dynamic>? meta;
+
+    final Set<int> visited = <int>{};
+
+    void inspect(dynamic node) {
+      if (node == null) {
+        return;
+      }
+
+      if (node is Iterable) {
+        for (final element in node) {
+          inspect(element);
+        }
+        return;
+      }
+
+      final Map<String, dynamic>? map = _mapifyManualBank(node);
+      if (map == null) {
+        return;
+      }
+
+      meta ??= _mapifyManualBank(map['meta']) ?? meta;
+
+      final int hash = identityHashCode(map);
+      if (!visited.add(hash)) {
+        return;
+      }
+
+      const containerKeys = <String>{
+        'manual_payment_banks',
+        'manualPaymentBanks',
+        'manual_banks',
+        'manualBanks',
+        'banks',
+        'data',
+        'items',
+        'records',
+        'list',
+        'payload',
+      };
+
+      bool drilled = false;
+
+      for (final key in containerKeys) {
+        if (!map.containsKey(key)) {
+          continue;
+        }
+        drilled = true;
+        inspect(map[key]);
+      }
+
+      if (drilled) {
+        return;
+      }
+
+      if (_looksLikeManualBank(map)) {
+        accounts.add(BankAccount.fromJson(map));
+      }
+    }
+
+    inspect(response['data']);
+    if (accounts.isEmpty) {
+      inspect(response['banks']);
+    }
+    if (accounts.isEmpty) {
+      inspect(response);
+    }
+
+    meta ??= _mapifyManualBank(response['meta']);
+
+    return _ManualBankPage(items: accounts, meta: meta);
+  }
+
+  static Map<String, dynamic>? _mapifyManualBank(dynamic source) {
+    if (source is Map<String, dynamic>) {
+      return source;
+    }
+
+    if (source is Map) {
+      final map = <String, dynamic>{};
+      source.forEach((key, value) {
+        if (key == null) {
+          return;
+        }
+        map[key.toString()] = value;
+      });
+      return map;
+    }
+
+    return null;
+  }
+
+  static bool _looksLikeManualBank(Map<String, dynamic> map) {
+    const possibleKeys = <String>{
+      'bank_name',
+      'beneficiary_name',
+      'account_name',
+      'account_number',
+      'iban',
+      'swift',
+      'manual_bank_id',
+    };
+
+    for (final key in possibleKeys) {
+      if (map.containsKey(key)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  static int? _manualBankAsInt(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+
+    if (value is int) {
+      return value;
+    }
+
+    if (value is double) {
+      return value.toInt();
+    }
+
+    if (value is String) {
+      return int.tryParse(value);
+    }
+
+    return null;
+  }
+
+  static bool? _manualBankAsBool(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+
+    if (value is bool) {
+      return value;
+    }
+
+    if (value is num) {
+      return value != 0;
+    }
+
+    if (value is String) {
+      final normalized = value.trim().toLowerCase();
+
+      if (normalized.isEmpty) {
+        return null;
+      }
+
+      if (<String>{'1', 'true', 'yes', 'on'}.contains(normalized)) {
+        return true;
+      }
+
+      if (<String>{'0', 'false', 'no', 'off'}.contains(normalized)) {
+        return false;
+      }
+    }
+
+    return null;
+  }
 
   // إرسال إثبات تحويل (رفع إيصال) للدفع اليدوي
   // - الراوت في لاراڤيل: POST /api/payments/manual (محمي بمصادقة Sanctum)
@@ -1228,3 +1556,12 @@ class Api {
 }
 
 
+class _ManualBankPage {
+  const _ManualBankPage({
+    required this.items,
+    this.meta,
+  });
+
+  final List<BankAccount> items;
+  final Map<String, dynamic>? meta;
+}

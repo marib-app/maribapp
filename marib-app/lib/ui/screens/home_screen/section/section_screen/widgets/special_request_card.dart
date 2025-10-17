@@ -16,7 +16,12 @@ import 'package:marib/data/cubits/request_device/request_device_cubit.dart';
 
 // مكوّن البطاقة كما هو (نفس القياسات، الألوان، والخطوط)
 class SpecialRequestCard extends StatelessWidget {
-  const SpecialRequestCard({super.key});
+  final String sectionSlug;
+
+  const SpecialRequestCard({
+    super.key,
+    required this.sectionSlug,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -376,6 +381,7 @@ class SpecialRequestCard extends StatelessWidget {
                                           phone: phoneController.text.trim(),
                                           subject: composeSubject(),
                                           message: composeMessage(),
+                                          section: _resolveSectionForRequest(),
                                         );
                                       }
                                     },
@@ -448,4 +454,17 @@ class SpecialRequestCard extends StatelessWidget {
       style: TextStyle(color: rootContext.color.textDefaultColor),
     );
   }
+
+  String _resolveSectionForRequest() {
+    final normalized = sectionSlug.trim().toLowerCase();
+    switch (normalized) {
+      case 'shein':
+        return 'shein';
+      case 'computer':
+        return 'computer';
+      default:
+        return 'computer';
+    }
+  }
+
 }

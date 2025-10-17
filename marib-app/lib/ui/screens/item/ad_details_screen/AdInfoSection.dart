@@ -71,8 +71,6 @@ class AdInfoSectionShimmer extends StatelessWidget {
   }
 }
 
-
-
 class AdInfoSection {
   final BuildContext context;
   final dynamic model;
@@ -84,24 +82,25 @@ class AdInfoSection {
     required this.isAddedByMe,
   });
 
-
   Widget _buildStatusChip(
-      BuildContext context,
-      String? rawStatus, {
-        bool fullWidth = false,        // اجعلها true لو تبغاه يتمدد
-        bool showTooltip = true,       // Tooltip بالوصف
-        bool dense = false,            // حجم أصغر
-      }) {
-    final cs   = Theme.of(context).colorScheme;
+    BuildContext context,
+    String? rawStatus, {
+    bool fullWidth = false, // اجعلها true لو تبغاه يتمدد
+    bool showTooltip = true, // Tooltip بالوصف
+    bool dense = false, // حجم أصغر
+  }) {
+    final cs = Theme.of(context).colorScheme;
     final norm = _normalizeStatus(rawStatus);
-    final st   = _statusStyles(context, cs)[norm] ?? _statusStyles(context, cs)['review']!;
-    final t    = Theme.of(context).textTheme;
+    final st = _statusStyles(context, cs)[norm] ??
+        _statusStyles(context, cs)['review']!;
+    final t = Theme.of(context).textTheme;
     final textScale = MediaQuery.of(context).textScaleFactor.clamp(1.0, 1.3);
 
     Widget buildChip({required bool compact, required bool iconOnly}) {
-      final label = iconOnly ? '' : (compact ? _shortLabel(norm, st.label) : st.label);
-      final padH  = iconOnly ? 10.0 : (dense ? 10.0 : 12.0);
-      final padV  = dense ? 6.0 : 8.0;
+      final label =
+          iconOnly ? '' : (compact ? _shortLabel(norm, st.label) : st.label);
+      final padH = iconOnly ? 10.0 : (dense ? 10.0 : 12.0);
+      final padV = dense ? 6.0 : 8.0;
 
       final content = Row(
         mainAxisSize: MainAxisSize.min,
@@ -147,14 +146,15 @@ class AdInfoSection {
     // التكيّف مع العرض المتاح
     Widget responsive(BuildContext ctx) {
       return LayoutBuilder(builder: (ctx, c) {
-        final w = c.maxWidth.isFinite ? c.maxWidth : MediaQuery.of(ctx).size.width;
+        final w =
+            c.maxWidth.isFinite ? c.maxWidth : MediaQuery.of(ctx).size.width;
 
         // قواعد بسيطة:
         // < 120px  -> أيقونة فقط
         // < 200px  -> نص قصير
         // >= 200px -> نص كامل
         final iconOnly = w < 120;
-        final compact  = !iconOnly && (w < 200 || textScale > 1.15);
+        final compact = !iconOnly && (w < 200 || textScale > 1.15);
 
         Widget chip = buildChip(compact: compact, iconOnly: iconOnly);
         if (fullWidth) chip = Row(children: [Expanded(child: chip)]);
@@ -168,101 +168,164 @@ class AdInfoSection {
 // نص مختصر للحالات عند ضيق المساحة
   String _shortLabel(String norm, String fallback) {
     switch (norm) {
-      case 'approved': return 'مفعل';
-      case 'review':   return 'قيد المراجعة';
-      case 'inactive': return 'موقّت';
-      case 'rejected': return 'مرفوض';
-      case 'sold out': return 'تم البيع';
-      default:         return fallback;
+      case 'approved':
+        return 'مفعل';
+      case 'review':
+        return 'قيد المراجعة';
+      case 'inactive':
+        return 'موقّت';
+      case 'rejected':
+        return 'مرفوض';
+      case 'sold out':
+        return 'تم البيع';
+      default:
+        return fallback;
     }
   }
 
-
-
-
-
-
-
-
   // ✅ ويدجت السعر والحالة
   Widget priceAndStatus() {
-    // نقرأ السعر ونتأكد أنه ليس 0 (يدعم رقم أو نص)
-    num? priceValue;
-    final p = model.price;
-    if (p is num) {
-      priceValue = p;
-    } else if (p is String) {
-      priceValue = num.tryParse(p.trim());
-    }
+    final double? basePrice = model.price;
+    final double? discountedPrice = model.finalPrice ?? basePrice;
+    final bool hasDiscount = basePrice != null &&
+        discountedPrice != null &&
+        discountedPrice < basePrice;
 
-
-
-    // إخفاء السعر إن كان null أو 0
-    final bool showPrice = priceValue != null && priceValue != 0;
-
-    final String? priceText = showPrice
-        ? NumberFormat("#,###", "ar").format(priceValue)
+    final double? discountPercent = hasDiscount
+        ? (((basePrice! - discountedPrice!) / basePrice) * 100).clamp(0, 100)
         : null;
 
-    final String currencyText = showPrice ? _getCurrencySymbol(model.currency) : "";
+    final double? priceValue = discountedPrice ?? basePrice;
+    final bool showPrice = priceValue != null && priceValue > 0;
+
+    final NumberFormat formatter = NumberFormat('#,##0.##', 'ar');
+    final String? priceText = showPrice ? formatter.format(priceValue) : null;
+    final String? basePriceText =
+        hasDiscount && basePrice != null ? formatter.format(basePrice) : null;
+    final String currencyText =
+        showPrice ? _getCurrencySymbol(model.currency) : "";
 
     final hasStatus = model.status != null && isAddedByMe;
     final statusText = hasStatus ? _getStatusText(model.status) : null;
     final statusColor = hasStatus ? _getStatusColor(model.status) : null;
-    final statusTextColor = hasStatus ? _getStatusTextColor(model.status) : null;
+    final statusTextColor =
+        hasStatus ? _getStatusTextColor(model.status) : null;
+
+    Widget buildPriceWidget() {
+      if (priceText == null) {
+        return const SizedBox();
+      }
+      final Color accent = context.color.territoryColor;
+
+      final TextStyle currencyStyle = TextStyle(
+        fontSize: context.font.normal + 2,
+        fontWeight: FontWeight.w600,
+        color: accent.withOpacity(0.85),
+        height: 1.1,
+      );
+
+      final TextStyle valueStyle = TextStyle(
+        fontSize: context.font.larger + 2,
+        fontWeight: FontWeight.w800,
+        color: accent,
+        height: 1.1,
+      );
+
+      final TextStyle basePriceStyle = TextStyle(
+        fontSize: context.font.normal,
+        color: context.color.textLightColor.withOpacity(0.7),
+        decoration: TextDecoration.lineThrough,
+        decorationColor: context.color.textLightColor.withOpacity(0.55),
+        height: 1.2,
+      );
+
+      final Widget priceValue = Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(priceText, style: valueStyle),
+          if (currencyText.isNotEmpty) ...[
+            const SizedBox(width: 4),
+            Text(currencyText, style: currencyStyle),
+          ],
+        ],
+      );
+
+      final Widget? basePriceWidget = basePriceText == null
+          ? null
+          : Text(
+              currencyText.isEmpty
+                  ? basePriceText
+                  : '$basePriceText $currencyText',
+              style: basePriceStyle,
+            );
+
+      final Widget? discountChip = (hasDiscount && discountPercent != null)
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: accent.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: accent.withOpacity(0.35), width: 1),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.discount_rounded, size: 18, color: accent),
+                  const SizedBox(width: 6),
+                  Text(
+                    '-${discountPercent.toStringAsFixed(discountPercent >= 10 ? 0 : 1)}%',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: context.font.normal,
+                      color: accent,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : null;
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            if (discountChip != null) ...[
+              discountChip,
+              const SizedBox(width: 12),
+            ],
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  priceValue,
+                  if (basePriceWidget != null) ...[
+                    const SizedBox(height: 4),
+                    basePriceWidget,
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         /// 💵 السعر (يختفي إن كان 0)
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 5),
-          child: priceText == null
-              ? const SizedBox()
-              : RichText(
-            text: TextSpan(
-              children: [
-                TextSpan(
-                  text: "  $priceText ",
-                  style: TextStyle(
-                    fontSize: context.font.larger,
-                    fontWeight: FontWeight.bold,
-                    color: context.color.territoryColor,
-                  ),
-                ),
-                TextSpan(
-                  text: currencyText,
-                  style: TextStyle(
-                    fontSize: context.font.small + 5,
-                    fontWeight: FontWeight.w500,
-                    color: context.color.textLightColor,
-                    letterSpacing: 0.8,
-                    height: 1.2,
-                    shadows: [
-                      Shadow(
-                        offset: Offset(0.3, 0.3),
-                        blurRadius: 0.3,
-                        color: Colors.black.withOpacity(0.1),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
+        Expanded(child: buildPriceWidget()),
         // 🏷️ حالة الإعلان (تظهر فقط لصاحب الإعلان)
-        if (hasStatus) _buildStatusChip(context, model.status),
-
-
+        if (hasStatus) ...[
+          const SizedBox(width: 12),
+          _buildStatusChip(context, model.status),
+        ],
       ],
     );
   }
-
-
-
-
 
   // ✅ ويدجت العنوان والتاريخ
   Widget titleAndDate({
@@ -277,7 +340,7 @@ class AdInfoSection {
       padding: const EdgeInsets.symmetric(vertical: 5.0),
       child: Row(
         mainAxisAlignment:
-        isDate ? MainAxisAlignment.spaceBetween : MainAxisAlignment.start,
+            isDate ? MainAxisAlignment.spaceBetween : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SvgPicture.asset(
@@ -312,8 +375,8 @@ class AdInfoSection {
                 child: Text(
                   model.created != null
                       ? timeago.format(
-                      DateTime.tryParse(model.created!) ?? DateTime.now(),
-                      locale: 'ar')
+                          DateTime.tryParse(model.created!) ?? DateTime.now(),
+                          locale: 'ar')
                       : "تحميل...",
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -328,9 +391,6 @@ class AdInfoSection {
       ),
     );
   }
-
-
-
 
   /// ✅ أدوات مساعدة
 
@@ -355,13 +415,11 @@ class AdInfoSection {
         return "soldOut".translate(context);
       case "rejected":
         return "rejected".translate(context);
-    // 🔥 حُذف expired نهائيًا
+      // 🔥 حُذف expired نهائيًا
       default:
         return status;
     }
   }
-
-
 
   Color _getStatusColor(String? status) {
     switch (status) {
@@ -375,14 +433,11 @@ class AdInfoSection {
         return deactivateButtonColor.withOpacity(0.1);
       case "sold out":
         return soldOutButtonColor.withOpacity(0.1);
-    // 🔥 حُذف expired نهائيًا
+      // 🔥 حُذف expired نهائيًا
       default:
         return context.color.territoryColor.withOpacity(0.1);
     }
   }
-
-
-
 
   Color _getStatusTextColor(String? status) {
     switch (status) {
@@ -396,16 +451,12 @@ class AdInfoSection {
         return deactivateButtonColor;
       case "sold out":
         return soldOutButtonColor;
-    // 🔥 حُذف expired نهائيًا
+      // 🔥 حُذف expired نهائيًا
       default:
         return context.color.territoryColor;
     }
   }
-
-
 }
-
-
 
 // =====================
 // تطبيع الحالة + أنماطها
@@ -413,11 +464,13 @@ class AdInfoSection {
 String _normalizeStatus(String? raw) {
   final s = (raw ?? '').trim().toLowerCase();
   if (s.isEmpty) return 'review';
-  if (['approved','active','published','enabled'].contains(s)) return 'approved';
-  if (['inactive','paused','disabled'].contains(s)) return 'inactive';
-  if (['rejected','declined'].contains(s)) return 'rejected';
-  if (['sold out','sold','completed'].contains(s)) return 'sold out';
-  if (['review','pending','under_review','inreview'].contains(s)) return 'review';
+  if (['approved', 'active', 'published', 'enabled'].contains(s))
+    return 'approved';
+  if (['inactive', 'paused', 'disabled'].contains(s)) return 'inactive';
+  if (['rejected', 'declined'].contains(s)) return 'rejected';
+  if (['sold out', 'sold', 'completed'].contains(s)) return 'sold out';
+  if (['review', 'pending', 'under_review', 'inreview'].contains(s))
+    return 'review';
   return s;
 }
 
@@ -426,6 +479,7 @@ class _StatusStyle {
   final IconData icon;
   final String label;
   final String description;
+
   const _StatusStyle({
     required this.bg,
     required this.fg,
@@ -435,8 +489,6 @@ class _StatusStyle {
     required this.description,
   });
 }
-
-
 
 // خريطة الأنماط: تُراعي الثيم تلقائياً
 
@@ -450,7 +502,8 @@ Map<String, _StatusStyle> _statusStyles(BuildContext context, ColorScheme cs) {
       border: Colors.blue.withOpacity(.35),
       icon: Icons.hourglass_top_rounded,
       label: "إعلانك قيد المراجعة",
-      description: "نراجع إعلانك للتأكد من مطابقته للإرشادات. عادةً يتم الاعتماد خلال وقت قصير.",
+      description:
+          "نراجع إعلانك للتأكد من مطابقته للإرشادات. عادةً يتم الاعتماد خلال وقت قصير.",
     ),
     'approved': _StatusStyle(
       bg: Colors.green.withOpacity(isDark ? .28 : .18),
@@ -466,7 +519,8 @@ Map<String, _StatusStyle> _statusStyles(BuildContext context, ColorScheme cs) {
       border: Colors.grey.withOpacity(.35),
       icon: Icons.pause_circle_filled_rounded,
       label: "إعلانك موقّت",
-      description: "الإعلان غير ظاهر حالياً. يمكنك تفعيله مجددًا من خيارات الإعلان.",
+      description:
+          "الإعلان غير ظاهر حالياً. يمكنك تفعيله مجددًا من خيارات الإعلان.",
     ),
     'rejected': _StatusStyle(
       bg: Colors.red.withOpacity(isDark ? .28 : .18),

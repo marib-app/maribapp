@@ -46,17 +46,92 @@ class WifiPlan extends Equatable {
       return int.tryParse(value.toString());
     }
 
+
+    num? resolveDataCapGb(Map<String, dynamic> source) {
+      num? dataCap = parseNum(
+        source['data_cap_gb'] ??
+            source['data_cap'] ??
+            source['data_cap_in_gb'] ??
+            source['data_cap_gigabytes'] ??
+            source['data_allowance_gb'],
+      );
+
+      final num? dataAllowanceMb = parseNum(source['data_allowance_mb']);
+      if (dataCap == null && dataAllowanceMb != null) {
+        dataCap = dataAllowanceMb / 1024;
+      }
+
+      if (dataCap == null) {
+        final dynamic labelCandidate = source['data_allowance_label'] ??
+            source['data_cap_label'];
+        if (labelCandidate != null) {
+          final String label = labelCandidate.toString();
+          final RegExpMatch? match =
+          RegExp(r'(\d+[\.,]?\d*)').firstMatch(label);
+          if (match != null) {
+            final String numeric = match.group(1)!.replaceAll(',', '.');
+            final num? parsed = num.tryParse(numeric);
+            if (parsed != null) {
+              if (label.toLowerCase().contains('mb')) {
+                dataCap = parsed / 1024;
+              } else {
+                dataCap = parsed;
+              }
+            }
+          }
+          if (label.toLowerCase().contains('unlimit')) {
+            dataCap = null;
+          }
+        }
+      }
+
+      return dataCap;
+    }
+
+    int? resolveDurationDays(Map<String, dynamic> source) {
+      final int? direct = parseInt(
+        source['duration_days'] ??
+            source['duration'] ??
+            source['validity_days'] ??
+            source['validity'] ??
+            source['validity_in_days'],
+      );
+
+      if (direct != null) {
+        return direct;
+      }
+
+      final int? durationMinutes = parseInt(source['duration_minutes']);
+      if (durationMinutes != null && durationMinutes > 0) {
+        final double days = durationMinutes / (60 * 24);
+        if (days >= 1) {
+          return days.ceil();
+        }
+        return 1;
+      }
+
+      return null;
+    }
+
+    final num? dataCapGb = resolveDataCapGb(json);
+    final bool unlimitedFlag = parseBool(json['is_unlimited'] ?? json['unlimited']);
+    final bool labelUnlimited =
+    (json['data_allowance_label'] ?? json['data_cap_label'] ?? '')
+        .toString()
+        .toLowerCase()
+        .contains('unlimit');
+    final bool resolvedUnlimited = unlimitedFlag || labelUnlimited;
+
+
     return WifiPlan(
       id: parseInt(json['id']) ?? 0,
       name: json['name']?.toString() ?? '',
       price: parseNum(json['price']) ?? 0,
       description: json['description']?.toString(),
       currency: json['currency']?.toString(),
-      dataCapGb: parseNum(
-        json['data_cap_gb'] ?? json['data_cap'] ?? json['data_cap_in_gb'],
-      ),
-      durationDays: parseInt(json['duration_days'] ?? json['duration']),
-      isUnlimited: parseBool(json['is_unlimited'] ?? json['unlimited']),
+      dataCapGb: dataCapGb,
+      durationDays: resolveDurationDays(json),
+      isUnlimited: resolvedUnlimited,
     );
   }
 

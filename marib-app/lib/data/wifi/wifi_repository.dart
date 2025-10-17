@@ -5,6 +5,7 @@ import 'package:marib/data/model/wifi/wifi_plan.dart';
 import 'package:marib/data/model/wifi/wifi_purchase.dart';
 import 'package:marib/data/model/wifi/wifi_purchase_result.dart';
 import 'dart:collection';
+import 'package:dio/dio.dart';
 
 
 class WifiRepository {
@@ -66,21 +67,19 @@ class WifiRepository {
 
 
 
-  Future<List<WifiNetwork>> fetchNearbyNetworks({
-    required double latitude,
-    required double longitude,
-    required double radiusKm,
+  Future<List<WifiNetwork>> searchNetworks({
+    String? query,
     int? limit,
   }) async {
-    final queryParameters = <String, dynamic>{
-      'latitude': latitude,
-      'longitude': longitude,
-      'radius': radiusKm,
+    final Map<String, dynamic> queryParameters = <String, dynamic>{
+      'owner_only': false,
+      'public': true,
+      if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
       if (limit != null) 'limit': limit,
     };
 
     final response = await Api.get(
-      url: Api.wifiNearbyNetworksApi,
+      url: Api.wifiNetworksApi,
       queryParameters: queryParameters,
     );
 
@@ -183,39 +182,75 @@ class WifiRepository {
 
   Future<Map<String, dynamic>> uploadBatch({
     required String name,
-    required double latitude,
-    required double longitude,
-    required double coverageKm,
+    required String contact,
+    required MultipartFile logo,
+    required MultipartFile loginScreenshot,
+    String? notes,
   }) async {
     final payload = <String, dynamic>{
       'name': name,
-      'latitude': latitude,
-      'longitude': longitude,
-      'coverage_km': coverageKm,
-    };
+      'contacts': <String>[contact],
+      'notes': notes,
 
-    return Api.postJson(
-      url: 'wifi/networks',
-      data: payload,
+
+      'logo': logo,
+      'login_screenshot': loginScreenshot,
+    }..removeWhere((key, value) {
+      if (value == null) return true;
+      if (value is String && value.trim().isEmpty) {
+        return true;
+      }
+      if (value is Iterable && value.isEmpty) {
+        return true;
+      }
+      return false;
+    });
+
+    return Api.post(
+      url: Api.wifiNetworksApi,
+      parameter: payload,
     );
   }
 
   Future<Map<String, dynamic>> createOwnerRequest({
     required String name,
-    required double latitude,
-    required double longitude,
-    required double coverageKm,
+    required String contact,
+    required MultipartFile logo,
+    required MultipartFile loginScreenshot,
+    String? notes,
   }) async {
+    const bool isActive = false;
+    final int isActiveFlag = isActive ? 1 : 0;
+
     final payload = <String, dynamic>{
       'name': name,
-      'latitude': latitude,
-      'longitude': longitude,
-      'coverage_km': coverageKm,
-    };
+      'contacts': <String>[contact],
+      'notes': notes,
+      'is_active': isActiveFlag,
+      'meta': <String, dynamic>{
+        'source': 'mobile_app',
+        'request_type': 'owner_network',
+      },
 
-    return Api.postJson(
-      url: 'wifi-cabin/owner-requests',
-      data: payload,
+      'logo': logo,
+      'login_screenshot': loginScreenshot,
+    }..removeWhere((key, value) {
+      if (value == null) return true;
+      if (value is String && value.trim().isEmpty) {
+        return true;
+      }
+      if (value is Iterable && value.isEmpty) {
+        return true;
+      }
+      return false;
+    });
+
+
+    return Api.post(
+
+      url: Api.wifiNetworksApi,
+      parameter: payload,
+
     );
   }
 
@@ -275,8 +310,55 @@ class WifiRepository {
           normalized['result'],
     );
 
-    final WifiPurchase? purchase =
+    WifiPurchase? purchase =
     payload.isEmpty ? null : WifiPurchase.fromJson(payload);
+
+
+    if (purchase != null) {
+      final Map<String, dynamic> wifiCode = _mapify(payload['wifi_code']);
+      final List<Map<String, dynamic>> wifiCodes = _listify(payload['wifi_codes'])
+          .map(_mapify)
+          .toList();
+
+      final List<String> extractedCodes = <String>[...purchase.codes];
+      final Set<int> extractedIds = <int>{
+        if (purchase.id != 0) purchase.id,
+      };
+
+      void appendCode(Map<String, dynamic> source) {
+        final String? codeValue = _stringify(source['code']);
+        if (codeValue != null && codeValue.isNotEmpty) {
+          extractedCodes.add(codeValue);
+        }
+        final int? codeId = _intify(source['id'] ?? source['code_id']);
+        if (codeId != null) {
+          extractedIds.add(codeId);
+        }
+      }
+
+      if (wifiCode.isNotEmpty) {
+        appendCode(wifiCode);
+      }
+
+      for (final Map<String, dynamic> codeMap in wifiCodes) {
+        appendCode(codeMap);
+      }
+
+      final List<String> normalizedCodes = extractedCodes
+          .map((code) => code.trim())
+          .where((code) => code.isNotEmpty)
+          .toSet()
+          .toList();
+
+      final int resolvedId = extractedIds.isNotEmpty
+          ? extractedIds.first
+          : purchase.id;
+
+      purchase = purchase.copyWith(
+        id: resolvedId,
+        codes: normalizedCodes,
+      );
+    }
 
     final String? topMessage = _stringify(
       normalized['message'] ??
@@ -445,10 +527,12 @@ class WifiRepository {
     required int planId,
     int quantity = 1,
     String paymentGateway = 'wallet',
+    required bool termsAcknowledged,
   }) async {
     final Map<String, dynamic> payload = <String, dynamic>{
       'quantity': quantity,
       'payment_gateway': paymentGateway,
+      'terms_acknowledged': termsAcknowledged,
     };
 
     final Map<String, dynamic> response = await Api.postJson(
@@ -471,6 +555,90 @@ class WifiRepository {
   }
 
 
+
+  Future<WifiPurchase?> revealTransactionCode(int transactionId) async {
+    if (transactionId <= 0) {
+      return null;
+    }
+
+    final Map<String, dynamic> response = await Api.get(
+      url: Api.wifiOrderCodeApi(transactionId),
+    );
+
+    final Map<String, dynamic> data = _mapify(
+      response['data'] ?? response['payload'] ?? response['result'],
+    );
+
+    if (data.isEmpty) {
+      return null;
+    }
+
+    final Map<String, dynamic> codeMap = _mapify(data['code']);
+    final Map<String, dynamic> planMap = _mapify(data['plan']);
+    final Map<String, dynamic> networkMap = _mapify(data['network']);
+    final Map<String, dynamic> transactionMap = _mapify(data['transaction']);
+
+    final List<String> codes = <String>[];
+    final String? primaryCode = _stringify(codeMap['code']);
+    if (primaryCode != null && primaryCode.isNotEmpty) {
+      codes.add(primaryCode);
+    }
+
+    if (codes.isEmpty) {
+      return null;
+    }
+
+    final Map<String, dynamic> payload = <String, dynamic>{
+      'id': codeMap['id'] ?? data['code_id'] ?? transactionId,
+      'plan': planMap,
+      'network': networkMap,
+      'codes': codes,
+      'status': codeMap['status'] ?? transactionMap['payment_status'],
+      'payment_status': transactionMap['payment_status'],
+      'payment_status_label': transactionMap['payment_status_label'],
+      'payment_gateway': transactionMap['payment_gateway'],
+      'transaction_id': transactionMap['id'] ?? transactionId,
+      'meta': <String, dynamic>{
+        ..._mapify(transactionMap['meta']),
+        'transaction_id': transactionMap['id'] ?? transactionId,
+        'payment_status': transactionMap['payment_status'],
+        'payment_status_label': transactionMap['payment_status_label'],
+        'payment_gateway': transactionMap['payment_gateway'],
+        'reveal_count': codeMap['reveal_count'],
+        'revealed_at': codeMap['revealed_at'],
+        'code_id': codeMap['id'],
+      },
+      'created_at': transactionMap['completed_at'] ??
+          transactionMap['updated_at'] ??
+          transactionMap['created_at'],
+      'reference': transactionMap['reference'],
+    };
+
+    return WifiPurchase.fromJson(payload);
+  }
+
+
+
+
+  Future<void> logCodeEvent({
+    required int codeId,
+    required String action,
+    Map<String, dynamic>? metadata,
+  }) async {
+    if (codeId <= 0) {
+      return;
+    }
+
+    final Map<String, dynamic> payload = <String, dynamic>{
+      'action': action,
+      if (metadata != null && metadata.isNotEmpty) 'meta': metadata,
+    };
+
+    await Api.postJson(
+      url: Api.wifiCodeEventsApi(codeId),
+      data: payload,
+    );
+  }
 
 
 }

@@ -12,7 +12,7 @@ class FetchRelatedItemsInProgress extends FetchRelatedItemsState {}
 class FetchRelatedItemsSuccess extends FetchRelatedItemsState {
   final bool isLoadingMore;
   final bool loadingMoreError;
-  final List<ItemModel> itemModel;
+  final List<ItemSummary> itemSummaries;
   final int page;
   final int total;
   final int? categoryId;
@@ -20,7 +20,7 @@ class FetchRelatedItemsSuccess extends FetchRelatedItemsState {
   FetchRelatedItemsSuccess(
       {required this.isLoadingMore,
       required this.loadingMoreError,
-      required this.itemModel,
+        required this.itemSummaries,
       required this.page,
       required this.total,
       this.categoryId});
@@ -28,18 +28,23 @@ class FetchRelatedItemsSuccess extends FetchRelatedItemsState {
   FetchRelatedItemsSuccess copyWith(
       {bool? isLoadingMore,
       bool? loadingMoreError,
-      List<ItemModel>? itemModel,
+        List<ItemSummary>? itemSummaries,
+
       int? page,
       int? total,
       int? categoryId}) {
     return FetchRelatedItemsSuccess(
         isLoadingMore: isLoadingMore ?? this.isLoadingMore,
         loadingMoreError: loadingMoreError ?? this.loadingMoreError,
-        itemModel: itemModel ?? this.itemModel,
+        itemSummaries: itemSummaries ?? this.itemSummaries,
+
         page: page ?? this.page,
         total: total ?? this.total,
         categoryId: categoryId ?? this.categoryId);
   }
+
+  List<ItemModel> get itemSkeletons =>
+      itemSummaries.map((summary) => summary.toItemModelSkeleton()).toList();
 }
 
 class FetchRelatedItemsFailure extends FetchRelatedItemsState {
@@ -49,9 +54,12 @@ class FetchRelatedItemsFailure extends FetchRelatedItemsState {
 }
 
 class FetchRelatedItemsCubit extends Cubit<FetchRelatedItemsState> {
-  FetchRelatedItemsCubit() : super(FetchRelatedItemsInitial());
+  FetchRelatedItemsCubit({ItemRepository? itemRepository})
+      : _itemRepository = itemRepository ?? ItemRepository(),
+        super(FetchRelatedItemsInitial());
 
-  final ItemRepository _itemRepository = ItemRepository();
+  final ItemRepository _itemRepository;
+
 
   Future<void> fetchRelatedItems(
       {required int categoryId,
@@ -62,14 +70,16 @@ class FetchRelatedItemsCubit extends Cubit<FetchRelatedItemsState> {
     try {
       emit(FetchRelatedItemsInProgress());
 
-      DataOutput<ItemModel> result = await _itemRepository.fetchItemFromCatId(
+      DataOutput<ItemSummary> result =
+      await _itemRepository.fetchItemSummariesFromCatId(
           categoryId: categoryId, page: 1);
 
       emit(
         FetchRelatedItemsSuccess(
           isLoadingMore: false,
           loadingMoreError: false,
-          itemModel: result.modelList,
+          itemSummaries: result.modelList,
+
           page: 1,
           total: result.total,
           categoryId: categoryId,
@@ -97,23 +107,27 @@ class FetchRelatedItemsCubit extends Cubit<FetchRelatedItemsState> {
         }
         emit((state as FetchRelatedItemsSuccess).copyWith(isLoadingMore: true));
 
-        DataOutput<ItemModel> result = await _itemRepository.fetchItemFromCatId(
-            categoryId: categoryId,
-            page: (state as FetchRelatedItemsSuccess).page + 1);
+        final FetchRelatedItemsSuccess currentState =
+        state as FetchRelatedItemsSuccess;
 
-        FetchRelatedItemsSuccess item = (state as FetchRelatedItemsSuccess);
-
-        item.itemModel.addAll(result.modelList);
-
-        emit(
-          FetchRelatedItemsSuccess(
-            isLoadingMore: false,
-            loadingMoreError: false,
-            itemModel: item.itemModel,
-            page: (state as FetchRelatedItemsSuccess).page + 1,
-            total: result.total,
-          ),
+        DataOutput<ItemSummary> result =
+        await _itemRepository.fetchItemSummariesFromCatId(
+        categoryId: categoryId,
+          page: currentState.page + 1,
         );
+
+        final List<ItemSummary> updatedSummaries =
+        List<ItemSummary>.from(currentState.itemSummaries)
+          ..addAll(result.modelList);
+
+        emit(FetchRelatedItemsSuccess(
+          isLoadingMore: false,
+          loadingMoreError: false,
+          itemSummaries: updatedSummaries,
+          page: currentState.page + 1,
+          total: result.total,
+          categoryId: currentState.categoryId,
+        ));
       }
     } catch (e) {
       emit(
@@ -127,7 +141,7 @@ class FetchRelatedItemsCubit extends Cubit<FetchRelatedItemsState> {
 
   bool hasMoreData() {
     if (state is FetchRelatedItemsSuccess) {
-      return (state as FetchRelatedItemsSuccess).itemModel.length <
+      return (state as FetchRelatedItemsSuccess).itemSummaries.length <
           (state as FetchRelatedItemsSuccess).total;
     }
     return false;

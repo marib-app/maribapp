@@ -5,24 +5,27 @@ class _NetworksGrid extends StatelessWidget {
     super.key,
     required this.networks,
     required this.onSelect,
-    required this.locationDenied,
-    required this.onEnableLocation,
+    required this.onRefresh,
+    required this.searchQuery,
   });
 
   final List<WifiNetwork> networks;
   final ValueChanged<WifiNetwork> onSelect;
-  final bool locationDenied;
-  final VoidCallback onEnableLocation;
+  final VoidCallback onRefresh;
+  final String searchQuery;
 
   @override
   Widget build(BuildContext context) {
     if (networks.isEmpty) {
+      final String trimmed = searchQuery.trim();
+      final String subtitle = trimmed.isEmpty
+          ? 'ابدأ بالبحث عن اسم الشبكة أو راجع قائمة الشبكات المتاحة من مزودي الخدمة.'
+          : 'لم يتم العثور على نتائج لـ "$trimmed". جرّب جزءًا من الاسم أو تحقق من التهجئة.';
       return _EmptyState(
-        title: 'لا توجد شبكات ضمن النطاق',
-        subtitle: locationDenied
-            ? 'فعّل خدمات الموقع أو زد نطاق البحث.'
-            : 'جرّب زيادة نطاق البحث بالكيلومترات.',
-        onAction: locationDenied ? onEnableLocation : null,
+        title: 'لم يتم العثور على شبكات',
+        subtitle: subtitle,
+        onAction: onRefresh,
+        actionLabel: 'تحديث القائمة',
       );
     }
 
@@ -36,16 +39,19 @@ class _NetworksGrid extends StatelessWidget {
       ),
       itemCount: networks.length,
       itemBuilder: (context, index) {
-        final network = networks[index];
-        final distance = network.distanceKm;
-        final distanceLabel = distance == null
-            ? 'المسافة غير متاحة'
-            : 'يبعد ${distance.toStringAsFixed(1)} كم';
+        final WifiNetwork network = networks[index];
+        final String subtitle = network.planCount > 0
+            ? 'عدد الفئات: ${network.planCount}'
+            : 'اطلع على تفاصيل الشبكة';
+        final String? currencyBadge = network.currencies.isNotEmpty
+            ? network.currencies.first
+            : null;
 
         return _WifiNetworkCard(
           name: network.name,
-          distanceText: distanceLabel,
-          rating: network.rating ?? 0,
+          subtitle: subtitle,
+          imageUrl: network.iconUrl ?? network.loginScreenshotUrl,
+          currencyBadge: currencyBadge,
           onTap: () => onSelect(network),
         );
       },
@@ -56,20 +62,63 @@ class _NetworksGrid extends StatelessWidget {
 class _WifiNetworkCard extends StatelessWidget {
   const _WifiNetworkCard({
     required this.name,
-    required this.distanceText,
-    required this.rating,
+    required this.subtitle,
+    this.imageUrl,
+    this.currencyBadge,
     required this.onTap,
   });
 
   final String name;
-  final String distanceText;
-  final double rating;
-  final VoidCallback onTap;
+  final String subtitle;
 
+  final VoidCallback onTap;
+  final String? imageUrl;
+  final String? currencyBadge;
   @override
   Widget build(BuildContext context) {
     final color = context.color;
 
+    Widget buildImage() {
+      if (imageUrl == null || imageUrl!.isEmpty) {
+        return Container(
+          height: 70,
+          width: double.infinity,
+          color: color.secondaryColor,
+          alignment: Alignment.center,
+          child: const Icon(Icons.wifi, size: 36),
+        );
+      }
+
+      return Image.network(
+        imageUrl!,
+        height: 70,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
+            height: 70,
+            width: double.infinity,
+            color: color.secondaryColor,
+            alignment: Alignment.center,
+            child: const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          );
+        },
+        errorBuilder: (context, _, __) {
+          return Container(
+            height: 70,
+            width: double.infinity,
+            color: color.secondaryColor,
+            alignment: Alignment.center,
+            child: const Icon(Icons.wifi, size: 36),
+          );
+        },
+      );
+    }
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -79,12 +128,33 @@ class _WifiNetworkCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(18),
-              child: Container(
-                height: 70,
-                width: double.infinity,
-                color: color.secondaryColor,
-                alignment: Alignment.center,
-                child: const Icon(Icons.wifi, size: 36),
+              child: Stack(
+                children: [
+                  Positioned.fill(child: buildImage()),
+                  if (currencyBadge != null)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.6),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          currencyBadge!,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
             const SizedBox(height: 6),
@@ -101,30 +171,16 @@ class _WifiNetworkCard extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              distanceText,
-              maxLines: 1,
+              subtitle,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: TextStyle(
                 color: color.textDefaultColor.withOpacity(0.8),
                 fontSize: 11,
               ),
             ),
-            const SizedBox(height: 2),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.star, size: 14, color: Colors.amber),
-                const SizedBox(width: 4),
-                Text(
-                  rating.toStringAsFixed(1),
-                  style: TextStyle(
-                    color: color.textDefaultColor.withOpacity(0.85),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
+
           ],
         ),
       ),

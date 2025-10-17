@@ -6,6 +6,7 @@ import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/home/fetch_home_all_items_cubit.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/ui/screens/home/widgets/grid_list_adapter.dart';
+import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 
 import 'package:marib/ui/screens/item/cards/horizontal_card.dart';
 import 'package:marib/ui/screens/item/cards/sections_adapter.dart';
@@ -27,7 +28,6 @@ import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/helper_utils.dart';
 
 import 'unread_notifications_cubit.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
 // ملاحظة: ProfileHeaderUI يدعم welcomeText و welcomeColor و shrinkFactor.
 
@@ -35,7 +35,8 @@ class HomeScreenUI extends StatelessWidget {
   // الأساسيات
   final ScrollController scrollController;
   final VoidCallback onSupportPressed;
-  final Widget bodyContent;
+  final List<Widget> bodySlivers;
+
 
   // إمّا تمرر ودجت جاهز للهيدر... (اختياري)
   final Widget? appBarLeading;
@@ -67,7 +68,7 @@ class HomeScreenUI extends StatelessWidget {
     super.key,
     required this.scrollController,
     required this.onSupportPressed,
-    required this.bodyContent,
+    required this.bodySlivers,
     this.appBarLeading,
     this.isAuthenticated,
     this.name,
@@ -225,28 +226,24 @@ class HomeScreenUI extends StatelessWidget {
 
 
   Widget _buildBody(BuildContext context) {
-    final scroll = CustomScrollView(
-      primary: false, // لأننا داخل NestedScrollView
-      physics: const ClampingScrollPhysics(
-        parent: AlwaysScrollableScrollPhysics(),
-      ),
-      slivers: [ SliverToBoxAdapter(child: bodyContent) ],
-    );
+    // ✨ لا نستخدم SingleChildScrollView ولا PrimaryScrollController هنا
+    final List<Widget> slivers =
+    bodySlivers.isEmpty ? <Widget>[const SliverToBoxAdapter(child: SizedBox.shrink())] : bodySlivers;
 
-    final content = ScrollConfiguration(
-      behavior: const _StretchScrollBehavior(), // يستبدل الـGlow بـ Stretch
-      child: scroll,
+    final scroll = CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+
+      slivers: slivers,
+
     );
 
     return onRefresh == null
-        ? content
-        : RefreshIndicator(
+        ? scroll
+        : RefreshIndicator.adaptive(
       onRefresh: onRefresh!,
-      child: content,
+      child: scroll,
     );
   }
-
-
 
 
 
@@ -739,6 +736,21 @@ class ProfileHeaderUI extends StatelessWidget {
           fit: BoxFit.cover,
           width: double.infinity,
           height: double.infinity,
+          placeholder: (_, __) => ShimmerBox(
+            width: double.infinity,
+            height: double.infinity,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          errorWidget: (_, __, ___) => ShimmerBox(
+            width: double.infinity,
+            height: double.infinity,
+            borderRadius: BorderRadius.circular(999),
+            animate: false,
+            baseColor: Theme.of(context)
+                .colorScheme
+                .surfaceVariant
+                .withOpacity(0.35),
+          ),
         ),
       );
     }
@@ -952,67 +964,50 @@ class AllItemsWidget extends StatelessWidget {
       builder: (context, state) {
         if (state is FetchHomeAllItemsSuccess) {
           if (state.items.isNotEmpty) {
-            return Column(
-              children: [
-                GridListAdapter(
-                  type: ListUiType.Mixed,
-                  mixMode: true,
-                  crossAxisCount: 2,
-                  height: (MediaQuery.of(context).size.height / 3.5).rh(context),
-                  builder: (context, int index, bool isGrid) {
-                    final ItemModel item = state.items[index]; // ✅ غير nullable
+            return GridListAdapter(
+                type: ListUiType.Mixed,
+                mixMode: true,
+                crossAxisCount: 2,
+                height: (MediaQuery.of(context).size.height / 3.5).rh(context),
+                total: state.items.length,
+                trailing: state.isLoadingMore ? UiUtils.progress() : null,
+                builder: (context, int index, bool isGrid) {
+                  final ItemModel item = state.items[index];
 
-                    if (isGrid) {
-                      return ICard(item: item, width: 192);
-                    } else {
-                      return InkWell(
-                        onTap: () {
-                          Navigator.pushNamed(
-                            context,
-                            Routes.adDetailsScreen,
-                            arguments: {'model': item},
-                          );
-                        },
-                        child: ItemHorizontalCard(
-                          item: item,
-                          showLikeButton: true,
-                          additionalImageWidth: 8,
-                        ),
+                  if (isGrid) {
+                    return ICard(item: item, width: 192);
+                  }
+
+                  return InkWell(
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        Routes.adDetailsScreen,
+                        arguments: {'model': item},
                       );
-                    }
                   },
-                  total: state.items.length,
-                ),
-                if (state.isLoadingMore) UiUtils.progress(),
-              ],
+                    child: ItemHorizontalCard(
+                      item: item,
+                      showLikeButton: true,
+                      additionalImageWidth: 8,
+                    ),
+                  );
+                },
             );
           } else {
-            return const SizedBox.shrink();
+            return const SliverToBoxAdapter(child: SizedBox.shrink());
           }
         }
         if (state is FetchHomeAllItemsFail) {
           if (state.error is ApiException) {
             if (state.error.error == "no-internet") {
-              return const Center(child: NoInternet());
+              return const SliverToBoxAdapter(child: Center(child: NoInternet()));
             }
           }
-          return const SomethingWentWrong();
+          return const SliverToBoxAdapter(child: SomethingWentWrong());
         }
-        return const SizedBox.shrink();
+        return const SliverToBoxAdapter(child: SizedBox.shrink());
       },
-    );
-  }
-}
-// ضع هذا خارج الكلاس (أسفل الملف مثلاً)
-class _StretchScrollBehavior extends ScrollBehavior {
-  const _StretchScrollBehavior();
-  @override
-  Widget buildOverscrollIndicator(
-      BuildContext context, Widget child, ScrollableDetails details,
-      ) {
-    // يستبدل الـGlow بـ StretchingOverscrollIndicator
-    return StretchingOverscrollIndicator(
-      axisDirection: details.direction, child: child,
     );
   }
 }

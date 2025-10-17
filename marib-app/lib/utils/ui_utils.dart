@@ -1,11 +1,9 @@
 
 import 'dart:math';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/app_icon.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:marib/app/app_localization.dart';
 import 'package:marib/app/app_theme.dart';
@@ -15,6 +13,8 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/constant.dart';
 import 'hive_utils.dart';
 import 'package:timeago/timeago.dart' as timeago_ar show setLocaleMessages;
+import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -23,14 +23,12 @@ import 'package:flutter_svg/svg.dart';
 import 'package:intl/intl.dart';
 import 'package:lottie/lottie.dart';
 import 'package:mime_type/mime_type.dart';
-import 'dart:ui' as ui;
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:marib/ui/screens/widgets/full_screen_image_view.dart';
 import 'package:marib/ui/screens/widgets/gallery_view.dart';
 import 'package:marib/data/cubits/home/fetch_home_all_items_cubit.dart';
 import 'package:marib/data/cubits/home/fetch_home_screen_cubit.dart';
-import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:intl/intl.dart';
@@ -40,8 +38,105 @@ import 'package:marib/utils/responsiveSize.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:marib/data/model/subscription_package_limit.dart';
 
-import 'dart:ui' show ImageFilter;          // للـ blur
-import 'package:flutter/gestures.dart';     // للروابط
+import 'dart:ui' show ImageFilter;
+import 'package:flutter/gestures.dart';
+import 'package:marib/utils/scroll/low_spec_scroll_physics.dart';
+import 'dart:collection';
+
+import 'package:flutter/foundation.dart';
+
+
+class _AdaptiveNetworkImage extends StatefulWidget {
+  const _AdaptiveNetworkImage({
+    required this.urls,
+    required this.width,
+    required this.height,
+    required this.fit,
+    required this.cacheWidth,
+    required this.cacheHeight,
+  });
+
+  final List<String> urls;
+  final double? width;
+  final double? height;
+  final BoxFit fit;
+  final int cacheWidth;
+  final int cacheHeight;
+
+  @override
+  State<_AdaptiveNetworkImage> createState() => _AdaptiveNetworkImageState();
+}
+
+class _AdaptiveNetworkImageState extends State<_AdaptiveNetworkImage> {
+  int _currentIndex = 0;
+
+  @override
+  void didUpdateWidget(covariant _AdaptiveNetworkImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!listEquals(oldWidget.urls, widget.urls)) {
+      _currentIndex = 0;
+    } else if (widget.urls.isNotEmpty && _currentIndex >= widget.urls.length) {
+      _currentIndex = widget.urls.length - 1;
+    } else if (widget.urls.isEmpty) {
+      _currentIndex = 0;
+    }
+  }
+
+  void _scheduleNextCandidate() {
+    if (_currentIndex >= widget.urls.length - 1) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _currentIndex += 1;
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.urls.isEmpty) {
+      return UiUtils._buildImageError(context, widget.width, widget.height);
+    }
+
+    final int index = (_currentIndex >= widget.urls.length)
+        ? widget.urls.length - 1
+        : _currentIndex;
+    final String url = widget.urls[index];
+
+    return CachedNetworkImage(
+      key: ValueKey('cached_network_image_${url.hashCode}'),
+      imageUrl: url,
+      width: widget.width,
+      height: widget.height,
+      fit: widget.fit,
+      memCacheWidth: widget.cacheWidth,
+      memCacheHeight: widget.cacheHeight,
+      maxWidthDiskCache: widget.cacheWidth,
+      maxHeightDiskCache: widget.cacheHeight,
+      placeholder: (context, _) => UiUtils._buildImagePlaceholder(
+        context,
+        widget.width,
+        widget.height,
+      ),
+      errorWidget: (context, _, __) {
+        if (_currentIndex < widget.urls.length - 1) {
+          _scheduleNextCandidate();
+          return UiUtils._buildImagePlaceholder(
+            context,
+            widget.width,
+            widget.height,
+          );
+        }
+        return UiUtils._buildImageError(context, widget.width, widget.height);
+      },
+    );
+  }
+}
+
+
+
+
+
 
 class UiUtils {
 
@@ -245,92 +340,217 @@ class UiUtils {
   }
 
 
-  static PreferredSizeWidget buildAppBar(BuildContext context,
-      {String? title,
-        bool? showBackButton,
+  static PreferredSizeWidget buildAppBar(
+      BuildContext context, {
+        String? title,
+        Widget? titleWidget,
+        bool showBackButton = false,
+        Widget? leading,
         List<Widget>? actions,
         List<Widget>? bottom,
         double? bottomHeight,
         bool? hideTopBorder,
         VoidCallback? onBackPress,
-        Color? backgroundColor}) {
-    return PreferredSize(
-      preferredSize: Size.fromHeight(55 + (bottomHeight ?? 0)),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Expanded(
-            child: RoundedBorderOnSomeSidesWidget(
-              borderColor: context.color.borderColor,
-              borderRadius: 0,
-              borderWidth: 1.5,
-              contentBackgroundColor:
-              backgroundColor ?? context.color.secondaryColor,
-              bottomLeft: true,
-              bottomRight: true,
-              topLeft: false,
-              topRight: false,
-              child: Container(
-                alignment: AlignmentDirectional.bottomStart,
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: (showBackButton ?? false) ? 0 : 20,
-                      vertical: (showBackButton ?? false) ? 0 : 18),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (showBackButton ?? false) ...[
-                        Material(
-                          clipBehavior: Clip.antiAlias,
-                          color: Colors.transparent,
-                          type: MaterialType.circle,
-                          child: InkWell(
-                            onTap: () {
-                              if (onBackPress != null) {
-                                onBackPress.call();
-                              } else {
-                                Navigator.pop(context);
-                              }
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.all(18.0),
-                              child: Directionality(
-                                textDirection: Directionality.of(context),
-                                child: RotatedBox(
-                                  quarterTurns: Directionality.of(context) ==
-                                      ui.TextDirection.rtl ? 2 : -4,
+        Color? backgroundColor,
+        Color? foregroundColor,
+        Color? borderColor,
+        Color? backButtonBackgroundColor,
+        EdgeInsetsGeometry? contentPadding,
+        bool centerTitle = true,
+        double? height,
+        double borderRadius = 18,
+        double borderStrokeWidth = 1.0,
+      }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final bool shouldHideTopBorder = hideTopBorder ?? true;
+    final double toolbarHeight = height ?? kToolbarHeight;
+    final Color resolvedBackgroundColor =
+        backgroundColor ?? colorScheme.secondaryColor;
+    final Color resolvedBorderColor =
+        borderColor ?? colorScheme.borderColor;
+    final Color resolvedForegroundColor = foregroundColor ??
+        colorScheme.textAutoAdapt(resolvedBackgroundColor);
+    final bool hasBottom = bottom != null && bottom.isNotEmpty;
+    final bool hasLeading = leading != null || showBackButton;
+    final EdgeInsetsGeometry resolvedPadding = contentPadding ??
+        EdgeInsetsDirectional.only(
+          start: hasLeading ? 12 : 20,
+          end: actions?.isNotEmpty == true ? 12 : 20,
+          top: 12,
+          bottom: 12,
+        );
+    final double? resolvedBottomHeight = hasBottom
+        ? (bottomHeight != null && bottomHeight > 0 ? bottomHeight : null)
+        : null;
 
-                                  child: UiUtils.getSvg(AppIcons.arrowLeft,
-                                      fit: BoxFit.none,
-                                      color: context.color.textDefaultColor),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                      Expanded(
-                        child: Text(
-                          title ?? "",
-                          overflow: TextOverflow.ellipsis,
-                          softWrap: true,
-                        )
-                            .color(context.color.textDefaultColor)
-                            .bold(weight: FontWeight.w600)
-                            .size(actions != null ? 14 : 18),
+
+    Widget? resolvedLeading;
+    if (leading != null) {
+      resolvedLeading = leading;
+    } else if (showBackButton) {
+      final textDirection = Directionality.of(context);
+      resolvedLeading = _AppBarBackButton(
+        onPressed: onBackPress ?? () => Navigator.of(context).maybePop(),
+        foregroundColor: resolvedForegroundColor,
+        backgroundColor: backButtonBackgroundColor,
+        isRtl: textDirection == ui.TextDirection.rtl,
+      );
+    }
+
+    final List<Widget>? trailingActions = actions?.isNotEmpty == true
+        ? _withSpacing(actions!, const SizedBox(width: 12))
+        : null;
+
+    final Widget? resolvedTitleWidget = titleWidget ??
+        (title != null
+            ? Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        )
+            : null);
+
+    final TextStyle defaultTitleStyle = theme.textTheme.titleMedium?.copyWith(
+      fontWeight: FontWeight.w600,
+      fontSize: actions?.isNotEmpty == true ? 16 : 20,
+      color: resolvedForegroundColor,
+    ) ??
+        TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: actions?.isNotEmpty == true ? 16 : 20,
+          color: resolvedForegroundColor,
+        );
+
+    final BorderRadius borderRadiusShape = BorderRadius.only(
+      topLeft:
+      shouldHideTopBorder ? Radius.zero : Radius.circular(borderRadius),
+      topRight:
+      shouldHideTopBorder ? Radius.zero : Radius.circular(borderRadius),
+      bottomLeft: Radius.circular(borderRadius),
+      bottomRight: Radius.circular(borderRadius),
+    );
+
+    final BorderSide defaultBorderSide = BorderSide(
+      color: resolvedBorderColor,
+      width: borderStrokeWidth,
+    );
+
+    final Border border = Border(
+      top: shouldHideTopBorder ? BorderSide.none : defaultBorderSide,
+      left: defaultBorderSide,
+      right: defaultBorderSide,
+      bottom: defaultBorderSide,
+    );
+
+    final Color shadowColor = (theme.brightness == Brightness.dark
+        ? Colors.black
+        : Colors.black.withOpacity(0.25))
+        .withOpacity(theme.brightness == Brightness.dark ? 0.45 : 0.12);
+
+    final double topPadding = MediaQuery.of(context).padding.top;
+    final double totalHeight =
+        toolbarHeight + (resolvedBottomHeight ?? 0.0) + topPadding;
+
+
+    return PreferredSize(
+      preferredSize: Size.fromHeight(totalHeight),
+      child: SizedBox(
+        height: totalHeight,
+        child: Material(
+          color: Colors.transparent,
+          child: SafeArea(
+            top: true,
+            bottom: false,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: borderRadiusShape,
+                boxShadow: [
+                BoxShadow(
+                color: shadowColor,
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: borderRadiusShape,
+                child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: resolvedBackgroundColor,
+                      border: border,
+                    ),
+                    child: IconTheme.merge(
+                      data: IconThemeData(
+                        color: resolvedForegroundColor,
+                        size: 22,
                       ),
-                      if (actions != null) ...[const Spacer(), ...actions],
-                      const SizedBox(width: 5),
-                    ],
+                      child: DefaultTextStyle(
+                        style: defaultTitleStyle,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                          SizedBox(
+                          height: toolbarHeight,
+                          child: Padding(
+                            padding: resolvedPadding,
+                            child: NavigationToolbar(
+                              leading: resolvedLeading != null
+                                  ? Padding(
+                                padding:
+                                const EdgeInsetsDirectional.only(
+                                  end: 12,
+                                ),
+                                child: resolvedLeading,
+                              )
+                                  : null,
+                              middle: resolvedTitleWidget,
+                              trailing: trailingActions != null
+                                  ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: trailingActions,
+                              )
+                                  : null,
+                              centerMiddle: centerTitle,
+                                ),
+
+                              ),
+
+                            ),
+                            if (hasBottom)
+                              _AppBarBottomSection(
+                                children: bottom!,
+                                height: resolvedBottomHeight,
+                              ),
+                          ],
+                        ),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-          ...bottom ?? [const SizedBox.shrink()]
-        ],
+        ),
       ),
     );
+  }
+
+
+
+
+  static List<Widget> _withSpacing(List<Widget> widgets, Widget spacer) {
+    if (widgets.length <= 1) {
+      return List<Widget>.from(widgets);
+    }
+
+    final List<Widget> spaced = [];
+    for (var i = 0; i < widgets.length; i++) {
+      if (i > 0) {
+        spaced.add(spacer);
+      }
+      spaced.add(widgets[i]);
+    }
+    return spaced;
   }
 
 
@@ -520,71 +740,119 @@ class UiUtils {
       height: height,
       fit: fit!,
       placeholderBuilder: (context) {
-        return Container(
-            width: width,
-            color: context.color.territoryColor.withOpacity(0.1),
-            height: height,
-            alignment: AlignmentDirectional.center,
-            child: SizedBox(
-                width: width,
-                height: height,
-                child: getSvg(
-                  AppIcons.placeHolder,
-                  width: width ?? 70,
-                  height: height ?? 70,
-                )));
-      },
-    );
-  }
-
-
-  static Widget getImage(String url,
-      {double? width,
-        double? height,
-        BoxFit? fit,
-        String? blurHash,
-        bool? showFullScreenImage}) {
-    return CachedNetworkImage(
-      imageUrl: url,
-      fit: fit,
-      width: width,
-      height: height,
-      memCacheHeight: 1000,
-      memCacheWidth: 1000,
-      placeholder: (context, url) {
-        return Container(
-            width: width,
-            color: context.color.territoryColor.withOpacity(0.1),
-            height: height,
-            alignment: AlignmentDirectional.center,
-            child: SizedBox(
-                width: width,
-                height: height,
-                child: getSvg(
-                  AppIcons.placeHolder,
-                  width: width ?? 70,
-                  height: height ?? 70,
-                )));
-      },
-      errorWidget: (context, url, error) {
-        return Container(
+        return ShimmerBox(
           width: width,
-          color: context.color.territoryColor.withOpacity(0.1),
           height: height,
-          alignment: AlignmentDirectional.center,
-          child: SizedBox(
-            width: width,
-            height: height,
-            child: getSvg(
-              AppIcons.placeHolder,
-              width: width ?? 70,
-              height: height ?? 70,
-            ),
-          ),
+          borderRadius: BorderRadius.circular(12),
         );
       },
     );
   }
+
+
+  static const int _defaultCacheDimension = 200;
+  static const int _minCacheDimension = 160;
+  static const int _maxCacheDimension = 240;
+  static final RegExp _preferredThumbnailExtension =
+  RegExp(r'\.(avif|webp)(?:\?|#|\b)', caseSensitive: false);
+
+  static Widget getImage(
+      String url, {
+        double? width,
+        double? height,
+        BoxFit? fit,
+        String? blurHash,
+        bool? showFullScreenImage,
+        String? fallbackUrl,
+        List<String>? alternateUrls,
+        int? cacheWidth,
+        int? cacheHeight,
+      }) {
+    final List<String> candidates = _prepareImageCandidates(
+      primary: url,
+      alternates: alternateUrls,
+      fallback: fallbackUrl,
+    );
+
+    final int resolvedCacheWidth = _resolveCacheDimension(cacheWidth);
+    final int resolvedCacheHeight = _resolveCacheDimension(cacheHeight);
+
+    return _AdaptiveNetworkImage(
+      urls: candidates,
+      width: width,
+      height: height,
+      fit: fit ?? BoxFit.cover,
+      cacheWidth: resolvedCacheWidth,
+      cacheHeight: resolvedCacheHeight,
+    );
+  }
+
+  static List<String> _prepareImageCandidates({
+    String? primary,
+    List<String>? alternates,
+    String? fallback,
+  }) {
+    final ordered = <String?>[primary, ...?alternates, fallback];
+    final filtered = ordered
+        .whereType<String>()
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toList();
+
+    final LinkedHashSet<String> deduplicated =
+    LinkedHashSet<String>.from(filtered);
+    final List<String> urls = deduplicated.toList();
+    if (urls.length <= 1) {
+      return urls;
+    }
+
+    final List<String> preferred = [];
+    final List<String> others = [];
+    for (final url in urls) {
+      if (_isPreferredThumbnailFormat(url)) {
+        preferred.add(url);
+      } else {
+        others.add(url);
+      }
+    }
+    return [...preferred, ...others];
+  }
+
+  static bool _isPreferredThumbnailFormat(String url) {
+    return _preferredThumbnailExtension.hasMatch(url);
+  }
+
+  static int _resolveCacheDimension(int? dimension) {
+    final int resolved = dimension ?? _defaultCacheDimension;
+    if (resolved < _minCacheDimension) return _minCacheDimension;
+    if (resolved > _maxCacheDimension) return _maxCacheDimension;
+    return resolved;
+  }
+
+  static Widget _buildImagePlaceholder(
+      BuildContext context,
+      double? width,
+      double? height, {
+        BorderRadius? borderRadius,
+        bool animate = true,
+      }) {
+    return ShimmerBox(
+      width: width,
+      height: height,
+      borderRadius: borderRadius ?? BorderRadius.circular(12),
+      animate: animate,
+    );
+  }
+
+  static Widget _buildImageError(
+      BuildContext context, double? width, double? height) {
+    return _buildImagePlaceholder(
+      context,
+      width,
+      height,
+      animate: false,
+    );  }
+
 
 
   static Widget progress({double? width,
@@ -735,93 +1003,111 @@ class UiUtils {
       return true;
     }());
 
-    final scheme = Theme.of(context).colorScheme;
 
-    final bool isDisabled = (disabled ?? false) || (isInProgress == true);
-    final Color bg = isDisabled
-        ? (disabledColor ?? context.color.territoryColor)
-        : (buttonColor ?? context.color.territoryColor);
+    final bool blockInput = (disabled ?? false) || (isInProgress == true);
+    final Color baseButtonColor = buttonColor ?? context.color.territoryColor;
+    final Color disabledBackgroundColor =
+        disabledColor ?? UiUtils.makeColorLight(baseButtonColor);
+    final Color bg = blockInput ? disabledBackgroundColor : baseButtonColor;
+
 
     // لون النص/الأيقونات/السبينر
-    final Color fg = textColor ?? scheme.onPrimary;
+    final Color fg = textColor ?? context.color.textAutoAdapt(bg);
+    final Color disabledForeground = textColor != null
+        ? UiUtils.makeColorLight(textColor!)
+        : UiUtils.makeColorDark(disabledBackgroundColor);
+    final Color contentColor = blockInput ? disabledForeground : fg;
 
+
+    final bool useWhiteProgress =
+        bg.computeLuminance() < 0.5;
+    final Color progressColor =
+    useWhiteProgress ? Colors.white : contentColor;
     final String title =
     (isInProgress == true) ? (titleWhenProgress ?? buttonTitle) : buttonTitle;
 
-    Widget buildText(String t, Color c) => Flexible(
-      child: Text(
-        t,
-        overflow: TextOverflow.ellipsis,
-        softWrap: true,
-        textAlign: TextAlign.center,
-      ).color(c).size(fontSize ?? context.font.larger),
-    );
+    Widget buildText(String t, Color c) =>
+        Flexible(
+          child: Text(
+            t,
+            overflow: TextOverflow.ellipsis,
+            softWrap: true,
+            textAlign: TextAlign.center,
+          ).color(c).size(fontSize ?? context.font.larger),
+        );
 
     return Padding(
       padding: outerPadding ?? EdgeInsets.zero,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          elevation: (showElevation ?? true) ? 1 : 0,
-          backgroundColor: bg,
-          foregroundColor: fg,
-          disabledBackgroundColor:
-          disabledColor ?? context.color.territoryColor,
-          minimumSize: Size(
-            autoWidth == true ? 0 : (width ?? double.infinity),
-            height ?? 56.rh(context),
-          ),
-          padding:
-          padding ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radius ?? 16),
-            side: border ?? BorderSide.none,
-          ),
-        ),
-        onPressed: isDisabled
-            ? () {
-          if (disabled == true) onTapDisabledButton?.call();
-        }
-            : () {
-          HelperUtils.unfocus();
-          onPressed.call();
-        },
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 250),
-          transitionBuilder: (child, anim) =>
-              FadeTransition(opacity: anim, child: child),
-          child: Row(
-            key: ValueKey("$isInProgress-$isSuccess-$isError-$title"),
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (isInProgress == true)
-                UiUtils.progress(
-                  width: progressWidth ?? 18,
-                  height: progressHeight ?? 18,
-                  showWhite: fg.computeLuminance() < 0.5,
-                ),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: (blockInput && disabled == true) ? onTapDisabledButton : null,
+        child: IgnorePointer(
+          ignoring: blockInput,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              elevation: (showElevation ?? true) ? 1 : 0,
+              backgroundColor: bg,
+              foregroundColor: fg,
+              disabledBackgroundColor: disabledBackgroundColor,
+              disabledForegroundColor: disabledForeground,
+              minimumSize: Size(
+                autoWidth == true ? 0 : (width ?? double.infinity),
+                height ?? 56.rh(context),
+              ),
+              padding: padding ??
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(radius ?? 16),
+                side: border ?? BorderSide.none,
+              ),
+            ),
+            onPressed: blockInput
+                ? null
+                : () {
+              HelperUtils.unfocus();
+              onPressed.call();
+            },
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              transitionBuilder: (child, anim) =>
+                  FadeTransition(opacity: anim, child: child),
+              child: Row(
+                key: ValueKey("$isInProgress-$isSuccess-$isError-$title"),
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (isInProgress == true)
+                    UiUtils.progress(
+                      width: progressWidth ?? 18,
+                      height: progressHeight ?? 18,
+                      showWhite: useWhiteProgress,
+                      normalProgressColor: progressColor,
 
-              if (isSuccess == true)
-                Icon(Icons.check_circle, color: fg, size: 22),
-
-              if (isError == true)
-                Icon(Icons.error_outline, color: fg, size: 22),
-
-              if ((isInProgress == true || isSuccess == true || isError == true))
-                const SizedBox(width: 8),
-
-              if (isInProgress == true && (showProgressTitle ?? false))
-                buildText(title, fg),
-
-              if (isInProgress != true && isSuccess != true && isError != true) ...[
-                if (prefixWidget != null) ...[
-                  IconTheme.merge(
-                      data: IconThemeData(color: fg), child: prefixWidget),
-                  const SizedBox(width: 8),
+                    ),
+                  if (isSuccess == true)
+                    Icon(Icons.check_circle, color: contentColor, size: 22),
+                  if (isError == true)
+                    Icon(Icons.error_outline, color: contentColor, size: 22),
+                  if (isInProgress == true || isSuccess == true ||
+                      isError == true)
+                    const SizedBox(width: 8),
+                  if (isInProgress == true && (showProgressTitle ?? false))
+                    buildText(title, contentColor),
+                  if (isInProgress != true &&
+                      isSuccess != true &&
+                      isError != true) ...[
+                    if (prefixWidget != null) ...[
+                      IconTheme.merge(
+                        data: IconThemeData(color: contentColor),
+                        child: prefixWidget!,
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    buildText(title, contentColor),
+                  ],
                 ],
-                buildText(title, fg),
-              ],
-            ],
+              ),
+            ),
           ),
         ),
       ),
@@ -1010,7 +1296,7 @@ class UiUtils {
 
 
 // وظيفتها عرض نافذة حوار (Dialog) مع تأثير ضبابي (Blur) خلفها،
-  
+
   static Future showBlurredDialoge(
       BuildContext context, {
         required BlurDialoge dialoge,
@@ -1103,7 +1389,57 @@ class UiUtils {
 }
 
 
+class _AppBarBackButton extends StatelessWidget {
+  const _AppBarBackButton({
+    required this.onPressed,
+    required this.foregroundColor,
+    this.backgroundColor,
+    required this.isRtl,
+  });
 
+  final VoidCallback onPressed;
+  final Color foregroundColor;
+  final Color? backgroundColor;
+  final bool isRtl;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    final BorderRadius radius = BorderRadius.circular(12);
+    final IconData icon = isRtl
+        ? Icons.arrow_forward_ios_rounded
+        : Icons.arrow_back_ios_new_rounded;
+    final String tooltip = MaterialLocalizations.of(context).backButtonTooltip;
+    final Color resolvedBackgroundColor =
+        backgroundColor ?? theme.colorScheme.surfaceVariant;
+    return Tooltip(
+      message: tooltip,
+      child: Semantics(
+        button: true,
+        label: tooltip,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: radius,
+          child: Container(
+            height: 40,
+            width: 40,
+            decoration: BoxDecoration(
+              color: resolvedBackgroundColor,
+              borderRadius: radius,
+            ),
+            alignment: Alignment.center,
+            child: Icon(
+              icon,
+              color: foregroundColor,
+              size: 24,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 
 ///Format string
@@ -1217,10 +1553,17 @@ extension ScrollEndListen on ScrollController {
 
 
 class RemoveGlow extends ScrollBehavior {
+  const RemoveGlow();
+
+
   @override
   Widget buildOverscrollIndicator(
       BuildContext context, Widget child, ScrollableDetails details) {
     return child;
+  }
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) {
+    return const LowSpecScrollPhysics();
   }
 }
 
@@ -1630,6 +1973,40 @@ class _GalleryViewState extends State<GalleryView> {
           ),
         ],
       ),
+    );
+  }
+}
+
+
+
+
+
+
+class _AppBarBottomSection extends StatelessWidget {
+  const _AppBarBottomSection({
+    required this.children,
+    this.height,
+  });
+
+  final List<Widget> children;
+  final double? height;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget content = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: children,
+    );
+
+    if (height == null) {
+      return content;
+    }
+
+    return SizedBox(
+      height: height,
+      width: double.infinity,
+      child: content,
     );
   }
 }

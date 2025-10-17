@@ -13,6 +13,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/data/model/chat/chated_user_model.dart';
+
+import 'package:marib/utils/helper_utils.dart';
+import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
+
 part 'chatTile_ui.dart';
 
 

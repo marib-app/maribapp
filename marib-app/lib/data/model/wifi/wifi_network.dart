@@ -6,28 +6,41 @@ class WifiNetwork extends Equatable {
   const WifiNetwork({
     required this.id,
     required this.name,
-    required this.latitude,
-    required this.longitude,
+    this.slug,
+    this.latitude,
+    this.longitude,
     this.description,
     this.iconUrl,
     this.coverageKm,
-    this.rating,
-    this.distanceKm,
+    this.loginScreenshotUrl,
     this.address,
-    this.plans = const [],
+    this.planCount = 0,
+    this.currencies = const <String>[],
+    this.contacts = const <String>[],
+    this.notes,
+    this.meta,
+    this.plans = const <WifiPlan>[],
   });
 
   final int id;
   final String name;
-  final double latitude;
-  final double longitude;
+  final String? slug;
+  final double? latitude;
+  final double? longitude;
   final String? description;
   final String? iconUrl;
   final double? coverageKm;
-  final double? rating;
-  final double? distanceKm;
+  final String? loginScreenshotUrl;
+
   final String? address;
   final List<WifiPlan> plans;
+  final int planCount;
+  final List<String> currencies;
+  final List<String> contacts;
+  final String? notes;
+  final Map<String, dynamic>? meta;
+
+
 
   factory WifiNetwork.fromJson(Map<String, dynamic> json) {
     double? parseDouble(dynamic value) {
@@ -62,44 +75,122 @@ class WifiNetwork extends Equatable {
       return const [];
     }
 
+
+    String? resolveIconUrl(Map<String, dynamic> source) {
+      final List<String> keys = <String>[
+        'icon',
+        'icon_url',
+        'iconUrl',
+        'logo_url',
+        'logo',
+        'logo_path',
+      ];
+
+      for (final String key in keys) {
+        final dynamic value = source[key];
+        if (value == null) continue;
+        final String text = value.toString().trim();
+        if (text.isEmpty) continue;
+        return text;
+      }
+
+      return null;
+    }
+
+    final double? coverage = parseDouble(json['radius']) ??
+        parseDouble(json['radius_km']) ??
+        parseDouble(json['coverage_radius_km']) ??
+        parseDouble(json['coverage_km']);
+
+     List<String> resolveStringList(dynamic source) {
+      if (source is List) {
+        return source
+            .map((dynamic element) => element?.toString())
+            .whereType<String>()
+            .map((value) => value.trim())
+            .where((value) => value.isNotEmpty)
+            .toList();
+      }
+      if (source is String) {
+        return source
+            .split(RegExp(r'[\r\n,;]+'))
+            .map((value) => value.trim())
+            .where((value) => value.isNotEmpty)
+            .toList();
+      }
+      return const <String>[];
+    }
+
+    Map<String, dynamic>? parseMeta(dynamic value) {
+      if (value is Map<String, dynamic>) {
+        return value;
+      }
+      if (value is Map) {
+        return Map<String, dynamic>.from(value as Map);
+      }
+      return null;
+    }
+
+
+
+    final List<WifiPlan> parsedPlans =
+    parsePlans(json['plans'] ?? json['wifi_plans'] ?? json['available_plans']);
+
+
+
     return WifiNetwork(
       id: parseInt(json['id']) ?? 0,
       name: json['name']?.toString() ?? '',
-      latitude: parseDouble(json['latitude']) ?? 0,
-      longitude: parseDouble(json['longitude']) ?? 0,
+      slug: json['slug']?.toString(),
+      latitude: parseDouble(json['latitude']),
+      longitude: parseDouble(json['longitude']),
       description: json['description']?.toString(),
-      iconUrl: json['icon']?.toString() ?? json['icon_url']?.toString(),
-      coverageKm: parseDouble(json['radius']) ?? parseDouble(json['radius_km']),
-      rating: parseDouble(json['rating']),
-      distanceKm: parseDouble(json['distance']) ?? parseDouble(json['distance_km']),
-      address: json['address']?.toString(),
-      plans: parsePlans(json['plans'] ?? json['wifi_plans'] ?? json['available_plans']),
+      iconUrl: resolveIconUrl(json),
+      loginScreenshotUrl: json['login_screenshot_url']?.toString(),
+      coverageKm: coverage,
+      address: json['address']?.toString() ?? json['location_name']?.toString(),
+      planCount: parseInt(json['plan_count']) ?? parsedPlans.length,
+      currencies: resolveStringList(json['currencies']).map((e) => e.toUpperCase()).toList(),
+      contacts: resolveStringList(json['contacts']),
+      notes: json['notes']?.toString(),
+      meta: parseMeta(json['meta']),
+      plans: parsedPlans,
     );
   }
 
   WifiNetwork copyWith({
     int? id,
     String? name,
+    String? slug,
     double? latitude,
     double? longitude,
     String? description,
     String? iconUrl,
     double? coverageKm,
-    double? rating,
-    double? distanceKm,
+    String? loginScreenshotUrl,
     String? address,
+    int? planCount,
+    List<String>? currencies,
+    List<String>? contacts,
+    String? notes,
+    Map<String, dynamic>? meta,
     List<WifiPlan>? plans,
   }) {
     return WifiNetwork(
       id: id ?? this.id,
       name: name ?? this.name,
+      slug: slug ?? this.slug,
+      loginScreenshotUrl: loginScreenshotUrl ?? this.loginScreenshotUrl,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       description: description ?? this.description,
       iconUrl: iconUrl ?? this.iconUrl,
       coverageKm: coverageKm ?? this.coverageKm,
-      rating: rating ?? this.rating,
-      distanceKm: distanceKm ?? this.distanceKm,
+      planCount: planCount ?? this.planCount,
+      currencies: currencies ?? this.currencies,
+      contacts: contacts ?? this.contacts,
+      notes: notes ?? this.notes,
+      meta: meta ?? this.meta,
       address: address ?? this.address,
       plans: plans ?? this.plans,
     );
@@ -109,15 +200,23 @@ class WifiNetwork extends Equatable {
     return {
       'id': id,
       'name': name,
-      'latitude': latitude,
-      'longitude': longitude,
+      if (slug != null) 'slug': slug,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
       if (description != null) 'description': description,
       if (iconUrl != null) 'icon_url': iconUrl,
       if (coverageKm != null) 'radius_km': coverageKm,
-      if (rating != null) 'rating': rating,
-      if (distanceKm != null) 'distance_km': distanceKm,
+      if (coverageKm != null) 'coverage_radius_km': coverageKm,
+      if (loginScreenshotUrl != null)
+        'login_screenshot_url': loginScreenshotUrl,
       if (address != null) 'address': address,
+      'plan_count': planCount,
+      if (currencies.isNotEmpty) 'currencies': currencies,
+      if (contacts.isNotEmpty) 'contacts': contacts,
+      if (notes != null) 'notes': notes,
+      if (meta != null) 'meta': meta,
       'plans': plans.map((plan) => plan.toJson()).toList(),
+
     };
   }
 
@@ -125,13 +224,18 @@ class WifiNetwork extends Equatable {
   List<Object?> get props => [
     id,
     name,
+    slug,
     latitude,
     longitude,
     description,
     iconUrl,
     coverageKm,
-    rating,
-    distanceKm,
+    loginScreenshotUrl,
+    planCount,
+    currencies,
+    contacts,
+    notes,
+    meta,
     address,
     plans,
   ];

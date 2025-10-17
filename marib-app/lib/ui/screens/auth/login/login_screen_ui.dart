@@ -907,14 +907,20 @@ class _MobileOrEmailForm extends StatelessWidget {
         const SizedBox(height: 24),
         CustomTextFormField(
           isRequired: true,
-          validator: CustomTextFieldValidator.nullCheck,
+          validator: isMobileNumberField
+              ? CustomTextFieldValidator.nullCheck
+              : CustomTextFieldValidator.email,
+
           controller: emailController,
           fillColor: context.color.secondaryColor,
           borderColor: phoneEmailError != null
               ? Colors.red
               : context.color.borderColor.darken(30),
           onChange: (v) => onChangedNumberOrEmail((v ?? '').toString()),
-          keyboard: TextInputType.phone,
+          keyboard: isMobileNumberField
+              ? TextInputType.phone
+              : TextInputType.emailAddress,
+
           fixedPrefix: isMobileNumberField
               ? SizedBox(
             width: 55,
@@ -934,7 +940,10 @@ class _MobileOrEmailForm extends StatelessWidget {
             ),
           )
               : null,
-          hintText: "mobileNumberLbl".translate(context),
+          hintText: isMobileNumberField
+              ? "mobileNumberLbl".translate(context)
+              : "emailAddress".translate(context),
+
         ),
         if (phoneEmailError != null)
           Padding(

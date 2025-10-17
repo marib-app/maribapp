@@ -17,7 +17,8 @@ class HiveKeys {
   static const String currentLocationLongitude = "currentLocationLongitudeKey";
   static const String lastDelegateCategoryId = "lastDelegateCategoryId";
   static const String delegateHistoryFlag = "delegateHistoryFlag";
-
+  static const String permittedDelegateSections = "permittedDelegateSections";
+  static const String blockedDelegateSections = "blockedDelegateSections";
 
   static const String jwtToken = "token";
   static const String svgBox = "svgBox";

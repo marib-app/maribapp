@@ -33,357 +33,406 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
 
     }
 
-    return Scaffold(
-      backgroundColor: context.color.primaryColor,
-      appBar: UiUtils.buildAppBar(
-        context,
-        title: ' خيارات الدفع ',
-        showBackButton: true,
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      child: Material(
+        color: Theme.of(context).colorScheme.surface,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _sheetHeader(onSurface, amountStr, curr),
+            const Divider(height: 1),
+            Expanded(
+              child: _loadingBanks
+                  ? _banksShimmer(onSurface)
+                  : (!hasAnyOptions
+                  ? _emptyBanks()
+                  : _buildPaymentOptionsList(
+                onSurface: onSurface,
+                instructionsText: instructionsText,
+                instructionsTitle: instructionsTitle,
+              )),
+            ),
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                child: _confirmButton(amountStr, curr),
+              ),
+            ),
+          ],
+        ),
       ),
-      body: _loadingBanks
-          ? _banksShimmer(onSurface)
-          : (!hasAnyOptions
-          ? _emptyBanks()
-          : ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 140),
+    );
+  }
+
+  Widget _sheetHeader(Color onSurface, String amount, String currency) {
+    final theme = Theme.of(context);
+    final accent = context.color.territoryColor;
+    final amountLabel = currency.isNotEmpty ? '$amount $currency' : amount;
+    return Container(
+        width: double.infinity,
+        color: theme.colorScheme.surface,
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
         children: [
-          // عنوان توضيحي أعلى الصفحة
-          Text(
-            'اختر وسيلة الدفع المناسبة لك',
-            style: TextStyle(
-              color: onSurface.withOpacity(.85),
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
+          Container(
+            width: 44,
+            height: 4,
+            decoration: BoxDecoration(
+              color: onSurface.withOpacity(.18),
+              borderRadius: BorderRadius.circular(8),
             ),
           ),
-          const SizedBox(height: 10),
-        if (_eastYemenBank != null) ...[
-
-            _gatewayCard(
-              config: _eastYemenBank!,
-              selected: _usingEastYemen,
-              pressed: _pressedBankId ==
-                  _BankTransferScreenState._eastYemenPressedKey,
-              onSurface: onSurface,
-            ),
-          const SizedBox(height: 12),
-        ],
-
-          // بطاقة ملخص المحفظة فوق قائمة البنوك
-          _walletPaymentCard(onSurface),
-          const SizedBox(height: 12),
-
-          // قائمة كروت البنوك (بدون ظل + تأثير ضغط)
-          ...List.generate(_banks.length, (i) {
-            final b = _banks[i];
-            final selected = _selectedMethod ==
-                _BankTransferScreenState._manualBankMethod &&
-                _selectedBankId == b.id;
-
-            final pressed = _pressedBankId == b.id;
-
-            final accountName = (b.accountName ?? '').trim();
-            final accountNumber = (b.accountNumber ?? '').trim();
-            final ibanValue = (b.iban ?? '').trim();
-            final String? displayNumber = () {
-              if (ibanValue.isNotEmpty) {
-                return ibanValue;
-
-              }
-              if (accountNumber.isNotEmpty) {
-                return accountNumber;
-
-              }
-              return null;
-            }();
-            final String displayLabel = ibanValue.isNotEmpty ? 'IBAN' : 'رقم الحساب';
-
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: InkWell(
-                onHighlightChanged: (h) => setState(
-                        () => _pressedBankId = h ? b.id : null),
-                onTap: () => setState(() {
-                  _selectedMethod =
-                      _BankTransferScreenState._manualBankMethod;
-                  _selectedBankId = b.id;
-                  _attempted = false;
-                }),
-
-
-                borderRadius: BorderRadius.circular(14),
-                child: AnimatedScale(
-                  scale: pressed ? 0.98 : 1.0,
-                  duration: const Duration(milliseconds: 120),
-                  curve: Curves.easeOut,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    curve: Curves.easeOut,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? context.color.secondaryColor.withOpacity(.88)
-                          : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-
-                      border: Border.all(
-                        color: selected
-                            ? context.color.territoryColor
-                            : context.color.borderColor.withOpacity(.65),
-                        width: selected ? 2 : 1,
+          const SizedBox(height: 18),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'خيارات الدفع',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: onSurface,
                       ),
                     ),
-                    padding: const EdgeInsets.all(12),
-
-
-                    child: Row(
-                      children: [
-                        _bankLogo(b.logoUrl),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment:
-                            CrossAxisAlignment.start,
-                            children: [
-                              // اسم البنك
-                              Text(
-                                b.bankName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 14,
-                                  color: onSurface,
-                                ),
-                              ),
-
-                              if (accountName.isNotEmpty) ...[
-                                const SizedBox(height: 8),
-                                Builder(
-                                  builder: (context) {
-                                    final raw = accountName.replaceAll(
-                                      RegExp(r'\s+'),
-                                      '',
-                                    );
-                                    final isNumeric = raw.isNotEmpty &&
-                                        RegExp(r'^[0-9٠-٩]+$').hasMatch(raw);
-                                    final title =
-                                    isNumeric ? 'رقم الحساب' : 'حوالة باسم';
-                                    final highlighted =
-                                        _highlightedAccountNameBankId == b.id;
-                                    final highlightBorderColor = highlighted
-                                        ? context.color.territoryColor
-                                        .withOpacity(
-                                      Theme.of(context).brightness ==
-                                          Brightness.dark
-                                          ? .7
-                                          : .5,
-                                    )
-                                        : onSurface.withOpacity(.12);
-
-                                    return Row(
-                                      children: [
-                                        Text(
-                                          title,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: onSurface.withOpacity(.7),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Material(
-                                            type: MaterialType.transparency,
-                                            child: Ink(
-                                              decoration: BoxDecoration(
-                                                color:
-                                                onSurface.withOpacity(.05),
-                                                borderRadius:
-                                                BorderRadius.circular(10),
-                                                border: Border.all(
-                                                  color: highlightBorderColor,
-
-                                                ),
-                                              ),
-                                              child: InkWell(
-                                                onHighlightChanged: (h) {
-                                                  if (h &&
-                                                      _highlightedAccountNameBankId !=
-                                                          b.id) {
-                                                    setState(() =>
-                                                    _highlightedAccountNameBankId =
-                                                        b.id);
-                                                  } else if (!h &&
-                                                      _highlightedAccountNameBankId ==
-                                                          b.id) {
-                                                    setState(() =>
-                                                    _highlightedAccountNameBankId =
-                                                    null);
-                                                  }
-                                                },
-                                                onTap: () =>
-                                                    _copyValueToClipboard(
-                                                      accountName,
-                                                      label: title,
-                                                    ),
-                                                borderRadius:
-                                                BorderRadius.circular(10),
-                                                child: Padding(
-                                                  padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 12,
-                                                    vertical: 10,
-                                                  ),
-                                                  child: Text(
-                                                    accountName,
-                                                    maxLines: 1,
-                                                    overflow:
-                                                    TextOverflow.ellipsis,
-                                                    style: TextStyle(
-                                                      fontSize: 13,
-                                                      fontWeight:
-                                                      FontWeight.w700,
-                                                      color: onSurface,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                ),
-                              ],
-                              if (displayNumber != null) ...[
-                                const SizedBox(height: 8),
-                                Text(
-                                  displayLabel,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: onSurface.withOpacity(.7),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                InkWell(
-                                  onTap: () => _copyValueToClipboard(
-                                    displayNumber,
-                                    label: displayLabel,
-                                  ),
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: onSurface.withOpacity(.05),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: onSurface.withOpacity(.12),
-                                      ),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 10,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            displayNumber,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w700,
-                                              color: onSurface,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Icon(
-                                          Icons.copy_rounded,
-                                          size: 18,
-                                          color: onSurface.withOpacity(.6),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(
-                          selected
-                              ? Icons.radio_button_checked
-                              : Icons.radio_button_off,
-                          color: selected
-                              ? context.color.territoryColor
-                              : context.color.borderColor,
-                        ),
-                      ],
+                    const SizedBox(height: 6),
+                    Text(
+                      'المبلغ المستحق: $amountLabel',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: onSurface.withOpacity(.7),
+                      ),
                     ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'النافذة تبقى ظاهرة حتى تأكيد الإغلاق لضمان إتمام العملية بأمان.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.4,
+                        color: onSurface.withOpacity(.6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: accent.withOpacity(.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: IconButton(
+                  tooltip: 'إغلاق',
+                  onPressed: _showCloseConfirmation,
+                  icon: Icon(
+                    Icons.close_rounded,
+                    color: accent,
                   ),
                 ),
               ),
-            );
+            ],
+          ),
+        ],
+        ),
+    );
+  }
+  Widget _buildPaymentOptionsList({
+    required Color onSurface,
+    required String? instructionsText,
+    required String? instructionsTitle,
+  }) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+      children: [
+      Text(
+      'اختر وسيلة الدفع المناسبة لك',
+      style: TextStyle(
+        color: onSurface.withOpacity(.85),
+        fontWeight: FontWeight.w600,
+        fontSize: 16,
+      ),
+    ),
+    const SizedBox(height: 10),
+    if (_eastYemenBank != null) ...[
+    _gatewayCard(
+    config: _eastYemenBank!,
+    selected: _usingEastYemen,
+    pressed: _pressedBankId == _BankTransferScreenState._eastYemenPressedKey,
+    onSurface: onSurface,
+    ),
+          const SizedBox(height: 12),
+    ],
+    _walletPaymentCard(onSurface),
+    const SizedBox(height: 12),
+    ...List.generate(_banks.length, (i) {
+    final b = _banks[i];
+    final selected = _selectedMethod == _BankTransferScreenState._manualBankMethod &&
+    _selectedBankId == b.id;
+
+    final pressed = _pressedBankId == b.id;
+
+    final accountName = (b.accountName ?? '').trim();
+    final accountNumber = (b.accountNumber ?? '').trim();
+    final ibanValue = (b.iban ?? '').trim();
+    final String? displayNumber = () {
+    if (ibanValue.isNotEmpty) {
+    return ibanValue;
+    }
+    if (accountNumber.isNotEmpty) {
+    return accountNumber;
+    }
+    return null;
+    }();
+    final String displayLabel = ibanValue.isNotEmpty ? 'IBAN' : 'رقم الحساب';
+    return Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: InkWell(
+          onHighlightChanged: (h) => setState(() => _pressedBankId = h ? b.id : null),
+          onTap: () => setState(() {
+            _selectedMethod = _BankTransferScreenState._manualBankMethod;
+            _selectedBankId = b.id;
+            _attempted = false;
           }),
+          borderRadius: BorderRadius.circular(14),
+          child: AnimatedScale(
+            scale: pressed ? 0.98 : 1.0,
+            duration: const Duration(milliseconds: 120),
+            curve: Curves.easeOut,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? context.color.secondaryColor.withOpacity(.88)
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: selected
+                      ? context.color.territoryColor
+                      : context.color.borderColor.withOpacity(.65),
+                  width: selected ? 2 : 1,
+                    ),
+              ),
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  _bankLogo(b.logoUrl),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                            b.bankName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: onSurface,
+                              ),
 
-          const SizedBox(height: 12),
+                        ),
+                        if (accountName.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Builder(
+                            builder: (context) {
+                              final raw = accountName.replaceAll(
+                                RegExp(r'\s+'),
+                                '',
+                              );
+                              final isNumeric = raw.isNotEmpty &&
+                                  RegExp(r'^[0-9٠-٩]+$').hasMatch(raw);
+                              final title = isNumeric ? 'رقم الحساب' : 'حوالة باسم';
+                              final highlighted = _highlightedAccountNameBankId == b.id;
+                              final highlightBorderColor = highlighted
+                                  ? context.color.territoryColor
+                                  .withOpacity(Theme.of(context).brightness == Brightness.dark ? .7 : .5)
+                                  : onSurface.withOpacity(.12);
 
-          // تعليمات البنك (notes) أسفل القائمة
-          if (instructionsText != null)
-            _bankNoteCard(
-              title: instructionsTitle ?? 'ملاحظة',
-              note: instructionsText!,
-              onSurface: onSurface,
+                              return Row(
+                                children: [
+                                Text(
+                                title,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: onSurface.withOpacity(.7),
+                                        ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                              child: Material(
+                              type: MaterialType.transparency,
+                              child: Ink(
+                              decoration: BoxDecoration(
+                              color: onSurface.withOpacity(.05),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                              color: highlightBorderColor,
+                                              ),
+                              ),
+                              child: InkWell(
+                              onHighlightChanged: (h) {
+                              if (h &&
+                              _highlightedAccountNameBankId != b.id) {
+                              setState(() =>
+                              _highlightedAccountNameBankId = b.id);
+                              } else if (!h &&
+                              _highlightedAccountNameBankId == b.id) {
+                              setState(() =>
+                              _highlightedAccountNameBankId = null);
+                              }
+                              },
+                              onTap: () => _copyValueToClipboard(
+                              accountName,
+                              label: title,
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                              child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                              ),
+                              child: Text(
+                              accountName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: onSurface,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                              ),
+                                ],
+                              );
+                            },
+                          ),
+              ],
+              if (displayNumber != null) ...[
+            const SizedBox(height: 8),
+        Text(
+            displayLabel,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: onSurface.withOpacity(.7),
+                                ),
+        ),
+      const SizedBox(height: 4),
+      InkWell(
+        onTap: () => _copyValueToClipboard(
+          displayNumber,
+          label: displayLabel,
+                                ),
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          decoration: BoxDecoration(
+            color: onSurface.withOpacity(.05),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: onSurface.withOpacity(.12),
+                                    ),
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 10,
+          ),
+          child: Row(
+            children: [
+            Expanded(
+            child: Text(
+            displayNumber,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: onSurface,
+                                          ),
+                                        ),
             ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.copy_rounded,
+                size: 18,
+                color: onSurface.withOpacity(.6),
+              ),
+            ],
+                                  ),
+                                ),
+      ),
+                            ],
+                      ],
+                        ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    selected ? Icons.radio_button_checked : Icons.radio_button_off,
+                    color: selected
+                        ? context.color.territoryColor
+                        : context.color.borderColor,
+                  ),
+                ],
+                  ),
+                ),
+              ),
 
-          const SizedBox(height: 12),
-
-          if (_selectedMethod == _BankTransferScreenState._manualBankMethod)
-            _instructionCard(
-              'إرفاق الإيصال مطلوب لاستكمال مراجعة التحويل.',
-              onSurface,
             ),
-          if (_usingEastYemen)
-            _instructionCard(
-              'لن تحتاج إلى رفع إيصال عند استخدام بوابة بنك الشرق الإلكترونية.',
-              onSurface,
-            ),
-
-          const SizedBox(height: 16),
-
-          if (_shouldShowSenderField) ...[
-            _inputField(
-              controller: _senderCtrl,
-              hint: 'اسم المرسل',
-              onSurface: onSurface,
-              showError: _attempted && !_senderOk,
-            ),
-            const SizedBox(height: 12),
-          ],
-
-          // ملاحظات (اختياري)
+    );
+    }),
+    const SizedBox(height: 12),
+    if (instructionsText != null)
+    _bankNoteCard(
+    title: instructionsTitle ?? 'ملاحظة',
+    note: instructionsText!,
+    onSurface: onSurface,
+    ),
+    const SizedBox(height: 12),
+    if (_selectedMethod == _BankTransferScreenState._manualBankMethod)
+    _instructionCard(
+    'إرفاق الإيصال مطلوب لاستكمال مراجعة التحويل.',
+    onSurface,
+    ),
+    if (_usingEastYemen)
+    _instructionCard(
+    'لن تحتاج إلى رفع إيصال عند استخدام بوابة بنك الشرق الإلكترونية.',
+    onSurface,
+    ),
+    const SizedBox(height: 16),
+    if (_shouldShowSenderField) ...[
           _inputField(
-            controller: _notesCtrl,
-            hint: 'ملاحظات (اختياري)',
+    controller: _senderCtrl,
+    hint: 'اسم المرسل',
             onSurface: onSurface,
-            maxLines: 3,
+    showError: _attempted && !_senderOk,
+
           ),
           const SizedBox(height: 12),
 
-          // إرفاق الإيصال مع أنميشن + معاينة مصغّرة
-          if (_selectedMethod == _BankTransferScreenState._manualBankMethod)
-            _attachReceiptTile(onSurface),
         ],
-      )),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: _confirmButton(amountStr, curr),
+    _inputField(
+    controller: _notesCtrl,
+    hint: 'ملاحظات (اختياري)',
+    onSurface: onSurface,
+    maxLines: 3,
         ),
-      ),
+        const SizedBox(height: 12),
+        if (_selectedMethod == _BankTransferScreenState._manualBankMethod)
+          _attachReceiptTile(onSurface),
+      ],
     );
   }
 

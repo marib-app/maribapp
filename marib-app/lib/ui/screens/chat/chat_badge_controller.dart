@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'dart:async';
+import 'package:marib/utils/chat/chat_badge_store.dart';
 
 /// Simple controller to keep chat unread badges in sync across the app.
 ///
@@ -12,14 +14,40 @@ class ChatBadgeController {
 
   static int _buyerUnread = 0;
   static int _sellerUnread = 0;
+  static String? _userId;
+
+  /// Loads the cached unread counters for the supplied [userId]. Passing `null`
+  /// resets the controller to zero which is used on logout.
+  static Future<void> init({String? userId}) async {
+    final String? trimmed = userId?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      _userId = null;
+      _buyerUnread = 0;
+      _sellerUnread = 0;
+      _notify();
+      return;
+    }
+
+    _userId = trimmed;
+    final stored = await ChatBadgeStore.load(trimmed);
+    _buyerUnread = stored.buyer.clamp(0, 9999);
+    _sellerUnread = stored.seller.clamp(0, 9999);
+    _notify();
+  }
+
+  /// Helper used by authentication flows when the active user changes.
+  static Future<void> handleUserChanged(String? userId) => init(userId: userId);
+
 
   static void updateBuyerUnread(int count) {
     _buyerUnread = count.clamp(0, 9999);
+    _persist();
     _notify();
   }
 
   static void updateSellerUnread(int count) {
     _sellerUnread = count.clamp(0, 9999);
+    _persist();
     _notify();
   }
 
@@ -29,5 +57,16 @@ class ChatBadgeController {
 
   static void _notify() {
     totalUnread.value = (_buyerUnread + _sellerUnread).clamp(0, 9999);
+  }
+  static void _persist() {
+    final String? userId = _userId;
+    if (userId == null || userId.isEmpty) {
+      return;
+    }
+    unawaited(ChatBadgeStore.save(
+      userId,
+      buyer: _buyerUnread,
+      seller: _sellerUnread,
+    ));
   }
 }

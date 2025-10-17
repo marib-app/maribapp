@@ -32,8 +32,9 @@ class FetchHomeScreenFail extends FetchHomeScreenState {
 }
 
 class FetchHomeScreenCubit extends Cubit<FetchHomeScreenState> {
-  FetchHomeScreenCubit({String? defaultInterfaceType})
-      : _defaultInterfaceType = _cleanInterfaceType(defaultInterfaceType),
+  FetchHomeScreenCubit({String? defaultInterfaceType, HomeRepository? homeRepository})
+      : _homeRepository = homeRepository ?? HomeRepository(),
+        _defaultInterfaceType = _cleanInterfaceType(defaultInterfaceType),
         _currentInterfaceType = _cleanInterfaceType(defaultInterfaceType),
         _currentSlug = null,
         _currentRootIdentifier = null,
@@ -41,7 +42,8 @@ class FetchHomeScreenCubit extends Cubit<FetchHomeScreenState> {
       super(FetchHomeScreenInitial());
 
 
-  final HomeRepository _homeRepository = HomeRepository();
+  final HomeRepository _homeRepository;
+
   final String? _defaultInterfaceType;
   String? _currentInterfaceType;
   String? _currentSlug;

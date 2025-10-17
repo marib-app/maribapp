@@ -123,7 +123,6 @@ class CountriesScreenState extends State<CountriesScreen> {
       bottom: PreferredSize(
           preferredSize: Size.fromHeight(58.rh(context)),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
               Expanded(
                 child: Container(
@@ -484,8 +483,7 @@ class CountriesScreenState extends State<CountriesScreen> {
                       child: Padding(
                         padding: const EdgeInsetsDirectional.only(start: 13),
                         child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                         crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text("useCurrentLocation".translate(context))
                                 .color(context.color.territoryColor)
@@ -649,7 +647,7 @@ class CountriesScreenState extends State<CountriesScreen> {
                         height: 10,
                       ),
                       // Using Flexible instead of Expanded here
-                      Flexible(
+                      Expanded(
                         child: ListView.separated(
                           controller: controller,
                           itemCount: state.countriesModel.length,

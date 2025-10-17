@@ -110,6 +110,7 @@ import 'shein_grabber_page.dart';
 
 
 import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/utils/ecommerce_department.dart';
 
 
 
@@ -286,7 +287,10 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
 
     adTitleController.text = item?.name ?? '';
     adDescriptionController.text = item?.description ?? '';
-    //adPriceController.text = item?.price ?? '';
+    final String? initialPrice = _initialPriceText(item);
+    if (initialPrice != null) {
+      adPriceController.text = initialPrice;
+    }
     adPhoneNumberController.text = item?.contact ?? '';
     adAdditionalDetailsController.text = item?.videoLink ?? '';
     reviewLinkController.text = item?.reviewLink ?? '';
@@ -305,6 +309,30 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
       ..clear()
       ..addAll(_buildInitialGalleryItems(item));
   }
+
+
+  String? _initialPriceText(ItemModel? item) {
+    if (item == null) {
+      return null;
+    }
+
+    final num? rawPrice = item.price ?? item.finalPrice;
+    if (rawPrice == null) {
+      return null;
+    }
+
+    if (rawPrice is int) {
+      return rawPrice.toString();
+    }
+
+    final double parsed = rawPrice.toDouble();
+    if (parsed == parsed.roundToDouble()) {
+      return parsed.toInt().toString();
+    }
+
+    return parsed.toInt().toString();
+  }
+
 
   void _initForCreate() {
     if (_breadcrumbItems.isEmpty) {
@@ -821,7 +849,7 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
                   keyboard: TextInputType.number,
                   action: TextInputAction.next,
                   validator: CustomTextFieldValidator.nullCheck,
-                  formaters: [FilteringTextInputFormatter.digitsOnly],
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 ),
               ),
             ),
@@ -901,7 +929,7 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
               keyboard: TextInputType.phone,
               validator: CustomTextFieldValidator.phoneNumber,
               isMobileRequired: true,
-              formaters: [FilteringTextInputFormatter.digitsOnly],
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               action: TextInputAction.next,
             ),
           ),
@@ -1044,7 +1072,7 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
               hintText: (field.name ?? 'حقل مخصص').firstUpperCase(),
               keyboardType: _keyboardTypeForField(field),
               action: TextInputAction.next,
-              formaters: _inputFormattersForField(field),
+              inputFormatters: _inputFormattersForField(field),
               required: field.required == 1,
               validator: CustomTextFieldValidator.minAndMixLen,
               minLen: field.minLength,
@@ -1058,6 +1086,82 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
       ],
     );
   }
+
+  Widget _buildPurchaseOptionsShortcut(BuildContext context) {
+    final ItemModel? currentItem = item;
+    if (currentItem == null || currentItem.id == null) {
+      return const SizedBox.shrink();
+    }
+    if (!_supportsProductOptionsForItem(currentItem)) {
+      return const SizedBox.shrink();
+    }
+    final theme = Theme.of(context);
+    final color = theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 24),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.secondaryColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.borderColor.withOpacity(0.4)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.territoryColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.tune_rounded,
+                    color: color.territoryColor,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'إدارة خيارات المنتج',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'يمكنك ضبط المخزون أو إنشاء خصومات مخصصة لهذا الإعلان من خلال صفحة إدارة خيارات المنتج.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: color.textDefaultColor.withOpacity(0.75),
+              ),
+            ),
+            const SizedBox(height: 16),
+            UiUtils.buildButton(
+              context,
+              onPressed: () {
+                Navigator.pushNamed(
+                  context,
+                  Routes.productManagementScreen,
+                  arguments: {'model': currentItem},
+                );
+              },
+              buttonTitle: 'فتح إدارة خيارات المنتج',
+              height: 48.rh(context),
+              fontSize: context.font.large,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 
   TextInputType? _keyboardTypeForField(CustomFieldModel field) {
     final type = (field.type ?? '').toLowerCase();
@@ -1377,6 +1481,13 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
     if (state is ManageItemSuccess) {
       Widgets.hideLoder(context);
       _isSubmittingWithoutLocation = false;
+      if (mounted) {
+        setState(() {
+          item = state.model;
+        });
+      } else {
+        item = state.model;
+      }
       final dynamic editKey = getCloudData('edit_from');
       if (editKey is String && editKey.isNotEmpty) {
         myAdsCubitReference[editKey]?.edit(state.model);
@@ -1385,11 +1496,24 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
         if (!mounted) {
           return;
         }
-        Navigator.pushNamed(
-          context,
-          Routes.successItemScreen,
-          arguments: {'model': state.model, 'isEdit': widget.isEdit},
-        );
+        final bool openProductManagement =
+            state.type == ManageItemType.add &&
+                _supportsProductOptionsForItem(state.model);
+
+        if (openProductManagement) {
+
+          Navigator.pushNamed(
+            context,
+            Routes.productManagementScreen,
+            arguments: {'model': state.model},
+          );
+        } else {
+          Navigator.pushNamed(
+            context,
+            Routes.successItemScreen,
+            arguments: {'model': state.model, 'isEdit': widget.isEdit},
+          );
+        }
       });
       return;
     }
@@ -1428,6 +1552,57 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
     }
     return const Iterable<int>.empty();
 
+  }
+
+  bool _supportsProductOptionsForItem(ItemModel model) {
+
+    if (GeoRules.isMapEnabledForItem(model)) {
+      return false;
+    }
+
+    final Iterable<int> categoryIds = _currentCategoryIds();
+    if (_hasMapSectionCategory(categoryIds)) {
+      return false;
+    }
+
+
+    if (isEcommerceItem(model)) {
+      return true;
+    }
+
+    final List<int> ecommerceCategoryIds =
+    _ecommerceEligibleCategoryIds(categoryIds);
+    if (ecommerceCategoryIds.isNotEmpty &&
+        supportsEcommerceByCategories(ecommerceCategoryIds)) {
+      return true;
+    }
+    return false;
+  }
+
+  List<int> _ecommerceEligibleCategoryIds(Iterable<int> categoryIds) {
+    if (categoryIds.isEmpty) {
+      return const <int>[];
+    }
+
+    return categoryIds
+        .where((int id) => !_isMapSectionCategoryId(id))
+        .toList(growable: false);
+  }
+
+  bool _hasMapSectionCategory(Iterable<int> categoryIds) {
+    for (final int id in categoryIds) {
+      if (_isMapSectionCategoryId(id)) {
+        return true;
+      }
+
+
+    }
+    return false;
+  }
+
+  bool _isMapSectionCategoryId(int id) {
+    return id == Constant.publicRootCategoryId ||
+        id == Constant.realEstateRootCategoryId;
   }
 
   Future<void> _onSheinFetchRequested(BuildContext context) async {
@@ -1666,6 +1841,8 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
                     _buildContactSection(context),
                     _buildSheinSection(context),
                     _buildDynamicFields(context),
+                    if (widget.isEdit == true && (item?.id ?? 0) > 0)
+                      _buildPurchaseOptionsShortcut(context),
                     _buildLocationPreview(context),
                   ],
                 ),

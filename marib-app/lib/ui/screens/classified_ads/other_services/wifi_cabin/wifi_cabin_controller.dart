@@ -43,129 +43,68 @@ class WifiCabinController extends ChangeNotifier {
 
   final WifiRepository _repository;
   WifiCabinViewState _viewState = const WifiCabinViewState.loading();
-  LatLng? _currentCenter;
-  bool _locationDenied = false;
-  double _maxKm = 10;
+  String _query = '';
+  bool _hasBootstrapped = false;
+
   Timer? _refreshDebounce;
   bool _isDisposed = false;
 
   WifiCabinViewState get viewState => _viewState;
-  LatLng? get currentCenter => _currentCenter;
-  bool get locationDenied => _locationDenied;
-  double get maxKm => _maxKm;
+  String get query => _query;
+  bool get isBootstrapped => _hasBootstrapped;
 
   Future<void> bootstrap() async {
-    await _resolveLocation();
-    if (_currentCenter == null) {
-      _setState(const WifiCabinViewState.failure(
-        'تعذّر تحديد موقعك الحالي. فعّل خدمات الموقع وحاول من جديد.',
-      ));
-      return;
-    }
-    await refreshNetworks();
+    if (_hasBootstrapped) return;
+    _hasBootstrapped = true;
+    await refreshNetworks(force: true);
   }
 
-  Future<void> refreshNetworks() async {
-    if (_isDisposed) return;
-    final center = _currentCenter;
-    if (center == null) {
-      _setState(const WifiCabinViewState.failure(
-        'تعذّر تحديد موقعك الحالي. فعّل خدمات الموقع وحاول من جديد.',
-      ));
-      return;
-    }
+  Future<void> refreshNetworks({bool force = false}) async {
 
-    _setState(WifiCabinViewState.loading(previous: _viewState.networks));
+    if (_isDisposed) return;
+    final List<WifiNetwork> previous =
+    force ? const <WifiNetwork>[] : _viewState.networks;
+    _setState(WifiCabinViewState.loading(previous: previous));
 
     try {
-      final networks = await _repository.fetchNearbyNetworks(
-        latitude: center.latitude,
-        longitude: center.longitude,
-        radiusKm: _maxKm,
+      final networks = await _repository.searchNetworks(
+        query: _query.trim().isEmpty ? null : _query.trim(),
         limit: _defaultLimit,
       );
 
-      final decorated = networks
-          .map((network) {
-        final distance = network.distanceKm ??
-            _haversineKm(center, LatLng(network.latitude, network.longitude));
-        return network.copyWith(distanceKm: distance);
-      })
-          .toList()
-        ..sort(
-              (a, b) => (a.distanceKm ?? double.infinity)
-              .compareTo(b.distanceKm ?? double.infinity),
-        );
+      _setState(WifiCabinViewState.success(networks));
 
-      _setState(WifiCabinViewState.success(decorated));
     } catch (error) {
-      final message = error.toString().isEmpty
+      final String message = error.toString().isEmpty
+
           ? 'حدث خطأ غير متوقع أثناء جلب الشبكات.'
           : error.toString();
       _setState(WifiCabinViewState.failure(message));
     }
   }
 
-  void updateMaxKm(double value) {
-    if (_maxKm == value || _isDisposed) return;
-    _maxKm = value;
+  void updateQuery(String value, {bool immediate = false}) {
+    if (_isDisposed) return;
+    _query = value;
     _safeNotify();
     _refreshDebounce?.cancel();
+    if (immediate) {
+      refreshNetworks();
+      return;
+    }
+
     _refreshDebounce = Timer(_debounceDuration, () {
       if (_isDisposed) return;
       refreshNetworks();
     });
   }
 
-  Future<void> enableLocation() async {
-    if (_isDisposed) return;
-    await _resolveLocation();
-    if (_isDisposed) return;
-    await refreshNetworks();
-  }
-
-  Future<void> _resolveLocation() async {
-    bool denied = false;
-    LatLng? resolved = _currentCenter;
-
-    try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        denied = true;
-        resolved ??= _fallbackLatLng();
-      } else {
-        var permission = await Geolocator.checkPermission();
-        if (permission == LocationPermission.denied) {
-          permission = await Geolocator.requestPermission();
-        }
-        if (permission == LocationPermission.denied ||
-            permission == LocationPermission.deniedForever) {
-          denied = true;
-          resolved ??= _fallbackLatLng();
-        } else {
-          final position = await Geolocator.getCurrentPosition(
-            desiredAccuracy: LocationAccuracy.medium,
-          );
-          resolved = LatLng(position.latitude, position.longitude);
-        }
-      }
-    } catch (_) {
-      denied = true;
-      resolved ??= _fallbackLatLng();
-    }
-
-    _locationDenied = denied;
-    _currentCenter = resolved;
+  void clearQuery() {
+    if (_isDisposed || _query.isEmpty) return;
+    _query = '';
     _safeNotify();
-  }
+    refreshNetworks();
 
-  LatLng? _fallbackLatLng() {
-    final lat = double.tryParse(Constant.defaultLatitude);
-    final lng = double.tryParse(Constant.defaultLongitude);
-    if (lat == null || lng == null) {
-      return null;
-    }
-    return LatLng(lat, lng);
   }
 
   void _setState(WifiCabinViewState state) {
@@ -179,20 +118,7 @@ class WifiCabinController extends ChangeNotifier {
     notifyListeners();
   }
 
-  double _haversineKm(LatLng a, LatLng b) {
-    const r = 6371.0;
-    final dLat = _deg2rad(b.latitude - a.latitude);
-    final dLon = _deg2rad(b.longitude - a.longitude);
-    final la1 = _deg2rad(a.latitude);
-    final la2 = _deg2rad(b.latitude);
 
-    final h = math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(la1) * math.cos(la2) * math.sin(dLon / 2) * math.sin(dLon / 2);
-    final c = 2 * math.asin(math.sqrt(h));
-    return r * c;
-  }
-
-  double _deg2rad(double value) => value * (math.pi / 180.0);
 
   @override
   void dispose() {

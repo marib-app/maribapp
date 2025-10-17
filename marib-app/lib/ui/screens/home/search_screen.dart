@@ -17,15 +17,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive_flutter/adapters.dart';
 
-import 'package:marib/utils/api.dart';
 
-import 'package:marib/data/helper/designs.dart';
 import 'package:marib/data/model/item/item_model.dart';
 
 import 'package:marib/ui/screens/widgets/errors/no_data_found.dart';
 import 'package:marib/ui/screens/widgets/errors/no_internet.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
-import 'package:marib/ui/screens/home_screen/home_screen.dart';
 import 'package:marib/ui/screens/item/cards/horizontal_card.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/ui/screens/widgets/errors/something_went_wrong.dart';
@@ -34,6 +31,14 @@ import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/responsiveSize.dart';
 import 'package:flutter/material.dart';
 import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/ui/widgets/slivers/catalog_scroll_view.dart';
+import 'package:marib/ui/widgets/slivers/catalog_section.dart';
+
+import 'package:flutter/foundation.dart';
+
+
+
+
 
 class SearchScreen extends StatefulWidget {
   final bool autoFocus;
@@ -68,14 +73,16 @@ class SearchScreen extends StatefulWidget {
 
 class SearchScreenState extends State<SearchScreen>
     with TickerProviderStateMixin, AutomaticKeepAliveClientMixin<SearchScreen> {
+  static const double _listItemExtent = 160;
+  static const double sidePadding = Constant.defaultPadding;
+
   @override
   bool get wantKeepAlive => true;
   bool isFocused = false;
   String previousSearchQuery = "";
   static TextEditingController searchController = TextEditingController();
-  final ScrollController controller = ScrollController();
-  final ScrollController popularController = ScrollController();
-  Timer? _searchDelay;
+  late final ScrollController _scrollController;
+  late final _SearchDebounceCoordinator _debounce;
   ItemFilterModel? filter;
 
   //to store selected filter categories
@@ -88,42 +95,503 @@ class SearchScreenState extends State<SearchScreen>
     context.read<FetchPopularItemsCubit>().fetchPopularItems();
     // context.read<ItemCubit>().fetchItem(context, {});
     //context.read<SearchItemCubit>().searchItem("", page: 1);
+
+    _debounce = _SearchDebounceCoordinator(
+      Duration(milliseconds: 500),
+    );
+
     searchController = TextEditingController();
 
     searchController.addListener(searchItemListener);
-    controller.addListener(pageScrollListen);
-    popularController.addListener(pagePopularScrollListen);
+    _scrollController = ScrollController()..addListener(_handleScroll);
   }
 
-  void pageScrollListen() {
-    if (controller.isEndReached()) {
-      if (context.read<SearchItemCubit>().hasMoreData()) {
-        context
-            .read<SearchItemCubit>()
-            .fetchMoreSearchData(searchController.text, Constant.itemFilter);
-      }
+  void _handleScroll() {
+    if (!_scrollController.hasClients) {
+      return;
     }
+
+    final position = _scrollController.position;
+    if (!position.hasPixels || position.maxScrollExtent <= 0) {
+      return;
+    }
+
+    final double triggerOffset = position.maxScrollExtent * 0.75;
+    if (position.pixels < triggerOffset) {
+      return;
+    }
+
+    final searchCubit = context.read<SearchItemCubit>();
+    final searchState = searchCubit.state;
+    if (_shouldShowSearchSections(searchState)) {
+      if (!searchCubit.hasMoreData()) {
+        return;
+      }
+
+      _debounce.run(_DebounceScope.scroll, () {
+        searchCubit.fetchMoreSearchData(searchController.text, filter);
+      });
+      return;
+    }
+
+    final popularCubit = context.read<FetchPopularItemsCubit>();
+    if (!popularCubit.hasMoreData()) {
+      return;
+    }
+
+    if (popularCubit.state is FetchPopularItemsSuccess &&
+        (popularCubit.state as FetchPopularItemsSuccess).isLoadingMore) {
+      return;
+    }
+
+    _debounce.run(_DebounceScope.scroll, () {
+      popularCubit.fetchMyMoreItems();
+    });
   }
 
-  void pagePopularScrollListen() {
-    if (popularController.isEndReached()) {
-      if (context.read<FetchPopularItemsCubit>().hasMoreData()) {
-        context.read<FetchPopularItemsCubit>().fetchMyMoreItems();
-      }
+  bool _shouldShowSearchSections(SearchItemState state) {
+    if (searchController.text.isNotEmpty || filter != null) {
+      return true;
     }
+
+    return state is SearchItemFetchProgress ||
+        state is SearchItemSuccess ||
+        state is SearchItemFailure;
+  }
+
+  List<CatalogSection> _buildSections({
+    required SearchItemState searchState,
+    required FetchPopularItemsState popularState,
+  }) {
+    final sections = <CatalogSection>[
+      _buildHistorySection(),
+    ];
+
+    if (_shouldShowSearchSections(searchState)) {
+      sections.addAll(_buildSearchSections(searchState));
+    } else {
+      sections.addAll(_buildPopularSections(popularState));
+    }
+
+    return sections;
+  }
+
+  CatalogSection _buildHistorySection() {
+    return CatalogSliverSection(
+      key: const ValueKey('search-history'),
+      sliver: ValueListenableBuilder(
+        valueListenable: Hive.box(HiveKeys.historyBox).listenable(),
+        builder: (context, Box box, _) {
+          final List<ItemModel> items = box.values.map((jsonString) {
+            return ItemModel.fromJson(jsonDecode(jsonString));
+          }).toList();
+
+          if (items.isEmpty) {
+            return const SliverToBoxAdapter(child: SizedBox.shrink());
+          }
+
+          final children = <Widget>[
+            _buildHistoryHeader(items.length),
+            const SizedBox(height: 10),
+          ];
+
+          for (var i = 0; i < items.length; i++) {
+            children.add(_buildHistoryRow(items[i]));
+            if (i != items.length - 1) {
+              children.add(_buildHistoryDivider());
+            }
+          }
+
+          children.add(_buildHistoryDivider());
+
+          return SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate(children),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildHistoryHeader(int itemCount) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text("recentSearches".translate(context))
+            .color(context.color.textDefaultColor.withOpacity(0.5)),
+        InkWell(
+          child: Text("clear".translate(context))
+              .color(context.color.territoryColor),
+          onTap: () {
+            if (itemCount > 0) {
+              clearBoxData();
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHistoryRow(ItemModel item) {
+    return Row(
+      children: [
+        Icon(
+          Icons.refresh,
+          size: 22,
+          color: context.color.textDefaultColor,
+        ),
+        const SizedBox(width: 20),
+        Expanded(
+          child: RichText(
+            text: TextSpan(
+              text: "${item.name!}\tin\t",
+              style: TextStyle(
+                color: context.color.textDefaultColor.withOpacity(0.5),
+                overflow: TextOverflow.ellipsis,
+              ),
+              children: <TextSpan>[
+                TextSpan(
+                  text: item.category?.name ?? '',
+                  style: TextStyle(
+                    color: context.color.textDefaultColor,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHistoryDivider() {
+    return Divider(
+      color: context.color.borderColor.darken(30),
+      thickness: 1.2,
+    );
+  }
+
+  List<CatalogSection> _buildSearchSections(SearchItemState state) {
+    if (state is SearchItemFetchProgress || state is SearchItemInitial) {
+      return [_buildShimmerSection(const ValueKey('search-loading'))];
+    }
+
+    if (state is SearchItemFailure) {
+      return [_buildSearchErrorSection(state)];
+    }
+
+    if (state is SearchItemSuccess) {
+      if (state.searchedItems.isEmpty) {
+        return [
+          _buildSearchHeaderSection(),
+          _buildEmptyResultsSection(),
+        ];
+      }
+
+      final sections = <CatalogSection>[
+        _buildSearchHeaderSection(),
+        CatalogListSection(
+          key: const ValueKey('search-results'),
+          padding: EdgeInsets.symmetric(
+            horizontal: sidePadding,
+            vertical: 8,
+          ),
+          itemCount: state.searchedItems.length,
+          itemExtent: _listItemExtent,
+          addRepaintBoundaries: true,
+          itemBuilder: (context, index) {
+            final item = state.searchedItems[index];
+            return Padding(
+              padding: EdgeInsetsDirectional.only(
+                top: index == 0 ? 4 : 0,
+                bottom: index == state.searchedItems.length - 1 ? 0 : 8,
+              ),
+              child: InkWell(
+                onTap: () {
+                  insertNewItem(item);
+                  Navigator.pushNamed(
+                    context,
+                    Routes.adDetailsScreen,
+                    arguments: {
+                      'model': item,
+                    },
+                  );
+                },
+                child: ItemHorizontalCard(
+                  key: ValueKey(item.id),
+                  item: item,
+                  showLikeButton: true,
+                  additionalImageWidth: 8,
+                ),
+              ),
+            );
+          },
+        ),
+      ];
+
+      if (state.isLoadingMore) {
+        sections.add(_buildLoadingMoreSection());
+      }
+
+      return sections;
+    }
+    return const [];
+
+  }
+
+  List<CatalogSection> _buildPopularSections(
+      FetchPopularItemsState popularState) {
+    if (popularState is FetchPopularItemsInProgress ||
+        popularState is FetchPopularItemsInitial) {
+      return [_buildShimmerSection(const ValueKey('popular-loading'))];
+    }
+
+    if (popularState is FetchPopularItemsFailed) {
+      return [_buildPopularErrorSection(popularState)];
+    }
+
+    if (popularState is FetchPopularItemsSuccess) {
+      if (popularState.items.isEmpty) {
+        return const [
+          CatalogBoxSection(child: SizedBox.shrink()),
+        ];
+      }
+
+      final sections = <CatalogSection>[
+        _buildPopularHeaderSection(),
+        CatalogListSection(
+          key: const ValueKey('popular-results'),
+          padding: EdgeInsets.symmetric(
+            horizontal: sidePadding,
+            vertical: 8,
+          ),
+          itemCount: popularState.items.length,
+          itemExtent: _listItemExtent,
+          addAutomaticKeepAlives: true,
+          addRepaintBoundaries: true,
+          itemBuilder: (context, index) {
+            final item = popularState.items[index];
+            return Padding(
+              padding: EdgeInsetsDirectional.only(
+                top: index == 0 ? 4 : 0,
+                bottom: index == popularState.items.length - 1 ? 0 : 8,
+              ),
+              child: InkWell(
+                onTap: () {
+                  Navigator.pushNamed(
+                    context,
+                    Routes.adDetailsScreen,
+                    arguments: {
+                      'model': item,
+                    },
+                  );
+                },
+                child: ItemHorizontalCard(
+                  key: ValueKey(item.id),
+                  item: item,
+                  showLikeButton: true,
+                  additionalImageWidth: 8,
+                ),
+              ),
+            );
+          },
+        ),
+      ];
+
+      if (popularState.isLoadingMore) {
+        sections.add(_buildLoadingMoreSection());
+      }
+
+      return sections;
+    }
+
+    return const [];
+  }
+
+  CatalogSection _buildSearchHeaderSection() {
+    return CatalogBoxSection(
+      key: const ValueKey('search-header'),
+      padding: EdgeInsets.symmetric(
+        horizontal: sidePadding,
+        vertical: 8,
+      ),
+      child: Padding(
+        padding: const EdgeInsetsDirectional.only(start: 5.0),
+        child: Text("searchedItems".translate(context))
+            .color(context.color.textDefaultColor.withOpacity(0.5))
+            .size(context.font.normal),
+      ),
+    );
+  }
+
+  CatalogSection _buildPopularHeaderSection() {
+    return CatalogBoxSection(
+      key: const ValueKey('popular-header'),
+      padding: EdgeInsets.symmetric(
+        horizontal: sidePadding,
+        vertical: 8,
+      ),
+      child: Padding(
+        padding: const EdgeInsetsDirectional.only(start: 5.0),
+        child: Text("popularAds".translate(context))
+            .color(context.color.textDefaultColor.withOpacity(0.5))
+            .size(context.font.normal),
+      ),
+    );
+  }
+
+  CatalogSection _buildShimmerSection(Key key) {
+    return CatalogListSection(
+      key: key,
+      padding: EdgeInsets.symmetric(
+        horizontal: sidePadding,
+        vertical: 8,
+      ),
+      itemCount: 5,
+      itemExtent: _listItemExtent,
+      addAutomaticKeepAlives: false,
+      addRepaintBoundaries: false,
+      itemBuilder: (context, index) {
+        return _buildShimmerTile(context);
+      },
+    );
+  }
+
+  Widget _buildShimmerTile(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double maxWidth = constraints.maxWidth;
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15),
+            color: context.color.secondaryColor,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: const CustomShimmer(height: 90, width: 90),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 10),
+                    CustomShimmer(height: 10, width: maxWidth - 50),
+                    const SizedBox(height: 10),
+                    const CustomShimmer(height: 10),
+                    const SizedBox(height: 10),
+                    CustomShimmer(height: 10, width: maxWidth / 1.2),
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: AlignmentDirectional.bottomStart,
+                      child: CustomShimmer(width: maxWidth / 4, height: 10),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  CatalogSection _buildLoadingMoreSection() {
+    return CatalogBoxSection(
+      key: const ValueKey('loading-more'),
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Center(
+        child: UiUtils.progress(
+          normalProgressColor: context.color.territoryColor,
+        ),
+      ),
+    );
+  }
+
+  CatalogSection _buildEmptyResultsSection() {
+    return CatalogBoxSection(
+      key: const ValueKey('search-empty'),
+      padding: EdgeInsets.symmetric(horizontal: sidePadding, vertical: 8),
+      child: NoDataFound(
+        onTap: () {
+          context.read<SearchItemCubit>().searchItem(
+            searchController.text,
+            page: 1,
+            filter: filter,
+          );
+        },
+      ),
+    );
+  }
+
+  CatalogSection _buildSearchErrorSection(SearchItemFailure state) {
+    final message = state.errorMessage.toLowerCase();
+    final bool isOffline = message.contains('internet');
+
+    if (isOffline) {
+      return CatalogBoxSection(
+        key: const ValueKey('search-offline'),
+        padding:
+        EdgeInsets.symmetric(horizontal: sidePadding, vertical: 16),
+        child: NoInternet(
+          onRetry: () {
+            context.read<SearchItemCubit>().searchItem(
+              searchController.text,
+              page: 1,
+              filter: filter,
+            );
+          },
+        ),
+      );
+    }
+
+    return CatalogBoxSection(
+      key: const ValueKey('search-error'),
+      padding: EdgeInsets.symmetric(horizontal: sidePadding, vertical: 16),
+      child: const SomethingWentWrong(),
+    );
+  }
+
+  CatalogSection _buildPopularErrorSection(FetchPopularItemsFailed state) {
+    final message = state.error.toString().toLowerCase();
+    final bool isOffline = message.contains('internet');
+
+    if (isOffline) {
+      return CatalogBoxSection(
+        key: const ValueKey('popular-offline'),
+        padding:
+         EdgeInsets.symmetric(horizontal: sidePadding, vertical: 16),
+        child: NoInternet(
+          onRetry: () {
+            context.read<FetchPopularItemsCubit>().fetchPopularItems();
+          },
+        ),
+      );
+    }
+    return CatalogBoxSection(
+      key: const ValueKey('popular-error'),
+      padding:  EdgeInsets.symmetric(horizontal: sidePadding, vertical: 16),
+      child: const SomethingWentWrong(),
+    );
   }
 
 //this will listen and manage search
   void searchItemListener() {
-    _searchDelay?.cancel();
-    searchCallAfterDelay();
+    _debounce.run(_DebounceScope.search, itemSearch);
+
     setState(() {});
   }
 
-//This will create delay so we don't face rapid api call
-  void searchCallAfterDelay() {
-    _searchDelay = Timer(const Duration(milliseconds: 500), itemSearch);
-  }
+
 
   ///This will call api after some delay
   void itemSearch() {
@@ -292,83 +760,6 @@ class SearchScreenState extends State<SearchScreen>
     setState(() {});
   }
 
-  ListView shimmerEffect() {
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(
-        vertical: 10 + defaultPadding,
-        horizontal: defaultPadding,
-      ),
-      itemCount: 5,
-      separatorBuilder: (context, index) {
-        return const SizedBox(
-          height: 12,
-        );
-      },
-      itemBuilder: (context, index) {
-        return Container(
-          width: double.maxFinite,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              ClipRRect(
-                clipBehavior: Clip.antiAliasWithSaveLayer,
-                borderRadius: BorderRadius.all(Radius.circular(15)),
-                child: CustomShimmer(height: 90, width: 90),
-              ),
-              const SizedBox(
-                width: 10,
-              ),
-              Expanded(
-                child: LayoutBuilder(builder: (context, c) {
-                  return Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      const SizedBox(
-                        height: 10,
-                      ),
-                      CustomShimmer(
-                        height: 10,
-                        width: c.maxWidth - 50,
-                      ),
-                      const SizedBox(
-                        height: 10,
-                      ),
-                      const CustomShimmer(
-                        height: 10,
-                      ),
-                      const SizedBox(
-                        height: 10,
-                      ),
-                      CustomShimmer(
-                        height: 10,
-                        width: c.maxWidth / 1.2,
-                      ),
-                      const SizedBox(
-                        height: 10,
-                      ),
-                      Align(
-                        alignment: AlignmentDirectional.bottomStart,
-                        child: CustomShimmer(
-                          width: c.maxWidth / 4,
-                        ),
-                      ),
-                    ],
-                  );
-                }),
-              )
-            ],
-          ),
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -400,31 +791,22 @@ class SearchScreenState extends State<SearchScreen>
   }*/
 
   Widget bodyData() {
-    return BlocConsumer<SearchItemCubit, SearchItemState>(
-      listener: (context, searchState) {
-        // Add any specific listener logic for SearchItemCubit state changes if needed
-      },
+    return BlocBuilder<SearchItemCubit, SearchItemState>(
+
       builder: (context, searchState) {
-        bool hasSearchResults = searchState is SearchItemSuccess &&
-            searchState.searchedItems.isNotEmpty;
+        return BlocBuilder<FetchPopularItemsCubit, FetchPopularItemsState>(
+          builder: (context, popularState) {
+            final sections = _buildSections(
+              searchState: searchState,
+              popularState: popularState,
+            );
 
-        ScrollController activeController =
-            hasSearchResults ? controller : popularController;
-
-        return SingleChildScrollView(
-          controller: activeController,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              buildHistoryItemList(),
-              if (searchController.text.isNotEmpty ||
-                  hasSearchResults ||
-                  filter != null)
-                searchItemsWidget()
-              else
-                popularItemsWidget(),
-            ],
-          ),
+            return CatalogScrollView(
+              controller: _scrollController,
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              sections: sections,
+            );
+          },
         );
       },
     );
@@ -436,105 +818,7 @@ class SearchScreenState extends State<SearchScreen>
     setState(() {});
   }
 
-  Widget buildHistoryItemList() {
-    return ValueListenableBuilder(
-      valueListenable: Hive.box(HiveKeys.historyBox).listenable(),
-      builder: (context, Box box, _) {
-        List<ItemModel> items = box.values.map((jsonString) {
-          return ItemModel.fromJson(jsonDecode(jsonString));
-        }).toList();
 
-        if (items.isNotEmpty) {
-          return Padding(
-            padding: EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text("recentSearches".translate(context))
-                        .color(context.color.textDefaultColor.withOpacity(0.5)),
-                    InkWell(
-                      child: Text("clear".translate(context))
-                          .color(context.color.territoryColor),
-                      onTap: () {
-                        clearBoxData();
-                      },
-                    ),
-                  ],
-                ),
-                ListView.separated(
-                  shrinkWrap: true,
-                  separatorBuilder: (BuildContext context, int index) {
-                    return Divider(
-                      color: context.color.borderColor.darken(30),
-                      thickness: 1.2,
-                    );
-                  },
-                  padding: EdgeInsets.only(top: 10),
-                  physics: NeverScrollableScrollPhysics(),
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    return Row(
-                      children: [
-                        Icon(
-                          Icons.refresh,
-                          size: 22,
-                          color: context.color.textDefaultColor,
-                        ),
-                        SizedBox(
-                          width: 20,
-                        ),
-                        Expanded(
-                          child: RichText(
-                            text: TextSpan(
-                              text: "${items[index].name!}\tin\t",
-                              style: TextStyle(
-                                  color: context.color.textDefaultColor
-                                      .withOpacity(0.5),
-                                  overflow: TextOverflow.ellipsis),
-                              children: <TextSpan>[
-                                TextSpan(
-                                  text: items[index].category!.name,
-                                  style: TextStyle(
-                                    color: context.color.textDefaultColor,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-                Divider(
-                  color: context.color.borderColor.darken(30),
-                  thickness: 1.2,
-                )
-              ],
-            ),
-          );
-        } else {
-          return SizedBox.shrink();
-        }
-      },
-    );
-  }
-
-/*  void insertNewItem(ItemModel model) {
-    var box = Hive.box(HiveKeys.historyBox);
-
-    if (box.length >= 5) {
-      box.deleteAt(0);
-    }
-
-    box.add(jsonEncode(model.toJson()));
-
-    setState(() {});
-  }*/
 
   void insertNewItem(ItemModel model) {
     var box = Hive.box(HiveKeys.historyBox);
@@ -562,203 +846,6 @@ class SearchScreenState extends State<SearchScreen>
     setState(() {});
   }
 
-  Widget searchItemsWidget() {
-    return BlocBuilder<SearchItemCubit, SearchItemState>(
-      builder: (context, state) {
-        if (state is SearchItemFetchProgress) {
-          return shimmerEffect();
-        }
-
-        if (state is SearchItemFailure) {
-          if (state.errorMessage is ApiException) {
-            if (state.errorMessage == "no-internet") {
-              return SingleChildScrollView(
-                child: NoInternet(
-                  onRetry: () {
-                    context.read<SearchItemCubit>().searchItem(
-                        searchController.text.toString(),
-                        page: 1,
-                        filter: filter);
-                  },
-                ),
-              );
-            }
-          }
-
-          return Center(child: const SomethingWentWrong());
-        }
-
-        if (state is SearchItemSuccess) {
-          if (state.searchedItems.isEmpty) {
-            return SingleChildScrollView(
-              child: NoDataFound(
-                onTap: () {
-                  context.read<SearchItemCubit>().searchItem(
-                      searchController.text.toString(),
-                      page: 1,
-                      filter: filter);
-                },
-              ),
-            );
-          }
-
-          return Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: sidePadding,
-              vertical: 8,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: EdgeInsetsDirectional.only(start: 5.0),
-                  child: Text("searchedItems".translate(context))
-                      .color(context.color.textDefaultColor.withOpacity(0.5))
-                      .size(context.font.normal),
-                ),
-                SizedBox(
-                  height: 3,
-                ),
-                ListView.separated(
-                  shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(),
-                  separatorBuilder: (context, index) {
-                    return Container(
-                      height: 8,
-                    );
-                  },
-                  itemBuilder: (context, index) {
-                    ItemModel item = state.searchedItems[index];
-
-                    return InkWell(
-                      onTap: () {
-                        insertNewItem(item);
-                        Navigator.pushNamed(
-                          context,
-                          Routes.adDetailsScreen,
-                          arguments: {
-                            'model': item,
-                          },
-                        );
-                      },
-                      child: ItemHorizontalCard(
-                        item: item,
-                        showLikeButton: true,
-                        additionalImageWidth: 8,
-                      ),
-                    );
-                  },
-                  itemCount: state.searchedItems.length,
-                ),
-                if (state.isLoadingMore)
-                  Center(
-                    child: UiUtils.progress(
-                      normalProgressColor: context.color.territoryColor,
-                    ),
-                  )
-              ],
-            ),
-          );
-        }
-        return Container();
-      },
-    );
-  }
-
-  Widget popularItemsWidget() {
-    return BlocBuilder<FetchPopularItemsCubit, FetchPopularItemsState>(
-      builder: (context, state) {
-        if (state is FetchPopularItemsInProgress) {
-          return shimmerEffect();
-        }
-
-        if (state is FetchPopularItemsFailed) {
-          if (state.error is ApiException) {
-            if (state.error.error == "no-internet") {
-              return SingleChildScrollView(
-                child: NoInternet(
-                  onRetry: () {
-                    context.read<FetchPopularItemsCubit>().fetchPopularItems();
-                  },
-                ),
-              );
-            }
-          }
-
-          return const SingleChildScrollView(child: SomethingWentWrong());
-        }
-
-        if (state is FetchPopularItemsSuccess) {
-          if (state.items.isEmpty) {
-            return Container();
-          }
-
-          return Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: sidePadding,
-              vertical: 8,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: EdgeInsetsDirectional.only(start: 5.0),
-                  child: Text("popularAds".translate(context))
-                      .color(context.color.textDefaultColor.withOpacity(0.5))
-                      .size(context.font.normal),
-                ),
-                SizedBox(
-                  height: 3,
-                ),
-                ListView.separated(
-                  shrinkWrap: true,
-                  /*  padding: const EdgeInsets.symmetric(
-                    horizontal: sidePadding,
-                    vertical: 8,
-                  ),*/
-
-                  physics: NeverScrollableScrollPhysics(),
-                  separatorBuilder: (context, index) {
-                    return Container(
-                      height: 8,
-                    );
-                  },
-                  itemBuilder: (context, index) {
-                    ItemModel item = state.items[index];
-
-                    return InkWell(
-                      onTap: () {
-                        Navigator.pushNamed(
-                          context,
-                          Routes.adDetailsScreen,
-                          arguments: {
-                            'model': item,
-                          },
-                        );
-                      },
-                      child: ItemHorizontalCard(
-                        item: item,
-                        showLikeButton: true,
-                        additionalImageWidth: 8,
-                      ),
-                    );
-                  },
-                  itemCount: state.items.length,
-                ),
-                if (state.isLoadingMore)
-                  Center(
-                    child: UiUtils.progress(
-                      normalProgressColor: context.color.territoryColor,
-                    ),
-                  )
-              ],
-            ),
-          );
-        }
-        return Container();
-      },
-    );
-  }
 
   Widget setSearchIcon() {
     return Padding(
@@ -785,7 +872,46 @@ class SearchScreenState extends State<SearchScreen>
 
   @override
   void dispose() {
+    searchController.removeListener(searchItemListener);
     searchController.dispose();
+    _scrollController.removeListener(_handleScroll);
+    _scrollController.dispose();
+    _debounce.dispose();
     super.dispose();
   }
+
+
+  @visibleForTesting
+  ScrollController get scrollController => _scrollController;
 }
+
+enum _DebounceScope { search, scroll }
+
+@visibleForTesting
+typedef DebounceScope = _DebounceScope;
+
+
+class _SearchDebounceCoordinator {
+  _SearchDebounceCoordinator(Duration duration)
+      : duration = duration,
+        _timers = <_DebounceScope, Timer>{};
+
+
+  final Duration duration;
+  final Map<_DebounceScope, Timer> _timers;
+
+
+  void run(_DebounceScope scope, VoidCallback action) {
+    _timers[scope]?.cancel();
+    _timers[scope] = Timer(duration, action);
+  }
+
+  void dispose() {
+    for (final timer in _timers.values) {
+      timer.cancel();
+    }
+    _timers.clear();
+  }
+}
+@visibleForTesting
+typedef SearchDebounceCoordinator = _SearchDebounceCoordinator;

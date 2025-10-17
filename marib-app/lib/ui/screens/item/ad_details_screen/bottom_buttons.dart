@@ -9,6 +9,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // ل Clipboard
+import 'package:marib/utils/ecommerce_department.dart';
 
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/cart/cart_cubit.dart';
@@ -53,6 +54,19 @@ import 'package:marib/data/cubits/item/change_my_items_status_cubit.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/utils/notification/notification_service.dart';
 import 'cart_field_helpers.dart';
+
+typedef CartItemBuilder = Cart Function({
+List<Map<String, dynamic>>? selectedCustomFields,
+});
+
+class CartBuildException implements Exception {
+  CartBuildException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
 
 
 class BottomButtonsShimmer extends StatelessWidget {
@@ -201,7 +215,7 @@ Widget bottomButtonWidget({
 
   // 👇 جديد لاستخدامه كبديل زر "إبلاغ"
   VoidCallback? onMakeOffer,
-
+  CartItemBuilder? cartBuilder,
   // ✅ هوكات اختيارية لنداءات API
   Future<bool> Function()? onPausePressed,
   Future<bool> Function()? onResumePressed,
@@ -471,6 +485,8 @@ Widget bottomButtonWidget({
     moreDetailDynamicFields: moreDetailDynamicFields,
     onUpdateFields: onUpdateFields,
     onMakeOffer: onMakeOffer, // 👈 هنا الربط
+    cartBuilder: cartBuilder,
+
   );
 }
 
@@ -493,21 +509,94 @@ enum AdActionMode { ecommerce, classifieds }
 // - kClassifiedIds: أقسام الإعلانات (عقارات، إعلانات عامة...)
 
 
-/// تُحدّد إن كان الإعلان من نمط المتجر/السلة بالاعتماد على categoryId فقط.
-/// الافتراضي: متجر (ecommerce) لتجنب تعطيل الأزرار إن كانت المعطيات ناقصة.
-bool _isEcommerceByCategory(ItemModel m) {
-  final int? id = m.categoryId;
-  if (id == null) return true;          // افتراضي متجر
-  if (kEcommerceIds.contains(id))  return true;
-  if (kClassifiedIds.contains(id)) return false;
-  return true;                           // افتراضي متجر
-}
 
 
 
 // ===== ضبط القوائم حسب أقسامك =====
-const Set<int> kEcommerceIds  = {3, 4, 5}; // المتجر الإلكتروني / شي إن / الكمبيوتر
 const Set<int> kClassifiedIds = {1, 2, 6}; // العقارات / السياحة / إعلانات الجمهور
+
+const Set<String> _kRealEstateKeywords = <String>{
+  'realestate',
+  'real_estate',
+  'real-estate',
+  'estate',
+  'property',
+  'properties',
+  'aqar',
+  'aqarat',
+  'aqarats',
+  'عقار',
+  'عقارات',
+  'العقارات',
+  'الاراضي',
+  'اراضي',
+  'ارض',
+  'ايجار',
+  'الايجار',
+};
+
+const Set<String> _kGeneralAudienceKeywords = <String>{
+  'publicads',
+  'publicad',
+  'public',
+  'audience',
+  'generalads',
+  'generalad',
+  'general',
+  'announcement',
+  'announcements',
+  'اعلان',
+  'اعلانات',
+  'اعلانالجمهور',
+  'اعلاناتالجمهور',
+  'الجمهور',
+  'قسمالجمهور',
+  'قسمالاعلانات',
+  'اعلاناتعامه',
+  'اعلانعام',
+  'الاعلانات',
+  'القسمالعام',
+};
+
+bool _containsKeyword(String? source, Set<String> keywords) {
+  if (source == null) {
+    return false;
+  }
+
+  final String condensed = source
+      .toLowerCase()
+      .replaceAll(RegExp(r'[\s_\-]+'), '')
+      .trim();
+
+  if (condensed.isEmpty) {
+    return false;
+  }
+
+  for (final String keyword in keywords) {
+    if (condensed.contains(keyword)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool _isClassifiedByText(ItemModel model) {
+  final Iterable<String?> candidates = <String?>[
+    model.category?.name,
+    model.category?.description,
+    model.departmentSlug,
+    model.type,
+    model.itemType,
+  ];
+
+  for (final String? candidate in candidates) {
+    if (_containsKeyword(candidate, _kRealEstateKeywords) ||
+        _containsKeyword(candidate, _kGeneralAudienceKeywords)) {
+      return true;
+    }
+  }
+  return false;
+}
 
 // ---- Helpers: نجمع كل IDs المتاحة من الموديل بأمان ----
 int? _toInt(dynamic v) {
@@ -543,13 +632,23 @@ Set<int> _collectCategoryIds(ItemModel m) {
 AdActionMode resolveActionMode(ItemModel m) {
   final ids = _collectCategoryIds(m);
 
-  // لو وجدنا أي ID ضمن مجموعاتنا، نقرر فورًا
-  if (ids.any(kEcommerceIds.contains))  return AdActionMode.ecommerce;
-  if (ids.any(kClassifiedIds.contains)) return AdActionMode.classifieds;
+  if (ids.any(kClassifiedIds.contains) || _isClassifiedByText(m)) {
+    return AdActionMode.classifieds;
+  }
+
+  if (isEcommerceItem(m)) {
+    return AdActionMode.ecommerce;
+  }
 
   // (اختياري) fallback خفيف عبر نوع العنصر (لو مشروعك يستخدمه)
   final kind = (m.itemType ?? m.type ?? '').toLowerCase();
-  if (kind.contains('real') || kind.contains('estate') || kind.contains('rent') || kind.contains('classified')) {
+  if (kind.contains('real') ||
+      kind.contains('estate') ||
+      kind.contains('rent') ||
+      kind.contains('classified') ||
+      kind.contains('اعلان') ||
+      kind.contains('الجمهور')) {
+
     return AdActionMode.classifieds;
   }
   if (kind.contains('store') || kind.contains('product') || kind.contains('ecommerce')) {
@@ -557,7 +656,8 @@ AdActionMode resolveActionMode(ItemModel m) {
   }
 
   // الافتراضي
-  return AdActionMode.ecommerce;
+  return AdActionMode.classifieds;
+
 }
 
 // --------------------------------------------------
@@ -568,6 +668,7 @@ class AdDetailsBottomBar extends StatefulWidget {
   final List<CustomFieldBuilder> moreDetailDynamicFields;
   final void Function(List<CustomFieldBuilder>) onUpdateFields;
   final VoidCallback? onMakeOffer;
+  final CartItemBuilder? cartBuilder;
 
 
 
@@ -577,6 +678,7 @@ class AdDetailsBottomBar extends StatefulWidget {
 
     super.key,
     this.onMakeOffer,
+    this.cartBuilder,
     required this.model,
     required this.moreDetailDynamicFields,
     required this.onUpdateFields,
@@ -596,6 +698,7 @@ class _AdDetailsBottomBarState extends State<AdDetailsBottomBar> {
   void Function(List<CustomFieldBuilder>) get onUpdateFields =>
       widget.onUpdateFields;
   VoidCallback? get onMakeOffer => widget.onMakeOffer;
+  CartItemBuilder? get cartBuilder => widget.cartBuilder;
 
   // --------------------------------------------
   // 📨 فتح الدردشة (يعتمد على منطقك الحالي في المشروع)
@@ -799,6 +902,8 @@ class _AdDetailsBottomBarState extends State<AdDetailsBottomBar> {
 
         final List<Map<String, dynamic>> selectedCustomFields =
         buildSelectedCustomFieldsPayload();
+        final List<Map<String, dynamic>>? selectedCustomFieldsPayload =
+        selectedCustomFields.isEmpty ? null : selectedCustomFields;
 
         if (model.id == null) {
           HelperUtils.showSnackBarMessage(
@@ -811,12 +916,29 @@ class _AdDetailsBottomBarState extends State<AdDetailsBottomBar> {
 
 
 
-        final cartItem = Cart.fromItemModel(
-          model,
-          quantity: 1,
-          selectedCustomFields:
-          selectedCustomFields.isEmpty ? null : selectedCustomFields,
-        );
+        late final Cart cartItem;
+        try {
+          if (cartBuilder != null) {
+            cartItem = cartBuilder!(
+              selectedCustomFields: selectedCustomFieldsPayload,
+            );
+          } else {
+            cartItem = Cart.fromItemModel(
+              model,
+              quantity: 1,
+              selectedCustomFields: selectedCustomFieldsPayload,
+            );
+          }
+        } on CartBuildException catch (error) {
+          HelperUtils.showSnackBarMessage(context, error.message);
+          return;
+        } catch (_) {
+          HelperUtils.showSnackBarMessage(
+            context,
+            'تعذر تجهيز هذا المنتج للسلة. حاول مرة أخرى لاحقاً.',
+          );
+          return;
+        }
 
         final cartCubit = context.read<CartCubit>();
         final existingItems = cartCubit.state.items;

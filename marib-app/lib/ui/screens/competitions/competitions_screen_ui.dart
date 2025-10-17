@@ -16,6 +16,8 @@ import 'package:marib/app/routes.dart';
 import 'package:marib/data/model/challenge_model.dart'; // Challenge
 import 'context_extensions.dart'; // context.isDarkMode / context.color
 import 'competitions_screen.dart'; // CompetitionState/Logic/Actions
+import 'package:marib/data/cubits/competition_cubit.dart';
+import 'competition_support.dart'; // CompetitionLogic / CompetitionActions
 
 /// واجهة العرض الرئيسية: تربط الحالة + المنطق + الإجراءات بالكلاسات المرئية.
 class CompetitionScreenUI extends StatelessWidget {
@@ -572,14 +574,15 @@ class PaymentMethodsSection extends StatelessWidget {
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: context.color.forthColor),
               onPressed: () async {
-                await onSavePaymentInfo(
+                await _handleSave(
+                  context,
+
                   paymentMethods: const ['credit_card'],
                   paymentAccountDetails: {
                     'type': 'credit_card',
                     'card_number': 'masked_number', // لا تحفظ بيانات حساسة
                   },
                 );
-                if (context.mounted) Navigator.pop(context);
               },
               child: Text("save".translate(context), style: const TextStyle(color: Colors.white)),
             ),
@@ -610,14 +613,14 @@ class PaymentMethodsSection extends StatelessWidget {
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: context.color.forthColor),
               onPressed: () async {
-                await onSavePaymentInfo(
+                await _handleSave(
+                  context,
                   paymentMethods: const ['wallet'],
                   paymentAccountDetails: {
                     'type': 'wallet',
                     'wallet_number': 'wallet_id',
                   },
                 );
-                if (context.mounted) Navigator.pop(context);
               },
               child: Text("save".translate(context), style: const TextStyle(color: Colors.white)),
             ),
@@ -645,14 +648,14 @@ class PaymentMethodsSection extends StatelessWidget {
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: context.color.forthColor),
               onPressed: () async {
-                await onSavePaymentInfo(
+                await _handleSave(
+                  context,
                   paymentMethods: const ['phone'],
                   paymentAccountDetails: {
                     'type': 'phone',
                     'phone_number': 'phone_id',
                   },
                 );
-                if (context.mounted) Navigator.pop(context);
               },
               child: Text("save".translate(context), style: const TextStyle(color: Colors.white)),
             ),
@@ -661,6 +664,47 @@ class PaymentMethodsSection extends StatelessWidget {
       ),
     );
   }
+
+
+  Future<void> _handleSave(
+      BuildContext context, {
+        required List<String> paymentMethods,
+        required Map<String, dynamic> paymentAccountDetails,
+        String? businessName,
+        String? businessWhatsapp,
+        String? businessLocation,
+        List<String>? businessCategories,
+        String? commercialRegister,
+        String? email,
+      }) async {
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      await onSavePaymentInfo(
+        paymentMethods: paymentMethods,
+        paymentAccountDetails: paymentAccountDetails,
+        businessName: businessName,
+        businessWhatsapp: businessWhatsapp,
+        businessLocation: businessLocation,
+        businessCategories: businessCategories,
+        commercialRegister: commercialRegister,
+        email: email,
+      );
+
+      messenger.showSnackBar(
+        SnackBar(content: Text("paymentInfoSaved".translate(context))),
+      );
+
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+    } catch (_) {
+      messenger.showSnackBar(
+        SnackBar(content: Text("paymentInfoSaveFailed".translate(context))),
+      );
+    }
+  }
+
 }
 
 //

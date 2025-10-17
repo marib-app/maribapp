@@ -4,6 +4,7 @@ import 'package:marib/utils/api.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:marib/data/repositories/system_repository.dart';
 
 abstract class ProfileSettingState {}
 
@@ -78,41 +79,30 @@ class ProfileSettingCubit extends Cubit<ProfileSettingState> {
       BuildContext context, String title) async {
     try {
       String? profileSettingData;
-      Map<String, String> body = {
-        Api.type: title,
-      };
+      final SystemRepository repository = SystemRepository();
 
-      var response = await Api.get(
-        url: Api.getSystemSettingsApi,
-        queryParameters: body,
+
+      final Map<String, dynamic> response = await repository.fetchSystemSettings(
+        parameters: <String, dynamic>{
+          Api.type: title,
+        },
       );
 
       if (!response[Api.error]) {
-        /*if (title == Api.currencySymbol) {
-          // Constant.currencySymbol = getdata['data'].toString();
-        } else*/
+        final Map<String, dynamic> data =
+        SystemRepository.extractSettingsData(response);
+
+
         if (title == Api.maintenanceMode) {
-          Constant.maintenanceMode = response['data'].toString();
+          final dynamic maintenanceValue =
+              data[Api.maintenanceMode] ?? response['data'];
+          if (maintenanceValue != null) {
+            Constant.maintenanceMode = maintenanceValue.toString();
+            profileSettingData = Constant.maintenanceMode;
+          }
         } else {
-          Map data = (response['data']);
-
-          if (title == Api.termsAndConditions) {
-            profileSettingData = data['terms_conditions'];
-            // .where((element) => element['type'] == "terms_conditions")
-            // .first['data'];
-          }
-
-          if (title == Api.privacyPolicy) {
-            profileSettingData = data['privacy_policy'];
-            // .where((element) => element['type'] == "privacy_policy")
-            // .first['data'];
-          }
-
-          if (title == Api.aboutUs) {
-            profileSettingData = data['about_us'];
-            // .where((element) => element['type'] == "about_us")
-            // .first['data'];
-          }
+          final dynamic rawValue = data[title];
+          profileSettingData = rawValue?.toString();
         }
       } else {
         throw CustomException(response[Api.message]);

@@ -24,10 +24,6 @@ import 'package:marib/ui/screens/wallet/wallet_manual_payments_section.dart';
 import 'package:marib/utils/currency_utils.dart';
 import 'package:marib/data/model/wallet/wallet_summary.dart';
 
-
-
-
-
 class WalletScreenUI extends StatefulWidget {
   const WalletScreenUI({super.key});
 
@@ -39,9 +35,9 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
   final PageController _pageController = PageController();
 
   final ScrollController _scrollController = ScrollController();
-  final NumberFormat _numberFormat = NumberFormat.currency(decimalDigits: 2, symbol: '');
+  final NumberFormat _numberFormat =
+      NumberFormat.currency(decimalDigits: 2, symbol: '');
   final DateFormat _dateTimeFormat = DateFormat('dd MMM yyyy, HH:mm');
-
 
   @override
   void initState() {
@@ -83,7 +79,8 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     String? code;
 
     if (summary != null) {
-      display = (display != null && display.isNotEmpty) ? display : summary.currency;
+      display =
+          (display != null && display.isNotEmpty) ? display : summary.currency;
       code = summary.currencyCode ??
           CurrencyUtils.normalizeCurrencyCode(summary.currency);
     } else {
@@ -97,7 +94,6 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     );
 
     return resolved == null || resolved.isEmpty
-
         ? withSign
         : '$withSign $resolved';
   }
@@ -114,6 +110,33 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     );
   }
 
+  String _localizedFilterLabel(
+      BuildContext context, String value, String fallback) {
+    final normalized = value.toLowerCase().trim();
+    switch (normalized) {
+      case 'top-ups':
+      case 'top_up':
+      case 'deposit':
+      case 'deposits':
+        return 'walletFilterDeposits'.translate(context);
+      case 'payments':
+      case 'payment':
+      case 'purchase':
+      case 'purchases':
+        return 'walletFilterPurchases'.translate(context);
+      case 'transfers':
+      case 'transfer':
+        return 'walletFilterTransfers'.translate(context);
+      case 'refunds':
+      case 'refund':
+        return 'walletFilterRefunds'.translate(context);
+    }
+    if (fallback.isNotEmpty) {
+      return fallback;
+    }
+    return value.isNotEmpty ? value : 'walletFilterAll'.translate(context);
+  }
+
   WalletSummary? _activeSummary() {
     final state = context.read<WalletSummaryCubit>().state;
     if (state is WalletSummaryLoadSuccess) {
@@ -124,7 +147,6 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     }
     return null;
   }
-
 
   double? _currentBalance() {
     final state = context.read<WalletSummaryCubit>().state;
@@ -141,7 +163,9 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     if (raw is List) {
       return raw
           .whereType<dynamic>()
-          .map((e) => e is Map<String, dynamic> ? e : Map<String, dynamic>.from(e as Map))
+          .map((e) => e is Map<String, dynamic>
+              ? e
+              : Map<String, dynamic>.from(e as Map))
           .toList();
     }
     if (raw is Map<String, dynamic>) {
@@ -150,19 +174,24 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
       }
       return raw.values
           .whereType<dynamic>()
-          .map((e) => e is Map<String, dynamic> ? e : Map<String, dynamic>.from(e as Map))
+          .map((e) => e is Map<String, dynamic>
+              ? e
+              : Map<String, dynamic>.from(e as Map))
           .toList();
     }
     if (raw is Map) {
       return raw.values
           .whereType<dynamic>()
-          .map((e) => e is Map<String, dynamic> ? e : Map<String, dynamic>.from(e as Map))
+          .map((e) => e is Map<String, dynamic>
+              ? e
+              : Map<String, dynamic>.from(e as Map))
           .toList();
     }
     return const [];
   }
 
-  WalletOperationOptions? _extractTransferOptions(WalletOperationOptions? base) {
+  WalletOperationOptions? _extractTransferOptions(
+      WalletOperationOptions? base) {
     if (base == null) return null;
 
     WalletOperationOptions mergeOptions(WalletOperationOptions source) {
@@ -199,7 +228,8 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
         return mergeOptions(transferOptions);
       }
       if (candidate is Map) {
-        final map = candidate.map((key, value) => MapEntry(key.toString(), value));
+        final map =
+            candidate.map((key, value) => MapEntry(key.toString(), value));
         final transferOptions = WalletOperationOptions.fromMap(map);
         return mergeOptions(transferOptions);
       }
@@ -217,7 +247,8 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
 
     WalletOperationOptions? options;
     final currentState = withdrawalsCubit.state;
-    if (currentState is WalletWithdrawalsSuccess && currentState.options != null) {
+    if (currentState is WalletWithdrawalsSuccess &&
+        currentState.options != null) {
       options = currentState.options;
     } else {
       options = await withdrawalsCubit.loadOptions();
@@ -225,27 +256,26 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
 
     options ??= await withdrawalsCubit.loadOptions(force: true);
 
-
-
     if (!mounted) return;
 
     if (options == null || options.fields.isEmpty) {
-      HelperUtils.showSnackBarMessage(context, 'تعذر تحميل نموذج السحب حالياً.');
+      HelperUtils.showSnackBarMessage(
+          context, 'تعذر تحميل نموذج السحب حالياً.');
       return;
     }
     final WalletOperationOptions sheetOptions = options;
 
     final result = await showModalBottomSheet<WalletWithdrawal>(
-        context: context,
-        isScrollControlled: true,
-        builder: (_) => BlocProvider.value(
-          value: withdrawalsCubit,
-          child: WalletWithdrawalSheet(
-            options: sheetOptions,
-            balance: _currentBalance(),
-            currency: _summaryCurrency(),
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => BlocProvider.value(
+        value: withdrawalsCubit,
+        child: WalletWithdrawalSheet(
+          options: sheetOptions,
+          balance: _currentBalance(),
+          currency: _summaryCurrency(),
         ),
-        ),
+      ),
     );
 
     if (result != null && mounted) {
@@ -262,7 +292,8 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
 
     WalletOperationOptions? baseOptions;
     final currentState = withdrawalsCubit.state;
-    if (currentState is WalletWithdrawalsSuccess && currentState.options != null) {
+    if (currentState is WalletWithdrawalsSuccess &&
+        currentState.options != null) {
       baseOptions = currentState.options;
     } else {
       baseOptions = await withdrawalsCubit.loadOptions();
@@ -274,7 +305,8 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
 
     final transferOptions = _extractTransferOptions(baseOptions);
     if (transferOptions == null || transferOptions.fields.isEmpty) {
-      HelperUtils.showSnackBarMessage(context, 'لا توجد حقول متاحة لعملية التحويل حالياً.');
+      HelperUtils.showSnackBarMessage(
+          context, 'لا توجد حقول متاحة لعملية التحويل حالياً.');
       return;
     }
 
@@ -297,7 +329,6 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
       context.read<WalletTransfersCubit>().refresh();
     }
   }
-
 
   Future<void> _startTopUp({String gateway = 'manual_bank'}) async {
     if (!HiveUtils.isUserAuthenticated()) {
@@ -325,9 +356,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     );
 
     if (!mounted) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => BankTransferScreen(args: args)),
-    );
+    await BankTransferScreen.show(context, args);
   }
 
   Future<double?> _promptForAmount() async {
@@ -352,7 +381,8 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
             ),
             TextButton(
               onPressed: () {
-                final value = double.tryParse(controller.text.replaceAll(',', '.'));
+                final value =
+                    double.tryParse(controller.text.replaceAll(',', '.'));
                 if (value == null || value <= 0) {
                   HelperUtils.showSnackBarMessage(
                     context,
@@ -396,12 +426,12 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
       onRefresh: _onRefresh,
       child: CustomScrollView(
         controller: _scrollController,
-        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+        physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics()),
         slivers: [
           SliverToBoxAdapter(child: _buildSummarySection()),
           SliverToBoxAdapter(child: _buildWithdrawalsSection()),
           SliverToBoxAdapter(child: _buildFiltersSection()),
-
           BlocBuilder<WalletTransactionsCubit, WalletTransactionsState>(
             builder: (context, state) {
               return SliverList(
@@ -429,8 +459,9 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
         if (state is WalletWithdrawalsFailure) {
           return _WithdrawalsErrorCard(
             message: state.error.toString(),
-            onRetry: () =>
-                context.read<WalletWithdrawalsCubit>().loadInitial(includeOptions: true),
+            onRetry: () => context
+                .read<WalletWithdrawalsCubit>()
+                .loadInitial(includeOptions: true),
           );
         }
 
@@ -454,7 +485,6 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
       },
     );
   }
-
 
   Widget _buildActionsPage() {
     return SafeArea(
@@ -487,14 +517,16 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
       builder: (context, state) {
         if (state is WalletSummaryLoading && state.previous != null) {
           return _SummaryCard(
-            balanceText: _formatAmount(state.previous!.summary.balance, state.previous!.summary.currency),
+            balanceText: _formatAmount(state.previous!.summary.balance,
+                state.previous!.summary.currency),
             lastUpdated: state.previous!.summary.lastUpdatedAt,
             isLoading: true,
           );
         }
         if (state is WalletSummaryLoadSuccess) {
           return _SummaryCard(
-            balanceText: _formatAmount(state.summary.balance, state.summary.currency),
+            balanceText:
+                _formatAmount(state.summary.balance, state.summary.currency),
             lastUpdated: state.summary.lastUpdatedAt,
           );
         }
@@ -512,7 +544,9 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
                 Text(state.error.toString()),
                 const SizedBox(height: 12),
                 OutlinedButton(
-                  onPressed: () => context.read<WalletSummaryCubit>().fetchSummary(forceReload: true),
+                  onPressed: () => context
+                      .read<WalletSummaryCubit>()
+                      .fetchSummary(forceReload: true),
                   child: Text('retry'.translate(context)),
                 ),
               ],
@@ -540,23 +574,27 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
         return SizedBox(
           height: 64,
           child: ListView(
-            padding: const EdgeInsetsDirectional.only(start: 16, end: 16, top: 12, bottom: 12),
+            padding: const EdgeInsetsDirectional.only(
+                start: 16, end: 16, top: 12, bottom: 12),
             scrollDirection: Axis.horizontal,
             children: [
               _FilterChip(
                 label: 'walletFilterAll'.translate(context),
-                selected: activeFilter == null,
-                onSelected: (_) => context.read<WalletTransactionsCubit>().clearFilters(),
+                selected: activeFilter == null || activeFilter == 'all',
+                onSelected: (_) =>
+                    context.read<WalletTransactionsCubit>().clearFilters(),
               ),
               const SizedBox(width: 8),
               ...filters.map(
-                    (filter) => Padding(
+                (filter) => Padding(
                   padding: const EdgeInsetsDirectional.only(end: 8),
                   child: _FilterChip(
-                    label: filter.label,
+                    label: _localizedFilterLabel(
+                        context, filter.value, filter.label),
                     selected: activeFilter == filter.value,
-                    onSelected: (_) =>
-                        context.read<WalletTransactionsCubit>().applyFilter(filter.value),
+                    onSelected: (_) => context
+                        .read<WalletTransactionsCubit>()
+                        .applyFilter(filter.value),
                   ),
                 ),
               ),
@@ -612,10 +650,6 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     );
   }
 
-
-
-
-
   List<Widget> _buildTransactionsContent(WalletTransactionsState state) {
     if (state is WalletTransactionsLoading) {
       return [
@@ -641,7 +675,8 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
               Text(state.error.toString()),
               const SizedBox(height: 12),
               OutlinedButton(
-                onPressed: () => context.read<WalletTransactionsCubit>().loadInitial(),
+                onPressed: () =>
+                    context.read<WalletTransactionsCubit>().loadInitial(),
                 child: Text('retry'.translate(context)),
               ),
             ],
@@ -663,7 +698,8 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton(
-                  onPressed: () => context.read<WalletTransactionsCubit>().refresh(),
+                  onPressed: () =>
+                      context.read<WalletTransactionsCubit>().refresh(),
                   child: Text('retry'.translate(context)),
                 ),
               ],
@@ -677,6 +713,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
         tiles.add(_TransactionTile(
           transaction: tx,
           formatAmount: _formatAmount,
+          dateFormat: _dateTimeFormat,
         ));
       }
 
@@ -694,10 +731,6 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     return const [];
   }
 }
-
-
-
-
 
 class _WithdrawalsCard extends StatelessWidget {
   const _WithdrawalsCard({
@@ -746,10 +779,10 @@ class _WithdrawalsCard extends StatelessWidget {
                   onPressed: isRefreshing ? null : onRefresh,
                   child: isRefreshing
                       ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Text('تحديث'),
                 ),
               ],
@@ -785,13 +818,16 @@ class _WithdrawalsCard extends StatelessWidget {
                     Align(
                       alignment: AlignmentDirectional.centerStart,
                       child: TextButton(
-                        onPressed: isLoadingMore || onLoadMore == null ? null : onLoadMore,
+                        onPressed: isLoadingMore || onLoadMore == null
+                            ? null
+                            : onLoadMore,
                         child: isLoadingMore
                             ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
+                                width: 16,
+                                height: 16,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
                             : const Text('تحميل المزيد'),
                       ),
                     ),
@@ -823,11 +859,13 @@ class _WithdrawalTile extends StatelessWidget {
         : '#${withdrawal.id}';
     final amountValue = withdrawal.amount;
     final amountText = amountValue != null
-        ? formatAmount(amountValue > 0 ? -amountValue : amountValue, withdrawal.currency)
+        ? formatAmount(
+            amountValue > 0 ? -amountValue : amountValue, withdrawal.currency)
         : '--';
     final status = withdrawal.status?.capitalize() ?? 'غير معروف';
     final timestamp = withdrawal.updatedAt ?? withdrawal.createdAt;
-    final subtitleText = timestamp != null ? dateFormat.format(timestamp.toLocal()) : null;
+    final subtitleText =
+        timestamp != null ? dateFormat.format(timestamp.toLocal()) : null;
     final statusColor = _statusColor(context, withdrawal.status);
 
     return ListTile(
@@ -856,7 +894,8 @@ class _WithdrawalTile extends StatelessWidget {
         children: [
           Text(
             amountText,
-            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 6),
           Container(
@@ -877,10 +916,14 @@ class _WithdrawalTile extends StatelessWidget {
 
   Color _statusColor(BuildContext context, String? status) {
     final normalized = status?.toLowerCase() ?? '';
-    if (normalized.contains('fail') || normalized.contains('reject') || normalized.contains('cancel')) {
+    if (normalized.contains('fail') ||
+        normalized.contains('reject') ||
+        normalized.contains('cancel')) {
       return Colors.redAccent;
     }
-    if (normalized.contains('complete') || normalized.contains('success') || normalized.contains('paid')) {
+    if (normalized.contains('complete') ||
+        normalized.contains('success') ||
+        normalized.contains('paid')) {
       return Colors.green;
     }
     if (normalized.contains('pending') || normalized.contains('process')) {
@@ -950,9 +993,9 @@ class _WalletPrimaryButton extends StatelessWidget {
     final onBackground = theme.colorScheme.onPrimary;
 
     final textStyle = theme.textTheme.titleMedium?.copyWith(
-      color: onBackground,
-      fontWeight: FontWeight.w700,
-    ) ??
+          color: onBackground,
+          fontWeight: FontWeight.w700,
+        ) ??
         TextStyle(
           color: onBackground,
           fontWeight: FontWeight.w700,
@@ -997,9 +1040,6 @@ class _WalletPrimaryButton extends StatelessWidget {
   }
 }
 
-
-
-
 class _SummaryCard extends StatelessWidget {
   const _SummaryCard({
     this.balanceText,
@@ -1013,49 +1053,147 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final onPrimary = theme.colorScheme.onPrimary;
+    final accent = context.color.territoryColor;
+    final secondaryAccent = context.color.forthColor.withOpacity(0.9);
+    final captionColor = onPrimary.withOpacity(0.75);
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Container(
-        padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: context.color.secondaryColor,
-          border: Border.all(color: context.color.borderColor.withOpacity(0.2)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'walletBalance'.translate(context),
-              style: Theme.of(context).textTheme.titleMedium,
+          gradient: LinearGradient(
+            colors: [accent, secondaryAccent],
+            begin: AlignmentDirectional.centerStart,
+            end: AlignmentDirectional.centerEnd,
+          ),
+          borderRadius: BorderRadius.circular(26),
+          boxShadow: [
+            BoxShadow(
+              color: secondaryAccent.withOpacity(0.28),
+              blurRadius: 32,
+              offset: const Offset(0, 18),
             ),
-            const SizedBox(height: 12),
-            isLoading
-                ? LinearProgressIndicator(
-              minHeight: 10,
-              color: context.color.territoryColor,
-              backgroundColor: context.color.borderColor.withOpacity(.3),
-            )
-                : Text(
-              balanceText ?? '--',
-              style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                fontWeight: FontWeight.bold,
+          ],
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              top: -30,
+              right: -18,
+              child: Container(
+                width: 140,
+                height: 140,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.08),
+                  shape: BoxShape.circle,
+                ),
               ),
             ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                const Icon(Icons.schedule, size: 16),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    lastUpdated == null
-                        ? 'walletLastUpdatedUnknown'.translate(context)
-                        : UiUtils.formatDate(lastUpdated!.toIso8601String()),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
+            Positioned(
+              bottom: -44,
+              left: -12,
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.05),
+                  shape: BoxShape.circle,
                 ),
-              ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.18),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        padding: const EdgeInsets.all(12),
+                        child: Icon(
+                          Icons.account_balance_wallet_outlined,
+                          size: 24,
+                          color: onPrimary,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'walletBalance'.translate(context),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                                color: onPrimary,
+                                fontWeight: FontWeight.w600,
+                              ) ??
+                              TextStyle(
+                                color: onPrimary,
+                                fontSize:
+                                    theme.textTheme.titleMedium?.fontSize ?? 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  if (isLoading)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        minHeight: 10,
+                        backgroundColor: Colors.white.withOpacity(0.2),
+                        valueColor:
+                            const AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  else
+                    Text(
+                      balanceText ?? '--',
+                      style: theme.textTheme.displaySmall?.copyWith(
+                            color: onPrimary,
+                            fontWeight: FontWeight.w800,
+                          ) ??
+                          TextStyle(
+                            color: onPrimary,
+                            fontSize:
+                                theme.textTheme.displaySmall?.fontSize ?? 36,
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Icon(Icons.schedule_rounded,
+                          size: 18, color: captionColor),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          lastUpdated == null
+                              ? 'walletLastUpdatedUnknown'.translate(context)
+                              : UiUtils.formatDate(
+                                  lastUpdated!.toIso8601String()),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                                color: captionColor,
+                                fontWeight: FontWeight.w500,
+                              ) ??
+                              TextStyle(
+                                color: captionColor,
+                                fontSize:
+                                    theme.textTheme.bodySmall?.fontSize ?? 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -1077,13 +1215,24 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final selectedColor = context.color.territoryColor.withOpacity(.16);
+    final borderColor = selected
+        ? context.color.territoryColor
+        : context.color.borderColor.withOpacity(0.6);
     return ChoiceChip(
       label: Text(label),
       selected: selected,
       onSelected: onSelected,
-      selectedColor: context.color.territoryColor.withOpacity(.15),
-      labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-        color: selected ? context.color.territoryColor : null,
+      side: BorderSide(color: borderColor),
+      backgroundColor: context.color.secondaryColor,
+      selectedColor: selectedColor,
+      elevation: 0,
+      labelStyle: theme.textTheme.bodyMedium?.copyWith(
+        color: selected
+            ? context.color.territoryColor
+            : theme.colorScheme.onSurface,
+        fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
       ),
     );
   }
@@ -1093,131 +1242,377 @@ class _TransactionTile extends StatelessWidget {
   const _TransactionTile({
     required this.transaction,
     required this.formatAmount,
+    required this.dateFormat,
   });
 
   final WalletTransaction transaction;
   final String Function(double amount, String? currency) formatAmount;
+  final DateFormat dateFormat;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isCredit = transaction.isCredit;
-    final accent = isCredit ? colorScheme.tertiary : Colors.redAccent;
-    final amountText = formatAmount(transaction.amount, transaction.currency);
+    final theme = Theme.of(context);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        decoration: BoxDecoration(
+    final amountText = formatAmount(transaction.amount, transaction.currency);
+    final accent = _resolveAccentColor(context);
+    final timestamp = transaction.createdAt == null
+        ? 'walletUnknownDate'.translate(context)
+        : dateFormat.format(transaction.createdAt!.toLocal());
+    final subtitle = _resolveSubtitle();
+    final statusLabel = _statusLabel();
+    final referenceValues = _referenceValues();
+
+    return Card(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      color: context.color.secondaryColor,
+      elevation: transaction.highlighted ? 6 : 0,
+      shadowColor: accent.withOpacity(transaction.highlighted ? 0.25 : 0.08),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(
           color: transaction.highlighted
-              ? colorScheme.secondary.withOpacity(.2)
-              : context.color.secondaryColor,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: transaction.highlighted
-                ? colorScheme.tertiary
-                : context.color.borderColor,
-          ),
-          boxShadow: transaction.highlighted
-              ? [
-            BoxShadow(
-              color: colorScheme.tertiary.withOpacity(.2),
-              offset: const Offset(0, 6),
-              blurRadius: 18,
-            ),
-          ]
-              : null,
+              ? accent
+              : context.color.borderColor.withOpacity(0.35),
+          width: transaction.highlighted ? 1.4 : 1,
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: accent,
-                      shape: BoxShape.circle,
-                    ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: accent.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      transaction.classification ?? 'walletUnknownClassification'.translate(context),
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
+                  child: Icon(
+                    _resolveIcon(),
+                    size: 22,
+                    color: accent,
                   ),
-                  Text(
-                    amountText,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: isCredit ? colorScheme.tertiary : Colors.red,
-                      fontWeight: FontWeight.w700,
-                    ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _classificationLabel(context),
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                ],
-              ),
-              if (transaction.description != null && transaction.description!.isNotEmpty) ...[
-                const SizedBox(height: 8),
+                ),
+                const SizedBox(width: 12),
                 Text(
-                  transaction.description!,
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  amountText,
+                  textAlign: TextAlign.end,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                        color: accent,
+                        fontWeight: FontWeight.w800,
+                      ) ??
+                      TextStyle(
+                        color: accent,
+                        fontSize: theme.textTheme.titleMedium?.fontSize ?? 18,
+                        fontWeight: FontWeight.w800,
+                      ),
                 ),
               ],
+            ),
+            const SizedBox(height: 12),
+            _TransactionInfoRow(
+              icon: Icons.schedule_rounded,
+              label: timestamp,
+            ),
+            if (statusLabel != null) ...[
+              const SizedBox(height: 8),
+              _TransactionInfoRow(
+                icon: Icons.verified_outlined,
+                label: statusLabel,
+                labelStyle: theme.textTheme.bodySmall?.copyWith(
+                  color: accent,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+            if (referenceValues.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'مراجع العملية',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: referenceValues
+                    .map((value) => _buildTag(context, value, accent))
+                    .toList(),
+              ),
+            ],
+            if (transaction.beforeBalance != null ||
+                transaction.afterBalance != null) ...[
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Icon(Icons.timelapse, size: 16, color: colorScheme.outline),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      transaction.createdAt == null
-                          ? 'walletUnknownDate'.translate(context)
-                          : UiUtils.formatDate(transaction.createdAt!.toIso8601String()),
-                      style: Theme.of(context).textTheme.bodySmall,
+                  if (transaction.beforeBalance != null)
+                    Expanded(
+                      child: _BalanceSummary(
+                        label: 'الرصيد قبل العملية',
+                        value: _formatBalanceValue(transaction.beforeBalance!),
+                      ),
                     ),
-                  ),
+                  if (transaction.beforeBalance != null &&
+                      transaction.afterBalance != null)
+                    const SizedBox(width: 12),
+                  if (transaction.afterBalance != null)
+                    Expanded(
+                      child: _BalanceSummary(
+                        label: 'الرصيد بعد العملية',
+                        value: _formatBalanceValue(transaction.afterBalance!),
+                      ),
+                    ),
                 ],
               ),
-              if (transaction.references.isNotEmpty || transaction.referenceCode != null) ...[
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    ...transaction.references
-                        .map(
-                          (ref) => Chip(
-                        label: Text(ref),
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                    )
-                        .toList(),
-                    if (transaction.referenceCode != null)
-                      Chip(
-                        label: Text(transaction.referenceCode!),
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                  ],
-                ),
-              ],
-              if (transaction.beforeBalance != null || transaction.afterBalance != null) ...[
-                const SizedBox(height: 10),
-                Text(
-                  'walletBalanceChange'
-                      .translate(context)
-                      .replaceFirst('{from}', (transaction.beforeBalance ?? 0).toStringAsFixed(2))
-                      .replaceFirst('{to}', (transaction.afterBalance ?? 0).toStringAsFixed(2)),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
             ],
-          ),
+          ],
         ),
       ),
+    );
+  }
+
+  String _classificationLabel(BuildContext context) {
+    final normalized =
+        (transaction.category ?? transaction.classification ?? '')
+            .toLowerCase()
+            .trim();
+    switch (normalized) {
+      case 'deposit':
+      case 'top-up':
+      case 'top-ups':
+      case 'top_up':
+        return 'walletCategoryDeposit'.translate(context);
+      case 'transfer':
+      case 'wallet_transfer':
+        return 'walletCategoryTransfer'.translate(context);
+      case 'purchase':
+      case 'payment':
+      case 'payments':
+        return 'walletCategoryPurchase'.translate(context);
+      case 'refund':
+      case 'refunds':
+        return 'walletCategoryRefund'.translate(context);
+      default:
+        final fallback = transaction.classification ?? transaction.category;
+        if (fallback != null && fallback.trim().isNotEmpty) {
+          return fallback;
+        }
+        return 'walletUnknownClassification'.translate(context);
+    }
+  }
+
+  IconData _resolveIcon() {
+    final normalized =
+        (transaction.category ?? transaction.classification ?? '')
+            .toLowerCase()
+            .trim();
+    switch (normalized) {
+      case 'transfer':
+      case 'wallet_transfer':
+        return Icons.swap_horiz_rounded;
+      case 'refund':
+      case 'refunds':
+        return Icons.reply_rounded;
+      case 'purchase':
+      case 'payment':
+      case 'payments':
+        return Icons.shopping_bag_outlined;
+      default:
+        return Icons.savings_outlined;
+    }
+  }
+
+  Color _resolveAccentColor(BuildContext context) {
+    final normalized =
+        (transaction.category ?? transaction.classification ?? '')
+            .toLowerCase()
+            .trim();
+    if (normalized.contains('transfer')) {
+      return const Color(0xFF3A7AFE);
+    }
+    if (normalized.contains('refund')) {
+      return const Color(0xFF2AB795);
+    }
+    if (!transaction.isCredit) {
+      return Theme.of(context).colorScheme.error;
+    }
+    return context.color.territoryColor;
+  }
+
+  String? _resolveSubtitle() {
+    final description = transaction.description;
+    if (description != null && description.trim().isNotEmpty) {
+      return description.trim();
+    }
+
+    final reason = transaction.metadata['reason'];
+    if (reason is String && reason.trim().isNotEmpty) {
+      return reason.replaceAll('_', ' ').trim();
+    }
+
+    final applied = transaction.appliedFilters;
+    if (applied.isNotEmpty) {
+      final label = applied.first.label.trim();
+      if (label.isNotEmpty) {
+        return label;
+      }
+    }
+
+    return null;
+  }
+
+  String? _statusLabel() {
+    final statusLabel = transaction.metadata['status_label'];
+    if (statusLabel is String && statusLabel.trim().isNotEmpty) {
+      return statusLabel.trim();
+    }
+
+    final status = transaction.metadata['status'];
+    if (status is String && status.trim().isNotEmpty) {
+      return status.trim();
+    }
+
+    return null;
+  }
+
+  List<String> _referenceValues() {
+    final values = <String>{};
+    for (final reference in transaction.references) {
+      final trimmed = reference.trim();
+      if (trimmed.isNotEmpty) {
+        values.add(trimmed);
+      }
+    }
+    final code = transaction.referenceCode;
+    if (code != null && code.trim().isNotEmpty) {
+      values.add(code.trim());
+    }
+    return values.toList();
+  }
+
+  String _formatBalanceValue(double value) {
+    final formatted = formatAmount(value, transaction.currency);
+    if (formatted.startsWith('+')) {
+      return formatted.substring(1).trimLeft();
+    }
+    return formatted;
+  }
+
+  Widget _buildTag(BuildContext context, String value, Color accent) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: accent.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accent.withOpacity(0.5)),
+      ),
+      child: Text(
+        value,
+        style: theme.textTheme.bodySmall?.copyWith(
+              color: accent,
+              fontWeight: FontWeight.w600,
+            ) ??
+            TextStyle(
+              color: accent,
+              fontSize: theme.textTheme.bodySmall?.fontSize ?? 12,
+              fontWeight: FontWeight.w600,
+            ),
+      ),
+    );
+  }
+}
+
+class _TransactionInfoRow extends StatelessWidget {
+  const _TransactionInfoRow({
+    required this.icon,
+    required this.label,
+    this.labelStyle,
+  });
+
+  final IconData icon;
+  final String label;
+  final TextStyle? labelStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = theme.colorScheme.outline;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: color),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label,
+            style: labelStyle ??
+                theme.textTheme.bodySmall?.copyWith(
+                  color: color,
+                ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BalanceSummary extends StatelessWidget {
+  const _BalanceSummary({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
     );
   }
 }

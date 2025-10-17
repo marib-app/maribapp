@@ -8,12 +8,7 @@
 /// values coming from different sources.
 class SliderInterfaceMapper {
   static const Map<String, String> _preferredForms = <String, String>{
-    // NOTE: The backend treats "homepage" sliders as part of the public
-    // audience section. Normalise to the canonical value so that slider
-    // filtering matches the payload coming from the API (which reports the
-    // interface type as "public").
-    'homepage': 'public_ads',
-
+    'homepage': 'homepage',
     'request_ad': 'request_ad',
     'public_ads': 'public_ads',
     'real_estate_services': 'real_estate_services',
@@ -50,12 +45,24 @@ class SliderInterfaceMapper {
     'shein_section': 'shein_products',
     'public': 'public_ads',
     'publicads': 'public_ads',
-    'home_page': 'public_ads',
+    'publicaudience': 'public_ads',
+    'public_audience': 'public_ads',
+    'publicaudienceads': 'public_ads',
+    'public_audience_ads': 'public_ads',
+    'audienceads': 'public_ads',
+    'audience_ads': 'public_ads',
+    'audience': 'public_ads',
     'merchants': 'e_store',
     'merchant': 'e_store',
     'estore': 'e_store',
     'real_estate': 'real_estate_services',
     'realestate': 'real_estate_services',
+    'real_estate_ads': 'real_estate_services',
+    'realestateads': 'real_estate_services',
+    'real_estate_department': 'real_estate_services',
+    'realestatedepartment': 'real_estate_services',
+    'real_estate_section': 'real_estate_services',
+    'realestatesection': 'real_estate_services',
     'tourism': 'tourism_services',
     'tourismservices': 'tourism_services',
     'computer': 'computer_section',

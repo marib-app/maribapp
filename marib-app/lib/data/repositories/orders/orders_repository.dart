@@ -246,6 +246,9 @@ class OrdersRepository {
         _wrapDepositReceipts(normalized['deposit_receipts'] ?? normalized['depositReceipts']) ??
             _wrapDepositReceipts(response['deposit_receipts'] ?? response['depositReceipts']);
 
+    final Map<String, dynamic>? depositSummary = _mapify(
+      normalized['deposit_summary'] ?? normalized['depositSummary'],
+    );
 
     final UserOrder orderModel = UserOrder.fromJson(normalized);
     final OrderPolicy? policy = policyMap != null ? OrderPolicy.fromJson(policyMap) : null;
@@ -259,6 +262,8 @@ class OrdersRepository {
       deliveryPaymentSummary: deliveryPaymentSummary,
       depositReceipts: depositReceipts,
       raw: Map<String, dynamic>.from(response),
+      depositSummary: depositSummary,
+
     );
   }
 

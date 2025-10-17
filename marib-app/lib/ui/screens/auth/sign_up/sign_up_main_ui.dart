@@ -581,14 +581,22 @@ class ReferralCodeField extends StatelessWidget {
           color: context.color.textColorDark.withOpacity(0.5),
         ),
         onPressed: () {
+          final locale = Localizations.maybeLocaleOf(context);
+          final isArabic =
+              locale != null && locale.languageCode.toLowerCase().startsWith('ar');
+          final titleKey =
+          isArabic ? 'referralCodeInfoTitle_ar' : 'referralCodeInfoTitle';
+          final messageKey = isArabic
+              ? 'referralCodeInfoMarib_ar'
+              : 'referralCodeInfoMarib';
           UiUtils.showBlurredDialoge(
             context,
             dialoge: BlurredDialogBox(
               showCancleButton: false,
-              title: "تفاصيل كود الاحالة ".translate(context),
+              title: titleKey.translate(context),
               content: Text(
-                // نص مختصر وواضح
-                "أدخل كود الإحالة إن وُجد. عادةً يتكوّن من أحرف وأرقام بدون مسافات (حتى $maxLength محرف). تركه فارغًا لا يؤثّر على عملية التسجيل.",
+                messageKey.translate(context),
+                textAlign: isArabic ? TextAlign.right : TextAlign.start,
               ),
               acceptButtonName: "ok".translate(context),
               isAcceptContainesPush: true,

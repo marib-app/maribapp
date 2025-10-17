@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
+import 'ad_image_source.dart';
+import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 
 class FullscreenGalleryPage extends StatefulWidget {
-  final List<String?> images;
+  final List<AdImageSource> images;
+
   final int initialIndex;
   // اختياري: هيرو تاج للانتقال السلس من القائمة
   final String Function(int index)? heroTagBuilder;
@@ -93,11 +96,12 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
                     _prefetchNeighbors(index);
                   },
                   builder: (context, index) {
-                    final url = widget.images[index]!;
-                    final tag = widget.heroTagBuilder?.call(index);
+                    final AdImageSource image = widget.images[index];
+                    final String? tag = widget.heroTagBuilder?.call(index);
                     return PhotoViewGalleryPageOptions(
-                      imageProvider: CachedNetworkImageProvider(url),
-                      heroAttributes: tag != null ? PhotoViewHeroAttributes(tag: tag) : null,
+                      imageProvider: image.buildFullScreenProvider(),
+                      heroAttributes:
+                      tag != null ? PhotoViewHeroAttributes(tag: tag) : null,
                       minScale: PhotoViewComputedScale.contained,
                       maxScale: PhotoViewComputedScale.covered * 3.0,
                       initialScale: PhotoViewComputedScale.contained,
@@ -259,7 +263,8 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
   // ======= عنصر المصغّر =======
   Widget _thumb(int i, {required double w, required double h}) {
     final selected = i == _currentIndex;
-    final url = widget.images[i]!;
+    final AdImageSource image = widget.images[i];
+    final String url = image.displayUrl;
     final selColor = Theme.of(context).colorScheme.primary;
 
     return GestureDetector(
@@ -320,9 +325,22 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
                     child: CachedNetworkImage(
                       imageUrl: url,
                       fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(color: Colors.white10),
-                      errorWidget: (_, __, ___) =>
-                      const Icon(Icons.broken_image_outlined, color: Colors.white54),
+                      memCacheWidth: kAdDetailImageMaxEdge,
+                      memCacheHeight: kAdDetailImageMaxEdge,
+                      maxWidthDiskCache: kAdDetailImageMaxEdge,
+                      maxHeightDiskCache: kAdDetailImageMaxEdge,
+                      placeholder: (_, __) => const ShimmerBox(
+                        width: double.infinity,
+                        height: double.infinity,
+                        borderRadius: BorderRadius.zero,
+                      ),
+                      errorWidget: (_, __, ___) => ShimmerBox(
+                        width: double.infinity,
+                        height: double.infinity,
+                        borderRadius: BorderRadius.zero,
+                        animate: false,
+                        baseColor: Colors.white24,
+                      ),
                     ),
                   ),
                 ),
@@ -385,12 +403,12 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
 
   // تهيئة تحميل صور الجيران لانتقال أنعم
   void _prefetchNeighbors(int i) {
-    Future<void> prefetch(String url) async {
+    Future<void> prefetch(AdImageSource image) async {
       try {
-        await precacheImage(CachedNetworkImageProvider(url), context);
+        await precacheImage(image.buildFullScreenProvider(), context);
       } catch (_) {}
     }
-    if (i - 1 >= 0) prefetch(widget.images[i - 1]!);
-    if (i + 1 < widget.images.length) prefetch(widget.images[i + 1]!);
+    if (i - 1 >= 0) prefetch(widget.images[i - 1]);
+    if (i + 1 < widget.images.length) prefetch(widget.images[i + 1]);
   }
 }

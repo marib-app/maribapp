@@ -187,23 +187,19 @@ class _ItemListingSubscriptionPlansItemState
                                   final packageCurrency =
                                   widget.model.currency?.trim();
 
-                                  final ok = await Navigator.of(context).push(
-                                    BankTransferScreen.route(
-                                      RouteSettings(
-                                        name: '/bank-transfer',
-                                        arguments: BankTransferArgs(
-                                          token: token,
-                                          packageId: widget.model.id!,
-                                          amount: widget.model.finalPrice!.toDouble(),
-                                          currency:
+                                  final ok = await BankTransferScreen.show(
+                                    context,
+                                    BankTransferArgs(
+                                      token: token,
+                                      packageId: widget.model.id!,
+                                      amount: widget.model.finalPrice!.toDouble(),
+                                      currency:
                                           (packageCurrency?.isNotEmpty ?? false)
                                               ? packageCurrency
                                               : null,
-                                          packageType: 'item_listing',
-                                          purpose: 'package',
-                                          itemId: null,
-                                        ),
-                                      ),
+                                      packageType: 'item_listing',
+                                      purpose: 'package',
+                                      itemId: null,
                                     ),
                                   );
 

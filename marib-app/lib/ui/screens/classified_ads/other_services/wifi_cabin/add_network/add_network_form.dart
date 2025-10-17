@@ -2,24 +2,22 @@ part of 'package:marib/ui/screens/classified_ads/other_services/wifi_cabin/wifi_
 
 abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
   final TextEditingController _nameController = TextEditingController();
-  LatLng? _selected;
-  double _coverage = 3;
+  final TextEditingController _contactController = TextEditingController();
+  final TextEditingController _notesController = TextEditingController();
+  PlatformFile? _logoFile;
+  PlatformFile? _loginScreenshotFile;
   bool _isSubmitting = false;
 
-  static const LatLng _defaultLatLng = LatLng(15.3694, 44.1910);
 
-  LatLng? get userLatLng;
   WifiRepository get repository;
 
-  @override
-  void initState() {
-    super.initState();
-    _selected = userLatLng;
-  }
+
 
   @override
   void dispose() {
     _nameController.dispose();
+    _contactController.dispose();
+    _notesController.dispose();
     super.dispose();
   }
 
@@ -46,62 +44,44 @@ abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
         const SizedBox(height: 16),
         TextField(
           controller: _nameController,
+          enabled: !_isSubmitting,
           decoration: const InputDecoration(
             labelText: 'اسم الشبكة',
           ),
         ),
         const SizedBox(height: 16),
-        GestureDetector(
-          onTap: _isSubmitting ? null : _selectLocation,
-          child: Container(
-            height: 220,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              color: color.secondaryColor.withOpacity(0.2),
-            ),
-            alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.map_outlined,
-                  color: color.textDefaultColor.withOpacity(0.65),
-                  size: 42,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  _selected == null
-                      ? 'اضغط لاختيار الموقع على الخريطة'
-                      : 'الموقع المحدد: ${_selected!.latitude.toStringAsFixed(4)}, ${_selected!.longitude.toStringAsFixed(4)}',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: color.textDefaultColor.withOpacity(0.85),
-                  ),
-                ),
-              ],
-            ),
+        _FilePickerTile(
+          title: 'شعار الشبكة',
+          placeholder: 'ارفع صورة الشعار',
+          fileName: _logoFile?.name,
+          isBusy: _isSubmitting,
+          onTap: () => _pickImage(isLogo: true),
+        ),
+        const SizedBox(height: 16),
+        _FilePickerTile(
+          title: 'صورة صفحة الدخول',
+          placeholder: 'ارفع صورة توضح صفحة الدخول',
+          fileName: _loginScreenshotFile?.name,
+          isBusy: _isSubmitting,
+          onTap: () => _pickImage(isLogo: false),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _contactController,
+          enabled: !_isSubmitting,
+          decoration: const InputDecoration(
+            labelText: 'وسيلة التواصل',
+            hintText: 'مثال: 777123456 أو @account',
           ),
         ),
         const SizedBox(height: 16),
-        Text(
-          'نطاق التغطية (كم)',
-          style: TextStyle(
-            color: color.textDefaultColor,
-            fontWeight: FontWeight.w600,
+        TextField(
+          controller: _notesController,
+          enabled: !_isSubmitting,
+          maxLines: 4,
+          decoration: const InputDecoration(
+            labelText: 'ملاحظات إضافية (اختياري)',
           ),
-        ),
-        Slider(
-          value: _coverage,
-          min: 1,
-          max: 10,
-          divisions: 9,
-          label: _coverage.toStringAsFixed(0),
-          onChanged: _isSubmitting
-              ? null
-              : (value) {
-            setState(() => _coverage = value);
-          },
         ),
       ],
     );
@@ -127,20 +107,7 @@ abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
     );
   }
 
-  Future<void> _selectLocation() async {
-    FocusScope.of(context).unfocus();
-    final LatLng initial = _selected ?? userLatLng ?? _defaultLatLng;
-    final LatLng? result = await Navigator.of(context).push<LatLng>(
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (_) => _NetworkLocationPicker(initialPosition: initial),
-      ),
-    );
 
-    if (result != null && mounted) {
-      setState(() => _selected = result);
-    }
-  }
 
   Future<void> _onSubmit() async {
     if (_isSubmitting) return;
@@ -149,20 +116,36 @@ abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
       _showError('يرجى إدخال اسم الشبكة.');
       return;
     }
-    if (_selected == null) {
-      _showError('يرجى اختيار موقع الشبكة على الخريطة.');
+    final contact = _contactController.text.trim();
+    if (contact.isEmpty) {
+      _showError('يرجى إدخال وسيلة للتواصل.');
+      return;
+    }
+    if (_logoFile == null) {
+      _showError('يرجى رفع صورة شعار الشبكة.');
+      return;
+    }
+    if (_loginScreenshotFile == null) {
+      _showError('يرجى رفع صورة لصفحة الدخول.');
+      return;
+    }
+
+    final MultipartFile? logoMultipart = _prepareMultipart(_logoFile!);
+    final MultipartFile? loginMultipart = _prepareMultipart(_loginScreenshotFile!);
+
+    if (logoMultipart == null || loginMultipart == null) {
       return;
     }
 
     setState(() => _isSubmitting = true);
     try {
-      final double coverage = double.parse(_coverage.toStringAsFixed(1));
       final Map<String, dynamic> response =
       await repository.createOwnerRequest(
         name: name,
-        latitude: _selected!.latitude,
-        longitude: _selected!.longitude,
-        coverageKm: coverage,
+        contact: contact,
+        logo: logoMultipart,
+        loginScreenshot: loginMultipart,
+        notes: _stringify(_notesController.text),
       );
 
       Map<String, dynamic> payload = <String, dynamic>{};
@@ -208,11 +191,83 @@ abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
     }
   }
 
+
+
+  Future<void> _pickImage({required bool isLogo}) async {
+    if (_isSubmitting) return;
+    FocusScope.of(context).unfocus();
+
+    try {
+      final FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: _allowedImageExtensions,
+        withData: kIsWeb,
+      );
+
+      if (result == null) {
+        return;
+      }
+
+      final PlatformFile file = result.files.single;
+      final String extension = (file.extension ?? '').toLowerCase();
+      if (!_allowedImageExtensions.contains(extension)) {
+        _showError('صيغة الملف غير مدعومة. يرجى اختيار صورة بصيغة PNG أو JPG أو WEBP.');
+        return;
+      }
+
+      if (file.size > _maxUploadSizeBytes) {
+        _showError('حجم الملف يتجاوز الحد المسموح (4 ميجابايت).');
+        return;
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        if (isLogo) {
+          _logoFile = file;
+        } else {
+          _loginScreenshotFile = file;
+        }
+      });
+    } catch (error) {
+      _showError('تعذّر اختيار الملف، حاول مرة أخرى.');
+    }
+  }
+
+  MultipartFile? _prepareMultipart(PlatformFile file) {
+    try {
+      if (!kIsWeb && file.path != null) {
+        return MultipartFile.fromFileSync(
+          file.path!,
+          filename: file.name,
+        );
+      }
+
+      final Uint8List? bytes = file.bytes;
+      if (bytes != null) {
+        return MultipartFile.fromBytes(
+          bytes,
+          filename: file.name,
+        );
+      }
+    } catch (_) {
+      _showError('تعذّر تجهيز الملف المرفوع (${file.name}).');
+      return null;
+    }
+
+    _showError('تعذّر قراءة الملف المرفوع (${file.name}).');
+    return null;
+  }
+
+
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
   }
+
+  static const int _maxUploadSizeBytes = 4 * 1024 * 1024;
+  static const List<String> _allowedImageExtensions = <String>['jpg', 'jpeg', 'png', 'webp'];
 
   String? _stringify(dynamic value) {
     if (value == null) return null;
@@ -222,4 +277,76 @@ abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
   }
 
   void handleCompletion(Map<String, dynamic> result);
+
+}
+
+class _FilePickerTile extends StatelessWidget {
+  const _FilePickerTile({
+    required this.title,
+    required this.placeholder,
+    required this.onTap,
+    required this.isBusy,
+    this.fileName,
+  });
+
+  final String title;
+  final String placeholder;
+  final String? fileName;
+  final VoidCallback onTap;
+  final bool isBusy;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.color;
+    final bool hasFile = fileName != null && fileName!.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            color: color.textDefaultColor,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: isBusy ? null : onTap,
+          child: Container(
+            height: 72,
+            decoration: BoxDecoration(
+              color: color.secondaryColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: color.borderColor.darken(12)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.cloud_upload_outlined,
+                  color: color.territoryColor,
+                  size: 28,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    hasFile ? fileName! : placeholder,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: hasFile
+                          ? color.textDefaultColor
+                          : color.textDefaultColor.withOpacity(0.6),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
 }

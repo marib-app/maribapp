@@ -8,7 +8,6 @@ import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/api.dart';
 import 'package:marib/data/model/item_filter_model.dart';
-import 'package:marib/data/cubits/item/fetch_item_from_category_cubit.dart';
 import 'package:marib/data/cubits/item/fetch_item_summary_cubit.dart';
 import 'package:marib/data/cubits/home/fetch_home_screen_cubit.dart';
 
@@ -22,6 +21,7 @@ import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'widgets/filter_sort_bar/filter_sort_bar.dart';
 import 'widgets/items_body_box.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
+import 'package:marib/utils/featured_section_utils.dart';
 
 
 class Section_screen extends StatefulWidget {
@@ -100,11 +100,14 @@ class Section_screenState extends State<Section_screen> {
   bool _sawLoading = false;
   DateTime? _loadingStart;
   static const Duration _minShimmer = Duration(milliseconds: 350);
+  late final String _sliderInterfaceType;
+
   late final bool _hasAdSlider;
 
   bool _showAdSlider = false;
   bool _requestedSlider = false;
 
+  late final String? _requestSectionSlug;
 
   ItemFilterModel _buildEffectiveFilter({
     ItemFilterModel? base,
@@ -127,17 +130,38 @@ class Section_screenState extends State<Section_screen> {
 
 
   void _requestFeaturedSections({int? rootId, String? slug}) {
-    final String? interfaceType = widget.interfaceType?.trim();
-    if (interfaceType == null || interfaceType.isEmpty) {
+    final String? normalizedInterface =
+        SliderInterfaceMapper.normalize(widget.interfaceType) ??
+            widget.interfaceType?.trim();
+
+    if (normalizedInterface == null || normalizedInterface.isEmpty) {
       context.read<FetchHomeScreenCubit>().fetch();
       return;
     }
+    final int? effectiveRootId =
+        rootId ?? selectedCategoryId.value ?? _catId;
 
+    final FetchHomeScreenState cubitState =
+        context.read<FetchHomeScreenCubit>().state;
+    String? cachedRootIdentifier;
+    if (cubitState is FetchHomeScreenSuccess) {
+      cachedRootIdentifier = cubitState.rootIdentifier;
+    }
+
+    final String? resolvedRootIdentifier =
+    FeaturedSectionUtils.resolveRootIdentifier(
+      interfaceType: normalizedInterface,
+      rootCategoryId: effectiveRootId,
+      cachedRootIdentifier: cachedRootIdentifier,
+    );
     final String? cleanedSlug = slug?.trim();
 
     context.read<FetchHomeScreenCubit>().loadFeaturedSections(
-      interfaceType: interfaceType,
+      interfaceType: normalizedInterface,
+
       slug: (cleanedSlug != null && cleanedSlug.isNotEmpty) ? cleanedSlug : null,
+      rootIdentifier: resolvedRootIdentifier,
+
     );
   }
 
@@ -156,20 +180,12 @@ class Section_screenState extends State<Section_screen> {
 
     final String query = search ?? searchController.text;
 
-    await Future.wait([
-      context.read<FetchItemSummaryCubit>().fetchSummaries(
-        categoryId: resolvedCategoryId,
-        search: query,
-        sortBy: sortBy,
-        filter: effectiveFilter,
-      ),
-      context.read<FetchItemFromCategoryCubit>().fetchItemFromCategory(
-        categoryId: resolvedCategoryId,
-        search: query,
-        sortBy: sortBy,
-        filter: effectiveFilter,
-      ),
-    ]);
+    await context.read<FetchItemSummaryCubit>().fetchSummaries(
+      categoryId: resolvedCategoryId,
+      search: query,
+      sortBy: sortBy,
+      filter: effectiveFilter,
+    );
   }
 
   @override
@@ -214,6 +230,8 @@ class Section_screenState extends State<Section_screen> {
     _initialFilter = effectiveFilter;
     filter = effectiveFilter;
 
+    _requestSectionSlug = _resolveRequestSectionSlug();
+
     unawaited(
       _refreshData(
         baseFilter: effectiveFilter,
@@ -222,10 +240,23 @@ class Section_screenState extends State<Section_screen> {
       ),
     );
 
-    _hasAdSlider = widget.interfaceType?.trim().isNotEmpty ?? false;
 
-    final String? interfaceType = widget.interfaceType?.trim();
-    if (interfaceType != null && interfaceType.isNotEmpty) {
+    // لضمان توفر البيانات قبل بناء HomeTabView.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _requestFeaturedSections(rootId: _catId);
+    });
+
+
+    final String? normalizedInterfaceType =
+        SliderInterfaceMapper.normalize(widget.interfaceType) ??
+            widget.interfaceType?.trim();
+    _sliderInterfaceType =
+    (normalizedInterfaceType == null || normalizedInterfaceType.isEmpty)
+        ? 'homepage'
+        : normalizedInterfaceType;
+    _hasAdSlider = _sliderInterfaceType.isNotEmpty;
+    if (_hasAdSlider) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || _requestedSlider) {
           return;
@@ -235,7 +266,7 @@ class Section_screenState extends State<Section_screen> {
           context.read<SliderCubit>().fetchSlider(
             context,
             forceRefresh: true,
-            interfaceType: interfaceType,
+            interfaceType: _sliderInterfaceType,
           ),
         );
       });
@@ -250,6 +281,29 @@ class Section_screenState extends State<Section_screen> {
   }
 
 
+  String? _resolveRequestSectionSlug() {
+    if (_catId == Constant.sheinRootCategoryId) {
+      return 'shein';
+    }
+    if (_catId == Constant.computerRootCategoryId) {
+      return 'computer';
+    }
+
+    final String? normalizedInterfaceType =
+        SliderInterfaceMapper.normalize(widget.interfaceType) ??
+            widget.interfaceType?.trim().toLowerCase();
+
+    switch (normalizedInterfaceType) {
+      case 'shein':
+      case 'shein_products':
+        return 'shein';
+      case 'computer':
+      case 'computer_section':
+        return 'computer';
+      default:
+        return null;
+    }
+  }
 
 
 
@@ -279,15 +333,15 @@ class Section_screenState extends State<Section_screen> {
       setState(() => showShimmer = true);
 
 
-      final String? normalizedInterfaceType =
-      SliderInterfaceMapper.normalize(widget.interfaceType);
-      unawaited(
-        context.read<SliderCubit>().fetchSlider(
-          context,
-          forceRefresh: true,
-          interfaceType: normalizedInterfaceType ?? widget.interfaceType,
-        ),
-      );
+      if (_hasAdSlider) {
+        unawaited(
+          context.read<SliderCubit>().fetchSlider(
+            context,
+            forceRefresh: true,
+            interfaceType: _sliderInterfaceType,
+          ),
+        );
+      }
 
       await context.read<FetchItemSummaryCubit>().fetchSummaries(
         categoryId: _catId,
@@ -296,7 +350,10 @@ class Section_screenState extends State<Section_screen> {
         filter: filter?.copyWith(categoryId: widget.categoryId),
       );
 
-
+      // إعادة تحميل أقسام الإعلانات المميزة عند السحب للتحديث
+      _requestFeaturedSections(
+        rootId: selectedCategoryId.value ?? _catId,
+      );
 
 
       // (اختياري)
@@ -427,9 +484,10 @@ class Section_screenState extends State<Section_screen> {
                         selectedCategoryId: selectedCategoryId,
                         showShimmer: showShimmer,
                         searchController: searchController,
+                        specialRequestSectionSlug: _requestSectionSlug,
                         enableTopBar: _showSlider,
                         enableAdSlider: _showAdSlider,        // إن كانت موجودة عندك
-                        adInterfaceType: widget.interfaceType, // إن كانت موجودة عندك
+                        adInterfaceType: _sliderInterfaceType, // ← تمرير الواجهة المعتمدة دائمًا
                         sortBy: sortBy,                       // ← جديد
                         filter: filter,                       // ← جديد
                         enableSubcats: _showSlider,           // ← نفس منطق التأجيل (أظهر بعد Success)

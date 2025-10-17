@@ -12,6 +12,7 @@ import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
 import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:marib/utils/performance/performance_monitor.dart';
 
 PersonalizedInterestSettings personalizedInterestSettings =
     PersonalizedInterestSettings.empty();
@@ -21,6 +22,10 @@ void initApp() async {
   ///Note: this file's code is very necessary and sensitive if you change it, this might affect whole app , So change it carefully.
   ///This must be used do not remove this line
   WidgetsFlutterBinding.ensureInitialized();
+  PerformanceMonitor.instance.initialize();
+  WidgetsBinding.instance.addTimingsCallback(
+    PerformanceMonitor.instance.handleFrameTimings,
+  );
   final GoogleMapsFlutterPlatform mapsImplementation =
       GoogleMapsFlutterPlatform.instance;
   if (mapsImplementation is GoogleMapsFlutterAndroid) {

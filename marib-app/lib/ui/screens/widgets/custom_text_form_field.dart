@@ -23,8 +23,8 @@ class CustomTextFormField extends StatelessWidget {
   final int? minLine;
   final int? maxLine;
   final bool? isReadOnly;
-  final List<TextInputFormatter>? formaters;
-  final List<TextInputFormatter>? formatters;
+  final List<TextInputFormatter>? inputFormatters;
+
 
   final CustomTextFieldValidator? validator;
   final Color? fillColor;
@@ -48,15 +48,16 @@ class CustomTextFormField extends StatelessWidget {
   final EdgeInsetsGeometry? contentPadding;
   final bool autofocus;
   final FocusNode? focusNode;
-
+  final Color? customStyleFillColor;
+  final Color? customStyleTextColor;
+  final Color? customStyleDividerColor;
   const CustomTextFormField({
     super.key,
     this.hintText,
     this.controller,
     this.minLine,
     this.maxLine,
-    this.formaters,
-    this.formatters,
+    this.inputFormatters,
     this.autofocus = false,
     this.focusNode,
     this.isReadOnly,
@@ -80,7 +81,9 @@ class CustomTextFormField extends StatelessWidget {
     this.isCustomStyle = false,
     this.textAlign,
     this.contentPadding,
-
+    this.customStyleFillColor,
+    this.customStyleTextColor,
+    this.customStyleDividerColor,
 
   });
 
@@ -90,7 +93,7 @@ class CustomTextFormField extends StatelessWidget {
       autofocus: autofocus,
       focusNode: focusNode,
       controller: controller,
-      inputFormatters: formatters ?? formaters,
+      inputFormatters: inputFormatters,
       obscureText: obscureText ?? false,
       textInputAction: action,
       textAlign: textAlign ?? TextAlign.start,
@@ -98,7 +101,7 @@ class CustomTextFormField extends StatelessWidget {
       onTapOutside: (PointerDownEvent event) {
         FocusManager.instance.primaryFocus?.unfocus();
       },
-      keyboardAppearance: Brightness.light,
+      keyboardAppearance: Theme.of(context).brightness,
       textCapitalization: capitalization ?? TextCapitalization.none,
       readOnly: isReadOnly ?? false,
       style: TextStyle(
@@ -114,9 +117,17 @@ class CustomTextFormField extends StatelessWidget {
         }
 
         if (validator == CustomTextFieldValidator.maxFifty) {
-          if ((value ??= "").length > 100) {
-            return "youCanEnter23LettersMax".translate(context);
-          } else if ((value).length == 0) {
+          final String textValue = value ?? '';
+          final int effectiveMaxLength = maxLength ?? 50;
+          final String? maxLengthError = Validator.validateMaxLength(
+            value: textValue,
+            maxLength: effectiveMaxLength,
+            context: context,
+          );
+
+          if (maxLengthError != null) {
+            return maxLengthError;
+          } else if (textValue.isEmpty) {
             return "fieldMustNotBeEmpty".translate(context);
           } else {
             return null;
@@ -124,17 +135,19 @@ class CustomTextFormField extends StatelessWidget {
         }
 
         if (validator == CustomTextFieldValidator.minAndMixLen) {
-          if (isRequired == true && value == "") {
-            return Validator.nullCheckValidator(value, context: context);
+          final String text = value ?? '';
+
+          if (isRequired == true && text.isEmpty) {
+            return Validator.nullCheckValidator(text, context: context);
           }
 
           if (isRequired == true &&
-              (maxLength != null && value!.length > maxLength!)) {
+              (maxLength != null && text.length > maxLength!)) {
             return "${"youCanAdd".translate(context)} \t $maxLength \t ${"maximumNumbersOnly".translate(context)}";
           }
 
           if (isRequired == true &&
-              (minLength != null && value!.length < minLength!)) {
+              (minLength != null && text.length < minLength!)) {
             return "$minLength \t ${"numMinRequired".translate(context)}";
           }
           return null;
@@ -169,22 +182,24 @@ class CustomTextFormField extends StatelessWidget {
       decoration: isCustomStyle
           ? InputDecoration(
               filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
+        fillColor: customStyleFillColor ??
+            Theme.of(context).colorScheme.surface,
+        border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
                 borderSide: BorderSide.none,
               ),
         contentPadding: contentPadding ??
             const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               prefixIcon: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       hintText ?? '',
                       style: TextStyle(
-                        color: context.color.forthColor,
+                        color: customStyleTextColor ??
+                            Theme.of(context).colorScheme.onSurface,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -192,7 +207,8 @@ class CustomTextFormField extends StatelessWidget {
                     Container(
                       width: 2,
                       height: 24,
-                      color: context.color.chatSenderColor,
+                      color: customStyleDividerColor ??
+                          Theme.of(context).colorScheme.outline,
                     ),
                     SizedBox(width: 8),
                   ],

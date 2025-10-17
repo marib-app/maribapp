@@ -117,10 +117,12 @@ class HomeRepository {
 
       Map<String, dynamic> response =
       await Api.get(url: Api.getItemApi, queryParameters: parameters);
+      List<ItemModel> items = (response['data']['data'] as List)
+          .map((e) => ItemModel.fromJson(e))
+          .toList();
 
-
-      return _parseItemData(response);
-
+      return DataOutput(
+          total: response['data']['total'] ?? 0, modelList: items);
     } catch (error) {
       rethrow;
     }
@@ -146,103 +148,14 @@ class HomeRepository {
 
       Map<String, dynamic> response =
       await Api.get(url: Api.getItemApi, queryParameters: parameters);
+      List<ItemModel> items = (response['data']['data'] as List)
+          .map((e) => ItemModel.fromJson(e))
+          .toList();
 
-
-      return _parseItemData(response);
-
+      return DataOutput(
+          total: response['data']['total'] ?? 0, modelList: items);
     } catch (error) {
       rethrow;
     }
   }
-
-
-
-  DataOutput<ItemModel> _parseItemData(Map<String, dynamic> response) {
-    final dynamic data = response['data'];
-    final Map<String, dynamic>? dataMap = _asStringKeyedMap(data);
-
-    List<ItemModel> items = <ItemModel>[];
-
-    if (data is List) {
-      items = data
-          .whereType<Map>()
-          .map((item) => ItemModel.fromJson(Map<String, dynamic>.from(item)))
-          .toList();
-    } else if (dataMap != null) {
-      final List<dynamic>? rawItems = _extractItemList(dataMap);
-
-      if (rawItems != null) {
-        items = rawItems
-            .whereType<Map>()
-            .map((item) => ItemModel.fromJson(Map<String, dynamic>.from(item)))
-            .toList();
-      }
-    }
-
-    final int total = _extractTotal(dataMap, items.length);
-
-    return DataOutput(total: total, modelList: items);
-  }
-
-  Map<String, dynamic>? _asStringKeyedMap(dynamic value) {
-    if (value is Map<String, dynamic>) {
-      return value;
-    }
-
-    if (value is Map) {
-      return value.map((key, value) => MapEntry(key.toString(), value));
-    }
-
-    return null;
-  }
-
-  List<dynamic>? _extractItemList(Map<String, dynamic> data) {
-    final dynamic items = data['items'];
-    if (items is List) {
-      return items;
-    }
-
-    final dynamic legacyItems = data['data'];
-    if (legacyItems is List) {
-      return legacyItems;
-    }
-
-    return null;
-  }
-
-  int _extractTotal(Map<String, dynamic>? data, int fallback) {
-    final dynamic pagination = data != null ? data['pagination'] : null;
-    final int? paginationTotal = _asInt(_asStringKeyedMap(pagination)?['total']);
-
-    if (paginationTotal != null) {
-      return paginationTotal;
-    }
-
-    final dynamic meta = data != null ? data['meta'] : null;
-    final int? metaTotal = _asInt(_asStringKeyedMap(meta)?['total']);
-
-    if (metaTotal != null) {
-      return metaTotal;
-    }
-
-    return fallback;
-  }
-
-  int? _asInt(dynamic value) {
-    if (value is int) {
-      return value;
-    }
-
-    if (value is num) {
-      return value.toInt();
-    }
-
-    if (value is String) {
-      return int.tryParse(value);
-    }
-
-    return null;
-  }
-
-
 }

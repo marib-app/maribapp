@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 
 class GalleryViewWidget extends StatefulWidget {
   final List images;
@@ -57,21 +58,17 @@ class _GalleryViewWidgetState extends State<GalleryViewWidget> {
               child: CachedNetworkImage(
                 imageUrl: widget.images[index],
                 fit: BoxFit.contain,
-                /*  memCacheHeight: 500,
-                memCacheWidth: 500,*/
-                errorWidget: (context, url, error) {
-                  return Container(
-                    color: context.color.territoryColor.withOpacity(0.1),
-                    alignment: AlignmentDirectional.center,
-                    child: SizedBox(
-                      child: UiUtils.getSvg(
-                        AppIcons.placeHolder,
-                        width: 70,
-                        height: 70,
-                      ),
-                    ),
-                  );
-                },
+                placeholder: (context, url) => ShimmerBox(
+                  width: double.infinity,
+                  height: double.infinity,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                errorWidget: (context, url, error) => ShimmerBox(
+                  width: double.infinity,
+                  height: double.infinity,
+                  borderRadius: BorderRadius.circular(16),
+                  animate: false,
+                ),
               ),
             );
           },

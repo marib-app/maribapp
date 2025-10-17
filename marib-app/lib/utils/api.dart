@@ -345,7 +345,6 @@ class Api {
   static String getCustomFieldsApi = "get-customfields";
   static String getFeaturedSectionApi = "get-featured-section";
   static String updateItemApi = "update-item";
-  static String adDraftsApi = "ad-drafts";
   static String addItemApi = "add-item";
   static String deleteItemApi = "delete-item";
   static String setItemTotalClickApi = "set-item-total-click";

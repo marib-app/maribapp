@@ -17,103 +17,6 @@ class ChatRepostiory {
     return trimmed;
   }
 
-
-
-  Map<String, dynamic>? _asStringKeyedMap(dynamic value) {
-    if (value is Map<String, dynamic>) {
-      return value;
-    }
-
-    if (value is Map) {
-      return value.map((key, dynamic value) => MapEntry(key.toString(), value));
-    }
-
-    return null;
-  }
-
-  List<dynamic>? _extractItemList(Map<String, dynamic>? data) {
-    if (data == null) {
-      return null;
-    }
-
-    final dynamic items = data['items'];
-    if (items is List) {
-      return items;
-    }
-
-    final dynamic legacyItems = data['data'];
-    if (legacyItems is List) {
-      return legacyItems;
-    }
-
-    return null;
-  }
-
-  int? _asInt(dynamic value) {
-    if (value is int) {
-      return value;
-    }
-
-    if (value is num) {
-      return value.toInt();
-    }
-
-    if (value is String) {
-      return int.tryParse(value);
-    }
-
-    return null;
-  }
-
-  int? _extractTotalFromMap(Map<String, dynamic>? data) {
-    if (data == null) {
-      return null;
-    }
-
-    const List<String> candidateKeys = <String>[
-      'total',
-      'total_items',
-      'total_count',
-      'count',
-    ];
-
-    for (final String key in candidateKeys) {
-      final int? parsed = _asInt(data[key]);
-      if (parsed != null) {
-        return parsed;
-      }
-    }
-
-    final Map<String, dynamic>? nestedPagination =
-    _asStringKeyedMap(data['pagination']);
-    if (nestedPagination != null && !identical(nestedPagination, data)) {
-      final int? nested = _extractTotalFromMap(nestedPagination);
-      if (nested != null) {
-        return nested;
-      }
-    }
-
-    return null;
-  }
-
-  int _extractTotalWithFallback(
-      Map<String, dynamic>? data, Map<String, dynamic>? root, int fallback) {
-    final int? dataTotal = _extractTotalFromMap(data);
-    if (dataTotal != null) {
-      return dataTotal;
-    }
-
-    final int? rootTotal = _extractTotalFromMap(root);
-    if (rootTotal != null) {
-      return rootTotal;
-    }
-
-    return fallback;
-  }
-
-
-
-
   void setContext(BuildContext context) {
     _setContext = context;
   }
@@ -126,28 +29,13 @@ class ChatRepostiory {
         url: Api.getChatListApi,
         queryParameters: {"type": "buyer", "page": page});
 
-    final Map<String, dynamic> responseMap =
-        _asStringKeyedMap(response) ?? <String, dynamic>{};
-    final Map<String, dynamic> dataMap =
-        _asStringKeyedMap(responseMap['data']) ?? <String, dynamic>{};
+    List<ChatedUser> modelList = (response['data']['data'] as List).map(
+      (e) {
+        return ChatedUser.fromJson(e);
+      },
+    ).toList();
 
-    final List<dynamic> rawItems =
-        _extractItemList(dataMap) ?? <dynamic>[];
-
-
-
-
-    final List<ChatedUser> modelList = rawItems
-        .map(_asStringKeyedMap)
-        .whereType<Map<String, dynamic>>()
-        .map(ChatedUser.fromJson)
-        .toList();
-
-    final int total =
-    _extractTotalWithFallback(dataMap, responseMap, modelList.length);
-
-    return DataOutput(total: total, modelList: modelList);
-
+    return DataOutput(total: response['data']['total'], modelList: modelList);
   }
 
   Future<DataOutput<ChatedUser>> fetchSellerChatList(int page) async {
@@ -155,24 +43,14 @@ class ChatRepostiory {
         url: Api.getChatListApi,
         queryParameters: {"page": page, "type": "seller"});
 
-    final Map<String, dynamic> responseMap =
-        _asStringKeyedMap(response) ?? <String, dynamic>{};
-    final Map<String, dynamic> dataMap =
-        _asStringKeyedMap(responseMap['data']) ?? <String, dynamic>{};
+    List<ChatedUser> modelList = (response['data']["data"] as List).map(
+      (e) {
+        return ChatedUser.fromJson(e /*, context: _setContext*/);
+      },
+    ).toList();
 
-    final List<dynamic> rawItems =
-        _extractItemList(dataMap) ?? <dynamic>[];
-
-    final List<ChatedUser> modelList = rawItems
-        .map(_asStringKeyedMap)
-        .whereType<Map<String, dynamic>>()
-        .map(ChatedUser.fromJson)
-        .toList();
-
-    final int total =
-    _extractTotalWithFallback(dataMap, responseMap, modelList.length);
-
-    return DataOutput(total: total, modelList: modelList);
+    return DataOutput(
+        total: response['data']['total'] ?? 0, modelList: modelList);
   }
 
   Future<DataOutput<ChatMessage>> getMessagesApi(
@@ -188,23 +66,15 @@ class ChatRepostiory {
     },
     );
 
-
-    final Map<String, dynamic> responseMap =
-        _asStringKeyedMap(response) ?? <String, dynamic>{};
-
     final Map<String, dynamic> responseData =
-        _asStringKeyedMap(responseMap['data']) ?? <String, dynamic>{};
+        (response['data'] as Map<String, dynamic>?) ?? <String, dynamic>{};
 
     final List<dynamic> resultList =
-        _extractItemList(responseData) ?? <dynamic>[];
+        (responseData['data'] as List<dynamic>?) ?? <dynamic>[];
 
-    final List<ChatMessage> modelList = <ChatMessage>[];
-
-    for (final dynamic result in resultList) {
-      final Map<String, dynamic>? resultMap = _asStringKeyedMap(result);
-      if (resultMap == null || resultMap.isEmpty) {
-        continue;
-      }
+    List<ChatMessage> modelList = resultList.map((result) {
+      final Map<String, dynamic> resultMap =
+      Map<String, dynamic>.from(result as Map);
 
       final dynamic senderIdRaw = resultMap['sender_id'];
       final int senderId = senderIdRaw is int
@@ -236,7 +106,7 @@ class ChatRepostiory {
           ? idRaw
           : int.tryParse(idRaw?.toString() ?? '') ?? 0;
 
-      modelList.add(ChatMessage(
+      return ChatMessage(
         key: ValueKey(id),
         id: id,
         message: message,
@@ -250,14 +120,13 @@ class ChatRepostiory {
         status: status,
         deliveredAt: deliveredAt,
         readAt: readAt,
-      ));
-    }
+      );
+    }).toList();
 
-    final int total = _extractTotalWithFallback(
-      responseData,
-      responseMap,
-      modelList.length,
-    );
+    final dynamic totalRaw = responseData['total'];
+    final int total = totalRaw is int
+        ? totalRaw
+        : int.tryParse(totalRaw?.toString() ?? '') ?? modelList.length;
 
     return DataOutput(total: total, modelList: modelList);
 

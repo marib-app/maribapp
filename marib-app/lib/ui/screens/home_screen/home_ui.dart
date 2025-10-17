@@ -224,24 +224,30 @@ class HomeScreenUI extends StatelessWidget {
 
 
 
+// داخل الكلاس
   Widget _buildBody(BuildContext context) {
-    // ✨ لا نستخدم SingleChildScrollView ولا PrimaryScrollController هنا
+    // ملاحظة: أبقِ SliverAppBar(stretch: true) في الأعلى لتمطيط الهيدر أيضًا.
     final scroll = CustomScrollView(
-      physics: const BouncingScrollPhysics(),
+      primary: true, // يلتقط PrimaryScrollController من NestedScrollView
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
+      slivers: [ SliverToBoxAdapter(child: bodyContent) ],
+    );
 
-      slivers: [
-        // حوّل الجسم إلى سليفَر واحد
-        SliverToBoxAdapter(child: bodyContent),
-      ],
+    final content = ScrollConfiguration(
+      behavior: const _StretchScrollBehavior(), // لا توهج + شدّ
+      child: scroll,
     );
 
     return onRefresh == null
-        ? scroll
-        : RefreshIndicator.adaptive(
+        ? content
+        : RefreshIndicator(
       onRefresh: onRefresh!,
-      child: scroll,
+      child: content,
     );
   }
+
 
 
 
@@ -995,6 +1001,19 @@ class AllItemsWidget extends StatelessWidget {
         }
         return const SizedBox.shrink();
       },
+    );
+  }
+}
+// ضع هذا خارج الكلاس (أسفل الملف مثلاً)
+class _StretchScrollBehavior extends ScrollBehavior {
+  const _StretchScrollBehavior();
+  @override
+  Widget buildOverscrollIndicator(
+      BuildContext context, Widget child, ScrollableDetails details,
+      ) {
+    // يستبدل الـGlow بـ StretchingOverscrollIndicator
+    return StretchingOverscrollIndicator(
+      axisDirection: details.direction, child: child,
     );
   }
 }

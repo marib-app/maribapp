@@ -2,9 +2,17 @@
 use App\Services\OrderCheckoutService;
 
 return [
-    'default_payment_method' => OrderCheckoutService::normalizePaymentMethod(
-        env('ORDERS_DEFAULT_PAYMENT_METHOD', 'east_yemen_bank')
-    ) ?? 'east_yemen_bank',
+    'default_payment_method' => (function () {
+        $normalized = OrderCheckoutService::normalizePaymentMethod(
+            env('ORDERS_DEFAULT_PAYMENT_METHOD', 'east_yemen_bank')
+        );
+
+        if (! is_string($normalized) || $normalized === '') {
+            return 'east_yemen_bank';
+        }
+
+        return mb_strtolower($normalized);
+    })(),
     
     'default_payment_intent' => [
         'ttl_minutes' => (int) env('ORDERS_DEFAULT_PAYMENT_INTENT_TTL_MINUTES', 60 * 24),

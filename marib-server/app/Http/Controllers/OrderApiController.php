@@ -668,8 +668,12 @@ class OrderApiController extends Controller
             }
         }
 
-        $method = $transaction?->payment_gateway ?? data_get($defaultIntent, 'method');
+        $rawMethod = $transaction?->payment_gateway ?? data_get($defaultIntent, 'method');
+        $method = OrderCheckoutService::normalizePaymentMethod(is_string($rawMethod) ? $rawMethod : null);
 
+        if (! is_string($method) || $method === '') {
+            $method = is_string($rawMethod) ? mb_strtolower($rawMethod) : null;
+        }
 
 
 

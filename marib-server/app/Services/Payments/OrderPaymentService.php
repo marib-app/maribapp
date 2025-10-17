@@ -34,6 +34,7 @@ class OrderPaymentService
      */
     private const LEGACY_METHOD_ALIASES = [
         'manual_bank' => ['manual'],
+        'east_yemen_bank' => ['bank_alsharq', 'bank_alsharq_bank'],
     ];
 
 
@@ -167,7 +168,7 @@ class OrderPaymentService
     public function createManual(User $user, Order $order, string $idempotencyKey, array $data = []): PaymentTransaction
     {
         return $this->db->transaction(function () use ($user, $order, $idempotencyKey, $data) {
-            $method = 'manual_bank';
+            $method = $this->normalizePaymentMethod('manual_bank');
             $data['payment_method'] = $method;
             $transaction = $this->findOrCreateTransaction($user, $order, $method, $idempotencyKey, $data);
 
@@ -244,7 +245,7 @@ class OrderPaymentService
         array $data = []
     ): PaymentTransaction {
         
-        $method = $this->canonicalizePaymentMethod($method);
+        $method = $this->normalizePaymentMethod($method);
         $data['payment_method'] = $method;
 
         $existing = PaymentTransaction::query()
@@ -503,22 +504,14 @@ class OrderPaymentService
             ]);
         }
 
-        $canonicalMethod = $this->canonicalizePaymentMethod($normalizedMethod);
+        $normalizedMethod = mb_strtolower($normalizedMethod);
 
-        $this->assertSupportedMethod($canonicalMethod);
 
-        return $canonicalMethod;
-    }
+        $this->assertSupportedMethod($normalizedMethod);
 
-    private function canonicalizePaymentMethod(string $method): string
-    {
-        $canonical = OrderCheckoutService::normalizePaymentMethod($method);
 
-        if (! is_string($canonical) || $canonical === '') {
-            return $method;
-        }
+        return $normalizedMethod;
 
-        return $canonical;
     }
 
     /**

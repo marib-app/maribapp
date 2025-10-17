@@ -31,319 +31,16 @@ import 'package:marib/data/repositories/metal_repository.dart';
 import 'package:marib/data/model/preference_option.dart';
 import 'package:marib/data/repositories/metal_repository.dart';
 import 'package:marib/data/repositories/preferences/user_preference_repository.dart';
+import 'package:marib/data/repositories/currency_repository.dart';
+import 'package:marib/data/repositories/metal_repository.dart';
+import 'package:marib/data/repositories/preferences/governorate_preference_repository.dart';
+import 'package:marib/data/repositories/preferences/user_preference_repository.dart';
+
+import 'state/state.dart';
+import 'view/currency_screen_shell.dart';
 
 
 
-/// حالة صفحة العملات
-enum CurrencyPageStatus { loading, error, ready }
-
-/// ViewState يُمرَّر للـ UI فقط
-class CurrencyViewState {
-  final CurrencyPageStatus status;
-  final String? errorMessage;
-
-  // بيانات الأسعار (ديناميكية لتفادي خطأ النوع)
-  final List<dynamic> rates;
-  final DateTime? lastUpdatedAt;
-  final List<MetalRate> goldRates;
-  final List<MetalRate> silverRates;
-  final DateTime? metalsLastUpdatedAt;
-  final List<Map<String, String?>> governorates;
-  final String? selectedGovernorateCode;
-  final String? appliedGovernorateCode;
-  final String? appliedGovernorateName;
-  final String? requestedGovernorateCode;
-  final String? requestedGovernorateName;
-  final bool usedFallback;
-
-  // حالة الحاسبة
-  final String amountText;
-  final String fromCurrency;
-  final String toCurrency;
-  final double convertedAmount;
-  final bool hasCalculated;
-
-
-
-
-
-
-
-  final Set<int> currencyWatchlist;
-  final Set<int> metalWatchlist;
-  final bool showWatchlistOnly;
-  final String notificationFrequency;
-  final List<PreferenceOption> notificationOptions;
-  final List<dynamic> displayRates;
-  final List<MetalRate> displayGoldRates;
-  final List<MetalRate> displaySilverRates;
-
-  final Map<int, int> selectedHistoryRanges;
-  final int defaultHistoryRangeDays;
-
-
-
-  CurrencyViewState({
-
-    required this.status,
-    this.errorMessage,
-    required List<dynamic> rates,
-    required List<dynamic> displayRates,
-    required this.lastUpdatedAt,
-    required List<MetalRate> goldRates,
-    required List<MetalRate> displayGoldRates,
-    required List<MetalRate> silverRates,
-    required List<MetalRate> displaySilverRates,
-    required this.metalsLastUpdatedAt,
-    required List<Map<String, String?>> governorates,
-    required this.selectedGovernorateCode,
-    required this.appliedGovernorateCode,
-    required this.appliedGovernorateName,
-    required this.requestedGovernorateCode,
-    required this.requestedGovernorateName,
-    required this.usedFallback,
-    required Map<int, int> selectedHistoryRanges,
-    required this.defaultHistoryRangeDays,
-    required Set<int> currencyWatchlist,
-    required Set<int> metalWatchlist,
-    required this.showWatchlistOnly,
-    required this.notificationFrequency,
-    required List<PreferenceOption> notificationOptions,
-    required this.amountText,
-    required this.fromCurrency,
-    required this.toCurrency,
-    required this.convertedAmount,
-    required this.hasCalculated,
-  })  : rates = List<dynamic>.unmodifiable(rates),
-        displayRates = List<dynamic>.unmodifiable(displayRates),
-        goldRates = List<MetalRate>.unmodifiable(goldRates),
-        displayGoldRates = List<MetalRate>.unmodifiable(displayGoldRates),
-        silverRates = List<MetalRate>.unmodifiable(silverRates),
-        displaySilverRates = List<MetalRate>.unmodifiable(displaySilverRates),
-        governorates = List<Map<String, String?>>.unmodifiable(
-          governorates.map(
-                (entry) => Map<String, String?>.unmodifiable(entry),
-          ),
-        ),
-        currencyWatchlist = Set<int>.unmodifiable(currencyWatchlist),
-        metalWatchlist = Set<int>.unmodifiable(metalWatchlist),
-        notificationOptions =
-        List<PreferenceOption>.unmodifiable(notificationOptions),
-        selectedHistoryRanges =
-        Map<int, int>.unmodifiable(selectedHistoryRanges);
-
-  static const Duration _currencyDataSla = Duration(hours: 12);
-
-
-  CurrencyViewState copyWith({
-    CurrencyPageStatus? status,
-    String? errorMessage,
-    List<dynamic>? rates,
-    DateTime? lastUpdatedAt,
-    List<MetalRate>? goldRates,
-    List<MetalRate>? silverRates,
-    DateTime? metalsLastUpdatedAt,
-    String? amountText,
-    String? fromCurrency,
-    String? toCurrency,
-    double? convertedAmount,
-    bool? hasCalculated,
-
-    Set<int>? currencyWatchlist,
-    Set<int>? metalWatchlist,
-    bool? showWatchlistOnly,
-    String? notificationFrequency,
-    List<PreferenceOption>? notificationOptions,
-    List<Map<String, String?>>? governorates,
-    String? selectedGovernorateCode,
-    String? appliedGovernorateCode,
-    String? appliedGovernorateName,
-    String? requestedGovernorateCode,
-    String? requestedGovernorateName,
-    bool? usedFallback,
-    List<MetalRate>? displaySilverRates,
-    List<MetalRate>? displayGoldRates,
-    List<dynamic>? displayRates,
-
-    Map<int, int>? selectedHistoryRanges,
-    int? defaultHistoryRangeDays,
-
-
-  }) {
-    return CurrencyViewState(
-      status: status ?? this.status,
-
-      displayRates: displayRates ?? this.displayRates,
-      displayGoldRates: displayGoldRates ?? this.displayGoldRates,
-      displaySilverRates: displaySilverRates ?? this.displaySilverRates,
-      currencyWatchlist: currencyWatchlist ?? this.currencyWatchlist,
-      metalWatchlist: metalWatchlist ?? this.metalWatchlist,
-      showWatchlistOnly: showWatchlistOnly ?? this.showWatchlistOnly,
-      notificationFrequency:
-      notificationFrequency ?? this.notificationFrequency,
-      notificationOptions: notificationOptions ?? this.notificationOptions,
-      amountText: amountText ?? this.amountText,
-      fromCurrency: fromCurrency ?? this.fromCurrency,
-      toCurrency: toCurrency ?? this.toCurrency,
-      convertedAmount: convertedAmount ?? this.convertedAmount,
-      hasCalculated: hasCalculated ?? this.hasCalculated,
-
-      selectedHistoryRanges:
-      selectedHistoryRanges ?? this.selectedHistoryRanges,
-      defaultHistoryRangeDays:
-      defaultHistoryRangeDays ?? this.defaultHistoryRangeDays,
-
-      errorMessage: errorMessage ?? this.errorMessage,
-      rates: rates ?? this.rates,
-      lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt,
-
-      goldRates: goldRates ?? this.goldRates,
-      silverRates: silverRates ?? this.silverRates,
-      metalsLastUpdatedAt: metalsLastUpdatedAt ?? this.metalsLastUpdatedAt,
-
-      governorates: governorates ?? this.governorates,
-      selectedGovernorateCode:
-      selectedGovernorateCode ?? this.selectedGovernorateCode,
-      appliedGovernorateCode:
-      appliedGovernorateCode ?? this.appliedGovernorateCode,
-      appliedGovernorateName:
-      appliedGovernorateName ?? this.appliedGovernorateName,
-      requestedGovernorateCode:
-      requestedGovernorateCode ?? this.requestedGovernorateCode,
-      requestedGovernorateName:
-      requestedGovernorateName ?? this.requestedGovernorateName,
-      usedFallback: usedFallback ?? this.usedFallback,
-    );
-  }
-
-
-  bool get isDisplayRatesStale {
-    final DateTime now = DateTime.now();
-
-    if (_isTimestampBeyondSla(lastUpdatedAt, now)) {
-      return true;
-    }
-
-    for (final dynamic rate in displayRates) {
-      if (_isRateDataStale(rate, now)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  bool _isRateDataStale(dynamic rate, DateTime now) {
-    if (rate == null) return false;
-
-    try {
-      final dynamic directQuality = rate.sourceQuality;
-      if (_normalizeQuality(directQuality) == 'stale') {
-        return true;
-      }
-    } catch (_) {}
-
-    try {
-      final dynamic history = rate.history;
-      if (_isHistoryDataStale(history, now)) {
-        return true;
-      }
-    } catch (_) {}
-
-    DateTime? lastUpdated;
-    try {
-      lastUpdated = _coerceDateTime(rate.lastUpdatedAt);
-    } catch (_) {}
-
-    if (_isTimestampBeyondSla(lastUpdated, now)) {
-      return true;
-    }
-
-    return false;
-  }
-
-  bool _isHistoryDataStale(dynamic history, DateTime now) {
-    if (history == null) return false;
-
-    String? quality;
-    DateTime? capturedAt;
-    DateTime? hourlyAt;
-
-    if (history is Map) {
-      quality = _normalizeQuality(
-        history['sourceQuality'] ?? history['source_quality'],
-      );
-      capturedAt = _coerceDateTime(
-        history['lastCapturedAt'] ?? history['last_captured_at'],
-      );
-      hourlyAt = _coerceDateTime(
-        history['lastHourlyAt'] ?? history['last_hourly_at'],
-      );
-    } else {
-      try {
-        quality = _normalizeQuality(history.sourceQuality);
-      } catch (_) {}
-      try {
-        capturedAt = _coerceDateTime(history.lastCapturedAt);
-      } catch (_) {}
-      try {
-        hourlyAt = _coerceDateTime(history.lastHourlyAt);
-      } catch (_) {}
-    }
-
-    if (quality == 'stale') {
-      return true;
-    }
-
-    if (_isTimestampBeyondSla(capturedAt, now)) {
-      return true;
-    }
-
-    if (_isTimestampBeyondSla(hourlyAt, now)) {
-      return true;
-    }
-
-    return false;
-  }
-
-  bool _isTimestampBeyondSla(DateTime? timestamp, DateTime now) {
-    if (timestamp == null) return false;
-    final Duration diff = now.difference(timestamp);
-    if (diff.isNegative) {
-      return false;
-    }
-    return diff > _currencyDataSla;
-  }
-
-  DateTime? _coerceDateTime(dynamic value) {
-    if (value is DateTime) {
-      return value;
-    }
-    if (value is String && value.isNotEmpty) {
-      return DateTime.tryParse(value);
-    }
-    return null;
-  }
-
-  String? _normalizeQuality(dynamic value) {
-    if (value is String) {
-      final String trimmed = value.trim();
-      if (trimmed.isNotEmpty) {
-        return trimmed.toLowerCase();
-      }
-    }
-    return null;
-  }
-
-
-  int historyRangeForCurrency(int? currencyId) {
-    if (currencyId == null) {
-      return defaultHistoryRangeDays;
-    }
-    return selectedHistoryRanges[currencyId] ?? defaultHistoryRangeDays;
-  }
-
-}
 
 class CurrencyScreen extends StatelessWidget {
   const CurrencyScreen({super.key});
@@ -631,26 +328,28 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
         if (state is CurrencyLoading) {
           viewState = CurrencyViewState(
             status: CurrencyPageStatus.loading,
-            rates: const [],
-
-
-            displayRates: const [],
-            displayGoldRates: const [],
-            displaySilverRates: const [],
+            currency: CurrencyRatesState(
+              rates: const [],
+              displayRates: const [],
+              lastUpdatedAt: null,
+              watchlist: const <int>{},
+              showWatchlistOnly: false,
+              selectedHistoryRanges:
+              Map<int, int>.from(_selectedHistoryRanges),
+              defaultHistoryRangeDays: _defaultHistoryRange,
+            ),
+            gold: GoldRatesState(
+              rates: const [],
+              displayRates: const [],
+              watchlist: const <int>{},
+            ),
+            silver: SilverRatesState(
+              rates: const [],
+              displayRates: const [],
+              watchlist: const <int>{},
+            ),
             metalsLastUpdatedAt: null,
-            currencyWatchlist: const <int>{},
-            metalWatchlist: const <int>{},
-            showWatchlistOnly: false,
-            notificationFrequency: 'daily',
-            notificationOptions: const <PreferenceOption>[],
-            lastUpdatedAt: null,
-            amountText: _amountController.text,
-            fromCurrency: _fromCurrency,
-            goldRates: const [],
-            silverRates: const [],
-            toCurrency: _toCurrency,
-            convertedAmount: _convertedAmount,
-            hasCalculated: _hasCalculated,
+
             governorates: const [],
             selectedGovernorateCode: null,
             appliedGovernorateCode: null,
@@ -658,38 +357,39 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
             requestedGovernorateCode: null,
             requestedGovernorateName: null,
             usedFallback: false,
-            selectedHistoryRanges:
-            Map<int, int>.from(_selectedHistoryRanges),
-            defaultHistoryRangeDays: _defaultHistoryRange,
+
+            amountText: _amountController.text,
+            fromCurrency: _fromCurrency,
+            toCurrency: _toCurrency,
+            convertedAmount: _convertedAmount,
+            hasCalculated: _hasCalculated,
+            notificationFrequency: 'daily',
+            notificationOptions: const <PreferenceOption>[],
           );
         } else if (state is CurrencyError) {
           viewState = CurrencyViewState(
-
-
-            currencyWatchlist: const <int>{},
-            metalWatchlist: const <int>{},
-            showWatchlistOnly: false,
-            notificationFrequency: 'daily',
-            notificationOptions: const <PreferenceOption>[],
-            displayGoldRates: const [],
-            displaySilverRates: const [],
-            displayRates: const [],
-
-
-
-
-
             status: CurrencyPageStatus.error,
             errorMessage: state.message,
-            rates: const [],
-            lastUpdatedAt: null,
-            amountText: _amountController.text,
-            fromCurrency: _fromCurrency,
-            toCurrency: _toCurrency,
-            convertedAmount: _convertedAmount,
-            hasCalculated: _hasCalculated,
-            goldRates: const [],
-            silverRates: const [],
+            currency: CurrencyRatesState(
+              rates: const [],
+              displayRates: const [],
+              lastUpdatedAt: null,
+              watchlist: const <int>{},
+              showWatchlistOnly: false,
+              selectedHistoryRanges:
+              Map<int, int>.from(_selectedHistoryRanges),
+              defaultHistoryRangeDays: _defaultHistoryRange,
+            ),
+            gold: GoldRatesState(
+              rates: const [],
+              displayRates: const [],
+              watchlist: const <int>{},
+            ),
+            silver: SilverRatesState(
+              rates: const [],
+              displayRates: const [],
+              watchlist: const <int>{},
+            ),
             metalsLastUpdatedAt: null,
             governorates: const [],
             selectedGovernorateCode: null,
@@ -698,9 +398,13 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
             requestedGovernorateCode: null,
             requestedGovernorateName: null,
             usedFallback: false,
-            selectedHistoryRanges:
-            Map<int, int>.from(_selectedHistoryRanges),
-            defaultHistoryRangeDays: _defaultHistoryRange,
+            amountText: _amountController.text,
+            fromCurrency: _fromCurrency,
+            toCurrency: _toCurrency,
+            convertedAmount: _convertedAmount,
+            hasCalculated: _hasCalculated,
+            notificationFrequency: 'daily',
+            notificationOptions: const <PreferenceOption>[],
           );
         } else if (state is CurrencySuccess) {
           final rates = state.currencyRates;
@@ -760,33 +464,48 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
           final selectedCode = requestedCode ?? appliedCode;
 
 
+          final currencyState = CurrencyRatesState(
+
+            rates: rates,
+
+            displayRates: displayRates,
+            lastUpdatedAt: updatedAt,
+            watchlist: state.preferences.currencyWatchlist,
+            showWatchlistOnly: state.showWatchlistOnly,
+            selectedHistoryRanges:
+            Map<int, int>.from(_selectedHistoryRanges),
+            defaultHistoryRangeDays: _defaultHistoryRange,
+          );
+
+          final Set<int> metalWatchlist = state.preferences.metalWatchlist;
+          final goldState = GoldRatesState(
+            rates: goldRates,
+            displayRates: displayGoldRates,
+            watchlist: metalWatchlist,
+          );
+          final silverState = SilverRatesState(
+            rates: silverRates,
+            displayRates: displaySilverRates,
+            watchlist: metalWatchlist,
+          );
+
           viewState = CurrencyViewState(
             status: CurrencyPageStatus.ready,
-            rates: rates,
-            lastUpdatedAt: updatedAt,
-
-            displayGoldRates: displayGoldRates,
-            displaySilverRates: displaySilverRates,
-            displayRates: displayRates,
-            currencyWatchlist: state.preferences.currencyWatchlist,
-            metalWatchlist: state.preferences.metalWatchlist,
-            showWatchlistOnly: state.showWatchlistOnly,
-            notificationFrequency: state.preferences.notificationFrequency,
-            notificationOptions: state.notificationOptions,
+            currency: currencyState,
+            gold: goldState,
+            silver: silverState,
+            metalsLastUpdatedAt: state.metalsLastUpdatedAt,
 
             governorates: governorateOptions,
             selectedGovernorateCode: selectedCode,
-            goldRates: goldRates,
-            silverRates: silverRates,
-            metalsLastUpdatedAt: state.metalsLastUpdatedAt,
+
             appliedGovernorateCode: appliedCode,
             appliedGovernorateName: appliedName,
             requestedGovernorateCode: requestedCode,
             requestedGovernorateName: requestedName,
             usedFallback: state.usedFallback,
-            selectedHistoryRanges:
-            Map<int, int>.from(_selectedHistoryRanges),
-            defaultHistoryRangeDays: _defaultHistoryRange,
+            notificationFrequency: state.preferences.notificationFrequency,
+            notificationOptions: state.notificationOptions,
 
             amountText: _amountController.text,
             fromCurrency: _fromCurrency,
@@ -798,37 +517,41 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
           viewState = CurrencyViewState(
             status: CurrencyPageStatus.error,
             errorMessage: 'حدث خطأ ما',
-            rates: const [],
-            lastUpdatedAt: null,
-
-            displayRates: const [],
-            displayGoldRates: const [],
-            displaySilverRates: const [],
-            currencyWatchlist: const <int>{},
-            metalWatchlist: const <int>{},
-            showWatchlistOnly: false,
-            notificationFrequency: 'daily',
-            notificationOptions: const <PreferenceOption>[],
-
-
-            governorates: const [],
-            goldRates: const [],
-            silverRates: const [],
+            currency: CurrencyRatesState(
+              rates: const [],
+              displayRates: const [],
+              lastUpdatedAt: null,
+              watchlist: const <int>{},
+              showWatchlistOnly: false,
+              selectedHistoryRanges:
+              Map<int, int>.from(_selectedHistoryRanges),
+              defaultHistoryRangeDays: _defaultHistoryRange,
+            ),
+            gold: GoldRatesState(
+              rates: const [],
+              displayRates: const [],
+              watchlist: const <int>{},
+            ),
+            silver: SilverRatesState(
+              rates: const [],
+              displayRates: const [],
+              watchlist: const <int>{},
+            ),
             metalsLastUpdatedAt: null,
+            governorates: const [],
             selectedGovernorateCode: null,
             appliedGovernorateCode: null,
             appliedGovernorateName: null,
             requestedGovernorateCode: null,
             requestedGovernorateName: null,
             usedFallback: false,
-            selectedHistoryRanges:
-            Map<int, int>.from(_selectedHistoryRanges),
-            defaultHistoryRangeDays: _defaultHistoryRange,
             amountText: _amountController.text,
             fromCurrency: _fromCurrency,
             toCurrency: _toCurrency,
             convertedAmount: _convertedAmount,
             hasCalculated: _hasCalculated,
+            notificationFrequency: 'daily',
+            notificationOptions: const <PreferenceOption>[],
           );
         }
 

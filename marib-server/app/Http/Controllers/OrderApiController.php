@@ -595,12 +595,21 @@ class OrderApiController extends Controller
     private function resolveDefaultPaymentMethod(Order $order): ?string
     {
         $configured = config('orders.default_payment_method');
+        $normalizedConfigured = OrderCheckoutService::normalizePaymentMethod(is_string($configured) ? $configured : null);
 
-        if (is_string($configured) && $configured !== '') {
-            return strtolower($configured);
+        if (is_string($normalizedConfigured) && $normalizedConfigured !== '') {
+            return mb_strtolower($normalizedConfigured);
         }
 
-        return data_get($order->payment_payload, 'default_intent.method');
+        $payloadMethod = data_get($order->payment_payload, 'default_intent.method');
+        $normalizedPayload = OrderCheckoutService::normalizePaymentMethod(is_string($payloadMethod) ? $payloadMethod : null);
+
+        if (is_string($normalizedPayload) && $normalizedPayload !== '') {
+            return mb_strtolower($normalizedPayload);
+        }
+
+        return null;
+    
     }
 
     private function buildDefaultPaymentIdempotencyKey(

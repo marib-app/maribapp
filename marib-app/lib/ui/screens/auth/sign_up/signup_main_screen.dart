@@ -90,8 +90,9 @@ class LoginScreenState extends State<SignUpMainScreen> {
   StreamSubscription<AuthenticationState>? _authenticationSubscription;
   VoidCallback? _loginStateListenerDisposer;
 
-  void _scheduleLazyInit() {
-    if (!mounted) return;
+  late final Future<void> _bootstrapFuture;
+  Future<void> _bootstrapSignUpFlow() async {
+
 
     final authCubit = context.read<AuthenticationCubit>();
     authCubit.init();
@@ -138,14 +139,15 @@ class LoginScreenState extends State<SignUpMainScreen> {
       }
     });
 
-    // Pre-fill country from SIM
-    getSimCountry().then((value) {
+    try {
+      final country = await getSimCountry();
       if (!mounted) return;
 
-      countryCode = value.phoneCode;
-      flagEmoji = value.flagEmoji;
-      setState(() {});
-    });
+      setState(() {
+        countryCode = country.phoneCode;
+        flagEmoji = country.flagEmoji;
+      });
+    } catch (_) {}
   }
 
 
@@ -164,10 +166,8 @@ class LoginScreenState extends State<SignUpMainScreen> {
       }
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _scheduleLazyInit();
-    });
+    _bootstrapFuture = _bootstrapSignUpFlow();
+
   }
 
   @override
@@ -620,115 +620,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // معرفة حجم الشاشة
-    size = MediaQuery
-        .of(context)
-        .size;
-
-
-    final settingsState = context.watch<FetchSystemSettingsCubit>().state;
-    final bool isSettingsReady = settingsState is FetchSystemSettingsSuccess;
-    final bool isSettingsLoading = settingsState is FetchSystemSettingsInProgress;
-
-
-    // تهيئة الـ ViewModel (البيانات الخاصة بشاشة التسجيل)
-    final vm = SignUpVM(
-      formKey: formKey,
-      mobileCtrl: mobileCtrl,
-      emailCtrl: emailCtrl,
-      usernameCtrl: usernameCtrl,
-      codeCtrl: codeCtrl,
-      passwordCtrl: passwordCtrl,
-      countryCode: countryCode,
-      countryName: countryName,
-      flagEmoji: flagEmoji,
-      isFromGoogleLogin: isFromGoogleLogin,
-      googleData: googleData,
-      isObscure: isObscure,
-      agreed: agreed,
-      selectedAccountType: selectedAccountType,
-      isSystemSettingsReady: isSettingsReady,
-      isSystemSettingsLoading: isSettingsLoading,
-
-    );
-
-    // تعريف الكولباكات (Callbacks) للأحداث المختلفة
-    final callbacks = SignUpCallbacks(
-      onToggleObscure: onToggleObscure,
-      onAgreeChanged: onAgreeChanged,
-
-      // عند تغيير نوع الحساب
-      onAccountTypeChanged: (v) async {
-        // حفظ القيمة الجديدة في الـ state
-        onAccountTypeChanged(v);
-
-        // عرض نافذة وسط الشاشة بمحتوى من السيرفر (مترجم)
-        await UiUtils.showBlurredDialoge(
-          context,
-          dialoge: BlurredDialogBox(
-            showCancleButton: false,
-            // لا نعرض زر إلغاء
-
-            // العنوان يأتي من الترجمة
-            title: "chooseaccountAlertTitle".translate(context),
-
-            // المحتوى من السيرفر مترجم، يمكن أن يحتوي نص طويل
-            content: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery
-                    .of(context)
-                    .size
-                    .height * 0.6, // أقصى 60% من ارتفاع الشاشة
-              ),
-              child: SingleChildScrollView(
-                child: Text(
-                  "chooseaccountAlertcontent ${v ?? ''}".translate(context),
-                  style: TextStyle(
-                    fontSize: context.font.small,
-                    color: context.color.textDefaultColor,
-                    height: 1.5, // تباعد الأسطر للقراءة المريحة
-                  ),
-                ),
-              ),
-            ),
-
-            // زر قبول/موافق
-            acceptButtonName: 'ok'.translate(context),
-            isAcceptContainesPush: true,
-            onAccept: () async {
-              Navigator.of(context).pop(); // إغلاق النافذة عند الضغط على OK
-            },
-          ),
-        );
-      },
-
-      onShowCountryPicker: onShowCountryPicker,
-      onSubmit: onSubmit,
-      onNavigateToLogin: () => Navigator.pushNamed(context, Routes.login),
-
-
-      onOpenStaticContent: ({required String title, required String param}) {
-        return _openStaticContent(title: title, param: param);
-      },
-
-      // مصادقة Google
-      onGoogleAuth: () {
-        context.read<AuthenticationCubit>().setData(
-          payload: GoogleLoginPayload(),
-          type: AuthenticationType.google,
-        );
-        context.read<AuthenticationCubit>().authenticate();
-      },
-
-      // مصادقة Apple
-      onAppleAuth: () {
-        context.read<AuthenticationCubit>().setData(
-          payload: AppleLoginPayload(),
-          type: AuthenticationType.apple,
-        );
-        context.read<AuthenticationCubit>().authenticate();
-      },
-    );
 
     // واجهة الشاشة
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -747,15 +638,137 @@ class LoginScreenState extends State<SignUpMainScreen> {
               value: SystemUiOverlayStyle.light.copyWith(
                 statusBarColor: Colors.transparent,
               ),
-              child: Scaffold(
-                backgroundColor: context.color.backgroundColor,
-                body: SignUpMainUI(
-                  vm: vm,
-                  callbacks: callbacks, // تمرير البيانات والأحداث للـ UI الرئيسي
-                ),
+              child: FutureBuilder<void>(
+                future: _bootstrapFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState != ConnectionState.done) {
+                    return const _SignUpLoadingPlaceholder();
+                  }
+
+                  size = MediaQuery.of(context).size;
+
+                  final settingsState =
+                      context.watch<FetchSystemSettingsCubit>().state;
+                  final bool isSettingsReady =
+                  settingsState is FetchSystemSettingsSuccess;
+                  final bool isSettingsLoading =
+                  settingsState is FetchSystemSettingsInProgress;
+
+                  final vm = SignUpVM(
+                    formKey: formKey,
+                    mobileCtrl: mobileCtrl,
+                    emailCtrl: emailCtrl,
+                    usernameCtrl: usernameCtrl,
+                    codeCtrl: codeCtrl,
+                    passwordCtrl: passwordCtrl,
+                    countryCode: countryCode,
+                    countryName: countryName,
+                    flagEmoji: flagEmoji,
+                    isFromGoogleLogin: isFromGoogleLogin,
+                    googleData: googleData,
+                    isObscure: isObscure,
+                    agreed: agreed,
+                    selectedAccountType: selectedAccountType,
+                    isSystemSettingsReady: isSettingsReady,
+                    isSystemSettingsLoading: isSettingsLoading,
+                  );
+
+                  final callbacks = SignUpCallbacks(
+                    onToggleObscure: onToggleObscure,
+                    onAgreeChanged: onAgreeChanged,
+                    onAccountTypeChanged: (v) async {
+                      onAccountTypeChanged(v);
+                      await UiUtils.showBlurredDialoge(
+                        context,
+                        dialoge: BlurredDialogBox(
+                          showCancleButton: false,
+                          title: "chooseaccountAlertTitle".translate(context),
+                          content: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight:
+                              MediaQuery.of(context).size.height * 0.6,
+                            ),
+                            child: SingleChildScrollView(
+                              child: Text(
+                                "chooseaccountAlertcontent ${v ?? ''}"
+                                    .translate(context),
+                                style: TextStyle(
+                                  fontSize: context.font.small,
+                                  color: context.color.textDefaultColor,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                          acceptButtonName: 'ok'.translate(context),
+                          isAcceptContainesPush: true,
+                          onAccept: () async {
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                      );
+                    },
+                    onShowCountryPicker: onShowCountryPicker,
+                    onSubmit: onSubmit,
+                    onNavigateToLogin: () =>
+                        Navigator.pushNamed(context, Routes.login),
+                    onOpenStaticContent:
+                        ({required String title, required String param}) {
+                      return _openStaticContent(title: title, param: param);
+                    },
+                    onGoogleAuth: () {
+                      context.read<AuthenticationCubit>().setData(
+                        payload: GoogleLoginPayload(),
+                        type: AuthenticationType.google,
+                      );
+                      context.read<AuthenticationCubit>().authenticate();
+                    },
+                    onAppleAuth: () {
+                      context.read<AuthenticationCubit>().setData(
+                        payload: AppleLoginPayload(),
+                        type: AuthenticationType.apple,
+                      );
+                      context.read<AuthenticationCubit>().authenticate();
+                    },
+                  );
+
+                  return Scaffold(
+                    backgroundColor: context.color.backgroundColor,
+                    body: SignUpMainUI(
+                      vm: vm,
+                      callbacks: callbacks,
+                    ),
+                  );
+                },
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SignUpLoadingPlaceholder extends StatelessWidget {
+  const _SignUpLoadingPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          colors: [
+            context.color.territoryColor,
+            context.color.territoryColor,
+          ],
+        ),
+      ),
+      child: const Center(
+        child: SizedBox(
+          width: 36,
+          height: 36,
+          child: CircularProgressIndicator(),
         ),
       ),
     );

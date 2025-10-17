@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'default_payment_method' => env('ORDERS_DEFAULT_PAYMENT_METHOD', 'bank_alsharq'),
+    'default_payment_method' => env('ORDERS_DEFAULT_PAYMENT_METHOD', 'east_yemen_bank'),
     'default_payment_intent' => [
         'ttl_minutes' => (int) env('ORDERS_DEFAULT_PAYMENT_INTENT_TTL_MINUTES', 60 * 24),
         'department_overrides' => array_filter([

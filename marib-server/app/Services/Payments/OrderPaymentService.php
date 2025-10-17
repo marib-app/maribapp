@@ -3,6 +3,7 @@
 namespace App\Services\Payments;
 use App\Services\Payments\ManualPaymentRequestService;
 use App\Models\Order;
+use App\Services\OrderCheckoutService;
 use App\Models\PaymentTransaction;
 use App\Models\User;
 use App\Services\PaymentFulfillmentService;
@@ -17,6 +18,12 @@ use RuntimeException;
 
 class OrderPaymentService
 {
+
+    /**
+     * @var array<int, string>
+     */
+    private const SUPPORTED_METHODS = ['manual_bank', 'east_yemen_bank', 'wallet'];
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly WalletService $walletService,
@@ -31,8 +38,18 @@ class OrderPaymentService
      */
     public function initiate(User $user, Order $order, string $method, string $idempotencyKey, array $data = []): PaymentTransaction
     {
-        $method = strtolower($method);
+        $normalizedMethod = OrderCheckoutService::normalizePaymentMethod($method);
+
+        if (! is_string($normalizedMethod) || $normalizedMethod === '') {
+            throw ValidationException::withMessages([
+                'payment_method' => __('طريقة الدفع غير مدعومة.'),
+            ]);
+        }
+
+        $method = mb_strtolower($normalizedMethod);
+        
         $this->assertSupportedMethod($method);
+        $data['payment_method'] = $method;
 
         return $this->db->transaction(function () use ($user, $order, $method, $idempotencyKey, $data) {
             return $this->findOrCreateTransaction($user, $order, $method, $idempotencyKey, $data);
@@ -72,8 +89,25 @@ class OrderPaymentService
             ]);
         }
 
-        $method = strtolower((string) $transaction->payment_gateway);
+        $rawMethod = $transaction->payment_gateway ?? Arr::get($data, 'payment_method');
+        $normalizedMethod = OrderCheckoutService::normalizePaymentMethod(is_string($rawMethod) ? $rawMethod : null);
+
+        if (! is_string($normalizedMethod) || $normalizedMethod === '') {
+            throw ValidationException::withMessages([
+                'payment_method' => __('طريقة الدفع غير مدعومة.'),
+            ]);
+        }
+
+        $method = mb_strtolower($normalizedMethod);
+        
         $this->assertSupportedMethod($method);
+
+        if ($transaction->payment_gateway !== $method) {
+            $transaction->payment_gateway = $method;
+        }
+
+        $data['payment_method'] = $method;
+
 
         $options = [
             'payment_gateway' => $method,
@@ -138,7 +172,10 @@ class OrderPaymentService
     public function createManual(User $user, Order $order, string $idempotencyKey, array $data = []): PaymentTransaction
     {
         return $this->db->transaction(function () use ($user, $order, $idempotencyKey, $data) {
-            $transaction = $this->findOrCreateTransaction($user, $order, 'manual', $idempotencyKey, $data);
+            $method = 'manual_bank';
+            $data['payment_method'] = $method;
+            $transaction = $this->findOrCreateTransaction($user, $order, $method, $idempotencyKey, $data);
+
 
             $manualPaymentRequest = $this->manualPaymentRequestService->createOrUpdateForManualTransaction(
                 $user,
@@ -211,6 +248,8 @@ class OrderPaymentService
         string $idempotencyKey,
         array $data = []
     ): PaymentTransaction {
+        $data['payment_method'] = $method;
+
         $existing = PaymentTransaction::query()
             ->where('user_id', $user->getKey())
             ->where('payment_gateway', $method)
@@ -272,7 +311,7 @@ class OrderPaymentService
             'amount' => $amount,
             'currency' => $transactionCurrency,
             'payment_gateway' => $method,
-             'order_id' => (string) $order->getKey(),
+            'order_id' => (string) $order->getKey(),
 
             'payment_status' => 'pending',
             'payable_type' => Order::class,
@@ -352,7 +391,7 @@ class OrderPaymentService
 
     private function assertSupportedMethod(string $method): void
     {
-        if (! in_array($method, ['wallet', 'bank_alsharq', 'manual'], true)) {
+        if (! in_array($method, self::SUPPORTED_METHODS, true)) {
             throw ValidationException::withMessages([
                 'payment_method' => __('طريقة الدفع غير مدعومة.'),
             ]);

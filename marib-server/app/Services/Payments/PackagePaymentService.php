@@ -3,6 +3,7 @@
 namespace App\Services\Payments;
 
 use App\Models\Package;
+use App\Services\OrderCheckoutService;
 use App\Models\PaymentTransaction;
 use App\Models\User;
 use App\Models\WalletTransaction;
@@ -17,6 +18,12 @@ use RuntimeException;
 
 class PackagePaymentService
 {
+
+    /**
+     * @var array<int, string>
+     */
+    private const SUPPORTED_METHODS = ['manual_bank', 'wallet'];
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly WalletService $walletService,
@@ -31,11 +38,23 @@ class PackagePaymentService
      */
     public function initiate(User $user, Package $package, string $method, string $idempotencyKey, array $data = []): PaymentTransaction
     {
-        $method = strtolower($method);
+        $normalizedMethod = OrderCheckoutService::normalizePaymentMethod($method);
+
+        if (! is_string($normalizedMethod) || $normalizedMethod === '') {
+            throw ValidationException::withMessages([
+                'payment_method' => __('طريقة الدفع المحددة غير مدعومة لهذه العملية.'),
+            ]);
+        }
+
+        $method = mb_strtolower($normalizedMethod);
+        
         $this->assertSupportedMethod($method);
 
+        $data['payment_method'] = $method;
+
         return $this->db->transaction(function () use ($user, $package, $method, $idempotencyKey, $data) {
-        return $this->findOrCreateTransaction($user, $package, $method, $idempotencyKey, $data);
+            return $this->findOrCreateTransaction($user, $package, $method, $idempotencyKey, $data);
+
 
         });
     }
@@ -63,8 +82,26 @@ class PackagePaymentService
 
         $package = Package::findOrFail($transaction->payable_id);
 
-        $method = strtolower((string) ($transaction->payment_gateway ?? $data['payment_method'] ?? ''));
+        $rawMethod = $transaction->payment_gateway ?? Arr::get($data, 'payment_method');
+        $normalizedMethod = OrderCheckoutService::normalizePaymentMethod(is_string($rawMethod) ? $rawMethod : null);
+
+        if (! is_string($normalizedMethod) || $normalizedMethod === '') {
+            throw ValidationException::withMessages([
+                'payment_method' => __('طريقة الدفع المحددة غير مدعومة لهذه العملية.'),
+            ]);
+        }
+
+        $method = mb_strtolower($normalizedMethod);
+        
         $this->assertSupportedMethod($method);
+
+        if ($transaction->payment_gateway !== $method) {
+            $transaction->payment_gateway = $method;
+            $transaction->save();
+        }
+
+        $data['payment_method'] = $method;
+
 
         $options = [
             'payment_gateway' => $method,
@@ -123,7 +160,10 @@ class PackagePaymentService
     public function createManual(User $user, Package $package, string $idempotencyKey, array $data = []): PaymentTransaction
     {
         return $this->db->transaction(function () use ($user, $package, $idempotencyKey, $data) {
-            $transaction = $this->findOrCreateTransaction($user, $package, 'manual', $idempotencyKey, $data);
+            $method = 'manual_bank';
+            $data['payment_method'] = $method;
+            $transaction = $this->findOrCreateTransaction($user, $package, $method, $idempotencyKey, $data);
+
 
             $manualPaymentRequest = $this->manualPaymentRequestService->createOrUpdateForManualTransaction(
                 $user,
@@ -287,7 +327,7 @@ class PackagePaymentService
 
     private function assertSupportedMethod(string $method): void
     {
-        if (!in_array($method, ['wallet', 'manual'], true)) {
+        if (! in_array($method, self::SUPPORTED_METHODS, true)) {
             throw ValidationException::withMessages([
                 'payment_method' => __('طريقة الدفع المحددة غير مدعومة لهذه العملية.'),
             ]);
@@ -305,6 +345,7 @@ class PackagePaymentService
         string $idempotencyKey,
         array $data = []
     ): PaymentTransaction {
+        $data['payment_method'] = $method;
         $existing = PaymentTransaction::query()
             ->where('user_id', $user->getKey())
             ->where('payment_gateway', $method)

@@ -22,7 +22,7 @@ class PaymentWebhookController extends Controller
 
     public function bankAlsharq(Request $request): JsonResponse
     {
-        return $this->process('bank_alsharq', $request);
+        return $this->process('east_yemen_bank', $request);
     }
 
     private function process(string $gateway, Request $request): JsonResponse

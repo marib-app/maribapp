@@ -11,7 +11,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:marib/ui/screens/item/ad_creation_wizard/ad_creation_wizard_screen.dart';
 
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/item/search_item_cubit.dart';
@@ -45,7 +44,6 @@ import 'package:marib/utils/hive_utils.dart';
 
 // الواجهة (ملف منفصل للعرض فقط)
 import 'main_activity_ui.dart' show MainActivityUI, MainTab;
-import 'ad_creation_access.dart';
 
 
 // متغيّرات مشتركة كما كانت
@@ -341,270 +339,19 @@ class MainActivityState extends State<MainActivity> with TickerProviderStateMixi
   }
 
 
-  void _openAdCreationWizard({
-    String? interfaceType,
-    Map<String, dynamic>? initialData,
-    List<int>? initialCategoryIds,
-    String? accountTypeCode,
-    Set<String>? permittedSections,
-    Set<String>? blockedSections,
-    Set<int>? allowedCategoryIds,
-  }) {
 
-    final String? resolvedInterfaceType =
-        interfaceType ?? _extractString(initialData?['interfaceType']) ?? _extractString(initialData?['interface_type']);
-    final String? draftId =
-        _extractString(initialData?['draftId']) ?? _extractString(initialData?['draft_id']);
-
-    final List<int> mergedInitialCategoryIds = <int>[];
-
-    void addCategories(Iterable<int> source) {
-      for (final int id in source) {
-        if (id <= 0) {
-          continue;
-        }
-        if (!mergedInitialCategoryIds.contains(id)) {
-          mergedInitialCategoryIds.add(id);
-        }
-      }
-    }
-
-    if (initialCategoryIds != null) {
-      addCategories(initialCategoryIds);
-    }
-
-    addCategories(_extractInitialCategoryIds(initialData));
-
-    final AdCreationWizardArguments arguments = AdCreationWizardArguments(
-      draftId: draftId,
-      interfaceType: resolvedInterfaceType,
-      initialCategoryIds:
-      mergedInitialCategoryIds.isEmpty ? null : mergedInitialCategoryIds,
-      accountTypeCode: accountTypeCode,
-      permittedDelegateSections: permittedSections,
-      blockedDelegateSections: blockedSections,
-      allowedCategoryIds: allowedCategoryIds,
-    );
-
-    final Map<String, dynamic> argumentMap = arguments.toMap();
-    if (initialData != null && initialData.isNotEmpty) {
-      argumentMap['initialData'] = Map<String, dynamic>.from(initialData);
-    }
-
-
-    final RouteSettings routeSettings = RouteSettings(
-      name: Routes.adCreationWizard,
-      arguments: argumentMap,
-    );
-
-    Navigator.of(context)
-        .push(
-      MaterialPageRoute(
-        builder: (_) => AdCreationWizardScreen(
-          draftId: draftId,
-          interfaceType: resolvedInterfaceType,
-          initialCategoryIds:
-          mergedInitialCategoryIds.isEmpty ? null : mergedInitialCategoryIds,
-          accountTypeCode: accountTypeCode,
-          permittedDelegateSections: permittedSections,
-          blockedDelegateSections: blockedSections,
-          allowedCategoryIds: allowedCategoryIds,
-          arguments: arguments,
-          routeSettings: routeSettings,
-          routeArgumentMap: argumentMap,
-        ),
-        settings: routeSettings,
-      ),
-    )
-        .then((_) => _refreshListingLimit());
-
-  }
-  List<int> _extractInitialCategoryIds(Map<String, dynamic>? source) {
-    if (source == null || source.isEmpty) {
-      return <int>[];
-    }
-    final List<int> categoryIds = <int>[];
-
-    void addCategory(dynamic value) {
-      final int? parsed = _extractInt(value);
-      if (parsed == null) {
-        return;
-      }
-      if (!categoryIds.contains(parsed)) {
-        categoryIds.add(parsed);
-      }
-    }
-
-    final dynamic rawCategoryIds =
-        source['categoryIds'] ?? source['category_ids'];
-    if (rawCategoryIds is Iterable) {
-      for (final dynamic entry in rawCategoryIds) {
-        addCategory(entry);
-      }
-    } else if (rawCategoryIds is String) {
-      for (final String token in rawCategoryIds.split(RegExp(r'[\s,]+'))) {
-        addCategory(token);
-      }
-    } else {
-      addCategory(rawCategoryIds);
-    }
-
-    addCategory(source['catID']);
-    addCategory(source['catId']);
-    addCategory(source['categoryId']);
-    addCategory(source['category_id']);
-    addCategory(source['mainCategoryId']);
-    addCategory(source['subCategoryId']);
-    addCategory(source['sub_category_id']);
-
-    return categoryIds;
-  }
-
-
-  AdCreationScope _buildAdCreationScope() {
-    final UserDetailsState userState = context.read<UserDetailsCubit>().state;
-    final Set<String> permittedSections = HiveUtils.getPermittedDelegateSections();
-    final Set<String> blockedSections = HiveUtils.getBlockedDelegateSections();
-
-    return resolveAdCreationScope(
-      user: userState.user,
-      permittedDelegateSections: permittedSections,
-      blockedDelegateSections: blockedSections,
-    );
-  }
 
   Future<void> _handleAdCreationNavigation() async {
-    final AdCreationScope scope = _buildAdCreationScope();
-    if (!scope.hasTargets) {
-      if (!mounted) return;
-      HelperUtils.showSnackBarMessage(
-        context,
-        _translateOrFallback('noCategoryAccess', 'لا توجد فئات متاحة لهذا الحساب'),
-        type: MessageType.error,
-      );
-      return;
-    }
-
-    AdCreationTarget? target;
-    if (scope.hasMultipleTargets) {
-      target = await _promptAdCreationTarget(scope.targets);
-      if (!mounted) return;
-    } else {
-      target = scope.targets.first;
-    }
-
-    if (target == null) {
-      return;
-    }
-
-    _launchAdCreationTarget(target, scope);
-  }
-
-  void _launchAdCreationTarget(AdCreationTarget target, AdCreationScope scope) {
-    final List<int> initialIds = target.initialCategoryIds.isNotEmpty
-        ? List<int>.from(target.initialCategoryIds)
-        : (target.allowedCategoryIds.isNotEmpty
-        ? <int>[target.allowedCategoryIds.first]
-        : const <int>[]);
-
-    _openAdCreationWizard(
-      interfaceType: target.interfaceType,
-      initialCategoryIds: initialIds.isEmpty ? null : initialIds,
-      accountTypeCode: scope.accountTypeCode,
-      permittedSections: scope.permittedDelegateSections,
-      blockedSections: scope.blockedDelegateSections,
-      allowedCategoryIds: target.allowedCategoryIds,
-    );
-  }
-
-  Future<AdCreationTarget?> _promptAdCreationTarget(
-      List<AdCreationTarget> targets) {
-    return showModalBottomSheet<AdCreationTarget>(
-      context: context,
-      builder: (BuildContext bottomSheetContext) {
-        final ThemeData theme = Theme.of(bottomSheetContext);
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-                child: Text(
-                  _translateOrFallback(
-                      'chooseAdDepartment', 'اختر القسم الذي تريد النشر فيه'),
-                  style: theme.textTheme.titleMedium,
-                  textAlign: TextAlign.start,
-                ),
-              ),
-              for (final AdCreationTarget target in targets) ...<Widget>[
-                ListTile(
-                  title: Text(
-                    _targetLabel(target),
-                    style: theme.textTheme.titleMedium,
-                  ),
-                  onTap: () => Navigator.pop(bottomSheetContext, target),
-                ),
-                if (target != targets.last) const Divider(height: 1),
-              ],
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  String _targetLabel(AdCreationTarget target) {
-    switch (target.type) {
-      case AdCreationTargetType.publicAudience:
-        return _translateOrFallback('publicAds', 'إعلانات الجمهور');
-      case AdCreationTargetType.realEstate:
-        return _translateOrFallback('realEstateservices', 'الخدمات العقارية');
-      case AdCreationTargetType.store:
-        return _translateOrFallback('storeProducts', 'منتجات المتجر');
-      case AdCreationTargetType.shein:
-        return _translateOrFallback('sheinDepartment', 'قسم شي إن');
-      case AdCreationTargetType.computer:
-        return _translateOrFallback('computerDepartment', 'قسم الكمبيوتر');
-    }
-  }
-
-  String _translateOrFallback(String key, String fallback) {
-    final String translated = key.translate(context);
-    if (translated.isEmpty || translated == key) {
-      return fallback;
-    }
-    return translated;
-  }
+    if (!mounted) return;
 
 
-
-  String? _extractString(dynamic value) {
-    if (value == null) {
-      return null;
-    }
-    final String text = value.toString().trim();
-    return text.isEmpty ? null : text;
-  }
-
-  int? _extractInt(dynamic value) {
-    if (value == null) {
-      return null;
-    }
-    if (value is int) {
-      return value;
-    }
-    if (value is num) {
-      return value.toInt();
-    }
-    if (value is String) {
-      final String trimmed = value.trim();
-      if (trimmed.isEmpty) {
-        return null;
+    try {
+      await Navigator.pushNamed(context, Routes.selectCategoryScreen);
+    } finally {
+      if (mounted) {
+        _refreshListingLimit();
       }
-      return int.tryParse(trimmed);
     }
-    return null;
 
 
   }

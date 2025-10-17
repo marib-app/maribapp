@@ -3,6 +3,8 @@ import 'package:marib/ui/screens/auth/sign_up/mobile_verification_screen.dart';
 import 'package:marib/ui/screens/cart/adress.dart';
 import 'package:marib/ui/screens/cart/delivery_and_payment.dart';
 import 'package:marib/ui/screens/cart/order_step.dart';
+import 'dart:ui';
+
 
 import 'package:marib/ui/screens/competitions/competitions_screen.dart';
 
@@ -56,7 +58,6 @@ import 'package:marib/ui/screens/seller/seller_verification.dart';
 import 'package:marib/ui/screens/subscription/packages_list.dart';
 import 'package:marib/ui/screens/subscription/transaction_history_screen.dart';
 import 'package:marib/ui/screens/filter_screen.dart';
-import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/ui/screens/widgets/maintenance_mode.dart';
 import 'package:marib/data/repositories/item/item_repository.dart';
 import 'package:marib/data/model/data_output.dart';
@@ -119,6 +120,133 @@ import 'package:marib/ui/screens/cart/orders_list_screen.dart';
 import 'package:marib/ui/screens/item/ad_creation_wizard/ad_creation_wizard_screen.dart';
 
 
+
+
+
+class AppPageRoute {
+  AppPageRoute._();
+
+  static const Duration _defaultDuration = Duration(milliseconds: 320);
+
+  static PageRoute<T> build<T>({
+    required WidgetBuilder builder,
+    RouteSettings? settings,
+    bool fullscreenDialog = false,
+    bool barrierDismissible = false,
+    Color? barrierColor,
+    String? barrierLabel,
+    Duration? duration,
+    Curve curve = Curves.easeInOut,
+    bool maintainState = true,
+    bool? opaque,
+  }) {
+    return _FadeBlurPageRoute<T>(
+      builder: builder,
+      settings: settings,
+      fullscreenDialog: fullscreenDialog,
+      barrierDismissible: barrierDismissible,
+      barrierColor: barrierColor,
+      barrierLabel: barrierLabel,
+      duration: duration ?? _defaultDuration,
+      curve: curve,
+      maintainState: maintainState,
+      opaque: opaque ?? !barrierDismissible,
+    );
+  }
+}
+
+class _FadeBlurPageRoute<T> extends PageRoute<T> {
+  _FadeBlurPageRoute({
+    required this.builder,
+    required RouteSettings? settings,
+    required this.curve,
+    required this.duration,
+    required bool maintainState,
+    required bool fullscreenDialog,
+    required bool barrierDismissible,
+    required bool opaque,
+    this.barrierColor,
+    this.barrierLabel,
+  })  : _maintainState = maintainState,
+        _barrierDismissible = barrierDismissible,
+        _opaque = opaque,
+        super(settings: settings, fullscreenDialog: fullscreenDialog);
+
+  final WidgetBuilder builder;
+  final Curve curve;
+  final Duration duration;
+  final bool _maintainState;
+  final bool _barrierDismissible;
+  final bool _opaque;
+
+  @override
+  final Color? barrierColor;
+
+  @override
+  final String? barrierLabel;
+
+  @override
+  bool get maintainState => _maintainState;
+
+  @override
+  bool get barrierDismissible => _barrierDismissible;
+
+  @override
+  bool get opaque => _opaque;
+
+  @override
+  Duration get transitionDuration => duration;
+
+  @override
+  Duration get reverseTransitionDuration => duration;
+
+  @override
+  Widget buildPage(
+      BuildContext context,
+      Animation<double> animation,
+      Animation<double> secondaryAnimation,
+      ) {
+    return builder(context);
+  }
+
+  @override
+  Widget buildTransitions(
+      BuildContext context,
+      Animation<double> animation,
+      Animation<double> secondaryAnimation,
+      Widget child,
+      ) {
+    final curvedAnimation = CurvedAnimation(
+      parent: animation,
+      curve: curve,
+      reverseCurve: curve.flipped,
+    );
+
+    return AnimatedBuilder(
+      animation: curvedAnimation,
+      builder: (context, _) {
+        final value = curvedAnimation.value;
+        final sigma = (1 - value) * 12;
+        final fadedChild = Opacity(
+          opacity: value,
+          child: child,
+        );
+
+        if (sigma <= 0.01) {
+          return fadedChild;
+        }
+
+        return ImageFiltered(
+          imageFilter: ImageFilter.blur(
+            sigmaX: sigma,
+            sigmaY: sigma,
+          ),
+          child: fadedChild,
+        );
+      },
+    );
+  }
+}
 
 
 class Routes {
@@ -318,9 +446,14 @@ class Routes {
     if (routeSettings.name == Routes.temporarySection) {
       final arguments = routeSettings.arguments as Map<String, dynamic>?;
       if (arguments == null) {
-        return CupertinoPageRoute(builder: (context) => ErrorScreen());
+        return AppPageRoute.build(
+          settings: routeSettings,
+          builder: (context) => ErrorScreen(),
+        );
       }
-      return MaterialPageRoute(
+
+      return AppPageRoute.build(
+        settings: routeSettings,
         builder: (context) => TemporarySectionScreen(
           catName: arguments['catName'] ?? 'Default CatName',
           catID: arguments['catID'] ?? 'Default CatID',
@@ -330,20 +463,23 @@ class Routes {
 
     if (routeSettings.name!.contains('/product-details/')) {
       String itemSlug = routeSettings.name!.split('/').last;
-      return MaterialPageRoute(builder: (context) {
-        return FutureBuilder<DataOutput<ItemModel>>(
-          future: ItemRepository().fetchItemFromItemSlug(itemSlug),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Scaffold(body: Center(child: CircularProgressIndicator()));
-            } else if (snapshot.hasError) {
-              return Scaffold(body: Center(child: Text('Error: ${snapshot.error}')));
-            } else {
-              return AdDetailsScreen(model: snapshot.data!.modelList.first);
-            }
-          },
-        );
-      });
+      return AppPageRoute.build(
+        settings: routeSettings,
+        builder: (context) {
+          return FutureBuilder<DataOutput<ItemModel>>(
+            future: ItemRepository().fetchItemFromItemSlug(itemSlug),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Scaffold(body: Center(child: CircularProgressIndicator()));
+              } else if (snapshot.hasError) {
+                return Scaffold(body: Center(child: Text('Error: ${snapshot.error}')));
+              } else {
+                return AdDetailsScreen(model: snapshot.data!.modelList.first);
+              }
+            },
+          );
+        },
+      );
     }
 
 
@@ -388,9 +524,11 @@ class Routes {
         return WifiCabinScreen.route(routeSettings);
 
       case mapSearch:
-        return MaterialPageRoute(builder: (_) => const MapSearchScreen());
 
-
+        return AppPageRoute.build(
+          settings: routeSettings,
+          builder: (_) => const MapSearchScreen(),
+        );
 
 
     // الدفع
@@ -410,7 +548,10 @@ class Routes {
     //  الأقسام الموقوفة
       case Routes.temporarySection:
         final arguments = routeSettings.arguments as Map<String, String>;
-        return MaterialPageRoute(
+
+        return AppPageRoute.build(
+          settings: routeSettings,
+
           builder: (context) => TemporarySectionScreen(
             catName: arguments['catName'] ?? '',
             catID: arguments['catID'] ?? '',
@@ -443,10 +584,17 @@ class Routes {
 
 
       case splash:
-        return BlurredRouter(builder: ((context) => const SplashScreen()));
+
+        return AppPageRoute.build(
+          settings: routeSettings,
+          builder: (context) => const SplashScreen(),
+        );
       case onboarding:
-        return CupertinoPageRoute(
-            builder: ((context) => const OnboardingScreen()));
+        return AppPageRoute.build(
+          settings: routeSettings,
+          builder: (context) => const OnboardingScreen(),
+        );
+
       case main:
         return MainActivity.route(routeSettings);
       case login:
@@ -632,12 +780,22 @@ class Routes {
         return MobileVerificationScreen.route(routeSettings);
 
       case info:
-        return BlurredRouter(builder: ((context) => const InfoScreen()));
+        return AppPageRoute.build(
+          settings: routeSettings,
+          builder: (context) => const InfoScreen(),
+        );
       case currency:
-        return BlurredRouter(builder: ((context) => const CurrencyScreen()));
+        return AppPageRoute.build(
+          settings: routeSettings,
+          builder: (context) => const CurrencyScreen(),
+        );
 
       case support:
-        return BlurredRouter(builder: ((context) => const SupportScreen()));
+
+        return AppPageRoute.build(
+          settings: routeSettings,
+          builder: (context) => const SupportScreen(),
+        );
 
       /*case payStackWebViewScreen:
         return PaystackWebView.route(routeSettings);*/
@@ -646,7 +804,11 @@ class Routes {
         return ItemsScreen.route(routeSettings);*/
 
       default:
-        return CupertinoPageRoute(builder: (context) => const Scaffold());
+
+        return AppPageRoute.build(
+          settings: routeSettings,
+          builder: (context) => const Scaffold(),
+        );
       /*
         if (routeSettings.name!.contains(AppSettings.shareNavigationWebUrl)) {
 

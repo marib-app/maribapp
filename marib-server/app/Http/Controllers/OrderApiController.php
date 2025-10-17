@@ -525,7 +525,7 @@ class OrderApiController extends Controller
 
         $method = $this->resolveDefaultPaymentMethod($order);
 
-        if ($method === null) {
+        if (! is_string($method) || $method === '') {
             return null;
         }
 
@@ -594,18 +594,18 @@ class OrderApiController extends Controller
 
     private function resolveDefaultPaymentMethod(Order $order): ?string
     {
-        $configured = config('orders.default_payment_method');
-        $normalizedConfigured = OrderCheckoutService::normalizePaymentMethod(is_string($configured) ? $configured : null);
+        $candidates = [
+            is_string($order->payment_method) ? $order->payment_method : null,
+            data_get($order->payment_payload, 'default_intent.method'),
+            config('orders.default_payment_method'),
+        ];
 
-        if (is_string($normalizedConfigured) && $normalizedConfigured !== '') {
-            return mb_strtolower($normalizedConfigured);
-        }
+        foreach ($candidates as $candidate) {
+            $normalized = OrderCheckoutService::normalizePaymentMethod(is_string($candidate) ? $candidate : null);
 
-        $payloadMethod = data_get($order->payment_payload, 'default_intent.method');
-        $normalizedPayload = OrderCheckoutService::normalizePaymentMethod(is_string($payloadMethod) ? $payloadMethod : null);
-
-        if (is_string($normalizedPayload) && $normalizedPayload !== '') {
-            return mb_strtolower($normalizedPayload);
+            if (is_string($normalized) && $normalized !== '') {
+                return mb_strtolower($normalized);
+            }
         }
 
         return null;

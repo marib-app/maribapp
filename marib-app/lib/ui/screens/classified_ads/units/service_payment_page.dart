@@ -264,7 +264,7 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
 
       body: SafeArea(
         child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
+
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

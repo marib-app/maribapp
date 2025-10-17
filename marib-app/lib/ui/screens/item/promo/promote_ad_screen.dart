@@ -960,7 +960,6 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
                     children: [
                       SingleChildScrollView(
                         controller: _scrollCtrl,
-                        physics: const BouncingScrollPhysics(),
                         padding: EdgeInsets.fromLTRB(
                           14.rw(context),
                           10.rh(context),
@@ -1137,7 +1136,7 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
           backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
           title: const Text("💳 الدفع عن طريق حوالة مصرفية"),
           content: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
+
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,

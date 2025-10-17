@@ -294,8 +294,7 @@ class _ClassifiedScreen3State extends State<ClassifiedScreen3> {
                       },
                       child: ListView.builder(
                         controller: _scroll,
-                        physics: const BouncingScrollPhysics(),
-                        padding: EdgeInsets.fromLTRB(
+                          padding: EdgeInsets.fromLTRB(
                           ScreenScaler.s(10),
                           ScreenScaler.s(8),
                           ScreenScaler.s(10),

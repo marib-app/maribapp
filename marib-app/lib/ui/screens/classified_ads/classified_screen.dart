@@ -280,7 +280,6 @@ class _ClassifiedScreenState extends State<ClassifiedScreen> {
                   Expanded(
                     child: GridView.custom(
                       controller: _pageScrollController,
-                      physics: const BouncingScrollPhysics(),
                       cacheExtent: 400,
 
                       // ✅ نفس padding الشيمر

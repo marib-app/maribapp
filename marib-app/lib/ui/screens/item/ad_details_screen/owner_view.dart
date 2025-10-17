@@ -43,27 +43,6 @@ import 'ad_image_source.dart';
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // ==============================
 // شريحة إضافات المالك (مثلاً: تمييز الإعلان)
 // ==============================
@@ -367,7 +346,6 @@ class OwnerAdDetailsBody extends StatelessWidget {
     }
 
     return CustomScrollView(
-      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       slivers: [
         // السلايدر مع تكبير عند السحب للأسفل (بدون blur)
         SliverAppBar(

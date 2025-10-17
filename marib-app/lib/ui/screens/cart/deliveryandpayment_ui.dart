@@ -209,7 +209,6 @@ class DeliveryAndPaymentUI extends StatelessWidget {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 1),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -438,8 +437,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
             ),
           ),
           child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Column(
+              child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

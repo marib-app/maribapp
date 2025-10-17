@@ -884,7 +884,6 @@ class _CheckboxActionButton extends StatelessWidget {
                         return Scrollbar(
                           thumbVisibility: true,
                           child: ListView.separated(
-                            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                             padding: const EdgeInsets.symmetric(vertical: 6),
                             itemCount: list.length,
                             separatorBuilder: (_, __) => Divider(

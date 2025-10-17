@@ -253,7 +253,6 @@ class _ClassifiedScreen2State extends State<ClassifiedScreen2> {
                   Expanded(
                     child: ListView.builder(
                       controller: _scroll,
-                      physics: const BouncingScrollPhysics(),
                       padding: EdgeInsets.symmetric(
                         vertical: ScreenScaler.s(6),
                         horizontal: ScreenScaler.s(8),

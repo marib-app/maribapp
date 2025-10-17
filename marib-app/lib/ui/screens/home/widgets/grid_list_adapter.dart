@@ -51,7 +51,7 @@ class GridListAdapter extends StatelessWidget {
           padding: EdgeInsets.symmetric(
               horizontal: isNotSidePadding != null ? 0 : sidePadding),
           scrollDirection: listAxis ?? Axis.vertical,
-          physics: const BouncingScrollPhysics(),
+
           itemBuilder: (context, index) => builder(context, index, false),
           itemCount: total,
           separatorBuilder: listSaperator ?? ((c, i) => Container()),

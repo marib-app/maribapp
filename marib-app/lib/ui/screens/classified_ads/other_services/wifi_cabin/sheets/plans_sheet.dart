@@ -148,7 +148,7 @@ class _PlansSheetState extends State<_PlansSheet> {
                     }
                     if (_plans.isEmpty) {
                       return SingleChildScrollView(
-                        physics: const BouncingScrollPhysics(),
+
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 32,

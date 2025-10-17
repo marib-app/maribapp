@@ -208,7 +208,6 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
                             controller: _thumbCtrl,
                             padding: l.padding,
                             scrollDirection: Axis.horizontal,
-                            physics: const BouncingScrollPhysics(),
                             itemExtent: l.itemExtent,
                             itemCount: widget.images.length,
                             itemBuilder: (_, i) => _thumb(i, w: l.itemW, h: l.itemH),

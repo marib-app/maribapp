@@ -1441,9 +1441,7 @@ class _CategoriesPaletteSheetState extends State<_CategoriesPaletteSheet>
                                     interactive: true,
                                     child: ListView.separated(
                                       controller: scrollController,
-                                      physics: const BouncingScrollPhysics(
-                                        parent: AlwaysScrollableScrollPhysics(),
-                                      ),
+
                                       itemCount: list.length,
                                       separatorBuilder: (_, __) =>
                                           Divider(height: 1, color: faintDivider),
@@ -1614,19 +1612,12 @@ class _PaletteRowState extends State<_PaletteRow> {
   }
 }
 
-class _NoGlowScrollBehavior extends ScrollBehavior {
+class _NoGlowScrollBehavior extends AppScrollBehavior {
   const _NoGlowScrollBehavior();
 
   @override
   Widget buildOverscrollIndicator(BuildContext context, Widget child, ScrollableDetails details) {
     return child; // بدون توهج
-  }
-
-  @override
-  ScrollPhysics getScrollPhysics(BuildContext context) {
-    return BouncingScrollPhysics(
-      parent: const AppScrollBehavior().getScrollPhysics(context),
-    );
   }
 }
 

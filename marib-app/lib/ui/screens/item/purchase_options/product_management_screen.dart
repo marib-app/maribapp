@@ -193,7 +193,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
       color: color.primaryColor,
       child: TabBarView(
         controller: _tabController,
-        physics: const BouncingScrollPhysics(),
+
         children: <Widget>[
           _AttributesTab(state: state),
 
@@ -465,7 +465,7 @@ class _AttributesTabState extends State<_AttributesTab> {
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      physics: const BouncingScrollPhysics(),
+
       children: <Widget>[
     Align(
     alignment: AlignmentDirectional.centerStart,
@@ -1568,7 +1568,7 @@ class _StockTab extends StatelessWidget {
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      physics: const BouncingScrollPhysics(),
+
       children: <Widget>[
         Align(
           alignment: AlignmentDirectional.centerStart,
@@ -1834,7 +1834,7 @@ class _DiscountTabState extends State<_DiscountTab> {
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      physics: const BouncingScrollPhysics(),
+
       children: <Widget>[
         Container(
           decoration: BoxDecoration(

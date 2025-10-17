@@ -331,7 +331,7 @@ class FilterScreenState extends State<FilterScreen> {
           }, buttonTitle: "applyFilter".translate(context), radius: 8),
         ),
         body: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
+
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           child: Padding(
             padding: const EdgeInsets.all(

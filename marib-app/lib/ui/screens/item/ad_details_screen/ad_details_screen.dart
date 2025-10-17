@@ -1895,7 +1895,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
           height: 56,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
             padding: EdgeInsets.zero,
             itemBuilder: (BuildContext context, int index) {
               final _AttributeValueDescriptor descriptor = descriptors[index];
@@ -1991,8 +1990,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
             height: 88,
             child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.zero,
+                    padding: EdgeInsets.zero,
                 itemBuilder: (BuildContext context, int index) {
                   final _ColorChoiceDescriptor descriptor = descriptors[index];
                   final bool selected = currentValue == descriptor.rawValue;
@@ -2629,8 +2627,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
 
     return CustomScrollView(
-      physics: const BouncingScrollPhysics(
-          parent: AlwaysScrollableScrollPhysics()), // ← تأثير السحب المطاطي
+
       slivers: [
         // =======================
         // 1️⃣ SliverAppBar للسلايدر
@@ -3084,7 +3081,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
             itemCount: itemCount,
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: sidePadding),
-            physics: const BouncingScrollPhysics(),
 
             /// ✅ إنشاء كل عنصر Shimmer (بطاقة وهمية)
             itemBuilder: (context, index) {
@@ -4187,7 +4183,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                 ListView.separated(
                   shrinkWrap: true,
                   itemCount: reasons?.length ?? 0,
-                  physics: const BouncingScrollPhysics(),
+                  physics: const NeverScrollableScrollPhysics(),
                   separatorBuilder: (context, index) {
                     return const SizedBox(height: 10);
                   },
@@ -4420,9 +4416,7 @@ class _AdDetailsLoadingBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     return CustomScrollView(
-      physics: const BouncingScrollPhysics(
-        parent: AlwaysScrollableScrollPhysics(),
-      ),
+
       slivers: [
         SliverAppBar(
           pinned: true,

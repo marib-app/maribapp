@@ -74,7 +74,7 @@ class _OtherServicesScreenState extends State<OtherServicesScreen> {
 
   Widget _buildGrid(BuildContext context) {
     return GridView.builder(
-      physics: const BouncingScrollPhysics(),
+
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 4,
         mainAxisSpacing: 12,

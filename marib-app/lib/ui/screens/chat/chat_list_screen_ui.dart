@@ -295,7 +295,6 @@ extension _ChatListScreenUi on _ChatListScreenState {
   Widget buildChatListLoadingShimmerUi() {
     return ListView.builder(
       itemCount: 10,
-      physics: const BouncingScrollPhysics(),
       padding: const EdgeInsetsDirectional.all(16),
       itemBuilder: (context, index) {
         return Padding(

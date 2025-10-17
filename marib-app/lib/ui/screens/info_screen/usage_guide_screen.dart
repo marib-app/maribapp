@@ -67,9 +67,7 @@ class _UsageGuideScreenState extends State<UsageGuideScreen> {
 
   Widget _buildHtmlContent() {
     return SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(
-        parent: BouncingScrollPhysics(),
-      ),
+
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: AppHtml(
         data: widget.htmlContent!,

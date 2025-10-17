@@ -143,7 +143,6 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
         ),
         body: SafeArea(
           child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
             padding: EdgeInsets.fromLTRB(horizontal, vertical, horizontal, (media.viewPadding.bottom + 1).clamp(8.0, 24.0)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -357,7 +356,6 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
           backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
           title: const Text("💳 الدفع عن طريق حوالة مصرفية"),
           content: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,

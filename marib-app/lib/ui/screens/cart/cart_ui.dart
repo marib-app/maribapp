@@ -891,7 +891,6 @@ class CartUI extends StatelessWidget {
               if (safetyBanner != null) safetyBanner,
               Expanded(
                 child: ListView.separated(
-                  physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemCount: isLoading ? 5 : cartItems.length + 1,

@@ -481,7 +481,6 @@ class _ColorSheetState extends State<ColorSheet> {
                 // الجسم
                 Expanded(
                   child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -911,8 +910,7 @@ class _ColorWheelPickerSheetState extends State<ColorWheelPickerSheet> {
                       final wheelSize = math.max(140.0, math.min(maxWheel, cons.maxWidth - 96));
 
                       return SingleChildScrollView(
-                        physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [

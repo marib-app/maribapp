@@ -48,7 +48,7 @@ class PromotedItemsShimmer extends StatelessWidget {
               horizontal: sidePadding,
             ),
             scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
+
             itemBuilder: (context, index) {
               return Padding(
                 padding: EdgeInsets.symmetric(horizontal: index == 0 ? 0 : 8),
@@ -102,7 +102,7 @@ class NearbyItemsShimmer extends StatelessWidget {
               horizontal: sidePadding,
             ),
             scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
+
             itemBuilder: (context, index) {
               return Padding(
                 padding: EdgeInsets.symmetric(horizontal: index == 0 ? 0 : 8),

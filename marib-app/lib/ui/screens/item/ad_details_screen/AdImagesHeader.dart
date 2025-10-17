@@ -332,7 +332,7 @@ class _AdImageHeaderState extends State<AdImageHeader> {
           currentImageIndex = index;
         });
       },
-      physics: const BouncingScrollPhysics(),
+
       itemBuilder: (context, index) {
         final AdImageSource imageSource = widget.images[index];
         final String imageUrl = imageSource.detailUrl;

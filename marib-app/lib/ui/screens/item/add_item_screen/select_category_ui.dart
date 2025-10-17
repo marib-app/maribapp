@@ -76,7 +76,6 @@ class SelectCategoryUI extends StatelessWidget {
             onBackPress: onBackToRoot,
           ),
           body: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
             controller: controller,
             child: Padding(
               padding: const EdgeInsets.all(18),
@@ -366,7 +365,6 @@ class SelectNestedCategoryUI extends StatelessWidget {
       child: ListView.separated(
        // controller: _breadcrumbController,
 
-        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
         scrollDirection: Axis.horizontal,
         padding: EdgeInsets.zero,
         itemCount: total,

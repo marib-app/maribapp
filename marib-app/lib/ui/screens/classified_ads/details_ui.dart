@@ -175,7 +175,7 @@ class _LoadingBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
+
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 100), // مساحة للـ FAB
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -312,7 +312,7 @@ class _LoadedBody extends StatelessWidget {
             return false;
           },
           child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
+
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 100), // مساحة للـ FAB
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

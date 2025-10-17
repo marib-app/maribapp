@@ -403,7 +403,7 @@ class _MainServiceDetailsState extends State<MainServiceDetails> {
 
   Widget _buildShimmer(BuildContext context) {
     return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
+
       padding: const EdgeInsets.all(5.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -469,7 +469,7 @@ class _MainServiceDetailsState extends State<MainServiceDetails> {
     final hasIconImage = detailIcon?.isNotEmpty == true;
 
     return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
+
       child: Padding(
         padding: const EdgeInsets.all(5.0),
         child: Column(

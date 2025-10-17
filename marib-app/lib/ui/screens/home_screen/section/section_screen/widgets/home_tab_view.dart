@@ -726,9 +726,7 @@ class _HomeTabViewState extends State<HomeTabView> {
     final platform = Theme
         .of(context)
         .platform;
-    final ScrollPhysics physics = (platform == TargetPlatform.iOS)
-        ? const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics())
-        : const ClampingScrollPhysics();
+
 
     // ✅ هل نخفي الأقسام/التصنيفات عند وجود بحث/فلتر؟
     final hasQuery = widget.searchController.text
@@ -762,7 +760,6 @@ class _HomeTabViewState extends State<HomeTabView> {
           },
           child: CustomScrollView(
             controller: controller,
-            physics: physics,
             cacheExtent: 800, // ✅ تحميل مسبق معتدل يقلل التقطيع
             slivers: [
 

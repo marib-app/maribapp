@@ -418,7 +418,6 @@ class _ColorAttributeSheetState extends State<_ColorAttributeSheet> {
                 _buildHeader(theme),
                 Expanded(
                   child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

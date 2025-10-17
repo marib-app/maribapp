@@ -60,7 +60,7 @@ class CategoryWidgetOffline extends StatelessWidget {
         width: context.screenWidth,
         height: 103,
         child: ListView.separated(
-          physics: const BouncingScrollPhysics(),
+
           padding: const EdgeInsets.symmetric(horizontal: 20),
           scrollDirection: Axis.horizontal,
           itemCount: staticCategories.length,

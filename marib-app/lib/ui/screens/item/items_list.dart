@@ -357,9 +357,7 @@ class ItemsListState extends State<ItemsList> {
                 color: context.color.territoryColor,
                 child: CatalogScrollView(
                   controller: controller,
-                  physics: const AlwaysScrollableScrollPhysics(
-                    parent: BouncingScrollPhysics(),
-                  ),
+
                   sections: sections,
                 ),
               );

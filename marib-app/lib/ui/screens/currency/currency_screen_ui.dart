@@ -365,7 +365,7 @@ class CurrencyScreenUI extends StatelessWidget {
       case CurrencyPageStatus.ready:
         return TabBarView(
           controller: tabController,
-          physics: const BouncingScrollPhysics(),
+
           children: [
             RatesTabView(
               state: state,
@@ -414,7 +414,7 @@ class CurrencyScreenUI extends StatelessWidget {
       highlightColor: highlight,
       period: const Duration(milliseconds: 1200),
       child: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
+
         slivers: [
           // شريط علوي شبيه بالترويسة
           SliverToBoxAdapter(
@@ -1129,7 +1129,7 @@ class RatesTabView extends StatelessWidget {
     if (rates.isEmpty) {
       final onBg = _isDark(context) ? Colors.white : Colors.black;
       return ListView(
-        physics: const BouncingScrollPhysics(),
+
         children: [
           _header(context),
           Padding(
@@ -1157,7 +1157,7 @@ class RatesTabView extends StatelessWidget {
     }
 
     return ListView.builder(
-      physics: const BouncingScrollPhysics(),
+
       itemCount: rates.length + 2, // + header + note
       itemBuilder: (ctx, i) {
         if (i == 0) return _header(context);
@@ -1358,7 +1358,7 @@ class ConvertTabView extends StatelessWidget {
         .toList(growable: false);
 
     return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
+
       padding: edge,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1724,7 +1724,7 @@ class GoldTabView extends StatelessWidget {
     final rates = state.displayGoldRates;
 
     return CustomScrollView(
-      physics: const BouncingScrollPhysics(),
+
       slivers: [
         SliverToBoxAdapter(child: _header(context)),
         if (rates.isEmpty)
@@ -1988,7 +1988,7 @@ class SilverTabView extends StatelessWidget {
     final rates = _rates;
 
     return CustomScrollView(
-      physics: const BouncingScrollPhysics(),
+
       slivers: [
         SliverToBoxAdapter(child: _header(context)),
         if (rates.isEmpty)

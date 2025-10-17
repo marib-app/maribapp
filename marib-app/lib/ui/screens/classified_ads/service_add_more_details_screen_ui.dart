@@ -231,7 +231,6 @@ class MoreDetailsUI extends StatelessWidget {
                   },
                   child: ListView.separated(
                     controller: scrollController,
-                    physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                     padding: EdgeInsets.only(top: 8.0, bottom: 12.0 + kb),
                     itemCount: fields.length + (_isLoading ? 1 : 0),
                     separatorBuilder: (_, __) => const SizedBox(height: 12.0),

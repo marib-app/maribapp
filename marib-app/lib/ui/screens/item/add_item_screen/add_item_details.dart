@@ -570,9 +570,7 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: EdgeInsets.zero,
-        physics: const BouncingScrollPhysics(
-          parent: AlwaysScrollableScrollPhysics(),
-        ),
+
         itemCount: total,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (BuildContext context, int index) {

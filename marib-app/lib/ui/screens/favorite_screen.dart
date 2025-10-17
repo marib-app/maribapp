@@ -143,7 +143,7 @@ class _FavoriteScreenState extends State<FavoriteScreen>
                   children: [
                     ListView.builder(
                       controller: _controller,
-                      physics: const BouncingScrollPhysics(),
+
                       padding: const EdgeInsets.all(16),
                       itemCount: items.length + 1, // +1 للذيل
                       itemBuilder: (context, index) {

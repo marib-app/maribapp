@@ -150,7 +150,6 @@ class _PcSliderWidgetState extends State<PcSliderWidget> {
                   child: ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: _kListHPad),
                     scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                     itemCount: _display.length,
                     separatorBuilder: (_, __) => const SizedBox(width: _kChipSpacing),
                     itemBuilder: (context, index) {

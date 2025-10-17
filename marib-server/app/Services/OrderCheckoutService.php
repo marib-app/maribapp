@@ -45,6 +45,77 @@ class OrderCheckoutService
         self::DELIVERY_TIMING_PUBLIC_ON_DELIVERY => self::DELIVERY_TIMING_PAY_ON_DELIVERY,
     ];
 
+
+    /**
+     * @var array<string, string>
+     */
+    private const PAYMENT_METHOD_ALIASES = [
+        'manual' => 'manual_bank',
+        'manual_bank' => 'manual_bank',
+        'manualbanks' => 'manual_bank',
+        'manual_banks' => 'manual_bank',
+        'manualbank' => 'manual_bank',
+        'manualpayment' => 'manual_bank',
+        'manual_payment' => 'manual_bank',
+        'manualtransfer' => 'manual_bank',
+        'manual_transfer' => 'manual_bank',
+        'manualgateway' => 'manual_bank',
+        'manual_gateway' => 'manual_bank',
+        'manualmethod' => 'manual_bank',
+        'manual_method' => 'manual_bank',
+        'bank' => 'manual_bank',
+        'banks' => 'manual_bank',
+        'banktransfer' => 'manual_bank',
+        'bank_transfer' => 'manual_bank',
+        'bankpayment' => 'manual_bank',
+        'bank_payment' => 'manual_bank',
+        'manualpayments' => 'manual_bank',
+        'manual_payments' => 'manual_bank',
+        'manualbanking' => 'manual_bank',
+        'manual_banking' => 'manual_bank',
+        'bankmanual' => 'manual_bank',
+        'bank_manual' => 'manual_bank',
+        'bankmanualtransfer' => 'manual_bank',
+        'bank_manual_transfer' => 'manual_bank',
+        'east' => 'east_yemen_bank',
+        'east_yemen_bank' => 'east_yemen_bank',
+        'eastyemenbank' => 'east_yemen_bank',
+        'east_yemen' => 'east_yemen_bank',
+        'bankalsharq' => 'east_yemen_bank',
+        'bank_alsharq' => 'east_yemen_bank',
+        'bankalsharqbank' => 'east_yemen_bank',
+        'bank_alsharq_bank' => 'east_yemen_bank',
+        'wallet' => 'wallet',
+        'walletpayment' => 'wallet',
+        'wallet_payment' => 'wallet',
+        'walletgateway' => 'wallet',
+        'wallet_gateway' => 'wallet',
+        'walletbalance' => 'wallet',
+        'wallet_balance' => 'wallet',
+        'walletpay' => 'wallet',
+        'wallet_pay' => 'wallet',
+        'wallettopup' => 'wallet',
+        'wallet_top_up' => 'wallet',
+        'walletdeposit' => 'wallet',
+        'wallet_deposit' => 'wallet',
+        'cash' => 'cash',
+        'cashondelivery' => 'cash',
+        'cash_on_delivery' => 'cash',
+        'cashdelivery' => 'cash',
+        'cash_delivery' => 'cash',
+        'cashpayment' => 'cash',
+        'cash_payment' => 'cash',
+        'cashondeliveryfee' => 'cash',
+        'cash_on_delivery_fee' => 'cash',
+        'cod' => 'cash',
+        'payondelivery' => 'cash',
+        'pay_on_delivery' => 'cash',
+        'deliverycash' => 'cash',
+        'delivery_cash' => 'cash',
+    ];
+
+
+
     /**
      * @var array<int, string>
      */
@@ -246,6 +317,7 @@ class OrderCheckoutService
                 }
             }
 
+            $normalizedPaymentMethod = self::normalizePaymentMethod($data['payment_method'] ?? null);
 
             $order = Order::create([
                 'user_id' => $user->getKey(),
@@ -258,7 +330,7 @@ class OrderCheckoutService
                 'tax_amount' => $taxAmount,
                 'discount_amount' => $discountAmount,
                 'final_amount' => $finalAmount,
-                'payment_method' => $data['payment_method'] ?? null,
+                'payment_method' => $normalizedPaymentMethod,
                 'payment_status' => 'pending',
                 'order_status' => Order::STATUS_PROCESSING,
                 'shipping_address' => json_encode($addressSnapshot, JSON_UNESCAPED_UNICODE),
@@ -292,7 +364,7 @@ class OrderCheckoutService
                 ],
                 'status_history' => $statusHistory,
                 'payment_payload' => array_filter([
-                    'requested_method' => $data['payment_method'] ?? null,
+                    'requested_method' => $normalizedPaymentMethod,
                     'quote_id' => $quoteReference['id'] ?? ($quote['id'] ?? null),
                     'quote_reference' => $quoteReference !== [] ? $quoteReference : null,
                     'quote_expires_at' => $quoteReference['expires_at'] ?? null,
@@ -1382,6 +1454,35 @@ class OrderCheckoutService
 
         return self::PUBLIC_TIMING_ALIASES[$normalized] ?? $normalized;
     }
+
+
+    public static function normalizePaymentMethod(?string $method): ?string
+    {
+        if ($method === null) {
+            return null;
+        }
+
+        $trimmed = trim($method);
+
+        if ($trimmed === '') {
+            return null;
+        }
+
+        $lower = mb_strtolower($trimmed);
+
+        if ($lower === 'null') {
+            return null;
+        }
+
+        $sanitized = preg_replace('/[^a-z0-9]+/', '_', $lower) ?? $lower;
+        $collapsed = str_replace('_', '', $sanitized);
+
+        return self::PAYMENT_METHOD_ALIASES[$sanitized]
+            ?? self::PAYMENT_METHOD_ALIASES[$lower]
+            ?? self::PAYMENT_METHOD_ALIASES[$collapsed]
+            ?? $trimmed;
+    }
+
 
     /**
      * @param array<string, mixed> $quote

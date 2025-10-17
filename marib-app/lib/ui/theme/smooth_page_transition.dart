@@ -8,17 +8,17 @@ class SmoothPageTransitionsBuilder extends PageTransitionsBuilder {
   const SmoothPageTransitionsBuilder();
 
   static final Tween<Offset> _slideTween = Tween<Offset>(
-    begin: const Offset(0.05, 0),
+    begin: const Offset(0.08, 0.02),
     end: Offset.zero,
   );
 
   static final Tween<double> _scaleTween = Tween<double>(
-    begin: 0.98,
+    begin: 0.96,
     end: 1,
   );
 
-  static final Tween<double> _fadeTween = Tween<double>(
-    begin: 0,
+  static final Tween<double> _stretchTween = Tween<double>(
+    begin: 1.04,
     end: 1,
   );
 
@@ -41,14 +41,26 @@ class SmoothPageTransitionsBuilder extends PageTransitionsBuilder {
       reverseCurve: Curves.easeInCubic,
     );
 
-    return FadeTransition(
-      opacity: _fadeTween.animate(curvedAnimation),
-      child: SlideTransition(
-        position: _slideTween.animate(curvedAnimation),
-        child: ScaleTransition(
-          scale: _scaleTween.animate(curvedAnimation),
-          child: child,
-        ),
+    final slideAnimation = _slideTween.animate(curvedAnimation);
+    final scaleAnimation = _scaleTween.animate(curvedAnimation);
+    final stretchAnimation = _stretchTween.animate(curvedAnimation);
+
+    return SlideTransition(
+      position: slideAnimation,
+      child: AnimatedBuilder(
+        animation: curvedAnimation,
+        child: child,
+        builder: (context, child) {
+          final scale = scaleAnimation.value;
+          final stretch = stretchAnimation.value;
+
+          return Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.identity()
+              ..scale(scale, stretch),
+            child: child,
+          );
+        },
       ),
     );
   }

@@ -23,7 +23,6 @@ import 'package:marib/data/cubits/currency/currency_cubit.dart';
 import 'package:marib/data/repositories/currency_repository.dart';
 
 // 👇 واجهة العرض (UI-Only)
-import 'currency_screen_ui.dart' show CurrencyScreenUI;
 import 'package:marib/data/repositories/preferences/governorate_preference_repository.dart';
 import 'package:marib/data/model/metal_rate.dart';
 import 'package:marib/data/repositories/metal_repository.dart';
@@ -31,13 +30,9 @@ import 'package:marib/data/repositories/metal_repository.dart';
 import 'package:marib/data/model/preference_option.dart';
 import 'package:marib/data/repositories/metal_repository.dart';
 import 'package:marib/data/repositories/preferences/user_preference_repository.dart';
-import 'package:marib/data/repositories/currency_repository.dart';
-import 'package:marib/data/repositories/metal_repository.dart';
-import 'package:marib/data/repositories/preferences/governorate_preference_repository.dart';
-import 'package:marib/data/repositories/preferences/user_preference_repository.dart';
 
 import 'state/state.dart';
-import 'view/currency_screen_shell.dart';
+import 'view/currency_screen_shell.dart' show CurrencyScreenUI;
 
 
 

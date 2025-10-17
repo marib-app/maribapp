@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' show DateFormat, NumberFormat;
+import 'package:flutter/foundation.dart' show listEquals;
 
 import 'package:marib/data/model/currency_history.dart';
 import 'package:marib/data/model/currency_rate.dart';
@@ -866,6 +867,116 @@ class _HistoryRangeChips extends StatelessWidget {
     );
   }
 }
+
+
+
+
+class _MiniTrendChart extends StatelessWidget {
+  const _MiniTrendChart({required this.values, required this.color});
+
+  final List<double> values;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    if (values.length < 2) {
+      return Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: Theme
+                .of(context)
+                .dividerColor
+                .withOpacity(0.12),
+          ),
+        ),
+      );
+    }
+
+    return CustomPaint(
+      painter: _MiniTrendChartPainter(
+        values: values,
+        color: color,
+        background: Theme
+            .of(context)
+            .canvasColor,
+      ),
+    );
+  }
+}
+
+class _MiniTrendChartPainter extends CustomPainter {
+  _MiniTrendChartPainter({
+    required this.values,
+    required this.color,
+    required this.background,
+  });
+
+  final List<double> values;
+  final Color color;
+  final Color background;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.length < 2) {
+      return;
+    }
+
+    final double minValue = values.reduce((double a, double b) =>
+    a < b
+        ? a
+        : b);
+    final double maxValue = values.reduce((double a, double b) =>
+    a > b
+        ? a
+        : b);
+    final double range = (maxValue - minValue).abs() < 0.0001
+        ? 1
+        : (maxValue - minValue);
+
+    final Path path = Path();
+    for (int i = 0; i < values.length; i++) {
+      final double x = (i / (values.length - 1)) * size.width;
+      final double normalized = (values[i] - minValue) / range;
+      final double y = size.height - (normalized * size.height);
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+
+    final Paint fillPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..shader = LinearGradient(
+        colors: [color.withOpacity(0.18), color.withOpacity(0.05)],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    final Path areaPath = Path.from(path)
+      ..lineTo(size.width, size.height)..lineTo(0, size.height)
+      ..close();
+
+    canvas.drawPath(areaPath, fillPaint);
+
+    final Paint linePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round
+      ..color = color;
+
+    canvas.drawPath(path, linePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MiniTrendChartPainter oldDelegate) {
+    return !listEquals(oldDelegate.values, values) ||
+        oldDelegate.color != color;
+  }
+}
+
+
 
 
 // ===================================================================

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' show DateFormat, NumberFormat;
+import 'package:flutter/foundation.dart';
 
 import 'package:marib/data/model/metal_rate.dart';
 

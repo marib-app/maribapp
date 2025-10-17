@@ -18,7 +18,6 @@ import 'package:marib/data/cubits/system/language_cubit.dart';
 import 'dart:async';
 import 'package:marib/ui/screens/chat/chat_badge_controller.dart';
 import 'package:marib/utils/performance/performance_route_observer.dart';
-import 'package:marib/utils/scroll/low_spec_scroll_physics.dart';
 import 'package:marib/app/app_scroll_behavior.dart';
 
 
@@ -172,11 +171,4 @@ class _AppState extends State<App> {
   }
 }
 
-class GlobalScrollBehavior extends ScrollBehavior {
-  const GlobalScrollBehavior();
-  @override
-  ScrollPhysics getScrollPhysics(BuildContext context) {
-    return const LowSpecScrollPhysics();
 
-  }
-}

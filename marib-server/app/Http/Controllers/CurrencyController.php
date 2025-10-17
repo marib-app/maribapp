@@ -118,14 +118,18 @@ class CurrencyController extends Controller
         $quotesPayload = $this->normalizeQuotes($request->input('quotes', []));
         $defaultGovernorateId = (int) $request->input('default_governorate_id');
 
-        DB::transaction(function () use ($currency, $request, $iconData, $quotesPayload, $defaultGovernorateId) {
+        $currency = DB::transaction(function () use ($currency, $request, $iconData, $quotesPayload, $defaultGovernorateId) {
             $payload = [
                 'currency_name' => $request->currency_name,
                 'icon_alt' => $request->filled('icon_alt') ? $request->icon_alt : null,
             ] + $iconData;
 
             if ($request->boolean('remove_icon')) {
-                $this->iconStorageService->deleteIcon($currency->icon_path);
+                if ($currency->icon_path) {
+                    $this->iconStorageService->deleteIcon($currency->icon_path);
+                }
+
+
                 $payload['icon_path'] = null;
                 $payload['icon_alt'] = null;
                 $payload['icon_uploaded_by'] = null;
@@ -134,15 +138,19 @@ class CurrencyController extends Controller
                 $payload['icon_removed_at'] = now();
             }
 
-            $this->persistCurrencyQuotes($currency, $quotesPayload, $defaultGovernorateId);
-        });
+            $currency->update($payload);
 
-        $currency->update($data);
+
+
+            $this->persistCurrencyQuotes($currency, $quotesPayload, $defaultGovernorateId);
+            return $currency->fresh(['quotes.governorate']);
+        });
 
         return response()->json([
             'success' => true,
             'message' => 'Currency rate updated successfully',
-            'data' => $currency->fresh(['quotes.governorate']),
+            'data' => $currency,
+
 
 
         ]);

@@ -40,7 +40,6 @@ import 'package:marib/data/model/subscription_package_limit.dart';
 
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/gestures.dart';
-import 'package:marib/utils/scroll/low_spec_scroll_physics.dart';
 import 'dart:collection';
 
 import 'package:flutter/foundation.dart';

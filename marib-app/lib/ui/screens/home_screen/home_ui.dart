@@ -224,19 +224,17 @@ class HomeScreenUI extends StatelessWidget {
 
 
 
-// داخل الكلاس
   Widget _buildBody(BuildContext context) {
-    // ملاحظة: أبقِ SliverAppBar(stretch: true) في الأعلى لتمطيط الهيدر أيضًا.
     final scroll = CustomScrollView(
-      primary: true, // يلتقط PrimaryScrollController من NestedScrollView
-      physics: const BouncingScrollPhysics(
+      primary: false, // لأننا داخل NestedScrollView
+      physics: const ClampingScrollPhysics(
         parent: AlwaysScrollableScrollPhysics(),
       ),
       slivers: [ SliverToBoxAdapter(child: bodyContent) ],
     );
 
     final content = ScrollConfiguration(
-      behavior: const _StretchScrollBehavior(), // لا توهج + شدّ
+      behavior: const _StretchScrollBehavior(), // يستبدل الـGlow بـ Stretch
       child: scroll,
     );
 
@@ -247,6 +245,7 @@ class HomeScreenUI extends StatelessWidget {
       child: content,
     );
   }
+
 
 
 

@@ -88,6 +88,25 @@ String formatManualPaymentAmount(double amount, String currencyCode) {
   return amount.toStringAsFixed(decimals);
 }
 
+const Map<String, String> _paymentMethodCanonicalization = {
+  'manual_bank': 'manual_bank',
+  'manual': 'manual_bank',
+  'manual-bank': 'manual_bank',
+  'manualbank': 'manual_bank',
+  'east_yemen_bank': 'east_yemen_bank',
+  'bank_alsharq': 'east_yemen_bank',
+  'bank-alsharq': 'east_yemen_bank',
+  'bankalsharq': 'east_yemen_bank',
+  'wallet': 'wallet',
+  'wallet_balance': 'wallet',
+  'wallet-balance': 'wallet',
+  'cash': 'cash',
+  'cash_on_delivery': 'cash',
+  'cash-on-delivery': 'cash',
+  'cod': 'cash',
+};
+
+
 
 String _apiPaymentMethod(String uiValue) {
   final trimmed = uiValue.trim();
@@ -95,13 +114,9 @@ String _apiPaymentMethod(String uiValue) {
     return trimmed;
   }
   final lowercase = trimmed.toLowerCase();
-  if (lowercase == 'manual_bank') {
-
-
-    return 'manual';
-  }
-  if (lowercase == 'east_yemen_bank') {
-    return 'bank_alsharq';
+  final canonical = _paymentMethodCanonicalization[lowercase];
+  if (canonical != null) {
+    return canonical;
   }
   return trimmed;
 }

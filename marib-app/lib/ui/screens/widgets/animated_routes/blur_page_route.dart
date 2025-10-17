@@ -6,12 +6,14 @@ class BlurredRouter<T> extends PageRoute<T> {
   final double? sigmaX;
   final double? sigmaY;
   final bool? barrierDismiss;
+  final double? barrierOpacity;
 
   BlurredRouter({
     required this.builder,
     this.barrierDismiss,
     this.sigmaX,
     this.sigmaY,
+    this.barrierOpacity,
     super.settings,
   }) : super(fullscreenDialog: false);
 
@@ -22,10 +24,13 @@ class BlurredRouter<T> extends PageRoute<T> {
   bool get barrierDismissible => barrierDismiss ?? false;
 
   @override
-  Duration get transitionDuration => const Duration(milliseconds: 120); // سريع
+  Duration get transitionDuration => const Duration(milliseconds: 11);
 
   @override
-  Color get barrierColor => Colors.black.withOpacity(0.2);
+  Duration get reverseTransitionDuration => const Duration(milliseconds: 11);
+
+  @override
+  Color get barrierColor => Colors.black.withOpacity(barrierOpacity ?? 0.2);
 
   @override
   String? get barrierLabel => null;
@@ -45,8 +50,8 @@ class BlurredRouter<T> extends PageRoute<T> {
       opacity: animation,
       child: BackdropFilter(
         filter: ImageFilter.blur(
-          sigmaX: sigmaX ?? 5,
-          sigmaY: sigmaY ?? 10,
+          sigmaX: sigmaX ?? 0,
+          sigmaY: sigmaY ?? 1,
         ),
         child: child,
       ),

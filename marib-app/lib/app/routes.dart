@@ -64,6 +64,7 @@ import 'package:marib/data/model/data_output.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/ui/screens/cart/cart.dart';
 
+import 'package:marib/app/navigation/app_page_route.dart';
 
 
 
@@ -121,132 +122,6 @@ import 'package:marib/ui/screens/item/ad_creation_wizard/ad_creation_wizard_scre
 
 
 
-
-
-class AppPageRoute {
-  AppPageRoute._();
-
-  static const Duration _defaultDuration = Duration(milliseconds: 320);
-
-  static PageRoute<T> build<T>({
-    required WidgetBuilder builder,
-    RouteSettings? settings,
-    bool fullscreenDialog = false,
-    bool barrierDismissible = false,
-    Color? barrierColor,
-    String? barrierLabel,
-    Duration? duration,
-    Curve curve = Curves.easeInOut,
-    bool maintainState = true,
-    bool? opaque,
-  }) {
-    return _FadeBlurPageRoute<T>(
-      builder: builder,
-      settings: settings,
-      fullscreenDialog: fullscreenDialog,
-      barrierDismissible: barrierDismissible,
-      barrierColor: barrierColor,
-      barrierLabel: barrierLabel,
-      duration: duration ?? _defaultDuration,
-      curve: curve,
-      maintainState: maintainState,
-      opaque: opaque ?? !barrierDismissible,
-    );
-  }
-}
-
-class _FadeBlurPageRoute<T> extends PageRoute<T> {
-  _FadeBlurPageRoute({
-    required this.builder,
-    required RouteSettings? settings,
-    required this.curve,
-    required this.duration,
-    required bool maintainState,
-    required bool fullscreenDialog,
-    required bool barrierDismissible,
-    required bool opaque,
-    this.barrierColor,
-    this.barrierLabel,
-  })  : _maintainState = maintainState,
-        _barrierDismissible = barrierDismissible,
-        _opaque = opaque,
-        super(settings: settings, fullscreenDialog: fullscreenDialog);
-
-  final WidgetBuilder builder;
-  final Curve curve;
-  final Duration duration;
-  final bool _maintainState;
-  final bool _barrierDismissible;
-  final bool _opaque;
-
-  @override
-  final Color? barrierColor;
-
-  @override
-  final String? barrierLabel;
-
-  @override
-  bool get maintainState => _maintainState;
-
-  @override
-  bool get barrierDismissible => _barrierDismissible;
-
-  @override
-  bool get opaque => _opaque;
-
-  @override
-  Duration get transitionDuration => duration;
-
-  @override
-  Duration get reverseTransitionDuration => duration;
-
-  @override
-  Widget buildPage(
-      BuildContext context,
-      Animation<double> animation,
-      Animation<double> secondaryAnimation,
-      ) {
-    return builder(context);
-  }
-
-  @override
-  Widget buildTransitions(
-      BuildContext context,
-      Animation<double> animation,
-      Animation<double> secondaryAnimation,
-      Widget child,
-      ) {
-    final curvedAnimation = CurvedAnimation(
-      parent: animation,
-      curve: curve,
-      reverseCurve: curve.flipped,
-    );
-
-    return AnimatedBuilder(
-      animation: curvedAnimation,
-      builder: (context, _) {
-        final value = curvedAnimation.value;
-        final sigma = (1 - value) * 12;
-        final fadedChild = Opacity(
-          opacity: value,
-          child: child,
-        );
-
-        if (sigma <= 0.01) {
-          return fadedChild;
-        }
-
-        return ImageFiltered(
-          imageFilter: ImageFilter.blur(
-            sigmaX: sigma,
-            sigmaY: sigma,
-          ),
-          child: fadedChild,
-        );
-      },
-    );
-  }
-}
 
 
 class Routes {

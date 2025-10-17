@@ -24,6 +24,15 @@ class PackagePaymentService
      */
     private const SUPPORTED_METHODS = ['manual_bank', 'wallet'];
 
+    /**
+     * @var array<string, array<int, string>>
+     */
+    private const LEGACY_METHOD_ALIASES = [
+        'manual_bank' => ['manual'],
+    ];
+
+
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly WalletService $walletService,
@@ -38,17 +47,8 @@ class PackagePaymentService
      */
     public function initiate(User $user, Package $package, string $method, string $idempotencyKey, array $data = []): PaymentTransaction
     {
-        $normalizedMethod = OrderCheckoutService::normalizePaymentMethod($method);
+        $method = $this->normalizePaymentMethod($method);
 
-        if (! is_string($normalizedMethod) || $normalizedMethod === '') {
-            throw ValidationException::withMessages([
-                'payment_method' => __('طريقة الدفع المحددة غير مدعومة لهذه العملية.'),
-            ]);
-        }
-
-        $method = mb_strtolower($normalizedMethod);
-        
-        $this->assertSupportedMethod($method);
 
         $data['payment_method'] = $method;
 
@@ -83,17 +83,8 @@ class PackagePaymentService
         $package = Package::findOrFail($transaction->payable_id);
 
         $rawMethod = $transaction->payment_gateway ?? Arr::get($data, 'payment_method');
-        $normalizedMethod = OrderCheckoutService::normalizePaymentMethod(is_string($rawMethod) ? $rawMethod : null);
+        $method = $this->normalizePaymentMethod(is_string($rawMethod) ? $rawMethod : null);
 
-        if (! is_string($normalizedMethod) || $normalizedMethod === '') {
-            throw ValidationException::withMessages([
-                'payment_method' => __('طريقة الدفع المحددة غير مدعومة لهذه العملية.'),
-            ]);
-        }
-
-        $method = mb_strtolower($normalizedMethod);
-        
-        $this->assertSupportedMethod($method);
 
         if ($transaction->payment_gateway !== $method) {
             $transaction->payment_gateway = $method;
@@ -325,6 +316,47 @@ class PackagePaymentService
         }
     }
 
+
+    private function normalizePaymentMethod(?string $method): string
+    {
+        $normalizedMethod = OrderCheckoutService::normalizePaymentMethod($method);
+
+        if (! is_string($normalizedMethod) || $normalizedMethod === '') {
+            throw ValidationException::withMessages([
+                'payment_method' => __('طريقة الدفع المحددة غير مدعومة لهذه العملية.'),
+            ]);
+        }
+
+        $canonicalMethod = $this->canonicalizePaymentMethod($normalizedMethod);
+
+        $this->assertSupportedMethod($canonicalMethod);
+
+        return $canonicalMethod;
+    }
+
+    private function canonicalizePaymentMethod(string $method): string
+    {
+        $canonical = OrderCheckoutService::normalizePaymentMethod($method);
+
+        if (! is_string($canonical) || $canonical === '') {
+            return $method;
+        }
+
+        return $canonical;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function expandLegacyMethods(string $method): array
+    {
+        return array_values(array_unique(array_merge([
+            $method,
+        ], self::LEGACY_METHOD_ALIASES[$method] ?? [])));
+    }
+
+
+
     private function assertSupportedMethod(string $method): void
     {
         if (! in_array($method, self::SUPPORTED_METHODS, true)) {
@@ -345,10 +377,11 @@ class PackagePaymentService
         string $idempotencyKey,
         array $data = []
     ): PaymentTransaction {
+        $method = $this->canonicalizePaymentMethod($method);
         $data['payment_method'] = $method;
         $existing = PaymentTransaction::query()
             ->where('user_id', $user->getKey())
-            ->where('payment_gateway', $method)
+            ->whereIn('payment_gateway', $this->expandLegacyMethods($method))
             ->where('idempotency_key', $idempotencyKey)
             ->lockForUpdate()
             ->first();
@@ -359,6 +392,12 @@ class PackagePaymentService
                     'idempotency' => __('المعاملة المرتبطة بالمفتاح المرسل تتعلق بعملية مختلفة.'),
                 ]);
             }
+
+            if ($existing->payment_gateway !== $method) {
+                $existing->payment_gateway = $method;
+                $existing->save();
+            }
+
 
             return $existing;
         }

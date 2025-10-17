@@ -22,7 +22,20 @@ class OrderPaymentService
     /**
      * @var array<int, string>
      */
-    private const SUPPORTED_METHODS = ['manual_bank', 'east_yemen_bank', 'wallet'];
+    private const SUPPORTED_METHODS = [
+        'manual_bank',
+        'east_yemen_bank',
+        'wallet',
+        'cash',
+    ];
+
+    /**
+     * @var array<string, array<int, string>>
+     */
+    private const LEGACY_METHOD_ALIASES = [
+        'manual_bank' => ['manual'],
+    ];
+
 
     public function __construct(
         private readonly DatabaseManager $db,
@@ -38,17 +51,8 @@ class OrderPaymentService
      */
     public function initiate(User $user, Order $order, string $method, string $idempotencyKey, array $data = []): PaymentTransaction
     {
-        $normalizedMethod = OrderCheckoutService::normalizePaymentMethod($method);
+        $method = $this->normalizePaymentMethod($method);
 
-        if (! is_string($normalizedMethod) || $normalizedMethod === '') {
-            throw ValidationException::withMessages([
-                'payment_method' => __('طريقة الدفع غير مدعومة.'),
-            ]);
-        }
-
-        $method = mb_strtolower($normalizedMethod);
-        
-        $this->assertSupportedMethod($method);
         $data['payment_method'] = $method;
 
         return $this->db->transaction(function () use ($user, $order, $method, $idempotencyKey, $data) {
@@ -90,17 +94,8 @@ class OrderPaymentService
         }
 
         $rawMethod = $transaction->payment_gateway ?? Arr::get($data, 'payment_method');
-        $normalizedMethod = OrderCheckoutService::normalizePaymentMethod(is_string($rawMethod) ? $rawMethod : null);
+        $method = $this->normalizePaymentMethod(is_string($rawMethod) ? $rawMethod : null);
 
-        if (! is_string($normalizedMethod) || $normalizedMethod === '') {
-            throw ValidationException::withMessages([
-                'payment_method' => __('طريقة الدفع غير مدعومة.'),
-            ]);
-        }
-
-        $method = mb_strtolower($normalizedMethod);
-        
-        $this->assertSupportedMethod($method);
 
         if ($transaction->payment_gateway !== $method) {
             $transaction->payment_gateway = $method;
@@ -248,11 +243,13 @@ class OrderPaymentService
         string $idempotencyKey,
         array $data = []
     ): PaymentTransaction {
+        
+        $method = $this->canonicalizePaymentMethod($method);
         $data['payment_method'] = $method;
 
         $existing = PaymentTransaction::query()
             ->where('user_id', $user->getKey())
-            ->where('payment_gateway', $method)
+            ->whereIn('payment_gateway', $this->expandLegacyMethods($method))
             ->where('idempotency_key', $idempotencyKey)
             ->lockForUpdate()
             ->first();
@@ -263,6 +260,12 @@ class OrderPaymentService
                     'idempotency' => __('المعاملة المرتبطة بالمفتاح المرسل تتعلق بطلب مختلف.'),
                 ]);
             }
+
+            if ($existing->payment_gateway !== $method) {
+                $existing->payment_gateway = $method;
+                $existing->save();
+            }
+
 
             return $existing;
 
@@ -488,6 +491,46 @@ class OrderPaymentService
 
         return $meta;
     }
+
+
+    private function normalizePaymentMethod(?string $method): string
+    {
+        $normalizedMethod = OrderCheckoutService::normalizePaymentMethod($method);
+
+        if (! is_string($normalizedMethod) || $normalizedMethod === '') {
+            throw ValidationException::withMessages([
+                'payment_method' => __('طريقة الدفع غير مدعومة.'),
+            ]);
+        }
+
+        $canonicalMethod = $this->canonicalizePaymentMethod($normalizedMethod);
+
+        $this->assertSupportedMethod($canonicalMethod);
+
+        return $canonicalMethod;
+    }
+
+    private function canonicalizePaymentMethod(string $method): string
+    {
+        $canonical = OrderCheckoutService::normalizePaymentMethod($method);
+
+        if (! is_string($canonical) || $canonical === '') {
+            return $method;
+        }
+
+        return $canonical;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function expandLegacyMethods(string $method): array
+    {
+        return array_values(array_unique(array_merge([
+            $method,
+        ], self::LEGACY_METHOD_ALIASES[$method] ?? [])));
+    }
+
 
     private function assertWalletCurrencyCompatibility(User $user, Order $order, string $requestedCurrency, bool $allowAccountCreation): string
 

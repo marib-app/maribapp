@@ -585,6 +585,7 @@ class RatesTabView extends StatelessWidget {
   Widget _header(BuildContext context) {
     final theme = Theme.of(context);
     final onBg = _isDark(context) ? Colors.white : Colors.black;
+    final bool isStale = state.isDisplayRatesStale;
 
     final hasTime = state.lastUpdatedAt != null;
     final dateStr = hasTime ? DateFormat('yyyy-MM-dd').format(
@@ -611,6 +612,12 @@ class RatesTabView extends StatelessWidget {
                   ),
                 ),
               ),
+
+              if (isStale) ...[
+                _buildStaleBadge(context),
+                const SizedBox(width: 6),
+              ],
+
               IconButton(
                 onPressed: onShareRates,
                 icon: const Icon(Icons.share_outlined),
@@ -675,6 +682,55 @@ class RatesTabView extends StatelessWidget {
       ),
     );
   }
+
+
+
+  Widget _buildStaleBadge(BuildContext context) {
+    final theme = Theme.of(context);
+    final bool dark = _isDark(context);
+    final Color background = dark
+        ? Colors.orange.shade900.withOpacity(0.55)
+        : Colors.orange.shade100;
+    final Color foreground = dark
+        ? Colors.orange.shade200
+        : Colors.orange.shade800;
+
+    return Tooltip(
+      message: 'تم رصد أن البيانات المعروضة قديمة، وسيتم تحديثها عند توفر مصادر أحدث.',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.warning_amber_rounded,
+              size: 16,
+              color: foreground,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'قديم',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: foreground,
+                fontWeight: FontWeight.w700,
+              ) ??
+                  TextStyle(
+                    color: foreground,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
 
   // ---------- صفّ العملة (نظيف مع عرض بيع/شراء احترافي) ----------
   Widget _row(

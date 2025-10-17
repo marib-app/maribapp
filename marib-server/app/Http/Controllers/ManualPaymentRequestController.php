@@ -208,6 +208,7 @@ class ManualPaymentRequestController extends Controller
             $row['payment_gateway_key'] = $canonicalGateway ?? 'manual_banks';
             $row['payment_gateway'] = $this->gatewayLabel($canonicalGateway ?? 'manual_banks');
             $row['payment_gateway_name'] = $this->paymentRequestGatewayName($requestRow);
+            $row['manual_bank_name'] = $this->resolveManualBankName($requestRow);
 
             $row['formatted_amount'] = number_format($requestRow->amount, 2)
                 . ($requestRow->currency ? ' ' . $requestRow->currency : '');
@@ -325,6 +326,7 @@ class ManualPaymentRequestController extends Controller
             if ($channel === 'manual_bank') {
                 $channel = 'manual_banks';
             }
+            $manualBankName = $this->resolveManualBankName($row);
 
             return [
                 'transaction_id' => $transactionId,
@@ -333,8 +335,9 @@ class ManualPaymentRequestController extends Controller
                 'amount_fmt' => number_format($amount, 2, '.', ''),
                 'currency' => $row->currency ?? '',
                 'payment_gateway' => $channel ?? $row->channel,
-                'payment_gateway_label' => $this->paymentRequestChannelLabel($channel ?? $row->channel),                
+                'payment_gateway_label' => $this->paymentRequestChannelLabel($channel ?? $row->channel),
                 'payment_gateway_name' => $this->paymentRequestGatewayName($row),
+                'manual_bank_name' => $manualBankName,
                 'category' => $row->category,
                 'department' => $row->department ?? null,
                 'department_label' => $this->paymentRequestDepartmentLabel($row->department ?? null),
@@ -1661,7 +1664,30 @@ class ManualPaymentRequestController extends Controller
     }
 
 
+    private function resolveManualBankName(mixed $row): ?string
+    {
+        $candidates = [
+            data_get($row, 'manual_bank_name'),
+            data_get($row, 'manualBank.name'),
+            data_get($row, 'manualBank.beneficiary_name'),
+            data_get($row, 'bank_name'),
+            data_get($row, 'bank_account_name'),
+        ];
 
+        foreach ($candidates as $candidate) {
+            if (! is_string($candidate)) {
+                continue;
+            }
+
+            $trimmed = trim($candidate);
+
+            if ($trimmed !== '') {
+                return $trimmed;
+            }
+        }
+
+        return null;
+    }
 
     private function paymentRequestGatewayName(object $row): string
     {
@@ -1703,15 +1729,11 @@ class ManualPaymentRequestController extends Controller
 
         }
 
-        if (($normalizedChannel === 'manual_banks' || $normalizedChannel === null) && $row instanceof ManualPaymentRequest) {
-            $manualBankName = $row->manualBank?->name;
+        if ($normalizedChannel === 'manual_banks' || $normalizedChannel === null) {
+            $manualBankName = $this->resolveManualBankName($row);
 
-            if (is_string($manualBankName)) {
-                $trimmedManualBankName = trim($manualBankName);
-
-                if ($trimmedManualBankName !== '') {
-                    $candidates[] = $trimmedManualBankName;
-                }
+            if ($manualBankName !== null) {
+                $candidates[] = $manualBankName;
 
 
             }

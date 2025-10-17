@@ -67,6 +67,17 @@ class PaymentRequestTableQuery
             && Schema::hasColumn('manual_payment_requests', 'bank_name');
         $supportsManualBankAccountName = Schema::hasTable('manual_payment_requests')
             && Schema::hasColumn('manual_payment_requests', 'bank_account_name');
+
+        $supportsManualBankId = Schema::hasTable('manual_payment_requests')
+            && Schema::hasColumn('manual_payment_requests', 'manual_bank_id');
+        $supportsManualBankLookupTable = Schema::hasTable('manual_banks');
+        $supportsManualBankLookup = $supportsManualBankId && $supportsManualBankLookupTable;
+        $supportsManualBankLookupName = $supportsManualBankLookup
+            && Schema::hasColumn('manual_banks', 'name');
+        $supportsManualBankLookupBeneficiaryName = $supportsManualBankLookup
+            && Schema::hasColumn('manual_banks', 'beneficiary_name');
+
+
         $supportsPaymentGatewayName = Schema::hasTable('payment_transactions')
             && Schema::hasColumn('payment_transactions', 'payment_gateway_name');
 
@@ -77,6 +88,14 @@ class PaymentRequestTableQuery
 
 
         $manualBankNameParts = [];
+
+        if ($supportsManualBankLookupName) {
+            $manualBankNameParts[] = "NULLIF(manual_bank_lookup.name, '')";
+        }
+        if ($supportsManualBankLookupBeneficiaryName) {
+            $manualBankNameParts[] = "NULLIF(manual_bank_lookup.beneficiary_name, '')";
+        }
+
         if ($supportsManualBankName) {
             $manualBankNameParts[] = "NULLIF(mpr.bank_name, '')";
         }
@@ -96,6 +115,13 @@ class PaymentRequestTableQuery
         $paymentGatewayNameParts[] = "NULLIF(pt.payment_gateway, '')";
 
         $manualGatewayNameParts = [];
+
+        if ($supportsManualBankLookupName) {
+            $manualGatewayNameParts[] = "NULLIF(manual_bank_lookup.name, '')";
+        }
+        if ($supportsManualBankLookupBeneficiaryName) {
+            $manualGatewayNameParts[] = "NULLIF(manual_bank_lookup.beneficiary_name, '')";
+        }
 
 
         if ($supportsManualGatewayName) {
@@ -188,7 +214,17 @@ class PaymentRequestTableQuery
             ->selectRaw($manualBankNameSelect . ' as manual_bank_name')
             ->selectRaw("'payment_transactions' as source")
             ->leftJoin('users', 'users.id', '=', 'pt.user_id')
-            ->leftJoin('manual_payment_requests as mpr', 'mpr.id', '=', 'pt.manual_payment_request_id');
+            ->leftJoin('manual_payment_requests as mpr', 'mpr.id', '=', 'pt.manual_payment_request_id')
+            ->when(
+                $supportsManualBankLookup,
+                static fn (Builder $query) => $query->leftJoin(
+                    'manual_banks as manual_bank_lookup',
+                    'manual_bank_lookup.id',
+                    '=',
+                    'mpr.manual_bank_id'
+                )
+            );
+
 
         $walletTopUps = DB::table('wallet_transactions as wt')
             ->selectRaw("CONCAT('wt-', wt.id) as row_key")
@@ -222,6 +258,17 @@ class PaymentRequestTableQuery
             ->join('wallet_accounts as wa', 'wa.id', '=', 'wt.wallet_account_id')
             ->leftJoin('users', 'users.id', '=', 'wa.user_id')
             ->leftJoin('manual_payment_requests as mpr', 'mpr.id', '=', 'wt.manual_payment_request_id')
+
+            ->when(
+                $supportsManualBankLookup,
+                static fn (Builder $query) => $query->leftJoin(
+                    'manual_banks as manual_bank_lookup',
+                    'manual_bank_lookup.id',
+                    '=',
+                    'mpr.manual_bank_id'
+                )
+            )
+
             ->whereNull('wt.payment_transaction_id')
             ->where('wt.type', 'credit')
             ->where(static function (Builder $query): void {

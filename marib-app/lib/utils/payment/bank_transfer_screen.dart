@@ -90,6 +90,10 @@ class _BankTransferScreenState extends State<BankTransferScreen>
   static const String _manualBankMethod = 'manual_bank';
   static const String _eastYemenMethod = 'east_yemen_bank';
   static const String _walletMethod = 'wallet';
+  static const String _walletTopUpPurpose =
+      ManualPaymentService.walletTopUpPurpose;
+
+
 
   static const int _eastYemenPressedKey = -1000;
   static const int _walletPressedKey = -1001;
@@ -200,28 +204,33 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     final explicit = widget.args.purpose?.trim();
     if (explicit != null && explicit.isNotEmpty) {
       final normalized = explicit.toLowerCase();
+      if (normalized.contains('wallet')) {
+        return _walletTopUpPurpose;
+      }
+
       if (normalized.contains('order')) {
         return 'order';
       }
 
-      if (normalized.contains('wallet')) {
-        return 'wallet';
-      }
+
 
       if (normalized == 'general') {
         return 'general';
       }
-      return 'package';
+      if (normalized.contains('package')) {
+        return 'package';
+      }
+      return normalized;
     }
 
     final packageType = widget.args.packageType.trim().toLowerCase();
+    if (packageType.contains('wallet')) {
+      return _walletTopUpPurpose;
+    }
     if (packageType.contains('order')) {
       return 'order';
     }
 
-    if (packageType.contains('wallet')) {
-      return 'wallet';
-    }
 
     if (packageType.isEmpty) {
       return 'general';
@@ -235,21 +244,33 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     setState(() => _loadingBanks = true);
     try {
       final purpose = _resolvedPurpose();
-      final purposeParam =
-      (purpose == 'order' || purpose == 'package') ? purpose : null;
+      final bool isWalletTopUp =
+          purpose == _walletTopUpPurpose || purpose == 'wallet';
+      final String? purposeParam;
+      if (purpose == 'order' || purpose == 'package') {
+        purposeParam = purpose;
+      } else if (isWalletTopUp) {
+        purposeParam = _walletTopUpPurpose;
+      } else {
+        purposeParam = null;
+      }
 
       final currency = widget.args.normalizedCurrency;
+      final int? orderIdParam = (!isWalletTopUp && widget.args.packageId > 0)
+          ? widget.args.packageId
+          : null;
 
+      final double? amountParam = isWalletTopUp ? widget.args.amount : null;
 
       final settings = await _service.fetchManualPaymentSettings(
         token: widget.args.token,
         purpose: purposeParam,
 
         currency: currency,
-        orderId: widget.args.packageId,
+        orderId: orderIdParam,
         paymentMethod:
         ManualPaymentService.paymentMethodForApi(_manualBankMethod),
-
+        amount: amountParam,
       );
 
       final List<CurrencyParseResult> currencyCandidates = <CurrencyParseResult>[
@@ -325,19 +346,37 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     }
 
     final purpose = _resolvedPurpose();
-    final purposeParam =
-    (purpose == 'order' || purpose == 'package') ? purpose : null;
+    final bool isWalletTopUp =
+        purpose == _walletTopUpPurpose || purpose == 'wallet';
+    final String? purposeParam;
+    if (purpose == 'order' || purpose == 'package') {
+      purposeParam = purpose;
+    } else if (isWalletTopUp) {
+      purposeParam = _walletTopUpPurpose;
+    } else {
+      purposeParam = null;
+    }
+
+
     final currency = widget.args.normalizedCurrency;
     final selectedMethod = _selectedMethod ?? _manualBankMethod;
+
+
+    final int? orderIdParam = (!isWalletTopUp && widget.args.packageId > 0)
+        ? widget.args.packageId
+        : null;
+    final double? amountParam = isWalletTopUp ? widget.args.amount : null;
 
     try {
       final settings = await _service.fetchManualPaymentSettings(
         token: widget.args.token,
         purpose: purposeParam,
         currency: currency,
-        orderId: widget.args.packageId,
+        orderId: orderIdParam,
+
         paymentMethod:
         ManualPaymentService.paymentMethodForApi(selectedMethod),
+        amount: amountParam,
       );
 
       final updatedIntent = settings.paymentIntentId?.trim();
@@ -555,7 +594,11 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
     setState(() => _submitting = true);
     try {
-      final normalizedPurpose = widget.args.normalizedPurpose;
+      final normalizedPurpose = widget.args.normalizedPurpose.toLowerCase();
+      final bool isWalletTopUp =
+          normalizedPurpose == _walletTopUpPurpose ||
+              normalizedPurpose.contains('wallet');
+
       String? payableType;
       int? payableId;
 
@@ -564,17 +607,29 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           payableType = 'order';
           payableId = widget.args.packageId;
           break;
-        case 'wallet':
-          payableType = 'wallet_top_up';
+        case 'package':
+          payableType = 'package';
+          payableId = widget.args.packageId;
+          break;
+        case _walletTopUpPurpose:
+          payableType = ManualPaymentService.walletTopUpPurpose;
+
           payableId = null;
           break;
         default:
-          payableType = 'package';
-          payableId = widget.args.packageId;
+          if (isWalletTopUp) {
+            payableType = ManualPaymentService.walletTopUpPurpose;
+            payableId = null;
+          } else {
+            payableType = 'package';
+            payableId = widget.args.packageId;
+          }
       }
 
 
-      final int? resolvedId = widget.args.packageId > 0 ? widget.args.packageId : null;
+      final int? resolvedId =
+      widget.args.packageId > 0 ? widget.args.packageId : null;
+
       String? purposeForApi;
       int? orderIdForApi;
       int? packageIdForApi;
@@ -584,6 +639,10 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       } else if (normalizedPurpose == 'package') {
         purposeForApi = 'package';
         packageIdForApi = resolvedId;
+
+      } else if (isWalletTopUp) {
+        purposeForApi = ManualPaymentService.walletTopUpPurpose;
+
       } else if (resolvedId != null) {
         purposeForApi = 'package';
         packageIdForApi = resolvedId;

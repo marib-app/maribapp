@@ -9,6 +9,14 @@ use App\Models\PaymentTransaction;
 use App\Services\Payments\OrderPaymentService;
 use App\Services\Payments\PackagePaymentService;
 use Illuminate\Validation\Rule;
+use App\Models\ManualBank;
+use App\Models\ManualPaymentRequest;
+
+use App\Models\PaymentConfiguration;
+use App\Models\WalletAccount;
+use App\Services\Payments\ManualPaymentRequestService;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -19,8 +27,10 @@ class PaymentController extends Controller
 {
     public function __construct(
         private readonly OrderPaymentService $orderPaymentService,
-        private readonly PackagePaymentService $packagePaymentService
-    )
+        private readonly PackagePaymentService $packagePaymentService,
+        private readonly ManualPaymentRequestService $manualPaymentRequestService
+        
+        )
     {
     }
 
@@ -28,7 +38,9 @@ class PaymentController extends Controller
     {
         $idempotencyKey = $this->resolveIdempotencyKey($request);
 
-        $purpose = $request->input('purpose', 'order');
+        $purpose = $this->normalizePurpose($request->input('purpose', 'order'));
+        $request->merge(['purpose' => $purpose]);
+
 
         if ($purpose === 'package' && ! $request->filled('package_id') && $request->filled('order_id')) {
             $request->merge(['package_id' => $request->input('order_id')]);
@@ -42,7 +54,9 @@ class PaymentController extends Controller
         $request->merge(['payment_method' => $normalizedMethod]);
 
         $rules = [
-            'purpose' => ['nullable', 'string', Rule::in(['order', 'package'])],
+            'purpose' => ['nullable', 'string', Rule::in(['order', 'package', ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP])],
+
+
             'payment_method' => ['required', 'string', 'max:191', Rule::in(['manual', 'manual_bank'])],
 
             'notes' => ['nullable', 'string'],
@@ -56,6 +70,10 @@ class PaymentController extends Controller
 
         if ($purpose === 'package') {
             $rules['package_id'] = ['required', 'integer', 'exists:packages,id'];
+        } elseif ($purpose === ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP) {
+            $rules['amount'] = ['required', 'numeric', 'min:0.01'];
+            $rules['currency'] = ['required', 'string', 'size:3'];
+
         } else {
             $rules['order_id'] = ['required', 'integer', 'exists:orders,id'];
         }
@@ -69,6 +87,12 @@ class PaymentController extends Controller
 
         if (!isset($validated['metadata']) && $request->has('metadata') && is_array($request->input('metadata'))) {
             $validated['metadata'] = $request->input('metadata');
+        }
+
+
+
+        if ($purpose === ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP) {
+            return $this->initiateWalletTopUp($request, $validated, $idempotencyKey);
         }
 
 
@@ -151,7 +175,9 @@ class PaymentController extends Controller
     {
         $idempotencyKey = $this->resolveIdempotencyKey($request);
 
-        $purpose = $request->input('purpose', 'order');
+        $purpose = $this->normalizePurpose($request->input('purpose', 'order'));
+        $request->merge(['purpose' => $purpose]);
+
 
         if ($purpose === 'package' && ! $request->filled('package_id') && $request->filled('order_id')) {
             $request->merge(['package_id' => $request->input('order_id')]);
@@ -168,7 +194,7 @@ class PaymentController extends Controller
         }
 
         $rules = [
-            'purpose' => ['nullable', 'string', Rule::in(['order', 'package'])],
+            'purpose' => ['nullable', 'string', Rule::in(['order', 'package', ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP])],
 
 
             'amount' => ['nullable', 'numeric', 'min:0'],
@@ -178,6 +204,11 @@ class PaymentController extends Controller
             'bank_account_id' => ['nullable', 'string', 'max:191'],
             'metadata' => ['nullable', 'array'],
 
+
+            'transaction_id' => ['nullable', 'integer', 'exists:payment_transactions,id'],
+            'payment_transaction_id' => ['nullable', 'integer', 'exists:payment_transactions,id'],
+
+
             'auto_confirm' => ['sometimes', 'boolean'],
             'receipt' => ['nullable', 'file', 'max:10240', 'mimes:jpg,jpeg,png,pdf'],
             'receipt_image' => ['nullable', 'file', 'max:10240', 'mimes:jpg,jpeg,png,pdf'],
@@ -186,6 +217,11 @@ class PaymentController extends Controller
 
         if ($purpose === 'package') {
             $rules['package_id'] = ['required', 'integer', 'exists:packages,id'];
+
+        } elseif ($purpose === ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP) {
+            $rules['amount'] = ['required', 'numeric', 'min:0.01'];
+            $rules['currency'] = ['required', 'string', 'size:3'];
+
         } else {
             $rules['order_id'] = ['required', 'integer', 'exists:orders,id'];
         }
@@ -225,6 +261,10 @@ class PaymentController extends Controller
 
 
         $validated['bank_id'] = $validated['manual_bank_id'];
+
+        if ($purpose === ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP) {
+            return $this->handleWalletTopUpManual($request, $validated, $idempotencyKey);
+        }
 
 
         if ($purpose === 'package') {
@@ -282,6 +322,268 @@ class PaymentController extends Controller
             'manual_payment_request' => $manualRequestResource,
         ], $transaction->payment_status === 'succeed' ? 200 : 202);
     }
+
+
+    protected function initiateWalletTopUp(Request $request, array $validated, string $idempotencyKey): JsonResponse
+    {
+        $user = $request->user();
+        $paymentMethod = $validated['payment_method'] ?? 'manual_bank';
+        $canonicalMethod = $paymentMethod === 'manual' ? 'manual_bank' : $paymentMethod;
+        $amount = (float) $validated['amount'];
+        $currency = strtoupper($validated['currency']);
+
+        return DB::transaction(function () use ($user, $canonicalMethod, $amount, $currency, $idempotencyKey) {
+            $transaction = PaymentTransaction::query()
+                ->where('user_id', $user->getKey())
+                ->where('payment_gateway', $canonicalMethod)
+                ->where('idempotency_key', $idempotencyKey)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $transaction) {
+                $transaction = PaymentTransaction::create([
+                    'user_id' => $user->getKey(),
+                    'amount' => $amount,
+                    'currency' => $currency,
+                    'payment_gateway' => $canonicalMethod,
+                    'payment_status' => 'pending',
+                    'idempotency_key' => $idempotencyKey,
+                    'meta' => [
+                        'wallet' => [
+                            'purpose' => ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP,
+                        ],
+                    ],
+                ]);
+            } else {
+                $transaction->fill([
+                    'amount' => $amount,
+                    'currency' => $currency,
+                    'payment_gateway' => $canonicalMethod,
+                ]);
+
+                $meta = $transaction->meta ?? [];
+                if (! is_array($meta)) {
+                    $meta = [];
+                }
+
+                $meta = array_replace_recursive($meta, [
+                    'wallet' => [
+                        'purpose' => ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP,
+                    ],
+                ]);
+
+                $transaction->meta = $meta;
+                $transaction->save();
+            }
+
+            $banks = ManualBank::query()
+                ->active()
+                ->orderBy('display_order')
+                ->orderBy('name')
+                ->get();
+
+            $bankPayload = $banks->map(static fn (ManualBank $bank) => $bank->toArray())->values()->toArray();
+
+            $eastYemenGateway = PaymentConfiguration::query()
+                ->where('payment_method', 'east_yemen_bank')
+                ->first();
+
+            $eastYemenPayload = [
+                'payment_method' => 'east_yemen_bank',
+                'enabled' => false,
+                'status' => false,
+                'display_name' => null,
+                'note' => null,
+                'logo_url' => null,
+                'currency_code' => null,
+            ];
+
+            if ($eastYemenGateway) {
+                $eastYemenPayload = array_merge($eastYemenPayload, [
+                    'enabled' => (bool) $eastYemenGateway->status,
+                    'status' => (bool) $eastYemenGateway->status,
+                    'display_name' => $eastYemenGateway->display_name,
+                    'note' => $eastYemenGateway->note,
+                    'logo_url' => $eastYemenGateway->logo_url,
+                    'currency_code' => $eastYemenGateway->currency_code,
+                ]);
+            }
+
+            $transactionPayload = [
+                'id' => $transaction->getKey(),
+                'status' => $transaction->payment_status,
+                'amount' => (float) $transaction->amount,
+                'currency' => $transaction->currency,
+                'payment_gateway' => $transaction->payment_gateway,
+                'user_id' => $transaction->user_id,
+                'meta' => $transaction->meta,
+            ];
+
+            $intentPayload = [
+                'id' => $transaction->idempotency_key,
+                'status' => $transaction->payment_status,
+                'amount' => (float) $transaction->amount,
+                'currency' => $transaction->currency,
+                'payment_transaction_id' => $transaction->getKey(),
+                'metadata' => [
+                    'purpose' => ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP,
+                ],
+            ];
+
+            $manualSettings = [
+                'banks' => $bankPayload,
+                'payment_intent' => $intentPayload,
+                'payment_transaction' => $transactionPayload,
+                'east_yemen_bank' => $eastYemenPayload,
+            ];
+
+            return response()->json([
+                'message' => __('تم إنشاء عملية الدفع بنجاح.'),
+                'payment_intent_id' => $transaction->idempotency_key,
+                'payment_transaction_id' => $transaction->getKey(),
+                'payment_intent' => $intentPayload,
+                'payment_transaction' => $transactionPayload,
+                'banks' => $bankPayload,
+                'manual_banks' => $bankPayload,
+                'manual_payment' => $manualSettings,
+                'manual_payment_settings' => $manualSettings,
+                'east_yemen_bank' => $eastYemenPayload,
+            ]);
+        });
+    }
+
+    protected function handleWalletTopUpManual(Request $request, array $validated, string $idempotencyKey): JsonResponse
+    {
+        $user = $request->user();
+        $transactionId = $validated['transaction_id']
+            ?? $validated['payment_transaction_id']
+            ?? $request->input('payment_transaction_id');
+
+        if (! $transactionId) {
+            throw ValidationException::withMessages([
+                'transaction_id' => __('المعاملة المطلوبة غير متاحة.'),
+            ]);
+        }
+
+        return DB::transaction(function () use ($user, $validated, $transactionId, $idempotencyKey) {
+            $transaction = PaymentTransaction::query()
+                ->where('user_id', $user->getKey())
+                ->lockForUpdate()
+                ->findOrFail($transactionId);
+
+            $transaction->fill([
+                'amount' => (float) $validated['amount'],
+                'currency' => strtoupper($validated['currency']),
+                'payment_gateway' => 'manual_bank',
+                'payment_status' => 'pending',
+            ]);
+
+            if (empty($transaction->idempotency_key)) {
+                $transaction->idempotency_key = $idempotencyKey;
+            }
+
+            $walletAccount = WalletAccount::firstOrCreate([
+                'user_id' => $user->getKey(),
+            ]);
+
+            $manualPaymentRequest = $this->manualPaymentRequestService->createOrUpdateForManualTransaction(
+                $user,
+                ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP,
+                $walletAccount->getKey(),
+                $transaction,
+                $validated
+            );
+
+            $manualMeta = array_filter(
+                Arr::only($validated, ['note', 'reference', 'attachments', 'receipt_path']),
+                static function ($value) {
+                    if (is_array($value)) {
+                        return $value !== [];
+                    }
+
+                    return $value !== null && $value !== '';
+                }
+            );
+
+            if (! empty($validated['manual_bank_id']) || ! empty($validated['bank_account_id'])) {
+                $manualMeta['bank'] = array_filter([
+                    'id' => $validated['manual_bank_id'] ?? null,
+                    'account_id' => $validated['bank_account_id'] ?? null,
+                ], static fn ($value) => $value !== null && $value !== '');
+            }
+
+            $metadata = $validated['metadata'] ?? null;
+            if (is_array($metadata) && ! empty($metadata)) {
+                $manualMeta['metadata'] = $metadata;
+            }
+
+            $manualMeta['idempotency_key'] = $transaction->idempotency_key;
+
+            $meta = $transaction->meta ?? [];
+            if (! is_array($meta)) {
+                $meta = [];
+            }
+
+            $meta = array_replace_recursive($meta, [
+                'manual' => $manualMeta,
+                'manual_payment_request' => [
+                    'id' => $manualPaymentRequest->getKey(),
+                    'status' => $manualPaymentRequest->status,
+                ],
+                'wallet' => array_filter([
+                    'purpose' => ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP,
+                    'manual_payment_request_id' => $manualPaymentRequest->getKey(),
+                ]),
+            ]);
+
+            $transaction->manual_payment_request_id = $manualPaymentRequest->getKey();
+            $transaction->meta = $meta;
+            $transaction->save();
+
+            $transaction->loadMissing('manualPaymentRequest.manualBank');
+            $manualRequest = $transaction->manualPaymentRequest?->loadMissing('payable');
+
+            $transactionResource = PaymentTransactionResource::make($transaction)->resolve();
+            $manualRequestResource = $manualRequest
+                ? ManualPaymentRequestResource::make($manualRequest)->resolve()
+                : null;
+
+            return response()->json([
+                'message' => __('تم تسجيل الدفع اليدوي.'),
+                'transaction' => $transactionResource,
+                'payment_transaction' => $transactionResource,
+                'manual_payment_request' => $manualRequestResource,
+            ], $transaction->payment_status === 'succeed' ? 200 : 202);
+        });
+    }
+
+    private function normalizePurpose(?string $purpose): string
+    {
+        if ($purpose === null) {
+            return 'order';
+        }
+
+        $normalized = strtolower(trim($purpose));
+
+        if ($normalized === '' || $normalized === 'null') {
+            return 'order';
+        }
+
+        if (str_contains($normalized, 'wallet')) {
+            return ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP;
+        }
+
+        if ($normalized === 'package') {
+            return 'package';
+        }
+
+        if ($normalized === 'order') {
+            return 'order';
+        }
+
+        return $normalized;
+    }
+
 
     private function resolveIdempotencyKey(Request $request): string
     {

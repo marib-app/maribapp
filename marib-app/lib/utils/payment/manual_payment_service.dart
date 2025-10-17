@@ -8,6 +8,7 @@ import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/api.dart';
 import 'package:meta/meta.dart';
 import 'package:marib/utils/payment/east_yemen_bank_config.dart';
+const String manualPaymentWalletTopUpPurpose = 'wallet_top_up';
 
 
 
@@ -155,6 +156,24 @@ String _canonicalPaymentMethod(String value) {
 
 
 
+
+
+bool _isWalletPurpose(String? purpose) {
+  if (purpose == null) {
+    return false;
+  }
+  final value = purpose.trim().toLowerCase();
+  if (value.isEmpty) {
+    return false;
+  }
+  if (value == manualPaymentWalletTopUpPurpose) {
+    return true;
+  }
+  return value.contains('wallet');
+}
+
+
+
 String? _normalizePurposeForApi(String? purpose) {
   if (purpose == null) {
     return null;
@@ -166,6 +185,13 @@ String? _normalizePurposeForApi(String? purpose) {
   if (value == 'order' || value == 'package') {
     return value;
   }
+
+
+  if (_isWalletPurpose(value)) {
+    return manualPaymentWalletTopUpPurpose;
+  }
+
+
   return null;
 }
 
@@ -574,6 +600,13 @@ class ManualPaymentSubmissionResult {
 
 
 class ManualPaymentService {
+
+  static const String walletTopUpPurpose =
+      manualPaymentWalletTopUpPurpose;
+
+  static bool isWalletPurpose(String? value) => _isWalletPurpose(value);
+
+
   ManualPaymentService({Dio? dio})
       : _dio = dio ??
       Dio(
@@ -989,6 +1022,7 @@ class ManualPaymentService {
     String? currency,
     int? orderId,
     String? paymentMethod,
+    double? amount,
   }) async {
     try {
       final ManualPaymentSettingsResult result =
@@ -1023,26 +1057,52 @@ class ManualPaymentService {
 
 
     try {
-      final normalizedPurpose = purpose?.trim();
       final normalizedCurrency = currency?.trim();
       final normalizedPaymentMethod = paymentMethod?.trim();
       final apiPaymentMethod =
-      ManualPaymentService.paymentMethodForApiOrNull(normalizedPaymentMethod);
+
+
+      ManualPaymentService.paymentMethodForApiOrNull(
+          normalizedPaymentMethod);
+
+      final String? resolvedPurpose =
+          _normalizePurposeForApi(purpose) ?? purpose?.trim();
+      final bool walletPurpose = _isWalletPurpose(resolvedPurpose);
+
+      final String? upperCurrency =
+      (normalizedCurrency != null && normalizedCurrency.isNotEmpty)
+          ? normalizedCurrency.toUpperCase()
+          : null;
+
+      String? formattedAmount;
+      if (amount != null && amount > 0) {
+        if (upperCurrency != null && upperCurrency.isNotEmpty) {
+          formattedAmount = formatManualPaymentAmount(amount, upperCurrency);
+        } else {
+          formattedAmount = amount.toStringAsFixed(2);
+        }
+      }
+
+      final int? sanitizedOrderId = (!walletPurpose && orderId != null && orderId > 0)
+          ? orderId
+          : null;
+
+
 
 
       final body = <String, dynamic>{
-        if (normalizedPurpose != null && normalizedPurpose.isNotEmpty)
+        if (resolvedPurpose != null && resolvedPurpose.isNotEmpty)
+          'purpose': resolvedPurpose,
+        if (upperCurrency != null && upperCurrency.isNotEmpty)
+          'currency': upperCurrency,
+        if (sanitizedOrderId != null) 'order_id': sanitizedOrderId,
 
-
-          'purpose': normalizedPurpose,
-
-
-        if (normalizedCurrency != null && normalizedCurrency.isNotEmpty)
-          'currency': normalizedCurrency.toUpperCase(),
-        if (orderId != null)
-          'order_id': orderId,
         if (apiPaymentMethod != null && apiPaymentMethod.isNotEmpty)
           'payment_method': apiPaymentMethod,
+
+        if (formattedAmount != null) 'amount': formattedAmount,
+
+
       };
       final response = await Api.postJson(
         url: Api.paymentsInitiateApi,

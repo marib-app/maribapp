@@ -23,6 +23,7 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/ui/screens/wallet/wallet_manual_payments_section.dart';
 import 'package:marib/utils/currency_utils.dart';
 import 'package:marib/data/model/wallet/wallet_summary.dart';
+import 'package:marib/utils/payment/manual_payment_service.dart';
 
 class WalletScreenUI extends StatefulWidget {
   const WalletScreenUI({super.key});
@@ -351,7 +352,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
       amount: amount,
       currency: _summaryCurrency(),
       packageType: 'wallet_top_up',
-      purpose: 'wallet',
+      purpose: ManualPaymentService.walletTopUpPurpose,
       initialGateway: gateway,
     );
 

@@ -27,7 +27,7 @@ class BankTransferArgs {
 // اترك تعريف BankTransferArgs لديك كما هو، وأضف الامتداد التالي:
 extension BankTransferArgsX on BankTransferArgs {
   Map<String, dynamic> toContext() => {
-    'package_id': packageId,
+    if (packageId > 0) 'package_id': packageId,
     'package_type': packageType,
     if (itemId != null) 'item_id': itemId,
   };
@@ -36,10 +36,27 @@ extension BankTransferArgsX on BankTransferArgs {
   String get normalizedPurpose {
     final explicit = purpose?.trim();
     if (explicit != null && explicit.isNotEmpty) {
+
+      final normalized = explicit.toLowerCase();
+      if (normalized.contains('wallet')) {
+        return 'wallet_top_up';
+      }
+      if (normalized.contains('order')) {
+        return 'order';
+      }
+      if (normalized == 'general') {
+        return 'general';
+      }
+
       return explicit;
     }
 
     final rawType = packageType.trim().toLowerCase();
+
+    if (rawType.contains('wallet')) {
+      return 'wallet_top_up';
+    }
+
     if (rawType.contains('order')) {
       return 'order';
     }

@@ -51,6 +51,7 @@ class CurrencyScreenUI extends StatelessWidget {
     required this.onToggleCurrencyWatchlist,
     required this.onToggleMetalWatchlist,
     required this.onNotificationFrequencyChanged,
+    required this.onSelectHistoryRange,
 
 
   });
@@ -70,6 +71,7 @@ class CurrencyScreenUI extends StatelessWidget {
   final VoidCallback onConvert;
   final VoidCallback onShareRates;
   final void Function(String?) onGovernorateChanged;
+  final void Function(int? currencyId, int days) onSelectHistoryRange;
 
   final List<TextInputFormatter> amountInputFormatters;
   final SystemUiOverlayStyle systemUiOverlayStyle;
@@ -372,6 +374,7 @@ class CurrencyScreenUI extends StatelessWidget {
               onShareRates: onShareRates,
               brand: brand,
               onToggleCurrencyWatchlist: onToggleCurrencyWatchlist,
+              onSelectHistoryRange: onSelectHistoryRange,
             ),
             ConvertTabView(
               state: state,
@@ -535,6 +538,7 @@ class RatesTabView extends StatelessWidget {
     required this.brand,
 
     required this.onToggleCurrencyWatchlist,
+    required this.onSelectHistoryRange,
 
 
   });
@@ -543,6 +547,7 @@ class RatesTabView extends StatelessWidget {
   final VoidCallback onShareRates;
   final Color brand;
   final void Function(int) onToggleCurrencyWatchlist;
+  final void Function(int? currencyId, int days) onSelectHistoryRange;
 
   bool _isDark(BuildContext c) =>
       Theme
@@ -672,7 +677,10 @@ class RatesTabView extends StatelessWidget {
   }
 
   // ---------- صفّ العملة (نظيف مع عرض بيع/شراء احترافي) ----------
-  Widget _row(BuildContext context, {
+  Widget _row(
+      BuildContext context, {
+
+
     required String name,
     required String sell,
     required String buy,
@@ -682,6 +690,11 @@ class RatesTabView extends StatelessWidget {
     required VoidCallback onToggleWatchlist,
     CurrencyHistoryBundle? history,
 
+
+        required int selectedRangeDays,
+        required ValueChanged<int> onHistoryRangeSelected,
+
+
   }) {
     final theme = Theme.of(context);
     final onBg = _isDark(context) ? Colors.white : Colors.black;
@@ -689,11 +702,11 @@ class RatesTabView extends StatelessWidget {
 
     // تنسيق الرقم إن أمكن
     String _fmt(String v) {
-      final d = double.tryParse(v.replaceAll(',', ''));
+      final double? d = double.tryParse(v.replaceAll(',', ''));
       return d == null ? v : NumberFormat('#,##0.####').format(d);
     }
 
-    final nameStyle = theme.textTheme.titleSmall?.copyWith(
+    final TextStyle nameStyle = theme.textTheme.titleSmall?.copyWith(
       color: onBg,
       fontWeight: FontWeight.w800,
     ) ??
@@ -709,7 +722,10 @@ class RatesTabView extends StatelessWidget {
           border: Border.all(color: onBg.withOpacity(0.20)),
         ),
         child: Icon(
-            Icons.account_balance_wallet_outlined, size: 17, color: brand),
+          Icons.account_balance_wallet_outlined,
+          size: 17,
+          color: brand,
+        ),
       );
     }
 
@@ -763,7 +779,11 @@ class RatesTabView extends StatelessWidget {
             style: theme.textTheme.labelSmall?.copyWith(
               color: onBg.withOpacity(0.6),
               fontWeight: FontWeight.w700,
-            ),
+            ) ??
+                TextStyle(
+                  color: onBg.withOpacity(0.6),
+                  fontWeight: FontWeight.w700,
+                ),
           ),
           Row(
             mainAxisSize: MainAxisSize.min,
@@ -794,16 +814,41 @@ class RatesTabView extends StatelessWidget {
     final NumberFormat changeFormatter = NumberFormat('+#0.##;-#0.##;0', 'en');
     final NumberFormat highLowFormatter = NumberFormat('#,##0.###', 'en');
 
-    final CurrencyHistoryRange? preferredRange =
-        history?.range(7) ?? history?.range(3) ?? history?.range(1);
-    final CurrencyHistorySummary? summary = preferredRange?.summary;
-    final List<double> sparklineValues = preferredRange?.points
+    final Set<int> availableRanges = history?.ranges.keys
+        .map((dynamic key) => key is int
+        ? key
+        : int.tryParse(key.toString()))
+        .whereType<int>()
+        .toSet() ??
+        <int>{};
+
+    int effectiveRangeDays = selectedRangeDays;
+    if (!availableRanges.contains(effectiveRangeDays) &&
+        availableRanges.isNotEmpty) {
+      if (availableRanges.contains(state.defaultHistoryRangeDays)) {
+        effectiveRangeDays = state.defaultHistoryRangeDays;
+      } else if (availableRanges.contains(7)) {
+        effectiveRangeDays = 7;
+      } else if (availableRanges.contains(3)) {
+        effectiveRangeDays = 3;
+      } else if (availableRanges.contains(1)) {
+        effectiveRangeDays = 1;
+      } else {
+        effectiveRangeDays = availableRanges.first;
+      }
+    }
+
+    final CurrencyHistoryRange? selectedRange =
+    history?.range(effectiveRangeDays);
+    final CurrencyHistorySummary? summary = selectedRange?.summary;
+    final List<double> sparklineValues = selectedRange?.points
         .map((CurrencyHistoryPoint point) => point.sellPrice)
         .where((double value) => value.isFinite)
         .toList(growable: false) ??
         <double>[];
 
     final bool hasSparkline = sparklineValues.length >= 2;
+    final bool hasHistoryData = history != null && availableRanges.isNotEmpty;
     final Color positiveColor = Colors.green;
     final Color negativeColor = Colors.redAccent;
     final Color neutralColor = onBg.withOpacity(0.6);
@@ -834,6 +879,58 @@ class RatesTabView extends StatelessWidget {
         ? highLowFormatter.format(summary!.lowSell)
         : null;
 
+    Widget buildRangeSelector() {
+      const List<int> options = <int>[1, 3, 7];
+      return Directionality(
+        textDirection: TextDirection.rtl,
+        child: Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: options.map((int days) {
+            final bool enabled = availableRanges.contains(days);
+            final bool selected = enabled && effectiveRangeDays == days;
+            final String label = days == 1
+                ? 'آخر يوم'
+                : 'آخر $days أيام';
+            return ChoiceChip(
+              label: Text(label),
+              selected: selected,
+              onSelected: enabled
+                  ? (bool value) {
+                if (value) {
+                  onHistoryRangeSelected(days);
+                }
+              }
+                  : null,
+              labelStyle: theme.textTheme.labelSmall?.copyWith(
+                color: selected
+                    ? Colors.white
+                    : onBg.withOpacity(enabled ? 0.85 : 0.35),
+                fontWeight: FontWeight.w700,
+              ) ??
+                  TextStyle(
+                    color: selected
+                        ? Colors.white
+                        : onBg.withOpacity(enabled ? 0.85 : 0.35),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+              selectedColor: brand,
+              backgroundColor: onBg.withOpacity(0.05),
+              disabledColor: onBg.withOpacity(0.06),
+              shape: StadiumBorder(
+                side: BorderSide(
+                  color: selected ? brand : onBg.withOpacity(0.12),
+                ),
+              ),
+              visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            );
+          }).toList(),
+        ),
+      );
+    }
+
 
     final Widget star = IconButton(
       onPressed: onToggleWatchlist,
@@ -844,80 +941,113 @@ class RatesTabView extends StatelessWidget {
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints.tightFor(width: 40, height: 40),
       splashRadius: 20,
-      tooltip: isWatchlisted
-          ? 'إزالة من قائمة المراقبة'
-          : 'إضافة إلى قائمة المراقبة',
+      tooltip:
+      isWatchlisted ? 'إزالة من قائمة المراقبة' : 'إضافة إلى قائمة المراقبة',
     );
 
 
     return Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {},
-          splashColor: brand.withOpacity(0.06),
-          highlightColor: brand.withOpacity(0.03),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: divider, width: 1)),
-            ),
-            child: LayoutBuilder(
-              builder: (ctx, cons) {
-                final bool narrow = cons.maxWidth < 360;
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {},
+        splashColor: brand.withOpacity(0.06),
+        highlightColor: brand.withOpacity(0.03),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: divider, width: 1)),
+          ),
+          child: LayoutBuilder(
+            builder: (BuildContext ctx, BoxConstraints cons) {
+              final bool narrow = cons.maxWidth < 360;
 
-                final Widget leading = Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                    leadingIcon,
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        name,
-                        style: nameStyle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textDirection: TextDirection.rtl,
+              final Widget leading = Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                  leadingIcon,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      name,
+                      style: nameStyle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textDirection: TextDirection.rtl,
                     ),
-                    ),
-                    ],
-                );
+                  ),
+                  ],
+              );
 
                 final Widget sellBlock = priceStat('بيع', sell, Colors.redAccent);
                 final Widget buyBlock = priceStat('شراء', buy, Colors.green);
 
-                final Widget priceContent = narrow
-                    ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    sellBlock,
-                    const SizedBox(height: 6),
-                    buyBlock,
-                  ],
+              final Widget priceContent = narrow
+                  ? Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  sellBlock,
+                  const SizedBox(height: 6),
+                  buyBlock,
+                ],
                     )
-                    : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    sellBlock,
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 10),
-                      width: 1,
-                      height: 22,
-                      color: onBg.withOpacity(0.12),
-                    ),
-                    buyBlock,
-                  ],
-                );
+                  : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  sellBlock,
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 10),
+                    width: 1,
+                    height: 22,
+                    color: onBg.withOpacity(0.12),
+                  ),
+                  buyBlock,
+                ],
+              );
 
-                Widget buildHistorySection(double availableWidth) {
-                  if (!hasSparkline && changeText == '--') {
-                    return Container(
-                        width: availableWidth,
-                        height: 40,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: onBg.withOpacity(0.12)),
+              Widget buildHistorySection(double availableWidth) {
+                final List<Widget> historyChildren = <Widget>[
+                  buildRangeSelector(),
+                  const SizedBox(height: 8),
+                ];
+
+                if (hasSparkline) {
+                  historyChildren.add(
+                    SizedBox(
+                      width: availableWidth,
+                      height: 40,
+                      child: _MiniTrendChart(
+                        values: sparklineValues,
+                        color: trendColor,
+                      ),
                     ),
+                  );
+                } else if (hasHistoryData) {
+                  historyChildren.add(
+                    Container(
+                      width: availableWidth,
+                      height: 40,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: onBg.withOpacity(0.12)),
+                      ),
+                      child: Icon(
+                        Icons.trending_flat,
+                        color: trendColor,
+                        size: 18,
+                      ),
+                    ),
+                  );
+                } else {
+                  historyChildren.add(
+                    Container(
+                      width: availableWidth,
+                      height: 40,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: onBg.withOpacity(0.12)),
+                      ),
                       child: Text(
                         'لا يوجد سجل',
                         style: theme.textTheme.labelSmall?.copyWith(
@@ -927,39 +1057,17 @@ class RatesTabView extends StatelessWidget {
                             TextStyle(
                               color: onBg.withOpacity(0.5),
                               fontSize: 12,
-                          ),
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
 
                     ),
 
                   );
                 }
 
-
-                final List<Widget> children = <Widget>[
-                  hasSparkline
-                      ? SizedBox(
-                    width: availableWidth,
-                    height: 40,
-                    child: _MiniTrendChart(
-                      values: sparklineValues,
-                      color: trendColor,
-                    ),
-                  )
-                      : Container(
-                    width: availableWidth,
-                    height: 40,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: onBg.withOpacity(0.12)),
-                    ),
-                    child: Icon(
-                      Icons.trending_flat,
-                      color: trendColor,
-                      size: 18,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
+                historyChildren.add(const SizedBox(height: 6));
+                historyChildren.add(
                   Container(
                     padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -987,26 +1095,30 @@ class RatesTabView extends StatelessWidget {
                       ],
                     ),
                   ),
-                ];
+                );
 
                 if (highText != null && lowText != null) {
-                children.addAll([
-                const SizedBox(height: 4),
-                Text(
-                'أعلى: $highText | أدنى: $lowText',
-                style: theme.textTheme.labelSmall?.copyWith(
-                color: onBg.withOpacity(0.6),
-                fontWeight: FontWeight.w600,
-                ) ??
-                TextStyle(color: onBg.withOpacity(0.6), fontSize: 11, fontWeight: FontWeight.w600),
-                textDirection: TextDirection.rtl,
-                ),
-                ]);
+                  historyChildren.addAll([
+                    const SizedBox(height: 4),
+                    Text(
+                      'أعلى: $highText | أدنى: $lowText',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: onBg.withOpacity(0.6),
+                        fontWeight: FontWeight.w600,
+                      ) ??
+                          TextStyle(
+                            color: onBg.withOpacity(0.6),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                      textDirection: TextDirection.rtl,
+                    ),
+                  ]);
                 }
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
-                  children: children,
+                  children: historyChildren,
                 );
                 }
 
@@ -1029,7 +1141,7 @@ class RatesTabView extends StatelessWidget {
                 );
                 }
 
-                return Row(
+              return Row(
 
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -1042,20 +1154,19 @@ class RatesTabView extends StatelessWidget {
                         priceContent,
                         const SizedBox(width: 16),
                         SizedBox(
-                          width: 140,
-                          child: buildHistorySection(140),
+                          width: 160,
+                          child: buildHistorySection(160),
                         ),
                       ],
                     ),
                   ),
                   star,
                 ],
-                );
-              },
-          ),
-
+              );
+            },
           ),
         ),
+      ),
     );
   }
 
@@ -1124,7 +1235,14 @@ class RatesTabView extends StatelessWidget {
     String? _icon(d) => (d as dynamic).iconUrl?.toString();
     String? _iconAlt(d) => (d as dynamic).iconAlt?.toString();
     CurrencyHistoryBundle? _history(d) => d is CurrencyRate ? d.history : null;
-
+    int? _id(d) {
+      try {
+        final dynamic raw = (d as dynamic).id;
+        if (raw is int) return raw;
+        if (raw is num) return raw.toInt();
+      } catch (_) {}
+      return null;
+    }
 
     if (rates.isEmpty) {
       final onBg = _isDark(context) ? Colors.white : Colors.black;
@@ -1163,9 +1281,8 @@ class RatesTabView extends StatelessWidget {
         if (i == 0) return _header(context);
         if (i == rates.length + 1) return _noteCard(context);
         final dynamic r = rates[i - 1];
-        final int rateId = (r as dynamic).id is int
-            ? (r as dynamic).id as int
-            : 0;
+        final int? currencyId = _id(r);
+        final int rateId = currencyId ?? 0;
         final bool isWatchlisted = state.currencyWatchlist.contains(rateId);
         return _row(
           context,
@@ -1177,6 +1294,9 @@ class RatesTabView extends StatelessWidget {
           isWatchlisted: isWatchlisted,
           onToggleWatchlist: () => onToggleCurrencyWatchlist(rateId),
           history: _history(r),
+          selectedRangeDays: state.historyRangeForCurrency(currencyId),
+          onHistoryRangeSelected: (int days) =>
+              onSelectHistoryRange(currencyId, days),
         );
       },
     );

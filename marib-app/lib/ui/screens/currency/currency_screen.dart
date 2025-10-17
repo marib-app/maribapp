@@ -78,7 +78,8 @@ class CurrencyViewState {
   final List<MetalRate> displayGoldRates;
   final List<MetalRate> displaySilverRates;
 
-
+  final Map<int, int> selectedHistoryRanges;
+  final int defaultHistoryRangeDays;
 
 
 
@@ -101,7 +102,8 @@ class CurrencyViewState {
     required this.requestedGovernorateCode,
     required this.requestedGovernorateName,
     required this.usedFallback,
-
+    required Map<int, int> selectedHistoryRanges,
+    required this.defaultHistoryRangeDays,
     required Set<int> currencyWatchlist,
     required Set<int> metalWatchlist,
     required this.showWatchlistOnly,
@@ -126,8 +128,9 @@ class CurrencyViewState {
         currencyWatchlist = Set<int>.unmodifiable(currencyWatchlist),
         metalWatchlist = Set<int>.unmodifiable(metalWatchlist),
         notificationOptions =
-        List<PreferenceOption>.unmodifiable(notificationOptions);
-
+        List<PreferenceOption>.unmodifiable(notificationOptions),
+        selectedHistoryRanges =
+        Map<int, int>.unmodifiable(selectedHistoryRanges);
   CurrencyViewState copyWith({
     CurrencyPageStatus? status,
     String? errorMessage,
@@ -158,7 +161,8 @@ class CurrencyViewState {
     List<MetalRate>? displayGoldRates,
     List<dynamic>? displayRates,
 
-
+    Map<int, int>? selectedHistoryRanges,
+    int? defaultHistoryRangeDays,
 
 
   }) {
@@ -180,7 +184,10 @@ class CurrencyViewState {
       convertedAmount: convertedAmount ?? this.convertedAmount,
       hasCalculated: hasCalculated ?? this.hasCalculated,
 
-
+      selectedHistoryRanges:
+      selectedHistoryRanges ?? this.selectedHistoryRanges,
+      defaultHistoryRangeDays:
+      defaultHistoryRangeDays ?? this.defaultHistoryRangeDays,
 
       errorMessage: errorMessage ?? this.errorMessage,
       rates: rates ?? this.rates,
@@ -204,6 +211,15 @@ class CurrencyViewState {
       usedFallback: usedFallback ?? this.usedFallback,
     );
   }
+
+
+  int historyRangeForCurrency(int? currencyId) {
+    if (currencyId == null) {
+      return defaultHistoryRangeDays;
+    }
+    return selectedHistoryRanges[currencyId] ?? defaultHistoryRangeDays;
+  }
+
 }
 
 class CurrencyScreen extends StatelessWidget {
@@ -249,6 +265,9 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
   String _toCurrency = '';
   double _convertedAmount = 0.0;
   bool _hasCalculated = false;
+  final Map<int, int> _selectedHistoryRanges = <int, int>{};
+  int _defaultHistoryRange = 7;
+
 
   @override
   void initState() {
@@ -426,6 +445,23 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
     context.read<CurrencyCubit>().changeNotificationFrequency(value);
   }
 
+  void _onHistoryRangeSelected(int? currencyId, int days) {
+    if (days != 1 && days != 3 && days != 7) {
+      return;
+    }
+    setState(() {
+      if (currencyId == null) {
+        _defaultHistoryRange = days;
+        _selectedHistoryRanges.removeWhere((_, value) => value == days);
+        return;
+      }
+      if (days == _defaultHistoryRange) {
+        _selectedHistoryRanges.remove(currencyId);
+      } else {
+        _selectedHistoryRanges[currencyId] = days;
+      }
+    });
+  }
 
 
   // ————— أدوات مساعدة داخلية —————
@@ -499,6 +535,9 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
             requestedGovernorateCode: null,
             requestedGovernorateName: null,
             usedFallback: false,
+            selectedHistoryRanges:
+            Map<int, int>.from(_selectedHistoryRanges),
+            defaultHistoryRangeDays: _defaultHistoryRange,
           );
         } else if (state is CurrencyError) {
           viewState = CurrencyViewState(
@@ -536,6 +575,9 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
             requestedGovernorateCode: null,
             requestedGovernorateName: null,
             usedFallback: false,
+            selectedHistoryRanges:
+            Map<int, int>.from(_selectedHistoryRanges),
+            defaultHistoryRangeDays: _defaultHistoryRange,
           );
         } else if (state is CurrencySuccess) {
           final rates = state.currencyRates;
@@ -619,7 +661,9 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
             requestedGovernorateCode: requestedCode,
             requestedGovernorateName: requestedName,
             usedFallback: state.usedFallback,
-
+            selectedHistoryRanges:
+            Map<int, int>.from(_selectedHistoryRanges),
+            defaultHistoryRangeDays: _defaultHistoryRange,
 
             amountText: _amountController.text,
             fromCurrency: _fromCurrency,
@@ -654,6 +698,9 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
             requestedGovernorateCode: null,
             requestedGovernorateName: null,
             usedFallback: false,
+            selectedHistoryRanges:
+            Map<int, int>.from(_selectedHistoryRanges),
+            defaultHistoryRangeDays: _defaultHistoryRange,
             amountText: _amountController.text,
             fromCurrency: _fromCurrency,
             toCurrency: _toCurrency,

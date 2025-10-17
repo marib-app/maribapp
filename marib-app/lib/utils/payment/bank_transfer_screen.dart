@@ -260,7 +260,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           ? widget.args.packageId
           : null;
 
-      final double? amountParam = isWalletTopUp ? widget.args.amount : null;
 
       final settings = await _service.fetchManualPaymentSettings(
         token: widget.args.token,
@@ -270,7 +269,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         orderId: orderIdParam,
         paymentMethod:
         ManualPaymentService.paymentMethodForApi(_manualBankMethod),
-        amount: amountParam,
+        amount: isWalletTopUp ? widget.args.amount : null,
       );
 
       final List<CurrencyParseResult> currencyCandidates = <CurrencyParseResult>[
@@ -365,7 +364,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     final int? orderIdParam = (!isWalletTopUp && widget.args.packageId > 0)
         ? widget.args.packageId
         : null;
-    final double? amountParam = isWalletTopUp ? widget.args.amount : null;
 
     try {
       final settings = await _service.fetchManualPaymentSettings(
@@ -376,7 +374,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
         paymentMethod:
         ManualPaymentService.paymentMethodForApi(selectedMethod),
-        amount: amountParam,
+        amount: isWalletTopUp ? widget.args.amount : null,
+
       );
 
       final updatedIntent = settings.paymentIntentId?.trim();

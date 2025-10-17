@@ -1032,6 +1032,8 @@ class ManualPaymentService {
         currency: currency,
         orderId: orderId,
         paymentMethod: paymentMethod,
+        amount: amount,
+
       );
       return result.banks;
     } catch (_) {
@@ -1045,6 +1047,7 @@ class ManualPaymentService {
     String? currency,
     int? orderId,
     String? paymentMethod,
+    double? amount,
   }) async {
     List<BankAccount> banks = <BankAccount>[];
     EastYemenBankConfig? eastYemenBank;

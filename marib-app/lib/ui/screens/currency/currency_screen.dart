@@ -26,6 +26,7 @@ import 'package:marib/data/repositories/currency_repository.dart';
 import 'package:marib/data/repositories/preferences/governorate_preference_repository.dart';
 import 'package:marib/data/model/metal_rate.dart';
 import 'package:marib/data/repositories/metal_repository.dart';
+import 'rates_share_card.dart';
 
 import 'package:marib/data/model/preference_option.dart';
 import 'package:marib/data/repositories/metal_repository.dart';
@@ -33,7 +34,10 @@ import 'package:marib/data/repositories/preferences/user_preference_repository.d
 
 import 'state/state.dart';
 import 'view/currency_screen_shell.dart' show CurrencyScreenUI;
-
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+import 'package:permission_handler/permission_handler.dart';
 
 
 
@@ -75,6 +79,7 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
     with TickerProviderStateMixin {
   late final TabController _tabController;
   final TextEditingController _amountController = TextEditingController();
+  final GlobalKey _shareBoundaryKey = GlobalKey(debugLabel: 'currencyShareBoundary');
 
   String _fromCurrency = '';
   String _toCurrency = '';
@@ -82,6 +87,7 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
   bool _hasCalculated = false;
   final Map<int, int> _selectedHistoryRanges = <int, int>{};
   int _defaultHistoryRange = 7;
+  bool _isSharingRates = false;
 
 
   @override
@@ -149,36 +155,42 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
     });
   }
 
-  void _onShareRates(CurrencyViewState viewState) {
-    final currencyRates = viewState.displayRates;
-    final goldRates = viewState.displayGoldRates;
-    final silverRates = viewState.displaySilverRates;
+  Future<void> _onShareRates(CurrencyViewState viewState) async {
+    final List<dynamic> currencyRates = viewState.displayRates;
+    final List<MetalRate> goldRates = viewState.displayGoldRates;
+    final List<MetalRate> silverRates = viewState.displaySilverRates;
 
     if (currencyRates.isEmpty && goldRates.isEmpty && silverRates.isEmpty) {
       return;
     }
 
-    final priceFormat = NumberFormat('#,##0.000');
+    if (_isSharingRates) {
+      return;
+    }
 
-    final buffer = StringBuffer();
+    final NumberFormat priceFormat = NumberFormat('#,##0.000');
+    final StringBuffer buffer = StringBuffer();
+
+
 
     if (currencyRates.isNotEmpty) {
-      final applied = viewState.appliedGovernorateName ?? 'المتوسط الافتراضي';
-      final requested = viewState.requestedGovernorateName;
-      final locationLine = (requested != null && requested != applied)
+      final String applied = viewState.appliedGovernorateName ?? 'المتوسط الافتراضي';
+      final String? requested = viewState.requestedGovernorateName;
+      final String locationLine = (requested != null && requested != applied)
           ? 'المحافظة: $applied (بديل عن $requested)'
           : 'المحافظة: $applied';
-      final stamp = viewState.lastUpdatedAt != null
+      final String stamp = viewState.lastUpdatedAt != null
           ? DateFormat('yyyy-MM-dd HH:mm').format(viewState.lastUpdatedAt!)
           : 'غير متاح';
 
       buffer.writeln('💰 أسعار العملات - $applied 💰\n');
 
-      for (final rate in currencyRates) {
+      for (final dynamic rate in currencyRates) {
+
         final dynamic r = rate;
-        final name = r.currencyName?.toString() ?? '';
-        final sell = r.sellPrice?.toString() ?? '';
-        final buy = r.buyPrice?.toString() ?? '';
+        final String name = r.currencyName?.toString() ?? '';
+        final String sell = r.sellPrice?.toString() ?? '';
+        final String buy = r.buyPrice?.toString() ?? '';
         String sourceLabel = 'غير متاح';
         try {
           final dynamic rawSource = r.quoteSource;
@@ -236,8 +248,105 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
 
     buffer.writeln('🔗 حمل تطبيق "مارب بين يديك" الآن للاستفادة من المزيد من الخدمات المميزة!');
 
+    final String shareText = buffer.toString().trim();
 
-    Share.share(buffer.toString().trim());
+    _isSharingRates = true;
+
+    try {
+      if (!await _ensureSharePermission()) {
+        if (!mounted) {
+          await Share.share(shareText);
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('لم يتم منح إذن مشاركة الصور. سيتم مشاركة النص فقط.'),
+          ),
+        );
+        await Share.share(shareText);
+        return;
+      }
+
+      if (!mounted) {
+        await Share.share(shareText);
+        return;
+      }
+
+      final OverlayState? overlayState = Overlay.of(context);
+      if (overlayState == null) {
+        await Share.share(shareText);
+        return;
+      }
+
+      final OverlayEntry overlayEntry = OverlayEntry(
+        builder: (BuildContext overlayContext) {
+          return RatesShareCard(
+            viewState: viewState,
+            boundaryKey: _shareBoundaryKey,
+          );
+        },
+      );
+
+      overlayState.insert(overlayEntry);
+
+      try {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await WidgetsBinding.instance.endOfFrame;
+
+        final RenderRepaintBoundary? boundary =
+        _shareBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+
+        if (boundary == null) {
+          debugPrint('Currency share boundary not found, sharing text only.');
+          await Share.share(shareText);
+          return;
+        }
+
+        final double pixelRatio =
+        MediaQuery.of(context).devicePixelRatio.clamp(2.0, 4.0).toDouble();
+        final ui.Image image = await boundary.toImage(pixelRatio: pixelRatio);
+        final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+
+        if (byteData == null) {
+          debugPrint('Currency share capture failed (no byteData), sharing text only.');
+          await Share.share(shareText);
+          return;
+        }
+
+        final Uint8List pngBytes = byteData.buffer.asUint8List();
+        final XFile shareFile = XFile.fromData(
+          pngBytes,
+          mimeType: 'image/png',
+          name: 'marib_rates_${DateTime.now().millisecondsSinceEpoch}.png',
+        );
+
+        await Share.shareXFiles(<XFile>[shareFile], text: shareText);
+      } finally {
+        overlayEntry.remove();
+      }
+    } catch (error, stackTrace) {
+      debugPrint('Currency share failed: $error\n$stackTrace');
+      await Share.share(shareText);
+    } finally {
+      _isSharingRates = false;
+    }
+  }
+
+
+  Future<bool> _ensureSharePermission() async {
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      return true;
+    }
+
+    final Permission permission = Platform.isIOS ? Permission.photos : Permission.storage;
+    final PermissionStatus currentStatus = await permission.status;
+
+    if (currentStatus.isGranted || currentStatus.isLimited) {
+      return true;
+    }
+
+    final PermissionStatus requestedStatus = await permission.request();
+    return requestedStatus.isGranted || requestedStatus.isLimited;
 
   }
 

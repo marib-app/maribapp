@@ -26,7 +26,6 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:flutter/foundation.dart';
 
 
 
@@ -54,18 +53,7 @@ extension StringCasingExtension on String {
 
 class HelperUtils {
 
-  static final List<_SoftSnackBarController> _activeSoftSnackbars =
-  <_SoftSnackBarController>[];
 
-  static void _reindexActiveSoftSnackbars() {
-    for (var i = 0; i < _activeSoftSnackbars.length; i++) {
-      if (i == 0) {
-        _activeSoftSnackbars[i].promote();
-      } else {
-        _activeSoftSnackbars[i].demote(i);
-      }
-    }
-  }
 
 
   static String absoluteImage(String? path) {
@@ -681,41 +669,9 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
     if (context == null) return;
 
     final overlay = Overlay.of(context);
-
-    if (overlay == null) {
-      return;
-    }
-
     final theme = Theme.of(context);
 
-    for (var i = 0; i < _activeSoftSnackbars.length; i++) {
-      _activeSoftSnackbars[i].demote(i + 1);
-    }
-
-    final ValueNotifier<double> offsetNotifier = ValueNotifier<double>(80.0);
-    final ValueNotifier<double> focusNotifier = ValueNotifier<double>(0.9);
-
     late OverlayEntry entry;
-
-    late final _SoftSnackBarController controller;
-    bool removed = false;
-
-    void handleFinish() {
-      if (removed) return;
-      removed = true;
-
-      final int index = _activeSoftSnackbars.indexOf(controller);
-      if (index != -1) {
-        _activeSoftSnackbars.removeAt(index);
-      }
-
-      entry.remove();
-      controller.dispose();
-
-      _reindexActiveSoftSnackbars();
-
-      onClose?.call();
-    }
 
     final widget = _SoftSnackBarWidget(
       message: message,
@@ -724,27 +680,18 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
       backgroundColor: type?.value ??
           (theme.brightness == Brightness.dark
               ? Colors.grey[800]
-              : Colors.grey[900])!,
-
+              : Colors.grey[900])!
+              .withOpacity(0.9),
       textColor: Colors.white,
       fontSize: 15,
       fontWeight: FontWeight.w500,
-      offsetListenable: offsetNotifier,
-      focusOpacityListenable: focusNotifier,
-      onFinish: handleFinish,
+      onFinish: () {
+        entry.remove();
+        onClose?.call();
+      },
     );
 
     entry = OverlayEntry(builder: (_) => widget);
-
-    controller = _SoftSnackBarController(
-      entry: entry,
-      offsetNotifier: offsetNotifier,
-      focusNotifier: focusNotifier,
-    );
-
-    _activeSoftSnackbars.insert(0, controller);
-
-    _reindexActiveSoftSnackbars();
 
     overlay.insert(entry);
   }
@@ -1056,33 +1003,6 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
 }
 
 
-class _SoftSnackBarController {
-  _SoftSnackBarController({
-    required this.entry,
-    required this.offsetNotifier,
-    required this.focusNotifier,
-  });
-
-  final OverlayEntry entry;
-  final ValueNotifier<double> offsetNotifier;
-  final ValueNotifier<double> focusNotifier;
-
-  void promote() {
-    offsetNotifier.value = 80.0;
-    focusNotifier.value = 0.9;
-  }
-
-  void demote(int index) {
-    offsetNotifier.value = (80 + index * 64).toDouble();
-    focusNotifier.value = 0.6;
-  }
-
-  void dispose() {
-    offsetNotifier.dispose();
-    focusNotifier.dispose();
-  }
-}
-
 
 class _SoftSnackBarWidget extends StatefulWidget {
   final String message;
@@ -1093,9 +1013,6 @@ class _SoftSnackBarWidget extends StatefulWidget {
   final double fontSize;
   final FontWeight fontWeight;
   final VoidCallback onFinish;
-  final ValueListenable<double> offsetListenable;
-  final ValueListenable<double> focusOpacityListenable;
-
 
   const _SoftSnackBarWidget({
     required this.message,
@@ -1106,8 +1023,6 @@ class _SoftSnackBarWidget extends StatefulWidget {
     required this.fontSize,
     required this.fontWeight,
     required this.onFinish,
-    required this.offsetListenable,
-    required this.focusOpacityListenable,
   });
 
   @override
@@ -1138,86 +1053,54 @@ class _SoftSnackBarWidgetState extends State<_SoftSnackBarWidget>
       bottom: 80,
       left: 0,
       right: 0,
-        child: ValueListenableBuilder<double>(
-            valueListenable: widget.offsetListenable,
-            builder: (BuildContext context, double offset, Widget? child) {
-              return AnimatedPadding(
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeOutCubic,
-                padding: EdgeInsets.only(bottom: offset),
-                child: child,
-              );
-            },
-            child: Center(
-                child: ValueListenableBuilder<double>(
-                    valueListenable: widget.focusOpacityListenable,
-                    builder: (BuildContext context, double focusOpacity, Widget? child) {
-                      final double clampedFocus =
-                      focusOpacity.clamp(0.0, 1.0).toDouble();
-                      final double combinedOpacity =
-                      (opacity * clampedFocus).clamp(0.0, 1.0).toDouble();
-                      final double slideOffset = opacity == 1
-                          ? (1 - clampedFocus) * 0.05
-                          : 0.1;
-                      final Color background =
-                      widget.backgroundColor.withOpacity(clampedFocus);
-                      final Color textColor =
-                      widget.textColor.withOpacity(clampedFocus);
-
-                      return AnimatedOpacity(
-                        duration: const Duration(milliseconds: 200),
-                        curve: Curves.easeOutCubic,
-                        opacity: combinedOpacity,
-                        child: AnimatedSlide(
-                          duration: const Duration(milliseconds: 250),
-                          curve: Curves.easeOutCubic,
-                          offset: Offset(0, slideOffset),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: IntrinsicWidth(
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 12, horizontal: 16),
-                                decoration: BoxDecoration(
-                                  color: background,
-                                  borderRadius: BorderRadius.circular(22),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(100),
-                                      child: Image.asset(
-                                        widget.iconPath,
-                                        width: 30,
-                                        height: 30,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Flexible(
-                                      child: Text(
-                                        widget.message,
-                                        style: TextStyle(
-                                          color: textColor,
-                                          fontSize: widget.fontSize,
-                                          fontWeight: widget.fontWeight,
-                                        ),
-                                        textAlign: TextAlign.start,
-                                        maxLines: 3,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                        ),
-
+      child: Center(
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 300),
+          opacity: opacity,
+          child: Material(
+            color: Colors.transparent,
+            child: IntrinsicWidth(
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: widget.backgroundColor,
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // ✅ الأيقونة على اليمين
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(100),
+                      child: Image.asset(
+                        widget.iconPath,
+                        width: 30,
+                        height: 30,
+                        fit: BoxFit.cover,
                       ),
                     ),
-                 ),
+
+                    const SizedBox(width: 10),
+
+                    // ✅ النص يتمدد ولكن يظل ضمن الحجم الطبيعي
+                    Flexible(
+                      child: Text(
+                        widget.message,
+                        style: TextStyle(
+                          color: widget.textColor,
+                          fontSize: widget.fontSize,
+                          fontWeight: widget.fontWeight,
+                        ),
+                        textAlign: TextAlign.start,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
-               );
-            },
+              ),
+            ),
           ),
         ),
       ),

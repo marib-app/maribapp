@@ -5632,21 +5632,11 @@ class ApiController extends Controller {
             }
         }
 
-        $currencyOverride = array_key_exists('currency', $options) ? $options['currency'] : null;
-        $effectiveCurrency = $currencyOverride ?? $transaction->currency;
-        $effectiveCurrency = WalletService::normalizeCurrency($effectiveCurrency);
-
-        $optionsWithoutCurrency = $options;
-        unset($optionsWithoutCurrency['currency']);
-
-
-        $debitOptions = array_merge([
-            'payment_transaction' => $transaction,
-            'currency' => $effectiveCurrency,
-        ], $optionsWithoutCurrency);
-
         try {
-            return $this->walletService->debit($user, $idempotencyKey, $amount, $debitOptions);
+            return $this->walletService->debit($user, $idempotencyKey, $amount, array_merge([
+                'payment_transaction' => $transaction,
+
+            ], $options));
 
         } catch (RuntimeException $runtimeException) {
             if (str_contains(strtolower($runtimeException->getMessage()), 'insufficient wallet balance')) {
@@ -9156,28 +9146,7 @@ public function storeRequestDevice(Request $request)
 
 
 
-        $rawPaymentMethod = $request->input('payment_method');
-        $normalizedPaymentMethod = $this->normalizeManualPaymentGateway($rawPaymentMethod);
-
-        if ($normalizedPaymentMethod === null) {
-            $normalizedPaymentMethod = 'manual_bank';
-
-        }
-
-        $request->merge(['payment_method' => $normalizedPaymentMethod]);
-
-        $paymentMethod = $normalizedPaymentMethod;
-
-        $manualBankId = null;
-        $manualBank = null;
-        if ($paymentMethod === 'manual_bank') {
-            $requestedManualBankId = $request->input('manual_bank_id');
-            if ($requestedManualBankId !== null && $requestedManualBankId !== '') {
-                $manualBankId = (int) $requestedManualBankId;
-                $manualBank = ManualBank::query()->find($manualBankId);
-            }
-        }
-
+        $paymentMethod = $request->input('payment_method', 'manual_bank');
 
         $validator = Validator::make($request->all(), [
             'payment_method' => 'nullable|in:manual_bank,east_yemen_bank,wallet',
@@ -9202,27 +9171,6 @@ public function storeRequestDevice(Request $request)
 
         $validated = $validator->validated();
 
-        $paymentMethod = $validated['payment_method'] ?? $paymentMethod;
-
-
-        if ($paymentMethod === 'manual_bank') {
-            $validatedManualBankId = $validated['manual_bank_id'] ?? $manualBankId;
-
-            if ($validatedManualBankId !== null && $validatedManualBankId !== '') {
-                $manualBankId = (int) $validatedManualBankId;
-
-                if ($manualBank === null || $manualBank->getKey() !== $manualBankId) {
-                    $manualBank = ManualBank::query()->find($manualBankId);
-                }
-            } else {
-                $manualBankId = null;
-                $manualBank = null;
-            }
-        } else {
-            $manualBankId = null;
-            $manualBank = null;
-        }
-        
 
         $payableTypeInput = $request->input('payable_type');
         $payableIdInput = $request->input('payable_id');
@@ -9365,78 +9313,24 @@ public function storeRequestDevice(Request $request)
                 $existingManualPaymentRequest
             );
 
-            $resolvedManualBankId = $manualBank?->getKey();
-
-            $manualBankName = null;
-            if ($manualBank) {
-                $rawName = $manualBank->name ?? null;
-                if (is_string($rawName)) {
-                    $trimmedName = trim($rawName);
-                    if ($trimmedName !== '') {
-                        $manualBankName = $trimmedName;
-                    }
-                }
-            }
-
-            $manualBankAccountName = null;
-
-            if ($manualBank) {
-                $accountName = $manualBank->account_name ?? null;
-                if (is_string($accountName)) {
-                    $accountName = trim($accountName);
-                }
-
-                if (!is_string($accountName) || $accountName === '') {
-                    $accountName = $manualBank->beneficiary_name ?? null;
-                }
-
-                if (is_string($accountName)) {
-                    $trimmedAccountName = trim($accountName);
-                    if ($trimmedAccountName !== '') {
-                        $manualBankAccountName = $trimmedAccountName;
-                    }
-                }
-            }
-
-            $resolvedManualBankName = $paymentMethod === 'manual_bank'
-                ? $manualBankName
-                : null;
-
-            $resolvedManualBankAccountName = $paymentMethod === 'manual_bank'
-                ? $manualBankAccountName
-                : null;
-            $paymentGatewayName = $paymentMethod === 'manual_bank'
-                ? $manualBankName
-                : null;
 
             $manualPaymentAttributes = [
-                'user_id' => $user->id,
+                'user_id'        => $user->id,
 
-                'manual_bank_id' => $paymentMethod === 'manual_bank'
-                    ? $resolvedManualBankId
+                'manual_bank_id' => $paymentMethod === 'manual_bank' ? $request->manual_bank_id : null,
+                'amount'         => $request->amount,
+                'currency'       => $currency,
 
 
-                    : null,
-                 
-                'amount' => $request->amount,
-                'currency' => $currency,
-                'reference' => $request->reference,
-                'user_note' => $request->user_note,
-                'receipt_path' => $receiptPath,
-                'status' => ManualPaymentRequest::STATUS_PENDING,
-                'payable_type' => $resolvedPayableType,
-                'payable_id' => $payableId,
-                'department' => $department,
-                'meta' => empty($metaPayload) ? null : $metaPayload,
-                'bank_name' => $resolvedManualBankName,
-                'bank_account_name' => $resolvedManualBankAccountName,
-                'gateway_name' => $paymentGatewayName,
+                'reference'      => $request->reference,
+                'user_note'      => $request->user_note,
+                'receipt_path'   => $receiptPath,
+                'status'         => ManualPaymentRequest::STATUS_PENDING,
+                'payable_type'   => $resolvedPayableType,
+                'payable_id'     => $payableId,
+                'department'     => $department,
+                'meta'           => empty($metaPayload) ? null : $metaPayload,
             ];
-
-
-
-
-
 
             if ($existingManualPaymentRequest) {
 
@@ -9464,9 +9358,7 @@ public function storeRequestDevice(Request $request)
                         'amount' => $manualPaymentRequest->amount,
                         'currency' => $currency,
                         'receipt_path' => $receiptPath,
-                        'payment_gateway' => $paymentMethod,
-                        'payment_gateway_name' => $paymentGatewayName,
-                        
+                        'payment_gateway' => 'wallet',
                         'payable_type' => ($resolvedPayableType && $resolvedPayableType !== ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP)
                             ? $resolvedPayableType
                             : null,
@@ -9485,9 +9377,7 @@ public function storeRequestDevice(Request $request)
                         'amount'                    => $manualPaymentRequest->amount,
                         'currency'                  => $currency,
                         'receipt_path'              => $receiptPath,
-                        'payment_gateway'           => $paymentMethod,
-                        'payment_gateway_name'      => $paymentGatewayName,
-                        
+                        'payment_gateway'           => 'wallet',
                         'payment_status'            => 'pending',
                         'payable_type'              => ($resolvedPayableType && $resolvedPayableType !== ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP)
                             ? $resolvedPayableType
@@ -9610,9 +9500,7 @@ public function storeRequestDevice(Request $request)
                     'amount'                    => $manualPaymentRequest->amount,
                     'currency'                  => $currency,
                     'receipt_path'              => $receiptPath,
-                    'payment_gateway'           => $paymentMethod,
-                    'payment_gateway_name'      => $paymentGatewayName,
-                    
+                    'payment_gateway'           => 'east_yemen_bank',
                     'payment_status'            => 'succeed',
                     'payable_type'              => ($resolvedPayableType && $resolvedPayableType !== ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP)
                         ? $resolvedPayableType
@@ -9719,9 +9607,6 @@ public function storeRequestDevice(Request $request)
                 'currency'                  => $currency,
                 'receipt_path'              => $receiptPath,
                 'payment_gateway'           => $paymentMethod,
-                'payment_gateway_name'      => $paymentGatewayName,
-
-
                 'payment_status'            => 'pending',
                 'payable_type'              => ($resolvedPayableType && $resolvedPayableType !== ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP)
                     ? $resolvedPayableType
@@ -9959,37 +9844,10 @@ public function storeRequestDevice(Request $request)
             'manual' => 'manual_bank',
             'manual_bank' => 'manual_bank',
             'manual-bank' => 'manual_bank',
-            'manual_banks' => 'manual_bank',
-            'manualbanks' => 'manual_bank',
-            'manualbank' => 'manual_bank',
-            'manual_payment' => 'manual_bank',
-            'offline' => 'manual_bank',
-            'internal' => 'manual_bank',
-            'bank' => 'manual_bank',
-            'bank_transfer' => 'manual_bank',
-            'banktransfer' => 'manual_bank',
             'east' => 'east_yemen_bank',
             'east_yemen_bank' => 'east_yemen_bank',
             'east-yemen-bank' => 'east_yemen_bank',
-            'eastyemenbank' => 'east_yemen_bank',
-            'bank_alsharq' => 'east_yemen_bank',
-
             'wallet' => 'wallet',
-            'wallet_balance' => 'wallet',
-            'wallet-balance' => 'wallet',
-            'wallet balance' => 'wallet',
-            'wallet_gateway' => 'wallet',
-            'wallet-gateway' => 'wallet',
-            'wallet gateway' => 'wallet',
-            'wallet_top_up' => 'wallet',
-            'wallet-top-up' => 'wallet',
-            'wallet top up' => 'wallet',
-            'walletpayment' => 'wallet',
-            'wallet_payment' => 'wallet',
-            'wallet-payment' => 'wallet',
-            'wallet payment' => 'wallet',
-            'wallettopup' => 'wallet',
-
         ];
 
         return $map[$normalized] ?? $normalized;
@@ -9998,44 +9856,8 @@ public function storeRequestDevice(Request $request)
     private function expandManualPaymentGatewayAliases(string $gateway): array
     {
         return match ($gateway) {
-            'manual_bank' => [
-                'manual_bank',
-                'manual',
-                'manual-bank',
-                'manual_banks',
-                'manualbanks',
-                'manualbank',
-                'bank',
-                'bank_transfer',
-                'banktransfer',
-                'manual_payment',
-                'offline',
-                'internal',
-            ],
-            'east_yemen_bank' => [
-                'east_yemen_bank',
-                'east',
-                'east-yemen-bank',
-                'eastyemenbank',
-                'bank_alsharq',
-            ],
-            'wallet' => [
-                'wallet',
-                'wallet_balance',
-                'wallet-balance',
-                'wallet balance',
-                'wallet_gateway',
-                'wallet-gateway',
-                'wallet gateway',
-                'wallet_top_up',
-                'wallet-top-up',
-                'wallet top up',
-                'walletpayment',
-                'wallet_payment',
-                'wallet-payment',
-                'wallet payment',
-                'wallettopup',
-            ],
+            'manual_bank' => ['manual_bank', 'manual'],
+            'east_yemen_bank' => ['east_yemen_bank', 'east'],
             default => [$gateway],
         };
     }

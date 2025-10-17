@@ -240,10 +240,6 @@ class _MainCategoryStepContent extends StatelessWidget {
       builder: (BuildContext context, FetchCategoryState fetchState) {
         final bool isLoading = fetchState is FetchCategoryInProgress;
 
-        final bool shouldShowSkeleton = isLoading ||
-            (screen._isCategoryFetchScheduled && screen._mainCategories.isEmpty);
-
-
         if (fetchState is FetchCategoryFailure &&
             screen._mainCategories.isEmpty) {
           return ListView(
@@ -258,8 +254,7 @@ class _MainCategoryStepContent extends StatelessWidget {
         }
 
         if (screen._mainCategories.isEmpty) {
-          if (shouldShowSkeleton) {
-
+          if (isLoading) {
             return ListView(
               padding: const EdgeInsets.all(16),
               children: const <Widget>[
@@ -309,7 +304,7 @@ class _MainCategoryStepContent extends StatelessWidget {
             screen._buildCategorySearchField(),
 
             const SizedBox(height: 16),
-            if (shouldShowSkeleton)
+            if (isLoading)
               const _CategoryListShimmer()
             else if (displayCategories.isEmpty)
               Column(

@@ -49,6 +49,111 @@ const Map<String, int> _currencyPrecisionOverrides = {
 
 String _normalizeCurrencyCode(String currency) => currency.trim().toUpperCase();
 
+String? _canonicalPaymentMethodOrNull(String? value) {
+  if (value == null) {
+    return null;
+  }
+
+  final String trimmed = value.trim();
+  if (trimmed.isEmpty) {
+    return null;
+  }
+
+  if (trimmed.toLowerCase() == 'null') {
+    return null;
+  }
+
+  final String lowercase = trimmed.toLowerCase();
+  final String sanitized = lowercase.replaceAll(RegExp(r'[^a-z0-9]+'), '_');
+  final String collapsed = sanitized.replaceAll('_', '');
+
+  const Map<String, String> aliases = <String, String>{
+    'manual': 'manual_bank',
+    'manual_bank': 'manual_bank',
+    'manualbanks': 'manual_bank',
+    'manual_banks': 'manual_bank',
+    'manualbank': 'manual_bank',
+    'manualpayment': 'manual_bank',
+    'manual_payment': 'manual_bank',
+    'manualtransfer': 'manual_bank',
+    'manual_transfer': 'manual_bank',
+    'manualgateway': 'manual_bank',
+    'manual_gateway': 'manual_bank',
+    'manualmethod': 'manual_bank',
+    'manual_method': 'manual_bank',
+    'bank': 'manual_bank',
+    'banks': 'manual_bank',
+    'banktransfer': 'manual_bank',
+    'bank_transfer': 'manual_bank',
+    'bankpayment': 'manual_bank',
+    'bank_payment': 'manual_bank',
+    'manualpayments': 'manual_bank',
+    'manual_payments': 'manual_bank',
+    'manualbanking': 'manual_bank',
+    'manual_banking': 'manual_bank',
+    'bankmanual': 'manual_bank',
+    'bank_manual': 'manual_bank',
+    'bankmanualtransfer': 'manual_bank',
+    'bank_manual_transfer': 'manual_bank',
+    'east': 'east_yemen_bank',
+    'east_yemen_bank': 'east_yemen_bank',
+    'eastyemenbank': 'east_yemen_bank',
+    'east_yemen': 'east_yemen_bank',
+    'bankalsharq': 'east_yemen_bank',
+    'bank_alsharq': 'east_yemen_bank',
+    'bankalsharqbank': 'east_yemen_bank',
+    'bank_alsharq_bank': 'east_yemen_bank',
+    'wallet': 'wallet',
+    'walletpayment': 'wallet',
+    'wallet_payment': 'wallet',
+    'walletgateway': 'wallet',
+    'wallet_gateway': 'wallet',
+    'walletbalance': 'wallet',
+    'wallet_balance': 'wallet',
+    'walletpay': 'wallet',
+    'wallet_pay': 'wallet',
+    'wallettopup': 'wallet',
+    'wallet_top_up': 'wallet',
+    'walletdeposit': 'wallet',
+    'wallet_deposit': 'wallet',
+    'cash': 'cash',
+    'cashondelivery': 'cash',
+    'cash_on_delivery': 'cash',
+    'cashdelivery': 'cash',
+    'cash_delivery': 'cash',
+    'cashpayment': 'cash',
+    'cash_payment': 'cash',
+    'cashondeliveryfee': 'cash',
+    'cash_on_delivery_fee': 'cash',
+    'cod': 'cash',
+    'payondelivery': 'cash',
+    'pay_on_delivery': 'cash',
+    'deliverycash': 'cash',
+    'delivery_cash': 'cash',
+  };
+
+  return aliases[sanitized] ?? aliases[lowercase] ?? aliases[collapsed];
+}
+
+String _canonicalPaymentMethod(String value) {
+  final String? canonical = _canonicalPaymentMethodOrNull(value);
+  if (canonical != null) {
+    return canonical;
+  }
+
+  final String trimmed = value.trim();
+  if (trimmed.isEmpty) {
+    return trimmed;
+  }
+
+  if (trimmed.toLowerCase() == 'null') {
+    return 'manual_bank';
+  }
+
+  return trimmed;
+}
+
+
 
 String? _normalizePurposeForApi(String? purpose) {
   if (purpose == null) {
@@ -89,32 +194,29 @@ String formatManualPaymentAmount(double amount, String currencyCode) {
 }
 
 
-String _apiPaymentMethod(String uiValue) {
-  final trimmed = uiValue.trim();
-  if (trimmed.isEmpty) {
-    return trimmed;
-  }
-  final lowercase = trimmed.toLowerCase();
-  if (lowercase == 'manual_bank') {
+String _apiPaymentMethod(String uiValue) => _canonicalPaymentMethod(uiValue);
 
 
-    return 'manual';
-  }
-  if (lowercase == 'east_yemen_bank') {
-    return 'bank_alsharq';
-  }
-  return trimmed;
-}
 
 String? _apiPaymentMethodOrNull(String? uiValue) {
+  final String? canonical = _canonicalPaymentMethodOrNull(uiValue);
+  if (canonical != null) {
+    return canonical;
+  }
+
   if (uiValue == null) {
     return null;
   }
-  final trimmed = uiValue.trim();
+  final String trimmed = uiValue.trim();
+
   if (trimmed.isEmpty) {
     return null;
   }
-  return _apiPaymentMethod(trimmed);
+  if (trimmed.toLowerCase() == 'null') {
+    return null;
+  }
+
+  return trimmed;
 }
 
 
@@ -1466,32 +1568,23 @@ class ManualPaymentService {
 
 
   String _normalizeGatewayKey(String? value) {
+    final String? canonical = _canonicalPaymentMethodOrNull(value);
+    if (canonical != null) {
+      return canonical;
+    }
     if (value == null) {
       return 'manual_bank';
     }
 
-    final normalized = value.trim().toLowerCase();
+    final String normalized = value.trim().toLowerCase();
+
 
     if (normalized.isEmpty || normalized == 'null') {
       return 'manual_bank';
     }
 
-    switch (normalized) {
-      case 'manual':
-      case 'manual-bank':
-      case 'manual_bank':
-      case 'manualbank':
-        return 'manual_bank';
-      case 'east':
-      case 'east_yemen_bank':
-      case 'east-yemen-bank':
-      case 'eastyemenbank':
-        return 'east_yemen_bank';
-      case 'wallet':
-        return 'wallet';
-      default:
-        return normalized;
-    }
+    return normalized;
+
   }
   Future<List<ManualPayment>> fetchMyManualPayments({
     bool latestOnly = true,

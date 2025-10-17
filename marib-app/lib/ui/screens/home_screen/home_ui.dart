@@ -228,10 +228,11 @@ class HomeScreenUI extends StatelessWidget {
   Widget _buildBody(BuildContext context) {
     // ✨ لا نستخدم SingleChildScrollView ولا PrimaryScrollController هنا
     final List<Widget> slivers =
-    bodySlivers.isEmpty ? <Widget>[const SliverToBoxAdapter(child: SizedBox.shrink())] : bodySlivers;
+    bodySlivers.isEmpty
+        ? <Widget>[const SliverToBoxAdapter(child: SizedBox.shrink())]
+        : bodySlivers;
 
     final scroll = CustomScrollView(
-      physics: const BouncingScrollPhysics(),
 
       slivers: slivers,
 

@@ -143,13 +143,30 @@ class CheckoutRepository {
     final WalletSummary? walletSummary = await walletFuture;
     final CheckoutAddress? fallbackAddress = await fallbackAddressFuture;
 
-    final Map<String, dynamic>? paymentData =
-    _extractMap(paymentSettings, candidates: const [
-      'data',
-      'payment_settings',
-      'settings',
-      'result',
-    ]);
+
+
+    if (paymentSettings.isNotEmpty) {
+      _normalizePaymentMethodMetadata(paymentSettings);
+    }
+
+    if (paymentData != null && paymentData.isNotEmpty) {
+      _normalizePaymentMethodMetadata(paymentData);
+    }
+
+    if (shippingQuote != null) {
+      if (shippingQuote.data != null && shippingQuote.data!.isNotEmpty) {
+        _normalizePaymentMethodMetadata(shippingQuote.data!);
+      }
+      if (shippingQuote.delivery != null && shippingQuote.delivery!.isNotEmpty) {
+        _normalizePaymentMethodMetadata(shippingQuote.delivery!);
+      }
+      if (shippingQuote.deliveryQuote != null &&
+          shippingQuote.deliveryQuote!.isNotEmpty) {
+        _normalizePaymentMethodMetadata(shippingQuote.deliveryQuote!);
+      }
+    }
+
+
 
     final CheckoutDeliveryInfo? deliveryInfo = FeatureFlags.deliveryPricingEnabled
 
@@ -906,12 +923,26 @@ class CheckoutRepository {
         '';
 
 
-    final String paymentMethod = _asString(_firstValue(map, const [
+    final String? rawPaymentMethod = _asString(_firstValue(map, const [
       ['payment_method'],
       ['method'],
       ['gateway'],
-    ]))?.trim() ??
-        'manual_bank';
+    ]));
+
+    final String paymentMethod = (() {
+      final String? canonical =
+      ManualPaymentService.paymentMethodForApiOrNull(rawPaymentMethod);
+      if (canonical != null) {
+        return canonical;
+      }
+
+      final String? trimmed = rawPaymentMethod?.trim();
+      if (trimmed == null || trimmed.isEmpty || trimmed.toLowerCase() == 'null') {
+        return 'manual_bank';
+      }
+
+      return trimmed;
+    })();
 
 
 
@@ -958,7 +989,7 @@ class CheckoutRepository {
       id: id,
       name: name,
 
-      paymentMethod: paymentMethod.isEmpty ? 'manual_bank' : paymentMethod,
+      paymentMethod: paymentMethod,
 
       accountName: accountName,
       accountNumber: accountNumber,
@@ -1246,6 +1277,85 @@ class CheckoutRepository {
     }
     return null;
   }
+
+
+  void _normalizePaymentMethodMetadata(Map<String, dynamic> map,
+      {Set<int>? visited}) {
+    visited ??= <int>{};
+    final int identity = identityHashCode(map);
+    if (!visited.add(identity)) {
+      return;
+    }
+
+    String? _firstNonEmpty(List<String> keys) {
+      for (final String key in keys) {
+        if (!map.containsKey(key)) {
+          continue;
+        }
+        final String? value = _asString(map[key])?.trim();
+        if (value != null && value.isNotEmpty && value.toLowerCase() != 'null') {
+          return value;
+        }
+      }
+      return null;
+    }
+
+    final String? methodValue =
+    _firstNonEmpty(const <String>['payment_method', 'method', 'gateway']);
+    if (methodValue != null) {
+      final String canonical =
+      ManualPaymentService.paymentMethodForApi(methodValue);
+      final String resolved =
+      canonical.toLowerCase() == 'null' ? 'manual_bank' : canonical;
+      map['payment_method'] = resolved;
+      if (map.containsKey('method')) {
+        map['method'] = resolved;
+      }
+      if (map.containsKey('gateway')) {
+        map['gateway'] = resolved;
+      }
+    }
+
+    final String? requestedValue = _firstNonEmpty(
+        const <String>['requested_method', 'requestedMethod']);
+    if (requestedValue != null) {
+      final String? canonicalRequested =
+      ManualPaymentService.paymentMethodForApiOrNull(requestedValue);
+      if (canonicalRequested != null) {
+        map['requested_method'] = canonicalRequested;
+        map['requestedMethod'] = canonicalRequested;
+      } else {
+        final String trimmed = requestedValue.trim();
+        if (trimmed.isEmpty || trimmed.toLowerCase() == 'null') {
+          map.remove('requested_method');
+          map.remove('requestedMethod');
+        } else {
+          map['requested_method'] = trimmed;
+          map['requestedMethod'] = trimmed;
+        }
+      }
+    }
+
+    for (final String key in const <String>[
+      'payment_payload',
+      'paymentPayload',
+      'payment',
+      'paymentData',
+      'delivery_payment',
+      'deliveryPayment',
+      'manual_payment',
+      'manualPayment',
+    ]) {
+      final Map<String, dynamic>? nested = _mapify(map[key]);
+      if (nested != null && nested.isNotEmpty) {
+        _normalizePaymentMethodMetadata(nested, visited: visited);
+        map[key] = nested;
+      }
+    }
+  }
+
+
+
 
   Map<String, dynamic>? _mapify(dynamic source) {
     if (source is Map<String, dynamic>) {

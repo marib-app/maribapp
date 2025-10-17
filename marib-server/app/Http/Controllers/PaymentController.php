@@ -13,8 +13,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Throwable;
-use App\Models\ManualPaymentRequest;
-
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 class PaymentController extends Controller
@@ -40,12 +38,12 @@ class PaymentController extends Controller
             $request->merge(['bank_id' => $request->input('manual_bank_id')]);
         }
 
-        $normalizedMethod = $this->normalizePaymentMethod($request->input('payment_method'));
+        $normalizedMethod = strtolower((string) $request->input('payment_method', 'manual'));
         $request->merge(['payment_method' => $normalizedMethod]);
 
         $rules = [
             'purpose' => ['nullable', 'string', Rule::in(['order', 'package'])],
-            'payment_method' => ['required', 'string', 'max:191', Rule::in(['manual', 'manual_bank', 'bank_alsharq', 'east_yemen_bank', 'wallet'])],
+            'payment_method' => ['required', 'string', 'max:191', Rule::in(['manual', 'manual_bank'])],
 
             'notes' => ['nullable', 'string'],
             'metadata' => ['nullable', 'array'],
@@ -76,12 +74,11 @@ class PaymentController extends Controller
 
         if ($purpose === 'package') {
             $package = Package::findOrFail($validated['package_id']);
-            $paymentMethod = $validated['payment_method'];
 
             $transaction = $this->packagePaymentService->initiate(
                 $request->user(),
                 $package,
-                $paymentMethod,
+                $validated['payment_method'],
                 $idempotencyKey,
                 $validated
             );
@@ -109,40 +106,6 @@ class PaymentController extends Controller
             'transaction' => $transaction->fresh(),
         ]);
     }
-
-
-
-    private function normalizePaymentMethod($method): string
-    {
-        if (! is_string($method)) {
-            return 'manual';
-        }
-
-        $normalized = strtolower(trim($method));
-
-        if ($normalized === '' || $normalized === 'null') {
-            return 'manual';
-        }
-
-        $canonical = ManualPaymentRequest::canonicalGateway($normalized);
-
-        if ($canonical === null) {
-            return match ($normalized) {
-                'manual_bank', 'manual-banks', 'manual_banks' => 'manual',
-                'east_yemen_bank' => 'bank_alsharq',
-                default => $normalized,
-            };
-        }
-
-        return match ($canonical) {
-            'manual_banks', 'manual_bank' => 'manual',
-            'east_yemen_bank' => 'bank_alsharq',
-            'wallet' => 'wallet',
-            default => $canonical,
-        };
-    }
-
-
 
     public function confirm(Request $request): JsonResponse
     {

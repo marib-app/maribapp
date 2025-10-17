@@ -715,11 +715,8 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   String? _preferredInterfaceTypeNormalized;
   int? _pendingInitialSubCategoryId;
   int? _pendingSubCategoryFetchParentId;
-  int? _lastEnsuredSubCategoryFetchParentId;
   bool _appliedInitialCategorySelection = false;
   bool _hasRequestedCategoryFetch = false;
-  bool _isCategoryFetchScheduled = false;
-  bool _pendingForcedCategoryRefresh = false;
   FetchCategoryCubit? _categoryCubit;
   StreamSubscription<FetchCategoryState>? _categorySubscription;
   final GlobalKey<DynamicCustomFieldsFormState> _customFieldsFormKey =
@@ -919,33 +916,18 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
   }
 
   void _scheduleCategoryFetch({bool forceRefresh = false}) {
-    if (forceRefresh) {
-      _pendingForcedCategoryRefresh = true;
-    }
-
-    if (_isCategoryFetchScheduled) {
-      return;
-    }
-
     if (!forceRefresh && _hasRequestedCategoryFetch) {
       return;
     }
 
-    _isCategoryFetchScheduled = true;
+    _hasRequestedCategoryFetch = true;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
-        _isCategoryFetchScheduled = false;
-        _pendingForcedCategoryRefresh = false;
-
         return;
       }
 
-      final bool shouldForceRefresh = forceRefresh || _pendingForcedCategoryRefresh;
-      _pendingForcedCategoryRefresh = false;
-
-      _triggerCategoryFetch(forceRefresh: shouldForceRefresh);
-      _isCategoryFetchScheduled = false;
+      _triggerCategoryFetch(forceRefresh: forceRefresh);
     });
   }
 
@@ -956,12 +938,6 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
     if (_pendingSubCategoryFetchParentId == parentId) {
       return;
     }
-    if (_lastEnsuredSubCategoryFetchParentId == parentId &&
-        _pendingSubCategoryFetchParentId == null) {
-      return;
-    }
-
-    _lastEnsuredSubCategoryFetchParentId = parentId;
 
     _pendingSubCategoryFetchParentId = parentId;
 
@@ -1063,19 +1039,12 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
         _selectedMainCategory = retainedMain;
         _selectedSubCategory = retainedSub;
         _pendingSubCategoryFetchParentId = null;
-        _lastEnsuredSubCategoryFetchParentId = retainedMain?.id;
       });
 
       if (!_appliedInitialCategorySelection) {
         _applyInitialCategorySelection(options);
       } else if (_pendingInitialSubCategoryId != null) {
         _applyPendingSubCategorySelection();
-      } else if (state is FetchCategoryFailure) {
-        if (_pendingSubCategoryFetchParentId != null) {
-          setState(() {
-            _pendingSubCategoryFetchParentId = null;
-          });
-        }
       }
     }
   }
@@ -3173,7 +3142,6 @@ class _AdCreationWizardScreenState extends State<AdCreationWizardScreen> {
       _inventoryVariations = <_InventoryVariation>[];
       _subCategorySearchQuery = '';
       _pendingSubCategoryFetchParentId = null;
-      _lastEnsuredSubCategoryFetchParentId = null;
       if (category.interfaceType != 'shein_products') {
         if (_sheinProductLinkController.text.isNotEmpty) {
           _sheinProductLinkController.clear();

@@ -894,32 +894,17 @@ class ManualPaymentRequestController extends Controller
                         throw new RuntimeException('The requester is no longer associated with this wallet top-up.');
                     }
 
-
-
-                    $walletCurrency = $manualPaymentRequest->currency
-                        ?? $transaction->currency
-                        ?? null;
-
-                    $creditOptions = [
-                        'manual_payment_request' => $manualPaymentRequest,
-                        'payment_transaction' => $transaction,
-                        'meta' => [
-                            'reason' => ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP,
-                        ],
-                    ];
-
-                    if ($walletCurrency) {
-                        $creditOptions['currency'] = $walletCurrency;
-                    }
-
-
-
                     $walletTransaction = $this->walletService->credit(
                         $manualPaymentRequest->user,
                         $this->walletIdempotencyKey($manualPaymentRequest),
                         (float) $manualPaymentRequest->amount,
-                        $creditOptions
-
+                        [
+                            'manual_payment_request' => $manualPaymentRequest,
+                            'payment_transaction' => $transaction,
+                            'meta' => [
+                                'reason' => ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP,
+                            ],
+                        ]
                     );
 
                     $transactionMeta = $transaction->meta ?? [];

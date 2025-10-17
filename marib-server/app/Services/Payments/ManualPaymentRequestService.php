@@ -138,37 +138,6 @@ class ManualPaymentRequestService
             $metaUpdates['metadata'] = $metadata;
         }
 
-        $manualBankName = null;
-        if ($manualBank) {
-            $rawName = $manualBank->name ?? null;
-            if (is_string($rawName)) {
-                $trimmedName = trim($rawName);
-                if ($trimmedName !== '') {
-                    $manualBankName = $trimmedName;
-                }
-            }
-        }
-
-        $manualBankAccountName = null;
-        if ($manualBank) {
-            $accountName = $manualBank->account_name ?? null;
-            if (is_string($accountName)) {
-                $accountName = trim($accountName);
-            }
-
-            if (! is_string($accountName) || $accountName === '') {
-                $accountName = $manualBank->beneficiary_name ?? null;
-            }
-
-            if (is_string($accountName)) {
-                $trimmedAccountName = trim($accountName);
-                if ($trimmedAccountName !== '') {
-                    $manualBankAccountName = $trimmedAccountName;
-                }
-            }
-        }
-
-
 
         if ($existingRequest) {
             $mergedMeta = $existingRequest->meta ?? [];
@@ -189,14 +158,12 @@ class ManualPaymentRequestService
                 'status' => ManualPaymentRequest::STATUS_PENDING,
                 'receipt_path' => $receiptPath !== '' ? $receiptPath : ($existingRequest->receipt_path ?? ''),
                 'department' => $department,
-                
-                'bank_name' => $manualBankName,
-                'bank_account_name' => $manualBankAccountName,
-                'gateway_name' => $manualBankName,
-
             ]);
 
-
+            if ($manualBank) {
+                $existingRequest->bank_name = $manualBank->name;
+                $existingRequest->bank_account_name = $manualBank->beneficiary_name;
+            }
 
             $existingRequest->meta = empty($mergedMeta) ? null : $mergedMeta;
             $existingRequest->save();
@@ -217,10 +184,6 @@ class ManualPaymentRequestService
             'meta' => empty($metaUpdates) ? null : $metaUpdates,
             'receipt_path' => $receiptPath,
             'department' => $department,
-            'bank_name' => $manualBankName,
-            'bank_account_name' => $manualBankAccountName,
-            'gateway_name' => $manualBankName,
-
 
         ];
 

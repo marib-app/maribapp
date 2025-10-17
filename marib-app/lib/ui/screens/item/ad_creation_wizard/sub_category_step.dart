@@ -3,6 +3,7 @@ part of 'ad_creation_wizard_screen.dart';
 extension _SubCategoryStepView on _AdCreationWizardScreenState {
   Widget _buildSubCategoryStep() => _SubCategoryStepContent(screen: this);
 
+
   Widget _buildSubCategorySearchField() {
     final ThemeData theme = Theme.of(context);
     return TextField(
@@ -25,14 +26,15 @@ extension _SubCategoryStepView on _AdCreationWizardScreenState {
   void _onSubCategorySearchChanged(String value) {
     _subCategorySearchDebounce?.cancel();
     final String query = value;
-    _subCategorySearchDebounce = Timer(const Duration(milliseconds: 180), () {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _subCategorySearchQuery = query;
-      });
-    });
+    _subCategorySearchDebounce =
+        Timer(const Duration(milliseconds: 180), () {
+          if (!mounted) {
+            return;
+          }
+          setState(() {
+            _subCategorySearchQuery = query;
+          });
+        });
   }
 
   void _resetSubCategorySearch() {
@@ -62,6 +64,7 @@ extension _SubCategoryStepView on _AdCreationWizardScreenState {
       bottomStart: Radius.circular(16),
     ).resolve(Directionality.of(context));
 
+
     Widget buildCategoryFallback() {
       return Container(
         height: double.infinity,
@@ -75,6 +78,7 @@ extension _SubCategoryStepView on _AdCreationWizardScreenState {
         ),
       );
     }
+
 
     Widget buildThumbnail() {
       final String? imageUrl = category.imageUrl?.trim();
@@ -190,6 +194,8 @@ extension _SubCategoryStepView on _AdCreationWizardScreenState {
       ),
     );
   }
+
+
 }
 
 class _SubCategoryStepContent extends StatelessWidget {
@@ -205,83 +211,64 @@ class _SubCategoryStepContent extends StatelessWidget {
           'يرجى اختيار الفئة الرئيسية أولًا لمتابعة اختيار الفئة الفرعية.');
     }
 
-    screen._ensureSubCategoryFetch(mainCategory.id);
+    final List<_SubCategoryOption> displayCategories =
+    screen._filteredSubCategories(mainCategory);
+    final bool hasSearchTerm =
+        screen._subCategorySearchQuery.trim().isNotEmpty;
 
-    return BlocBuilder<FetchCategoryCubit, FetchCategoryState>(
-      builder: (BuildContext context, FetchCategoryState fetchState) {
-        final bool isFetchingCurrent =
-            screen._pendingSubCategoryFetchParentId == mainCategory.id;
-        final List<_SubCategoryOption> displayCategories =
-            screen._filteredSubCategories(mainCategory);
-        final bool hasSearchTerm =
-            screen._subCategorySearchQuery.trim().isNotEmpty;
-        final bool hasFailure = fetchState is FetchCategoryFailure &&
-            mainCategory.subCategories.isEmpty;
+    if (mainCategory.subCategories.isEmpty) {
 
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Text(
-                'اختر الفئة الفرعية المناسبة لإعلانك ضمن ${mainCategory.name}.'),
-            const SizedBox(height: 12),
-            screen._buildSubCategorySearchField(),
-            const SizedBox(height: 16),
-            if (isFetchingCurrent) ...const <Widget>[
-              Text('جارٍ تحميل الفئات الفرعية المتاحة...'),
-              SizedBox(height: 16),
-              _CategoryListShimmer(itemCount: 4),
-            ] else if (displayCategories.isEmpty) ...[
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  screen._buildPlaceholderMessage(
-                    hasSearchTerm
-                        ? 'لا توجد فئات فرعية مطابقة لبحثك. جرّب كلمة مختلفة.'
-                        : 'لا توجد فئات فرعية متاحة لهذه الفئة.',
-                  ),
-                  if (hasSearchTerm)
-                    Align(
-                      alignment: AlignmentDirectional.centerStart,
-                      child: TextButton(
-                        onPressed: screen._resetSubCategorySearch,
-                        child: const Text('إعادة ضبط البحث'),
-                      ),
-                    ),
-                ],
+
+      screen._ensureSubCategoryFetch(mainCategory.id);
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: const <Widget>[
+          Text('جارٍ تحميل الفئات الفرعية المتاحة...'),
+          SizedBox(height: 16),
+          _CategoryListShimmer(itemCount: 4),
+        ],
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text('اختر الفئة الفرعية المناسبة لإعلانك ضمن ${mainCategory.name}.'),
+        const SizedBox(height: 12),
+        screen._buildSubCategorySearchField(),
+        const SizedBox(height: 16),
+        if (displayCategories.isEmpty)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              screen._buildPlaceholderMessage(
+                hasSearchTerm
+                    ? 'لا توجد فئات فرعية مطابقة لبحثك. جرّب كلمة مختلفة.'
+                    : 'لا توجد فئات فرعية متاحة لهذه الفئة.',
               ),
-              if (hasFailure)
-                Padding(
-                  padding: const EdgeInsets.only(top: 16),
-                  child: screen._buildErrorCard(
-                    message: 'تعذّر تحميل الفئات الفرعية. حاول مجددًا.',
-                    onRetry: screen._retryFetchCategories,
-                  ),
-                ),
-            ] else ...[
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: EdgeInsets.zero,
-                itemCount: displayCategories.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (BuildContext context, int index) {
-                  final _SubCategoryOption option = displayCategories[index];
-                  return screen._buildSubCategoryCard(option);
-                },
-              ),
-              if (fetchState is FetchCategoryFailure)
-                Padding(
-                  padding: const EdgeInsets.only(top: 16),
-                  child: screen._buildErrorCard(
-                    message:
-                        'حدث خطأ أثناء تحديث الفئات الفرعية. حاول مرة أخرى.',
-                    onRetry: screen._retryFetchCategories,
+              if (hasSearchTerm)
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: TextButton(
+                    onPressed: screen._resetSubCategorySearch,
+                    child: const Text('إعادة ضبط البحث'),
                   ),
                 ),
             ],
-          ],
-        );
-      },
+          )
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
+            itemCount: displayCategories.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (BuildContext context, int index) {
+              final _SubCategoryOption option = displayCategories[index];
+              return screen._buildSubCategoryCard(option);
+            },
+          ),
+      ],
     );
   }
 }

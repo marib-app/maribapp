@@ -19,6 +19,7 @@ import 'dart:async';
 import 'package:marib/ui/screens/chat/chat_badge_controller.dart';
 import 'package:marib/utils/performance/performance_route_observer.dart';
 import 'package:marib/utils/scroll/low_spec_scroll_physics.dart';
+import 'package:marib/app/app_scroll_behavior.dart';
 
 
 /////////////
@@ -101,7 +102,7 @@ class _AppState extends State<App> {
           debugShowCheckedModeBanner: false,
           onGenerateRoute: Routes.onGenerateRouted,
           theme: appThemeData[currentTheme],
-          scrollBehavior: const GlobalScrollBehavior(),
+          scrollBehavior: const AppScrollBehavior(),
           builder: (context, child) {
             TextDirection? direction;
 

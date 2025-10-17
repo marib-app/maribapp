@@ -54,8 +54,6 @@ class ManualPaymentRequest extends Model
             'east_yemen_bank',
             'east-yemen-bank',
             'eastyemenbank',
-            'bank_alsharq',
-
         ],
         'manual_banks' => [
             'manual',
@@ -68,7 +66,7 @@ class ManualPaymentRequest extends Model
             'bank',
             'bank_transfer',
             'banktransfer',
-
+            'bank_alsharq',
         ],
         'wallet' => [
             'wallet',
@@ -334,7 +332,6 @@ class ManualPaymentRequest extends Model
         'bank_account_number',
         'bank_iban',
         'bank_swift_code',
-        'gateway_name',
         'reference',
         'user_note',
         'receipt_path',

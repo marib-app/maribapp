@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources;
 use App\Models\WalletTransaction;
-use App\Models\ManualPaymentRequest;
 
 use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -43,11 +42,6 @@ class ManualPaymentRequestResource extends JsonResource
             ?? data_get($this->meta, 'gateway')
             ?? 'manual_bank';
 
-        $canonicalGateway = ManualPaymentRequest::canonicalGateway($gatewayKey);
-
-        if ($canonicalGateway !== null) {
-            $gatewayKey = $canonicalGateway === 'manual_banks' ? 'manual_bank' : $canonicalGateway;
-        }
 
         $paymentStatus = $this->normalizePaymentStatus($paymentTransaction?->payment_status);
         $manualReference = $this->reference

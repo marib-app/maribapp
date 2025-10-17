@@ -94,7 +94,13 @@ class FetchSystemSettingsCubit extends Cubit<FetchSystemSettingsState> {
   }
 
   static FetchSystemSettingsCubit? maybeOf(BuildContext context) {
-    return BlocProvider.maybeOf<FetchSystemSettingsCubit>(context);
+    try {
+      return BlocProvider.of<FetchSystemSettingsCubit>(context, listen: false);
+    } on ProviderNotFoundException {
+      return null;
+    } catch (_) {
+      return null;
+    }
   }
 
   static Future<void> resetDelegateSectionsFor(

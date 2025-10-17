@@ -549,6 +549,33 @@ class RatesTabView extends StatelessWidget {
           .of(c)
           .brightness == Brightness.dark;
 
+  String? _resolveQuoteSource() {
+    String? _extract(List<dynamic> rates) {
+      for (final dynamic item in rates) {
+        if (item is CurrencyRate) {
+          final String? source = item.quoteSource;
+          if (source != null && source.trim().isNotEmpty) {
+            return source.trim();
+          }
+          continue;
+        }
+        try {
+          final dynamic source = (item as dynamic).quoteSource;
+          if (source is String && source.trim().isNotEmpty) {
+            return source.trim();
+          }
+        } catch (_) {
+          continue;
+        }
+      }
+      return null;
+    }
+
+    return _extract(state.displayRates) ?? _extract(state.rates);
+  }
+
+
+
   // ---------- Header (بسيط بدون إطارات ثقيلة) ----------
   Widget _header(BuildContext context) {
     final theme = Theme.of(context);
@@ -560,7 +587,8 @@ class RatesTabView extends StatelessWidget {
     final timeStr = hasTime
         ? DateFormat('HH:mm').format(state.lastUpdatedAt!)
         : '--:--';
-
+    final quoteSource = _resolveQuoteSource();
+    final sourceLabel = quoteSource ?? 'غير متاح';
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
       child: Column(
@@ -598,6 +626,19 @@ class RatesTabView extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
+
+          const SizedBox(height: 4),
+          Text(
+            'المصدر: $sourceLabel',
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: onBg.withOpacity(0.55),
+              fontWeight: FontWeight.w600,
+            ),
+            textDirection: TextDirection.rtl,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+
           const SizedBox(height: 6),
           Text(
             'الأسعار المعروضة: '
@@ -1440,6 +1481,22 @@ class GoldTabView extends StatelessWidget {
 
   DateTime? get _lastUpdated => state.metalsLastUpdatedAt;
 
+
+  String? _resolveSource() {
+    String? pick(List<MetalRate> rates) {
+      for (final MetalRate rate in rates) {
+        final String? source = rate.source;
+        if (source != null && source.trim().isNotEmpty) {
+          return source.trim();
+        }
+      }
+      return null;
+    }
+
+    return pick(state.displayGoldRates) ?? pick(state.goldRates);
+  }
+
+
   bool _isDark(BuildContext c) =>
       Theme
           .of(c)
@@ -1454,6 +1511,7 @@ class GoldTabView extends StatelessWidget {
     final updatedLabel = _lastUpdated == null
         ? 'آخر تحديث غير متاح'
         : DateFormat('yyyy-MM-dd HH:mm').format(_lastUpdated!);
+    final source = _resolveSource() ?? 'غير متاح';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1468,19 +1526,40 @@ class GoldTabView extends StatelessWidget {
               color: onBg.withOpacity(0.7)),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              'أسعار الذهب — $updatedLabel',
-              style: Theme
-                  .of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(
-                color: onBg.withOpacity(0.85),
-                fontWeight: FontWeight.w700,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textDirection: TextDirection.rtl,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'أسعار الذهب — $updatedLabel',
+                  style: Theme
+                      .of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(
+                    color: onBg.withOpacity(0.85),
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textDirection: TextDirection.rtl,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'المصدر: $source',
+                  style: Theme
+                      .of(context)
+                      .textTheme
+                      .labelLarge
+                      ?.copyWith(
+                    color: onBg.withOpacity(0.6),
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textDirection: TextDirection.rtl,
+                ),
+              ],
             ),
           ),
           IconButton(
@@ -1688,6 +1767,21 @@ class SilverTabView extends StatelessWidget {
 
   List<MetalRate> get _rates => state.displaySilverRates;
 
+  String? _resolveSource() {
+    String? pick(List<MetalRate> rates) {
+      for (final MetalRate rate in rates) {
+        final String? source = rate.source;
+        if (source != null && source.trim().isNotEmpty) {
+          return source.trim();
+        }
+      }
+      return null;
+    }
+
+    return pick(state.displaySilverRates) ?? pick(state.silverRates);
+  }
+
+
   String _format(double value) => NumberFormat('#,##0.000').format(value);
 
   Widget _header(BuildContext context) {
@@ -1696,6 +1790,7 @@ class SilverTabView extends StatelessWidget {
     final updatedLabel = state.metalsLastUpdatedAt == null
         ? 'آخر تحديث غير متاح'
         : DateFormat('yyyy-MM-dd HH:mm').format(state.metalsLastUpdatedAt!);
+    final source = _resolveSource() ?? 'غير متاح';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1709,19 +1804,40 @@ class SilverTabView extends StatelessWidget {
           Icon(Icons.diamond_outlined, size: 18, color: onBg.withOpacity(0.7)),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              'أسعار الفضة — $updatedLabel',
-              style: Theme
-                  .of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(
-                color: onBg.withOpacity(0.85),
-                fontWeight: FontWeight.w700,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textDirection: TextDirection.rtl,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'أسعار الفضة — $updatedLabel',
+                  style: Theme
+                      .of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(
+                    color: onBg.withOpacity(0.85),
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textDirection: TextDirection.rtl,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'المصدر: $source',
+                  style: Theme
+                      .of(context)
+                      .textTheme
+                      .labelLarge
+                      ?.copyWith(
+                    color: onBg.withOpacity(0.6),
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textDirection: TextDirection.rtl,
+                ),
+              ],
             ),
           ),
         ],

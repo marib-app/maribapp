@@ -345,9 +345,17 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
         final name = r.currencyName?.toString() ?? '';
         final sell = r.sellPrice?.toString() ?? '';
         final buy = r.buyPrice?.toString() ?? '';
+        String sourceLabel = 'غير متاح';
+        try {
+          final dynamic rawSource = r.quoteSource;
+          if (rawSource is String && rawSource.trim().isNotEmpty) {
+            sourceLabel = rawSource.trim();
+          }
+        } catch (_) {}
         buffer.writeln('💱 $name');
         buffer.writeln('بيع: $sell');
-        buffer.writeln('شراء: $buy\n');
+        buffer.writeln('شراء: $buy');
+        buffer.writeln('المصدر: $sourceLabel\n');
       }
 
       buffer.writeln('📍 $locationLine');
@@ -356,20 +364,33 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
 
     if (goldRates.isNotEmpty) {
       buffer.writeln('🟡 أسعار الذهب:');
-      for (final rate in goldRates) {
+      for (final MetalRate rate in goldRates) {
+        final String sourceLabel =
+        rate.source != null && rate.source!.trim().isNotEmpty
+            ? rate.source!.trim()
+            : 'غير متاح';
+        buffer.writeln('• ${rate.displayName}');
         buffer.writeln(
-            '• ${rate.displayName}: بيع ${priceFormat.format(rate.sellPrice)} | شراء ${priceFormat.format(rate.buyPrice)}');
+            'بيع: ${priceFormat.format(rate.sellPrice)} | شراء: ${priceFormat.format(rate.buyPrice)}');
+        buffer.writeln('المصدر: $sourceLabel\n');
       }
-      buffer.writeln('');
+
     }
 
     if (silverRates.isNotEmpty) {
       buffer.writeln('⚪ أسعار الفضة:');
-      for (final rate in silverRates) {
+      for (final MetalRate rate in silverRates) {
+        final String sourceLabel =
+        rate.source != null && rate.source!.trim().isNotEmpty
+            ? rate.source!.trim()
+            : 'غير متاح';
+        buffer.writeln('• ${rate.displayName}');
         buffer.writeln(
-            '• ${rate.displayName}: بيع ${priceFormat.format(rate.sellPrice)} | شراء ${priceFormat.format(rate.buyPrice)}');
+            'بيع: ${priceFormat.format(rate.sellPrice)} | شراء: ${priceFormat.format(rate.buyPrice)}');
+        buffer.writeln('المصدر: $sourceLabel\n');
+
       }
-      buffer.writeln('');
+
     }
 
 

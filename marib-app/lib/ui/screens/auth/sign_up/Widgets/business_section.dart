@@ -31,7 +31,7 @@ import 'package:flutter/scheduler.dart'; // SchedulerBinding
 import 'working_hours.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/helper_utils.dart';
-import 'package:marib/utils/scroll/low_spec_scroll_physics.dart';
+import 'package:marib/app/app_scroll_behavior.dart';
 
 
 class BusinessSection extends StatelessWidget {
@@ -1624,9 +1624,8 @@ class _NoGlowScrollBehavior extends ScrollBehavior {
 
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) {
-    return const BouncingScrollPhysics(
-      // الاحتفاظ بتأثير الارتداد مع الاعتماد على الفيزياء منخفضة الاستهلاك كأصل
-      parent: AlwaysScrollableScrollPhysics(parent: LowSpecScrollPhysics()),
+    return BouncingScrollPhysics(
+      parent: const AppScrollBehavior().getScrollPhysics(context),
     );
   }
 }

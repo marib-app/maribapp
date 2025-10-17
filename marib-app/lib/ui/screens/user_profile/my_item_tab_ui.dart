@@ -23,7 +23,7 @@ import 'package:marib/ui/screens/widgets/errors/something_went_wrong.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 
 import 'profile_item_card.dart';
-import 'package:marib/utils/scroll/low_spec_scroll_physics.dart';
+import 'package:marib/app/app_scroll_behavior.dart';
 
 
 const double sidePadding = Constant.defaultPadding;
@@ -76,9 +76,8 @@ class MyItemTabUI extends StatelessWidget {
       }) {
     // مطاط دائمًا على كل المنصات (يمكن تجاوزه)
     final ScrollPhysics physics = physicsOverride ??
-        const BouncingScrollPhysics(
-          // نربط الفيزياء العامة ذات التخميد الأعلى لضمان تجربة موحدة
-          parent: AlwaysScrollableScrollPhysics(parent: LowSpecScrollPhysics()),
+        BouncingScrollPhysics(
+          parent: const AppScrollBehavior().getScrollPhysics(context),
         );
     // غلاف موحّد للتحكم بالعرض/المحاذاة/الحشوات
     Widget wrapContent(Widget child) {

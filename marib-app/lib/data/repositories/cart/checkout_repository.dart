@@ -139,6 +139,8 @@ class CheckoutRepository {
     final List<CartDiscount> discounts = cartSummary.discounts;
 
     final Map<String, dynamic> paymentSettings = await paymentFuture;
+    final Map<String, dynamic>? paymentData =
+    _resolvePaymentData(paymentSettings);
     final CheckoutShippingQuote? shippingQuote = await quoteFuture;
     final WalletSummary? walletSummary = await walletFuture;
     final CheckoutAddress? fallbackAddress = await fallbackAddressFuture;
@@ -200,7 +202,7 @@ class CheckoutRepository {
       banks: banks,
       deliveryInfo: deliveryInfo,
       userAddress: address,
-      paymentSettings: paymentData,
+      paymentSettings: paymentSettings,
       shippingQuote: shippingQuote,
       walletSummary: walletSummary,
       isWalletAvailable: walletSummary != null,
@@ -1354,6 +1356,43 @@ class CheckoutRepository {
     }
   }
 
+
+  Map<String, dynamic>? _resolvePaymentData(dynamic payload) {
+    Map<String, dynamic>? search(dynamic source) {
+      final Map<String, dynamic>? map = _mapify(source);
+      if (map == null || map.isEmpty) {
+        return null;
+      }
+
+      const List<String> paymentKeys = <String>[
+        'payment',
+        'payment_data',
+        'paymentData',
+        'delivery_payment',
+        'deliveryPayment',
+        'manual_payment',
+        'manualPayment',
+      ];
+
+      for (final String key in paymentKeys) {
+        final Map<String, dynamic>? nested = _mapify(map[key]);
+        if (nested != null && nested.isNotEmpty) {
+          return nested;
+        }
+      }
+
+      for (final String wrapper in const <String>['data', 'result', 'payload']) {
+        final Map<String, dynamic>? nested = search(map[wrapper]);
+        if (nested != null && nested.isNotEmpty) {
+          return nested;
+        }
+      }
+
+      return null;
+    }
+
+    return search(payload);
+  }
 
 
 

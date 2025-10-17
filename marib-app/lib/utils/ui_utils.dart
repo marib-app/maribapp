@@ -1563,7 +1563,9 @@ class RemoveGlow extends ScrollBehavior {
   }
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) {
-    return const LowSpecScrollPhysics();
+    return const ClampingScrollPhysics(
+      parent: AlwaysScrollableScrollPhysics(),
+    );
   }
 }
 

@@ -2,6 +2,7 @@
 
 import 'package:marib/ui/theme/theme.dart';
 import 'package:flutter/material.dart';
+import 'package:marib/ui/theme/smooth_page_transition.dart';
 
 enum AppTheme { dark, light }
 
@@ -11,6 +12,18 @@ final appThemeData = {
     brightness: Brightness.light,
     //textTheme
     useMaterial3: false,
+
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: <TargetPlatform, PageTransitionsBuilder>{
+        TargetPlatform.android: SmoothPageTransitionsBuilder(),
+        TargetPlatform.iOS: SmoothPageTransitionsBuilder(),
+        TargetPlatform.fuchsia: SmoothPageTransitionsBuilder(),
+        TargetPlatform.macOS: SmoothPageTransitionsBuilder(),
+        TargetPlatform.windows: SmoothPageTransitionsBuilder(),
+        TargetPlatform.linux: SmoothPageTransitionsBuilder(),
+      },
+    ),
+
     fontFamily: "Manrope",
     textSelectionTheme: const TextSelectionThemeData(
       selectionColor: territoryColor_,
@@ -32,6 +45,18 @@ final appThemeData = {
   AppTheme.dark: ThemeData(
     brightness: Brightness.dark,
     useMaterial3: false,
+
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: <TargetPlatform, PageTransitionsBuilder>{
+        TargetPlatform.android: SmoothPageTransitionsBuilder(),
+        TargetPlatform.iOS: SmoothPageTransitionsBuilder(),
+        TargetPlatform.fuchsia: SmoothPageTransitionsBuilder(),
+        TargetPlatform.macOS: SmoothPageTransitionsBuilder(),
+        TargetPlatform.windows: SmoothPageTransitionsBuilder(),
+        TargetPlatform.linux: SmoothPageTransitionsBuilder(),
+      },
+    ),
+
     fontFamily: "Manrope",
     textSelectionTheme: const TextSelectionThemeData(
       selectionHandleColor: territoryColorDark,

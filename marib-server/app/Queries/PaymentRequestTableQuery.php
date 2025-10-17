@@ -7,6 +7,7 @@ use App\Models\WalletTransaction;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Query\JoinClause;
 
 class PaymentRequestTableQuery
 {
@@ -82,9 +83,24 @@ class PaymentRequestTableQuery
             && Schema::hasColumn('payment_transactions', 'payment_gateway_name');
 
 
-        $departmentSelect = $supportsDepartment
-            ? 'mpr.department as department'
-            : "NULL as department";
+        $supportsOrderLookup = Schema::hasTable('orders');
+        $supportsOrderDepartment = $supportsOrderLookup
+            && Schema::hasColumn('orders', 'department');
+        $orderPayableTypeAliases = ManualPaymentRequest::orderPayableTypeAliases();
+
+        $departmentParts = [];
+
+        if ($supportsOrderDepartment) {
+            $departmentParts[] = "NULLIF(order_lookup.department, '')";
+        }
+
+        if ($supportsDepartment) {
+            $departmentParts[] = "NULLIF(mpr.department, '')";
+        }
+
+        $departmentSelect = $departmentParts === []
+            ? "NULL as department"
+            : 'COALESCE(' . implode(', ', $departmentParts) . ') as department';
 
 
         $manualBankNameParts = [];

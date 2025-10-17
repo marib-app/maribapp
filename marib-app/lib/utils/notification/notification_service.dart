@@ -900,8 +900,10 @@ class NotificationService {
 
       if (storedToken == currentToken) {
         await HiveUtils.setUserDetail(key: Api.fcmId, value: currentToken);
+        await HiveUtils.setUserDetail(
+            key: _pendingFcmTokenKey, value: currentToken);
 
-        if (HiveUtils.isUserAuthenticated()) {
+        if (HiveUtils.isUserBasicallyAuthenticated()) {
           await _updateTokenOnServer(currentToken);
         }
 

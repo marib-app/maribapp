@@ -80,7 +80,6 @@ class _LayeredPageRoute<T> extends PageRouteBuilder<T> {
         end: 1,
       ).animate(curvedAnimation);
 
-      final fadeAnimation = curvedAnimation;
 
       Widget current = child;
       current = SlideTransition(
@@ -94,10 +93,7 @@ class _LayeredPageRoute<T> extends PageRouteBuilder<T> {
         scale: scaleAnimation,
         child: current,
       );
-      current = FadeTransition(
-        opacity: fadeAnimation,
-        child: current,
-      );
+
       return current;
     },
   );

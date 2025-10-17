@@ -23,10 +23,10 @@ class ItemRepository {
   /// يعيد: ItemModel الخاص بالإعلان الذي تم إنشاؤه
   /// -------------------------------------------------------------------------
   Future<ItemModel> createItem(
-      Map<String, dynamic> itemDetails,
-      File mainImage,
-      List<File>? otherImages,
-      ) async {
+    Map<String, dynamic> itemDetails,
+    File mainImage,
+    List<File>? otherImages,
+  ) async {
     try {
       final Map<String, dynamic> parameters = {};
       parameters.addAll(itemDetails);
@@ -39,7 +39,8 @@ class ItemRepository {
 
       // تجهيز صور المعرض (إن وُجدت)
       if (otherImages != null && otherImages.isNotEmpty) {
-        final List<Future<MultipartFile>> futures = otherImages.map((imageFile) {
+        final List<Future<MultipartFile>> futures =
+            otherImages.map((imageFile) {
           return MultipartFile.fromFile(
             imageFile.path,
             filename: path.basename(imageFile.path),
@@ -78,8 +79,6 @@ class ItemRepository {
   // يعيد: DataOutput<ItemModel> يحتوي total + modelList
   // -------------------------------------------------------------------------
 
-
-
   Future<DataOutput<ItemSummary>> fetchItemSummariesFromCatId({
     required int categoryId,
     required int page,
@@ -116,29 +115,40 @@ class ItemRepository {
     if (sortBy != null) parameters[Api.sortBy] = sortBy;
 
     final Map<String, dynamic> response =
-    await Api.get(url: Api.getItemApi, queryParameters: parameters);
+        await Api.get(url: Api.getItemApi, queryParameters: parameters);
 
-    final List<ItemSummary> items = (response['data']['data'] as List)
-        .whereType<Map<String, dynamic>>()
-        .map(ItemSummary.fromJson)
-        .toList();
+    final Map<String, dynamic>? data =
+        response['data'] as Map<String, dynamic>?;
+
+    final dynamic rawItems = data?['items'] ?? data?['data'];
+    final List<Map<String, dynamic>> parsedItems = rawItems is List
+        ? rawItems.whereType<Map<String, dynamic>>().toList()
+        : <Map<String, dynamic>>[];
+
+    int _parseTotal(dynamic value, int fallback) {
+      if (value is int) return value;
+      if (value is double) return value.toInt();
+      if (value is String) return int.tryParse(value) ?? fallback;
+      return fallback;
+    }
+
+    final Map<String, dynamic>? pagination =
+        data?['pagination'] as Map<String, dynamic>?;
+    final Map<String, dynamic>? meta = data?['meta'] as Map<String, dynamic>?;
+
+    final int total = _parseTotal(
+      pagination?['total'] ?? meta?['total'],
+      parsedItems.length,
+    );
+
+    final List<ItemSummary> items =
+        parsedItems.map(ItemSummary.fromJson).toList();
 
     return DataOutput(
-      total: response['data']['total'] ?? 0,
+      total: total,
       modelList: items,
     );
   }
-
-
-
-
-
-
-
-
-
-
-
 
   Future<DataOutput<ItemModel>> fetchMyFeaturedItems({int? page}) async {
     try {
@@ -217,7 +227,7 @@ class ItemRepository {
     );
 
     final List<ItemModel> modelList =
-    (response['data'] as List).map((e) => ItemModel.fromJson(e)).toList();
+        (response['data'] as List).map((e) => ItemModel.fromJson(e)).toList();
 
     return DataOutput(total: modelList.length, modelList: modelList);
   }
@@ -327,7 +337,7 @@ class ItemRepository {
     if (sortBy != null) parameters[Api.sortBy] = sortBy;
 
     final Map<String, dynamic> response =
-    await Api.get(url: Api.getItemApi, queryParameters: parameters);
+        await Api.get(url: Api.getItemApi, queryParameters: parameters);
 
     final List<ItemModel> items = (response['data']['data'] as List)
         .map((e) => ItemModel.fromJson(e))
@@ -338,10 +348,6 @@ class ItemRepository {
       modelList: items,
     );
   }
-
-
-
-
 
   /// -------------------------------------------------------------------------
   /// fetchMyItemFromItemId
@@ -389,8 +395,6 @@ class ItemRepository {
     return DataOutput(total: total, modelList: modelList);
   }
 
-
-
   /*  النسخة السابقة (مرجعية) احتفظت بها عندك بالتعليق لو احتجت ترجع
   Future<DataOutput<ItemModel>> fetchItemFromCatId(...) async { ... }
   */
@@ -406,10 +410,13 @@ class ItemRepository {
     required String sortBy,
     required int page,
   }) async {
-    final Map<String, dynamic> parameters = {Api.sortBy: sortBy, Api.page: page};
+    final Map<String, dynamic> parameters = {
+      Api.sortBy: sortBy,
+      Api.page: page
+    };
 
     final Map<String, dynamic> response =
-    await Api.get(url: Api.getItemApi, queryParameters: parameters);
+        await Api.get(url: Api.getItemApi, queryParameters: parameters);
 
     final List<ItemModel> items = (response['data']['data'] as List)
         .map((e) => ItemModel.fromJson(e))
@@ -430,10 +437,10 @@ class ItemRepository {
   /// يعيد: ItemModel بعد التعديل
   /// -------------------------------------------------------------------------
   Future<ItemModel> editItem(
-      Map<String, dynamic> itemDetails,
-      File? mainImage,
-      List<File>? otherImages,
-      ) async {
+    Map<String, dynamic> itemDetails,
+    File? mainImage,
+    List<File>? otherImages,
+  ) async {
     final Map<String, dynamic> parameters = {};
     parameters.addAll(itemDetails);
 
@@ -518,10 +525,10 @@ class ItemRepository {
   /// يعيد: DataOutput<ItemModel>
   /// -------------------------------------------------------------------------
   Future<DataOutput<ItemModel>> searchItem(
-      String query,
-      ItemFilterModel? filter, {
-        required int page,
-      }) async {
+    String query,
+    ItemFilterModel? filter, {
+    required int page,
+  }) async {
     final Map<String, dynamic> parameters = {
       Api.search: query,
       Api.page: page,
@@ -543,7 +550,7 @@ class ItemRepository {
     }
 
     final Map<String, dynamic> response =
-    await Api.get(url: Api.getItemApi, queryParameters: parameters);
+        await Api.get(url: Api.getItemApi, queryParameters: parameters);
 
     final List<ItemModel> items = (response['data']['data'] as List)
         .map((e) => ItemModel.fromJson(e))
@@ -560,8 +567,8 @@ class ItemRepository {
   /// أداة مساعدة لتحويل قائمة Files إلى MultipartFiles (للرفع)
   /// -------------------------------------------------------------------------
   Future<List<MultipartFile>> _fileToMultipartFileList(
-      List<File> files,
-      ) async {
+    List<File> files,
+  ) async {
     final List<MultipartFile> multipartFileList = [];
     for (final File file in files) {
       multipartFileList.add(await MultipartFile.fromFile(file.path));

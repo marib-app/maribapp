@@ -8,7 +8,12 @@
 /// values coming from different sources.
 class SliderInterfaceMapper {
   static const Map<String, String> _preferredForms = <String, String>{
-    'homepage': 'homepage',
+    // NOTE: The backend treats "homepage" sliders as part of the public
+    // audience section. Normalise to the canonical value so that slider
+    // filtering matches the payload coming from the API (which reports the
+    // interface type as "public").
+    'homepage': 'public_ads',
+
     'request_ad': 'request_ad',
     'public_ads': 'public_ads',
     'real_estate_services': 'real_estate_services',
@@ -45,6 +50,7 @@ class SliderInterfaceMapper {
     'shein_section': 'shein_products',
     'public': 'public_ads',
     'publicads': 'public_ads',
+    'home_page': 'public_ads',
     'merchants': 'e_store',
     'merchant': 'e_store',
     'estore': 'e_store',

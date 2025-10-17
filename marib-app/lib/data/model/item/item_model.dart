@@ -136,7 +136,7 @@ extension ItemSummaryX on ItemSummary {
       slug: slug,
       description: description,
       price: price,
-      image: image,
+      image: image ?? thumbnailUrl,
       productLink: productLink,
       watermarkimage: watermarkImage,
       latitude: latitude,

@@ -938,9 +938,15 @@ class NotificationService {
       return;
     }
 
-    if (!HiveUtils.isUserAuthenticated()) {
+    if (!HiveUtils.isUserBasicallyAuthenticated()) {
       await HiveUtils.setUserDetail(
           key: _pendingFcmTokenKey, value: normalizedToken);
+
+      log(
+        'Skipping FCM token upload because user is not basically authenticated',
+        name: 'NotificationService',
+      );
+
       return;
     }
     try {
@@ -954,6 +960,10 @@ class NotificationService {
       );
       await HiveUtils.setUserDetail(key: Api.fcmId, value: normalizedToken);
       await HiveUtils.setUserDetail(key: _pendingFcmTokenKey, value: null);
+      log(
+        'Successfully synced FCM token with the server',
+        name: 'NotificationService',
+      );
 
     } catch (e, stackTrace) {
       await HiveUtils.setUserDetail(
@@ -967,7 +977,12 @@ class NotificationService {
   }
 
   static Future<void> resendPendingTokenIfNeeded() async {
-    if (!HiveUtils.isUserAuthenticated()) {
+    if (!HiveUtils.isUserBasicallyAuthenticated()) {
+      log(
+        'Resend of pending FCM token skipped: user not basically authenticated',
+        name: 'NotificationService',
+      );
+
       return;
     }
 

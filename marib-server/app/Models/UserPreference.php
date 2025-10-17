@@ -18,11 +18,17 @@ class UserPreference extends Model
         'currency_watchlist',
         'metal_watchlist',
         'notification_frequency',
+        'currency_notification_regions',
+
+
     ];
 
     protected $casts = [
         'currency_watchlist' => 'array',
         'metal_watchlist' => 'array',
+        'currency_notification_regions' => 'array',
+
+
     ];
 
     protected static function booted(): void
@@ -63,6 +69,51 @@ class UserPreference extends Model
                 ->all(),
         );
     }
+
+    public function currencyNotificationRegions(): Attribute
+    {
+        return Attribute::make(
+            get: function ($value) {
+                $decoded = is_array($value) ? $value : (json_decode($value, true) ?: []);
+
+                return collect($decoded)
+                    ->mapWithKeys(static function ($code, $currencyId) {
+                        $id = (int) $currencyId;
+                        if ($id <= 0) {
+                            return [];
+                        }
+
+                        $normalizedCode = is_string($code) ? trim($code) : '';
+                        if ($normalizedCode === '') {
+                            return [];
+                        }
+
+                        return [$id => $normalizedCode];
+                    })
+                    ->all();
+            },
+            set: static function ($value) {
+                $decoded = is_array($value) ? $value : (json_decode($value, true) ?: []);
+
+                return collect($decoded)
+                    ->mapWithKeys(static function ($code, $currencyId) {
+                        $id = (int) $currencyId;
+                        if ($id <= 0) {
+                            return [];
+                        }
+
+                        $normalizedCode = is_string($code) ? trim($code) : '';
+                        if ($normalizedCode === '') {
+                            return [];
+                        }
+
+                        return [$id => $normalizedCode];
+                    })
+                    ->all();
+            }
+        );
+    }
+
 
     public function metalWatchlist(): Attribute
     {

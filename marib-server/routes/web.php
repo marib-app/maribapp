@@ -247,6 +247,7 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
     ], static function () {
         Route::get('/', [WifiCabinController::class, 'index'])->name('index');
         Route::get('/create', [WifiCabinController::class, 'create'])->name('create');
+        Route::post('/batches', [WifiCabinController::class, 'store'])->name('voucher-batches.store');
         Route::get('/{network}/edit', [WifiCabinController::class, 'edit'])->name('edit');
 
         Route::post('/owner-requests/{batch}/approve', [WifiCabinController::class, 'approveOwnerRequest'])

@@ -105,6 +105,8 @@ class UserPreferenceRepository {
           'currency_watchlist': preferences.currencyWatchlist.toList(),
           'metal_watchlist': preferences.metalWatchlist.toList(),
           'notification_frequency': preferences.notificationFrequency,
+          'currency_notification_regions': preferences.currencyNotificationRegions
+              .map((int key, String value) => MapEntry(key.toString(), value)),
         },
       );
 

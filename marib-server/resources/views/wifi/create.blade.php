@@ -34,24 +34,61 @@
                         <p class="text-muted small mb-0">{{ __('Select the network, plan and quantity to allocate vouchers for the cabin.') }}</p>
                     </div>
                     <div class="card-body">
-                        <form action="#" method="post" class="row g-3">
-                            @csrf
+                        @if (session('status'))
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                {{ session('status') }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ __('Close') }}"></button>
+                            </div>
+                        @endif
+
+                        @if (session('error'))
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                {{ session('error') }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ __('Close') }}"></button>
+                            </div>
+                        @endif
+
+                        @if ($errors->any())
+                            <div class="alert alert-danger">
+                                <ul class="mb-0 ps-3">
+                                    @foreach ($errors->all() as $message)
+                                        <li>{{ $message }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+
+                        <form action="{{ route('wifi.voucher-batches.store') }}" method="post" class="row g-3">
+                            
+                        @csrf
                             <div class="col-12">
                                 <label for="wifi-network" class="form-label">{{ __('Choose Network') }}</label>
-                                <select id="wifi-network" class="form-select" required>
-                                    <option value="">{{ __('Select a network') }}</option>
+                                <select id="wifi-network" name="network_id" class="form-select @error('network_id') is-invalid @enderror" required>
+
+
+                                <option value="">{{ __('Select a network') }}</option>
                                     @foreach($networks as $network)
                                         @php
                                             $value = data_get($network, 'id') ?? data_get($network, 'uuid') ?? data_get($network, 'slug');
                                         @endphp
-                                        <option value="{{ $value }}">{{ data_get($network, 'name', __('Unnamed Network')) }}</option>
-                                    @endforeach
+                                        <option value="{{ $value }}" @selected(old('network_id') == $value)>
+                                            {{ data_get($network, 'name', __('Unnamed Network')) }}
+                                        </option>
+                                        
+                                        @endforeach
                                 </select>
+
+                                @error('network_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+
                             </div>
 
                             <div class="col-12">
                                 <label for="wifi-plan" class="form-label">{{ __('Select Plan') }}</label>
-                                <select id="wifi-plan" class="form-select" required>
+                                <select id="wifi-plan" name="plan_id" class="form-select @error('plan_id') is-invalid @enderror" required>
                                     <option value="">{{ __('Choose a plan') }}</option>
                                     @foreach($plans as $plan)
                                         @php
@@ -75,24 +112,45 @@
                                                 $priceLabel,
                                             ])->filter()->implode(' • '));
                                         @endphp
-                                        <option value="{{ $planId }}">{{ $planName }} @if($planDescription) — {{ $planDescription }} @endif</option>
-                                    @endforeach
+                                        <option value="{{ $planId }}" @selected(old('plan_id') == $planId)>
+                                            {{ $planName }}@if($planDescription) — {{ $planDescription }} @endif
+                                        </option>
+                                        
+                                        @endforeach
                                 </select>
+
+                                @error('plan_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+
                             </div>
 
                             <div class="col-md-6">
                                 <label for="wifi-quantity" class="form-label">{{ __('Quantity') }}</label>
-                                <input type="number" min="1" step="1" class="form-control" id="wifi-quantity" placeholder="50" required>
+                                <input type="number" min="1" step="1" name="quantity" class="form-control @error('quantity') is-invalid @enderror" id="wifi-quantity" placeholder="50" value="{{ old('quantity') }}" required>
+                                @error('quantity')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            
                             </div>
 
                             <div class="col-md-6">
                                 <label for="wifi-reference" class="form-label">{{ __('Reference / Batch name') }}</label>
-                                <input type="text" class="form-control" id="wifi-reference" placeholder="Cabin A - April">
+                                <input type="text" name="reference" class="form-control @error('reference') is-invalid @enderror" id="wifi-reference" placeholder="Cabin A - April" value="{{ old('reference') }}">
+                                @error('reference')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            
                             </div>
 
                             <div class="col-12">
                                 <label for="wifi-notes" class="form-label">{{ __('Internal notes') }}</label>
-                                <textarea id="wifi-notes" rows="3" class="form-control" placeholder="{{ __('Optional instructions for the support team...') }}"></textarea>
+                                <textarea id="wifi-notes" name="notes" rows="3" class="form-control @error('notes') is-invalid @enderror" placeholder="{{ __('Optional instructions for the support team...') }}">{{ old('notes') }}</textarea>
+                                @error('notes')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            
+                            
                             </div>
 
                             <div class="col-12 d-flex justify-content-end">

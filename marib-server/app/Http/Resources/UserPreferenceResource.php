@@ -19,6 +19,20 @@ class UserPreferenceResource extends JsonResource
             'currency_watchlist' => collect($this->currency_watchlist ?? [])->map(static fn ($id) => (int) $id)->values()->all(),
             'metal_watchlist' => collect($this->metal_watchlist ?? [])->map(static fn ($id) => (int) $id)->values()->all(),
             'notification_frequency' => $this->notification_frequency,
+
+            'currency_notification_regions' => collect($this->currency_notification_regions ?? [])
+                ->mapWithKeys(static function ($code, $currencyId) {
+                    $id = (int) $currencyId;
+                    $normalizedCode = is_string($code) ? trim($code) : '';
+
+                    if ($id <= 0 || $normalizedCode === '') {
+                        return [];
+                    }
+
+                    return [$id => $normalizedCode];
+                })
+                ->all(),
+
         ];
     }
 }

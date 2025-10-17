@@ -7,7 +7,8 @@ namespace App\Http\Controllers;
 use App\Models\WifiCodeBatch;
 use App\Services\Wifi\WifiOwnerRequestService;
 use Illuminate\Auth\Access\AuthorizationException;
-
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 use App\Services\Wifi\WifiCabinService;
 use Illuminate\Contracts\View\View;
@@ -52,6 +53,63 @@ class WifiCabinController extends Controller
             'plans' => $this->wifiCabinService->getPlans(),
         ]);
     }
+
+
+    /**
+     * Handle the submission of the WiFi voucher batch form.
+     */
+    public function store(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'network_id' => ['required', 'integer', 'exists:wifi_networks,id'],
+            'plan_id' => [
+                'required',
+                'integer',
+                Rule::exists('wifi_plans', 'id')->where(function ($query) use ($request) {
+                    $networkId = $request->input('network_id');
+
+                    if ($networkId) {
+                        $query->where('wifi_network_id', $networkId);
+                    }
+                }),
+            ],
+            'quantity' => ['required', 'integer', 'min:1', 'max:1000'],
+            'reference' => ['nullable', 'string', 'max:255'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ], [], [
+            'network_id' => __('network'),
+            'plan_id' => __('plan'),
+            'quantity' => __('quantity'),
+            'reference' => __('reference'),
+            'notes' => __('notes'),
+        ]);
+
+        try {
+            $batch = $this->wifiCabinService->createVoucherBatch($validated, $request->user());
+        } catch (ValidationException $exception) {
+            return redirect()->back()
+                ->withErrors($exception->errors())
+                ->withInput();
+        } catch (AuthorizationException $exception) {
+            return redirect()->back()
+                ->with('error', $exception->getMessage())
+                ->withInput();
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return redirect()->back()
+                ->with('error', __('Unable to create the Wi-Fi voucher batch at the moment.'))
+                ->withInput();
+        }
+
+        $issuedCount = (int) ($batch->accepted_rows ?? $validated['quantity']);
+
+        return redirect()
+            ->route('wifi.create')
+            ->with('status', __('Voucher batch issued successfully with :count vouchers.', ['count' => $issuedCount]));
+    }
+
+
 
     /**
      * Show the edit view for a specific WiFi network.

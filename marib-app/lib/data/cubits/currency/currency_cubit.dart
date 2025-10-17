@@ -242,6 +242,39 @@ class CurrencyCubit extends Cubit<CurrencyState> {
     _refreshSuccessState();
   }
 
+
+
+  Future<void> changeCurrencyNotificationRegion(
+      int currencyId,
+      String? governorateCode,
+      ) async {
+    if (currencyId <= 0) {
+      return;
+    }
+
+    final Map<int, String> updatedRegions = Map<int, String>.from(
+      _preferences.currencyNotificationRegions,
+    );
+
+    final String? normalizedCode =
+    governorateCode != null && governorateCode.trim().isNotEmpty
+        ? governorateCode.trim()
+        : null;
+
+    if (normalizedCode == null) {
+      updatedRegions.remove(currencyId);
+    } else {
+      updatedRegions[currencyId] = normalizedCode;
+    }
+
+    await _persistPreferences(
+      _preferences.copyWith(currencyNotificationRegions: updatedRegions),
+      syncRemote: true,
+    );
+    _refreshSuccessState();
+  }
+
+
   Future<void> _persistPreferences(
       UserPreferences preferences, {
         required bool syncRemote,

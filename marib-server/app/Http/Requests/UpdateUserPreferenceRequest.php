@@ -24,6 +24,16 @@ class UpdateUserPreferenceRequest extends FormRequest
                 }
             }
         }
+
+
+        $regions = $this->input('currency_notification_regions');
+        if (is_string($regions)) {
+            $decoded = json_decode($regions, true);
+            if (is_array($decoded)) {
+                $this->merge(['currency_notification_regions' => $decoded]);
+            }
+        }
+
     }
 
     public function rules(): array
@@ -35,6 +45,10 @@ class UpdateUserPreferenceRequest extends FormRequest
             'metal_watchlist' => ['sometimes', 'array'],
             'metal_watchlist.*' => ['integer', 'exists:metal_rates,id'],
             'notification_frequency' => ['nullable', 'string', Rule::in(NotificationFrequency::values())],
+
+            'currency_notification_regions' => ['sometimes', 'array'],
+            'currency_notification_regions.*' => ['nullable', 'string', 'exists:governorates,code'],
+
         ];
     }
 }

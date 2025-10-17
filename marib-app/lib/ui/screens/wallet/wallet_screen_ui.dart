@@ -8,6 +8,7 @@ import 'package:marib/data/cubits/wallet/wallet_summary_cubit.dart';
 import 'package:marib/data/cubits/wallet/wallet_transactions_cubit.dart';
 import 'package:marib/data/model/wallet/wallet_filter.dart';
 import 'package:marib/data/model/wallet/wallet_operation_options.dart';
+import 'package:marib/data/model/wallet/wallet_withdrawal.dart';
 
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';

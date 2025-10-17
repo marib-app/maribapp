@@ -240,26 +240,29 @@ class WalletTransactionTile extends StatelessWidget {
                     .toList(),
               ),
             ],
-            if (transaction.balanceBefore != null ||
-                transaction.balanceAfter != null) ...[
+            if (transaction.beforeBalance != null ||
+                transaction.afterBalance != null) ...[
               const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
                     child: WalletBalanceSummary(
                       label: 'walletBalanceBefore'.translate(context),
-                      value: transaction.balanceBefore == null
+                      value: transaction.beforeBalance == null
+
                           ? '--'
-                          : _formatBalanceValue(transaction.balanceBefore!),
+                          : _formatBalanceValue(transaction.beforeBalance!),
+
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: WalletBalanceSummary(
                       label: 'walletBalanceAfter'.translate(context),
-                      value: transaction.balanceAfter == null
+                      value: transaction.afterBalance == null
+
                           ? '--'
-                          : _formatBalanceValue(transaction.balanceAfter!),
+                          : _formatBalanceValue(transaction.afterBalance!),
                     ),
                   ),
                 ],

@@ -1695,16 +1695,19 @@ class ManualPaymentRequestController extends Controller
         $channelValue = data_get($row, 'channel', data_get($row, 'payment_gateway'));
         $normalizedChannel = $this->normalizePaymentRequestChannel($channelValue);
 
-        $propertyNames = [
-            'payment_gateway_name',
-            'gateway_name',
-            'gateway_display_name',
-        ];
+        $propertyNames = ['payment_gateway_name'];
+
 
 
         if ($normalizedChannel === 'manual_banks' || $normalizedChannel === null) {
             $propertyNames[] = 'manual_bank_name';
             $propertyNames[] = 'bank_name';
+            $propertyNames[] = 'gateway_name';
+            $propertyNames[] = 'gateway_display_name';
+        } else {
+            $propertyNames[] = 'gateway_name';
+            $propertyNames[] = 'gateway_display_name';
+
         }
 
 
@@ -1733,7 +1736,7 @@ class ManualPaymentRequestController extends Controller
             $manualBankName = $this->resolveManualBankName($row);
 
             if ($manualBankName !== null) {
-                $candidates[] = $manualBankName;
+                array_unshift($candidates, $manualBankName);
 
 
             }

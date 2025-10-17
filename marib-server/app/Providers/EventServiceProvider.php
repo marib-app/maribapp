@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Events\CompetitionAnnounced;
+use App\Events\CurrencyCreated;
 use App\Events\ManualPaymentRequestCreated;
 use App\Events\OrderStatusChanged;
 use App\Events\OrderNoteUpdated;
@@ -11,6 +12,7 @@ use App\Events\UserWentInactive;
 use App\Listeners\DispatchDelegateBadgeUpdate;
 use App\Listeners\DispatchManualPaymentRequestDelegateNotifications;
 use App\Listeners\HandleMarketingAutomation;
+use App\Listeners\SendCurrencyCreatedNotification;
 use App\Listeners\RecordCacheTelemetry;
 use Illuminate\Cache\Events\CacheHit;
 use Illuminate\Cache\Events\CacheMissed;
@@ -58,6 +60,11 @@ class EventServiceProvider extends ServiceProvider
         ManualPaymentRequestCreated::class => [
             DispatchManualPaymentRequestDelegateNotifications::class,
         ],
+
+        CurrencyCreated::class => [
+            SendCurrencyCreatedNotification::class,
+        ],
+
         DelegateAssignmentsUpdated::class => [
             
             SendDelegateAssignmentNotifications::class,

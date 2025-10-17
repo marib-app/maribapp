@@ -1,15 +1,33 @@
 <?php
 
 namespace App\Http\Controllers;
+
+
+
 use App\Models\WifiCodeBatch;
+use App\Services\Wifi\WifiOwnerRequestService;
+use Illuminate\Auth\Access\AuthorizationException;
+
 
 use App\Services\Wifi\WifiCabinService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Arr;
+use Illuminate\Validation\ValidationException;
+use Throwable;
+
+
+
+
 
 class WifiCabinController extends Controller
 {
-    public function __construct(private readonly WifiCabinService $wifiCabinService)
+    public function __construct(
+        private readonly WifiCabinService $wifiCabinService,
+        private readonly WifiOwnerRequestService $wifiOwnerRequestService,
+    )
+    
+    
     {
         $this->middleware('permission:wifi-cabin-manage');
     }
@@ -49,11 +67,54 @@ class WifiCabinController extends Controller
     }
     public function approveOwnerRequest(WifiCodeBatch $batch): RedirectResponse
     {
-        return redirect()->back()->with('status', __('Owner request approval handling is not yet implemented.'));
+        return $this->processOwnerRequestDecision(
+            fn () => $this->wifiOwnerRequestService->approve($batch, auth()->user()),
+            __('Owner request approved successfully.'),
+            __('Failed to approve the owner request.'),
+            __('An unexpected error occurred while approving the owner request.'),
+        );
+    
     }
 
     public function rejectOwnerRequest(WifiCodeBatch $batch): RedirectResponse
     {
-        return redirect()->back()->with('status', __('Owner request rejection handling is not yet implemented.'));
+        return $this->processOwnerRequestDecision(
+            fn () => $this->wifiOwnerRequestService->reject($batch, auth()->user()),
+            __('Owner request rejected successfully.'),
+            __('Failed to reject the owner request.'),
+            __('An unexpected error occurred while rejecting the owner request.'),
+        );
+    }
+
+    /**
+     * @param  callable():WifiCodeBatch  $decision
+     */
+    protected function processOwnerRequestDecision(
+        callable $decision,
+        string $successMessage,
+        string $validationFallbackMessage,
+        string $unexpectedErrorMessage,
+    ): RedirectResponse {
+        try {
+            $decision();
+
+            return redirect()->back()->with('status', $successMessage);
+        } catch (ValidationException $exception) {
+            $errors = $exception->errors();
+            $flattened = Arr::flatten($errors);
+            $message = Arr::first($flattened) ?? $validationFallbackMessage;
+
+            return redirect()->back()
+                ->withErrors($errors, 'wifiOwnerRequests')
+                ->with('error', $message);
+        } catch (AuthorizationException $exception) {
+            return redirect()->back()->with('error', $exception->getMessage());
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return redirect()->back()->with('error', $unexpectedErrorMessage);
+        }
+    
+    
     }
 }

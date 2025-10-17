@@ -57,6 +57,12 @@ Route::prefix('wifi-cabin')
         Route::get('alerts', [WifiCabinApiController::class, 'alerts']);
         Route::get('networks/{network}', [WifiCabinApiController::class, 'network']);
         Route::get('owner-requests', [WifiCabinApiController::class, 'ownerRequests']);
+
+        Route::post('owner-requests/{batch}/approve', [WifiCabinApiController::class, 'approveOwnerRequest'])
+            ->whereNumber('batch');
+        Route::post('owner-requests/{batch}/reject', [WifiCabinApiController::class, 'rejectOwnerRequest'])
+            ->whereNumber('batch');
+
         Route::get('networks/{network}/stock', [WifiCabinApiController::class, 'networkStock']);
         Route::get('networks/{network}/alerts', [WifiCabinApiController::class, 'networkAlerts']);
     });

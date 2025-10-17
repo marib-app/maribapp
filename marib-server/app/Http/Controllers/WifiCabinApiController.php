@@ -7,6 +7,8 @@ use App\Models\WifiCode;
 use App\Models\WifiCodeBatch;
 use App\Models\WifiNetwork;
 use App\Models\WifiPlan;
+use App\Services\Wifi\WifiOwnerRequestService;
+use Illuminate\Auth\Access\AuthorizationException;
 use App\Services\Wifi\WifiCodeSummaryService;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Builder;
@@ -17,12 +19,22 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Pagination\CursorPaginator;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Validation\ValidationException;
+use Throwable;
+
+
+
 
 class WifiCabinApiController extends Controller
 {
     protected int $defaultLowStockThreshold = 10;
 
-    public function __construct(protected WifiCodeSummaryService $codeSummaryService)
+    public function __construct(
+        protected WifiCodeSummaryService $codeSummaryService,
+        protected WifiOwnerRequestService $ownerRequestService,
+    )
+
+
     {
         $this->middleware('permission:wifi-cabin-manage');
     }
@@ -406,6 +418,25 @@ class WifiCabinApiController extends Controller
     }
 
 
+    public function approveOwnerRequest(Request $request, WifiCodeBatch $batch): JsonResponse
+    {
+        return $this->handleOwnerRequestDecision(
+            fn () => $this->ownerRequestService->approve($batch, $request->user()),
+            __('Owner request approved successfully.'),
+            __('Failed to approve the owner request.'),
+            __('An unexpected error occurred while approving the owner request.'),
+        );
+    }
+
+    public function rejectOwnerRequest(Request $request, WifiCodeBatch $batch): JsonResponse
+    {
+        return $this->handleOwnerRequestDecision(
+            fn () => $this->ownerRequestService->reject($batch, $request->user()),
+            __('Owner request rejected successfully.'),
+            __('Failed to reject the owner request.'),
+            __('An unexpected error occurred while rejecting the owner request.'),
+        );
+    }
 
 
     public function network(Request $request, string $network): JsonResponse
@@ -564,7 +595,41 @@ class WifiCabinApiController extends Controller
 
 
 
+    /**
+     * @param  callable():WifiCodeBatch  $decision
+     */
+    protected function handleOwnerRequestDecision(
+        callable $decision,
+        string $successMessage,
+        string $validationFallbackMessage,
+        string $unexpectedErrorMessage,
+    ): JsonResponse {
+        try {
+            $batch = $decision();
 
+            return response()->json([
+                'message' => $successMessage,
+                'data' => $this->transformOwnerRequest($batch),
+            ]);
+        } catch (ValidationException $exception) {
+            $errors = $exception->errors();
+            $flattened = Arr::flatten($errors);
+            $message = Arr::first($flattened) ?? $validationFallbackMessage;
+
+            return response()->json([
+                'message' => $message,
+                'errors' => $errors,
+            ], 422);
+        } catch (AuthorizationException $exception) {
+            throw $exception;
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'message' => $unexpectedErrorMessage,
+            ], 500);
+        }
+    }
 
     protected function transformNetwork(
         WifiNetwork $network,

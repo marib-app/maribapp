@@ -119,7 +119,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="4" class="text-center text-muted py-4">
+                                        <td colspan="6" class="text-center text-muted py-4">
                                             <i class="bi bi-wifi-off display-6 d-block mb-2"></i>
                                             <span>{{ __('No networks available yet.') }}</span>
                                         </td>
@@ -143,6 +143,41 @@
                     </div>
                 </div>
                 <div class="card-body">
+
+
+                    @if (session('status'))
+                        <div class="alert alert-success d-flex align-items-center justify-content-between" role="alert">
+                            <div class="me-3">
+                                <i class="bi bi-check-circle me-2"></i>{{ session('status') }}
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ __('Close') }}"></button>
+                        </div>
+                    @endif
+
+                    @if (session('error'))
+                        <div class="alert alert-danger d-flex align-items-center justify-content-between" role="alert">
+                            <div class="me-3">
+                                <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ __('Close') }}"></button>
+                        </div>
+                    @endif
+
+                    @php($ownerRequestErrors = $errors->getBag('wifiOwnerRequests'))
+                    @if ($ownerRequestErrors->any())
+                        <div class="alert alert-danger" role="alert">
+                            <div class="d-flex align-items-start">
+                                <i class="bi bi-info-circle me-2 mt-1"></i>
+                                <ul class="mb-0 small">
+                                    @foreach($ownerRequestErrors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        </div>
+                    @endif
+
+
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
                             <thead>

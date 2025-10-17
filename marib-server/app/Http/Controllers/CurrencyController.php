@@ -8,6 +8,7 @@ use App\Jobs\BackfillCurrencyRateHistory;
 use App\Services\CurrencyRateHistoryService;
 use App\Services\ResponseService;
 use App\Models\CurrencyRateQuote;
+use App\Events\CurrencyCreated;
 use App\Models\Governorate;
 use App\Services\CurrencyIconStorageService;
 use Carbon\Carbon;
@@ -79,6 +80,9 @@ class CurrencyController extends Controller
 
             return $currency->fresh(['quotes.governorate']);
         });
+        CurrencyCreated::dispatch($currency->id, $defaultGovernorateId);
+
+
 
         return response()->json([
             'success' => true,

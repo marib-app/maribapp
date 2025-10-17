@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Eloquent\Model as BaseModel;
 use App\Models\ServiceReviewReport;
+use App\Models\WifiCodeBatch;
+
+
 
 class AdminNotification extends Model
 {
@@ -23,6 +26,7 @@ class AdminNotification extends Model
     public const TYPE_SELLER_VERIFICATION = 'seller_verification_request';
     public const TYPE_ITEM_REVIEW = 'item_review';
     public const TYPE_SERVICE_REVIEW_REPORT = 'service_review_report';
+    public const TYPE_WIFI_OWNER_REQUEST = 'wifi_owner_request';
 
     protected $table = 'admin_notifications';
 
@@ -54,6 +58,7 @@ class AdminNotification extends Model
             self::TYPE_SELLER_VERIFICATION    => VerificationRequest::class,
             self::TYPE_ITEM_REVIEW            => Item::class,
             self::TYPE_SERVICE_REVIEW_REPORT  => ServiceReviewReport::class,
+            self::TYPE_WIFI_OWNER_REQUEST     => WifiCodeBatch::class,
 
         ], true);
     }

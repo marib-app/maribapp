@@ -181,6 +181,9 @@ class PaymentRequestTableQuery
             . " ELSE {$defaultGatewayNameSelect}"
             . ' END';
 
+        $paymentResolvedPayableTypeExpression = "LOWER(COALESCE(NULLIF(pt.payable_type, ''), NULLIF(mpr.payable_type, '')))";
+        $paymentResolvedPayableIdExpression = 'COALESCE(pt.payable_id, mpr.payable_id)';
+
 
         $paymentTransactions = DB::table('payment_transactions as pt')
             ->selectRaw("CONCAT('pt-', pt.id) as row_key")
@@ -223,7 +226,40 @@ class PaymentRequestTableQuery
                     '=',
                     'mpr.manual_bank_id'
                 )
+
+
+            )
+            ->when(
+                $supportsOrderLookup,
+                static function (Builder $query) use (
+                    $paymentResolvedPayableIdExpression,
+                    $paymentResolvedPayableTypeExpression,
+                    $orderPayableTypeAliases
+                ): void {
+                    $query->leftJoin(
+                        'orders as order_lookup',
+                        static function (JoinClause $join) use (
+                            $paymentResolvedPayableIdExpression,
+                            $paymentResolvedPayableTypeExpression,
+                            $orderPayableTypeAliases
+                        ): void {
+                            $join->on(
+                                'order_lookup.id',
+                                '=',
+                                DB::raw($paymentResolvedPayableIdExpression)
+                            )->whereIn(
+                                DB::raw($paymentResolvedPayableTypeExpression),
+                                $orderPayableTypeAliases
+                            );
+                        }
+                    );
+                }
+
+
             );
+
+        $walletResolvedPayableIdExpression = 'COALESCE(mpr.payable_id, wt.id)';
+        $walletResolvedPayableTypeExpression = "LOWER(NULLIF(mpr.payable_type, ''))";
 
 
         $walletTopUps = DB::table('wallet_transactions as wt')
@@ -268,6 +304,35 @@ class PaymentRequestTableQuery
                     'mpr.manual_bank_id'
                 )
             )
+
+
+            ->when(
+                $supportsOrderLookup,
+                static function (Builder $query) use (
+                    $walletResolvedPayableIdExpression,
+                    $walletResolvedPayableTypeExpression,
+                    $orderPayableTypeAliases
+                ): void {
+                    $query->leftJoin(
+                        'orders as order_lookup',
+                        static function (JoinClause $join) use (
+                            $walletResolvedPayableIdExpression,
+                            $walletResolvedPayableTypeExpression,
+                            $orderPayableTypeAliases
+                        ): void {
+                            $join->on(
+                                'order_lookup.id',
+                                '=',
+                                DB::raw($walletResolvedPayableIdExpression)
+                            )->whereIn(
+                                DB::raw($walletResolvedPayableTypeExpression),
+                                $orderPayableTypeAliases
+                            );
+                        }
+                    );
+                }
+            )
+
 
             ->whereNull('wt.payment_transaction_id')
             ->where('wt.type', 'credit')

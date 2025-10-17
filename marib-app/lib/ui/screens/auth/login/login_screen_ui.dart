@@ -130,7 +130,6 @@ class LoginScreenFrame extends StatelessWidget {
     final Widget scrollableChild = hasAncestorScroll
         ? child
         : SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
       child: child,
     );
 

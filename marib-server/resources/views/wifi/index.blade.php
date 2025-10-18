@@ -43,7 +43,6 @@
                                     <th scope="col">{{ __('Network') }}</th>
                                     <th scope="col" class="text-center">{{ __('Status') }}</th>
                                     <th scope="col" class="text-center">{{ __('Plans') }}</th>
-                                    <th scope="col" class="text-center">{{ __('Coverage (km)') }}</th>
                                     <th scope="col">{{ __('Support Contacts') }}</th>
 
                                     <th scope="col" class="text-end">{{ __('Actions') }}</th>
@@ -90,10 +89,7 @@
                                         </td>
 
 
-                                        @php($coverage = data_get($network, 'coverage_radius_km'))
-                                        <td class="text-center">
-                                            {{ $coverage !== null ? number_format((float) $coverage, 2) : '—' }}
-                                        </td>
+
                                         <td>
                                             @php($contacts = collect(data_get($network, 'contacts', []))->filter())
                                             <div class="d-flex flex-wrap gap-1">
@@ -119,7 +115,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="text-center text-muted py-4">
+                                        <td colspan="5" class="text-center text-muted py-4">
                                             <i class="bi bi-wifi-off display-6 d-block mb-2"></i>
                                             <span>{{ __('No networks available yet.') }}</span>
                                         </td>

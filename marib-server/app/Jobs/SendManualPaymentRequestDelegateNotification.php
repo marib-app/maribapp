@@ -13,6 +13,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Route;
 
 class SendManualPaymentRequestDelegateNotification implements ShouldQueue
 {
@@ -97,7 +98,10 @@ class SendManualPaymentRequestDelegateNotification implements ShouldQueue
             $orderReference
         );
 
-        $ordersIndexUrl = route('orders.index', ['department' => $this->department]);
+        $reviewUrl = $this->resolveManualPaymentReviewUrl($manualPaymentRequest);
+        $ordersIndexUrl = $this->resolveOrdersIndexUrl();
+        $deeplink = $ordersIndexUrl ?? $reviewUrl ?? '#';
+
 
         $payload = [
             'manual_payment_request_id' => $manualPaymentRequest->getKey(),
@@ -106,8 +110,10 @@ class SendManualPaymentRequestDelegateNotification implements ShouldQueue
             'type' => 'manual_payment_request',
             'order_id' => $orderId,
             'order_reference' => $orderReference,
-            'deeplink' => $ordersIndexUrl,
-            'click_action' => $ordersIndexUrl,
+            'deeplink' => $deeplink,
+            'click_action' => $deeplink,
+            'manual_payment_review_url' => $reviewUrl,
+
             'message_preview' => $body,
 
         ];
@@ -126,6 +132,38 @@ class SendManualPaymentRequestDelegateNotification implements ShouldQueue
                 'delegate_id' => $this->delegateId,
                 'error' => $exception->getMessage(),
             ]);
+        }
+    }
+
+
+
+    private function resolveOrdersIndexUrl(): ?string
+    {
+        if (Route::has('orders.index')) {
+            return route('orders.index', ['department' => $this->department]);
+        }
+
+        if (Route::has('orders')) {
+            try {
+                return route('orders', ['department' => $this->department]);
+            } catch (\Throwable) {
+                // Fallback handled below.
+            }
+        }
+
+        return null;
+    }
+
+    private function resolveManualPaymentReviewUrl(ManualPaymentRequest $manualPaymentRequest): ?string
+    {
+        if (! Route::has('manual-payments.review')) {
+            return null;
+        }
+
+        try {
+            return route('manual-payments.review', $manualPaymentRequest);
+        } catch (\Throwable) {
+            return null;
         }
     }
 }

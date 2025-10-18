@@ -95,10 +95,6 @@ class WifiNetworkController extends Controller
         $networkData['commission_flat'] = $networkData['commission_flat'] ?? 0;
         $networkData['is_active'] = $networkData['is_active'] ?? true;
 
-        if (array_key_exists('coverage_radius_km', $networkData)) {
-            $networkData['coverage_radius_km'] = $this->normalizeCoverageRadius($networkData['coverage_radius_km']);
-        }
-
         if ($request->hasFile('logo')) {
             $networkData['logo_path'] = $this->storeUploadedFile($request->file('logo'), 'wifi/logos');
         }
@@ -147,7 +143,6 @@ class WifiNetworkController extends Controller
             'longitude' => 'nullable|numeric|between:-180,180',
             'commission_rate' => 'nullable|numeric|min:0|max:100',
             'commission_flat' => 'nullable|numeric|min:0',
-            'coverage_radius_km' => 'nullable|numeric|min:0',
             'contacts' => 'nullable',
             'notes' => 'nullable|string',
 
@@ -166,7 +161,6 @@ class WifiNetworkController extends Controller
             'longitude',
             'commission_rate',
             'commission_flat',
-            'coverage_radius_km',
             'notes',
             'is_active',
             'meta',
@@ -176,9 +170,7 @@ class WifiNetworkController extends Controller
             $updateData['contacts'] = $this->normalizeContacts($request->input('contacts'));
         }
 
-        if (array_key_exists('coverage_radius_km', $updateData)) {
-            $updateData['coverage_radius_km'] = $this->normalizeCoverageRadius($updateData['coverage_radius_km']);
-        }
+
 
         if ($this->hasWifiNetworkSlugColumn() && array_key_exists('slug', $validated)) {
 
@@ -279,7 +271,6 @@ class WifiNetworkController extends Controller
                 'name',
                 'location_name',
                 'description',
-                'coverage_radius_km',
                 'logo_url',
                 'login_screenshot_url',
                 'contacts',
@@ -513,14 +504,6 @@ class WifiNetworkController extends Controller
         return $normalized === [] ? null : $normalized;
     }
 
-    private function normalizeCoverageRadius(mixed $radius): ?float
-    {
-        if ($radius === null || $radius === '') {
-            return null;
-        }
-
-        return max(0, round((float) $radius, 2));
-    }
 
     private function resolveWalletAccount(?\App\Models\User $user, ?int $requestedWalletId = null): ?WalletAccount
     {

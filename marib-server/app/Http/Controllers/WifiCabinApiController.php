@@ -686,7 +686,6 @@ class WifiCabinApiController extends Controller
         $summary['location_name'] = $network->location_name;
         $summary['latitude'] = $network->latitude;
         $summary['longitude'] = $network->longitude;
-        $summary['coverage_radius_km'] = $network->coverage_radius_km;
         $summary['commission_rate'] = (float) $network->commission_rate;
         $summary['commission_flat'] = (float) $network->commission_flat;
         $summary['notes'] = $network->notes;

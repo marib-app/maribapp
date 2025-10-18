@@ -81,14 +81,6 @@
 
 
 
-                            <dt class="col-5 text-muted">{{ __('Location') }}</dt>
-                            <dd class="col-7 fw-semibold">{{ data_get($network, 'location_name', __('Not available')) }}</dd>
-
-                            @php($coverageRadius = data_get($network, 'coverage_radius_km'))
-                            <dt class="col-5 text-muted">{{ __('Coverage radius') }}</dt>
-                            <dd class="col-7 fw-semibold">
-                                {{ $coverageRadius !== null ? number_format((float) $coverageRadius, 2) . ' ' . __('km') : __('Not available') }}
-                            </dd>
 
                             <dt class="col-5 text-muted">{{ __('Wallet') }}</dt>
                             <dd class="col-7 fw-semibold">{{ data_get($network, 'wallet.currency', data_get($network, 'wallet_id', __('Not available'))) }}</dd>
@@ -190,24 +182,19 @@
                     <div class="card shadow-sm mb-4">
                         <div class="card-header border-0 pb-0">
                             <h5 class="card-title mb-1">{{ __('Network settings & branding') }}</h5>
-                            <p class="text-muted small mb-0">{{ __('Update the public slug, coverage details, support contacts and upload branded assets.') }}</p>
+                            <p class="text-muted small mb-0">{{ __('Update the public slug, support contacts and upload branded assets.') }}</p>
                         </div>
                         <div class="card-body">
                             <form action="{{ route('wifi.networks.update', $networkId) }}" method="post" enctype="multipart/form-data" class="row g-3">
                                 @csrf
                                 @method('PUT')
 
-                                <div class="col-md-6">
+                                <div class="col-12">
                                     <label for="wifi-slug" class="form-label">{{ __('Slug') }}</label>
                                     <input type="text" name="slug" id="wifi-slug" class="form-control" value="{{ old('slug', data_get($network, 'slug')) }}" maxlength="255" placeholder="cabin-01">
                                     <div class="form-text">{{ __('Slug is used for friendly URLs. Leave blank to auto-generate.') }}</div>
                                 </div>
 
-                                <div class="col-md-6">
-                                    <label for="wifi-coverage" class="form-label">{{ __('Coverage radius (km)') }}</label>
-                                    <input type="number" name="coverage_radius_km" id="wifi-coverage" class="form-control" min="0" step="0.01" value="{{ old('coverage_radius_km', data_get($network, 'coverage_radius_km')) }}" placeholder="5">
-                                    <div class="form-text">{{ __('Provide an approximate coverage radius for field teams.') }}</div>
-                                </div>
 
                                 <div class="col-12">
                                     <label for="wifi-contacts" class="form-label">{{ __('Support contacts') }}</label>

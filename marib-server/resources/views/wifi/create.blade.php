@@ -254,14 +254,12 @@
 
                 <div class="card shadow-sm">
                     <div class="card-header border-0 pb-0">
-                        <h5 class="card-title mb-1">{{ __('Network coverage & contacts') }}</h5>
+                        <h5 class="card-title mb-1">{{ __('Network contacts & wallet summary') }}</h5>
                         <p class="text-muted small mb-0">{{ __('Verify slugs, wallet linkage and support channels for each managed network.') }}</p>
                     </div>
                     <div class="card-body">
                         @forelse($networks as $networkSummary)
-                            @php(
-                                $summaryCoverage = data_get($networkSummary, 'coverage_radius_km')
-                            )
+
                             @php(
                                 $summaryContacts = collect(data_get($networkSummary, 'contacts', []))->filter()
                             )
@@ -274,11 +272,7 @@
                                     </div>
                                     <span class="badge bg-primary-subtle text-primary">{{ __('ID') }}: {{ data_get($networkSummary, 'id', '—') }}</span>
                                 </div>
-                                <div class="small text-muted mb-2">
-                                    <i class="bi bi-geo-alt"></i>
-                                    {{ __('Coverage radius') }}:
-                                    <span class="text-body-secondary">{{ $summaryCoverage !== null ? number_format((float) $summaryCoverage, 2) . ' ' . __('km') : __('Not available') }}</span>
-                                </div>
+
                                 <div class="small text-muted">
                                     <i class="bi bi-telephone"></i>
                                     {{ __('Support contacts') }}:

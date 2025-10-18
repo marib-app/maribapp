@@ -33,7 +33,6 @@ class StoreWifiNetworkRequest extends FormRequest
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'commission_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'commission_flat' => ['nullable', 'numeric', 'min:0'],
-            'coverage_radius_km' => ['nullable', 'numeric', 'min:0'],
             'contacts' => ['nullable', 'array', 'min:1'],
             'contacts.*' => ['nullable', 'string'],
             'notes' => ['nullable', 'string'],

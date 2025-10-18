@@ -533,6 +533,12 @@ class Section_screenState extends State<Section_screen> {
                 source: effectiveFilter,
               );
 
+              if (_isValidCategoryId(newFilter?.categoryId) &&
+                  selectedCategoryId.value != resolvedCategoryId) {
+                selectedCategoryId.value = resolvedCategoryId;
+              }
+
+
               context.read<FetchItemSummaryCubit>().fetchSummaries(
                 categoryId: resolvedCategoryId,
                 search: searchController.text,

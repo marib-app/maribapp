@@ -503,7 +503,8 @@ class OrderApiController extends Controller
         $intentIdempotencyKey = data_get($defaultIntent, 'idempotency_key');
         $existingTransaction = null;
         $shouldForceUniqueIdempotencyKey = false;
-
+        $existingTransactionIsReusable = false;
+        $logMethod = null;
 
 
         if ($existingTransactionId) {
@@ -519,61 +520,64 @@ class OrderApiController extends Controller
                 $existingTransaction = null;
                 $shouldForceUniqueIdempotencyKey = true;
             } else {
-                if (! $hasExpired && $existingTransaction
-                    && $existingTransaction->payment_gateway === 'wallet'
+
+
+                $existingTransactionIsReusable = true;
+            }
+
+        }
+
+        $transaction = null;
+
+        try {
+            if ($existingTransactionIsReusable && $existingTransaction !== null) {
+                $logMethod = $existingTransaction->payment_gateway;
+
+                if ($existingTransaction->payment_gateway === 'wallet'
+
+
+
+
                     && $existingTransaction->payment_status !== 'succeed') {
                     $intentIdempotencyKey = $intentIdempotencyKey
                         ?: (string) ($existingTransaction->idempotency_key ?? $idempotencyKey);
-                    try {
-                        $existingTransaction = $this->confirmDefaultWalletPaymentIntent(
-                            $user,
-                            $order,
-                            $existingTransaction,
-                            $intentIdempotencyKey
-                        );
-                    } catch (ValidationException $exception) {
-                        Log::info('orders.default_payment_intent.skipped', [
-                            'order_id' => $order->getKey(),
-                            'user_id' => $user->getKey(),
-                            'method' => $existingTransaction->payment_gateway,
-                            'message' => $exception->getMessage(),
-                        ]);
 
-                        return null;
-                    } catch (Throwable $throwable) {
-                        Log::warning('orders.default_payment_intent.failed', [
-                            'order_id' => $order->getKey(),
-                            'user_id' => $user->getKey(),
-                            'method' => $existingTransaction->payment_gateway,
-                            'message' => $throwable->getMessage(),
-                        ]);
 
-                        return null;
-                    }
+                    $existingTransaction = $this->confirmDefaultWalletPaymentIntent(
+                        $user,
+                        $order,
+                        $existingTransaction,
+                        $intentIdempotencyKey
+                    );
+
+
+
                 }
 
                 return $existingTransaction;
             }
         
-        }
+
 
         $method = $this->resolveDefaultPaymentMethod($order);
 
-        if (! is_string($method) || $method === '') {
-            return null;
-        }
+            if (! is_string($method) || $method === '') {
+                return null;
+            }
 
-        $idempotencySuffix = $shouldForceUniqueIdempotencyKey ? Str::uuid()->toString() : null;
-        $intentIdempotencyKey = $this->buildDefaultPaymentIdempotencyKey(
-            $order,
-            $idempotencyKey,
-            $method,
-            $idempotencySuffix
-        );
+            $logMethod = $method;
+
+            $idempotencySuffix = $shouldForceUniqueIdempotencyKey ? Str::uuid()->toString() : null;
+            $intentIdempotencyKey = $this->buildDefaultPaymentIdempotencyKey(
+                $order,
+                $idempotencyKey,
+                $method,
+                $idempotencySuffix
+            );
 
 
 
-        try {
+
             $transaction = $this->orderPaymentService->initiate(
                 $user,
                 $order,
@@ -582,6 +586,9 @@ class OrderApiController extends Controller
             );
 
             if ($transaction->payment_gateway === 'wallet') {
+                $logMethod = $transaction->payment_gateway;
+
+
                 $transaction = $this->confirmDefaultWalletPaymentIntent(
                     $user,
                     $order,
@@ -594,7 +601,7 @@ class OrderApiController extends Controller
             Log::info('orders.default_payment_intent.skipped', [
                 'order_id' => $order->getKey(),
                 'user_id' => $user->getKey(),
-                'method' => $method,
+                'method' => $logMethod,
                 'message' => $exception->getMessage(),
             ]);
 
@@ -603,7 +610,7 @@ class OrderApiController extends Controller
             Log::warning('orders.default_payment_intent.failed', [
                 'order_id' => $order->getKey(),
                 'user_id' => $user->getKey(),
-                'method' => $method,
+                'method' => $logMethod,
                 'message' => $throwable->getMessage(),
             ]);
 

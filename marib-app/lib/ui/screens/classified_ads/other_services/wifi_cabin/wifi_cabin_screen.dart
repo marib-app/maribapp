@@ -6,6 +6,7 @@ import 'package:marib/data/model/wifi/wifi_network.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'widgets/service_overview.dart';
 
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
@@ -114,7 +115,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
                   onRefresh: () => _controller.refreshNetworks(force: true),
                 ),
                 const SizedBox(height: 12),
-                const WifiServiceOverview(),
+                WifiServiceOverview(),
                 const SizedBox(height: 16),
                 Expanded(
                   child: AnimatedSwitcher(

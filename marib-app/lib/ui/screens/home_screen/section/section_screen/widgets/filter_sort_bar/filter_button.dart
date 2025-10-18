@@ -85,8 +85,8 @@ class FilterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textColor = context.color.textDefaultColor;
-
+    final colorScheme = Theme.of(context).colorScheme;
+    final textColor = colorScheme.onPrimaryContainer;
 
     return FilterSortActionButton(
 

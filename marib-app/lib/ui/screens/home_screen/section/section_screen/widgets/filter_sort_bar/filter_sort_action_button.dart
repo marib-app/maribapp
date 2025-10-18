@@ -17,46 +17,65 @@ class FilterSortActionButton extends StatelessWidget {
     required this.onTap,
     required this.icon,
     required this.label,
-    this.padding = const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-    this.iconTextSpacing = 6,
-    this.borderRadius = 12,
+    this.padding = const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+    this.iconTextSpacing = 8,
+    this.borderRadius = 18,
   });
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = context.color;
-    final textColor = colorScheme.textDefaultColor;
+    final scheme = Theme.of(context).colorScheme;
+    final baseColor = scheme.primaryContainer;
+    final onBaseColor = scheme.onPrimaryContainer;
+    final highlightColor = scheme.primary;
+    final radius = BorderRadius.circular(borderRadius);
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(borderRadius),
-      splashColor: Theme.of(context).colorScheme.primary.withOpacity(0.14),
-      child: Container(
-        padding: padding,
-        decoration: BoxDecoration(
-          color: colorScheme.secondaryColor,
-          borderRadius: BorderRadius.circular(borderRadius),
-          border: Border.all(color: colorScheme.borderColor, width: 1),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            IconTheme.merge(
-              data: IconThemeData(color: textColor, size: 22),
-              child: icon,
+    return Material(
+        color: Colors.transparent,
+        elevation: 3,
+        shadowColor: highlightColor.withOpacity(0.18),
+        borderRadius: radius,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: radius,
+          splashColor: highlightColor.withOpacity(0.16),
+          child: Ink(
+            padding: padding,
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  baseColor.brighten(12),
+                  baseColor.darken(8),
+                ],
             ),
-            SizedBox(height: iconTextSpacing),
-            Text(
-              label,
-              maxLines: 2,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: textColor,
-              ),
+              border: Border.all(
+                color: highlightColor.withOpacity(0.32),
+                width: 1.2,
             ),
-          ],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                IconTheme.merge(
+                  data: IconThemeData(color: onBaseColor, size: 22),
+                  child: icon,
+                ),
+                SizedBox(height: iconTextSpacing),
+                Text(
+                  label,
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: onBaseColor,
+                  ),
+                ),
+              ],
+            ),
         ),
       ),
     );

@@ -1018,6 +1018,7 @@ class UiUtils {
         Color? buttonColor,
         EdgeInsets? outerPadding,
         Color? disabledColor,
+        Color? disabledTextColor,
         VoidCallback? onTapDisabledButton,
         bool? disabled,
       }) {
@@ -1026,19 +1027,25 @@ class UiUtils {
       return true;
     }());
 
+    final ThemeData theme = Theme.of(context);
 
     final bool blockInput = (disabled ?? false) || (isInProgress == true);
     final Color baseButtonColor = buttonColor ?? context.color.territoryColor;
+    final Color fallbackDisabledBackground =
+        theme.colorScheme.surfaceVariant;
     final Color disabledBackgroundColor =
-        disabledColor ?? UiUtils.makeColorLight(baseButtonColor);
+        disabledColor ?? fallbackDisabledBackground;
     final Color bg = blockInput ? disabledBackgroundColor : baseButtonColor;
 
 
     // لون النص/الأيقونات/السبينر
     final Color fg = textColor ?? context.color.textAutoAdapt(bg);
-    final Color disabledForeground = textColor != null
-        ? UiUtils.makeColorLight(textColor!)
-        : UiUtils.makeColorDark(disabledBackgroundColor);
+    final Color disabledForeground = disabledTextColor ??
+        (textColor != null
+            ? textColor!.withOpacity(0.6)
+            : theme.colorScheme.onSurface.withOpacity(
+          theme.brightness == Brightness.dark ? 0.8 : 0.7,
+        ));
     final Color contentColor = blockInput ? disabledForeground : fg;
 
 

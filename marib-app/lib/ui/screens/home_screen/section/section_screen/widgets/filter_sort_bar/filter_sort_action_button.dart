@@ -82,6 +82,7 @@ class FilterSortActionButton extends StatelessWidget {
             ),
         ),
       ),
+            ),
     );
   }
 }

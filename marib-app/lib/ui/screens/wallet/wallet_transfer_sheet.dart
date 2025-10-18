@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:marib/data/cubits/wallet/wallet_transfers_cubit.dart';
 import 'package:marib/data/model/wallet/wallet_operation_options.dart';
 import 'package:marib/data/cubits/wallet/wallet_summary_cubit.dart';
@@ -13,6 +14,7 @@ import 'package:marib/utils/api.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/utils/payment/manual_payment_service.dart';
 
 
 
@@ -237,7 +239,13 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
       ) async {
     final theme = Theme.of(context);
 
-    final amountText = amount.toStringAsFixed(2);
+    final amountText = formatWalletTransferAmount(
+      amount: amount,
+      submissionCurrency: _resolveSubmissionCurrency(),
+      currencyLabel: currencyLabel,
+    );
+
+
 
     return await showDialog<bool>(
       context: context,
@@ -412,6 +420,8 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final currencyLabel = _currencyLabel();
+    final submissionCurrency = _resolveSubmissionCurrency();
+
     return DraggableScrollableSheet(
       expand: false,
       maxChildSize: 0.95,
@@ -454,7 +464,12 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
                       const SizedBox(height: 4),
                       if (widget.balance != null)
                         Text(
-                          'الرصيد المتاح: ${widget.balance!.toStringAsFixed(2)} ${currencyLabel ?? ''}',
+                          'الرصيد المتاح: ${formatWalletTransferAmount(
+                            amount: widget.balance!,
+                            submissionCurrency: submissionCurrency,
+                            currencyLabel: currencyLabel,
+                          )} ${currencyLabel ?? ''}',
+
                           style: theme.textTheme.bodyMedium,
                         ),
                       const SizedBox(height: 16),
@@ -489,7 +504,11 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(
                     labelText: 'المبلغ',
-                    hintText: '0.00',
+                    hintText: buildWalletTransferAmountPlaceholder(
+                      submissionCurrency: submissionCurrency,
+                      currencyLabel: currencyLabel,
+                    ),
+
                     suffixText: currencyLabel,
                   ),
                   validator: _validateAmountField,
@@ -567,21 +586,81 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
   }
 
   String _amountHintText() {
-    final buffer = StringBuffer();
-    final min = widget.options.minimumAmount;
-    final max = widget.options.maximumAmount;
-
-    if (min != null) {
-      buffer.write('الحد الأدنى: ${min.toStringAsFixed(2)}');
-    }
-
-    if (max != null) {
-      if (buffer.isNotEmpty) {
-        buffer.write(' • ');
-      }
-      buffer.write('الحد الأعلى: ${max.toStringAsFixed(2)}');
-    }
-
-    return buffer.toString();
+    return buildWalletTransferHintText(
+      minimum: widget.options.minimumAmount,
+      maximum: widget.options.maximumAmount,
+      submissionCurrency: _resolveSubmissionCurrency(),
+      currencyLabel: _currencyLabel(),
+    );
   }
+}
+
+
+@visibleForTesting
+String formatWalletTransferAmount({
+  required double amount,
+  required String? submissionCurrency,
+  required String? currencyLabel,
+}) {
+  final String? formattingCurrency =
+  (submissionCurrency ?? currencyLabel)?.trim();
+
+  if (formattingCurrency == null || formattingCurrency.isEmpty) {
+    return amount.toStringAsFixed(2);
+  }
+
+  return formatManualPaymentAmount(amount, formattingCurrency);
+}
+
+@visibleForTesting
+String buildWalletTransferAmountPlaceholder({
+  required String? submissionCurrency,
+  required String? currencyLabel,
+}) {
+  final String? formattingCurrency =
+  (submissionCurrency ?? currencyLabel)?.trim();
+
+  if (formattingCurrency == null || formattingCurrency.isEmpty) {
+    return '0.00';
+  }
+
+
+
+
+  return formatManualPaymentAmount(0, formattingCurrency);
+}
+
+@visibleForTesting
+String buildWalletTransferHintText({
+  required double? minimum,
+  required double? maximum,
+  required String? submissionCurrency,
+  required String? currencyLabel,
+}) {
+  final buffer = StringBuffer();
+
+  if (minimum != null) {
+    buffer.write(
+      'الحد الأدنى: ${formatWalletTransferAmount(
+        amount: minimum,
+        submissionCurrency: submissionCurrency,
+        currencyLabel: currencyLabel,
+      )}',
+    );
+  }
+
+  if (maximum != null) {
+    if (buffer.isNotEmpty) {
+      buffer.write(' • ');
+    }
+    buffer.write(
+      'الحد الأعلى: ${formatWalletTransferAmount(
+        amount: maximum,
+        submissionCurrency: submissionCurrency,
+        currencyLabel: currencyLabel,
+      )}',
+    );
+  }
+
+  return buffer.toString();
 }

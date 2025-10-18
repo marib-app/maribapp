@@ -86,6 +86,7 @@ import 'package:marib/data/model/home/home_screen_section.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
 import 'package:marib/utils/featured_section_utils.dart';
 import 'special_request_card.dart';
+import 'package:flutter/rendering.dart';
 
 //==============================================================================
 ///                                   HomeTabView
@@ -117,6 +118,7 @@ class HomeTabView extends StatefulWidget {
   final String? sortBy;
   final ItemFilterModel? filter;
   final ValueChanged<bool>? onLoadMore;
+  final ValueChanged<bool>? onScrollDirectionChanged;
 
 
 
@@ -135,6 +137,7 @@ class HomeTabView extends StatefulWidget {
     this.currentSortBy,                 // ← جديد
     this.currentFilter,                 // ← جديد
     this.enableSubcats = true,          // ← جديد (افتراضي)
+    this.onScrollDirectionChanged,
 
     this.sortBy,
     this.filter,
@@ -155,6 +158,7 @@ class _HomeTabViewState extends State<HomeTabView> {
   int? _activeSubcatId; // الفئة الفرعية المختارة حالياً
   int? _lastTopCatId; // لملاحظة تغيّر التصنيف العلوي وإعادة ضبط الفرعيات
   bool _hasRequestedInitialFeatured = false;
+  bool? _lastReportedScrollIsUp;
 
 
   // ✅ قفل تحميل المزيد + تباطؤ بسيط لتجنّب سيل الاستدعاءات
@@ -171,6 +175,7 @@ class _HomeTabViewState extends State<HomeTabView> {
     super.initState();
     controller = ScrollController();
     widget.selectedCategoryId.addListener(_onSelectedCategoryChanged);
+    controller.addListener(_handleScrollDirectionChange);
 
     _lastTopCatId = widget.selectedCategoryId.value;
 
@@ -194,6 +199,8 @@ class _HomeTabViewState extends State<HomeTabView> {
   @override
   void dispose() {
     widget.selectedCategoryId.removeListener(_onSelectedCategoryChanged);
+    controller.removeListener(_handleScrollDirectionChange);
+
     controller.dispose();
     super.dispose();
   }
@@ -335,6 +342,40 @@ class _HomeTabViewState extends State<HomeTabView> {
     final String trimmed = value.trim();
     return trimmed.isEmpty ? null : trimmed;
   }
+
+
+
+
+  void _handleScrollDirectionChange() {
+    if (!controller.hasClients) {
+      return;
+    }
+
+    final ScrollDirection direction =
+        controller.position.userScrollDirection;
+
+    bool? isScrollingUp;
+    switch (direction) {
+      case ScrollDirection.forward:
+        isScrollingUp = true;
+        break;
+      case ScrollDirection.reverse:
+        isScrollingUp = false;
+        break;
+      case ScrollDirection.idle:
+        isScrollingUp = null;
+        break;
+    }
+
+    if (isScrollingUp == null ||
+        _lastReportedScrollIsUp == isScrollingUp) {
+      return;
+    }
+
+    _lastReportedScrollIsUp = isScrollingUp;
+    widget.onScrollDirectionChanged?.call(isScrollingUp);
+  }
+
 
 
   void _cacheRootIdentifiers({

@@ -102,6 +102,10 @@ class Section_screenState extends State<Section_screen> {
   // ✅ تحكم ظهور شريط التصنيفات الحقيقي
   bool _showSlider = false;
 
+  // ✅ تحكم في ظهور شريط الفلترة/الفرز السفلي حسب التمرير
+  final ValueNotifier<bool> _showBottomBar = ValueNotifier<bool>(true);
+
+
   // ✅ لإجبار إظهار الشيمر فترة دنيا بعد أول Loading
   bool _sawLoading = false;
   DateTime? _loadingStart;
@@ -381,6 +385,7 @@ class Section_screenState extends State<Section_screen> {
 
   @override
   void dispose() {
+    _showBottomBar.dispose();
     selectedCategoryId.dispose();
     searchController.dispose();
     super.dispose();
@@ -520,53 +525,77 @@ class Section_screenState extends State<Section_screen> {
           backgroundColor: context.color.primaryColor,
           appBar: null, // AppBar داخل ItemsBodyBox
 
-          bottomNavigationBar: FilterSortBar(
-            categoryIds: widget.categoryIds,
-            categoryId: widget.categoryId,
-            searchController: searchController,
-            onFilterChanged: (newFilter) {
-              final ItemFilterModel effectiveFilter = _buildEffectiveFilter(
-                base: newFilter,
-              );
-              filter = effectiveFilter;
-              final int resolvedCategoryId = _resolveCategoryIdInt(
-                source: effectiveFilter,
-              );
+          bottomNavigationBar: ValueListenableBuilder<bool>(
+              valueListenable: _showBottomBar,
+              child: SafeArea(
+                top: false,
+                left: false,
+                right: false,
+                minimum: const EdgeInsets.only(bottom: 12),
+                child: FilterSortBar(
+                  categoryIds: widget.categoryIds,
+                  categoryId: widget.categoryId,
+                  searchController: searchController,
+                  onFilterChanged: (newFilter) {
+                    final ItemFilterModel effectiveFilter = _buildEffectiveFilter(
+                      base: newFilter,
+                    );
+                    filter = effectiveFilter;
+                    final int resolvedCategoryId = _resolveCategoryIdInt(
+                      source: effectiveFilter,
+                    );
 
-              if (_isValidCategoryId(newFilter?.categoryId) &&
-                  selectedCategoryId.value != resolvedCategoryId) {
-                selectedCategoryId.value = resolvedCategoryId;
-              }
+                    if (_isValidCategoryId(newFilter?.categoryId) &&
+                        selectedCategoryId.value != resolvedCategoryId) {
+                      selectedCategoryId.value = resolvedCategoryId;
+                    }
 
 
-              context.read<FetchItemSummaryCubit>().fetchSummaries(
-                categoryId: resolvedCategoryId,
-                search: searchController.text,
-                filter: effectiveFilter,
-                sortBy: sortBy,
+                    context.read<FetchItemSummaryCubit>().fetchSummaries(
+                      categoryId: resolvedCategoryId,
+                      search: searchController.text,
+                      filter: effectiveFilter,
+                      sortBy: sortBy,
+                    );
+                  },
+                  onSortChanged: (newSort) {
+                    sortBy = newSort;
+
+                    final ItemFilterModel effectiveFilter = _buildEffectiveFilter();
+                    filter = effectiveFilter;
+                    final int resolvedCategoryId = _resolveCategoryIdInt(
+                      source: effectiveFilter,
+                    );
+
+
+                    context.read<FetchItemSummaryCubit>().fetchSummaries(
+                      categoryId: resolvedCategoryId,
+                      search: searchController.text,
+                      filter: effectiveFilter,
+                      sortBy: sortBy,
+                    );
+                  },
+                  onMapSearchTap: () {
+                    Navigator.pushNamed(context, '/mapSearch');
+                  },
+                ),
+              ),
+              builder: (context, show, child) {
+                return AnimatedSlide(
+                  offset: Offset(0, show ? 0 : 1),
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeInOut,
+                  child: IgnorePointer(
+                    ignoring: !show,
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeInOut,
+                      opacity: show ? 1 : 0,
+                      child: child,
+                    ),
+                  ),
               );
             },
-            onSortChanged: (newSort) {
-              sortBy = newSort;
-
-              final ItemFilterModel effectiveFilter = _buildEffectiveFilter();
-              filter = effectiveFilter;
-              final int resolvedCategoryId = _resolveCategoryIdInt(
-                source: effectiveFilter,
-              );
-
-
-              context.read<FetchItemSummaryCubit>().fetchSummaries(
-                categoryId: resolvedCategoryId,
-                search: searchController.text,
-                filter: effectiveFilter,
-                sortBy: sortBy,
-              );
-            },
-              onMapSearchTap: () {
-                Navigator.pushNamed(context, '/mapSearch');
-              }
-
           ),
 
           body: Column(
@@ -600,6 +629,11 @@ class Section_screenState extends State<Section_screen> {
                         filter: filter,                       // ← جديد
                         enableSubcats: _showSlider,           // ← نفس منطق التأجيل (أظهر بعد Success)
                         onLoadMore: _handleLoadMoreState,
+                        onScrollDirectionChanged: (isScrollingUp) {
+                          if (_showBottomBar.value != isScrollingUp) {
+                            _showBottomBar.value = isScrollingUp;
+                          }
+                        },
 
                       ),
 

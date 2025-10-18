@@ -48,6 +48,7 @@ class ItemsBodyBox extends StatefulWidget {
   final String? sortBy;
   final ItemFilterModel? filter;
   final ValueChanged<bool>? onLoadMore;
+  final ValueChanged<bool>? onScrollDirectionChanged;
 
 
 
@@ -65,6 +66,7 @@ class ItemsBodyBox extends StatefulWidget {
     this.enableSubcats = true,     // ← جديد (بحالته الافتراضية)
     this.onLoadMore,
     this.specialRequestSectionSlug,
+    this.onScrollDirectionChanged,
 
     super.key,
   });
@@ -268,6 +270,7 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
                   currentSortBy: widget.sortBy,
                   currentFilter: widget.filter,
                   enableSubcats: widget.enableSubcats,
+                  onScrollDirectionChanged: widget.onScrollDirectionChanged,
 
                   // ✨ المهم: مرر مفاتيح السلايدر الإعلاني
                   enableAdSlider: widget.enableAdSlider,          // ← أضِف هذا

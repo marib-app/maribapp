@@ -18,11 +18,7 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
   final TextEditingController _notesController = TextEditingController();
   PlatformFile? _logoFile;
   PlatformFile? _loginScreenshotFile;
-  PlatformFile? _voucherFile;
-  List<WifiPlan> _availablePlans = <WifiPlan>[];
-  WifiPlan? _selectedPlan;
-  bool _isLoadingPlans = false;
-  String? _plansError;
+
   bool _isSubmitting = false;
 
   WifiRepository get repository;
@@ -30,11 +26,7 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
   @protected
   void handleCompletion(Map<String, dynamic> result);
 
-  @override
-  void initState() {
-    super.initState();
-    _loadPlans();
-  }
+
 
   @override
   void dispose() {
@@ -76,31 +68,7 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
           ),
         ),
         const SizedBox(height: 16),
-        _buildPlansDropdown(color),
-        if (_isLoadingPlans) ...[
-          const SizedBox(height: 8),
-          const LinearProgressIndicator(),
-        ] else if (_plansError != null) ...[
-          const SizedBox(height: 8),
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: TextButton.icon(
-              onPressed: _isSubmitting ? null : _loadPlans,
-              icon: const Icon(Icons.refresh),
-              label: const Text('إعادة المحاولة'),
-            ),
-          ),
-        ] else if (_availablePlans.isEmpty) ...[
-          const SizedBox(height: 8),
-          Text(
-            'لا توجد باقات متاحة للرفع حاليًا.',
-            style: TextStyle(
-              color: color.textDefaultColor.withOpacity(0.6),
-              fontSize: 13,
-            ),
-          ),
-        ],
-        const SizedBox(height: 16),
+
         WifiFilePickerTile(
           title: 'شعار الشبكة',
           placeholder: 'ارفع صورة الشعار',
@@ -117,14 +85,7 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
           onTap: () => _pickImage(isLogo: false),
         ),
         const SizedBox(height: 16),
-        WifiFilePickerTile(
-          title: 'ملف أكواد القسائم',
-          placeholder: 'ارفع ملف CSV أو XLS أو XLSX يحتوي على الأكواد',
-          fileName: _voucherFile?.name,
-          isBusy: _isSubmitting,
-          onTap: _pickVoucherFile,
-        ),
-        const SizedBox(height: 16),
+
         TextField(
           controller: _contactController,
           enabled: !_isSubmitting,
@@ -189,24 +150,12 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
       return;
     }
 
-    if (_selectedPlan == null) {
-      _showError('يرجى اختيار الباقة المستهدفة.');
-      return;
-    }
-    if (_voucherFile == null) {
-      _showError('يرجى رفع ملف أكواد القسائم.');
-      return;
-    }
 
     final MultipartFile? logoMultipart = _prepareMultipart(_logoFile!);
     final MultipartFile? loginMultipart =
         _prepareMultipart(_loginScreenshotFile!);
-    final MultipartFile? voucherMultipart =
-        _prepareVoucherMultipart(_voucherFile!);
+    if (logoMultipart == null || loginMultipart == null) {
 
-    if (logoMultipart == null ||
-        loginMultipart == null ||
-        voucherMultipart == null) {
       return;
     }
 
@@ -220,27 +169,8 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
         notes: _stringify(_notesController.text),
       );
 
-      final Map<String, dynamic> batchResponse =
-          await repository.uploadPlanBatch(
-        planId: _selectedPlan!.id,
-        file: voucherMultipart,
-      );
+      final Map<String, dynamic> payload = _extractNetworkPayload(response);
 
-      final Map<String, dynamic> batchPayload =
-          _extractBatchPayload(batchResponse)..['plan_id'] = _selectedPlan!.id;
-
-      final String batchMessage = _buildBatchMessage(batchPayload);
-
-      Map<String, dynamic> payload = <String, dynamic>{};
-      final dynamic rawData = response['data'] ??
-          response['network'] ??
-          response['request'] ??
-          response['payload'];
-      if (rawData is Map<String, dynamic>) {
-        payload = Map<String, dynamic>.from(rawData);
-      } else if (rawData is Map) {
-        payload = Map<String, dynamic>.from(rawData as Map);
-      }
 
       final Map<String, dynamic> result = <String, dynamic>{
         'name': payload['name'] ?? name,
@@ -256,16 +186,12 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
               payload['status_message'],
         ),
         'id': payload['id'] ?? response['id'],
-        'batch': batchPayload,
+        'networkId': payload['id'] ?? response['network_id'] ?? response['id'],
+        'network': payload,
+
       }..removeWhere((key, value) => value == null);
 
-      final String? existingMessage = result['message'] as String?;
-      final String? combinedMessage =
-          _combineMessages(existingMessage, batchMessage);
 
-      if (combinedMessage != null) {
-        result['message'] = combinedMessage;
-      }
 
       if (!mounted) {
         return;
@@ -354,23 +280,7 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
     return null;
   }
 
-  MultipartFile? _prepareVoucherMultipart(PlatformFile file) {
-    final String extension = (file.extension ?? '').toLowerCase();
-    if (!_allowedVoucherExtensions.contains(extension)) {
-      _showError(
-        'صيغة ملف القسائم غير مدعومة. يرجى اختيار ملف بصيغة CSV أو XLS أو XLSX.',
-      );
 
-      return null;
-    }
-
-    if (file.size > _maxVoucherUploadSizeBytes) {
-      _showError('حجم ملف القسائم يتجاوز الحد المسموح (5 ميجابايت).');
-      return null;
-    }
-
-    return _prepareMultipart(file);
-  }
 
   void _showError(String message) {
     HelperUtils.showSnackBarMessage(
@@ -380,149 +290,18 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
     );
   }
 
-  Future<void> _loadPlans() async {
-    if (_isLoadingPlans || _isSubmitting) return;
-    setState(() {
-      _isLoadingPlans = true;
-      _plansError = null;
-    });
-
-    try {
-      final plans = await repository.fetchManagedPlans();
-      if (!mounted) return;
-      setState(() {
-        _availablePlans = plans;
-        if (_selectedPlan != null) {
-          final int selectedId = _selectedPlan!.id;
-          final WifiPlan? refreshed = plans.firstWhere(
-            (plan) => plan.id == selectedId,
-            orElse: () => _selectedPlan!,
-          );
-          _selectedPlan = refreshed;
-        }
-        _isLoadingPlans = false;
-      });
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _plansError = error.toString().isEmpty
-            ? 'تعذّر تحميل الباقات المتاحة.'
-            : error.toString();
-        _isLoadingPlans = false;
-      });
-    }
-  }
-
-  Widget _buildPlansDropdown(ColorScheme color) {
-    return DropdownButtonFormField<int>(
-      decoration: InputDecoration(
-        labelText: 'الباقة المستهدفة',
-        errorText: _plansError,
-      ),
-      value: _selectedPlan?.id,
-      items: _availablePlans
-          .map(
-            (plan) => DropdownMenuItem<int>(
-              value: plan.id,
-              child: Text(plan.name),
-            ),
-          )
-          .toList(),
-      onChanged: _isSubmitting || _isLoadingPlans || _availablePlans.isEmpty
-          ? null
-          : (value) {
-              if (value == null) {
-                setState(() => _selectedPlan = null);
-                return;
-              }
-              setState(() {
-                _selectedPlan =
-                    _availablePlans.firstWhere((plan) => plan.id == value);
-              });
-            },
-    );
-  }
-
-  Future<void> _pickVoucherFile() async {
-    if (_isSubmitting) return;
-    FocusScope.of(context).unfocus();
-
-    try {
-      final FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: _allowedVoucherExtensions,
-        withData: kIsWeb,
-      );
-
-      if (result == null) {
-        return;
-      }
-
-      final PlatformFile file = result.files.single;
-      final MultipartFile? prepared = _prepareVoucherMultipart(file);
-      if (prepared == null) {
-        return;
-      }
-
-      if (!mounted) return;
-
-      setState(() {
-        _voucherFile = file;
-      });
-    } catch (_) {
-      _showError('تعذّر اختيار ملف الأكواد، حاول مرة أخرى.');
-    }
-  }
-
-  Map<String, dynamic> _extractBatchPayload(Map<String, dynamic> response) {
-    final dynamic rawData = response['data'] ?? response['batch'];
-    if (rawData is Map<String, dynamic>) {
-      return Map<String, dynamic>.from(rawData);
-    }
-    if (rawData is Map) {
-      return Map<String, dynamic>.from(rawData as Map);
-    }
-    return <String, dynamic>{};
-  }
-
-  int _parseInt(dynamic value) {
-    if (value is int) return value;
-    if (value is num) return value.toInt();
-    return int.tryParse(value.toString()) ?? 0;
-  }
-
-  String _buildBatchMessage(Map<String, dynamic> batch) {
-    final int accepted = _parseInt(batch['accepted']);
-    final int rejected = _parseInt(batch['rejected']);
-    final int total = _parseInt(batch['total']);
-
-    return 'تم رفع ملف الأكواد بنجاح (مقبول: $accepted، مرفوض: $rejected، الإجمالي: $total).';
-  }
-
-  String? _combineMessages(String? first, String? second) {
-    final String? normalizedFirst = _stringify(first);
-    final String? normalizedSecond = _stringify(second);
-
-    if (normalizedFirst == null) return normalizedSecond;
-    if (normalizedSecond == null) return normalizedFirst;
-    return '$normalizedFirst\n$normalizedSecond';
-  }
 
   @visibleForTesting
   void debugSetFiles({
     PlatformFile? logo,
     PlatformFile? login,
-    PlatformFile? voucher,
   }) {
     _logoFile = logo;
     _loginScreenshotFile = login;
-    _voucherFile = voucher;
   }
 
   @visibleForTesting
-  void debugSelectPlan(WifiPlan? plan) {
-    _selectedPlan = plan;
-  }
+
 
   String? _stringify(dynamic value) {
     if (value == null) return null;
@@ -538,12 +317,22 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
     'png',
     'webp'
   ];
-  static const int _maxVoucherUploadSizeBytes = 5 * 1024 * 1024;
-  static const List<String> _allowedVoucherExtensions = <String>[
-    'csv',
-    'xls',
-    'xlsx'
-  ];
+
+  Map<String, dynamic> _extractNetworkPayload(dynamic response) {
+    final dynamic rawData = response is Map<String, dynamic>
+        ? response['data'] ??
+        response['network'] ??
+        response['request'] ??
+        response['payload']
+        : null;
+    if (rawData is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(rawData);
+    }
+    if (rawData is Map) {
+      return Map<String, dynamic>.from(rawData as Map);
+    }
+    return <String, dynamic>{};
+  }
 }
 
 class WifiFilePickerTile extends StatelessWidget {
@@ -622,13 +411,11 @@ void debugUpdateAddNetworkFormState(
   State state, {
   PlatformFile? logo,
   PlatformFile? login,
-  PlatformFile? voucher,
-  WifiPlan? selectedPlan,
+
 }) {
   if (state is WifiAddNetworkFormState) {
-    state
-      ..debugSetFiles(logo: logo, login: login, voucher: voucher)
-      ..debugSelectPlan(selectedPlan);
+    state.debugSetFiles(logo: logo, login: login);
+
   }
 }
 

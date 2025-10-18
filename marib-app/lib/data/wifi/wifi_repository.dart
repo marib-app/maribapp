@@ -373,7 +373,68 @@ class WifiRepository {
   }
 
 
-  Future<Map<String, dynamic>> uploadPlanBatch({
+  Future<Map<String, dynamic>> createNetworkPlan({
+    required int networkId,
+    required String name,
+    String? description,
+    required int durationMinutes,
+    required num price,
+    required String currency,
+    int? dataAllowanceMb,
+    int? validityDays,
+    num? speedMbps,
+    num? commissionRateOverride,
+    bool? isActive,
+    Map<String, dynamic>? meta,
+  }) async {
+    if (networkId <= 0) {
+      throw ArgumentError.value(networkId, 'networkId', 'must be positive');
+    }
+    if (durationMinutes <= 0) {
+      throw ArgumentError.value(
+        durationMinutes,
+        'durationMinutes',
+        'must be greater than zero',
+      );
+    }
+    if (price <= 0) {
+      throw ArgumentError.value(price, 'price', 'must be greater than zero');
+    }
+    final Map<String, dynamic> payload = <String, dynamic>{
+      'name': name,
+      'description': description,
+      'duration_minutes': durationMinutes,
+      'data_allowance_mb': dataAllowanceMb,
+      'validity_days': validityDays,
+      'speed_mbps': speedMbps,
+      'price': price,
+      'currency': currency,
+      'commission_rate_override': commissionRateOverride,
+      'is_active': isActive,
+      'meta': meta,
+    }..removeWhere((key, value) {
+      if (value == null) return true;
+      if (value is String && value.trim().isEmpty) {
+        return true;
+      }
+      if (value is Iterable && value.isEmpty) {
+        return true;
+      }
+      if (value is num && value.isNaN) {
+        return true;
+      }
+      return false;
+    });
+
+    return Api.post(
+      url: Api.wifiNetworkPlansApi(networkId),
+      parameter: payload,
+    );
+  }
+
+
+  Future<Map<String, dynamic>> createPlanBatch({
+
     required int planId,
     required MultipartFile file,
   }) async {

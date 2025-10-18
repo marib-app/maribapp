@@ -13,6 +13,7 @@ import 'package:marib/data/wifi/wifi_repository.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 
 import 'checkout_sheet.dart';
+enum WifiPlansSheetResult { addPlan }
 
 class WifiPlansSheet extends StatefulWidget {
   const WifiPlansSheet({
@@ -21,12 +22,15 @@ class WifiPlansSheet extends StatefulWidget {
     required this.onRegisterPurchase,
     required this.onRefreshPurchases,
     required this.onShowCodes,
+    this.allowPlanCreation = false,
+
   });
 
   final WifiNetwork network;
   final ValueChanged<WifiPurchase> onRegisterPurchase;
   final Future<void> Function({bool force}) onRefreshPurchases;
   final Future<void> Function(WifiPurchase) onShowCodes;
+  final bool allowPlanCreation;
 
   @override
   State<WifiPlansSheet> createState() => WifiPlansSheetState();
@@ -124,6 +128,15 @@ class WifiPlansSheetState extends State<WifiPlansSheet> {
                         color: color.textDefaultColor.withOpacity(0.8),
                       ),
                     ),
+                    if (widget.allowPlanCreation) ...[
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: () => Navigator.of(context)
+                            .pop(WifiPlansSheetResult.addPlan),
+                        icon: const Icon(Icons.add),
+                        label: const Text('إضافة فئة'),
+                      ),
+                    ],
                   ],
                 ),
               ),

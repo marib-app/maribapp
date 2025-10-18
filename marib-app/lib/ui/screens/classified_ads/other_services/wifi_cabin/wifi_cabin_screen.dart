@@ -27,6 +27,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:meta/meta.dart';
+import 'add_network/plan_configuration_screen.dart';
 
 class WifiCabinScreen extends StatefulWidget {
   const WifiCabinScreen({super.key});
@@ -456,41 +457,60 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
       ),
     );
 
-    if (result != null) {
-      await _controller.refreshNetworks(force: true);
+    if (result == null) {
+      return;
+    }
+
+    await _controller.refreshNetworks(force: true);
+    if (!mounted) return;
+
+    final Map<String, dynamic> payload = _normalizeNetworkSubmission(result);
+    final String? networkName = payload['name'] as String?;
+    final String? networkStatus = payload['status'] as String?;
+    final String? networkMessage = payload['message'] as String? ??
+        _buildNetworkSubmissionMessage(networkName, networkStatus);
+    final int? networkId =
+    _parsePositiveInt(payload['networkId'] ?? payload['id']);
+    final Map<String, dynamic>? networkData =
+    payload['network'] is Map<String, dynamic>
+        ? Map<String, dynamic>.from(
+      payload['network'] as Map<String, dynamic>,
+    )
+        : null;
+
+    String? combinedMessage = networkMessage;
+
+    if (networkId != null && networkId > 0) {
+      final Map<String, dynamic>? planResult = await _openPlanConfiguration(
+        networkId: networkId,
+        networkName: networkName,
+        defaultCurrency: _resolveCurrencyFromPayload(networkData),
+      );
+
       if (!mounted) return;
-      String? message;
-      if (result is Map) {
-        final map = Map<String, dynamic>.from(result as Map);
-        message = (map['message'] as String?) ??
-            (() {
-              final String? name = map['name'] as String?;
-              final String? status = map['status'] as String?;
-              if (name != null && status != null) {
-                return 'تم إرسال طلب الشبكة "$name" (الحالة: $status)';
-              }
-              if (name != null) {
-                return 'تمت إضافة الشبكة "$name" بنجاح';
-              }
-              if (status != null) {
-                return 'تم إرسال الطلب (الحالة: $status)';
-              }
-              return null;
-            })();
-      } else if (result is String) {
-        message = 'تمت إضافة الشبكة "$result" بنجاح';
+
+      if (planResult != null) {
+        combinedMessage = _joinMessages([
+          networkMessage,
+          planResult['planMessage'] as String?,
+          planResult['batchMessage'] as String?,
+        ]);
+        await _controller.refreshNetworks(force: true);
       }
-      message ??= 'تم إرسال طلب الشبكة بنجاح';
+
+      combinedMessage ??= networkMessage ?? 'تم إرسال طلب الشبكة بنجاح';
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
+        SnackBar(content: Text(combinedMessage!)),
       );
     }
   }
 
   Future<void> _openPlansSheet(
       BuildContext context, WifiNetwork network) async {
-    await showModalBottomSheet<void>(
+    final WifiPlansSheetResult? result = await showModalBottomSheet<
+        WifiPlansSheetResult?>(
+
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -500,7 +520,158 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
         onRegisterPurchase: _registerPurchase,
         onRefreshPurchases: _fetchPurchases,
         onShowCodes: _showCodesDialog,
+
+        allowPlanCreation: _shouldAllowPlanCreation(network),
       ),
     );
+
+    if (!mounted) return;
+
+    if (result == WifiPlansSheetResult.addPlan) {
+      final Map<String, dynamic>? planResult = await _openPlanConfiguration(
+        networkId: network.id,
+        networkName: network.name,
+        defaultCurrency: _resolveCurrencyForNetwork(network),
+      );
+
+      if (!mounted) return;
+
+      if (planResult != null) {
+        final String? message = _joinMessages([
+          planResult['planMessage'] as String?,
+          planResult['batchMessage'] as String?,
+        ]);
+        if (message != null && message.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(message)),
+          );
+        }
+        await _controller.refreshNetworks(force: true);
+      }
+    }
+  }
+
+  Future<Map<String, dynamic>?> _openPlanConfiguration({
+    required int networkId,
+    String? networkName,
+    String? defaultCurrency,
+  }) {
+    return Navigator.of(context).push<Map<String, dynamic>?>(
+      WifiPlanConfigurationScreen.route(
+        networkId: networkId,
+        networkName: networkName,
+        defaultCurrency: (defaultCurrency ?? 'YER').toUpperCase(),
+        repository: _repository,
+
+      ),
+    );
+  }
+
+
+  Map<String, dynamic> _normalizeNetworkSubmission(dynamic result) {
+    if (result is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(result);
+    }
+    if (result is Map) {
+      return Map<String, dynamic>.from(result as Map);
+    }
+    if (result is String) {
+      return <String, dynamic>{'name': result};
+    }
+    return <String, dynamic>{};
+  }
+
+  String? _buildNetworkSubmissionMessage(String? name, String? status) {
+    if (name != null && status != null) {
+      return 'تم إرسال طلب الشبكة "$name" (الحالة: $status)';
+    }
+    if (name != null) {
+      return 'تمت إضافة الشبكة "$name" بنجاح';
+    }
+    if (status != null) {
+      return 'تم إرسال الطلب (الحالة: $status)';
+    }
+    return null;
+  }
+
+  String? _joinMessages(List<String?> messages) {
+    final List<String> filtered = messages
+        .map((message) => message?.trim())
+        .whereType<String>()
+        .where((message) => message.isNotEmpty)
+        .toList();
+    if (filtered.isEmpty) {
+      return null;
+    }
+    return filtered.join('\n');
+  }
+
+  int? _parsePositiveInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value > 0 ? value : null;
+    if (value is num) {
+      final int parsed = value.toInt();
+      return parsed > 0 ? parsed : null;
+    }
+    final int? parsed = int.tryParse(value.toString());
+    if (parsed == null || parsed <= 0) {
+      return null;
+    }
+    return parsed;
+  }
+
+  String _resolveCurrencyForNetwork(WifiNetwork network) {
+    if (network.currencies.isNotEmpty) {
+      return network.currencies.first.toUpperCase();
+    }
+    final dynamic metaCurrency =
+        network.meta?['currency'] ?? network.meta?['default_currency'];
+    if (metaCurrency is String && metaCurrency.trim().isNotEmpty) {
+      return metaCurrency.toUpperCase();
+    }
+    return 'YER';
+  }
+
+  String _resolveCurrencyFromPayload(Map<String, dynamic>? payload) {
+    if (payload == null) return 'YER';
+    final dynamic currency = payload['currency'];
+    if (currency is String && currency.trim().isNotEmpty) {
+      return currency.toUpperCase();
+    }
+    final dynamic currencies = payload['currencies'];
+    if (currencies is List) {
+      for (final dynamic element in currencies) {
+        final String? text = element?.toString();
+        if (text != null && text.trim().isNotEmpty) {
+          return text.toUpperCase();
+        }
+      }
+    }
+    return 'YER';
+  }
+
+  bool _shouldAllowPlanCreation(WifiNetwork network) {
+    final Map<String, dynamic>? meta = network.meta;
+    final List<String?> statuses = <String?>[
+      if (meta?['owner_request'] is Map)
+        (meta!['owner_request'] as Map)['status']?.toString(),
+      meta?['owner_request_status']?.toString(),
+      meta?['status']?.toString(),
+    ];
+
+    bool approved = statuses.any((status) {
+      if (status == null) return false;
+      final String normalized = status.toLowerCase();
+      return normalized == 'approved' ||
+          normalized == 'active' ||
+          normalized == 'published' ||
+          normalized == 'enabled';
+    });
+
+    if (!approved && network.planCount > 0) {
+      approved = true;
+    }
+
+    return approved;
   }
 }

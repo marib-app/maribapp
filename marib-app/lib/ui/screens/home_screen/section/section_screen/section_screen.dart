@@ -22,6 +22,7 @@ import 'widgets/filter_sort_bar/filter_sort_bar.dart';
 import 'widgets/items_body_box.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
 import 'package:marib/utils/featured_section_utils.dart';
+import 'package:marib/utils/logger.dart';
 
 
 class Section_screen extends StatefulWidget {
@@ -73,7 +74,12 @@ class Section_screenState extends State<Section_screen> {
   // =========================
 
   // ✅ تحويل categoryId مرة واحدة
-  late final int _catId = int.parse(widget.categoryId);
+  static const int _defaultCategoryId = 0;
+
+  late final int _catId;
+  bool _catIdUsedFallback = false;
+  bool _hasLoggedFallbackFetch = false;
+
 
   // ✅ حقل البحث + ديباونس
   final TextEditingController searchController = TextEditingController();
@@ -115,6 +121,26 @@ class Section_screenState extends State<Section_screen> {
     final String trimmed = raw.trim();
     if (trimmed.isEmpty) return false;
     return int.tryParse(trimmed) != null;
+  }
+
+
+  int _parseInitialCategoryId(String raw) {
+    final String trimmed = raw.trim();
+    final int? parsed = int.tryParse(trimmed);
+    if (parsed != null) {
+      return parsed;
+    }
+
+    _catIdUsedFallback = true;
+    _emitInvalidCategoryIdLog(raw);
+    return _defaultCategoryId;
+  }
+
+  void _emitInvalidCategoryIdLog(String raw) {
+    Logger.debug(
+      'Section_screen received invalid categoryId "$raw". Falling back to $_defaultCategoryId.',
+      name: 'Section_screen',
+    );
   }
 
   String _resolveCategoryIdString({

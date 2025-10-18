@@ -202,7 +202,12 @@ int _currencyPrecision(String currencyCode) {
   return _currencyPrecisionOverrides[currencyCode] ?? 2;
 }
 
-String formatManualPaymentAmount(double amount, String currencyCode) {
+String formatManualPaymentAmount(double amount, String currencyCode) =>
+    _formatManualPaymentAmountInternal(amount, currencyCode);
+
+String _formatManualPaymentAmountInternal(
+    double amount, String currencyCode) {
+
   final normalizedCurrency = _normalizeCurrencyCode(currencyCode);
   final precision = _currencyPrecision(normalizedCurrency);
 
@@ -605,6 +610,9 @@ class ManualPaymentService {
       manualPaymentWalletTopUpPurpose;
 
   static bool isWalletPurpose(String? value) => _isWalletPurpose(value);
+
+  static String formatManualPaymentAmount(double amount, String currencyCode) =>
+      _formatManualPaymentAmountInternal(amount, currencyCode);
 
 
   ManualPaymentService({Dio? dio})

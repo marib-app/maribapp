@@ -27,7 +27,7 @@
 @section('content')
     <section class="section">
         <div class="row g-4">
-            <div class="col-12 col-xl-7">
+            <div class="col-12 col-xl-7 d-flex flex-column gap-4">
                 <div class="card shadow-sm h-100">
                     <div class="card-header border-0 pb-0 d-flex align-items-center justify-content-between">
                         <div>
@@ -133,16 +133,15 @@
 
 
                 </div>
-            </div>
-
-            <div class="card shadow-sm mt-4">
-                <div class="card-header border-0 pb-0 d-flex align-items-center justify-content-between">
-                    <div>
-                        <h5 class="card-title mb-1">{{ __('Owner Requests') }}</h5>
-                        <p class="text-muted small mb-0">{{ __('Review pending uploads submitted by network owners before activating them.') }}</p>
+                <div class="card shadow-sm">
+                    <div class="card-header border-0 pb-0 d-flex align-items-center justify-content-between">
+                        <div>
+                            <h5 class="card-title mb-1">{{ __('Owner Requests') }}</h5>
+                            <p class="text-muted small mb-0">{{ __('Review pending uploads submitted by network owners before activating them.') }}</p>
+                        </div>
                     </div>
-                </div>
-                <div class="card-body">
+                    <div class="card-body">
+
 
 
                     @if (session('status'))
@@ -284,9 +283,9 @@
                     </div>
                 </div>
             </div>
-        </div>
-            <div class="col-12 col-xl-5">
-                <div class="card shadow-sm h-100 mb-4">
+
+            <div class="col-12 col-xl-5 d-flex flex-column gap-4">
+                <div class="card shadow-sm h-100">
                     <div class="card-header border-0 pb-0">
                         <h5 class="card-title mb-1">{{ __('Stock Overview') }}</h5>
                         <p class="text-muted small mb-0">{{ __('Follow issued vouchers and available balances across networks.') }}</p>

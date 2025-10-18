@@ -6,6 +6,8 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/ui/screens/widgets/errors/no_data_found.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
+import 'package:flutter/foundation.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class WalletTransactionsSliver extends StatelessWidget {
   const WalletTransactionsSliver({
@@ -131,6 +133,7 @@ class WalletTransactionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final onTap = _resolveTapHandler(context);
 
     final amountText = formatAmount(transaction.amount, transaction.currency);
     final accent = _resolveAccentColor(context);
@@ -155,130 +158,158 @@ class WalletTransactionTile extends StatelessWidget {
           width: transaction.highlighted ? 1.4 : 1,
         ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: accent.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: accent.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(
+                      _resolveIcon(),
+                      size: 22,
+                      color: accent,
+                    ),
                   ),
-                  child: Icon(
-                    _resolveIcon(),
-                    size: 22,
-                    color: accent,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _classificationLabel(context),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        if (subtitle != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            subtitle,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        _classificationLabel(context),
+                        amountText,
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      if (subtitle != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          subtitle,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
+                      const SizedBox(height: 4),
+                      Text(
+                        timestamp,
+                        style: theme.textTheme.bodySmall,
+                      ),
                     ],
                   ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                ],
+              ),
+              const SizedBox(height: 16),
+              if (statusLabel != null)
+                Row(
                   children: [
-                    Text(
-                      amountText,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
+                    WalletTransactionInfoRow(
+                      icon: Icons.verified_rounded,
+                      label: statusLabel,
+                      labelStyle: theme.textTheme.bodySmall?.copyWith(
+                        color: accent,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      timestamp,
-                      style: theme.textTheme.bodySmall,
+                  ],
+                ),
+              if (referenceValues.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: referenceValues
+                      .map((value) => _buildTag(context, value, accent))
+                      .toList(),
+                ),
+              ],
+              if (transaction.beforeBalance != null ||
+                  transaction.afterBalance != null) ...[
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: WalletBalanceSummary(
+                        label: 'walletBalanceBefore'.translate(context),
+                        value: transaction.beforeBalance == null
+                            ? '--'
+                            : _formatBalanceValue(transaction.beforeBalance!),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: WalletBalanceSummary(
+                        label: 'walletBalanceAfter'.translate(context),
+                        value: transaction.afterBalance == null
+                            ? '--'
+                            : _formatBalanceValue(transaction.afterBalance!),
+                      ),
                     ),
                   ],
                 ),
               ],
-            ),
-            const SizedBox(height: 16),
-            if (statusLabel != null)
-              Row(
-                children: [
-                  WalletTransactionInfoRow(
-                    icon: Icons.verified_rounded,
-                    label: statusLabel,
-                    labelStyle: theme.textTheme.bodySmall?.copyWith(
-                      color: accent,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            if (referenceValues.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: referenceValues
-                    .map((value) => _buildTag(context, value, accent))
-                    .toList(),
-              ),
             ],
-            if (transaction.beforeBalance != null ||
-                transaction.afterBalance != null) ...[
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: WalletBalanceSummary(
-                      label: 'walletBalanceBefore'.translate(context),
-                      value: transaction.beforeBalance == null
-
-                          ? '--'
-                          : _formatBalanceValue(transaction.beforeBalance!),
-
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: WalletBalanceSummary(
-                      label: 'walletBalanceAfter'.translate(context),
-                      value: transaction.afterBalance == null
-
-                          ? '--'
-                          : _formatBalanceValue(transaction.afterBalance!),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );
   }
 
+  VoidCallback? _resolveTapHandler(BuildContext context) {
+    final deeplink = transaction.deeplink?.trim();
+    if (deeplink == null || deeplink.isEmpty) {
+      return null;
+    }
+
+    final uri = Uri.tryParse(deeplink);
+    if (uri == null) {
+      return null;
+    }
+
+    return () async {
+      try {
+        final launched =
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+        if (!launched && kDebugMode) {
+          debugPrint('Failed to launch wallet deeplink: $deeplink');
+        }
+      } catch (error, stackTrace) {
+        if (kDebugMode) {
+          debugPrint('Failed to launch wallet deeplink: $deeplink -> $error');
+          debugPrintStack(stackTrace: stackTrace);
+        }
+      }
+    };
+  }
+
   String _classificationLabel(BuildContext context) {
     final normalized =
-    (transaction.category ?? transaction.classification ?? '')
-        .toLowerCase()
-        .trim();
+        (transaction.category ?? transaction.classification ?? '')
+            .toLowerCase()
+            .trim();
     switch (normalized) {
       case 'deposit':
       case 'top-up':
@@ -306,9 +337,9 @@ class WalletTransactionTile extends StatelessWidget {
 
   IconData _resolveIcon() {
     final normalized =
-    (transaction.category ?? transaction.classification ?? '')
-        .toLowerCase()
-        .trim();
+        (transaction.category ?? transaction.classification ?? '')
+            .toLowerCase()
+            .trim();
     switch (normalized) {
       case 'transfer':
       case 'wallet_transfer':
@@ -327,9 +358,9 @@ class WalletTransactionTile extends StatelessWidget {
 
   Color _resolveAccentColor(BuildContext context) {
     final normalized =
-    (transaction.category ?? transaction.classification ?? '')
-        .toLowerCase()
-        .trim();
+        (transaction.category ?? transaction.classification ?? '')
+            .toLowerCase()
+            .trim();
     if (normalized.contains('transfer')) {
       return const Color(0xFF3A7AFE);
     }
@@ -413,9 +444,9 @@ class WalletTransactionTile extends StatelessWidget {
       child: Text(
         value,
         style: theme.textTheme.bodySmall?.copyWith(
-          color: accent,
-          fontWeight: FontWeight.w600,
-        ) ??
+              color: accent,
+              fontWeight: FontWeight.w600,
+            ) ??
             TextStyle(
               color: accent,
               fontSize: theme.textTheme.bodySmall?.fontSize ?? 12,

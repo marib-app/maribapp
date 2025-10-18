@@ -82,32 +82,83 @@ class WalletTransaction {
     final amountSource = json['amount'] ?? json['value'] ?? json['delta'];
     final amountDetails = _extractAmountDetails(amountSource);
     final amount = amountDetails.amount ?? 0.0;
-    final appliedFilters = WalletFilter.fromResponse(json['filters'] ?? json['applied_filters']);
-    final category = _parseString(json['category'] ?? json['classification']);
 
-    final references = _parseReferences(json);
 
     final metadataSource = json['meta'] ?? json['metadata'];
     final metadata = metadataSource is Map
         ? Map<String, dynamic>.from(metadataSource as Map)
         : const <String, dynamic>{};
 
+
+    final appliedFilters = WalletFilter.fromResponse(
+      json['filters'] ??
+          json['applied_filters'] ??
+          metadata['filters'] ??
+          metadata['applied_filters'],
+    );
+
+    final category = _parseString(
+      json['category'] ??
+          json['classification'] ??
+          metadata['category'] ??
+          metadata['classification'],
+    );
+
+    final references = _parseReferences(json, metadata);
+    final description = _parseDescription(json, metadata);
+    final referenceCode = _parseReferenceCode(json, metadata);
+    final deeplink = _parseDeeplink(json, metadata);
+
     return WalletTransaction(
       id: id ?? DateTime.now().microsecondsSinceEpoch.toString(),
       amount: amount,
       currency:
-      _parseString(json['currency'] ?? json['amount_currency']) ?? amountDetails.currency,
+      _parseString(
+        json['currency'] ??
+            json['amount_currency'] ??
+            metadata['currency'] ??
+            metadata['amount_currency'],
+      ) ??
+          amountDetails.currency,
 
-      beforeBalance: _parseNullableDouble(json['before_balance'] ?? json['balance_before']),
-      afterBalance: _parseNullableDouble(json['after_balance'] ?? json['balance_after']),
-      classification: _parseString(json['classification'] ?? json['type'] ?? json['category']),
+      beforeBalance: _parseNullableDouble(
+        json['before_balance'] ??
+            json['balance_before'] ??
+            metadata['before_balance'] ??
+            metadata['balance_before'],
+      ),
+      afterBalance: _parseNullableDouble(
+        json['after_balance'] ??
+            json['balance_after'] ??
+            metadata['after_balance'] ??
+            metadata['balance_after'],
+      ),
+      classification: _parseString(
+        json['classification'] ??
+            json['type'] ??
+            json['category'] ??
+            metadata['classification'] ??
+            metadata['type'] ??
+            metadata['category'],
+      ),
       category: category,
-      description: _parseString(json['description'] ?? json['title'] ?? json['message']),
+      description: description,
       references: references,
-      referenceCode: _parseString(json['reference'] ?? json['reference_code'] ?? json['receipt']),
-      createdAt: _parseDate(json['created_at'] ?? json['date'] ?? json['timestamp']),
-      deeplink: _parseString(json['deeplink']),
-      idempotencyKey: _parseString(json['idempotency_key'] ?? json['event_id']),
+      referenceCode: referenceCode,
+      createdAt: _parseDate(
+        json['created_at'] ??
+            json['date'] ??
+            json['timestamp'] ??
+            metadata['created_at'] ??
+            metadata['timestamp'],
+      ),
+      deeplink: deeplink,
+      idempotencyKey: _parseString(
+        json['idempotency_key'] ??
+            json['event_id'] ??
+            metadata['idempotency_key'] ??
+            _deepGet(metadata, const ['wallet', 'idempotency_key']),
+      ),
       metadata: metadata,
       appliedFilters: appliedFilters,
     );
@@ -208,31 +259,148 @@ class WalletTransaction {
     return null;
   }
 
-  static List<String> _parseReferences(Map<String, dynamic> json) {
-    final refs = <String>[];
-    final dynamic directRefs = json['references'] ?? json['refs'];
-    if (directRefs is List) {
-      for (final item in directRefs) {
-        final parsed = _parseString(item);
-        if (parsed != null) refs.add(parsed);
+  static String? _parseDescription(
+      Map<String, dynamic> json,
+      Map<String, dynamic> metadata,
+      ) {
+    final candidates = [
+      json['description'],
+      json['title'],
+      json['message'],
+      metadata['description'],
+      metadata['title'],
+      metadata['message'],
+      metadata['summary'],
+      metadata['note'],
+      metadata['notes'],
+      metadata['withdrawal_notes'],
+    ];
+
+    for (final candidate in candidates) {
+      final parsed = _parseString(candidate);
+      if (parsed != null) {
+        return parsed;
       }
-    } else if (directRefs is String) {
-      refs.add(directRefs);
+
     }
 
-    final otherKeys = [
+    return null;
+  }
+
+  static String? _parseReferenceCode(
+      Map<String, dynamic> json,
+      Map<String, dynamic> metadata,
+      ) {
+    final candidates = [
+
       json['reference'],
       json['reference_code'],
       json['receipt'],
-      json['transfer_reference'],
-      json['external_reference'],
+      metadata['reference_code'],
+      metadata['reference'],
+      metadata['wallet_reference'],
+      metadata['withdrawal_request_reference'],
+      metadata['transfer_reference'],
+      metadata['external_reference'],
+      metadata['manual_reference'],
+      metadata['receipt'],
     ];
-    for (final item in otherKeys) {
-      final parsed = _parseString(item);
-      if (parsed != null) refs.add(parsed);
+
+    for (final candidate in candidates) {
+      final parsed = _parseString(candidate);
+      if (parsed != null) {
+        return parsed;
+      }
     }
 
-    return refs.toSet().toList();
+    return null;
+  }
+
+  static String? _parseDeeplink(
+      Map<String, dynamic> json,
+      Map<String, dynamic> metadata,
+      ) {
+    final candidates = [
+      json['deeplink'],
+      metadata['deeplink'],
+      _deepGet(metadata, const ['links', 'deeplink']),
+      _deepGet(metadata, const ['links', 'url']),
+      _deepGet(metadata, const ['navigation', 'deeplink']),
+      _deepGet(metadata, const ['navigation', 'url']),
+      _deepGet(metadata, const ['wallet', 'deeplink']),
+    ];
+
+    for (final candidate in candidates) {
+      final parsed = _parseString(candidate);
+      if (parsed != null) {
+        return parsed;
+      }
+    }
+
+    return null;
+  }
+
+  static List<String> _parseReferences(
+      Map<String, dynamic> json,
+      Map<String, dynamic> metadata,
+      ) {
+    final refs = <String>{};
+
+    void addCandidate(dynamic value) {
+      final parsed = _parseString(value);
+      if (parsed != null) {
+        refs.add(parsed);
+      }
+    }
+
+    void addCollection(dynamic value) {
+      if (value is List) {
+        for (final item in value) {
+          addCandidate(item);
+        }
+      } else {
+        addCandidate(value);
+      }
+    }
+
+    addCollection(json['references'] ?? json['refs']);
+    addCandidate(json['reference']);
+    addCandidate(json['reference_code']);
+    addCandidate(json['receipt']);
+    addCandidate(json['transfer_reference']);
+    addCandidate(json['external_reference']);
+
+    addCollection(metadata['references'] ?? metadata['refs']);
+    addCandidate(metadata['reference']);
+    addCandidate(metadata['reference_code']);
+    addCandidate(metadata['wallet_reference']);
+    addCandidate(metadata['withdrawal_request_reference']);
+    addCandidate(metadata['transfer_reference']);
+    addCandidate(metadata['external_reference']);
+    addCandidate(metadata['manual_reference']);
+    addCandidate(metadata['receipt']);
+
+    return refs.toList();
+  }
+
+  static dynamic _deepGet(Map<String, dynamic> source, List<Object> path) {
+    dynamic current = source;
+    for (final segment in path) {
+      if (current is Map<String, dynamic>) {
+        current = current[segment];
+      } else if (current is Map) {
+        current = Map<String, dynamic>.from(current as Map)[segment];
+      } else {
+        return null;
+      }
+
+      if (current == null) {
+        return null;
+      }
+    }
+
+    return current;
+
   }
 }
 

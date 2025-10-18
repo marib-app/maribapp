@@ -10,6 +10,9 @@ class UserPreferenceRepository {
   static const String _storageKey = 'user_preferences_v1';
   static const String _pendingSyncKey = 'user_preferences_pending_sync';
   static const String _filterKey = 'user_preferences_watchlist_filter';
+  static const String _assetFilterKey = 'user_preferences_asset_filter';
+  static const String _changeFilterKey = 'user_preferences_change_filter';
+
 
   Future<UserPreferences> loadLocalPreferences() async {
     final prefs = await SharedPreferences.getInstance();
@@ -69,6 +72,31 @@ class UserPreferenceRepository {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_filterKey, value);
   }
+
+
+
+  Future<String?> loadAssetFilter() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_assetFilterKey);
+  }
+
+  Future<void> saveAssetFilter(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_assetFilterKey, value);
+  }
+
+  Future<String?> loadChangeFilter() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_changeFilterKey);
+  }
+
+  Future<void> saveChangeFilter(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_changeFilterKey, value);
+  }
+
+
+
 
   Future<UserPreferences?> fetchRemotePreferences() async {
     try {

@@ -8,6 +8,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:marib/data/cubits/currency/currency_filters.dart';
 
 import 'package:marib/data/model/preference_option.dart';
 import 'package:marib/ui/theme/theme.dart';
@@ -42,7 +43,8 @@ class CurrencyScreenUI extends StatelessWidget {
     required this.onToggleMetalWatchlist,
     required this.onNotificationFrequencyChanged,
     required this.onSelectHistoryRange,
-
+    required this.onAssetFilterChanged,
+    required this.onDirectionFilterChanged,
 
   });
 
@@ -62,7 +64,8 @@ class CurrencyScreenUI extends StatelessWidget {
   final VoidCallback onShareRates;
   final void Function(String?) onGovernorateChanged;
   final void Function(int? currencyId, int days) onSelectHistoryRange;
-
+  final void Function(AssetFilterType) onAssetFilterChanged;
+  final void Function(RateChangeFilter) onDirectionFilterChanged;
   final List<TextInputFormatter> amountInputFormatters;
   final SystemUiOverlayStyle systemUiOverlayStyle;
 
@@ -223,6 +226,33 @@ class CurrencyScreenUI extends StatelessWidget {
     final border = _isDark(context) ? Colors.white12 : Colors.black12;
     final options = state.notificationOptions;
 
+    final Color selectedColor = brand;
+    final Color inactiveColor = _isDark(context)
+        ? Colors.white.withOpacity(0.08)
+        : Colors.black.withOpacity(0.05);
+    final ButtonStyle segmentedStyle = ButtonStyle(
+      backgroundColor: MaterialStateProperty.resolveWith((states) {
+        if (states.contains(MaterialState.selected)) {
+          return selectedColor.withOpacity(0.12);
+        }
+        return inactiveColor;
+      }),
+      foregroundColor: MaterialStateProperty.all(onBg),
+      overlayColor: MaterialStateProperty.all(selectedColor.withOpacity(0.15)),
+      side: MaterialStateProperty.resolveWith((states) {
+        if (states.contains(MaterialState.selected)) {
+          return BorderSide(color: selectedColor, width: 1.4);
+        }
+        return BorderSide(color: border);
+      }),
+      shape: MaterialStateProperty.all(
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+      textStyle: MaterialStateProperty.all(
+        theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+      ),
+    );
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12),
       padding: const EdgeInsets.all(12),
@@ -253,6 +283,86 @@ class CurrencyScreenUI extends StatelessWidget {
               ),
             ],
           ),
+
+          const SizedBox(height: 12),
+          Text(
+            'نوع الأصل',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: onBg.withOpacity(0.7),
+              fontWeight: FontWeight.w600,
+            ),
+            textDirection: TextDirection.rtl,
+          ),
+          const SizedBox(height: 6),
+          Directionality(
+            textDirection: TextDirection.rtl,
+            child: SegmentedButton<AssetFilterType>(
+              style: segmentedStyle,
+              segments: const <ButtonSegment<AssetFilterType>>[
+                ButtonSegment<AssetFilterType>(
+                  value: AssetFilterType.all,
+                  label: Text('الكل'),
+                  icon: Icon(Icons.all_inbox_outlined),
+                ),
+                ButtonSegment<AssetFilterType>(
+                  value: AssetFilterType.currencies,
+                  label: Text('عملات فقط'),
+                  icon: Icon(Icons.payments_outlined),
+                ),
+                ButtonSegment<AssetFilterType>(
+                  value: AssetFilterType.metals,
+                  label: Text('معادن'),
+                  icon: Icon(Icons.auto_awesome_outlined),
+                ),
+              ],
+              selected: <AssetFilterType>{state.assetFilter},
+              onSelectionChanged: (Set<AssetFilterType> value) {
+                if (value.isNotEmpty) {
+                  onAssetFilterChanged(value.first);
+                }
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'اتجاه التغيّر',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: onBg.withOpacity(0.7),
+              fontWeight: FontWeight.w600,
+            ),
+            textDirection: TextDirection.rtl,
+          ),
+          const SizedBox(height: 6),
+          Directionality(
+            textDirection: TextDirection.rtl,
+            child: SegmentedButton<RateChangeFilter>(
+              style: segmentedStyle,
+              segments: const <ButtonSegment<RateChangeFilter>>[
+                ButtonSegment<RateChangeFilter>(
+                  value: RateChangeFilter.all,
+                  label: Text('الكل'),
+                  icon: Icon(Icons.filter_list),
+                ),
+                ButtonSegment<RateChangeFilter>(
+                  value: RateChangeFilter.rising,
+                  label: Text('ارتفاع'),
+                  icon: Icon(Icons.trending_up),
+                ),
+                ButtonSegment<RateChangeFilter>(
+                  value: RateChangeFilter.falling,
+                  label: Text('انخفاض'),
+                  icon: Icon(Icons.trending_down),
+                ),
+              ],
+              selected: <RateChangeFilter>{state.changeFilter},
+              onSelectionChanged: (Set<RateChangeFilter> value) {
+                if (value.isNotEmpty) {
+                  onDirectionFilterChanged(value.first);
+                }
+              },
+            ),
+          ),
+
           if (options.isNotEmpty) ...[
             const SizedBox(height: 12),
             Text(
@@ -364,6 +474,7 @@ class CurrencyScreenUI extends StatelessWidget {
               onShareRates: onShareRates,
               brand: brand,
               onToggleCurrencyWatchlist: onToggleCurrencyWatchlist,
+              onToggleMetalWatchlist: onToggleMetalWatchlist,
               onSelectHistoryRange: onSelectHistoryRange,
             ),
             ConvertTabView(

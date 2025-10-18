@@ -16,6 +16,8 @@ class CurrencySuccess extends CurrencyState {
   final UserPreferences preferences;
   final List<PreferenceOption> notificationOptions;
   final bool showWatchlistOnly;
+  final AssetFilterType assetFilter;
+  final RateChangeFilter changeFilter;
   final List<CurrencyRate> visibleCurrencyRates;
   final List<MetalRate> metalRates;
   final List<MetalRate> visibleMetalRates;
@@ -33,6 +35,8 @@ class CurrencySuccess extends CurrencyState {
     required this.preferences,
     required this.notificationOptions,
     required this.showWatchlistOnly,
+    required this.assetFilter,
+    required this.changeFilter,
     required this.usedFallback,
     this.requestedGovernorateCode,
   });

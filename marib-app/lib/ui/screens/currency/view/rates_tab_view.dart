@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' show DateFormat, NumberFormat;
 import 'package:flutter/foundation.dart' show listEquals;
+import 'package:marib/data/model/metal_rate.dart';
 
 import 'package:marib/data/model/currency_history.dart';
 import 'package:marib/data/model/currency_rate.dart';
@@ -13,6 +14,7 @@ class RatesTabView extends StatelessWidget {
     required this.state,
     required this.onShareRates,
     required this.brand,
+    required this.onToggleMetalWatchlist,
 
     required this.onToggleCurrencyWatchlist,
     required this.onSelectHistoryRange,
@@ -25,6 +27,7 @@ class RatesTabView extends StatelessWidget {
   final Color brand;
   final void Function(int) onToggleCurrencyWatchlist;
   final void Function(int? currencyId, int days) onSelectHistoryRange;
+  final void Function(int) onToggleMetalWatchlist;
 
   bool _isDark(BuildContext c) =>
       Theme
@@ -36,6 +39,13 @@ class RatesTabView extends StatelessWidget {
       for (final dynamic item in rates) {
         if (item is CurrencyRate) {
           final String? source = item.quoteSource;
+          if (source != null && source.trim().isNotEmpty) {
+            return source.trim();
+          }
+          continue;
+        }
+        if (item is MetalRate) {
+          final String? source = item.source;
           if (source != null && source.trim().isNotEmpty) {
             return source.trim();
           }
@@ -615,6 +625,135 @@ class RatesTabView extends StatelessWidget {
     );
   }
 
+
+
+  Widget _metalRow(
+      BuildContext context, {
+        required MetalRate rate,
+        required bool isWatchlisted,
+        required VoidCallback onToggleWatchlist,
+      }) {
+    final theme = Theme.of(context);
+    final onBg = _isDark(context) ? Colors.white : Colors.black;
+    final divider = _isDark(context) ? Colors.white12 : Colors.black12;
+    final NumberFormat formatter = NumberFormat('#,##0.###', 'en');
+
+    String format(double value) {
+      if (value.isNaN || value.isInfinite) {
+        return '--';
+      }
+      return formatter.format(value);
+    }
+
+    final Widget star = IconButton(
+      onPressed: onToggleWatchlist,
+      icon: Icon(
+        isWatchlisted ? Icons.star_rounded : Icons.star_outline_rounded,
+        color: isWatchlisted ? Colors.amber : onBg.withOpacity(0.35),
+      ),
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+      splashRadius: 20,
+      tooltip:
+      isWatchlisted ? 'إزالة من قائمة المراقبة' : 'إضافة إلى قائمة المراقبة',
+    );
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {},
+        splashColor: brand.withOpacity(0.06),
+        highlightColor: brand.withOpacity(0.03),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: divider, width: 1)),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                rate.isGold ? Icons.workspace_premium : Icons.auto_awesome,
+                color: brand,
+                size: 28,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      rate.displayName,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: onBg,
+                        fontWeight: FontWeight.w800,
+                      ),
+                      textDirection: TextDirection.rtl,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      rate.karatLabel,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: onBg.withOpacity(0.6),
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textDirection: TextDirection.rtl,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'سعر البيع',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: onBg.withOpacity(0.6),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    format(rate.sellPrice),
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: brand,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'سعر الشراء',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: onBg.withOpacity(0.6),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    format(rate.buyPrice),
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: onBg.withOpacity(0.85),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 12),
+              star,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+
+
+
   // ---------- بطاقة الملاحظة (احتفظنا بها كما أعجبتك) ----------
   Widget _noteCard(BuildContext context) {
     final theme = Theme.of(context);
@@ -726,6 +865,36 @@ class RatesTabView extends StatelessWidget {
         if (i == 0) return _header(context);
         if (i == rates.length + 1) return _noteCard(context);
         final dynamic r = rates[i - 1];
+
+
+        if (r is CurrencyRate) {
+          final bool isWatchlisted = state.currencyWatchlist.contains(r.id);
+          return _row(
+            context,
+            name: r.currencyName,
+            sell: r.sellPrice.toString(),
+            buy: r.buyPrice.toString(),
+            iconUrl: r.iconUrl,
+            iconAlt: r.iconAlt,
+            isWatchlisted: isWatchlisted,
+            onToggleWatchlist: () => onToggleCurrencyWatchlist(r.id),
+            history: r.history,
+            selectedRangeDays: state.historyRangeForCurrency(r.id),
+            onHistoryRangeSelected: (int days) =>
+                onSelectHistoryRange(r.id, days),
+          );
+        }
+
+        if (r is MetalRate) {
+          final bool isWatchlisted = state.metalWatchlist.contains(r.id);
+          return _metalRow(
+            context,
+            rate: r,
+            isWatchlisted: isWatchlisted,
+            onToggleWatchlist: () => onToggleMetalWatchlist(r.id),
+          );
+        }
+
         final int? currencyId = _id(r);
         final int rateId = currencyId ?? 0;
         final bool isWatchlisted = state.currencyWatchlist.contains(rateId);

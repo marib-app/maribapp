@@ -14,6 +14,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart' show DateFormat, NumberFormat;
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter/rendering.dart';
+import 'package:marib/data/cubits/currency/currency_filters.dart';
 
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/ui_utils.dart';
@@ -80,7 +81,8 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
     with TickerProviderStateMixin {
   late final TabController _tabController;
   final TextEditingController _amountController = TextEditingController();
-  final GlobalKey _shareBoundaryKey = GlobalKey(debugLabel: 'currencyShareBoundary');
+  final GlobalKey _shareBoundaryKey = GlobalKey(
+      debugLabel: 'currencyShareBoundary');
 
   String _fromCurrency = '';
   String _toCurrency = '';
@@ -364,11 +366,15 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
 
   void _onToggleMetalWatchlist(int metalId) {
     context.read<CurrencyCubit>().toggleMetalWatchlist(metalId);
-  }
 
-  void _onNotificationFrequencyChanged(String value) {
-    context.read<CurrencyCubit>().changeNotificationFrequency(value);
-  }
+
+    void _onAssetFilterChanged(AssetFilterType filter) {
+      context.read<CurrencyCubit>().changeAssetFilter(filter);
+    }
+
+    void _onDirectionFilterChanged(RateChangeFilter filter) {
+      context.read<CurrencyCubit>().changeChangeDirectionFilter(filter);
+    }
 
   void _onHistoryRangeSelected(int? currencyId, int days) {
     if (days != 1 && days != 3 && days != 7) {
@@ -470,6 +476,10 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
             hasCalculated: _hasCalculated,
             notificationFrequency: 'daily',
             notificationOptions: const <PreferenceOption>[],
+
+            assetFilter: AssetFilterType.all,
+            changeFilter: RateChangeFilter.all,
+
           );
         } else if (state is CurrencyError) {
           viewState = CurrencyViewState(
@@ -510,6 +520,8 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
             hasCalculated: _hasCalculated,
             notificationFrequency: 'daily',
             notificationOptions: const <PreferenceOption>[],
+            assetFilter: AssetFilterType.all,
+            changeFilter: RateChangeFilter.all,
           );
         } else if (state is CurrencySuccess) {
           final rates = state.currencyRates;
@@ -520,7 +532,22 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
           final silverRates = state.metalRates
               .where((rate) => rate.isSilver)
               .toList(growable: false);
-          final displayRates = state.visibleCurrencyRates;
+          final List<dynamic> combinedDisplayRates;
+          switch (state.assetFilter) {
+            case AssetFilterType.all:
+              combinedDisplayRates = <dynamic>[
+                ...state.visibleCurrencyRates,
+                ...state.visibleMetalRates,
+              ];
+              break;
+            case AssetFilterType.currencies:
+              combinedDisplayRates = List<dynamic>.of(state.visibleCurrencyRates);
+              break;
+            case AssetFilterType.metals:
+              combinedDisplayRates = List<dynamic>.of(state.visibleMetalRates);
+              break;
+          }
+
           final displayGoldRates = state.visibleMetalRates
               .where((rate) => rate.isGold)
               .toList(growable: false);
@@ -573,7 +600,7 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
 
             rates: rates,
 
-            displayRates: displayRates,
+            displayRates: combinedDisplayRates,
             lastUpdatedAt: updatedAt,
             watchlist: state.preferences.currencyWatchlist,
             showWatchlistOnly: state.showWatchlistOnly,
@@ -611,7 +638,8 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
             usedFallback: state.usedFallback,
             notificationFrequency: state.preferences.notificationFrequency,
             notificationOptions: state.notificationOptions,
-
+            assetFilter: state.assetFilter,
+            changeFilter: state.changeFilter,
             amountText: _amountController.text,
             fromCurrency: _fromCurrency,
             toCurrency: _toCurrency,
@@ -657,6 +685,8 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
             hasCalculated: _hasCalculated,
             notificationFrequency: 'daily',
             notificationOptions: const <PreferenceOption>[],
+            assetFilter: AssetFilterType.all,
+            changeFilter: RateChangeFilter.all,
           );
         }
 
@@ -678,6 +708,8 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
           onToggleMetalWatchlist: _onToggleMetalWatchlist,
           onNotificationFrequencyChanged: _onNotificationFrequencyChanged,
           onSelectHistoryRange: _onHistoryRangeSelected,
+          onAssetFilterChanged: _onAssetFilterChanged,
+          onDirectionFilterChanged: _onDirectionFilterChanged,
 
           // 🔧 لا تستخدم const هنا
           amountInputFormatters: [

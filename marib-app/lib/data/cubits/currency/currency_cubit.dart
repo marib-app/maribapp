@@ -13,6 +13,8 @@ import 'package:marib/data/repositories/metal_repository.dart';
 import 'package:marib/data/repositories/preferences/user_preference_repository.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/data/model/currency_history.dart';
+import 'currency_filters.dart';
+import 'package:marib/data/model/currency_history.dart';
 
 
 
@@ -34,10 +36,20 @@ class CurrencyCubit extends Cubit<CurrencyState> {
   UserPreferences _preferences = const UserPreferences();
   List<PreferenceOption> _notificationOptions = const <PreferenceOption>[];
   bool _showWatchlistOnly = false;
+  AssetFilterType _assetFilter = AssetFilterType.all;
+  RateChangeFilter _changeFilter = RateChangeFilter.all;
+
+
 
   Future<void> initialize() async {
     _preferences = await _preferenceRepository.loadLocalPreferences();
     _showWatchlistOnly = await _preferenceRepository.loadWatchlistFilter();
+    _assetFilter = AssetFilterTypeStorage.fromStorage(
+      await _preferenceRepository.loadAssetFilter(),
+    );
+    _changeFilter = RateChangeFilterStorage.fromStorage(
+      await _preferenceRepository.loadChangeFilter(),
+    );
 
     if (HiveUtils.isUserAuthenticated() &&
         await _preferenceRepository.hasPendingSync()) {
@@ -156,6 +168,8 @@ class CurrencyCubit extends Cubit<CurrencyState> {
         preferences: _preferences,
         notificationOptions: _notificationOptions,
         showWatchlistOnly: _showWatchlistOnly,
+        assetFilter: _assetFilter,
+        changeFilter: _changeFilter,
 
       ));
     } catch (error) {
@@ -164,23 +178,35 @@ class CurrencyCubit extends Cubit<CurrencyState> {
   }
 
   List<CurrencyRate> _filterCurrencyRates(List<CurrencyRate> rates) {
-    if (!_showWatchlistOnly) {
-      return rates;
+    if (_assetFilter == AssetFilterType.metals) {
+      return const <CurrencyRate>[];
     }
-    final Set<int> watchlist = _preferences.currencyWatchlist;
-    return rates
-        .where((CurrencyRate rate) => watchlist.contains(rate.id))
-        .toList(growable: false);
+    Iterable<CurrencyRate> filtered = rates;
+
+    if (_changeFilter != RateChangeFilter.all) {
+      filtered = filtered.where(_matchesCurrencyChangeFilter);
+    }
+
+    if (_showWatchlistOnly) {
+      final Set<int> watchlist = _preferences.currencyWatchlist;
+      filtered = filtered.where((CurrencyRate rate) => watchlist.contains(rate.id));
+    }
+
+    return filtered.toList(growable: false);
   }
 
   List<MetalRate> _filterMetalRates(List<MetalRate> rates) {
-    if (!_showWatchlistOnly) {
-      return rates;
+    Iterable<MetalRate> filtered = rates;
+
+    if (_changeFilter != RateChangeFilter.all) {
+      filtered = filtered.where(_matchesMetalChangeFilter);
     }
-    final Set<int> watchlist = _preferences.metalWatchlist;
-    return rates
-        .where((MetalRate rate) => watchlist.contains(rate.id))
-        .toList(growable: false);
+    if (_showWatchlistOnly) {
+      final Set<int> watchlist = _preferences.metalWatchlist;
+      filtered = filtered.where((MetalRate rate) => watchlist.contains(rate.id));
+    }
+
+    return filtered.toList(growable: false);
   }
 
   Future<void> changeGovernorate(String? governorateCode) async {
@@ -199,6 +225,28 @@ class CurrencyCubit extends Cubit<CurrencyState> {
     await _preferenceRepository.saveWatchlistFilter(enabled);
     _refreshSuccessState();
   }
+
+
+
+  Future<void> changeAssetFilter(AssetFilterType filter) async {
+    if (_assetFilter == filter) {
+      return;
+    }
+    _assetFilter = filter;
+    await _preferenceRepository.saveAssetFilter(filter.storageValue);
+    _refreshSuccessState();
+  }
+
+  Future<void> changeChangeDirectionFilter(RateChangeFilter filter) async {
+    if (_changeFilter == filter) {
+      return;
+    }
+    _changeFilter = filter;
+    await _preferenceRepository.saveChangeFilter(filter.storageValue);
+    _refreshSuccessState();
+  }
+
+
 
   Future<void> toggleCurrencyWatchlist(int currencyId) async {
     final Set<int> updated = Set<int>.from(_preferences.currencyWatchlist);
@@ -330,8 +378,77 @@ class CurrencyCubit extends Cubit<CurrencyState> {
       preferences: _preferences,
       notificationOptions: _notificationOptions,
       showWatchlistOnly: _showWatchlistOnly,
+      assetFilter: _assetFilter,
+      changeFilter: _changeFilter,
     ));
   }
+
+
+
+
+  bool _matchesCurrencyChangeFilter(CurrencyRate rate) {
+    final double? delta = _resolveCurrencyChange(rate);
+    if (delta == null) {
+      return _changeFilter == RateChangeFilter.all;
+    }
+
+    switch (_changeFilter) {
+      case RateChangeFilter.all:
+        return true;
+      case RateChangeFilter.rising:
+        return delta > 0;
+      case RateChangeFilter.falling:
+        return delta < 0;
+    }
+  }
+
+  bool _matchesMetalChangeFilter(MetalRate rate) {
+    final double? delta = rate.sellPrice - rate.buyPrice;
+
+    switch (_changeFilter) {
+      case RateChangeFilter.all:
+        return true;
+      case RateChangeFilter.rising:
+        return delta > 0;
+      case RateChangeFilter.falling:
+        return delta < 0;
+    }
+  }
+
+  double? _resolveCurrencyChange(CurrencyRate rate) {
+    final CurrencyHistoryBundle? history = rate.history;
+    if (history != null && history.ranges.isNotEmpty) {
+      for (final CurrencyHistoryRange range in history.ranges.values) {
+        final CurrencyHistorySummary summary = range.summary;
+        if (summary.isPositiveTrend) {
+          return 1;
+        }
+        if (summary.isNegativeTrend) {
+          return -1;
+        }
+        if (summary.changeSellPercent != null && summary.changeSellPercent != 0) {
+          return summary.changeSellPercent;
+        }
+        if (summary.changeSell != null && summary.changeSell != 0) {
+          return summary.changeSell;
+        }
+        if (summary.changeBuyPercent != null && summary.changeBuyPercent != 0) {
+          return summary.changeBuyPercent;
+        }
+        if (summary.changeBuy != null && summary.changeBuy != 0) {
+          return summary.changeBuy;
+        }
+      }
+    }
+
+    final double fallbackDelta = rate.sellPrice - rate.buyPrice;
+    if (fallbackDelta != 0) {
+      return fallbackDelta;
+    }
+    return null;
+  }
+
+
 
   double calculateConversion({
     required double amount,

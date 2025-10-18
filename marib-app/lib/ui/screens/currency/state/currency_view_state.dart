@@ -1,5 +1,6 @@
 import 'package:marib/data/model/metal_rate.dart';
 import 'package:marib/data/model/preference_option.dart';
+import 'package:marib/data/cubits/currency/currency_filters.dart';
 
 import 'currency_page_status.dart';
 import 'currency_rates_state.dart';
@@ -25,6 +26,8 @@ class CurrencyViewState {
     required this.toCurrency,
     required this.convertedAmount,
     required this.hasCalculated,
+    required this.assetFilter,
+    required this.changeFilter,
     required this.notificationFrequency,
     required List<PreferenceOption> notificationOptions,
   })  : governorates = _wrapGovernorates(governorates),
@@ -44,7 +47,8 @@ class CurrencyViewState {
   final String? requestedGovernorateCode;
   final String? requestedGovernorateName;
   final bool usedFallback;
-
+  final AssetFilterType assetFilter;
+  final RateChangeFilter changeFilter;
   final String amountText;
   final String fromCurrency;
   final String toCurrency;
@@ -93,6 +97,8 @@ class CurrencyViewState {
     bool? hasCalculated,
     String? notificationFrequency,
     List<PreferenceOption>? notificationOptions,
+    AssetFilterType? assetFilter,
+    RateChangeFilter? changeFilter,
   }) {
     return CurrencyViewState(
       status: status ?? this.status,
@@ -122,6 +128,10 @@ class CurrencyViewState {
       notificationFrequency ?? this.notificationFrequency,
       notificationOptions:
       notificationOptions ?? this.notificationOptions,
+
+      assetFilter: assetFilter ?? this.assetFilter,
+      changeFilter: changeFilter ?? this.changeFilter,
+
     );
   }
 

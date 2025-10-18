@@ -19,6 +19,11 @@ class WifiOwnerPlanSummaryController extends WifiCabinApiController
 
     protected bool $requiresManagePermission = false;
 
+    protected ?int $recentOwnerRequestNetworkId = null;
+
+    protected bool $recentOwnerRequestNetworkIdResolved = false;
+
+
 
     public function __construct(
         WifiCodeSummaryService $codeSummaryService,
@@ -54,6 +59,11 @@ class WifiOwnerPlanSummaryController extends WifiCabinApiController
         if ($this->hasPendingOwnerRequest($user)) {
             return;
         }
+
+        if ($this->resolveRecentOwnerRequestNetworkId($user) !== null) {
+            return;
+        }
+
 
         if ($user->can('wifi-cabin-manage')) {
             return;
@@ -164,6 +174,14 @@ class WifiOwnerPlanSummaryController extends WifiCabinApiController
                                     });
                             });
                     });
+
+
+                $recentNetworkId = $this->resolveRecentOwnerRequestNetworkId($user);
+
+                if ($recentNetworkId !== null) {
+                    $builder->orWhere('id', $recentNetworkId);
+                }
+
             });
         
         } else {
@@ -172,4 +190,48 @@ class WifiOwnerPlanSummaryController extends WifiCabinApiController
 
         return $query;
     }
+
+
+
+
+    protected function resolveRecentOwnerRequestNetworkId(Authenticatable $user): ?int
+    {
+        if ($this->recentOwnerRequestNetworkIdResolved) {
+            return $this->recentOwnerRequestNetworkId;
+        }
+
+        $this->recentOwnerRequestNetworkIdResolved = true;
+
+        $batch = WifiCodeBatch::query()
+            ->where('uploaded_by', $user->getKey())
+            ->whereNotNull('meta->owner_request')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('created_at')
+            ->first();
+
+        if (! $batch) {
+            return $this->recentOwnerRequestNetworkId = null;
+        }
+
+        $networkId = $batch->wifi_network_id;
+
+        if (! $networkId) {
+            return $this->recentOwnerRequestNetworkId = null;
+        }
+
+        $networkExists = WifiNetwork::query()
+            ->whereKey($networkId)
+            ->exists();
+
+        if (! $networkExists) {
+            return $this->recentOwnerRequestNetworkId = null;
+        }
+
+        $this->recentOwnerRequestNetworkId = (int) $networkId;
+
+        return $this->recentOwnerRequestNetworkId;
+    }
+
+
+
 }

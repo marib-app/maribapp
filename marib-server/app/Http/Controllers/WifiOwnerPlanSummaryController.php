@@ -11,6 +11,10 @@ use Illuminate\Http\Request;
 
 class WifiOwnerPlanSummaryController extends WifiCabinApiController
 {
+
+    protected bool $requiresManagePermission = false;
+
+
     public function __construct(
         WifiCodeSummaryService $codeSummaryService,
         WifiOwnerRequestService $ownerRequestService

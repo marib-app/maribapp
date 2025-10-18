@@ -106,14 +106,26 @@ class PaymentRequestTableQuery
             ? "NULL as department"
             : 'COALESCE(' . implode(', ', $departmentParts) . ') as department';
 
+        $manualBankAliasSqlList = implode(', ', array_map(
+            static fn (string $alias): string => "'" . $alias . "'",
+            ManualPaymentRequest::manualBankGatewayAliases()
+        ));
+
+        $sanitizeManualBankAlias = static function (string $column) use ($manualBankAliasSqlList): string {
+            return 'CASE'
+                . " WHEN TRIM(COALESCE({$column}, '')) = '' THEN NULL"
+                . " WHEN LOWER(TRIM({$column})) IN ({$manualBankAliasSqlList}) THEN NULL"
+                . " ELSE {$column}"
+                . ' END';
+        };
 
         $manualBankNameParts = [];
 
         if ($supportsManualBankLookupName) {
-            $manualBankNameParts[] = "NULLIF(manual_bank_lookup.name, '')";
+            $manualBankNameParts[] = $sanitizeManualBankAlias('manual_bank_lookup.name');
         }
         if ($supportsManualBankLookupBeneficiaryName) {
-            $manualBankNameParts[] = "NULLIF(manual_bank_lookup.beneficiary_name, '')";
+            $manualBankNameParts[] = $sanitizeManualBankAlias('manual_bank_lookup.beneficiary_name');
         }
 
         if ($supportsManualBankName) {
@@ -129,18 +141,6 @@ class PaymentRequestTableQuery
         $channelExpression = self::channelExpression('pt');
 
 
-        $manualBankAliasSqlList = implode(', ', array_map(
-            static fn (string $alias): string => "'" . $alias . "'",
-            ManualPaymentRequest::manualBankGatewayAliases()
-        ));
-
-        $sanitizeManualBankAlias = static function (string $column) use ($manualBankAliasSqlList): string {
-            return 'CASE'
-                . " WHEN TRIM(COALESCE({$column}, '')) = '' THEN NULL"
-                . " WHEN LOWER(TRIM({$column})) IN ({$manualBankAliasSqlList}) THEN NULL"
-                . " ELSE {$column}"
-                . ' END';
-        };
 
 
         $paymentGatewayNameParts = [];
@@ -153,10 +153,10 @@ class PaymentRequestTableQuery
         $manualGatewayNameParts = [];
 
         if ($supportsManualBankLookupName) {
-            $manualGatewayNameParts[] = "NULLIF(manual_bank_lookup.name, '')";
+            $manualGatewayNameParts[] = $sanitizeManualBankAlias('manual_bank_lookup.name');
         }
         if ($supportsManualBankLookupBeneficiaryName) {
-            $manualGatewayNameParts[] = "NULLIF(manual_bank_lookup.beneficiary_name, '')";
+            $manualGatewayNameParts[] = $sanitizeManualBankAlias('manual_bank_lookup.beneficiary_name');
         }
 
         if ($supportsManualBankName) {

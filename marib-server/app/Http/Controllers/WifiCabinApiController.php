@@ -27,6 +27,9 @@ use Throwable;
 
 class WifiCabinApiController extends Controller
 {
+    protected bool $requiresManagePermission = true;
+
+
     protected int $defaultLowStockThreshold = 10;
 
     public function __construct(
@@ -36,7 +39,10 @@ class WifiCabinApiController extends Controller
 
 
     {
-        $this->middleware('permission:wifi-cabin-manage');
+        if ($this->requiresManagePermission) {
+            $this->middleware('permission:wifi-cabin-manage');
+        }
+    
     }
 
 

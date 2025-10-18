@@ -53,6 +53,17 @@ class PaymentRequestTableQuery
         '',
     ];
 
+
+    private const MANUAL_BANK_ALIASES = [
+        'manual_bank',
+        'manual_banks',
+        'manual bank',
+        'manual banks',
+        'manual-bank',
+        'manual-banks',
+    ];
+
+
     /**
      * Build the unified payment request table query.
      */
@@ -130,6 +141,20 @@ class PaymentRequestTableQuery
         }
         $paymentGatewayNameParts[] = "NULLIF(pt.payment_gateway, '')";
 
+        $manualBankAliasSqlList = implode(', ', array_map(
+            static fn (string $alias): string => "'" . $alias . "'",
+            self::MANUAL_BANK_ALIASES
+        ));
+
+        $sanitizeManualBankAlias = static function (string $column) use ($manualBankAliasSqlList): string {
+            return 'CASE'
+                . " WHEN TRIM(COALESCE({$column}, '')) = '' THEN NULL"
+                . " WHEN LOWER(TRIM({$column})) IN ({$manualBankAliasSqlList}) THEN NULL"
+                . " ELSE {$column}"
+                . ' END';
+        };
+
+
         $manualGatewayNameParts = [];
 
         if ($supportsManualBankLookupName) {
@@ -158,7 +183,14 @@ class PaymentRequestTableQuery
         if ($supportsManualGatewayName) {
             $walletGatewayNameParts[] = "NULLIF(mpr.gateway_name, '')";
         }
-        $walletGatewayNameParts = array_merge($walletGatewayNameParts, $paymentGatewayNameParts);
+        $walletPaymentGatewayNameParts = [];
+        if ($supportsPaymentGatewayName) {
+            $walletPaymentGatewayNameParts[] = $sanitizeManualBankAlias('pt.payment_gateway_name');
+        }
+        $walletPaymentGatewayNameParts[] = $sanitizeManualBankAlias('pt.payment_gateway');
+        $walletGatewayNameParts = array_merge($walletGatewayNameParts, $walletPaymentGatewayNameParts);
+        
+        
         $walletGatewayNameParts[] = "'Wallet'";
         $paymentTransactionWalletGatewayNameSelect = 'COALESCE(' . implode(', ', $walletGatewayNameParts) . ')';
 

@@ -391,11 +391,35 @@ class ManualPaymentRequestController extends Controller
 
     
 
-    public function show(ManualPaymentRequest $manualPaymentRequest) 
+    public function show(ManualPaymentRequest $manualPaymentRequest)
     {
         ResponseService::noAnyPermissionThenSendJson(['manual-payments-list', 'manual-payments-review']);
 
         $manualPaymentRequest = $this->loadManualPaymentRequestRelations($manualPaymentRequest);
+
+        return view('payments.manual.show', array_merge([
+            'request' => $manualPaymentRequest,
+            'canReview' => Auth::user()->can('manual-payments-review') && $manualPaymentRequest->isOpen(),
+            'timelineData' => $this->manualPaymentTimelinePayload($manualPaymentRequest),
+        ], $this->manualPaymentRequestPresentationData($manualPaymentRequest)));
+    }
+
+
+    public function review(ManualPaymentRequest $manualPaymentRequest)
+    {
+        ResponseService::noAnyPermissionThenRedirect(['manual-payments-list', 'manual-payments-review']);
+
+        $manualPaymentRequest = $this->loadManualPaymentRequestRelations($manualPaymentRequest);
+
+        return view('payments.manual.review', array_merge([
+            'request' => $manualPaymentRequest,
+            'canReview' => Auth::user()->can('manual-payments-review') && $manualPaymentRequest->isOpen(),
+            'timelineData' => $this->manualPaymentTimelinePayload($manualPaymentRequest),
+        ], $this->manualPaymentRequestPresentationData($manualPaymentRequest)));
+    }
+
+    private function manualPaymentRequestPresentationData(ManualPaymentRequest $manualPaymentRequest): array
+    {
 
         $paymentTransaction = $manualPaymentRequest->paymentTransaction;
         $paymentGatewayKey = $paymentTransaction?->payment_gateway ?? $manualPaymentRequest->channel;
@@ -412,35 +436,12 @@ class ManualPaymentRequestController extends Controller
         );
         $departmentLabel = $this->paymentRequestDepartmentLabel($manualPaymentRequest->department ?? null);
 
-        return view('payments.manual.show', [
-            'request' => $manualPaymentRequest,
-            'canReview' => Auth::user()->can('manual-payments-review') && $manualPaymentRequest->isOpen(),
-            'timelineData' => $this->manualPaymentTimelinePayload($manualPaymentRequest),
-
-
-
-            'paymentGatewayKey' => $paymentGatewayKey,
-            'paymentGatewayCanonical' => $paymentGatewayCanonical,
-            'paymentGatewayLabel' => $paymentGatewayLabel,
-            'departmentLabel' => $departmentLabel,
-            
-
-        ]);
-    }
-      
-
-    public function review(ManualPaymentRequest $manualPaymentRequest)
-    {
-        ResponseService::noAnyPermissionThenRedirect(['manual-payments-list', 'manual-payments-review']);
-
-        $manualPaymentRequest = $this->loadManualPaymentRequestRelations($manualPaymentRequest);
-
-        return view('payments.manual.review', [
-            'request' => $manualPaymentRequest,
-            'canReview' => Auth::user()->can('manual-payments-review') && $manualPaymentRequest->isOpen(),
-
-            'timelineData' => $this->manualPaymentTimelinePayload($manualPaymentRequest),
-        ]);
+        return compact(
+            'paymentGatewayKey',
+            'paymentGatewayCanonical',
+            'paymentGatewayLabel',
+            'departmentLabel'
+        );
     }
 
     public function timeline(ManualPaymentRequest $manualPaymentRequest)

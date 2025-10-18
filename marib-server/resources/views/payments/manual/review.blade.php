@@ -61,6 +61,12 @@
                     'request' => $request,
                     'canReview' => $canReview,
                     'timelineData' => $timelineData ?? [],
+
+                    'paymentGatewayKey' => $paymentGatewayKey ?? null,
+                    'paymentGatewayCanonical' => $paymentGatewayCanonical ?? null,
+                    'paymentGatewayLabel' => $paymentGatewayLabel ?? null,
+                    'departmentLabel' => $departmentLabel ?? null,
+
                 ])
             
             </div>

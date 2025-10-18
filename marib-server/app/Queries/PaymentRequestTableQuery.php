@@ -119,7 +119,6 @@ class PaymentRequestTableQuery
                 . ' END';
         };
 
-        $manualBankNameParts = [];
         $sanitizedManualBankName = $supportsManualBankName
             ? $sanitizeManualBankAlias('mpr.bank_name')
             : null;
@@ -127,24 +126,22 @@ class PaymentRequestTableQuery
             ? $sanitizeManualBankAlias('mpr.bank_account_name')
             : null;
 
+        $manualBankLookupParts = [];
 
         if ($supportsManualBankLookupName) {
-            $manualBankNameParts[] = $sanitizeManualBankAlias('manual_bank_lookup.name');
+            $manualBankLookupParts[] = $sanitizeManualBankAlias('manual_bank_lookup.name');
         }
         if ($supportsManualBankLookupBeneficiaryName) {
-            $manualBankNameParts[] = $sanitizeManualBankAlias('manual_bank_lookup.beneficiary_name');
+            $manualBankLookupParts[] = $sanitizeManualBankAlias('manual_bank_lookup.beneficiary_name');
         }
 
-        if ($sanitizedManualBankName !== null) {
+        $manualBankRequestParts = array_values(array_filter([
+            $sanitizedManualBankName,
+            $sanitizedManualBankAccountName,
+        ], static fn (?string $part): bool => $part !== null));
 
-            $manualBankNameParts[] = $sanitizedManualBankName;
-        
-        }
-        if ($sanitizedManualBankAccountName !== null) {
+        $manualBankNameParts = array_merge($manualBankLookupParts, $manualBankRequestParts);
 
-            $manualBankNameParts[] = $sanitizedManualBankAccountName;
-        
-        }
         $manualBankNameSelect = $manualBankNameParts === []
             ? 'NULL'
             : 'COALESCE(' . implode(', ', $manualBankNameParts) . ')';
@@ -161,30 +158,28 @@ class PaymentRequestTableQuery
         $paymentGatewayNameParts[] = $sanitizeManualBankAlias('pt.payment_gateway');
 
 
-        $manualGatewayNameParts = [];
+        $manualGatewayLookupParts = [];
 
         if ($supportsManualBankLookupName) {
-            $manualGatewayNameParts[] = $sanitizeManualBankAlias('manual_bank_lookup.name');
+            $manualGatewayLookupParts[] = $sanitizeManualBankAlias('manual_bank_lookup.name');
         }
         if ($supportsManualBankLookupBeneficiaryName) {
-            $manualGatewayNameParts[] = $sanitizeManualBankAlias('manual_bank_lookup.beneficiary_name');
+            $manualGatewayLookupParts[] = $sanitizeManualBankAlias('manual_bank_lookup.beneficiary_name');
+
         }
 
-        if ($sanitizedManualBankName !== null) {
+        $manualGatewayRequestParts = array_values(array_filter([
+            $sanitizedManualBankName,
+            $sanitizedManualBankAccountName,
+            $supportsManualGatewayName ? $sanitizeManualBankAlias('mpr.gateway_name') : null,
+        ], static fn (?string $part): bool => $part !== null));
 
-            $manualGatewayNameParts[] = $sanitizedManualBankName;
+        $manualGatewayNameParts = array_merge(
+            $manualGatewayLookupParts,
+            $manualGatewayRequestParts,
+            $paymentGatewayNameParts,
+        );
         
-        }
-        if ($sanitizedManualBankAccountName !== null) {
-
-            $manualGatewayNameParts[] = $sanitizedManualBankAccountName;
-        
-        }
-        if ($supportsManualGatewayName) {
-            $manualGatewayNameParts[] = $sanitizeManualBankAlias('mpr.gateway_name');
-        }
-
-        $manualGatewayNameParts = array_merge($manualGatewayNameParts, $paymentGatewayNameParts);
         $manualGatewayNameParts[] = "'Manual Banks'";
         $manualGatewayNameSelect = 'COALESCE(' . implode(', ', $manualGatewayNameParts) . ')';
 

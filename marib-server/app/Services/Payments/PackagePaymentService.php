@@ -82,7 +82,7 @@ class PackagePaymentService
 
         $package = Package::findOrFail($transaction->payable_id);
 
-        $rawMethod = Arr::get($data, 'payment_method');
+        $rawMethod = Arr::get($data, 'payment_method', $transaction->payment_gateway);
 
         if (! is_string($rawMethod) || $rawMethod === '') {
             $rawMethod = $transaction->payment_gateway;

@@ -18,8 +18,8 @@ class FilterSortBar extends StatelessWidget {
   final TextEditingController searchController;
   final Function(ItemFilterModel) onFilterChanged;
   final Function(String) onSortChanged;
-  final VoidCallback onMapSearchTap;
-
+  final VoidCallback? onMapSearchTap;
+  final bool showMapButton;
   // إبراز الخيارات الحالية (اختياري)
   final String? currentSort;
   final ItemFilterModel? currentFilter;
@@ -39,14 +39,18 @@ class FilterSortBar extends StatelessWidget {
     required this.searchController,
     required this.onFilterChanged,
     required this.onSortChanged,
-    required this.onMapSearchTap,
+    this.onMapSearchTap,
+    this.showMapButton = true,
     this.currentSort,
     this.currentFilter,
     this.currentCategoryList,
     this.parentCategoryId,
     this.loadSubcategories,
     this.subcategories,
-  });
+  }) : assert(
+  !showMapButton || onMapSearchTap != null,
+  'onMapSearchTap must be provided when showMapButton is true.',
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -93,60 +97,66 @@ class FilterSortBar extends StatelessWidget {
                   vertical: 8,
                   horizontal: size.width * 0.02,
                 ),
-                  child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        const buttonCount = 3;
-                        final double horizontalGapCandidate = constraints.maxWidth * 0.03;
-                        final double horizontalGap = horizontalGapCandidate < 8
-                            ? 8
-                            : (horizontalGapCandidate > 16 ? 16 : horizontalGapCandidate);
-                        final double availableWidth = math.max(
-                          0,
-                          constraints.maxWidth - horizontalGap * (buttonCount - 1),
-                        );
-                        final double buttonWidth = availableWidth > 0
-                            ? availableWidth / buttonCount
-                            : constraints.maxWidth / buttonCount;
-                        final double desiredHeight =
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final buttonCount = showMapButton ? 3 : 2;
+                    final double horizontalGapCandidate = constraints.maxWidth * 0.03;
+                    final double horizontalGap = horizontalGapCandidate < 8
+                        ? 8
+                        : (horizontalGapCandidate > 16 ? 16 : horizontalGapCandidate);
+                    final double availableWidth = math.max(
+                      0,
+                      constraints.maxWidth - horizontalGap * (buttonCount - 1),
+                    );
+                    final double buttonWidth = availableWidth > 0
+                        ? availableWidth / buttonCount
+                        : constraints.maxWidth / buttonCount;
+                    final double desiredHeight =
                         (size.height * 0.08).clamp(44.0, 52.0).toDouble();
-                        return Row(
-                          children: [
-                            SizedBox(
-                              width: buttonWidth,
-                              height: desiredHeight,
-                              child: FilterButton(
-                                categoryIds: categoryIds,
-                                onFilterChanged: onFilterChanged,             // ✅ مهم: نمرر الكولباك الحقيقي
-                                currentFilter: currentFilter,                 // إبراز القيم الحالية
-                                categoryListInitial: currentCategoryList,     // عرض أسماء/أيقونات الفئات
-                                parentCategoryId: parentCategoryId,           // تحميل الفرعيات
-                                loadSubcategories: loadSubcategories,         // لودر الفرعيات
-                              ),
-                            ),
-                            SizedBox(width: horizontalGap),
-                            SizedBox(
-                              width: buttonWidth,
-                              height: desiredHeight,
-                              child: FilterSortActionButton(
-                                onTap: onMapSearchTap,
-                                icon: const Icon(Icons.map, size: 22),
-                                label: "searchOnMap".translate(context),
-                              ),
-                            ),
-                            SizedBox(width: horizontalGap),
-                            SizedBox(
-                              width: buttonWidth,
-                              height: desiredHeight,
-                              child: SortByAction(
-                                searchController: searchController,
-                                categoryId: categoryId,
-                                onSortChanged: onSortChanged,
-                                currentSort: currentSort, // إبراز الخيار الحالي
-                              ),
-                            ),
-                          ],
-                        );
-                      },
+                    final buttons = <Widget>[
+                      SizedBox(
+                        width: buttonWidth,
+                        height: desiredHeight,
+                        child: FilterButton(
+                          categoryIds: categoryIds,
+                          onFilterChanged: onFilterChanged,             // ✅ مهم: نمرر الكولباك الحقيقي
+                          currentFilter: currentFilter,                 // إبراز القيم الحالية
+                          categoryListInitial: currentCategoryList,     // عرض أسماء/أيقونات الفئات
+                          parentCategoryId: parentCategoryId,           // تحميل الفرعيات
+                          loadSubcategories: loadSubcategories,         // لودر الفرعيات
+                        ),
+                      ),
+                      if (showMapButton)
+                        SizedBox(
+                          width: buttonWidth,
+                          height: desiredHeight,
+                          child: FilterSortActionButton(
+                            onTap: onMapSearchTap!,
+                            icon: const Icon(Icons.map, size: 22),
+                            label: "searchOnMap".translate(context),
+                          ),
+                        ),
+                      SizedBox(
+                        width: buttonWidth,
+                        height: desiredHeight,
+                        child: SortByAction(
+                          searchController: searchController,
+                          categoryId: categoryId,
+                          onSortChanged: onSortChanged,
+                          currentSort: currentSort, // إبراز الخيار الحالي
+                        ),
+                      ),
+                    ];
+
+                    return Row(
+                      children: [
+                        for (int i = 0; i < buttons.length; i++) ...[
+                          if (i > 0) SizedBox(width: horizontalGap),
+                          buttons[i],
+                        ],
+                      ],
+                    );
+                  },
                 ),
               ),
             ),

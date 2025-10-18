@@ -526,62 +526,9 @@ class Section_screenState extends State<Section_screen> {
           appBar: null, // AppBar داخل ItemsBodyBox
 
           bottomNavigationBar: ValueListenableBuilder<bool>(
-              valueListenable: _showBottomBar,
-              child: SafeArea(
-                top: false,
-                left: false,
-                right: false,
-                minimum: const EdgeInsets.only(bottom: 12),
-                child: FilterSortBar(
-                  categoryIds: widget.categoryIds,
-                  categoryId: widget.categoryId,
-                  searchController: searchController,
-                  onFilterChanged: (newFilter) {
-                    final ItemFilterModel effectiveFilter = _buildEffectiveFilter(
-                      base: newFilter,
-                    );
-                    filter = effectiveFilter;
-                    final int resolvedCategoryId = _resolveCategoryIdInt(
-                      source: effectiveFilter,
-                    );
-
-                    if (_isValidCategoryId(newFilter?.categoryId) &&
-                        selectedCategoryId.value != resolvedCategoryId) {
-                      selectedCategoryId.value = resolvedCategoryId;
-                    }
-
-
-                    context.read<FetchItemSummaryCubit>().fetchSummaries(
-                      categoryId: resolvedCategoryId,
-                      search: searchController.text,
-                      filter: effectiveFilter,
-                      sortBy: sortBy,
-                    );
-                  },
-                  onSortChanged: (newSort) {
-                    sortBy = newSort;
-
-                    final ItemFilterModel effectiveFilter = _buildEffectiveFilter();
-                    filter = effectiveFilter;
-                    final int resolvedCategoryId = _resolveCategoryIdInt(
-                      source: effectiveFilter,
-                    );
-
-
-                    context.read<FetchItemSummaryCubit>().fetchSummaries(
-                      categoryId: resolvedCategoryId,
-                      search: searchController.text,
-                      filter: effectiveFilter,
-                      sortBy: sortBy,
-                    );
-                  },
-                  onMapSearchTap: () {
-                    Navigator.pushNamed(context, '/mapSearch');
-                  },
-                ),
-              ),
-              builder: (context, show, child) {
-                return AnimatedSlide(
+            valueListenable: _showBottomBar,
+            builder: (context, show, _) {
+              return AnimatedSlide(
                   offset: Offset(0, show ? 0 : 1),
                   duration: const Duration(milliseconds: 220),
                   curve: Curves.easeInOut,
@@ -591,7 +538,74 @@ class Section_screenState extends State<Section_screen> {
                       duration: const Duration(milliseconds: 220),
                       curve: Curves.easeInOut,
                       opacity: show ? 1 : 0,
-                      child: child,
+                      child: SafeArea(
+                        top: false,
+                        left: false,
+                        right: false,
+                        minimum: const EdgeInsets.only(bottom: 12),
+                        child: ValueListenableBuilder<int?>(
+                          valueListenable: selectedCategoryId,
+                          builder: (context, selectedId, _) {
+                            final int effectiveCategoryId = selectedId ?? _catId;
+                            final bool showMap = !{
+                              Constant.computerRootCategoryId,
+                              Constant.sheinRootCategoryId,
+                              Constant.storeRootCategoryId,
+                            }.contains(effectiveCategoryId);
+
+                            return FilterSortBar(
+                              categoryIds: widget.categoryIds,
+                              categoryId: widget.categoryId,
+                              searchController: searchController,
+                              onFilterChanged: (newFilter) {
+                                final ItemFilterModel effectiveFilter = _buildEffectiveFilter(
+                                  base: newFilter,
+                                );
+                                filter = effectiveFilter;
+                                final int resolvedCategoryId = _resolveCategoryIdInt(
+                                  source: effectiveFilter,
+                                );
+
+                                if (_isValidCategoryId(newFilter?.categoryId) &&
+                                    selectedCategoryId.value != resolvedCategoryId) {
+                                  selectedCategoryId.value = resolvedCategoryId;
+                                }
+
+
+                                context.read<FetchItemSummaryCubit>().fetchSummaries(
+                                  categoryId: resolvedCategoryId,
+                                  search: searchController.text,
+                                  filter: effectiveFilter,
+                                  sortBy: sortBy,
+                                );
+                              },
+                              onSortChanged: (newSort) {
+                                sortBy = newSort;
+
+                                final ItemFilterModel effectiveFilter = _buildEffectiveFilter();
+                                filter = effectiveFilter;
+                                final int resolvedCategoryId = _resolveCategoryIdInt(
+                                  source: effectiveFilter,
+                                );
+
+
+                                context.read<FetchItemSummaryCubit>().fetchSummaries(
+                                  categoryId: resolvedCategoryId,
+                                  search: searchController.text,
+                                  filter: effectiveFilter,
+                                  sortBy: sortBy,
+                                );
+                              },
+                              showMapButton: showMap,
+                              onMapSearchTap: showMap
+                                  ? () {
+                                Navigator.pushNamed(context, '/mapSearch');
+                              }
+                                  : null,
+                            );
+                          },
+                        ),
+                    ),
                     ),
                   ),
               );

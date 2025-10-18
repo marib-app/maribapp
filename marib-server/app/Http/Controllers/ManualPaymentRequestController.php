@@ -22,6 +22,7 @@ use App\Services\NotificationService;
 use App\Services\PaymentFulfillmentService;
 use App\Services\Payments\EastYemenBankGateway;
 use App\Services\WalletService;
+use App\Support\ManualPayments\ManualPaymentPresentationHelpers;
 
 use App\Services\DepartmentReportService;
 use App\Models\User;
@@ -44,11 +45,8 @@ use Throwable;
 class ManualPaymentRequestController extends Controller
 {
 
-    private array $manualPaymentColumnSupportCache = [];
-    private array $manualPaymentRequestLookupCache = [];
+    use ManualPaymentPresentationHelpers;
 
-    private array $manualBankLookupCache = [];
-    private ?bool $manualBankTableSupported = null;
 
     public function __construct(
         private readonly PaymentFulfillmentService $paymentFulfillmentService,
@@ -710,58 +708,6 @@ class ManualPaymentRequestController extends Controller
 
 
 
-    private function parseDateOrNull($value): ?Carbon
-    {
-        if (empty($value)) {
-            return null;
-        }
-
-        try {
-            return Carbon::parse($value);
-        } catch (Throwable) {
-            return null;
-        }
-    }
-
-    private function manualPaymentStatusIcon(?string $status): string
-    {
-        return match ($this->normalizeManualPaymentStatus($status)) {
-            ManualPaymentRequest::STATUS_APPROVED => 'fa-solid fa-circle-check',
-            ManualPaymentRequest::STATUS_REJECTED => 'fa-solid fa-circle-xmark',
-            ManualPaymentRequest::STATUS_UNDER_REVIEW => 'fa-solid fa-magnifying-glass',
-            default => 'fa-solid fa-hourglass-half',
-        };
-    }
-
-    private function manualPaymentStatusBadge(?string $status): string
-    {
-        return match ($this->normalizeManualPaymentStatus($status)) {
-            ManualPaymentRequest::STATUS_APPROVED => 'bg-success',
-            ManualPaymentRequest::STATUS_REJECTED => 'bg-danger',
-            ManualPaymentRequest::STATUS_UNDER_REVIEW => 'bg-info text-dark',
-            default => 'bg-warning text-dark',
-        };
-    }
-
-    private function manualPaymentStatusIconMap(): array
-    {
-        return [
-            ManualPaymentRequest::STATUS_PENDING => 'fa-solid fa-clock text-warning',            
-            ManualPaymentRequest::STATUS_UNDER_REVIEW => 'fa-solid fa-magnifying-glass text-primary',
-            ManualPaymentRequest::STATUS_APPROVED => 'fa-solid fa-circle-check text-success',
-            ManualPaymentRequest::STATUS_REJECTED => 'fa-solid fa-circle-xmark text-danger',
-            'submitted' => 'fa-solid fa-file-circle-plus text-primary',
-            'default' => 'fa-solid fa-circle text-secondary',
-        ];
-    }
-
-
-
-
-
-
-
-
         public function notify(Request $request, ManualPaymentRequest $manualPaymentRequest)
     {
         ResponseService::noPermissionThenSendJson('manual-payments-review');
@@ -1272,36 +1218,6 @@ class ManualPaymentRequestController extends Controller
         return $buttons;
     }
 
-
-
-
-    private function normalizeManualPaymentStatus($status): ?string
-    {
-        if (!is_string($status)) {
-            return null;
-        }
-
-        $normalized = strtolower(trim($status));
-
-        if ($normalized === '' || $normalized === 'null') {
-            return null;
-        }
-
-
-        $canonical = ManualPaymentRequest::normalizeStatus($normalized);
-
-        if ($canonical !== null) {
-            return $canonical;
-        }
-
-
-        return in_array($normalized, [
-            ManualPaymentRequest::STATUS_PENDING,
-            ManualPaymentRequest::STATUS_APPROVED,
-            ManualPaymentRequest::STATUS_REJECTED,
-            ManualPaymentRequest::STATUS_UNDER_REVIEW,
-        ], true) ? $normalized : null;
-    }
 
     private function normalizeManualPaymentGateway($gateway): ?string
     {

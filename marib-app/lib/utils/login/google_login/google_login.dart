@@ -79,10 +79,9 @@ class GoogleLogin extends LoginSystem {
 
     if (state is MFail) {
       _resetGoogleSignIn();
-    }
-
-    if (context != null) {
-      Widgets.hideLoder(context);
+      if (context != null) {
+        Widgets.hideLoder(context);
+      }
     }
 
   }

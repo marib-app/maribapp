@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:animations/animations.dart';
+import 'motion/route_motion.dart';
+
+
+
 
 class AppPageRoute {
   AppPageRoute._();
@@ -16,32 +21,57 @@ class AppPageRoute {
     Curve curve = Curves.easeOutQuart,
     bool maintainState = true,
     bool? opaque,
+    AppMotionPattern motionPattern = AppMotionPattern.sharedAxis,
+    SharedAxisTransitionType sharedAxisType = SharedAxisTransitionType.scaled,
+    bool? reduceMotion,
+    Duration? reverseDuration,
+    Duration? refreshDuration,
+    Curve? popCurve,
+    Curve? refreshCurve,
+
   }) {
-    return _LayeredPageRoute<T>(
+    final baseDuration = duration ?? _defaultDuration;
+    final baseReverseDuration = reverseDuration ?? baseDuration;
+    final baseRefreshDuration = refreshDuration ?? baseDuration;
+
+    final composer = RouteMotionComposer(
+      pattern: motionPattern,
+      sharedAxisType: sharedAxisType,
+      pushDuration: baseDuration,
+      popDuration: baseReverseDuration,
+      refreshDuration: baseRefreshDuration,
+      pushCurve: curve,
+      popCurveOverride: popCurve,
+      refreshCurveOverride: refreshCurve,
+      modal: fullscreenDialog || barrierDismissible,
+      reducedMotion: reduceMotion ??
+          RouteMotionComposer.platformPrefersReducedMotion(),
+    );
+
+    return _MotionPageRoute<T>(
       builder: builder,
       settings: settings,
       fullscreenDialog: fullscreenDialog,
       barrierDismissible: barrierDismissible,
       barrierColor: barrierColor,
       barrierLabel: barrierLabel,
-      duration: duration ?? _defaultDuration,
-      curve: curve,
       maintainState: maintainState,
       opaque: opaque ?? !barrierDismissible,
+      composer: composer,
+
     );
   }
 }
 
-class _LayeredPageRoute<T> extends PageRouteBuilder<T> {
-  _LayeredPageRoute({
+class _MotionPageRoute<T> extends PageRouteBuilder<T> {
+  _MotionPageRoute({
     required WidgetBuilder builder,
     RouteSettings? settings,
     required bool fullscreenDialog,
     required bool barrierDismissible,
     Color? barrierColor,
     String? barrierLabel,
-    required Duration duration,
-    required Curve curve,
+    required RouteMotionComposer composer,
     required bool maintainState,
     required bool opaque,
   }) : super(
@@ -52,48 +82,41 @@ class _LayeredPageRoute<T> extends PageRouteBuilder<T> {
     barrierLabel: barrierLabel,
     maintainState: maintainState,
     opaque: opaque,
-    transitionDuration: duration,
-    reverseTransitionDuration: duration,
+    transitionDuration: composer.effectivePushDuration,
+    reverseTransitionDuration: composer.effectivePopDuration,
     pageBuilder: (context, animation, secondaryAnimation) {
       return builder(context);
     },
     transitionsBuilder:
         (context, animation, secondaryAnimation, child) {
-      final curvedAnimation = CurvedAnimation(
-        parent: animation,
-        curve: curve,
-        reverseCurve: curve.flipped,
-      );
+          final route = ModalRoute.of(context);
+          if (animation.status == AnimationStatus.reverse) {
+            return composer.buildForPop(
+              context,
+              animation,
+              secondaryAnimation,
+              child,
+              route: route is PageRoute<dynamic> ? route : null,
+            );
+          }
 
+          if (secondaryAnimation.status == AnimationStatus.forward &&
+              animation.status == AnimationStatus.forward) {
+            return composer.buildForRefresh(
+              context,
+              animation,
+              secondaryAnimation,
+              child,
+              route: route is PageRoute<dynamic> ? route : null,
+            );
+          }
 
-
-      final scaleAnimation = Tween<double>(
-        begin: 0.96,
-        end: 1,
-      ).animate(curvedAnimation);
-
-      const baseTranslation = Offset(0.015, 0.012);
-
-      return AnimatedBuilder(
-        animation: curvedAnimation,
-        child: ScaleTransition(
-          scale: scaleAnimation,
-          child: child,
-        ),
-        builder: (context, scaleChild) {
-          final progress = 1 - curvedAnimation.value;
-          final verticalDirection =
-          animation.status == AnimationStatus.reverse ? -1.0 : 1.0;
-          final translation = Offset(
-            baseTranslation.dx * progress,
-            baseTranslation.dy * progress * verticalDirection,
-          );
-
-          return FractionalTranslation(
-            translation: translation,
-            child: scaleChild,
-          );
-        },
+          return composer.buildForPush(
+            context,
+            animation,
+            secondaryAnimation,
+            child,
+            route: route is PageRoute<dynamic> ? route : null,
       );
     },
   );

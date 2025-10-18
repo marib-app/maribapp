@@ -20,6 +20,7 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/currency_utils.dart';
 import 'package:marib/data/cubits/wallet/wallet_summary_cubit.dart';
 import 'package:flutter/services.dart';
+import 'dart:async';
 
 
 
@@ -538,10 +539,11 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
                         final submitting = state is WalletTransferSubmitting;
                         return UiUtils.buildButton(
                           context,
-                          onPressed: submitting || _lookupInProgress
-                              ? null
-                              : () {
-                            _submit();
+                          onPressed: () {
+                            if (submitting || _lookupInProgress) {
+                              return;
+                            }
+                            unawaited(_submit());
                           },
 
                           buttonTitle: 'تنفيذ التحويل',

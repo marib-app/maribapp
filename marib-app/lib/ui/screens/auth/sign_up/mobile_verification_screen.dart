@@ -19,6 +19,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:io';
 import 'package:marib/utils/api.dart';
 import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
+import 'package:marib/utils/notification/notification_service.dart';
 
 const double sidePadding = 20.0;
 
@@ -298,7 +299,7 @@ class _MobileVerificationScreenState extends State<MobileVerificationScreen> {
             HelperUtils.showSnackBarMessage(context, 'تم التحقق بنجاح!',
                 messageDuration: 2, type: MessageType.success);
 
-            Future.delayed(const Duration(milliseconds: 300), () {
+            Future.delayed(const Duration(milliseconds: 300), () async {
               if (mounted) {
                 print("OTP verification successful, activating account...");
 
@@ -331,6 +332,8 @@ class _MobileVerificationScreenState extends State<MobileVerificationScreen> {
                       HiveUtils.getCityName() != "null") {
                     // الموقع محفوظ مسبقاً - الدخول مباشرة للتطبيق
                     HiveUtils.setUserIsAuthenticated(true);
+                    await NotificationService.resendPendingTokenIfNeeded();
+
                     FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
                       context,
                       clearCacheBeforeFetch: true,
@@ -340,6 +343,7 @@ class _MobileVerificationScreenState extends State<MobileVerificationScreen> {
                   } else {
                     // الموقع غير محفوظ - الانتقال لشاشة تحديد الموقع
                     HiveUtils.setUserIsAuthenticated(true);
+                    await NotificationService.resendPendingTokenIfNeeded();
                     FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
                       context,
                       clearCacheBeforeFetch: true,

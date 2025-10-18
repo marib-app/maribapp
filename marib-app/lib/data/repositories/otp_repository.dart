@@ -1,6 +1,7 @@
 import 'package:marib/utils/api.dart';
 import 'package:dio/dio.dart';
 import 'package:marib/utils/hive_utils.dart';
+import 'package:marib/utils/notification/notification_service.dart';
 
 class OtpRepository {
   Future<void> sendOtp(
@@ -213,6 +214,7 @@ class OtpRepository {
           HiveUtils.setJWT(response['token']);
           HiveUtils.setUserData(response['data']);
           HiveUtils.setUserIsAuthenticated(true);
+          await NotificationService.resendPendingTokenIfNeeded();
           print("User logged in automatically after password update");
         }
         return true;

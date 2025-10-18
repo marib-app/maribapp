@@ -68,6 +68,7 @@ import 'package:marib/utils/api.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/data/repositories/auth_repository.dart';
 import 'package:flutter/foundation.dart';
+import 'package:marib/utils/notification/notification_service.dart';
 
 class PhoneLogin extends LoginSystem {
   bool _isPhonePasswordLoginSuccess = false;
@@ -143,6 +144,7 @@ class PhoneLogin extends LoginSystem {
           HiveUtils.setJWT(loginResponse['token']);
           HiveUtils.setUserData(loginResponse['data']);
           HiveUtils.setUserIsAuthenticated(true);
+          await NotificationService.resendPendingTokenIfNeeded();
 
           // تعيين علامة النجاح
           _isPhonePasswordLoginSuccess = true;

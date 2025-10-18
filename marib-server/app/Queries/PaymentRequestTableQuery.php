@@ -120,8 +120,14 @@ class PaymentRequestTableQuery
         };
 
         $manualBankNameParts = [];
-        $sanitizedManualBankName = null;
-        $sanitizedManualBankAccountName = null;
+        $sanitizedManualBankName = $supportsManualBankName
+            ? $sanitizeManualBankAlias('mpr.bank_name')
+            : null;
+        $sanitizedManualBankAccountName = $supportsManualBankAccountName
+            ? $sanitizeManualBankAlias('mpr.bank_account_name')
+            : null;
+
+
         if ($supportsManualBankLookupName) {
             $manualBankNameParts[] = $sanitizeManualBankAlias('manual_bank_lookup.name');
         }
@@ -129,13 +135,13 @@ class PaymentRequestTableQuery
             $manualBankNameParts[] = $sanitizeManualBankAlias('manual_bank_lookup.beneficiary_name');
         }
 
-        if ($supportsManualBankName) {
-            $sanitizedManualBankName = $sanitizeManualBankAlias('mpr.bank_name');
+        if ($sanitizedManualBankName !== null) {
+
             $manualBankNameParts[] = $sanitizedManualBankName;
         
         }
-        if ($supportsManualBankAccountName) {
-            $sanitizedManualBankAccountName = $sanitizeManualBankAlias('mpr.bank_account_name');
+        if ($sanitizedManualBankAccountName !== null) {
+
             $manualBankNameParts[] = $sanitizedManualBankAccountName;
         
         }
@@ -164,13 +170,13 @@ class PaymentRequestTableQuery
             $manualGatewayNameParts[] = $sanitizeManualBankAlias('manual_bank_lookup.beneficiary_name');
         }
 
-        if ($supportsManualBankName) {
-            $sanitizedManualBankName ??= $sanitizeManualBankAlias('mpr.bank_name');
+        if ($sanitizedManualBankName !== null) {
+
             $manualGatewayNameParts[] = $sanitizedManualBankName;
         
         }
-        if ($supportsManualBankAccountName) {
-            $sanitizedManualBankAccountName ??= $sanitizeManualBankAlias('mpr.bank_account_name');
+        if ($sanitizedManualBankAccountName !== null) {
+
             $manualGatewayNameParts[] = $sanitizedManualBankAccountName;
         
         }

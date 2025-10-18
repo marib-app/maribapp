@@ -27,6 +27,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sms_autofill/sms_autofill.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
+import 'package:marib/utils/notification/notification_service.dart';
 
 
 // واجهة منفصلة بالكامل
@@ -429,6 +430,8 @@ class LoginScreenState extends State<LoginScreen> {
           HiveUtils.setJWT(response['token']);
           HiveUtils.setUserData(response['data']);
           HiveUtils.setUserIsAuthenticated(true);
+          await NotificationService.resendPendingTokenIfNeeded();
+
           context.read<UserDetailsCubit>().fill(HiveUtils.getUserDetails());
           FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
             context,
@@ -481,6 +484,8 @@ class LoginScreenState extends State<LoginScreen> {
           HiveUtils.setJWT(response['token']);
           HiveUtils.setUserData(response['data']);
           HiveUtils.setUserIsAuthenticated(true);
+          await NotificationService.resendPendingTokenIfNeeded();
+
           context.read<UserDetailsCubit>().fill(HiveUtils.getUserDetails());
           FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
             context,
@@ -574,7 +579,7 @@ class LoginScreenState extends State<LoginScreen> {
       // محتوى الشاشة (واجهة صافية + منطق BLoC)
       child: LoginScreenFrame(
         child: BlocListener<LoginCubit, LoginState>(
-          listener: (context, state) {
+          listener: (context, state) async {
             // إيقاف التحميل عند انتهاء أي عملية
 
 
@@ -588,8 +593,9 @@ class LoginScreenState extends State<LoginScreen> {
                   api['account_type'] != null && api['account_type'] != 0;
 
               if ((isEmailVerified || isVerified) && hasAccountType) {
-                HiveUtils.setUserIsAuthenticated(true);
                 HiveUtils.setUserData(api);
+                HiveUtils.setUserIsAuthenticated(true);
+                await NotificationService.resendPendingTokenIfNeeded();
                 context.read<UserDetailsCubit>().fill(
                     HiveUtils.getUserDetails());
                 FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(

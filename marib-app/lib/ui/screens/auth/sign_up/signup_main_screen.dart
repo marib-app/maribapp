@@ -42,6 +42,7 @@ import 'sign_up_main_ui.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
+import 'package:marib/utils/notification/notification_service.dart';
 
 
 
@@ -325,6 +326,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
 
         if (hasAccountType && isEmailVerified && hasCompleteName) {
           HiveUtils.setUserIsAuthenticated(true);
+          await NotificationService.resendPendingTokenIfNeeded();
           if ((HiveUtils.getCityName() ?? '').isNotEmpty &&
               HiveUtils.getCityName() != 'null') {
             HelperUtils.killPreviousPages(
@@ -591,6 +593,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
         HiveUtils.setJWT(response['token']);
         HiveUtils.setUserData(response['data']);
         HiveUtils.setUserIsAuthenticated(true);
+        await NotificationService.resendPendingTokenIfNeeded();
 
         context.read<UserDetailsCubit>().fill(HiveUtils.getUserDetails());
         FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(

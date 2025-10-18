@@ -40,6 +40,7 @@ import 'widgets/real_estate_section.dart';
 import 'widgets/business_section.dart';
 import 'dart:async'; // للـ Timer
 import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
+import 'package:marib/utils/notification/notification_service.dart';
 
 
 
@@ -1263,6 +1264,10 @@ class _SignupScreenState extends CloudState<SignupScreen> {
 
             HiveUtils.setUserData(persistedUser);
             HiveUtils.setUserIsAuthenticated(true);
+
+            await NotificationService.resendPendingTokenIfNeeded();
+
+
 
             if (mounted) {
               context

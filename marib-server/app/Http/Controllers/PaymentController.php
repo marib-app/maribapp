@@ -11,6 +11,8 @@ use App\Services\Payments\PackagePaymentService;
 use Illuminate\Validation\Rule;
 use App\Models\ManualBank;
 use App\Models\ManualPaymentRequest;
+use App\Services\OrderCheckoutService;
+use ReflectionClass;
 
 use App\Models\PaymentConfiguration;
 use App\Models\WalletAccount;
@@ -50,14 +52,23 @@ class PaymentController extends Controller
             $request->merge(['bank_id' => $request->input('manual_bank_id')]);
         }
 
-        $normalizedMethod = strtolower((string) $request->input('payment_method', 'manual'));
-        $request->merge(['payment_method' => $normalizedMethod]);
+        $rawMethod = $request->input('payment_method', 'manual');
+        $normalizedForRequest = OrderCheckoutService::normalizePaymentMethod(is_string($rawMethod) ? $rawMethod : null);
+        $sanitizedMethod = is_string($normalizedForRequest) && $normalizedForRequest !== ''
+            ? $normalizedForRequest
+            : (is_string($rawMethod) ? trim($rawMethod) : 'manual');
+
+        $request->merge(['payment_method' => $sanitizedMethod]);
+
+        $allowedMethods = $this->allowedPaymentMethodTokens($purpose);
+
+
 
         $rules = [
             'purpose' => ['nullable', 'string', Rule::in(['order', 'package', ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP])],
 
 
-            'payment_method' => ['required', 'string', 'max:191', Rule::in(['manual', 'manual_bank'])],
+            'payment_method' => ['required', 'string', 'max:191', Rule::in($allowedMethods)],
 
             'notes' => ['nullable', 'string'],
             'metadata' => ['nullable', 'array'],
@@ -80,6 +91,7 @@ class PaymentController extends Controller
 
         $validated = $request->validate($rules);
 
+        $validated['payment_method'] = $this->normalizePaymentMethodForPurpose($validated['payment_method'], $purpose);
 
         if (!isset($validated['note']) && $request->filled('notes')) {
             $validated['note'] = $request->input('notes');
@@ -556,6 +568,124 @@ class PaymentController extends Controller
             ], $transaction->payment_status === 'succeed' ? 200 : 202);
         });
     }
+
+
+
+    /**
+     * @return array<int, string>
+     */
+    private function allowedPaymentMethodTokens(string $purpose): array
+    {
+        $supported = $this->supportedPaymentMethodsForPurpose($purpose);
+        $aliases = $this->extractPaymentMethodAliases();
+
+        $tokens = $supported;
+
+        foreach ($aliases as $alias => $canonical) {
+            if (in_array($canonical, $supported, true)) {
+                $tokens[] = $alias;
+            }
+        }
+
+        $tokens = array_filter($tokens, static fn ($token) => is_string($token) && $token !== '');
+
+        return array_values(array_unique(array_map(static fn ($token) => (string) $token, $tokens)));
+    }
+
+
+    private function normalizePaymentMethodForPurpose(string $method, string $purpose): string
+    {
+        $normalized = OrderCheckoutService::normalizePaymentMethod($method);
+
+        if (! is_string($normalized) || $normalized === '') {
+            throw ValidationException::withMessages([
+                'payment_method' => __('طريقة الدفع غير مدعومة.'),
+            ]);
+        }
+
+        $normalized = mb_strtolower($normalized);
+
+        $supported = $this->supportedPaymentMethodsForPurpose($purpose);
+
+        if (! in_array($normalized, $supported, true)) {
+            throw ValidationException::withMessages([
+                'payment_method' => __('طريقة الدفع غير مدعومة.'),
+            ]);
+        }
+
+        return $normalized;
+    }
+
+
+    /**
+     * @return array<int, string>
+     */
+    private function supportedPaymentMethodsForPurpose(string $purpose): array
+    {
+        if ($purpose === 'package') {
+            return $this->extractSupportedMethodsFrom(PackagePaymentService::class);
+        }
+
+        if ($purpose === ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP) {
+            return ['manual_bank'];
+        }
+
+        return $this->extractSupportedMethodsFrom(OrderPaymentService::class);
+    }
+
+
+    /**
+     * @return array<string, string>
+     */
+    private function extractPaymentMethodAliases(): array
+    {
+        static $aliases;
+
+        if ($aliases !== null) {
+            return $aliases;
+        }
+
+        $reflection = new ReflectionClass(OrderCheckoutService::class);
+        $constants = $reflection->getConstants();
+        $rawAliases = $constants['PAYMENT_METHOD_ALIASES'] ?? [];
+
+        if (! is_array($rawAliases)) {
+            return $aliases = [];
+        }
+
+        $aliases = [];
+
+        foreach ($rawAliases as $alias => $canonical) {
+            if (! is_string($alias) || ! is_string($canonical) || $canonical === '') {
+                continue;
+            }
+
+            $aliases[$alias] = $canonical;
+        }
+
+        return $aliases;
+    }
+
+
+    /**
+     * @return array<int, string>
+     */
+    private function extractSupportedMethodsFrom(string $class): array
+    {
+        $reflection = new ReflectionClass($class);
+        $constants = $reflection->getConstants();
+        $methods = $constants['SUPPORTED_METHODS'] ?? [];
+
+        if (! is_array($methods)) {
+            return [];
+        }
+
+        $canonical = array_filter($methods, static fn ($method) => is_string($method) && $method !== '');
+
+        return array_values(array_unique(array_map(static fn ($method) => mb_strtolower((string) $method), $canonical)));
+    }
+
+    
 
     private function normalizePurpose(?string $purpose): string
     {

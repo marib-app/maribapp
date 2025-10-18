@@ -16,18 +16,16 @@ import 'wifi_cabin_controller.dart';
 import 'widgets/common_states.dart';
 import 'widgets/header_filter_bar.dart';
 import 'widgets/network_grid.dart';
-
 import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/data/model/wifi/wifi_plan.dart';
 import 'package:flutter/foundation.dart';
-import 'package:marib/data/model/wifi/wifi_purchase_result.dart';
-import 'package:marib/data/model/wifi/wifi_payment_gateway.dart';
-import 'package:intl/intl.dart';
-import 'dart:typed_data';
-import 'package:dio/dio.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:meta/meta.dart';
 import 'add_network/plan_configuration_screen.dart';
+
+
+
+
+
+
+
 
 class WifiCabinScreen extends StatefulWidget {
   const WifiCabinScreen({super.key});
@@ -116,6 +114,8 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
                   onRefresh: () => _controller.refreshNetworks(force: true),
                 ),
                 const SizedBox(height: 12),
+                const WifiServiceOverview(),
+                const SizedBox(height: 16),
                 Expanded(
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 220),

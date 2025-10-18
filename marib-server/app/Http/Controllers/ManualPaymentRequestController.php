@@ -396,6 +396,22 @@ class ManualPaymentRequestController extends Controller
         ResponseService::noAnyPermissionThenSendJson(['manual-payments-list', 'manual-payments-review']);
 
         $manualPaymentRequest = $this->loadManualPaymentRequestRelations($manualPaymentRequest);
+
+        $paymentTransaction = $manualPaymentRequest->paymentTransaction;
+        $paymentGatewayKey = $paymentTransaction?->payment_gateway ?? $manualPaymentRequest->channel;
+        $paymentGatewayCanonical = ManualPaymentRequest::canonicalGateway($paymentGatewayKey);
+
+        if ($paymentGatewayCanonical === 'manual_bank') {
+            $paymentGatewayCanonical = 'manual_banks';
+        }
+
+        $manualBankName = $this->resolveManualBankName($manualPaymentRequest);
+        $paymentGatewayLabel = $this->paymentRequestChannelLabel(
+            $paymentGatewayCanonical ?? $paymentGatewayKey,
+            $manualBankName
+        );
+        $departmentLabel = $this->paymentRequestDepartmentLabel($manualPaymentRequest->department ?? null);
+
         return view('payments.manual.show', [
             'request' => $manualPaymentRequest,
             'canReview' => Auth::user()->can('manual-payments-review') && $manualPaymentRequest->isOpen(),
@@ -403,6 +419,10 @@ class ManualPaymentRequestController extends Controller
 
 
 
+            'paymentGatewayKey' => $paymentGatewayKey,
+            'paymentGatewayCanonical' => $paymentGatewayCanonical,
+            'paymentGatewayLabel' => $paymentGatewayLabel,
+            'departmentLabel' => $departmentLabel,
             
 
         ]);

@@ -6,69 +6,18 @@
         default => '<span class="badge bg-warning text-dark">' . __('Pending') . '</span>',
     };
 
+    $paymentTransaction = $request->paymentTransaction;
+    $paymentGatewayKey = $paymentGatewayKey ?? $paymentTransaction?->payment_gateway;
+    $paymentGatewayCanonical = $paymentGatewayCanonical
+        ?? ManualPaymentRequest::canonicalGateway($paymentGatewayKey);
 
-        $paymentTransaction = $request->paymentTransaction;
-    $paymentGatewayKey = $paymentTransaction?->payment_gateway;
-    $paymentGatewayCanonical = \App\Models\ManualPaymentRequest::canonicalGateway($paymentGatewayKey);
+        
     if ($paymentGatewayCanonical === 'manual_bank') {
         $paymentGatewayCanonical = 'manual_banks';
     }
 
-    $manualBankAliases = ManualPaymentRequest::manualBankGatewayAliases();
-    $manualBankName = null;
-
-    $manualBankCandidates = [
-        $request->manual_bank_name ?? null,
-        $request->manualBank?->name,
-        $request->manualBank?->beneficiary_name,
-        data_get($request, 'bank_name'),
-        data_get($request, 'bank_account_name'),
-        data_get($request->meta, 'bank.name'),
-        data_get($request->meta, 'bank_name'),
-        data_get($request->meta, 'manual_bank.name'),
-        data_get($request->paymentTransaction, 'payment_gateway_name'),
-        data_get($request->paymentTransaction, 'gateway_name'),
-        data_get($request->paymentTransaction, 'gateway_display_name'),
-    ];
-
-    foreach ($manualBankCandidates as $candidate) {
-        if (! is_string($candidate)) {
-            continue;
-        }
-
-        $trimmedCandidate = trim($candidate);
-
-        if ($trimmedCandidate === '') {
-            continue;
-        }
-
-        if (in_array(strtolower($trimmedCandidate), $manualBankAliases, true)) {
-            continue;
-        }
-
-        $manualBankName = $trimmedCandidate;
-        break;
-    }
-
-
-
-    $paymentGatewayLabel = match ($paymentGatewayCanonical) {
-        'east_yemen_bank' => __('East Yemen Bank Gateway'),
-        'manual_banks' => $manualBankName ?? __('Manual Banks'),
-        'wallet' => __('Wallet'),
-        'cash' => __('Cash'),
-        default => $paymentGatewayKey
-            ? ucwords(str_replace('_', ' ', $paymentGatewayKey))
-            : ($manualBankName ?? __('Manual Banks')),
-    };
-
-    $department = $request->department;
-    $departmentLabel = match ($department) {
-        \App\Services\DepartmentReportService::DEPARTMENT_SHEIN => __('departments.shein'),
-        \App\Services\DepartmentReportService::DEPARTMENT_COMPUTER => __('departments.computer'),
-        \App\Services\DepartmentReportService::DEPARTMENT_STORE => __('departments.store'),
-        default => $department ? ucfirst($department) : __('Unknown Department'),
-    };
+    $paymentGatewayLabel = $paymentGatewayLabel ?? __('Manual Banks');
+    $departmentLabel = $departmentLabel ?? __('Unknown Department');
 
 
     $eastYemenMeta = data_get($request->meta, 'east_yemen_bank', []);

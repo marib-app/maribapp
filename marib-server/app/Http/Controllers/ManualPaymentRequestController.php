@@ -83,7 +83,10 @@ class ManualPaymentRequestController extends Controller
         ];
 
         $departments = $this->departmentReportService->availableDepartments();
-        $paymentRequestBase = DB::query()->fromSub(PaymentRequestTableQuery::make(), 'requests');
+        $paymentRequestBase = DB::query()
+            ->fromSub(PaymentRequestTableQuery::make(), 'requests')
+            ->whereNotNull('manual_payment_request_id');
+
 
         $summaryData = $this->summarizePaymentRequests($paymentRequestBase);
 
@@ -279,8 +282,9 @@ class ManualPaymentRequestController extends Controller
         $from = $this->normalizeManualPaymentDate($request->input('from'), true);
         $to = $this->normalizeManualPaymentDate($request->input('to'), false);
 
-        $baseQuery = DB::query()->fromSub(PaymentRequestTableQuery::make(), 'requests');
-
+        $baseQuery = DB::query()
+            ->fromSub(PaymentRequestTableQuery::make(), 'requests')
+            ->whereNotNull('manual_payment_request_id');
 
         $recordsTotal = (clone $baseQuery)->count();
 
@@ -346,6 +350,7 @@ class ManualPaymentRequestController extends Controller
                 'user_mobile' => $row->user_mobile ?? '—',
                 'amount_fmt' => number_format($amount, 2, '.', ''),
                 'currency' => $row->currency ?? '',
+                'manual_payment_request_id' => $row->manual_payment_request_id,
                 'payment_gateway' => $channel ?? $row->channel,
 
                 'payment_gateway_label' => $this->paymentRequestChannelLabel(

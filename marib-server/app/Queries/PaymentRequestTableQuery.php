@@ -308,8 +308,8 @@ class PaymentRequestTableQuery
                     );
                 }
 
-
-            );
+            )
+            ->whereNotNull('pt.manual_payment_request_id');
 
         $walletResolvedPayableIdExpression = 'COALESCE(mpr.payable_id, wt.id)';
         $walletResolvedPayableTypeExpression = "LOWER(NULLIF(mpr.payable_type, ''))";
@@ -396,7 +396,8 @@ class PaymentRequestTableQuery
                     ->orWhere('wt.meta->reason', 'wallet-top-up')
                     ->orWhere('wt.meta->reason', 'wallet_topup')
                     ->orWhere('wt.meta->reason', 'admin_manual_credit');
-            });
+            })
+            ->whereNotNull('wt.manual_payment_request_id');
 
         return $paymentTransactions->unionAll($walletTopUps);
     }

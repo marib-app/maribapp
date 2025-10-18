@@ -2,6 +2,8 @@
 
 namespace App\Console;
 
+
+use App\Services\CurrencyDataMonitor;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -41,7 +43,14 @@ class Kernel extends ConsoleKernel
             ->hourly()
             ->withoutOverlapping();
 
+        $schedule->call(static function () {
+            app(CurrencyDataMonitor::class)->checkHistoricalSnapshots();
+        })
+            ->name('currency-data-monitor')
+            ->everyFifteenMinutes()
+            ->withoutOverlapping();
 
+            
     }
 
     /**

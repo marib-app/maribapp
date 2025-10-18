@@ -14,6 +14,7 @@ use App\Services\CurrencyRateHistoryService;
 use App\Services\ResponseService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use App\Services\CurrencyDataMonitor;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
@@ -34,7 +35,8 @@ class CurrencyController extends Controller
 
     public function __construct(
         private readonly CurrencyIconStorageService $iconStorageService,
-        private readonly CurrencyRateHistoryService $historyService
+        private readonly CurrencyRateHistoryService $historyService,
+        private readonly CurrencyDataMonitor $currencyDataMonitor
     )
     
     
@@ -442,12 +444,13 @@ class CurrencyController extends Controller
 
         $total = $query->count();
         $historyService = $this->historyService;
+        $monitor = $this->currencyDataMonitor;
 
         $currencies = $query->orderBy($sort, $order)
             ->offset($offset)
             ->limit($limit)
             ->get()
-            ->map(function (CurrencyRate $currency) use ($historyService) {
+            ->map(function (CurrencyRate $currency) use ($historyService, $monitor) {
 
                 [$defaultQuote] = $currency->resolveQuoteForGovernorate(null);
 
@@ -470,6 +473,7 @@ class CurrencyController extends Controller
 
                 $capturedAt = $latestHourly?->captured_at ?? $latestHourly?->hour_start;
                 $sourceQuality = $historyService->determineSourceQuality($capturedAt);
+                $monitor->inspectCurrency($currency, $capturedAt, $sourceQuality);
 
 
                 return [

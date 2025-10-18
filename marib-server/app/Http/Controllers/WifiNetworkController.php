@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 
 
 use App\Models\WalletAccount;
-use Illuminate\Support\Facades\Schema;
 use App\Http\Requests\Wifi\StoreWifiNetworkRequest;
 use App\Models\WifiNetwork;
 use Illuminate\Http\JsonResponse;
@@ -15,7 +14,9 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Schema;
 
 class WifiNetworkController extends Controller
 {
@@ -111,7 +112,20 @@ class WifiNetworkController extends Controller
             ->reject(static fn ($value, $key) => is_int($key) || (is_string($key) && trim($key) === ''))
             ->all();
 
-        $network = WifiNetwork::create($networkData);
+        try {
+            $network = WifiNetwork::create($networkData);
+        } catch (QueryException $exception) {
+            report($exception);
+
+            return response()->json([
+                'message' => __('Unable to create the Wi-Fi network.'),
+                'errors' => [
+                    'database' => [__('A database constraint prevented the Wi-Fi network from being created.')],
+                ],
+            ], 422);
+        }
+
+
         return response()->json(['data' => $network->fresh()], 201);
     
     
@@ -529,7 +543,7 @@ class WifiNetworkController extends Controller
 
         $defaultCurrency = strtoupper((string) config('app.currency', 'SAR'));
 
-        $wallet = (clone $query)->where('currency', $defaultCurrency)->first();
+        $wallet = $this->findWalletAccountByCurrency($query, $defaultCurrency);
 
         if (! $wallet) {
             $walletAttributes = [
@@ -542,12 +556,52 @@ class WifiNetworkController extends Controller
                 $walletAttributes['currency'] = $defaultCurrency;
             }
 
-            $wallet = WalletAccount::create($walletAttributes);
+            try {
+                $wallet = WalletAccount::create($walletAttributes);
+            } catch (QueryException $exception) {
+                if (! $this->isDuplicateWalletAccountException($exception)) {
+                    throw $exception;
+                }
+
+                $wallet = $this->findWalletAccountByCurrency($query, $defaultCurrency)
+                    ?? $query->first();
+            }
+        
         }
 
         return $wallet;
     }
 
+    private function findWalletAccountByCurrency(Builder $query, string $currency): ?WalletAccount
+    {
+        $normalizedCurrency = strtoupper($currency);
+        $lowerCurrency = strtolower($currency);
 
+        return (clone $query)
+            ->where(static function (Builder $builder) use ($normalizedCurrency, $lowerCurrency) {
+                $builder->where('currency', $normalizedCurrency)
+                    ->orWhereRaw('LOWER(currency) = ?', [$lowerCurrency]);
+            })
+            ->first();
+    }
 
+    private function isDuplicateWalletAccountException(QueryException $exception): bool
+    {
+        $message = strtolower($exception->getMessage());
+
+        if (! str_contains($message, 'wallet_accounts')) {
+            return false;
+        }
+
+        $sqlState = $exception->getCode();
+        if (in_array($sqlState, ['23000', '23505'], true)) {
+            return true;
+        }
+
+        $errorInfo = $exception->errorInfo ?? [];
+        $driverCode = isset($errorInfo[1]) ? (int) $errorInfo[1] : null;
+
+        return in_array($driverCode, [1062, 1555, 23505], true)
+            || str_contains($message, 'wallet_accounts_user_currency_unique');
+    }
 }

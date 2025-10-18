@@ -239,6 +239,24 @@ class _BankTransferScreenState extends State<BankTransferScreen>
   }
 
 
+  bool _isWalletTopUpPurpose(String? purpose) {
+    final normalized = purpose?.trim().toLowerCase();
+    if (normalized == null || normalized.isEmpty) {
+      return false;
+    }
+    if (normalized == _walletTopUpPurpose || normalized == 'wallet') {
+      return true;
+    }
+    if (normalized.contains('wallet_top_up')) {
+      return true;
+    }
+    if (normalized.contains('wallet')) {
+      return true;
+    }
+    return false;
+  }
+
+
 
   Future<void> _loadBanks() async {
     setState(() => _loadingBanks = true);
@@ -246,6 +264,11 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       final purpose = _resolvedPurpose();
       final bool isWalletTopUp =
           purpose == _walletTopUpPurpose || purpose == 'wallet';
+
+      final bool normalizedWalletTopUp =
+      _isWalletTopUpPurpose(widget.args.normalizedPurpose);
+
+
       final String? purposeParam;
       if (purpose == 'order' || purpose == 'package') {
         purposeParam = purpose;
@@ -295,10 +318,16 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         final normalizedGateway = widget.args.normalizedGateway;
         final bool walletAvailable = _walletSummaryReady;
 
+        final bool walletPurpose = isWalletTopUp || normalizedWalletTopUp;
+        final bool walletOptionAllowed = walletAvailable && !walletPurpose;
+
+
         if (normalizedGateway == _eastYemenMethod && _eastYemenBank != null) {
           _selectedMethod = _eastYemenMethod;
           _selectedBankId = null;
-        } else if (normalizedGateway == _walletMethod && walletAvailable) {
+
+        } else if (normalizedGateway == _walletMethod && walletOptionAllowed) {
+
           _selectedMethod = _walletMethod;
           _selectedBankId = null;
 
@@ -309,7 +338,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
           _selectedMethod = _eastYemenMethod;
           _selectedBankId = null;
-        } else if (walletAvailable) {
+        } else if (walletOptionAllowed) {
           _selectedMethod = _walletMethod;
           _selectedBankId = null;
         } else if (_banks.isNotEmpty) {
@@ -319,10 +348,28 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           _selectedMethod = null;
           _selectedBankId = null;
         }
-        if (_selectedMethod == null && normalizedGateway == _walletMethod) {
+        if (_selectedMethod == null &&
+            normalizedGateway == _walletMethod &&
+            walletOptionAllowed) {
+
           _selectedMethod = _walletMethod;
           _selectedBankId = null;
         }
+
+
+        if (!walletOptionAllowed && _selectedMethod == _walletMethod) {
+          if (_eastYemenBank != null) {
+            _selectedMethod = _eastYemenMethod;
+            _selectedBankId = null;
+          } else if (_banks.isNotEmpty) {
+            _selectedMethod = _manualBankMethod;
+            _selectedBankId = _banks.first.id;
+          } else {
+            _selectedMethod = null;
+            _selectedBankId = null;
+          }
+        }
+
         _pressedBankId = null;
         _attempted = false;
       });
@@ -347,6 +394,11 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     final purpose = _resolvedPurpose();
     final bool isWalletTopUp =
         purpose == _walletTopUpPurpose || purpose == 'wallet';
+
+    final bool normalizedWalletTopUp =
+    _isWalletTopUpPurpose(widget.args.normalizedPurpose);
+    final bool walletPurpose = isWalletTopUp || normalizedWalletTopUp;
+
     final String? purposeParam;
     if (purpose == 'order' || purpose == 'package') {
       purposeParam = purpose;
@@ -358,7 +410,33 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
 
     final currency = widget.args.normalizedCurrency;
-    final selectedMethod = _selectedMethod ?? _manualBankMethod;
+
+    if (walletPurpose && _selectedMethod == _walletMethod) {
+      void assignFallback() {
+        if (_eastYemenBank != null) {
+          _selectedMethod = _eastYemenMethod;
+          _selectedBankId = null;
+        } else if (_banks.isNotEmpty) {
+          _selectedMethod = _manualBankMethod;
+          _selectedBankId ??= _banks.first.id;
+        } else {
+          _selectedMethod = null;
+          _selectedBankId = null;
+        }
+      }
+
+      if (mounted) {
+        setState(assignFallback);
+      } else {
+        assignFallback();
+      }
+    }
+
+    final selectedMethod = (_selectedMethod == null ||
+        (walletPurpose && _selectedMethod == _walletMethod))
+        ? _manualBankMethod
+        : _selectedMethod!;
+
 
 
     final int? orderIdParam = (!isWalletTopUp && widget.args.packageId > 0)
@@ -551,6 +629,18 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         const SnackBar(content: Text('الرجاء إرفاق إيصال التحويل')),
       );
     }
+
+    final bool walletPurpose = _isWalletTopUpPurpose(widget.args.normalizedPurpose) ||
+        _isWalletTopUpPurpose(_resolvedPurpose());
+
+    if (_usingWallet && walletPurpose) {
+      _showOverlayMessage(
+        'لا يمكن استخدام المحفظة لشحن الرصيد. الرجاء اختيار تحويل بنكي.',
+        type: MessageType.warning,
+      );
+      return;
+    }
+
 
 
     if (_usingWallet) {

@@ -148,6 +148,12 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
     required String? instructionsText,
     required String? instructionsTitle,
   }) {
+
+    final bool hideWalletOption =
+        _isWalletTopUpPurpose(widget.args.normalizedPurpose) ||
+            _isWalletTopUpPurpose(_resolvedPurpose());
+
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
@@ -170,8 +176,12 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
     ),
           const SizedBox(height: 12),
     ],
-    _walletPaymentCard(onSurface),
-    const SizedBox(height: 12),
+        if (!hideWalletOption) ...[
+          _walletPaymentCard(onSurface),
+          const SizedBox(height: 12),
+        ],
+
+
     ...List.generate(_banks.length, (i) {
     final b = _banks[i];
     final selected = _selectedMethod == _BankTransferScreenState._manualBankMethod &&

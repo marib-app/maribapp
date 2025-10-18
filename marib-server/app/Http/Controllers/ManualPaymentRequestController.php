@@ -25,7 +25,6 @@ use App\Services\WalletService;
 
 use App\Services\DepartmentReportService;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Builder;
 
 use App\Services\ResponseService;
 use Carbon\Carbon;
@@ -46,7 +45,6 @@ class ManualPaymentRequestController extends Controller
 {
 
     private array $manualPaymentColumnSupportCache = [];
-    private array $manualPaymentOrderIdCache = [];
     private array $manualPaymentRequestLookupCache = [];
 
     private array $manualBankLookupCache = [];
@@ -1594,129 +1592,26 @@ class ManualPaymentRequestController extends Controller
     private function paymentRequestActionsFromRow(object $row): string
     {
 
-        $category = $this->normalizePaymentRequestCategory($row->category ?? null);
-        $payableId = $row->payable_id ?? null;
-        $hasPayableId = $payableId !== null && $payableId !== '';
-
-        if ($category === 'orders' && $hasPayableId) {
-            $orderId = $this->resolveOrderIdFromPayableId($payableId);
-
-            if ($orderId === null || ! Route::has('orders.show')) {
-                return '';
-            }
-
-            $url = route('orders.show', ['order' => $orderId]);
-
-            return BootstrapTableService::button(
-                'fa fa-external-link-alt',
-                $url,
-                ['btn-primary', 'view-order-details'],
-                [
-                    'title' => trans('View'),
-                ],
-                trans('View')
-            );
-        }
 
         if (
-            !empty($row->manual_payment_request_id)
-            && Route::has('manual-payments.review')
+            empty($row->manual_payment_request_id)
+            || ! Route::has('manual-payments.review')
         ) {
-            return BootstrapTableService::button(
-                'fa fa-eye',
-                route('manual-payments.review', ['manualPaymentRequest' => $row->manual_payment_request_id]),
-                ['btn-outline-primary', 'view-manual-payment'],
-                [
-                    'target' => '_blank',
-                    'rel' => 'noopener noreferrer',
-                    'title' => trans('View'),
-                ],
-                trans('View')
-            
-            );
+            return '';
+
         }
 
-        if (
-            !empty($row->payment_transaction_id)
-            && Route::has('manual-payments.deep-link')
-        ) {
-            return BootstrapTableService::button(
-                'fa fa-receipt',
-                route('manual-payments.deep-link', ['paymentTransaction' => $row->payment_transaction_id]),
-                ['btn-outline-secondary'],
-                [
-                    'target' => '_blank',
-                    'rel' => 'noopener noreferrer',
-                    'title' => trans('View'),
-                ]
-            );
-        }
-
-
-
-        if (
-            $category === 'orders'
-            && $hasPayableId
-            && Route::has('orders.show')
-        ) {
-            return BootstrapTableService::button(
-                'fa fa-shopping-cart',
-                route('orders.show', ['order' => $payableId]),
-                ['btn-outline-primary'],
-                [
-                    'target' => '_blank',
-                    'rel' => 'noopener noreferrer',
-                    'title' => trans('View'),
-                ]
-            );
-        }
-
-        return '';
-    }
-
-
-    private function resolveOrderIdFromPayableId(mixed $payableId): ?int
-    {
-        if (! is_scalar($payableId)) {
-            return null;
-        }
-
-        $normalized = trim((string) $payableId);
-
-        if ($normalized === '') {
-            return null;
-        }
-
-        if (array_key_exists($normalized, $this->manualPaymentOrderIdCache)) {
-            return $this->manualPaymentOrderIdCache[$normalized];
-        }
-
-        $numericId = ctype_digit($normalized) ? (int) $normalized : null;
-
-        $orderId = Order::withTrashed()
-            ->select('id')
-            ->when(
-                $numericId !== null,
-                static function (Builder $builder) use ($numericId, $normalized) {
-                    $builder->where(static function (Builder $query) use ($numericId, $normalized) {
-                        $query
-                            ->where('id', $numericId)
-                            ->orWhere('order_number', $normalized);
-                    });
-                },
-                static function (Builder $builder) use ($normalized) {
-                    $builder->where('order_number', $normalized);
-                }
-            )
-            ->value('id');
-
-        if ($orderId === null) {
-            $orderId = $numericId;
-        }
-
-        return $this->manualPaymentOrderIdCache[$normalized] = $orderId !== null
-            ? (int) $orderId
-            : null;
+        return BootstrapTableService::button(
+            'fa fa-eye',
+            route('manual-payments.review', ['manualPaymentRequest' => $row->manual_payment_request_id]),
+            ['btn-primary', 'view-manual-payment'],
+            [
+                'target' => '_blank',
+                'rel' => 'noopener noreferrer',
+                'title' => trans('Review'),
+            ],
+            trans('Review')
+        );
     }
 
 

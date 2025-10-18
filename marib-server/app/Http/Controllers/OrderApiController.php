@@ -546,6 +546,16 @@ class OrderApiController extends Controller
                 $method,
                 $intentIdempotencyKey
             );
+
+            if ($transaction->payment_gateway === 'wallet') {
+                $transaction = $this->confirmDefaultWalletPaymentIntent(
+                    $user,
+                    $order,
+                    $transaction,
+                    $intentIdempotencyKey
+                );
+            }
+
         } catch (ValidationException $exception) {
             Log::info('orders.default_payment_intent.skipped', [
                 'order_id' => $order->getKey(),
@@ -591,6 +601,76 @@ class OrderApiController extends Controller
 
         return $transaction->fresh();
     }
+
+
+    private function confirmDefaultWalletPaymentIntent(
+        User $user,
+        Order $order,
+        PaymentTransaction $transaction,
+        string $intentIdempotencyKey
+    ): PaymentTransaction {
+        $confirmationData = [
+            'payment_method' => $transaction->payment_gateway,
+            'currency' => strtoupper((string) ($transaction->currency ?? config('app.currency', 'SAR'))),
+        ];
+
+        try {
+            return $this->orderPaymentService->confirm(
+                $user,
+                $transaction,
+                $intentIdempotencyKey,
+                $confirmationData
+            );
+        } catch (Throwable $throwable) {
+            $this->handleWalletIntentFailure($order, $transaction, $throwable);
+        }
+    }
+
+    private function handleWalletIntentFailure(
+        Order $order,
+        PaymentTransaction $transaction,
+        Throwable $throwable
+    ): never {
+        $this->cancelDefaultPaymentIntent($order, $transaction);
+
+        Log::warning('orders.default_payment_intent.wallet_confirm_failed', [
+            'order_id' => $order->getKey(),
+            'transaction_id' => $transaction->getKey(),
+            'user_id' => $transaction->user_id,
+            'message' => $throwable->getMessage(),
+        ]);
+
+        if ($throwable instanceof ValidationException) {
+            throw $throwable;
+        }
+
+        throw ValidationException::withMessages([
+            'payment' => __('تعذر خصم مبلغ المحفظة.'),
+        ]);
+    }
+
+    private function cancelDefaultPaymentIntent(Order $order, PaymentTransaction $transaction): void
+    {
+        if ($transaction->payment_status === 'pending') {
+            $transaction->forceFill([
+                'payment_status' => 'cancelled',
+            ])->save();
+        }
+
+        $payload = $order->payment_payload ?? [];
+
+        if (
+            isset($payload['default_intent']['transaction_id'])
+            && (int) $payload['default_intent']['transaction_id'] === $transaction->getKey()
+        ) {
+            unset($payload['default_intent']);
+
+            $order->forceFill([
+                'payment_payload' => $payload,
+            ])->save();
+        }
+    }
+
 
     private function resolveDefaultPaymentMethod(Order $order): ?string
     {

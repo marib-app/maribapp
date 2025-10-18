@@ -258,6 +258,11 @@ class Section_screenState extends State<Section_screen> {
   @override
   void initState() {
     super.initState();
+    // =========================
+    // إعداد معرف الفئة الأساسي
+    // =========================
+    _catId = _parseInitialCategoryId(widget.categoryId);
+    selectedCategoryId.value = _catId;
 
     // (اختياري) لو هذه المتغيرات عندك أصلاً — وإلا احذف السطور الثلاثة:
     // searchbody = {};

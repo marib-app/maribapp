@@ -1706,10 +1706,17 @@ class ManualPaymentRequestController extends Controller
 
         $candidates = [
             data_get($row, 'manual_bank_name'),
-            data_get($row, 'manualBank.name'),
-            data_get($row, 'manualBank.beneficiary_name'),
             data_get($row, 'bank_name'),
             data_get($row, 'bank_account_name'),
+            data_get($row, 'meta.manual_bank.name'),
+            data_get($row, 'meta.manual_bank.bank_name'),
+            data_get($row, 'meta.manual_bank.beneficiary_name'),
+            data_get($row, 'meta.bank.name'),
+            data_get($row, 'meta.bank.bank_name'),
+            data_get($row, 'meta.bank.beneficiary_name'),
+            data_get($row, 'manualBank.name'),
+            data_get($row, 'manualBank.beneficiary_name'),
+
         ];
 
         foreach ($candidates as $candidate) {

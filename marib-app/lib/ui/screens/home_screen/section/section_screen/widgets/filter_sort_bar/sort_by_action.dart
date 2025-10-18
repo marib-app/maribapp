@@ -5,6 +5,7 @@ import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/app_icon.dart';
+import 'filter_sort_action_button.dart';
 
 
 
@@ -25,41 +26,20 @@ class SortByAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = context.color.secondaryColor;         // كابسولة الزر
-    final fg = context.color.textDefaultColor;       // نص/أيقونة
-    final br = context.color.borderColor;            // حدود خفيفة
+    final textColor = context.color.textDefaultColor;
 
-    return InkWell(
+    return FilterSortActionButton(
       onTap: () => _openSheet(context),
-      borderRadius: BorderRadius.circular(12),
-      splashColor: Theme.of(context).colorScheme.primary.withOpacity(0.14),
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          vertical: MediaQuery.of(context).size.height * 0.012,
-          horizontal: MediaQuery.of(context).size.width * 0.02,
-        ),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: br, width: 1),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            UiUtils.getSvg(AppIcons.sortByIcon, color: fg, height: 20, width: 20),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                "sortBy".translate(context),
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontWeight: FontWeight.w600, color: fg),
-              ),
-            ),
-          ],
-        ),
+      icon: UiUtils.getSvg(
+        AppIcons.sortByIcon,
+        color: textColor,
+        height: 22,
+        width: 22,
       ),
+      label: "sortBy".translate(context),
     );
   }
+
 
   void _openSheet(BuildContext context) {
     showModalBottomSheet(

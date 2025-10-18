@@ -20,6 +20,7 @@ import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/responsiveSize.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'filter_sort_action_button.dart';
 
 import 'package:marib/utils/app_icon.dart';
 
@@ -84,48 +85,20 @@ class FilterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ألوان/حدود الكبسولة حسب الثيم العام
-    final bg = context.color.secondaryColor;         // الخلفية
-    final fg = context.color.textDefaultColor;       // لون الأيقونة/النص
-    final br = context.color.borderColor;            // لون الحدود
+    final textColor = context.color.textDefaultColor;
 
-    return InkWell(
+
+    return FilterSortActionButton(
+
       onTap: () => _openFilterBottomSheet(context),
-      borderRadius: BorderRadius.circular(12),
-      splashColor: Theme.of(context).colorScheme.primary.withOpacity(0.14),
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          vertical: MediaQuery.of(context).size.height * 0.012,
-          horizontal: MediaQuery.of(context).size.width * 0.02,
-        ),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: br, width: 1),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            UiUtils.getSvg(
-              AppIcons.filterByIcon,
-              color: fg,
-              height: 20,
-              width: 20,
-            ),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                "filterTitle".translate(context),
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600, // نفس وزن الفرز
-                  color: fg,
-                ),
-              ),
-            ),
-          ],
-        ),
+      icon: UiUtils.getSvg(
+        AppIcons.filterByIcon,
+        color: textColor,
+        height: 22,
+        width: 22,
       ),
+      label: "filterTitle".translate(context),
+
     );
   }
 

@@ -82,7 +82,10 @@ class WifiNetworkController extends Controller
         $networkData = Arr::only($validated, $fillable);
 
 
-        if ($this->hasWifiNetworkSlugColumn()) {
+        $supportsSlug = $this->hasWifiNetworkSlugColumn();
+
+        if ($supportsSlug) {
+            
             $networkData['slug'] = $this->prepareSlug($validated['slug'] ?? null, $validated['name']);
         }
         
@@ -108,10 +111,32 @@ class WifiNetworkController extends Controller
             ->reject(static fn ($value, $key) => is_int($key) || (is_string($key) && trim($key) === ''))
             ->all();
 
-        try {
-            $network = WifiNetwork::create($networkData);
-        } catch (QueryException $exception) {
-            report($exception);
+        $network = null;
+        $maxAttempts = $supportsSlug ? 5 : 1;
+
+        for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
+            try {
+                $network = WifiNetwork::create($networkData);
+                break;
+            } catch (QueryException $exception) {
+                if ($supportsSlug && $this->isDuplicateWifiNetworkSlugException($exception) && $attempt < $maxAttempts - 1) {
+                    $networkData['slug'] = $this->prepareSlug(null, $validated['name']);
+
+                    continue;
+                }
+
+                report($exception);
+
+                return response()->json([
+                    'message' => __('Unable to create the Wi-Fi network.'),
+                    'errors' => [
+                        'database' => [__('A database constraint prevented the Wi-Fi network from being created.')],
+                    ],
+                ], 422);
+            }
+        }
+
+        if (! $network) {
 
             return response()->json([
                 'message' => __('Unable to create the Wi-Fi network.'),
@@ -587,4 +612,35 @@ class WifiNetworkController extends Controller
         return in_array($driverCode, [1062, 1555, 23505], true)
             || str_contains($message, 'wallet_accounts_user_currency_unique');
     }
+
+
+
+
+    private function isDuplicateWifiNetworkSlugException(QueryException $exception): bool
+    {
+        $message = strtolower($exception->getMessage());
+
+        if (! str_contains($message, 'wifi_networks')) {
+            return false;
+        }
+
+        if (str_contains($message, 'slug')) {
+            return true;
+        }
+
+        $constraint = strtolower((string) ($exception->errorInfo[2] ?? ''));
+
+        if ($constraint !== '' && str_contains($constraint, 'slug')) {
+            return true;
+        }
+
+        $driverCode = isset($exception->errorInfo[1]) ? (int) $exception->errorInfo[1] : null;
+
+        if ($driverCode !== null && in_array($driverCode, [19, 1062, 1555, 23505], true)) {
+            return true;
+        }
+
+        return false;
+    }
+
 }

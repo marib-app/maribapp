@@ -28,6 +28,7 @@ import 'package:marib/ui/screens/wallet/components/wallet_withdrawals_cards.dart
 import 'package:marib/ui/screens/wallet/components/wallet_filters_list.dart';
 import 'package:marib/ui/screens/wallet/components/wallet_transactions_sliver.dart';
 import 'package:marib/ui/screens/wallet/components/wallet_actions_card.dart';
+import 'package:marib/utils/api.dart';
 
 
 
@@ -285,20 +286,31 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     if (!mounted) return;
 
     final transferOptions = _extractTransferOptions(baseOptions);
-    if (transferOptions == null ||
-        transferOptions.clientTag == null ||
-        transferOptions.clientTag!.isEmpty) {
+    if (transferOptions == null) {
 
       HelperUtils.showSnackBarMessage(
           context, 'لا تتوفر إعدادات صالحة لعملية التحويل حالياً.');
       return;
     }
 
+
+    final WalletOperationOptions resolvedOptions;
+    final String? existingClientTag = transferOptions.clientTag?.trim();
+    if (existingClientTag == null || existingClientTag.isEmpty) {
+      resolvedOptions = transferOptions.copyWith(
+        clientTag: Api.generateIdempotencyKey(),
+      );
+    } else {
+      resolvedOptions = transferOptions;
+    }
+
+
+
     final response = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
       builder: (_) => WalletTransferSheet(
-        options: transferOptions,
+        options: resolvedOptions,
         balance: _currentBalance(),
         currency: _summaryCurrency(),
       ),

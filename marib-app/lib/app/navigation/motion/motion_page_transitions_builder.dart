@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:animations/animations.dart';
 
 import 'route_motion.dart';
 
@@ -6,7 +7,7 @@ import 'route_motion.dart';
 /// according to the application's motion preferences.
 class MotionSettingsController {
   MotionSettingsController._()
-      : _defaultComposer = const RouteMotionComposer(
+      : _defaultComposer =  RouteMotionComposer(
     pattern: AppMotionPattern.sharedAxis,
   );
 
@@ -49,7 +50,7 @@ class MotionSettingsController {
 
   /// Restores the controller to its initial state.
   void reset() {
-    _defaultComposer = const RouteMotionComposer(
+    _defaultComposer =  RouteMotionComposer(
       pattern: AppMotionPattern.sharedAxis,
     );
     clearOverrides();

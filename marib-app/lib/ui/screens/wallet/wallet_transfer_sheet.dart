@@ -21,6 +21,7 @@ import 'package:marib/utils/currency_utils.dart';
 import 'package:marib/data/cubits/wallet/wallet_summary_cubit.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
+import 'package:marib/utils/api.dart';
 
 
 
@@ -144,11 +145,7 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
       return;
     }
 
-    final clientTag = widget.options.clientTag;
-    if (clientTag == null || clientTag.isEmpty) {
-      HelperUtils.showSnackBarMessage(context, 'لا يمكن إتمام التحويل بدون معرف العميل');
-      return;
-    }
+
 
     final recipientId = int.tryParse(_recipientIdController.text.trim());
     final double? amount = _parseAmount(_amountController.text.trim());
@@ -203,6 +200,7 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
     if (!confirmed || !mounted) {
       return;
     }
+    final String clientTag = _resolveClientTag();
 
     final payload = <String, dynamic>{
       'recipient_id': recipient.id,
@@ -228,6 +226,18 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
       HelperUtils.showSnackBarMessage(context, error.toString());
     }
   }
+
+
+
+  String _resolveClientTag() {
+    final String? provided = widget.options.clientTag?.trim();
+    if (provided != null && provided.isNotEmpty) {
+      return provided;
+    }
+    return Api.generateIdempotencyKey();
+  }
+
+
 
   Future<bool> _showConfirmationDialog(
       WalletRecipient recipient,

@@ -180,7 +180,8 @@ class ManualPayment {
           metadata?['manual_reference'],
     );
 
-    final paymentGateway = toStr(
+    final paymentGatewayRaw = toStr(
+
       json['payment_gateway'] ??
           manualData?['payment_gateway'] ??
           metadata?['payment_gateway'],

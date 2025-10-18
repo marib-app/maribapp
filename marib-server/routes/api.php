@@ -89,7 +89,10 @@ Route::prefix('wifi-cabin')
         Route::put('networks/{network}', [WifiNetworkController::class, 'update'])->whereNumber('network');
         Route::get('networks/{network}/plans', [WifiPlanController::class, 'index'])->whereNumber('network');
         Route::post('networks/{network}/plans', [WifiPlanController::class, 'store'])->whereNumber('network');
-        
+
+        Route::get('plans/available', [WifiOwnerPlanSummaryController::class, 'available']);
+
+
         Route::get('plans', WifiOwnerPlanSummaryController::class);
 
         Route::put('plans/{plan}', [WifiPlanController::class, 'update'])->whereNumber('plan');

@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
+import 'package:marib/utils/api.dart';
 
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
@@ -195,7 +196,12 @@ class WifiPlanConfigurationScreenState
                       'ارفع ملف CSV أو XLS أو XLSX يحتوي على الأكواد الجديدة',
                       fileName: _voucherFile?.name,
                       isBusy: _isSubmitting,
-                      onTap: _isSubmitting ? null : _pickVoucherFile,
+                      onTap: _isSubmitting
+                          ? null
+                          : () {
+                        _pickVoucherFile();
+                      },
+
                     ),
                   ],
                 ),
@@ -320,7 +326,7 @@ class WifiPlanConfigurationScreenState
 
     final int? dataAllowanceMb = _dataUnlimited
         ? null
-        : max<int>(1, ((dataAllowanceGb ?? 0) * 1024).round());
+        : math.max(1, ((dataAllowanceGb ?? 0) * 1024).round());
 
     setState(() => _isSubmitting = true);
 

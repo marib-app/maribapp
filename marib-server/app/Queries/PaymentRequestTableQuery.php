@@ -54,14 +54,7 @@ class PaymentRequestTableQuery
     ];
 
 
-    private const MANUAL_BANK_ALIASES = [
-        'manual_bank',
-        'manual_banks',
-        'manual bank',
-        'manual banks',
-        'manual-bank',
-        'manual-banks',
-    ];
+
 
 
     /**
@@ -138,7 +131,7 @@ class PaymentRequestTableQuery
 
         $manualBankAliasSqlList = implode(', ', array_map(
             static fn (string $alias): string => "'" . $alias . "'",
-            self::MANUAL_BANK_ALIASES
+            ManualPaymentRequest::manualBankGatewayAliases()
         ));
 
         $sanitizeManualBankAlias = static function (string $column) use ($manualBankAliasSqlList): string {

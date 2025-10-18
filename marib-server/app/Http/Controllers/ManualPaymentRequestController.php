@@ -1666,6 +1666,9 @@ class ManualPaymentRequestController extends Controller
 
     private function resolveManualBankName(mixed $row): ?string
     {
+        $manualBankAliases = ManualPaymentRequest::manualBankGatewayAliases();
+
+
         $candidates = [
             data_get($row, 'manual_bank_name'),
             data_get($row, 'manualBank.name'),
@@ -1681,9 +1684,16 @@ class ManualPaymentRequestController extends Controller
 
             $trimmed = trim($candidate);
 
-            if ($trimmed !== '') {
-                return $trimmed;
+            if ($trimmed === '') {
+                continue;
             }
+
+            if (in_array(strtolower($trimmed), $manualBankAliases, true)) {
+                continue;
+            }
+
+            return $trimmed;
+
         }
 
         return null;
@@ -1694,6 +1704,7 @@ class ManualPaymentRequestController extends Controller
 
         $channelValue = data_get($row, 'channel', data_get($row, 'payment_gateway'));
         $normalizedChannel = $this->normalizePaymentRequestChannel($channelValue);
+        $manualBankAliases = ManualPaymentRequest::manualBankGatewayAliases();
 
         $propertyNames = ['payment_gateway_name'];
 
@@ -1727,6 +1738,11 @@ class ManualPaymentRequestController extends Controller
             if ($trimmed === '') {
                 continue;
             }
+
+            if (in_array(strtolower($trimmed), $manualBankAliases, true)) {
+                continue;
+            }
+
             $candidates[] = $trimmed;
 
 
@@ -1743,9 +1759,16 @@ class ManualPaymentRequestController extends Controller
         }
 
         foreach ($candidates as $candidate) {
-            if ($candidate !== '') {
-                return $candidate;
+            if ($candidate === '') {
+                continue;
             }
+
+            if (in_array(strtolower($candidate), $manualBankAliases, true)) {
+                continue;
+            }
+
+            return $candidate;
+
         }
 
         if (is_string($channelValue) && trim($channelValue) !== '') {

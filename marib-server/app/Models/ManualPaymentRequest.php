@@ -177,6 +177,48 @@ class ManualPaymentRequest extends Model
         return $normalized;
     }
 
+
+
+    /**
+     * Canonical aliases representing the manual bank gateway values.
+     *
+     * @return array<int, string>
+     */
+    public static function manualBankGatewayAliases(): array
+    {
+        $aliases = array_merge(
+            [
+                'manual_bank',
+                'manual_banks',
+                'manual bank',
+                'manual banks',
+                'manual-bank',
+                'manual-banks',
+            ],
+            self::GATEWAY_ALIASES['manual_banks'] ?? []
+        );
+
+        $normalized = array_map(
+            static function ($alias) {
+                if (! is_string($alias)) {
+                    return null;
+                }
+
+                $trimmed = trim($alias);
+
+                if ($trimmed === '') {
+                    return null;
+                }
+
+                return strtolower($trimmed);
+            },
+            $aliases
+        );
+
+        return array_values(array_unique(array_filter($normalized)));
+    }
+
+
      /**
      * @var array<int, string>
      */

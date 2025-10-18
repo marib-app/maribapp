@@ -164,17 +164,16 @@ class PaymentRequestTableQuery
             $manualGatewayNameParts[] = "NULLIF(manual_bank_lookup.beneficiary_name, '')";
         }
 
-
-        if ($supportsManualGatewayName) {
-            $manualGatewayNameParts[] = "NULLIF(mpr.gateway_name, '')";
-
-        }
         if ($supportsManualBankName) {
             $manualGatewayNameParts[] = "NULLIF(mpr.bank_name, '')";
         }
         if ($supportsManualBankAccountName) {
             $manualGatewayNameParts[] = "NULLIF(mpr.bank_account_name, '')";
         }
+        if ($supportsManualGatewayName) {
+            $manualGatewayNameParts[] = $sanitizeManualBankAlias('mpr.gateway_name');
+        }
+
         $manualGatewayNameParts = array_merge($manualGatewayNameParts, $paymentGatewayNameParts);
         $manualGatewayNameParts[] = "'Manual Banks'";
         $manualGatewayNameSelect = 'COALESCE(' . implode(', ', $manualGatewayNameParts) . ')';

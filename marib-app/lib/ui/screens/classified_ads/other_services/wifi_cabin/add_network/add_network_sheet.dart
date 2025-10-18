@@ -3,7 +3,6 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 
 import 'package:marib/data/wifi/wifi_repository.dart';
-import 'package:marib/utils/extensions/extensions.dart';
 
 import 'add_network_form.dart';
 
@@ -29,7 +28,6 @@ class WifiAddNetworkSheetState
 
   @override
   Widget build(BuildContext context) {
-    final color = context.color;
 
     return DraggableScrollableSheet(
       expand: false,
@@ -37,31 +35,105 @@ class WifiAddNetworkSheetState
       minChildSize: 0.6,
       maxChildSize: 0.95,
       builder: (context, controller) {
-        return Container(
-          decoration: BoxDecoration(
-            color: color.backgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-          ),
-          child: Column(
-            children: [
-              const SizedBox(height: 8),
-              Container(
-                height: 4,
-                width: 44,
-                decoration: BoxDecoration(
-                  color: color.secondaryColor,
-                  borderRadius: BorderRadius.circular(4),
+        final theme = Theme.of(context);
+        return ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: Material(
+            color: theme.colorScheme.surface,
+            child: Column(
+              children: [
+                _buildSheetHeader(theme),
+                const Divider(height: 1),
+                Expanded(
+                  child: buildFormContent(
+                    controller: controller,
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                    showIntroTitle: false,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: buildFormContent(controller: controller),
-              ),
-              buildSubmitButton(),
-            ],
+                SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                    child: buildSubmitButton(
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildSheetHeader(ThemeData theme) {
+    final color = context.color;
+    final onSurface = theme.colorScheme.onSurface;
+
+    return Container(
+      width: double.infinity,
+      color: theme.colorScheme.surface,
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+        Container(
+        width: 44,
+        height: 4,
+        decoration: BoxDecoration(
+          color: onSurface.withOpacity(.18),
+          borderRadius: BorderRadius.circular(8),
+        ),
+          ),
+      const SizedBox(height: 18),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'أضف شبكتك',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'عرّف مجتمع كبائن واي فاي على شبكتك وشارك تفاصيل التواصل والباقات المتاحة.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.4,
+                        color: onSurface.withOpacity(.65),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: color.territoryColor.withOpacity(.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: IconButton(
+                  tooltip: 'إغلاق',
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  icon: Icon(
+                    Icons.close_rounded,
+                    color: color.territoryColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

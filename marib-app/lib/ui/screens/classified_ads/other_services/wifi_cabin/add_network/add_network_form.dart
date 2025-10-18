@@ -47,6 +47,7 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
   Widget buildFormContent({
     ScrollController? controller,
     EdgeInsetsGeometry? padding,
+    bool showIntroTitle = true,
   }) {
     final color = context.color;
     final EdgeInsetsGeometry effectivePadding =
@@ -56,15 +57,17 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
       controller: controller,
       padding: effectivePadding,
       children: [
-        Text(
-          'أضف شبكتك',
-          style: TextStyle(
-            color: color.textDefaultColor,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+        if (showIntroTitle) ...[
+    Text(
+    'أضف شبكتك',
+    style: TextStyle(
+    color: color.textDefaultColor,
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+    ),
           ),
-        ),
-        const SizedBox(height: 16),
+          const SizedBox(height: 16),
+        ],
         TextField(
           controller: _nameController,
           enabled: !_isSubmitting,

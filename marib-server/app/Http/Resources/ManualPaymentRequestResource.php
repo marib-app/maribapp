@@ -202,6 +202,12 @@ class ManualPaymentRequestResource extends JsonResource
             : [];
 
         $candidates = [
+
+            data_get($this, 'gateway_display_name'),
+            data_get($meta, 'gateway_display_name'),
+            data_get($meta, 'manual.gateway_display_name'),
+            data_get($transactionMeta, 'gateway_display_name'),
+            data_get($transactionMeta, 'manual.gateway_display_name'),
             data_get($this, 'manual_bank_name'),
             data_get($this, 'bank_name'),
             data_get($this, 'bank_account_name'),
@@ -257,16 +263,21 @@ class ManualPaymentRequestResource extends JsonResource
         }
 
         $candidates = array_merge($candidates, [
+            data_get($this, 'gateway_display_name'),
             data_get($this, 'payment_gateway_label'),
             data_get($this, 'payment_gateway_name'),
             data_get($this, 'gateway_name'),
+            data_get($meta, 'gateway_display_name'),
             data_get($meta, 'payment_gateway_label'),
             data_get($meta, 'payment_gateway_name'),
             data_get($meta, 'gateway_name'),
+            data_get($meta, 'manual.gateway_display_name'),
             data_get($meta, 'manual.gateway_name'),
+            data_get($transactionMeta, 'gateway_display_name'),
             data_get($transactionMeta, 'payment_gateway_label'),
             data_get($transactionMeta, 'payment_gateway_name'),
             data_get($transactionMeta, 'gateway_name'),
+            data_get($transactionMeta, 'manual.gateway_display_name'),
             data_get($transactionMeta, 'manual.gateway_name'),
         ]);
 

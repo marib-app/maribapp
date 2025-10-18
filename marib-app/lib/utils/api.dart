@@ -24,8 +24,6 @@ import 'dart:collection';
 import 'dart:convert';
 import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
 
-
-
 class ApiException implements Exception {
   ApiException(this.errorMessage);
 
@@ -64,9 +62,9 @@ class _ApiResponseCache {
   static final Map<String, _CachedApiResponse> _cache = {};
 
   static String _buildKey(
-      String url,
-      Map<String, dynamic>? queryParameters,
-      ) {
+    String url,
+    Map<String, dynamic>? queryParameters,
+  ) {
     if (queryParameters == null || queryParameters.isEmpty) {
       return url;
     }
@@ -80,19 +78,19 @@ class _ApiResponseCache {
   }
 
   static _CachedApiResponse? get(
-      String url,
-      Map<String, dynamic>? queryParameters,
-      ) {
+    String url,
+    Map<String, dynamic>? queryParameters,
+  ) {
     final key = _buildKey(url, queryParameters);
     return _cache[key];
   }
 
   static void store(
-      String url,
-      Map<String, dynamic>? queryParameters,
-      Map<String, dynamic> payload,
-      String? eTag,
-      ) {
+    String url,
+    Map<String, dynamic>? queryParameters,
+    Map<String, dynamic> payload,
+    String? eTag,
+  ) {
     final key = _buildKey(url, queryParameters);
     _cache[key] = _CachedApiResponse(
       payload: Map<String, dynamic>.from(payload),
@@ -101,22 +99,12 @@ class _ApiResponseCache {
   }
 }
 
-
-
-
-
-
 class Api {
-
-
-
   // تهيئة الهيدرز لكل الطلبات
   // - لو المستخدم غير مسجل: نضيف اللغة فقط إن وجدت
   // - لو مسجل: نضيف Bearer <JWT> + اللغة
 
-
   static Map<String, dynamic> headers() {
-
     final Map<String, dynamic> headers = {
       "Accept": "application/json",
     };
@@ -126,7 +114,6 @@ class Api {
     if (languageCode is String && languageCode.isNotEmpty) {
       headers["Content-Language"] = languageCode;
     }
-
 
     if (!HiveUtils.isUserAuthenticated()) {
       _ensureSliderSessionHeaders(headers);
@@ -164,8 +151,9 @@ class Api {
       }
     }
     if (kDebugMode && jwtToken != null && jwtToken.isNotEmpty) {
-      final String visibleSuffix =
-      jwtToken.length > 4 ? jwtToken.substring(jwtToken.length - 4) : jwtToken;
+      final String visibleSuffix = jwtToken.length > 4
+          ? jwtToken.substring(jwtToken.length - 4)
+          : jwtToken;
       print("JWT token ****$visibleSuffix");
     }
 
@@ -175,7 +163,6 @@ class Api {
     _ensureSliderSessionHeaders(headers);
     return headers;
   }
-
 
   static Map<String, dynamic>? _cloneMap(Map<String, dynamic>? source) {
     if (source == null) {
@@ -188,11 +175,11 @@ class Api {
 
     return Map<String, dynamic>.from(source);
   }
+
   static const Object _contentTypeNotSpecified = Object();
 
   @visibleForTesting
   static Dio Function()? dioFactory;
-
 
   static String? _resolveContentType({
     Object? override = _contentTypeNotSpecified,
@@ -213,7 +200,6 @@ class Api {
     // unexpected object instances.
     return candidate.toString();
   }
-
 
   static Options _buildRequestOptions({
     Options? base,
@@ -236,8 +222,7 @@ class Api {
         base: resolvedBase.contentType,
       ),
       validateStatus: resolvedBase.validateStatus,
-      receiveDataWhenStatusError:
-      resolvedBase.receiveDataWhenStatusError,
+      receiveDataWhenStatusError: resolvedBase.receiveDataWhenStatusError,
       followRedirects: followRedirects ?? resolvedBase.followRedirects,
       maxRedirects: resolvedBase.maxRedirects,
       requestEncoder: resolvedBase.requestEncoder,
@@ -245,7 +230,6 @@ class Api {
       listFormat: resolvedBase.listFormat,
     );
   }
-
 
   static void _ensureSliderSessionHeaders(Map<String, dynamic> headers) {
     final String? sliderSessionId = HiveUtils.getSliderSessionId();
@@ -256,8 +240,7 @@ class Api {
     headers['X-Session-Id'] = sliderSessionId;
 
     final String sliderCookie = 'slider_session=$sliderSessionId';
-    final dynamic existingCookieRaw =
-        headers['Cookie'] ?? headers['cookie'];
+    final dynamic existingCookieRaw = headers['Cookie'] ?? headers['cookie'];
     String? resolvedCookie;
 
     if (existingCookieRaw is String && existingCookieRaw.isNotEmpty) {
@@ -336,9 +319,15 @@ class Api {
   static String getSliderApi = "get-slider";
   static String getCategoriesApi = "get-categories";
   static String getItemApi = "get-item";
-  static String productPurchaseOptionsApi(int itemId) => "products/$itemId/purchase-options";
+
+  static String productPurchaseOptionsApi(int itemId) =>
+      "products/$itemId/purchase-options";
+
   static String itemAttributesApi(int itemId) => "items/$itemId/attributes";
-  static String itemStockBulkSetApi(int itemId) => "admin/items/$itemId/stock/bulk-set";
+
+  static String itemStockBulkSetApi(int itemId) =>
+      "admin/items/$itemId/stock/bulk-set";
+
   static String itemDiscountApi(int itemId) => "items/$itemId/discount";
   static String getMyItemApi = "my-items";
   static String getNotificationListApi = "get-notification-list";
@@ -368,6 +357,7 @@ class Api {
   static String getTipsApi = "tips";
   static String premiumSubscriptionStatusApi = getLimitsOfPackageApi;
   static String adsFeaturedCountApi = "ads/featured/count";
+
   static String unfeatureAdApi(int id) => "ads/$id/unfeature";
   static String walletSummaryApi = "wallet";
   static String walletTransactionsApi = "wallet/transactions";
@@ -375,8 +365,6 @@ class Api {
   static String walletWithdrawalOptionsApi = "wallet/withdrawals/options";
   static String walletTransfersApi = "wallet/transfers";
   static String walletRecipientLookupApi = "wallet/recipients";
-
-
 
   static String manualPaymentRequestsApi = "manual-payment-requests";
   static String paymentsInitiateApi = "payments/initiate";
@@ -391,29 +379,32 @@ class Api {
   static String getBlogApi = "blogs";
   static String getServicesApi = "get-services";
 
-
-
   static String wifiNetworksApi = "wifi/networks";
+
   static String wifiNetworkPlansApi(int id) => "wifi/networks/$id/plans";
 
   static String wifiPlansApi = "wifi/plans";
+
   static String wifiPlanBatchesApi(int planId) => "wifi/plans/$planId/batches";
 
-
   static String wifiPaymentGatewaysApi = "wifi/payment-gateways";
-  static String wifiPlanPurchaseApi(int planId) => "wifi/plans/$planId/purchase";
-  static String wifiOrderCodeApi(int transactionId) => "wifi/orders/$transactionId/code";
+
+  static String wifiPlanPurchaseApi(int planId) =>
+      "wifi/plans/$planId/purchase";
+
+  static String wifiOrderCodeApi(int transactionId) =>
+      "wifi/orders/$transactionId/code";
   static String wifiPlanPurchaseWebhookApi = "wifi/plans/purchase/webhook";
   static String wifiPurchasesApi = "wifi/purchases";
+
   static String wifiCodeEventsApi(int codeId) => "wifi/codes/$codeId/events";
-
-
 
   static String serviceRequestsIndexApi = "service-requests";
   static String serviceRequestsCreateApi = "service-requests";
   static String serviceRequestsAlternativeCreateApi = "services/requests";
 
   static String myServicesApi = "my-services";
+
   static String myServiceManageApi(int id) => "my-services/$id";
 
   static String getCurrencyRatesApi = "currency-rates";
@@ -426,7 +417,6 @@ class Api {
   static String addItemReviewApi = "add-item-review";
   static String serviceReviewsApi = "service-reviews";
   static String addServiceReviewApi = "add-service-review";
-
 
   static String getVerificationFieldApi = "verification-fields";
   static String sendVerificationRequestApi = "send-verification-request";
@@ -446,9 +436,6 @@ class Api {
   static String sendOtpApi = "send-otp";
   static String verifyOtpApi = "verify-otp";
 
-
-
-
   // Common query parameters
   static const String filterQuery = "filter";
   static const String perPageQuery = "per_page";
@@ -463,8 +450,10 @@ class Api {
   static String markMessageDeliveredApi = "mark-message-delivered";
   static String markMessageReadApi = "mark-message-read";
   static String blockUserApi = "block-user";
+
   static String chatConversationTypingApi(String conversationId) =>
       "chat/conversations/$conversationId/typing";
+
   static String chatConversationPresenceApi(String conversationId) =>
       "chat/conversations/$conversationId/presence";
   static String unBlockUserApi = "unblock-user";
@@ -479,9 +468,6 @@ class Api {
 
   static String getDeliveryPricesApi = "delivery-prices";
   static String userOrdersApi = "orders";
-
-
-
 
   // not used API List
   static String userPurchasePackageApi = "user-purchase-package";
@@ -626,7 +612,6 @@ class Api {
     Options? options,
     bool? useBaseUrl,
     Map<String, dynamic>? extraHeaders,
-
   }) async {
     try {
       if (_isSliderEndpoint(url)) {
@@ -637,9 +622,6 @@ class Api {
 
       dio.options.followRedirects = false;
       dio.options.validateStatus = (_) => true;
-
-
-
 
       dio.interceptors.add(NetworkRequestInterseptor());
 
@@ -662,9 +644,9 @@ class Api {
             // قائمة ملفات → نحول كل عنصر
             formMap[key] = value
                 .map((file) => MultipartFile.fromFileSync(
-              file.path,
-              filename: file.path.split('/').last,
-            ))
+                      file.path,
+                      filename: file.path.split('/').last,
+                    ))
                 .toList();
           } else {
             // قيم عادية
@@ -685,8 +667,6 @@ class Api {
         );
       }
 
-
-
       final Map<String, dynamic>? optionHeaders = options?.headers;
       final Map<String, dynamic> mergedHeaders = <String, dynamic>{
         ...headers(),
@@ -696,8 +676,8 @@ class Api {
 
       if (parameterIsFormData) {
         mergedHeaders.removeWhere(
-              (String key, dynamic value) =>
-          key.toLowerCase() == HttpHeaders.contentTypeHeader &&
+          (String key, dynamic value) =>
+              key.toLowerCase() == HttpHeaders.contentTypeHeader &&
               value?.toString().toLowerCase() ==
                   Headers.jsonContentType.toLowerCase(),
         );
@@ -718,8 +698,6 @@ class Api {
         }
       });
 
-
-
       String? normalizedHeaderContentType;
       if (explicitContentTypeHeaderValue != null) {
         final String candidate = explicitContentTypeHeaderValue!.trim();
@@ -738,21 +716,19 @@ class Api {
         }
       }
 
-
       bool hasCustomContentTypeOption = false;
       if (normalizedOptionContentType != null) {
         final String normalized = normalizedOptionContentType;
 
         final String jsonContentType = Headers.jsonContentType.toLowerCase();
         final String formUrlEncodedContentType =
-        Headers.formUrlEncodedContentType.toLowerCase();
-        final bool isJsonDefault =
-            normalized == jsonContentType ||
-                normalized.startsWith('application/json');
+            Headers.formUrlEncodedContentType.toLowerCase();
+        final bool isJsonDefault = normalized == jsonContentType ||
+            normalized.startsWith('application/json');
         final bool isFormUrlEncoded = normalized == formUrlEncodedContentType;
         final bool isMultipart = normalized.startsWith('multipart/form-data');
         hasCustomContentTypeOption =
-        !(isJsonDefault || isFormUrlEncoded || isMultipart);
+            !(isJsonDefault || isFormUrlEncoded || isMultipart);
       }
 
       bool hasCustomContentTypeHeader = false;
@@ -760,14 +736,14 @@ class Api {
         final String normalized = normalizedHeaderContentType!;
         final String jsonContentType = Headers.jsonContentType.toLowerCase();
         final String formUrlEncodedContentType =
-        Headers.formUrlEncodedContentType.toLowerCase();
-        final bool isJsonDefault =
-            normalized == jsonContentType ||
-                normalized.startsWith('application/json');
+            Headers.formUrlEncodedContentType.toLowerCase();
+        final bool isJsonDefault = normalized == jsonContentType ||
+            normalized.startsWith('application/json');
         final bool isFormUrlEncoded = normalized == formUrlEncodedContentType;
         final bool isMultipart = normalized.startsWith('multipart/form-data');
         hasCustomContentTypeHeader =
-        !(isJsonDefault || isFormUrlEncoded || isMultipart);      }
+            !(isJsonDefault || isFormUrlEncoded || isMultipart);
+      }
 
       final bool shouldNullifyContentType = requestBodyIsMultipart &&
           !hasCustomContentTypeHeader &&
@@ -781,12 +757,11 @@ class Api {
         dio.options.contentType = null;
       }
 
-
       final Object? resolvedContentType = parameterIsFormData
           ? null
           : shouldNullifyContentType
-          ? null
-          : (options?.contentType ?? _contentTypeNotSpecified);
+              ? null
+              : (options?.contentType ?? _contentTypeNotSpecified);
 
       final Options requestOptions = _buildRequestOptions(
         base: options,
@@ -795,12 +770,10 @@ class Api {
         followRedirects: false,
       );
 
-
       final response = await dio.post(
         ((useBaseUrl ?? true) ? Constant.baseUrl : "") + url,
         data: formData,
         options: requestOptions,
-
       );
 
       final int statusCode = response.statusCode ?? 0;
@@ -808,8 +781,8 @@ class Api {
       final Map<String, dynamic> resp = rawBody is Map<String, dynamic>
           ? Map<String, dynamic>.from(rawBody)
           : rawBody is Map
-          ? rawBody.map((key, value) => MapEntry(key.toString(), value))
-          : <String, dynamic>{'data': rawBody};
+              ? rawBody.map((key, value) => MapEntry(key.toString(), value))
+              : <String, dynamic>{'data': rawBody};
 
       if (statusCode >= 400) {
         throw ApiHttpException(
@@ -839,7 +812,6 @@ class Api {
       }
 
       if (statusCode == 503) {
-
         throw "server-not-available";
       }
 
@@ -850,11 +822,7 @@ class Api {
         statusCode: statusCode,
         payload: e.response?.data,
         cause: e,
-
-
       );
-
-
     } on ApiException {
       rethrow;
     } catch (e) {
@@ -870,24 +838,15 @@ class Api {
     Future.delayed(const Duration(seconds: 2), () {
       HiveUtils.clear();
       Constant.favoriteItemList.clear();
-      Constant
-          .navigatorKey.currentContext!
-          .read<UserDetailsCubit>()
-          .clear();
-      Constant
-          .navigatorKey.currentContext!
-          .read<FavoriteCubit>()
-          .resetState();
-      Constant
-          .navigatorKey.currentContext!
+      Constant.navigatorKey.currentContext!.read<UserDetailsCubit>().clear();
+      Constant.navigatorKey.currentContext!.read<FavoriteCubit>().resetState();
+      Constant.navigatorKey.currentContext!
           .read<UpdatedReportItemCubit>()
           .clearItem();
-      Constant
-          .navigatorKey.currentContext!
+      Constant.navigatorKey.currentContext!
           .read<GetBuyerChatListCubit>()
           .resetState();
-      Constant
-          .navigatorKey.currentContext!
+      Constant.navigatorKey.currentContext!
           .read<BlockedUsersListCubit>()
           .resetState();
       HiveUtils.logoutUser(
@@ -915,8 +874,7 @@ class Api {
       final Dio dio = Dio();
 
       dio.options.followRedirects = false;
-      dio.options.validateStatus =
-          (status) => status != null && status < 400;
+      dio.options.validateStatus = (status) => status != null && status < 400;
 
       dio.interceptors.add(NetworkRequestInterseptor());
 
@@ -961,21 +919,14 @@ class Api {
       );
     } on ApiException {
       rethrow;
-
-
     } catch (e, st) {
       throw ApiException(st.toString());
     }
   }
 
-
-
-
   static Future<Map<String, dynamic>> requestJson({
-
     required String url,
     String method = 'POST',
-
     Map<String, dynamic>? data,
     Options? options,
     bool? useBaseUrl,
@@ -989,16 +940,13 @@ class Api {
       }
       final Dio dio = Dio();
 
-
       dio.options.followRedirects = false;
-      dio.options.validateStatus =
-          (status) => status != null && status < 400;
+      dio.options.validateStatus = (status) => status != null && status < 400;
 
       dio.interceptors.add(NetworkRequestInterseptor());
 
       final Map<String, dynamic>? optionHeaders = options?.headers;
       final Map<String, dynamic> mergedHeaders = <String, dynamic>{
-
         ...headers(),
         if (optionHeaders != null) ...optionHeaders,
         if (extraHeaders != null) ...extraHeaders,
@@ -1006,15 +954,16 @@ class Api {
 
       mergedHeaders['Accept'] = 'application/json';
 
-      final bool hasJsonBody =
-          resolvedMethod == 'POST' || resolvedMethod == 'PUT' || resolvedMethod == 'PATCH';
+      final bool hasJsonBody = resolvedMethod == 'POST' ||
+          resolvedMethod == 'PUT' ||
+          resolvedMethod == 'PATCH';
       final bool dataIsFormData = data is FormData;
 
       if (hasJsonBody) {
         if (dataIsFormData) {
           mergedHeaders.removeWhere(
-                (String key, dynamic value) =>
-            key.toLowerCase() == HttpHeaders.contentTypeHeader &&
+            (String key, dynamic value) =>
+                key.toLowerCase() == HttpHeaders.contentTypeHeader &&
                 value?.toString().toLowerCase() ==
                     Headers.jsonContentType.toLowerCase(),
           );
@@ -1040,9 +989,7 @@ class Api {
         method: resolvedMethod,
         headers: mergedHeaders,
         contentType: requestContentType,
-
         followRedirects: false,
-
       );
 
       String? extractMessage(dynamic payload) {
@@ -1057,7 +1004,8 @@ class Api {
             }
           }
         } else if (payload is Map) {
-          final Map<String, dynamic> converted = Map<String, dynamic>.from(payload as Map);
+          final Map<String, dynamic> converted =
+              Map<String, dynamic>.from(payload as Map);
           return extractMessage(converted);
         } else if (payload is String) {
           final String trimmed = payload.trim();
@@ -1078,7 +1026,6 @@ class Api {
         return null;
       }
 
-
       final response = await dio.request(
         ((useBaseUrl ?? true) ? Constant.baseUrl : "") + url,
         data: hasJsonBody ? (data ?? const <String, dynamic>{}) : data,
@@ -1092,7 +1039,9 @@ class Api {
       final bool redirectedToLogin = statusCode == 302 || statusCode == 307;
       final int normalizedStatus = redirectedToLogin ? 401 : statusCode;
 
-      if (redirectedToLogin || normalizedStatus == 401 || normalizedStatus == 403) {
+      if (redirectedToLogin ||
+          normalizedStatus == 401 ||
+          normalizedStatus == 403) {
         userExpired();
       }
       if (normalizedStatus == 503) {
@@ -1100,8 +1049,9 @@ class Api {
       }
 
       if (normalizedStatus < 200 || normalizedStatus >= 300) {
-        final dynamic errorPayload =
-        payloadMap != null ? Map<String, dynamic>.from(payloadMap) : rawPayload;
+        final dynamic errorPayload = payloadMap != null
+            ? Map<String, dynamic>.from(payloadMap)
+            : rawPayload;
         throw ApiHttpException(
           errorMessage: extractMessage(errorPayload) ?? 'request-failed',
           statusCode: normalizedStatus,
@@ -1111,8 +1061,6 @@ class Api {
 
       if (payloadMap != null) {
         return Map<String, dynamic>.from(payloadMap);
-
-
       }
       if (rawPayload == null) {
         return <String, dynamic>{};
@@ -1151,7 +1099,6 @@ class Api {
     }
   }
 
-
   /// POST helper that sends JSON body instead of multipart.
   static Future<Map<String, dynamic>> postJson({
     required String url,
@@ -1169,14 +1116,12 @@ class Api {
     );
   }
 
-
   /// GET عام
   static Future<Map<String, dynamic>> get({
     required String url,
     Map<String, dynamic>? queryParameters,
     bool? useBaseUrl,
     bool enableEtagCache = false,
-
   }) async {
     try {
       if (_isSliderEndpoint(url)) {
@@ -1186,8 +1131,7 @@ class Api {
       final Dio dio = Dio();
 
       dio.options.followRedirects = false;
-      dio.options.validateStatus =
-          (status) => status != null && status < 400;
+      dio.options.validateStatus = (status) => status != null && status < 400;
 
       dio.interceptors.add(NetworkRequestInterseptor());
 
@@ -1203,7 +1147,6 @@ class Api {
       if (enableEtagCache && cachedResponse?.eTag != null) {
         requestHeaders['If-None-Match'] = cachedResponse!.eTag;
       }
-
 
       final response = await dio.get(
         requestUrl,
@@ -1225,8 +1168,8 @@ class Api {
       final dynamic responseData = response.data;
       final Map<String, dynamic> responseMap = responseData is Map
           ? Map<String, dynamic>.from(
-        responseData as Map<dynamic, dynamic>,
-      )
+              responseData as Map<dynamic, dynamic>,
+            )
           : <String, dynamic>{'data': responseData};
 
       if (enableEtagCache && statusCode >= 200 && statusCode < 300) {
@@ -1271,7 +1214,6 @@ class Api {
       );
     } on ApiException {
       rethrow;
-
     } catch (e, st) {
       throw ApiException(st.toString());
     }
@@ -1285,7 +1227,6 @@ class Api {
   /// - الراوت في لاراڤيل: GET /api/banks
   /// - الدالة تدعم الرد بالشكل:
   ///   { "data": [ ... ] } أو [ ... ] مباشرة
-
 
   static Future<List<BankAccount>> fetchBanks() async {
     ApiHttpException? lastHttpError;
@@ -1311,12 +1252,11 @@ class Api {
             break;
           }
 
-
           collected.addAll(page.items);
 
-
           final Map<String, dynamic>? meta = page.meta;
-          final int? current = _manualBankAsInt(meta?['current_page']) ?? currentPage;
+          final int? current =
+              _manualBankAsInt(meta?['current_page']) ?? currentPage;
           final int? last = _manualBankAsInt(meta?['last_page']);
           final bool? metaHasMore = _manualBankAsBool(meta?['has_more_pages']);
 
@@ -1326,7 +1266,6 @@ class Api {
               : (last != null && current != null && current < last && canLoop);
 
           if (!hasMorePages || current == null) {
-
             break;
           }
 
@@ -1355,8 +1294,8 @@ class Api {
     throw ApiException('فشل في جلب الحسابات البنكية اليدوية');
   }
 
-
-  static _ManualBankPage _parseManualBankResponse(Map<String, dynamic> response) {
+  static _ManualBankPage _parseManualBankResponse(
+      Map<String, dynamic> response) {
     final List<BankAccount> accounts = <BankAccount>[];
     Map<String, dynamic>? meta;
 
@@ -1527,16 +1466,16 @@ class Api {
   // - يرسل Multipart يتضمن صورة الإيصال + بيانات التحويل
   // - الحقول الاختيارية تُرسَل فقط عند توفرها
 
-
   static Future<Map<String, dynamic>> submitManualPayment({
-    required int bankAccountId,      // معرف الحساب البنكي من السيرفر
-    required double amount,          // المبلغ المحوَّل
-    String? currency,                // مثال: YER / SAR
-    String? transferDate,            // بالتنسيق 'YYYY-MM-DD'
-    String? reference,               // رقم مرجعي (اختياري)
-    String? notes,                   // ملاحظات (اختياري)
-    Map<String, dynamic>? contextData, // سياق ربط إضافي (اختياري) مثل {order_id:123}
-    required File receiptImage,      // ملف صورة الإيصال
+    required int bankAccountId, // معرف الحساب البنكي من السيرفر
+    required double amount, // المبلغ المحوَّل
+    String? currency, // مثال: YER / SAR
+    String? transferDate, // بالتنسيق 'YYYY-MM-DD'
+    String? reference, // رقم مرجعي (اختياري)
+    String? notes, // ملاحظات (اختياري)
+    Map<String, dynamic>?
+        contextData, // سياق ربط إضافي (اختياري) مثل {order_id:123}
+    required File receiptImage, // ملف صورة الإيصال
   }) async {
     final body = <String, dynamic>{
       'bank_account_id': bankAccountId,
@@ -1561,15 +1500,13 @@ class Api {
     return Map<String, dynamic>.from(res);
   }
 
-
   static String generateIdempotencyKey() {
     final String timestamp = DateTime.now().toUtc().toIso8601String();
     final String randomSuffix =
-    Random().nextInt(1 << 32).toRadixString(16).padLeft(8, '0');
+        Random().nextInt(1 << 32).toRadixString(16).padLeft(8, '0');
     return '$timestamp-$randomSuffix';
   }
 }
-
 
 class _ManualBankPage {
   const _ManualBankPage({

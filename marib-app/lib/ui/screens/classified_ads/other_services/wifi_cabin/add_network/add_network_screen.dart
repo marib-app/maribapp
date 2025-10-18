@@ -9,7 +9,6 @@ class WifiAddNetworkScreen extends StatefulWidget {
   const WifiAddNetworkScreen({super.key, WifiRepository? repository})
       : repository = repository ?? const WifiRepository();
 
-
   final WifiRepository repository;
 
   @override
@@ -18,7 +17,6 @@ class WifiAddNetworkScreen extends StatefulWidget {
 
 class WifiAddNetworkScreenState
     extends WifiAddNetworkFormState<WifiAddNetworkScreen> {
-
   @override
   WifiRepository get repository => widget.repository;
 
@@ -50,5 +48,4 @@ class WifiAddNetworkScreenState
       ),
     );
   }
-
 }

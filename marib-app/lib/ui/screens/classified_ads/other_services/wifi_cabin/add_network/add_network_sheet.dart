@@ -2,16 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 
+import 'package:marib/data/wifi/wifi_repository.dart';
+import 'package:marib/utils/extensions/extensions.dart';
 
-  import 'package:marib/data/wifi/wifi_repository.dart';
-  import 'package:marib/utils/extensions/extensions.dart';
+import 'add_network_form.dart';
 
-  import 'add_network_form.dart';
-
-  class WifiAddNetworkSheet extends StatefulWidget {
+class WifiAddNetworkSheet extends StatefulWidget {
   const WifiAddNetworkSheet({super.key, WifiRepository? repository})
       : repository = repository ?? const WifiRepository();
-
 
   final WifiRepository repository;
 
@@ -21,7 +19,6 @@ import 'package:marib/utils/extensions/extensions.dart';
 
 class WifiAddNetworkSheetState
     extends WifiAddNetworkFormState<WifiAddNetworkSheet> {
-
   @override
   WifiRepository get repository => widget.repository;
 

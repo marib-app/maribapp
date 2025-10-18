@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 
+import 'package:marib/utils/extensions/extensions.dart';
 
-  import 'package:marib/utils/extensions/extensions.dart';
-
-  class WifiLoadingOverlay extends StatelessWidget {
+class WifiLoadingOverlay extends StatelessWidget {
   const WifiLoadingOverlay({super.key});
 
   @override
@@ -25,7 +24,6 @@ class WifiErrorBanner extends StatelessWidget {
     required this.message,
     required this.onRetry,
   });
-
 
   final String message;
   final VoidCallback onRetry;
@@ -72,8 +70,6 @@ class WifiErrorState extends StatelessWidget {
     required this.onRetry,
   });
 
-
-
   final String message;
   final VoidCallback onRetry;
 
@@ -113,7 +109,6 @@ class WifiEmptyState extends StatelessWidget {
     required this.subtitle,
     this.onAction,
     this.actionLabel,
-
   });
 
   final String title;

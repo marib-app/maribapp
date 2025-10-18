@@ -11,13 +11,6 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
 
-
-
-
-
-
-
-
 abstract class WifiAddNetworkFormState<T extends StatefulWidget>
     extends State<T> {
   final TextEditingController _nameController = TextEditingController();
@@ -31,7 +24,6 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
   bool _isLoadingPlans = false;
   String? _plansError;
   bool _isSubmitting = false;
-
 
   WifiRepository get repository;
 
@@ -81,7 +73,6 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
           ),
         ),
         const SizedBox(height: 16),
-
         _buildPlansDropdown(color),
         if (_isLoadingPlans) ...[
           const SizedBox(height: 8),
@@ -107,8 +98,6 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
           ),
         ],
         const SizedBox(height: 16),
-
-
         WifiFilePickerTile(
           title: 'شعار الشبكة',
           placeholder: 'ارفع صورة الشعار',
@@ -125,8 +114,6 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
           onTap: () => _pickImage(isLogo: false),
         ),
         const SizedBox(height: 16),
-
-
         WifiFilePickerTile(
           title: 'ملف أكواد القسائم',
           placeholder: 'ارفع ملف CSV أو XLS أو XLSX يحتوي على الأكواد',
@@ -135,8 +122,6 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
           onTap: _pickVoucherFile,
         ),
         const SizedBox(height: 16),
-
-
         TextField(
           controller: _contactController,
           enabled: !_isSubmitting,
@@ -161,7 +146,6 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
   Widget buildSubmitButton({
     EdgeInsetsGeometry padding = const EdgeInsets.all(16),
   }) {
-
     return Padding(
       padding: padding,
       child: SizedBox(
@@ -171,17 +155,15 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
           onPressed: _isSubmitting ? null : _onSubmit,
           child: _isSubmitting
               ? const SizedBox(
-            width: 22,
-            height: 22,
-            child: CircularProgressIndicator(strokeWidth: 2.5),
-          )
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2.5),
+                )
               : const Text('إرسال الطلب'),
         ),
       ),
     );
   }
-
-
 
   Future<void> _onSubmit() async {
     if (_isSubmitting) return;
@@ -204,8 +186,6 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
       return;
     }
 
-
-
     if (_selectedPlan == null) {
       _showError('يرجى اختيار الباقة المستهدفة.');
       return;
@@ -215,10 +195,11 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
       return;
     }
 
-
     final MultipartFile? logoMultipart = _prepareMultipart(_logoFile!);
-    final MultipartFile? loginMultipart = _prepareMultipart(_loginScreenshotFile!);
-    final MultipartFile? voucherMultipart = _prepareVoucherMultipart(_voucherFile!);
+    final MultipartFile? loginMultipart =
+        _prepareMultipart(_loginScreenshotFile!);
+    final MultipartFile? voucherMultipart =
+        _prepareVoucherMultipart(_voucherFile!);
 
     if (logoMultipart == null ||
         loginMultipart == null ||
@@ -228,8 +209,7 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
 
     setState(() => _isSubmitting = true);
     try {
-      final Map<String, dynamic> response =
-      await repository.createOwnerRequest(
+      final Map<String, dynamic> response = await repository.createOwnerRequest(
         name: name,
         contact: contact,
         logo: logoMultipart,
@@ -237,20 +217,16 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
         notes: _stringify(_notesController.text),
       );
 
-
       final Map<String, dynamic> batchResponse =
-      await repository.uploadPlanBatch(
+          await repository.uploadPlanBatch(
         planId: _selectedPlan!.id,
         file: voucherMultipart,
       );
 
       final Map<String, dynamic> batchPayload =
-      _extractBatchPayload(batchResponse)
-        ..['plan_id'] = _selectedPlan!.id;
+          _extractBatchPayload(batchResponse)..['plan_id'] = _selectedPlan!.id;
 
       final String batchMessage = _buildBatchMessage(batchPayload);
-
-
 
       Map<String, dynamic> payload = <String, dynamic>{};
       final dynamic rawData = response['data'] ??
@@ -277,16 +253,12 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
               payload['status_message'],
         ),
         'id': payload['id'] ?? response['id'],
-
         'batch': batchPayload,
-
-
       }..removeWhere((key, value) => value == null);
-
 
       final String? existingMessage = result['message'] as String?;
       final String? combinedMessage =
-      _combineMessages(existingMessage, batchMessage);
+          _combineMessages(existingMessage, batchMessage);
 
       if (combinedMessage != null) {
         result['message'] = combinedMessage;
@@ -295,7 +267,6 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
       if (!mounted) {
         return;
       }
-
 
       setState(() => _isSubmitting = false);
 
@@ -310,8 +281,6 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
       setState(() => _isSubmitting = false);
     }
   }
-
-
 
   Future<void> _pickImage({required bool isLogo}) async {
     if (_isSubmitting) return;
@@ -400,7 +369,6 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
     return _prepareMultipart(file);
   }
 
-
   void _showError(String message) {
     HelperUtils.showSnackBarMessage(
       context,
@@ -408,8 +376,6 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
       type: MessageType.error,
     );
   }
-
-
 
   Future<void> _loadPlans() async {
     if (_isLoadingPlans || _isSubmitting) return;
@@ -426,7 +392,7 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
         if (_selectedPlan != null) {
           final int selectedId = _selectedPlan!.id;
           final WifiPlan? refreshed = plans.firstWhere(
-                (plan) => plan.id == selectedId,
+            (plan) => plan.id == selectedId,
             orElse: () => _selectedPlan!,
           );
           _selectedPlan = refreshed;
@@ -454,26 +420,23 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
       items: _availablePlans
           .map(
             (plan) => DropdownMenuItem<int>(
-          value: plan.id,
-          child: Text(plan.name),
-        ),
-      )
+              value: plan.id,
+              child: Text(plan.name),
+            ),
+          )
           .toList(),
-      onChanged: _isSubmitting ||
-          _isLoadingPlans ||
-          _availablePlans.isEmpty
-
+      onChanged: _isSubmitting || _isLoadingPlans || _availablePlans.isEmpty
           ? null
           : (value) {
-        if (value == null) {
-          setState(() => _selectedPlan = null);
-          return;
-        }
-        setState(() {
-          _selectedPlan =
-              _availablePlans.firstWhere((plan) => plan.id == value);
-        });
-      },
+              if (value == null) {
+                setState(() => _selectedPlan = null);
+                return;
+              }
+              setState(() {
+                _selectedPlan =
+                    _availablePlans.firstWhere((plan) => plan.id == value);
+              });
+            },
     );
   }
 
@@ -558,9 +521,6 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
     _selectedPlan = plan;
   }
 
-
-
-
   String? _stringify(dynamic value) {
     if (value == null) return null;
     final String text = value.toString().trim();
@@ -568,21 +528,24 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
     return text;
   }
 
-
   static const int _maxUploadSizeBytes = 4 * 1024 * 1024;
-  static const List<String> _allowedImageExtensions =
-  <String>['jpg', 'jpeg', 'png', 'webp'];
+  static const List<String> _allowedImageExtensions = <String>[
+    'jpg',
+    'jpeg',
+    'png',
+    'webp'
+  ];
   static const int _maxVoucherUploadSizeBytes = 5 * 1024 * 1024;
-  static const List<String> _allowedVoucherExtensions =
-  <String>['csv', 'xls', 'xlsx'];
-
-
+  static const List<String> _allowedVoucherExtensions = <String>[
+    'csv',
+    'xls',
+    'xlsx'
+  ];
 }
 
 class WifiFilePickerTile extends StatelessWidget {
   const WifiFilePickerTile({
     super.key,
-
     required this.title,
     required this.placeholder,
     required this.onTap,
@@ -649,17 +612,16 @@ class WifiFilePickerTile extends StatelessWidget {
       ],
     );
   }
-
 }
 
 @visibleForTesting
 void debugUpdateAddNetworkFormState(
-    State state, {
-      PlatformFile? logo,
-      PlatformFile? login,
-      PlatformFile? voucher,
-      WifiPlan? selectedPlan,
-    }) {
+  State state, {
+  PlatformFile? logo,
+  PlatformFile? login,
+  PlatformFile? voucher,
+  WifiPlan? selectedPlan,
+}) {
   if (state is WifiAddNetworkFormState) {
     state
       ..debugSetFiles(logo: logo, login: login, voucher: voucher)
@@ -692,9 +654,6 @@ class WifiAddNetworkFormTestHarnessState
   void handleCompletion(Map<String, dynamic> result) {
     widget.onComplete?.call(result);
   }
-
-
-
 
   @override
   Widget build(BuildContext context) {

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-  import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/utils/extensions/extensions.dart';
 
-  class WifiServiceOverview extends StatelessWidget {
+class WifiServiceOverview extends StatelessWidget {
   const WifiServiceOverview({super.key});
 
   @override
@@ -19,7 +19,7 @@ import 'package:flutter/material.dart';
       height: 1.5,
     );
 
-    final List<WifiOverviewPoint> points =  <WifiOverviewPoint>[
+    final List<WifiOverviewPoint> points = <WifiOverviewPoint>[
       WifiOverviewPoint('بوابة بيع تعمل على مدار 24 ساعة لطلبات الاشتراك.'),
       WifiOverviewPoint('إشعارات فورية لكل طلب جديد وتحديثات الحالة.'),
       WifiOverviewPoint('تحويل العوائد إلى محفظتك داخل التطبيق بسهولة.'),

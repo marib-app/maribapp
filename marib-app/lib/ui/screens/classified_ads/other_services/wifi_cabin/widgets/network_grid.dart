@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 
-  import 'package:marib/data/model/wifi/wifi_network.dart';
-  import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/data/model/wifi/wifi_network.dart';
+import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 
-  import 'common_states.dart';
+import 'common_states.dart';
 
-  class WifiNetworksGrid extends StatelessWidget {
+class WifiNetworksGrid extends StatelessWidget {
   const WifiNetworksGrid({
-
     super.key,
     required this.networks,
     required this.onSelect,
@@ -38,7 +37,6 @@ import 'package:marib/utils/extensions/extensions.dart';
     }
 
     return GridView.builder(
-
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
         mainAxisSpacing: 12,
@@ -51,9 +49,8 @@ import 'package:marib/utils/extensions/extensions.dart';
         final String subtitle = network.planCount > 0
             ? 'عدد الفئات: ${network.planCount}'
             : 'اطلع على تفاصيل الشبكة';
-        final String? currencyBadge = network.currencies.isNotEmpty
-            ? network.currencies.first
-            : null;
+        final String? currencyBadge =
+            network.currencies.isNotEmpty ? network.currencies.first : null;
 
         return WifiNetworkCard(
           name: network.name,
@@ -83,6 +80,7 @@ class WifiNetworkCard extends StatelessWidget {
   final VoidCallback onTap;
   final String? imageUrl;
   final String? currencyBadge;
+
   @override
   Widget build(BuildContext context) {
     final color = context.color;
@@ -128,6 +126,7 @@ class WifiNetworkCard extends StatelessWidget {
         },
       );
     }
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -189,7 +188,6 @@ class WifiNetworkCard extends StatelessWidget {
                 fontSize: 11,
               ),
             ),
-
           ],
         ),
       ),

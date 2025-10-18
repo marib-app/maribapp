@@ -13,7 +13,6 @@ import 'package:flutter_svg/svg.dart';
 import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/customHeroAnimation.dart';
 
-
 import 'dart:ui' as ui;
 import 'package:intl/intl.dart';
 
@@ -42,6 +41,7 @@ class MyReviewScreen extends StatefulWidget {
 class MyReviewScreenState extends State<MyReviewScreen>
     with SingleTickerProviderStateMixin {
   late ScrollController reviewController;
+
   //bool isExpanded = false;
   final TextEditingController _reportController = TextEditingController();
 
@@ -200,7 +200,7 @@ class MyReviewScreenState extends State<MyReviewScreen>
                   itemBuilder: (context, index) {
                     MyReviewModel ratings = state.ratings[index];
 
-                    return _buildReviewCard(ratings,index);
+                    return _buildReviewCard(ratings, index);
                   },
                 ),
               ),
@@ -380,14 +380,16 @@ class MyReviewScreenState extends State<MyReviewScreen>
                       if (ratings.reportStatus == null)
                         InkWell(
                           child: UiUtils.getSvg(AppIcons.reportReviewIcon,
-                              height: 20, width: 20,color: context.color.textDefaultColor),
+                              height: 20,
+                              width: 20,
+                              color: context.color.textDefaultColor),
                           onTap: () {
                             reportAlertDialog(ratings.id!);
                           },
                         )
                     ],
                   ),
-                  itemDetails(ratings,index),
+                  itemDetails(ratings, index),
                 ],
               ),
             ),
@@ -584,7 +586,9 @@ class MyReviewScreenState extends State<MyReviewScreen>
                             padding: EdgeInsetsDirectional.only(start: 3),
                             child: GestureDetector(
                               onTap: () {
-                                context.read<FetchMyRatingsCubit>().updateIsExpanded(index);
+                                context
+                                    .read<FetchMyRatingsCubit>()
+                                    .updateIsExpanded(index);
                               },
                               child: Text(
                                 ratings.isExpanded!

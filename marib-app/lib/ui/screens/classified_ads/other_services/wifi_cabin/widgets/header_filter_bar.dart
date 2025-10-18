@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
-  import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 
-
-  class WifiSearchHeaderBar extends StatelessWidget {
+class WifiSearchHeaderBar extends StatelessWidget {
   const WifiSearchHeaderBar({
-  super.key,
-
-
-
+    super.key,
     required this.controller,
     required this.focusNode,
     required this.isLoading,
@@ -50,7 +46,6 @@ import 'package:marib/utils/extensions/extensions.dart';
           const SizedBox(height: 8),
           Row(
             children: [
-
               Expanded(
                 child: ValueListenableBuilder<TextEditingValue>(
                   valueListenable: controller,
@@ -67,10 +62,10 @@ import 'package:marib/utils/extensions/extensions.dart';
                         suffixIcon: value.text.isEmpty
                             ? null
                             : IconButton(
-                          tooltip: 'مسح البحث',
-                          icon: const Icon(Icons.clear),
-                          onPressed: onClear,
-                        ),
+                                tooltip: 'مسح البحث',
+                                icon: const Icon(Icons.clear),
+                                onPressed: onClear,
+                              ),
                       ),
                     );
                   },
@@ -90,10 +85,10 @@ import 'package:marib/utils/extensions/extensions.dart';
                   ),
                   child: isLoading
                       ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2.2),
-                  )
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2.2),
+                        )
                       : const Icon(Icons.refresh),
                 ),
               ),

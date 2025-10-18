@@ -17,14 +17,6 @@ import 'widgets/common_states.dart';
 import 'widgets/header_filter_bar.dart';
 import 'widgets/network_grid.dart';
 
-
-
-
-
-
-
-
-
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/data/model/wifi/wifi_plan.dart';
 import 'package:flutter/foundation.dart';
@@ -35,11 +27,6 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:meta/meta.dart';
-
-
-
-
-
 
 class WifiCabinScreen extends StatefulWidget {
   const WifiCabinScreen({super.key});
@@ -517,5 +504,3 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
     );
   }
 }
-
-

@@ -13,24 +13,26 @@ class ManualPaymentRequestsSheet extends StatefulWidget {
   const ManualPaymentRequestsSheet({super.key});
 
   @override
-  State<ManualPaymentRequestsSheet> createState() => _ManualPaymentRequestsSheetState();
+  State<ManualPaymentRequestsSheet> createState() =>
+      _ManualPaymentRequestsSheetState();
 }
 
-class _ManualPaymentRequestsSheetState extends State<ManualPaymentRequestsSheet> {
+class _ManualPaymentRequestsSheetState
+    extends State<ManualPaymentRequestsSheet> {
   final DateFormat _dateFormat = DateFormat('yyyy-MM-dd HH:mm');
 
   bool _handleScrollNotification(ScrollNotification notification) {
     if (notification.metrics.axis != Axis.vertical) {
       return false;
     }
-    if (notification is ScrollUpdateNotification || notification is OverscrollNotification) {
+    if (notification is ScrollUpdateNotification ||
+        notification is OverscrollNotification) {
       final metrics = notification.metrics;
       if (metrics.pixels >= metrics.maxScrollExtent - 120) {
         context.read<ManualPaymentRequestsCubit>().loadMore();
       }
     }
     return false;
-
   }
 
   Future<void> _refresh() async {
@@ -66,7 +68,8 @@ class _ManualPaymentRequestsSheetState extends State<ManualPaymentRequestsSheet>
               ),
               const SizedBox(height: 12),
               Expanded(
-                child: BlocBuilder<ManualPaymentRequestsCubit, ManualPaymentRequestsState>(
+                child: BlocBuilder<ManualPaymentRequestsCubit,
+                    ManualPaymentRequestsState>(
                   builder: (context, state) {
                     if (state is ManualPaymentRequestsLoading) {
                       return const Center(child: CircularProgressIndicator());
@@ -74,7 +77,9 @@ class _ManualPaymentRequestsSheetState extends State<ManualPaymentRequestsSheet>
                     if (state is ManualPaymentRequestsFailure) {
                       return _ErrorView(
                         message: state.error.toString(),
-                        onRetry: () => context.read<ManualPaymentRequestsCubit>().loadInitial(),
+                        onRetry: () => context
+                            .read<ManualPaymentRequestsCubit>()
+                            .loadInitial(),
                       );
                     }
                     if (state is ManualPaymentRequestsSuccess) {
@@ -85,60 +90,66 @@ class _ManualPaymentRequestsSheetState extends State<ManualPaymentRequestsSheet>
                       final headerCount = hasSummary ? 1 : 0;
                       final emptyCount = hasRequests ? 0 : 1;
                       final loadingCount = state.isLoadingMore ? 1 : 0;
-                      final totalItems =
-                          headerCount + (hasRequests ? requests.length : 0) + emptyCount + loadingCount;
-
+                      final totalItems = headerCount +
+                          (hasRequests ? requests.length : 0) +
+                          emptyCount +
+                          loadingCount;
 
                       return RefreshIndicator(
                         color: context.color.territoryColor,
                         onRefresh: _refresh,
                         child: NotificationListener<ScrollNotification>(
-                            onNotification: _handleScrollNotification,
-                            child: ListView.builder(
-                                controller: scrollController,
-                                physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-                                padding: const EdgeInsets.only(bottom: 12),
-                                itemCount: totalItems,
-                                itemBuilder: (context, index) {
-                                  var currentIndex = index;
+                          onNotification: _handleScrollNotification,
+                          child: ListView.builder(
+                            controller: scrollController,
+                            physics: const AlwaysScrollableScrollPhysics(
+                                parent: BouncingScrollPhysics()),
+                            padding: const EdgeInsets.only(bottom: 12),
+                            itemCount: totalItems,
+                            itemBuilder: (context, index) {
+                              var currentIndex = index;
 
-                                  if (hasSummary) {
-                                    if (currentIndex == 0) {
-                                      return Padding(
-                                        padding: const EdgeInsets.fromLTRB(4, 0, 4, 16),
-                                        child: _ManualPaymentSummarySection(summary: summary!),
-                                      );
-                                    }
-                                    currentIndex -= 1;
+                              if (hasSummary) {
+                                if (currentIndex == 0) {
+                                  return Padding(
+                                    padding:
+                                        const EdgeInsets.fromLTRB(4, 0, 4, 16),
+                                    child: _ManualPaymentSummarySection(
+                                        summary: summary!),
+                                  );
+                                }
+                                currentIndex -= 1;
                               }
 
-                                  if (!hasRequests) {
-                                    if (currentIndex == 0) {
-                                      return Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 24),
-                                        child: _EmptyView(onRefresh: _refresh),
-                                      );
-                                    }
-                                    return const Padding(
-                                      padding: EdgeInsets.symmetric(vertical: 16),
-                                      child: Center(child: CircularProgressIndicator()),
+                              if (!hasRequests) {
+                                if (currentIndex == 0) {
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 24),
+                                    child: _EmptyView(onRefresh: _refresh),
+                                  );
+                                }
+                                return const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 16),
+                                  child: Center(
+                                      child: CircularProgressIndicator()),
                                 );
                               }
 
-                                  if (currentIndex >= requests.length) {
-                                    return const Padding(
-                                      padding: EdgeInsets.symmetric(vertical: 16),
-                                      child: Center(child: CircularProgressIndicator()),
-                                    );
-                                  }
-                                  final request = requests[currentIndex];
-                                  return _ManualPaymentTile(
-                                    payment: request,
-                                    dateFormat: _dateFormat,
-
+                              if (currentIndex >= requests.length) {
+                                return const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 16),
+                                  child: Center(
+                                      child: CircularProgressIndicator()),
+                                );
+                              }
+                              final request = requests[currentIndex];
+                              return _ManualPaymentTile(
+                                payment: request,
+                                dateFormat: _dateFormat,
                               );
-                                },
-                            ),
+                            },
+                          ),
                         ),
                       );
                     }
@@ -154,8 +165,6 @@ class _ManualPaymentRequestsSheetState extends State<ManualPaymentRequestsSheet>
   }
 }
 
-
-
 class _ManualPaymentSummarySection extends StatelessWidget {
   const _ManualPaymentSummarySection({required this.summary});
 
@@ -163,7 +172,8 @@ class _ManualPaymentSummarySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statuses = summary.orderedStatuses(const ['pending', 'under_review', 'approved', 'rejected']);
+    final statuses = summary.orderedStatuses(
+        const ['pending', 'under_review', 'approved', 'rejected']);
     final cards = <_SummaryCardConfig>[
       _SummaryCardConfig(
         key: 'total',
@@ -187,7 +197,10 @@ class _ManualPaymentSummarySection extends StatelessWidget {
       children: [
         Text(
           'نظرة عامة على الطلبات اليدوية',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          style: Theme.of(context)
+              .textTheme
+              .titleMedium
+              ?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 12),
         LayoutBuilder(
@@ -205,15 +218,15 @@ class _ManualPaymentSummarySection extends StatelessWidget {
               children: cards
                   .map(
                     (card) => SizedBox(
-                  width: itemWidth,
-                  child: _ManualPaymentSummaryCard(
-                    title: card.title,
-                    status: card.status,
-                    color: card.color,
-                    icon: card.icon,
-                  ),
-                ),
-              )
+                      width: itemWidth,
+                      child: _ManualPaymentSummaryCard(
+                        title: card.title,
+                        status: card.status,
+                        color: card.color,
+                        icon: card.icon,
+                      ),
+                    ),
+                  )
                   .toList(),
             );
           },
@@ -263,7 +276,8 @@ class _ManualPaymentSummaryCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     title,
-                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
@@ -331,7 +345,8 @@ class _ManualPaymentTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = _manualPaymentStatusColor(context, payment.paymentStatus);
+    final statusColor =
+        _manualPaymentStatusColor(context, payment.paymentStatus);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -344,19 +359,25 @@ class _ManualPaymentTile extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    payment.manualReference ?? payment.transactionIdentifier ?? '#${payment.manualPaymentId ?? ''}',
+                    payment.manualReference ??
+                        payment.transactionIdentifier ??
+                        '#${payment.manualPaymentId ?? ''}',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     payment.paymentStatus.capitalize(),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: statusColor),
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: statusColor),
                   ),
                 ),
               ],
@@ -400,8 +421,6 @@ class _ManualPaymentTile extends StatelessWidget {
       ),
     );
   }
-
-
 }
 
 class _ErrorView extends StatelessWidget {
@@ -455,7 +474,8 @@ class _EmptyView extends StatelessWidget {
       color: context.color.territoryColor,
       onRefresh: onRefresh,
       child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics()),
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
@@ -540,9 +560,9 @@ Color _summaryColorForKey(BuildContext context, String key) {
 }
 
 String _formatSummaryAmounts(
-    ManualPaymentRequestsSummaryStatus status,
-    NumberFormat format,
-    ) {
+  ManualPaymentRequestsSummaryStatus status,
+  NumberFormat format,
+) {
   if (status.amounts.isEmpty) {
     return '—';
   }
@@ -553,16 +573,22 @@ String _formatSummaryAmounts(
 
 Color _manualPaymentStatusColor(BuildContext context, String status) {
   final normalized = status.toLowerCase();
-  if (normalized.contains('success') || normalized.contains('approved') || normalized.contains('paid')) {
+  if (normalized.contains('success') ||
+      normalized.contains('approved') ||
+      normalized.contains('paid')) {
     return Colors.green.shade600;
   }
-  if (normalized.contains('rejected') || normalized.contains('failed') || normalized.contains('declined')) {
+  if (normalized.contains('rejected') ||
+      normalized.contains('failed') ||
+      normalized.contains('declined')) {
     return Colors.red.shade600;
   }
   if (normalized.contains('review')) {
     return Colors.blue.shade600;
   }
-  if (normalized.contains('pending') || normalized.contains('await') || normalized.contains('wait')) {
+  if (normalized.contains('pending') ||
+      normalized.contains('await') ||
+      normalized.contains('wait')) {
     return Colors.orange.shade600;
   }
   return context.color.textDefaultColor;

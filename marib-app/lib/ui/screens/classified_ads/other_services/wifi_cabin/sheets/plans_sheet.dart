@@ -3,22 +3,20 @@ import 'dart:async';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 
-  import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
-  import 'package:marib/data/model/wifi/wifi_network.dart';
-  import 'package:marib/data/model/wifi/wifi_plan.dart';
-  import 'package:marib/data/model/wifi/wifi_purchase.dart';
-  import 'package:marib/data/model/wifi/wifi_purchase_result.dart';
-  import 'package:marib/data/wifi/wifi_repository.dart';
-  import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/data/model/wifi/wifi_network.dart';
+import 'package:marib/data/model/wifi/wifi_plan.dart';
+import 'package:marib/data/model/wifi/wifi_purchase.dart';
+import 'package:marib/data/model/wifi/wifi_purchase_result.dart';
+import 'package:marib/data/wifi/wifi_repository.dart';
+import 'package:marib/utils/extensions/extensions.dart';
 
-  import 'checkout_sheet.dart';
+import 'checkout_sheet.dart';
 
-  class WifiPlansSheet extends StatefulWidget {
+class WifiPlansSheet extends StatefulWidget {
   const WifiPlansSheet({
-  super.key,
-
-
+    super.key,
     required this.network,
     required this.onRegisterPurchase,
     required this.onRefreshPurchases,
@@ -165,7 +163,6 @@ class WifiPlansSheetState extends State<WifiPlansSheet> {
                     }
                     if (_plans.isEmpty) {
                       return SingleChildScrollView(
-
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 32,
@@ -269,7 +266,6 @@ class WifiPlansSheetState extends State<WifiPlansSheet> {
                         controller: controller,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         children: listChildren,
-
                       ),
                     );
                   },
@@ -301,8 +297,8 @@ class WifiPlansSheetState extends State<WifiPlansSheet> {
     final messenger = ScaffoldMessenger.of(context);
 
     if (result.isPending) {
-      final String message = result.message ??
-          'تم إرسال طلب الدفع. سنخطرك عند اكتمال المعالجة.';
+      final String message =
+          result.message ?? 'تم إرسال طلب الدفع. سنخطرك عند اكتمال المعالجة.';
       messenger.showSnackBar(SnackBar(content: Text(message)));
       unawaited(widget.onRefreshPurchases(force: true));
       return;
@@ -364,7 +360,6 @@ class WifiPlanTile extends StatelessWidget {
               ),
             ),
             WifiSheetPlanHighlights(plan: plan),
-
             const SizedBox(height: 12),
             Row(
               children: [
@@ -384,8 +379,6 @@ class WifiPlanTile extends StatelessWidget {
       ),
     );
   }
-
-
 }
 
 class WifiSheetPlanHighlights extends StatelessWidget {
@@ -427,12 +420,13 @@ class WifiSheetPlanHighlights extends StatelessWidget {
         children: labels
             .map(
               (label) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: color.backgroundColor,
                   borderRadius: BorderRadius.circular(10),
                   border:
-                  Border.all(color: color.secondaryColor.withOpacity(0.35)),
+                      Border.all(color: color.secondaryColor.withOpacity(0.35)),
                 ),
                 child: Text(
                   label,
@@ -443,7 +437,7 @@ class WifiSheetPlanHighlights extends StatelessWidget {
                   ),
                 ),
               ),
-        )
+            )
             .toList(),
       ),
     );
@@ -565,5 +559,4 @@ class WifiLoginScreenshotPreview extends StatelessWidget {
       },
     );
   }
-
 }

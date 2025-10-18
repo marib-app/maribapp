@@ -4,12 +4,12 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:flutter/foundation.dart';
 
+import 'package:marib/data/model/wifi/wifi_purchase.dart';
+import 'package:marib/utils/extensions/extensions.dart';
 
-  import 'package:marib/data/model/wifi/wifi_purchase.dart';
-  import 'package:marib/utils/extensions/extensions.dart';
-
-  class WifiCodeTile extends StatelessWidget {
+class WifiCodeTile extends StatelessWidget {
   const WifiCodeTile({super.key, required this.code, required this.onCopy});
+
   final String code;
   final VoidCallback onCopy;
 
@@ -49,8 +49,7 @@ import 'package:flutter/foundation.dart';
 
 class WifiPurchasesSheet extends StatefulWidget {
   const WifiPurchasesSheet({
-  super.key,
-
+    super.key,
     required this.purchasesListenable,
     required this.loadingListenable,
     required this.errorListenable,
@@ -119,7 +118,7 @@ class WifiPurchasesSheetState extends State<WifiPurchasesSheet> {
             decoration: BoxDecoration(
               color: color.backgroundColor,
               borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(16)),
+                  const BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Column(
               children: [
@@ -171,9 +170,9 @@ class WifiPurchasesSheetState extends State<WifiPurchasesSheet> {
   }
 
   Widget _buildBody(
-      BuildContext context,
-      ScrollController controller,
-      ) {
+    BuildContext context,
+    ScrollController controller,
+  ) {
     final color = context.color;
     if (_isLoading && _purchases.isEmpty) {
       return const Center(child: CircularProgressIndicator());
@@ -298,7 +297,6 @@ class WifiPurchaseTile extends StatelessWidget {
     required this.dateFormat,
   });
 
-
   final WifiPurchase purchase;
   final DateFormat dateFormat;
 
@@ -318,7 +316,7 @@ class WifiPurchaseTile extends StatelessWidget {
     final bool pending = _isPending(status);
     final DateTime? createdAt = purchase.createdAt;
     final String? created =
-    createdAt != null ? dateFormat.format(createdAt.toLocal()) : null;
+        createdAt != null ? dateFormat.format(createdAt.toLocal()) : null;
     final String? totalText = purchase.total != null
         ? '${purchase.total!.toStringAsFixed(2)} ${purchase.currency ?? ''}'
         : null;
@@ -398,7 +396,7 @@ class WifiPurchaseTile extends StatelessWidget {
             children: [
               Container(
                 padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: pending
                       ? Colors.orange.withOpacity(0.2)
@@ -408,9 +406,7 @@ class WifiPurchaseTile extends StatelessWidget {
                 child: Text(
                   status,
                   style: TextStyle(
-                    color: pending
-                        ? Colors.orange
-                        : color.primaryColor,
+                    color: pending ? Colors.orange : color.primaryColor,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -420,7 +416,7 @@ class WifiPurchaseTile extends StatelessWidget {
                 const SizedBox(width: 8),
                 Container(
                   padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: color.secondaryColor.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(10),
@@ -468,28 +464,28 @@ class WifiPurchaseTile extends StatelessWidget {
               children: purchase.codes
                   .map(
                     (code) => Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: color.backgroundColor,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: color.secondaryColor.withOpacity(0.4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color.backgroundColor,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: color.secondaryColor.withOpacity(0.4),
+                        ),
+                      ),
+                      child: SelectableText(
+                        code,
+                        style: TextStyle(
+                          color: color.textDefaultColor,
+                          fontFamily: 'monospace',
+                          letterSpacing: 1.0,
+                          fontSize: 13,
+                        ),
+                      ),
                     ),
-                  ),
-                  child: SelectableText(
-                    code,
-                    style: TextStyle(
-                      color: color.textDefaultColor,
-                      fontFamily: 'monospace',
-                      letterSpacing: 1.0,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              )
+                  )
                   .toList(),
             ),
           ] else

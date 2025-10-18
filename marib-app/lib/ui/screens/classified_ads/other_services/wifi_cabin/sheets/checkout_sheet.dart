@@ -11,8 +11,6 @@ import 'package:marib/data/wifi/wifi_repository.dart';
 import 'package:marib/utils/api.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 
-
-
 class PaymentGatewayView {
   const PaymentGatewayView({
     required this.id,
@@ -37,7 +35,7 @@ class WifiCheckoutSheet extends StatefulWidget {
 class WifiCheckoutSheetState extends State<WifiCheckoutSheet> {
   final WifiRepository _repository = const WifiRepository();
   final Map<String, WifiPaymentGateway> _gatewayEntities =
-  <String, WifiPaymentGateway>{};
+      <String, WifiPaymentGateway>{};
 
   int _quantity = 1;
   String _gateway = 'wallet';
@@ -73,16 +71,16 @@ class WifiCheckoutSheetState extends State<WifiCheckoutSheet> {
       views = gateways
           .map(
             (gateway) => PaymentGatewayView(
-          id: gateway.id,
-          name: gateway.name,
-          description: gateway.description,
-        ),
-      )
+              id: gateway.id,
+              name: gateway.name,
+              description: gateway.description,
+            ),
+          )
           .toList();
 
       if (views.isEmpty) {
-        final WifiPaymentGateway fallback =
-        const WifiPaymentGateway(id: 'wallet', name: 'المحفظة', isWallet: true);
+        final WifiPaymentGateway fallback = const WifiPaymentGateway(
+            id: 'wallet', name: 'المحفظة', isWallet: true);
         lookup = <String, WifiPaymentGateway>{fallback.id: fallback};
         views = const <PaymentGatewayView>[
           PaymentGatewayView(id: 'wallet', name: 'المحفظة'),
@@ -95,8 +93,8 @@ class WifiCheckoutSheetState extends State<WifiCheckoutSheet> {
           ? _extractErrorMessage(error.payload) ?? error.toString()
           : error.toString();
       if (_gateways.isEmpty) {
-        final WifiPaymentGateway fallback =
-        const WifiPaymentGateway(id: 'wallet', name: 'المحفظة', isWallet: true);
+        final WifiPaymentGateway fallback = const WifiPaymentGateway(
+            id: 'wallet', name: 'المحفظة', isWallet: true);
         lookup = <String, WifiPaymentGateway>{fallback.id: fallback};
         views = const <PaymentGatewayView>[
           PaymentGatewayView(id: 'wallet', name: 'المحفظة'),
@@ -131,9 +129,9 @@ class WifiCheckoutSheetState extends State<WifiCheckoutSheet> {
   }
 
   String _pickDefaultGatewayId(
-      List<WifiPaymentGateway> gateways,
-      String fallbackId,
-      ) {
+    List<WifiPaymentGateway> gateways,
+    String fallbackId,
+  ) {
     for (final gateway in gateways) {
       if (gateway.isDefault) {
         return gateway.id;
@@ -267,7 +265,8 @@ class WifiCheckoutSheetState extends State<WifiCheckoutSheet> {
           return Container(
             decoration: BoxDecoration(
               color: color.backgroundColor,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Column(
               children: [
@@ -296,7 +295,8 @@ class WifiCheckoutSheetState extends State<WifiCheckoutSheet> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        widget.plan.description ?? 'راجع تفاصيل الخطة قبل المتابعة.',
+                        widget.plan.description ??
+                            'راجع تفاصيل الخطة قبل المتابعة.',
                         style: TextStyle(
                           color: color.textDefaultColor.withOpacity(0.7),
                         ),
@@ -322,7 +322,8 @@ class WifiCheckoutSheetState extends State<WifiCheckoutSheet> {
                           const SizedBox(width: 12),
                           WifiQtyStepper(
                             value: _quantity,
-                            onChanged: (value) => setState(() => _quantity = value),
+                            onChanged: (value) =>
+                                setState(() => _quantity = value),
                           ),
                         ],
                       ),
@@ -404,12 +405,13 @@ class WifiCheckoutSheetState extends State<WifiCheckoutSheet> {
                                 Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: color.secondaryColor
-                                        .withOpacity(0.18),
+                                    color:
+                                        color.secondaryColor.withOpacity(0.18),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Icon(
                                         Icons.shield_outlined,
@@ -437,11 +439,11 @@ class WifiCheckoutSheetState extends State<WifiCheckoutSheet> {
                                   onChanged: _isSubmitting
                                       ? null
                                       : (value) => setState(
-                                        () =>
-                                    _acknowledged = value ?? false,
-                                  ),
+                                            () =>
+                                                _acknowledged = value ?? false,
+                                          ),
                                   controlAffinity:
-                                  ListTileControlAffinity.leading,
+                                      ListTileControlAffinity.leading,
                                   contentPadding: EdgeInsets.zero,
                                   title: Text(
                                     'أؤكد أنني تحققت من صورة صفحة الدخول وأقر بأن أي مشكلة تُحل مباشرة مع صاحب الشبكة.',
@@ -465,34 +467,34 @@ class WifiCheckoutSheetState extends State<WifiCheckoutSheet> {
                     height: 48,
                     child: ElevatedButton(
                       onPressed:
-                      (_isSubmitting || !_acknowledged) ? null : _onConfirm,
+                          (_isSubmitting || !_acknowledged) ? null : _onConfirm,
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 200),
                         child: _isSubmitting
                             ? Row(
-                          key: const ValueKey('processing'),
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Text('جارٍ معالجة الدفع'),
-                          ],
-                        )
+                                key: const ValueKey('processing'),
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Text('جارٍ معالجة الدفع'),
+                                ],
+                              )
                             : Row(
-                          key: const ValueKey('confirm'),
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.check_circle_outline),
-                            SizedBox(width: 8),
-                            Text('تأكيد الدفع'),
-                          ],
-                        ),
+                                key: const ValueKey('confirm'),
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  Icon(Icons.check_circle_outline),
+                                  SizedBox(width: 8),
+                                  Text('تأكيد الدفع'),
+                                ],
+                              ),
                       ),
                     ),
                   ),
@@ -507,7 +509,8 @@ class WifiCheckoutSheetState extends State<WifiCheckoutSheet> {
 }
 
 class WifiQtyStepper extends StatelessWidget {
-  const WifiQtyStepper({super.key, required this.value, required this.onChanged});
+  const WifiQtyStepper(
+      {super.key, required this.value, required this.onChanged});
 
   final int value;
   final ValueChanged<int> onChanged;
@@ -587,8 +590,6 @@ class WifiTotalBar extends StatelessWidget {
 class WifiGatewayPicker extends StatelessWidget {
   const WifiGatewayPicker({
     super.key,
-
-
     required this.gateways,
     required this.value,
     required this.onChanged,
@@ -612,8 +613,8 @@ class WifiGatewayPicker extends StatelessWidget {
               groupValue: value,
               onChanged: enabled
                   ? (val) {
-                if (val != null) onChanged(val);
-              }
+                      if (val != null) onChanged(val);
+                    }
                   : null,
               title: Text(
                 gateway.name,
@@ -621,16 +622,15 @@ class WifiGatewayPicker extends StatelessWidget {
               ),
               subtitle: gateway.description != null
                   ? Text(
-                gateway.description!,
-                style: TextStyle(
-                  color: color.textDefaultColor.withOpacity(0.65),
-                  fontSize: 12,
-                ),
-              )
+                      gateway.description!,
+                      style: TextStyle(
+                        color: color.textDefaultColor.withOpacity(0.65),
+                        fontSize: 12,
+                      ),
+                    )
                   : null,
             ),
           )
-
           .toList(),
     );
   }

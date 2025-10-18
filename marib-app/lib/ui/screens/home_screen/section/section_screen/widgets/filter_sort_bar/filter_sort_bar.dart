@@ -61,7 +61,7 @@ class FilterSortBar extends StatelessWidget {
 
     return SafeArea(
       top: false,
-      minimum: const EdgeInsets.only(bottom: 8),
+      minimum: EdgeInsets.zero,
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: size.width * 0.02),
         child: TweenAnimationBuilder<double>(
@@ -69,7 +69,7 @@ class FilterSortBar extends StatelessWidget {
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
           builder: (context, t, child) {
-            final lift = lerpDouble(12, 6, t)!; // رفع بسيط للشريط
+            final lift = lerpDouble(12, 0, t)!; // رفع بسيط للشريط
             return Transform.translate(offset: Offset(0, -lift), child: child!);
           },
           child: ClipRRect(
@@ -90,7 +90,7 @@ class FilterSortBar extends StatelessWidget {
                   ],
                 ),
                 padding: EdgeInsets.symmetric(
-                  vertical: size.height * 0.012,
+                  vertical: 8,
                   horizontal: size.width * 0.02,
                 ),
                   child: LayoutBuilder(
@@ -107,8 +107,8 @@ class FilterSortBar extends StatelessWidget {
                         final double buttonWidth = availableWidth > 0
                             ? availableWidth / buttonCount
                             : constraints.maxWidth / buttonCount;
-                        final double desiredHeight = math.max(64.0, size.height * 0.08);
-
+                        final double desiredHeight =
+                        (size.height * 0.08).clamp(44.0, 52.0).toDouble();
                         return Row(
                           children: [
                             SizedBox(

@@ -6,7 +6,7 @@ enum AppMotionPattern { sharedAxis, fadeThrough, platform }
 enum _RouteMotionPhase { push, pop, refresh }
 
 class RouteMotionComposer {
-  const RouteMotionComposer({
+   RouteMotionComposer({
     required this.pattern,
     this.sharedAxisType = SharedAxisTransitionType.scaled,
     Duration? pushDuration,
@@ -52,7 +52,7 @@ class RouteMotionComposer {
   final bool reducedMotion;
 
   static bool platformPrefersReducedMotion() {
-    final binding = WidgetsBinding.instanceOrNull;
+    final WidgetsBinding? binding = WidgetsBinding.instance;
     if (binding == null) {
       return false;
     }

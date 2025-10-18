@@ -179,28 +179,28 @@ class PaymentRequestTableQuery
         $manualGatewayNameParts[] = "'Manual Banks'";
         $manualGatewayNameSelect = 'COALESCE(' . implode(', ', $manualGatewayNameParts) . ')';
 
-        $walletGatewayNameParts = [];
-        if ($supportsManualGatewayName) {
-            $walletGatewayNameParts[] = $sanitizeManualBankAlias('mpr.gateway_name');
-        }
+
         $walletPaymentGatewayNameParts = [];
         if ($supportsPaymentGatewayName) {
             $walletPaymentGatewayNameParts[] = $sanitizeManualBankAlias('pt.payment_gateway_name');
         }
         $walletPaymentGatewayNameParts[] = $sanitizeManualBankAlias('pt.payment_gateway');
-        $walletGatewayNameParts = array_merge($walletGatewayNameParts, $walletPaymentGatewayNameParts);
+        $walletGatewayNameParts = $walletPaymentGatewayNameParts;
+        if ($supportsManualGatewayName) {
+            array_unshift($walletGatewayNameParts, $sanitizeManualBankAlias('mpr.gateway_name'));
+        }
+        
         
         
         $walletGatewayNameParts[] = "'Wallet'";
         $paymentTransactionWalletGatewayNameSelect = 'COALESCE(' . implode(', ', $walletGatewayNameParts) . ')';
 
-        $walletTopUpGatewayNameParts = [];
+        $walletTopUpGatewayNameParts = ["'Wallet'"];
         if ($supportsManualGatewayName) {
-            $walletTopUpGatewayNameParts[] = $sanitizeManualBankAlias('mpr.gateway_name');
+            array_unshift($walletTopUpGatewayNameParts, $sanitizeManualBankAlias('mpr.gateway_name'));
 
 
         }
-        $walletTopUpGatewayNameParts[] = "'Wallet'";
         $walletGatewayNameSelect = 'COALESCE(' . implode(', ', $walletTopUpGatewayNameParts) . ')';
 
         $eastGatewayNameParts = [];

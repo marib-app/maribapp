@@ -958,8 +958,10 @@ class NotificationService {
     Map<String, String>? extraHeaders;
 
     if (!isFullyAuthenticated) {
-      final String? jwt = _normalizeNotificationValue(HiveUtils.getJWT());
-      if (jwt == null) {
+      final String? normalizedJwt =
+      _normalizeNotificationValue(HiveUtils.getJWT());
+      if (normalizedJwt == null) {
+
         await HiveUtils.setUserDetail(
             key: _pendingFcmTokenKey, value: normalizedToken);
         log(
@@ -968,7 +970,9 @@ class NotificationService {
         );
         return;
       }
-      extraHeaders = <String, String>{'Authorization': 'Bearer $jwt'};
+      extraHeaders =
+      <String, String>{'Authorization': 'Bearer $normalizedJwt'};
+
     }
 
     try {

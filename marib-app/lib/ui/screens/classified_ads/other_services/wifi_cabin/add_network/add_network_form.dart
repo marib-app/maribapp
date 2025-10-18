@@ -369,8 +369,10 @@ abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
 
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+    HelperUtils.showSnackBarMessage(
+      context,
+      message,
+      type: MessageType.error,
     );
   }
 

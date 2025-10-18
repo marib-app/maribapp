@@ -26,6 +26,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:meta/meta.dart';
+import 'package:marib/utils/helper_utils.dart';
 
 
 class WifiCabinScreen extends StatefulWidget {

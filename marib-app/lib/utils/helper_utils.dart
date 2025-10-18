@@ -54,7 +54,16 @@ extension StringCasingExtension on String {
 class HelperUtils {
 
 
+  static final Map<OverlayState, OverlayEntry> _activeSnackBars =
+  <OverlayState, OverlayEntry>{};
 
+  static void _dismissActiveSnackBar(OverlayState? overlay) {
+    if (overlay == null) return;
+    final OverlayEntry? entry = _activeSnackBars.remove(overlay);
+    if (entry != null && entry.mounted) {
+      entry.remove();
+    }
+  }
 
   static String absoluteImage(String? path) {
     final String value = (path ?? '').trim();

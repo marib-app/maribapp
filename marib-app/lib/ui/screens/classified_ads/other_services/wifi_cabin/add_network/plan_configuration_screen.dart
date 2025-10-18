@@ -196,9 +196,8 @@ class WifiPlanConfigurationScreenState
                       'ارفع ملف CSV أو XLS أو XLSX يحتوي على الأكواد الجديدة',
                       fileName: _voucherFile?.name,
                       isBusy: _isSubmitting,
-                      onTap: _isSubmitting
-                          ? null
-                          : () {
+                      onTap: () {
+
                         _pickVoucherFile();
                       },
 

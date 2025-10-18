@@ -18,6 +18,7 @@ use App\Http\Controllers\Payments\PaymentWebhookController;
 use App\Http\Controllers\WifiCodeBatchController;
 use App\Http\Controllers\WifiNetworkController;
 use App\Http\Controllers\WifiPlanController;
+use App\Http\Controllers\WifiOwnerPlanSummaryController;
 use App\Http\Controllers\WifiPurchaseController;
 use App\Http\Controllers\ProductPurchaseOptionsController;
 use App\Http\Controllers\ItemPurchaseManagementController;
@@ -88,6 +89,8 @@ Route::prefix('wifi-cabin')
         Route::put('networks/{network}', [WifiNetworkController::class, 'update'])->whereNumber('network');
         Route::get('networks/{network}/plans', [WifiPlanController::class, 'index'])->whereNumber('network');
         Route::post('networks/{network}/plans', [WifiPlanController::class, 'store'])->whereNumber('network');
+        
+        Route::get('plans', WifiOwnerPlanSummaryController::class);
 
         Route::put('plans/{plan}', [WifiPlanController::class, 'update'])->whereNumber('plan');
 

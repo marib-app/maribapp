@@ -154,13 +154,22 @@ class WifiRepository {
   }
 
 
-  Future<List<WifiPlan>> fetchManagedPlans({int? networkId}) async {
-    final Map<String, dynamic>? query =
-    networkId != null ? <String, dynamic>{'network': networkId} : null;
+  Future<List<WifiPlan>> fetchManagedPlans({
+    int? networkId,
+    int perPage = 50,
+  }) async {
+    final int normalizedPerPage = perPage.clamp(1, 50).toInt();
+
+    final Map<String, dynamic> queryParameters = <String, dynamic>{
+      'owner_only': true,
+      'per_page': normalizedPerPage,
+      if (networkId != null) 'network': networkId,
+    };
+
 
     final response = await Api.get(
       url: Api.wifiPlansApi,
-      queryParameters: query,
+      queryParameters: queryParameters,
     );
 
     final dynamic container = response['data'] ??
@@ -168,18 +177,86 @@ class WifiRepository {
         response['wifi_plans'] ??
         response['items'];
 
-    final List<dynamic> rawList = List<dynamic>.from(_listify(container));
-    if (rawList.isEmpty && container is List) {
-      rawList.addAll(container);
+    final List<dynamic> primaryList = List<dynamic>.from(_listify(container));
+    if (primaryList.isEmpty && container is List) {
+      primaryList.addAll(container);
     }
 
-    final List<WifiPlan> plans = rawList
-        .map((dynamic element) => _mapify(element))
-        .where((map) => map.isNotEmpty)
-        .map(WifiPlan.fromJson)
-        .toList();
+    final List<dynamic> includedRaw = _extractIncludedPlans(response);
 
-    return plans;
+
+    final List<Map<String, dynamic>> planMaps = <Map<String, dynamic>>[];
+    final Map<int, int> indexById = <int, int>{};
+
+    void addPlan(dynamic element) {
+      final Map<String, dynamic> map = _mapify(element);
+      if (map.isEmpty) {
+        return;
+      }
+
+      final int? id = _intify(map['id']);
+      if (id != null) {
+        final int? existingIndex = indexById[id];
+        if (existingIndex != null) {
+          planMaps[existingIndex] = <String, dynamic>{
+            ...planMaps[existingIndex],
+            ...map,
+          };
+          return;
+        }
+        indexById[id] = planMaps.length;
+      }
+
+      planMaps.add(map);
+    }
+
+    for (final dynamic element in primaryList) {
+      addPlan(element);
+    }
+
+    for (final dynamic element in includedRaw) {
+      addPlan(element);
+    }
+
+    return planMaps.map(WifiPlan.fromJson).toList();
+  }
+
+  List<dynamic> _extractIncludedPlans(dynamic payload) {
+    if (payload is Map<String, dynamic>) {
+      final dynamic included = payload['included'];
+
+      if (included is List) {
+        final List<dynamic> list = _listify(included);
+        return list.isEmpty ? const [] : List<dynamic>.from(list);
+      }
+
+      if (included is Map<String, dynamic>) {
+        final dynamic container = included['plans'] ??
+            included['wifi_plans'] ??
+            included['data'] ??
+            included['items'];
+
+        final List<dynamic> list = _listify(container);
+        return list.isEmpty ? const [] : List<dynamic>.from(list);
+      }
+
+      if (included is Map) {
+        return _extractIncludedPlans(
+          <String, dynamic>{
+            'included': Map<String, dynamic>.from(included as Map),
+          },
+        );
+      }
+
+      return const [];
+    }
+
+    if (payload is Map) {
+      return _extractIncludedPlans(Map<String, dynamic>.from(payload as Map));
+    }
+
+    return const [];
+
   }
 
 

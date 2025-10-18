@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 use App\Models\Item;
+use App\Models\ManualBank;
 
 use App\Models\ManualPaymentRequest;
 use App\Models\ManualPaymentRequestHistory;
@@ -46,6 +47,8 @@ class ManualPaymentRequestController extends Controller
     private array $manualPaymentColumnSupportCache = [];
     private array $manualPaymentOrderIdCache = [];
 
+    private array $manualBankLookupCache = [];
+    private ?bool $manualBankTableSupported = null;
 
     public function __construct(
         private readonly PaymentFulfillmentService $paymentFulfillmentService,
@@ -1696,6 +1699,56 @@ class ManualPaymentRequestController extends Controller
 
         }
 
+        $manualBankId = null;
+
+        if ($this->manualPaymentRequestsSupportsColumn('manual_bank_id')) {
+            $manualBankId = data_get($row, 'manual_bank_id');
+
+            if ($manualBankId === null) {
+                $manualBankId = data_get($row, 'manualBank.id');
+            }
+        }
+
+        if (is_string($manualBankId)) {
+            $manualBankId = trim($manualBankId);
+        }
+
+        if ($manualBankId !== null && $manualBankId !== '') {
+            $manualBankId = (int) $manualBankId;
+        } else {
+            $manualBankId = null;
+        }
+
+        if ($manualBankId !== null) {
+            $manualBank = $this->findManualBankById($manualBankId);
+
+            if ($manualBank !== null) {
+                $lookupCandidates = [
+                    data_get($manualBank, 'name'),
+                    data_get($manualBank, 'beneficiary_name'),
+                ];
+
+                foreach ($lookupCandidates as $lookupCandidate) {
+                    if (! is_string($lookupCandidate)) {
+                        continue;
+                    }
+
+                    $trimmedLookupCandidate = trim($lookupCandidate);
+
+                    if ($trimmedLookupCandidate === '') {
+                        continue;
+                    }
+
+                    if (in_array(strtolower($trimmedLookupCandidate), $manualBankAliases, true)) {
+                        continue;
+                    }
+
+                    return $trimmedLookupCandidate;
+                }
+            }
+        }
+
+
         return null;
     }
 
@@ -1895,6 +1948,37 @@ class ManualPaymentRequestController extends Controller
 
         return $this->manualPaymentColumnSupportCache[$column];
     }
+
+
+    private function manualBankLookupSupported(): bool
+    {
+        if ($this->manualBankTableSupported === null) {
+            $this->manualBankTableSupported = Schema::hasTable('manual_banks');
+        }
+
+        return $this->manualBankTableSupported;
+    }
+
+    private function findManualBankById(int $manualBankId): ?ManualBank
+    {
+        if ($manualBankId <= 0) {
+            return null;
+        }
+
+        if (! $this->manualBankLookupSupported()) {
+            return null;
+        }
+
+        if (! array_key_exists($manualBankId, $this->manualBankLookupCache)) {
+            $this->manualBankLookupCache[$manualBankId] = ManualBank::query()->find($manualBankId);
+        }
+
+        $manualBank = $this->manualBankLookupCache[$manualBankId] ?? null;
+
+        return $manualBank instanceof ManualBank ? $manualBank : null;
+    }
+
+
 
 
     private function manualPaymentPayableLabel(ManualPaymentRequest $manualPaymentRequest): string

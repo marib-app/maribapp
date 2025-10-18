@@ -500,6 +500,7 @@ class OrderApiController extends Controller
     {
         $defaultIntent = $order->payment_payload['default_intent'] ?? [];
         $existingTransactionId = data_get($defaultIntent, 'transaction_id');
+        $intentIdempotencyKey = data_get($defaultIntent, 'idempotency_key');
         $existingTransaction = null;
         $shouldForceUniqueIdempotencyKey = false;
 
@@ -518,6 +519,19 @@ class OrderApiController extends Controller
                 $existingTransaction = null;
                 $shouldForceUniqueIdempotencyKey = true;
             } else {
+                if (! $hasExpired && $existingTransaction
+                    && $existingTransaction->payment_gateway === 'wallet'
+                    && $existingTransaction->payment_status !== 'succeed') {
+                    $intentIdempotencyKey = $intentIdempotencyKey
+                        ?: (string) ($existingTransaction->idempotency_key ?? $idempotencyKey);
+                    $existingTransaction = $this->confirmDefaultWalletPaymentIntent(
+                        $user,
+                        $order,
+                        $existingTransaction,
+                        $intentIdempotencyKey
+                    );
+                }
+
                 return $existingTransaction;
             }
         

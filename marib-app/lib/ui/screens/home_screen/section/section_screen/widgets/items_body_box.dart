@@ -121,13 +121,33 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
     final int myToken = ++_searchToken;
     _lastExecutedQuery = q;
 
-    context
-        .read<FetchItemSummaryCubit>()
+    final fetchCubit = context.read<FetchItemSummaryCubit>();
+    final currentState = fetchCubit.state;
+
+    final int effectiveCategoryId;
+    if (currentState is FetchItemSummarySuccess) {
+      effectiveCategoryId = currentState.categoryId;
+    } else {
+      final int? selectedCategoryId = widget.selectedCategoryId.value;
+      effectiveCategoryId = selectedCategoryId ?? _catId;
+    }
+
+    final ItemFilterModel? sourceFilter =
+    (currentState is FetchItemSummarySuccess && currentState.filter != null)
+        ? currentState.filter
+        : widget.filter;
+
+    final ItemFilterModel? normalizedFilter =
+    sourceFilter?.copyWith(categoryId: effectiveCategoryId.toString());
+
+    fetchCubit
+
+
         .fetchSummaries(
-      categoryId: _catId,
+      categoryId: effectiveCategoryId,
       search: q,
       sortBy: widget.sortBy,
-      filter: widget.filter,
+      filter: normalizedFilter,
     )
 
 

@@ -972,7 +972,7 @@ class UiUtils {
 
     final bool blockInput = (disabled ?? false) || (isInProgress == true);
     final Color baseButtonColor = buttonColor ?? context.color.territoryColor;
-    final Color fallbackDisabledBackground = theme.colorScheme.surfaceVariant;
+    final Color fallbackDisabledBackground = Colors.grey.shade400;
     final Color disabledBackgroundColor =
         disabledColor ?? fallbackDisabledBackground;
     final Color bg = blockInput ? disabledBackgroundColor : baseButtonColor;
@@ -980,11 +980,8 @@ class UiUtils {
     // لون النص/الأيقونات/السبينر
     final Color fg = textColor ?? context.color.textAutoAdapt(bg);
     final Color disabledForeground = disabledTextColor ??
-        (textColor != null
-            ? textColor!.withOpacity(0.6)
-            : theme.colorScheme.onSurface.withOpacity(
-                theme.brightness == Brightness.dark ? 0.8 : 0.7,
-              ));
+        theme.colorScheme.onSurface.withOpacity(0.6);
+
     final Color contentColor = blockInput ? disabledForeground : fg;
 
     final bool useWhiteProgress = bg.computeLuminance() < 0.5;

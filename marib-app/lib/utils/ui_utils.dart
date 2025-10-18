@@ -1154,9 +1154,8 @@ class UiUtils {
       {required ImageProvider provider, VoidCallback? then}) {
     Navigator.of(context)
         .push(BlurredRouter(
-        sigmaX: 10,
-        sigmaY: 10,
         barrierDismiss: true,
+        barrierOpacity: 0.3,
         builder: (BuildContext context) =>
             FullScreenImageView(
               provider: provider,
@@ -1299,20 +1298,21 @@ class UiUtils {
   static Future showBlurredDialoge(
       BuildContext context, {
         required BlurDialoge dialoge,
-        double? sigmaX,
-        double? sigmaY,
+        AxisDirection axisDirection = AxisDirection.down,
+        double? barrierOpacity,
       }) async {
     return await Navigator.push(
       context,
       BlurredRouter(
         barrierDismiss: true,
+        axisDirection: axisDirection,
+        barrierOpacity: barrierOpacity,
         builder: (context) {
           // يكفي نتأكد إنه Widget ونرجعه
           if (dialoge is Widget) return dialoge as Widget;
           return const SizedBox.shrink();
         },
-        sigmaX: sigmaX,
-        sigmaY: sigmaY,
+
       ),
     );
   }

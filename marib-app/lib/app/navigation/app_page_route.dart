@@ -62,39 +62,39 @@ class _LayeredPageRoute<T> extends PageRouteBuilder<T> {
       final curvedAnimation = CurvedAnimation(
         parent: animation,
         curve: curve,
-        reverseCurve: Curves.easeInQuart,
+        reverseCurve: curve.flipped,
       );
 
-      final horizontalSlide = Tween<Offset>(
-        begin: const Offset(0.05, 0),
-        end: Offset.zero,
-      ).animate(curvedAnimation);
 
-      final verticalSlide = Tween<Offset>(
-        begin: const Offset(0, 0.08),
-        end: Offset.zero,
-      ).animate(curvedAnimation);
 
       final scaleAnimation = Tween<double>(
         begin: 0.96,
         end: 1,
       ).animate(curvedAnimation);
 
+      const baseTranslation = Offset(0.015, 0.012);
 
-      Widget current = child;
-      current = SlideTransition(
-        position: horizontalSlide,
-        child: SlideTransition(
-          position: verticalSlide,
-          child: current,
+      return AnimatedBuilder(
+        animation: curvedAnimation,
+        child: ScaleTransition(
+          scale: scaleAnimation,
+          child: child,
         ),
-      );
-      current = ScaleTransition(
-        scale: scaleAnimation,
-        child: current,
-      );
+        builder: (context, scaleChild) {
+          final progress = 1 - curvedAnimation.value;
+          final verticalDirection =
+          animation.status == AnimationStatus.reverse ? -1.0 : 1.0;
+          final translation = Offset(
+            baseTranslation.dx * progress,
+            baseTranslation.dy * progress * verticalDirection,
+          );
 
-      return current;
+          return FractionalTranslation(
+            translation: translation,
+            child: scaleChild,
+          );
+        },
+      );
     },
   );
 }

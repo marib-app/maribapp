@@ -622,6 +622,9 @@
 
         let manualPaymentInitialDrawTriggered = false;
         let manualPaymentOriginalErrMode = null;
+        let manualPaymentHasActiveFilters = false;
+
+
 
         function safeManualPaymentStorageGet(key) {
             try {
@@ -668,7 +671,7 @@
                 $.fn.dataTable.ext.errMode = manualPaymentOriginalErrMode;
             }
         }
-        let manualPaymentFilters = loadInitialManualPaymentFilters();
+        let manualPaymentFilters = loadInitialManualPaymentFilters() || {};
 
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -835,7 +838,7 @@
         function persistManualPaymentFilters() {
             safeManualPaymentStorageSet(
                 MANUAL_PAYMENT_FILTER_STORAGE_KEY,
-                JSON.stringify(manualPaymentFilters)
+                JSON.stringify(manualPaymentFilters ?? {})
             );
         }
 
@@ -1285,7 +1288,6 @@
                     url.searchParams.set('page', (info.page ?? 0) + 1);
                     const infoLength = Number(info.length ?? 20) || 20;
                     url.searchParams.set('length', infoLength);
-                    url.searchParams.set('length', infoLength);
                 
                 } else {
                     url.searchParams.delete('page');
@@ -1320,7 +1322,7 @@
 
 
 
-            manualPaymentFilters = filters;
+            manualPaymentFilters = { ...filters };
             persistManualPaymentFilters();
             const $transactionSearch = $('#manual-payment-transaction-search');
             if ($transactionSearch.length) {
@@ -1636,7 +1638,6 @@
                 persistManualPaymentFilters();
 
 
-                $form[0].reset();
                 if ($form.length) {
                     $form[0].reset();
                 }

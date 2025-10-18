@@ -990,6 +990,18 @@ class UiUtils {
         ? (titleWhenProgress ?? buttonTitle)
         : buttonTitle;
 
+    final double resolvedProgressWidth = progressWidth ?? 24;
+    final double resolvedProgressHeight = progressHeight ?? 24;
+    final bool showStatusIcon =
+        isInProgress == true || isSuccess == true || isError == true;
+    final double statusGap = showStatusIcon
+        ? (isInProgress == true
+            ? (max(resolvedProgressWidth, resolvedProgressHeight) >= 22
+                ? 12
+                : 10)
+            : 12)
+        : 0;
+
     Widget buildText(String t, Color c) => Flexible(
           child: Text(
             t,
@@ -1041,8 +1053,8 @@ class UiUtils {
                 children: [
                   if (isInProgress == true)
                     UiUtils.progress(
-                      width: progressWidth ?? 18,
-                      height: progressHeight ?? 18,
+                      width: resolvedProgressWidth,
+                      height: resolvedProgressHeight,
                       showWhite: useWhiteProgress,
                       normalProgressColor: progressColor,
                     ),
@@ -1050,10 +1062,8 @@ class UiUtils {
                     Icon(Icons.check_circle, color: contentColor, size: 22),
                   if (isError == true)
                     Icon(Icons.error_outline, color: contentColor, size: 22),
-                  if (isInProgress == true ||
-                      isSuccess == true ||
-                      isError == true)
-                    const SizedBox(width: 8),
+                  if (showStatusIcon)
+                    SizedBox(width: statusGap),
                   if (isInProgress == true && (showProgressTitle ?? false))
                     buildText(title, contentColor),
                   if (isInProgress != true &&

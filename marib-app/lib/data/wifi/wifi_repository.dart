@@ -167,10 +167,19 @@ class WifiRepository {
     };
 
 
-    final response = await Api.get(
-      url: Api.wifiPlansApi,
-      queryParameters: queryParameters,
-    );
+    final Map<String, dynamic> response;
+
+    try {
+      response = await Api.get(
+        url: Api.wifiPlansApi,
+        queryParameters: queryParameters,
+      );
+    } on ApiHttpException catch (error) {
+      if (error.statusCode == 403) {
+        return const <WifiPlan>[];
+      }
+      rethrow;
+    }
 
     final dynamic container = response['data'] ??
         response['plans'] ??

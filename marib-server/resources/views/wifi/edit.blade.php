@@ -248,7 +248,7 @@
                             </form>
                         </div>
                     </div>
-                @endifر
+                @endif
 
                 <div class="card shadow-sm mb-4">
                     <div class="card-header border-0 pb-0">

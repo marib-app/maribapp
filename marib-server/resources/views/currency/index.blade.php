@@ -19,6 +19,40 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
     <section class="section">
         <div class="row">
+
+
+            @can('currency-rate-import')
+                <div class="col-12">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title mb-3">{{ __('Bulk import currency rates') }}</h5>
+                            <p class="text-muted small mb-3">
+                                {{ __('Upload a CSV or Excel file with the columns: currency_name, governorate_code, sell_price, buy_price. Optional columns: source, quoted_at, is_default.') }}
+                            </p>
+                            <form id="currency-import-form" action="{{ route('currency.import') }}" method="POST" enctype="multipart/form-data">
+                                @csrf
+                                <div class="row g-3 align-items-end">
+                                    <div class="col-md-6 col-lg-4">
+                                        <label for="currency-import-file" class="form-label">{{ __('Select file') }}</label>
+                                        <input type="file" class="form-control" id="currency-import-file" name="file" accept=".csv,.xlsx,.xls" required>
+                                    </div>
+                                    <div class="col-md-auto">
+                                        <button type="submit" class="btn btn-outline-primary">{{ __('Import rates') }}</button>
+                                    </div>
+                                    <div class="col-md text-muted small">
+                                        {{ __('Each currency must include at least one governorate row with sell and buy prices.') }}
+                                    </div>
+                                </div>
+                            </form>
+                            <div id="currency-import-success" class="alert alert-success mt-3 d-none" role="alert"></div>
+                            <div id="currency-import-error" class="alert alert-danger mt-3 d-none" role="alert"></div>
+                            <div id="currency-import-report" class="mt-3 border rounded p-3 d-none"></div>
+                        </div>
+                    </div>
+                </div>
+            @endcan
+
+
             @can('currency-rate-create')
                 <div class="col-md-4">
                     <div class="card">
@@ -219,6 +253,21 @@
         // }
 
 
+
+
+
+        const currencyImportI18n = {
+            updatedHeading: @json(__('Updated currencies')),
+            warningsHeading: @json(__('Warnings')),
+            errorsHeading: @json(__('Errors')),
+            rowLabel: @json(__('Row')),
+            currencyLabel: @json(__('Currency')),
+            summaryTemplate: @json(__('Processed :rows rows. Updated :updated currencies.', ['rows' => ':rows', 'updated' => ':updated'])),
+            updatedItemTemplate: @json(__('Updated :count quotes')),
+        };
+
+
+
         function iconFormatter(value, row, index) {
             if (!value) {
                 return '<span class="text-muted">&mdash;</span>';
@@ -333,6 +382,82 @@
             const source = row?.history?.source ? `<span class="d-block text-muted small mt-1">${row.history.source}</span>` : '';
 
             return `<span class="${meta.class}">${meta.label}</span>${source}`;
+        }
+
+
+
+
+        function renderCurrencyImportReport(container, report) {
+            const target = container instanceof jQuery ? container : $(container);
+            target.empty();
+
+            if (!report) {
+                target.addClass('d-none');
+                return;
+            }
+
+            const errors = Array.isArray(report.errors) ? report.errors : [];
+            const warnings = Array.isArray(report.warnings) ? report.warnings : [];
+            const updated = Array.isArray(report.updated_currencies) ? report.updated_currencies : [];
+            const rowsProcessed = typeof report.rows_processed === 'number' ? report.rows_processed : 0;
+
+            if (!errors.length && !warnings.length && !updated.length) {
+                target.addClass('d-none');
+                return;
+            }
+
+            const wrapper = $('<div class="currency-import-report__content"></div>');
+            const summaryText = currencyImportI18n.summaryTemplate
+                .replace(':rows', rowsProcessed)
+                .replace(':updated', updated.length);
+
+            wrapper.append($('<p class="mb-2 small text-muted"></p>').text(summaryText));
+
+            if (updated.length) {
+                wrapper.append($('<h6 class="fw-semibold mb-1"></h6>').text(currencyImportI18n.updatedHeading));
+                const list = $('<ul class="mb-2"></ul>');
+                updated.forEach(function (entry) {
+                    const countText = currencyImportI18n.updatedItemTemplate.replace(':count', entry?.quotes_updated ?? 0);
+                    const label = entry?.currency_name ? entry.currency_name + ' — ' + countText : countText;
+                    list.append($('<li class="small"></li>').text(label));
+                });
+                wrapper.append(list);
+            }
+
+            if (warnings.length) {
+                wrapper.append($('<h6 class="fw-semibold mb-1"></h6>').text(currencyImportI18n.warningsHeading));
+                wrapper.append(buildCurrencyImportIssueList(warnings));
+            }
+
+            if (errors.length) {
+                wrapper.append($('<h6 class="fw-semibold mb-1"></h6>').text(currencyImportI18n.errorsHeading));
+                wrapper.append(buildCurrencyImportIssueList(errors));
+            }
+
+            target.removeClass('d-none').append(wrapper);
+        }
+
+        function buildCurrencyImportIssueList(entries) {
+            const list = $('<ul class="mb-2"></ul>');
+
+            entries.forEach(function (entry) {
+                const parts = [];
+
+                if (typeof entry.row_number !== 'undefined') {
+                    parts.push(currencyImportI18n.rowLabel + ' ' + entry.row_number);
+                }
+
+                if (entry.currency_name) {
+                    parts.push(currencyImportI18n.currencyLabel + ': ' + entry.currency_name);
+                }
+
+                const prefix = parts.length ? parts.join(' · ') + ' — ' : '';
+                const message = entry.message || '';
+
+                list.append($('<li class="small"></li>').text(prefix + message));
+            });
+
+            return list;
         }
 
 
@@ -454,6 +579,74 @@
 
             }
         };
+
+
+
+
+
+
+        $(function () {
+            const form = $('#currency-import-form');
+
+            if (!form.length) {
+                return;
+            }
+
+            const successAlert = $('#currency-import-success');
+            const errorAlert = $('#currency-import-error');
+            const reportContainer = $('#currency-import-report');
+            const submitButton = form.find('button[type="submit"]');
+
+            form.on('submit', function (event) {
+                event.preventDefault();
+
+                successAlert.addClass('d-none').text('');
+                errorAlert.addClass('d-none').text('');
+                renderCurrencyImportReport(reportContainer, null);
+
+                const formData = new FormData(this);
+
+                submitButton.prop('disabled', true);
+
+                $.ajax({
+                    url: form.attr('action'),
+                    method: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function (response) {
+                        const message = response?.message || '{{ __('Currency rates imported successfully.') }}';
+                        successAlert.removeClass('d-none').text(message);
+                        showSuccessToast(message);
+                        renderCurrencyImportReport(reportContainer, response.report);
+                        $('#table_list').bootstrapTable('refresh');
+                        form[0].reset();
+                    },
+                    error: function (xhr) {
+                        const payload = xhr?.responseJSON;
+                        const message = payload?.message || '{{ __('Unable to import currency rates at the moment.') }}';
+                        errorAlert.removeClass('d-none').text(message);
+                        showErrorToast(message);
+
+                        if (payload?.errors && payload.errors.file) {
+                            const validationMessage = payload.errors.file[0];
+                            if (validationMessage && validationMessage !== message) {
+                                errorAlert.append($('<div class="small mt-2"></div>').text(validationMessage));
+                            }
+                        }
+
+                        renderCurrencyImportReport(reportContainer, payload?.report);
+                    },
+                    complete: function () {
+                        submitButton.prop('disabled', false);
+                    },
+                });
+            });
+        });
+
+
+
+
 
         // $(function () {
         //     $('#table_list').bootstrapTable();

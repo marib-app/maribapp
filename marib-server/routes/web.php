@@ -368,9 +368,11 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
 
 
     /* ------------------------------- العملة Currency ------------------------------ */
-    Route::group(['middleware' => ['permission:currency-rate-list|currency-rate-create|currency-rate-edit|currency-rate-delete']], static function () {
+    Route::group(['middleware' => ['permission:currency-rate-list|currency-rate-create|currency-rate-edit|currency-rate-delete|currency-rate-import']], static function () {
+
         Route::get('/currency', [CurrencyController::class, 'index'])->name('currency.index');
         Route::post('/currency', [CurrencyController::class, 'store'])->name('currency.store');
+        Route::post('/currency/import', [CurrencyController::class, 'import'])->name('currency.import');
         Route::get('/currency/show', [CurrencyController::class, 'show'])->name('currency.show');
         Route::put('/currency/{id}', [CurrencyController::class, 'update'])->name('currency.update');
         Route::delete('/currency/{id}', [CurrencyController::class, 'destroy'])->name('currency.destroy');

@@ -538,7 +538,11 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
                         final submitting = state is WalletTransferSubmitting;
                         return UiUtils.buildButton(
                           context,
-                          onPressed: submitting || _lookupInProgress ? null : _submit,
+                          onPressed: submitting || _lookupInProgress
+                              ? null
+                              : () {
+                            _submit();
+                          },
 
                           buttonTitle: 'تنفيذ التحويل',
                           titleWhenProgress: 'جاري الإرسال...',

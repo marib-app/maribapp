@@ -17,7 +17,7 @@ class FilterSortActionButton extends StatelessWidget {
     required this.onTap,
     required this.icon,
     required this.label,
-    this.padding = const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+    this.padding = const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
     this.iconTextSpacing = 8,
     this.borderRadius = 18,
   });
@@ -40,7 +40,6 @@ class FilterSortActionButton extends StatelessWidget {
           borderRadius: radius,
           splashColor: highlightColor.withOpacity(0.16),
           child: Ink(
-            padding: padding,
             decoration: BoxDecoration(
               borderRadius: radius,
               gradient: LinearGradient(
@@ -55,26 +54,31 @@ class FilterSortActionButton extends StatelessWidget {
                 color: highlightColor.withOpacity(0.32),
                 width: 1.2,
             ),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                IconTheme.merge(
-                  data: IconThemeData(color: onBaseColor, size: 22),
-                  child: icon,
+              child: Padding(
+                padding: padding,
+                child: IntrinsicHeight(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      IconTheme.merge(
+                        data: IconThemeData(color: onBaseColor, size: 22),
+                        child: icon,
+                      ),
+                      SizedBox(height: iconTextSpacing),
+                      Text(
+                        label,
+                        maxLines: 2,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: onBaseColor,
+                        ),
+                      ),
+                    ],
                 ),
-                SizedBox(height: iconTextSpacing),
-                Text(
-                  label,
-                  maxLines: 2,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: onBaseColor,
-                  ),
                 ),
-              ],
             ),
         ),
       ),

@@ -111,13 +111,30 @@ class FilterSortBar extends StatelessWidget {
                     final double buttonWidth = availableWidth > 0
                         ? availableWidth / buttonCount
                         : constraints.maxWidth / buttonCount;
-                    final double desiredHeight =
+                    final double fallbackHeight =
                         (size.height * 0.08).clamp(44.0, 52.0).toDouble();
-                    final buttons = <Widget>[
-                      SizedBox(
+                    final bool hasBoundedHeight =
+                        constraints.maxHeight.isFinite &&
+                            constraints.maxHeight > 0;
+                    final double desiredHeight = hasBoundedHeight
+                        ? math.max(44.0, constraints.maxHeight)
+                        : fallbackHeight;
+
+                    Widget buttonWrapper(Widget child) {
+                      return SizedBox(
+
                         width: buttonWidth,
-                        height: desiredHeight,
-                        child: FilterButton(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(minHeight: desiredHeight),
+                          child: child,
+                        ),
+                      );
+                    }
+
+                    final buttons = <Widget>[
+                      buttonWrapper(
+                        FilterButton(
+
                           categoryIds: categoryIds,
                           onFilterChanged: onFilterChanged,             // ✅ مهم: نمرر الكولباك الحقيقي
                           currentFilter: currentFilter,                 // إبراز القيم الحالية
@@ -127,19 +144,15 @@ class FilterSortBar extends StatelessWidget {
                         ),
                       ),
                       if (showMapButton)
-                        SizedBox(
-                          width: buttonWidth,
-                          height: desiredHeight,
-                          child: FilterSortActionButton(
+                        buttonWrapper(
+                          FilterSortActionButton(
                             onTap: onMapSearchTap!,
                             icon: const Icon(Icons.map, size: 22),
                             label: "searchOnMap".translate(context),
                           ),
                         ),
-                      SizedBox(
-                        width: buttonWidth,
-                        height: desiredHeight,
-                        child: SortByAction(
+                      buttonWrapper(
+                        SortByAction(
                           searchController: searchController,
                           categoryId: categoryId,
                           onSortChanged: onSortChanged,

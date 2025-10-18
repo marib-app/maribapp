@@ -109,21 +109,57 @@ class Section_screenState extends State<Section_screen> {
 
   late final String? _requestSectionSlug;
 
+
+  bool _isValidCategoryId(String? raw) {
+    if (raw == null) return false;
+    final String trimmed = raw.trim();
+    if (trimmed.isEmpty) return false;
+    return int.tryParse(trimmed) != null;
+  }
+
+  String _resolveCategoryIdString({
+    ItemFilterModel? source,
+    int? categoryIdOverride,
+  }) {
+    final String? candidate = source?.categoryId;
+    if (_isValidCategoryId(candidate)) {
+      return candidate!.trim();
+    }
+
+    final int fallback = categoryIdOverride ?? _catId;
+    return fallback.toString();
+  }
+
+  int _resolveCategoryIdInt({
+    ItemFilterModel? source,
+    int? categoryIdOverride,
+  }) {
+    final String resolved = _resolveCategoryIdString(
+      source: source,
+      categoryIdOverride: categoryIdOverride,
+    );
+
+    return int.tryParse(resolved) ?? (categoryIdOverride ?? _catId);
+  }
+
   ItemFilterModel _buildEffectiveFilter({
     ItemFilterModel? base,
     int? categoryIdOverride,
   }) {
     final ItemFilterModel? source = base ?? filter ?? _initialFilter;
-    final int resolvedCategoryId = categoryIdOverride ?? _catId;
+    final String resolvedCategoryId = _resolveCategoryIdString(
+      source: source,
+      categoryIdOverride: categoryIdOverride,
+    );
 
     if (source == null) {
       return ItemFilterModel(
-        categoryId: resolvedCategoryId.toString(),
+        categoryId: resolvedCategoryId,
       );
     }
 
     return source.copyWith(
-      categoryId: resolvedCategoryId.toString(),
+      categoryId: resolvedCategoryId,
     );
   }
 
@@ -170,10 +206,15 @@ class Section_screenState extends State<Section_screen> {
     String? search,
     int? categoryId,
   }) async {
-    final int resolvedCategoryId = categoryId ?? _catId;
     final ItemFilterModel effectiveFilter = _buildEffectiveFilter(
       base: baseFilter,
-      categoryIdOverride: resolvedCategoryId,
+      categoryIdOverride: categoryId,
+    );
+
+    final int resolvedCategoryId = _resolveCategoryIdInt(
+      source: effectiveFilter,
+      categoryIdOverride: categoryId,
+
     );
 
     filter = effectiveFilter;
@@ -343,11 +384,19 @@ class Section_screenState extends State<Section_screen> {
         );
       }
 
+
+      final ItemFilterModel effectiveFilter = _buildEffectiveFilter();
+      final int resolvedCategoryId = _resolveCategoryIdInt(
+        source: effectiveFilter,
+      );
+
+      filter = effectiveFilter;
+
       await context.read<FetchItemSummaryCubit>().fetchSummaries(
-        categoryId: _catId,
+        categoryId: resolvedCategoryId,
         search: searchController.text,
         sortBy: sortBy,
-        filter: filter?.copyWith(categoryId: widget.categoryId),
+        filter: effectiveFilter,
       );
 
       // إعادة تحميل أقسام الإعلانات المميزة عند السحب للتحديث
@@ -439,20 +488,35 @@ class Section_screenState extends State<Section_screen> {
             categoryId: widget.categoryId,
             searchController: searchController,
             onFilterChanged: (newFilter) {
-              filter = newFilter.copyWith(categoryId: widget.categoryId);
+              final ItemFilterModel effectiveFilter = _buildEffectiveFilter(
+                base: newFilter,
+              );
+              filter = effectiveFilter;
+              final int resolvedCategoryId = _resolveCategoryIdInt(
+                source: effectiveFilter,
+              );
+
               context.read<FetchItemSummaryCubit>().fetchSummaries(
-                categoryId: _catId,
+                categoryId: resolvedCategoryId,
                 search: searchController.text,
-                filter: filter,
+                filter: effectiveFilter,
                 sortBy: sortBy,
               );
             },
             onSortChanged: (newSort) {
               sortBy = newSort;
+
+              final ItemFilterModel effectiveFilter = _buildEffectiveFilter();
+              filter = effectiveFilter;
+              final int resolvedCategoryId = _resolveCategoryIdInt(
+                source: effectiveFilter,
+              );
+
+
               context.read<FetchItemSummaryCubit>().fetchSummaries(
-                categoryId: _catId,
+                categoryId: resolvedCategoryId,
                 search: searchController.text,
-                filter: filter?.copyWith(categoryId: widget.categoryId),
+                filter: effectiveFilter,
                 sortBy: sortBy,
               );
             },

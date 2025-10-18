@@ -7,18 +7,18 @@ import 'package:flutter/material.dart';
 class SmoothPageTransitionsBuilder extends PageTransitionsBuilder {
   const SmoothPageTransitionsBuilder();
 
-  static final Tween<Offset> _slideTween = Tween<Offset>(
-    begin: const Offset(0.08, 0.02),
+  static final Tween<Offset> _incomingSlideTween = Tween<Offset>(
+    begin: const Offset(0.08, 0),
     end: Offset.zero,
   );
 
-  static final Tween<double> _scaleTween = Tween<double>(
-    begin: 0.96,
-    end: 1,
+  static final Tween<Offset> _outgoingSlideTween = Tween<Offset>(
+    begin: Offset.zero,
+    end: const Offset(-0.02, 0),
   );
 
-  static final Tween<double> _stretchTween = Tween<double>(
-    begin: 1.04,
+  static final Tween<double> _scaleTween = Tween<double>(
+    begin: 0.97,
     end: 1,
   );
 
@@ -41,26 +41,25 @@ class SmoothPageTransitionsBuilder extends PageTransitionsBuilder {
       reverseCurve: Curves.easeInCubic,
     );
 
-    final slideAnimation = _slideTween.animate(curvedAnimation);
+    final incomingSlideAnimation =
+    _incomingSlideTween.animate(curvedAnimation);
     final scaleAnimation = _scaleTween.animate(curvedAnimation);
-    final stretchAnimation = _stretchTween.animate(curvedAnimation);
+    final secondaryCurve = CurvedAnimation(
+      parent: _secondaryAnimation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+    final outgoingSlideAnimation =
+    _outgoingSlideTween.animate(secondaryCurve);
 
     return SlideTransition(
-      position: slideAnimation,
-      child: AnimatedBuilder(
-        animation: curvedAnimation,
-        child: child,
-        builder: (context, child) {
-          final scale = scaleAnimation.value;
-          final stretch = stretchAnimation.value;
-
-          return Transform(
-            alignment: Alignment.center,
-            transform: Matrix4.identity()
-              ..scale(scale, stretch),
-            child: child,
-          );
-        },
+      position: outgoingSlideAnimation,
+      child: SlideTransition(
+        position: incomingSlideAnimation,
+        child: ScaleTransition(
+          scale: scaleAnimation,
+          child: child,
+        ),
       ),
     );
   }

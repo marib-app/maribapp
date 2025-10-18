@@ -2,7 +2,7 @@
 
 import 'package:marib/ui/theme/theme.dart';
 import 'package:flutter/material.dart';
-import 'package:marib/ui/theme/smooth_page_transition.dart';
+import 'package:marib/app/navigation/motion/motion_page_transitions_builder.dart';
 
 enum AppTheme { dark, light }
 
@@ -15,12 +15,12 @@ final appThemeData = {
 
     pageTransitionsTheme: const PageTransitionsTheme(
       builders: <TargetPlatform, PageTransitionsBuilder>{
-        TargetPlatform.android: SmoothPageTransitionsBuilder(),
-        TargetPlatform.iOS: SmoothPageTransitionsBuilder(),
-        TargetPlatform.fuchsia: SmoothPageTransitionsBuilder(),
-        TargetPlatform.macOS: SmoothPageTransitionsBuilder(),
-        TargetPlatform.windows: SmoothPageTransitionsBuilder(),
-        TargetPlatform.linux: SmoothPageTransitionsBuilder(),
+        TargetPlatform.android: MotionPageTransitionsBuilder(),
+        TargetPlatform.iOS: MotionPageTransitionsBuilder(),
+        TargetPlatform.fuchsia: MotionPageTransitionsBuilder(),
+        TargetPlatform.macOS: MotionPageTransitionsBuilder(),
+        TargetPlatform.windows: MotionPageTransitionsBuilder(),
+        TargetPlatform.linux: MotionPageTransitionsBuilder(),
       },
     ),
 
@@ -48,12 +48,12 @@ final appThemeData = {
 
     pageTransitionsTheme: const PageTransitionsTheme(
       builders: <TargetPlatform, PageTransitionsBuilder>{
-        TargetPlatform.android: SmoothPageTransitionsBuilder(),
-        TargetPlatform.iOS: SmoothPageTransitionsBuilder(),
-        TargetPlatform.fuchsia: SmoothPageTransitionsBuilder(),
-        TargetPlatform.macOS: SmoothPageTransitionsBuilder(),
-        TargetPlatform.windows: SmoothPageTransitionsBuilder(),
-        TargetPlatform.linux: SmoothPageTransitionsBuilder(),
+        TargetPlatform.android: MotionPageTransitionsBuilder(),
+        TargetPlatform.iOS: MotionPageTransitionsBuilder(),
+        TargetPlatform.fuchsia: MotionPageTransitionsBuilder(),
+        TargetPlatform.macOS: MotionPageTransitionsBuilder(),
+        TargetPlatform.windows: MotionPageTransitionsBuilder(),
+        TargetPlatform.linux: MotionPageTransitionsBuilder(),
       },
     ),
 

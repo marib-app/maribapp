@@ -1,7 +1,24 @@
-part of 'package:marib/ui/screens/classified_ads/other_services/wifi_cabin/wifi_cabin_screen.dart';
+import 'dart:async';
 
-class _PlansSheet extends StatefulWidget {
-  const _PlansSheet({
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/extensions/extensions.dart';
+
+  import 'package:flutter/material.dart';
+
+  import 'package:marib/data/model/wifi/wifi_network.dart';
+  import 'package:marib/data/model/wifi/wifi_plan.dart';
+  import 'package:marib/data/model/wifi/wifi_purchase.dart';
+  import 'package:marib/data/model/wifi/wifi_purchase_result.dart';
+  import 'package:marib/data/wifi/wifi_repository.dart';
+  import 'package:marib/utils/extensions/extensions.dart';
+
+  import 'checkout_sheet.dart';
+
+  class WifiPlansSheet extends StatefulWidget {
+  const WifiPlansSheet({
+  super.key,
+
+
     required this.network,
     required this.onRegisterPurchase,
     required this.onRefreshPurchases,
@@ -14,10 +31,10 @@ class _PlansSheet extends StatefulWidget {
   final Future<void> Function(WifiPurchase) onShowCodes;
 
   @override
-  State<_PlansSheet> createState() => _PlansSheetState();
+  State<WifiPlansSheet> createState() => WifiPlansSheetState();
 }
 
-class _PlansSheetState extends State<_PlansSheet> {
+class WifiPlansSheetState extends State<WifiPlansSheet> {
   final WifiRepository _repository = const WifiRepository();
   List<WifiPlan> _plans = <WifiPlan>[];
   bool _isLoading = false;
@@ -224,7 +241,7 @@ class _PlansSheetState extends State<_PlansSheet> {
                     if (widget.network.loginScreenshotUrl != null) {
                       listChildren.addAll(
                         [
-                          _LoginScreenshotPreview(
+                          WifiLoginScreenshotPreview(
                             imageUrl: widget.network.loginScreenshotUrl!,
                           ),
                           const SizedBox(height: 12),
@@ -237,7 +254,7 @@ class _PlansSheetState extends State<_PlansSheet> {
                         listChildren.add(const SizedBox(height: 10));
                       }
                       listChildren.add(
-                        _PlanTile(
+                        WifiPlanTile(
                           plan: _plans[i],
                           onSelect: () => _openCheckout(context, _plans[i]),
                         ),
@@ -271,7 +288,7 @@ class _PlansSheetState extends State<_PlansSheet> {
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: context.color.backgroundColor,
-      builder: (_) => _CheckoutSheet(plan: plan),
+      builder: (_) => WifiCheckoutSheet(plan: plan),
     );
     if (result == null) return;
 
@@ -308,8 +325,8 @@ class _PlansSheetState extends State<_PlansSheet> {
   }
 }
 
-class _PlanTile extends StatelessWidget {
-  const _PlanTile({required this.plan, required this.onSelect});
+class WifiPlanTile extends StatelessWidget {
+  const WifiPlanTile({super.key, required this.plan, required this.onSelect});
 
   final WifiPlan plan;
   final VoidCallback onSelect;
@@ -346,7 +363,7 @@ class _PlanTile extends StatelessWidget {
                 fontSize: 12,
               ),
             ),
-            _SheetPlanHighlights(plan: plan),
+            WifiSheetPlanHighlights(plan: plan),
 
             const SizedBox(height: 12),
             Row(
@@ -371,9 +388,8 @@ class _PlanTile extends StatelessWidget {
 
 }
 
-
-class _SheetPlanHighlights extends StatelessWidget {
-  const _SheetPlanHighlights({required this.plan});
+class WifiSheetPlanHighlights extends StatelessWidget {
+  const WifiSheetPlanHighlights({super.key, required this.plan});
 
   final WifiPlan plan;
 
@@ -411,21 +427,22 @@ class _SheetPlanHighlights extends StatelessWidget {
         children: labels
             .map(
               (label) => Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: color.backgroundColor,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: color.secondaryColor.withOpacity(0.35)),
-            ),
-            child: Text(
-              label,
-              style: TextStyle(
-                color: color.textDefaultColor.withOpacity(0.85),
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: color.backgroundColor,
+                  borderRadius: BorderRadius.circular(10),
+                  border:
+                  Border.all(color: color.secondaryColor.withOpacity(0.35)),
+                ),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: color.textDefaultColor.withOpacity(0.85),
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
-            ),
-          ),
         )
             .toList(),
       ),
@@ -433,8 +450,8 @@ class _SheetPlanHighlights extends StatelessWidget {
   }
 }
 
-class _LoginScreenshotPreview extends StatelessWidget {
-  const _LoginScreenshotPreview({required this.imageUrl});
+class WifiLoginScreenshotPreview extends StatelessWidget {
+  const WifiLoginScreenshotPreview({super.key, required this.imageUrl});
 
   final String imageUrl;
 

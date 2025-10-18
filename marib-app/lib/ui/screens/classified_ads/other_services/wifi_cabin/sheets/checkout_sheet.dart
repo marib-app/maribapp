@@ -1,4 +1,17 @@
-part of 'package:marib/ui/screens/classified_ads/other_services/wifi_cabin/wifi_cabin_screen.dart';
+import 'dart:async';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/extensions/extensions.dart';
+
+import 'package:flutter/material.dart';
+
+import 'package:marib/data/model/wifi/wifi_payment_gateway.dart';
+import 'package:marib/data/model/wifi/wifi_plan.dart';
+import 'package:marib/data/model/wifi/wifi_purchase_result.dart';
+import 'package:marib/data/wifi/wifi_repository.dart';
+import 'package:marib/utils/api.dart';
+import 'package:marib/utils/extensions/extensions.dart';
+
+
 
 class PaymentGatewayView {
   const PaymentGatewayView({
@@ -12,16 +25,16 @@ class PaymentGatewayView {
   final String? description;
 }
 
-class _CheckoutSheet extends StatefulWidget {
-  const _CheckoutSheet({required this.plan});
+class WifiCheckoutSheet extends StatefulWidget {
+  const WifiCheckoutSheet({super.key, required this.plan});
 
   final WifiPlan plan;
 
   @override
-  State<_CheckoutSheet> createState() => _CheckoutSheetState();
+  State<WifiCheckoutSheet> createState() => WifiCheckoutSheetState();
 }
 
-class _CheckoutSheetState extends State<_CheckoutSheet> {
+class WifiCheckoutSheetState extends State<WifiCheckoutSheet> {
   final WifiRepository _repository = const WifiRepository();
   final Map<String, WifiPaymentGateway> _gatewayEntities =
   <String, WifiPaymentGateway>{};
@@ -307,14 +320,14 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          _QtyStepper(
+                          WifiQtyStepper(
                             value: _quantity,
                             onChanged: (value) => setState(() => _quantity = value),
                           ),
                         ],
                       ),
                       const SizedBox(height: 16),
-                      _TotalBar(
+                      WifiTotalBar(
                         total: total,
                         currency: widget.plan.currency,
                       ),
@@ -334,7 +347,7 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                         )
                       else ...[
                         if (_gateways.isNotEmpty)
-                          _GatewayPicker(
+                          WifiGatewayPicker(
                             gateways: _gateways,
                             value: _gateway,
                             enabled: !_isSubmitting,
@@ -493,8 +506,8 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
   }
 }
 
-class _QtyStepper extends StatelessWidget {
-  const _QtyStepper({required this.value, required this.onChanged});
+class WifiQtyStepper extends StatelessWidget {
+  const WifiQtyStepper({super.key, required this.value, required this.onChanged});
 
   final int value;
   final ValueChanged<int> onChanged;
@@ -532,8 +545,8 @@ class _QtyStepper extends StatelessWidget {
   }
 }
 
-class _TotalBar extends StatelessWidget {
-  const _TotalBar({required this.total, this.currency});
+class WifiTotalBar extends StatelessWidget {
+  const WifiTotalBar({super.key, required this.total, this.currency});
 
   final num total;
   final String? currency;
@@ -571,8 +584,11 @@ class _TotalBar extends StatelessWidget {
   }
 }
 
-class _GatewayPicker extends StatelessWidget {
-  const _GatewayPicker({
+class WifiGatewayPicker extends StatelessWidget {
+  const WifiGatewayPicker({
+    super.key,
+
+
     required this.gateways,
     required this.value,
     required this.onChanged,
@@ -592,28 +608,29 @@ class _GatewayPicker extends StatelessWidget {
       children: gateways
           .map(
             (gateway) => RadioListTile<String>(
-          value: gateway.id,
-          groupValue: value,
-          onChanged: enabled
-              ? (val) {
-            if (val != null) onChanged(val);
-          }
-              : null,
-          title: Text(
-            gateway.name,
-            style: TextStyle(color: color.textDefaultColor),
-          ),
-          subtitle: gateway.description != null
-              ? Text(
-            gateway.description!,
-            style: TextStyle(
-              color: color.textDefaultColor.withOpacity(0.65),
-              fontSize: 12,
+              value: gateway.id,
+              groupValue: value,
+              onChanged: enabled
+                  ? (val) {
+                if (val != null) onChanged(val);
+              }
+                  : null,
+              title: Text(
+                gateway.name,
+                style: TextStyle(color: color.textDefaultColor),
+              ),
+              subtitle: gateway.description != null
+                  ? Text(
+                gateway.description!,
+                style: TextStyle(
+                  color: color.textDefaultColor.withOpacity(0.65),
+                  fontSize: 12,
+                ),
+              )
+                  : null,
             ),
           )
-              : null,
-        ),
-      )
+
           .toList(),
     );
   }

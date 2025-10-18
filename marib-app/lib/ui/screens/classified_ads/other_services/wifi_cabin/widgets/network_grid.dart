@@ -1,7 +1,15 @@
-part of 'package:marib/ui/screens/classified_ads/other_services/wifi_cabin/wifi_cabin_screen.dart';
+import 'package:flutter/material.dart';
 
-class _NetworksGrid extends StatelessWidget {
-  const _NetworksGrid({
+  import 'package:marib/data/model/wifi/wifi_network.dart';
+  import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/extensions/extensions.dart';
+
+  import 'common_states.dart';
+
+  class WifiNetworksGrid extends StatelessWidget {
+  const WifiNetworksGrid({
+
     super.key,
     required this.networks,
     required this.onSelect,
@@ -21,7 +29,7 @@ class _NetworksGrid extends StatelessWidget {
       final String subtitle = trimmed.isEmpty
           ? 'ابدأ بالبحث عن اسم الشبكة أو راجع قائمة الشبكات المتاحة من مزودي الخدمة.'
           : 'لم يتم العثور على نتائج لـ "$trimmed". جرّب جزءًا من الاسم أو تحقق من التهجئة.';
-      return _EmptyState(
+      return WifiEmptyState(
         title: 'لم يتم العثور على شبكات',
         subtitle: subtitle,
         onAction: onRefresh,
@@ -47,7 +55,7 @@ class _NetworksGrid extends StatelessWidget {
             ? network.currencies.first
             : null;
 
-        return _WifiNetworkCard(
+        return WifiNetworkCard(
           name: network.name,
           subtitle: subtitle,
           imageUrl: network.iconUrl ?? network.loginScreenshotUrl,
@@ -59,8 +67,9 @@ class _NetworksGrid extends StatelessWidget {
   }
 }
 
-class _WifiNetworkCard extends StatelessWidget {
-  const _WifiNetworkCard({
+class WifiNetworkCard extends StatelessWidget {
+  const WifiNetworkCard({
+    super.key,
     required this.name,
     required this.subtitle,
     this.imageUrl,

@@ -1,5 +1,24 @@
-part of 'package:marib/ui/screens/classified_ads/other_services/wifi_cabin/wifi_cabin_screen.dart';
+import 'dart:typed_data';
 
+  import 'package:dio/dio.dart';
+  import 'package:file_picker/file_picker.dart';
+  import 'package:flutter/foundation.dart';
+  import 'package:flutter/material.dart';
+  import 'package:meta/meta.dart';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/extensions/extensions.dart';
+
+  import 'package:marib/data/model/wifi/wifi_plan.dart';
+  import 'package:marib/data/wifi/wifi_repository.dart';
+  import 'package:marib/utils/extensions/extensions.dart';
+  import 'package:marib/utils/helper_utils.dart';
+
+  abstract class WifiAddNetworkFormState<T extends StatefulWidget>
+  extends State<T> {
+
+
+
+  }
 abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _contactController = TextEditingController();
@@ -88,7 +107,7 @@ abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
         const SizedBox(height: 16),
 
 
-        _FilePickerTile(
+        WifiFilePickerTile(
           title: 'شعار الشبكة',
           placeholder: 'ارفع صورة الشعار',
           fileName: _logoFile?.name,
@@ -96,7 +115,7 @@ abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
           onTap: () => _pickImage(isLogo: true),
         ),
         const SizedBox(height: 16),
-        _FilePickerTile(
+        WifiFilePickerTile(
           title: 'صورة صفحة الدخول',
           placeholder: 'ارفع صورة توضح صفحة الدخول',
           fileName: _loginScreenshotFile?.name,
@@ -106,7 +125,7 @@ abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
         const SizedBox(height: 16),
 
 
-        _FilePickerTile(
+        WifiFilePickerTile(
           title: 'ملف أكواد القسائم',
           placeholder: 'ارفع ملف CSV أو XLS أو XLSX يحتوي على الأكواد',
           fileName: _voucherFile?.name,
@@ -426,7 +445,7 @@ abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
     }
   }
 
-  Widget _buildPlansDropdown(AppColorScheme color) {
+  Widget _buildPlansDropdown(ColorScheme color) {
     return DropdownButtonFormField<int>(
       decoration: InputDecoration(
         labelText: 'الباقة المستهدفة',
@@ -544,8 +563,10 @@ abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
 
 }
 
-class _FilePickerTile extends StatelessWidget {
-  const _FilePickerTile({
+class WifiFilePickerTile extends StatelessWidget {
+  const WifiFilePickerTile({
+    super.key,
+
     required this.title,
     required this.placeholder,
     required this.onTap,
@@ -623,7 +644,7 @@ void debugUpdateAddNetworkFormState(
       PlatformFile? voucher,
       WifiPlan? selectedPlan,
     }) {
-  if (state is _AddNetworkFormState) {
+  if (state is WifiAddNetworkFormState) {
     state
       ..debugSetFiles(logo: logo, login: login, voucher: voucher)
       ..debugSelectPlan(selectedPlan);
@@ -643,11 +664,11 @@ class AddNetworkFormTestHarness extends StatefulWidget {
 
   @override
   State<AddNetworkFormTestHarness> createState() =>
-      _AddNetworkFormTestHarnessState();
+      WifiAddNetworkFormTestHarnessState();
 }
 
-class _AddNetworkFormTestHarnessState
-    extends _AddNetworkFormState<AddNetworkFormTestHarness> {
+class WifiAddNetworkFormTestHarnessState
+    extends WifiAddNetworkFormState<AddNetworkFormTestHarness> {
   @override
   WifiRepository get repository => widget.repository;
 

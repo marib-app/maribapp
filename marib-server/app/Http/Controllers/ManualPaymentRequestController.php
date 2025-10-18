@@ -420,6 +420,7 @@ class ManualPaymentRequestController extends Controller
     {
         $manualPaymentRequest->load([
             'user',
+            'manualBank',
             'paymentTransaction.order.user',
             'paymentTransaction.walletTransaction.walletAccount.user',
             'paymentTransaction.payable',

@@ -1,7 +1,9 @@
-part of 'package:marib/ui/screens/classified_ads/other_services/wifi_cabin/wifi_cabin_screen.dart';
+import 'package:flutter/material.dart';
 
-class _ServiceOverview extends StatelessWidget {
-  const _ServiceOverview();
+  import 'package:marib/utils/extensions/extensions.dart';
+
+  class WifiServiceOverview extends StatelessWidget {
+  const WifiServiceOverview({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -17,10 +19,10 @@ class _ServiceOverview extends StatelessWidget {
       height: 1.5,
     );
 
-    final List<_OverviewPoint> points = const <_OverviewPoint>[
-      _OverviewPoint('بوابة بيع تعمل على مدار 24 ساعة لطلبات الاشتراك.'),
-      _OverviewPoint('إشعارات فورية لكل طلب جديد وتحديثات الحالة.'),
-      _OverviewPoint('تحويل العوائد إلى محفظتك داخل التطبيق بسهولة.'),
+    final List<WifiOverviewPoint> points =  <WifiOverviewPoint>[
+      WifiOverviewPoint('بوابة بيع تعمل على مدار 24 ساعة لطلبات الاشتراك.'),
+      WifiOverviewPoint('إشعارات فورية لكل طلب جديد وتحديثات الحالة.'),
+      WifiOverviewPoint('تحويل العوائد إلى محفظتك داخل التطبيق بسهولة.'),
     ];
 
     return Container(
@@ -40,7 +42,7 @@ class _ServiceOverview extends StatelessWidget {
             style: bodyStyle,
           ),
           const SizedBox(height: 12),
-          ...points.map((point) => _OverviewRow(point: point, color: color)),
+          ...points.map((point) => WifiOverviewRow(point: point, color: color)),
           const SizedBox(height: 12),
           Text(
             'الرسوم تستقطع بعد اكتمال البيع فقط، ويمكنك سحب أرباحك في أي وقت.',
@@ -52,17 +54,17 @@ class _ServiceOverview extends StatelessWidget {
   }
 }
 
-class _OverviewPoint {
-  const _OverviewPoint(this.text);
+class WifiOverviewPoint {
+  const WifiOverviewPoint(this.text);
 
   final String text;
 }
 
-class _OverviewRow extends StatelessWidget {
-  const _OverviewRow({required this.point, required this.color});
+class WifiOverviewRow extends StatelessWidget {
+  const WifiOverviewRow({super.key, required this.point, required this.color});
 
-  final _OverviewPoint point;
-  final ThemeColorExtension color;
+  final WifiOverviewPoint point;
+  final ColorScheme color;
 
   @override
   Widget build(BuildContext context) {

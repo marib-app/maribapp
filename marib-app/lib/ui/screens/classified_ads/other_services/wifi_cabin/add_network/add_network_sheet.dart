@@ -1,18 +1,26 @@
-part of 'package:marib/ui/screens/classified_ads/other_services/wifi_cabin/wifi_cabin_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/extensions/extensions.dart';
 
-class _AddNetworkSheet extends StatefulWidget {
-  const _AddNetworkSheet({WifiRepository? repository})
+
+  import 'package:marib/data/wifi/wifi_repository.dart';
+  import 'package:marib/utils/extensions/extensions.dart';
+
+  import 'add_network_form.dart';
+
+  class WifiAddNetworkSheet extends StatefulWidget {
+  const WifiAddNetworkSheet({super.key, WifiRepository? repository})
       : repository = repository ?? const WifiRepository();
 
 
   final WifiRepository repository;
 
   @override
-  State<_AddNetworkSheet> createState() => _AddNetworkSheetState();
+  State<WifiAddNetworkSheet> createState() => WifiAddNetworkSheetState();
 }
 
-class _AddNetworkSheetState extends _AddNetworkFormState<_AddNetworkSheet> {
-
+class WifiAddNetworkSheetState
+    extends WifiAddNetworkFormState<WifiAddNetworkSheet> {
 
   @override
   WifiRepository get repository => widget.repository;

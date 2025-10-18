@@ -1,7 +1,12 @@
-part of 'package:marib/ui/screens/classified_ads/other_services/wifi_cabin/wifi_cabin_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/extensions/extensions.dart';
 
-class _LoadingOverlay extends StatelessWidget {
-  const _LoadingOverlay();
+
+  import 'package:marib/utils/extensions/extensions.dart';
+
+  class WifiLoadingOverlay extends StatelessWidget {
+  const WifiLoadingOverlay({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -14,8 +19,13 @@ class _LoadingOverlay extends StatelessWidget {
   }
 }
 
-class _ErrorBanner extends StatelessWidget {
-  const _ErrorBanner({required this.message, required this.onRetry});
+class WifiErrorBanner extends StatelessWidget {
+  const WifiErrorBanner({
+    super.key,
+    required this.message,
+    required this.onRetry,
+  });
+
 
   final String message;
   final VoidCallback onRetry;
@@ -55,8 +65,14 @@ class _ErrorBanner extends StatelessWidget {
   }
 }
 
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({super.key, required this.message, required this.onRetry});
+class WifiErrorState extends StatelessWidget {
+  const WifiErrorState({
+    super.key,
+    required this.message,
+    required this.onRetry,
+  });
+
+
 
   final String message;
   final VoidCallback onRetry;
@@ -90,8 +106,9 @@ class _ErrorState extends StatelessWidget {
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({
+class WifiEmptyState extends StatelessWidget {
+  const WifiEmptyState({
+    super.key,
     required this.title,
     required this.subtitle,
     this.onAction,

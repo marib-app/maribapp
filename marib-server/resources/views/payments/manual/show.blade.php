@@ -14,14 +14,52 @@
         $paymentGatewayCanonical = 'manual_banks';
     }
 
+    $manualBankAliases = ManualPaymentRequest::manualBankGatewayAliases();
+    $manualBankName = null;
+
+    $manualBankCandidates = [
+        $request->manual_bank_name ?? null,
+        $request->manualBank?->name,
+        $request->manualBank?->beneficiary_name,
+        data_get($request, 'bank_name'),
+        data_get($request, 'bank_account_name'),
+        data_get($request->meta, 'bank.name'),
+        data_get($request->meta, 'bank_name'),
+        data_get($request->meta, 'manual_bank.name'),
+        data_get($request->paymentTransaction, 'payment_gateway_name'),
+        data_get($request->paymentTransaction, 'gateway_name'),
+        data_get($request->paymentTransaction, 'gateway_display_name'),
+    ];
+
+    foreach ($manualBankCandidates as $candidate) {
+        if (! is_string($candidate)) {
+            continue;
+        }
+
+        $trimmedCandidate = trim($candidate);
+
+        if ($trimmedCandidate === '') {
+            continue;
+        }
+
+        if (in_array(strtolower($trimmedCandidate), $manualBankAliases, true)) {
+            continue;
+        }
+
+        $manualBankName = $trimmedCandidate;
+        break;
+    }
+
+
+
     $paymentGatewayLabel = match ($paymentGatewayCanonical) {
         'east_yemen_bank' => __('East Yemen Bank Gateway'),
-        'manual_banks' => __('Manual Banks'),
+        'manual_banks' => $manualBankName ?? __('Manual Banks'),
         'wallet' => __('Wallet'),
         'cash' => __('Cash'),
         default => $paymentGatewayKey
             ? ucwords(str_replace('_', ' ', $paymentGatewayKey))
-            : __('Manual Banks'),
+            : ($manualBankName ?? __('Manual Banks')),
     };
 
     $department = $request->department;

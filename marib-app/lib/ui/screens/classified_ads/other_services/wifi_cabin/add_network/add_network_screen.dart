@@ -1,18 +1,23 @@
-part of 'package:marib/ui/screens/classified_ads/other_services/wifi_cabin/wifi_cabin_screen.dart';
+import 'package:flutter/material.dart';
 
-class _AddNetworkScreen extends StatefulWidget {
-  const _AddNetworkScreen({WifiRepository? repository})
+import 'package:marib/data/wifi/wifi_repository.dart';
+import 'package:marib/utils/extensions/extensions.dart';
+
+import 'add_network_form.dart';
+
+class WifiAddNetworkScreen extends StatefulWidget {
+  const WifiAddNetworkScreen({super.key, WifiRepository? repository})
       : repository = repository ?? const WifiRepository();
 
 
   final WifiRepository repository;
 
   @override
-  State<_AddNetworkScreen> createState() => _AddNetworkScreenState();
+  State<WifiAddNetworkScreen> createState() => WifiAddNetworkScreenState();
 }
 
-class _AddNetworkScreenState extends _AddNetworkFormState<_AddNetworkScreen> {
-
+class WifiAddNetworkScreenState
+    extends WifiAddNetworkFormState<WifiAddNetworkScreen> {
 
   @override
   WifiRepository get repository => widget.repository;

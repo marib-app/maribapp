@@ -1,8 +1,14 @@
-part of 'package:marib/ui/screens/classified_ads/other_services/wifi_cabin/wifi_cabin_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/extensions/extensions.dart';
 
-class _CodeTile extends StatelessWidget {
-  const _CodeTile({required this.code, required this.onCopy});
 
+  import 'package:marib/data/model/wifi/wifi_purchase.dart';
+  import 'package:marib/utils/extensions/extensions.dart';
+
+  class WifiCodeTile extends StatelessWidget {
+  const WifiCodeTile({super.key, required this.code, required this.onCopy});
   final String code;
   final VoidCallback onCopy;
 
@@ -40,8 +46,10 @@ class _CodeTile extends StatelessWidget {
   }
 }
 
-class _PurchasesSheet extends StatefulWidget {
-  const _PurchasesSheet({
+class WifiPurchasesSheet extends StatefulWidget {
+  const WifiPurchasesSheet({
+  super.key,
+
     required this.purchasesListenable,
     required this.loadingListenable,
     required this.errorListenable,
@@ -54,7 +62,7 @@ class _PurchasesSheet extends StatefulWidget {
   final Future<void> Function() onRefresh;
 
   @override
-  State<_PurchasesSheet> createState() => _PurchasesSheetState();
+  State<WifiPurchasesSheet> createState() => WifiPurchasesSheetState();
 }
 
 class _PurchasesSheetState extends State<_PurchasesSheet> {
@@ -264,13 +272,13 @@ class _PurchasesSheetState extends State<_PurchasesSheet> {
               );
             }
             final purchase = _purchases[index - 1];
-            return _PurchaseTile(
+            return WifiPurchaseTile(
               purchase: purchase,
               dateFormat: _dateFormat,
             );
           }
           final purchase = _purchases[index];
-          return _PurchaseTile(
+          return WifiPurchaseTile(
             purchase: purchase,
             dateFormat: _dateFormat,
           );
@@ -282,8 +290,13 @@ class _PurchasesSheetState extends State<_PurchasesSheet> {
   }
 }
 
-class _PurchaseTile extends StatelessWidget {
-  const _PurchaseTile({required this.purchase, required this.dateFormat});
+class WifiPurchaseTile extends StatelessWidget {
+  const WifiPurchaseTile({
+    super.key,
+    required this.purchase,
+    required this.dateFormat,
+  });
+
 
   final WifiPurchase purchase;
   final DateFormat dateFormat;

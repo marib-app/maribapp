@@ -37,6 +37,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Collection;
 
 use RuntimeException;
 use Throwable;
@@ -46,6 +47,7 @@ class ManualPaymentRequestController extends Controller
 
     private array $manualPaymentColumnSupportCache = [];
     private array $manualPaymentOrderIdCache = [];
+    private array $manualPaymentRequestLookupCache = [];
 
     private array $manualBankLookupCache = [];
     private ?bool $manualBankTableSupported = null;
@@ -325,6 +327,7 @@ class ManualPaymentRequestController extends Controller
         }
 
         $rows = $orderedQuery->get();
+        $this->prefetchManualPaymentRequestsForRows($rows);
 
 
         $data = $rows->map(function (object $row) {
@@ -1778,6 +1781,51 @@ class ManualPaymentRequestController extends Controller
         }
 
 
+
+       $manualPaymentRequestId = data_get($row, 'manual_payment_request_id');
+
+        if (is_string($manualPaymentRequestId)) {
+            $manualPaymentRequestId = trim($manualPaymentRequestId);
+        }
+
+        if ($manualPaymentRequestId !== null && $manualPaymentRequestId !== '') {
+            $manualPaymentRequestId = (int) $manualPaymentRequestId;
+        } else {
+            $manualPaymentRequestId = null;
+        }
+
+        if ($manualPaymentRequestId !== null) {
+            $manualPaymentRequest = $this->getManualPaymentRequestById($manualPaymentRequestId);
+
+            if ($manualPaymentRequest instanceof ManualPaymentRequest) {
+                $lookupCandidates = [
+                    data_get($manualPaymentRequest, 'manualBank.name'),
+                    data_get($manualPaymentRequest, 'manualBank.beneficiary_name'),
+                ];
+
+                foreach ($lookupCandidates as $lookupCandidate) {
+                    if (! is_string($lookupCandidate)) {
+                        continue;
+                    }
+
+                    $trimmedLookupCandidate = trim($lookupCandidate);
+
+                    if ($trimmedLookupCandidate === '') {
+                        continue;
+                    }
+
+                    if (in_array(strtolower($trimmedLookupCandidate), $manualBankAliases, true)) {
+                        continue;
+                    }
+
+                    return $trimmedLookupCandidate;
+                }
+            }
+        }
+
+
+
+
         return null;
     }
 
@@ -2010,7 +2058,97 @@ class ManualPaymentRequestController extends Controller
 
 
 
+    private function getManualPaymentRequestById(int $manualPaymentRequestId): ?ManualPaymentRequest
+    {
+        if ($manualPaymentRequestId <= 0) {
+            return null;
+        }
 
+        if (! array_key_exists($manualPaymentRequestId, $this->manualPaymentRequestLookupCache)) {
+            $this->manualPaymentRequestLookupCache[$manualPaymentRequestId] = ManualPaymentRequest::query()
+                ->with('manualBank')
+                ->find($manualPaymentRequestId);
+        }
+
+        $manualPaymentRequest = $this->manualPaymentRequestLookupCache[$manualPaymentRequestId] ?? null;
+
+        return $manualPaymentRequest instanceof ManualPaymentRequest ? $manualPaymentRequest : null;
+    }
+
+    private function prefetchManualPaymentRequestsForRows(Collection $rows): void
+    {
+        if ($rows->isEmpty()) {
+            return;
+        }
+
+        $manualBankAliases = ManualPaymentRequest::manualBankGatewayAliases();
+
+        $candidateIds = $rows
+            ->map(static function (object $row) use ($manualBankAliases) {
+                $manualBankName = data_get($row, 'manual_bank_name');
+
+                if (is_string($manualBankName)) {
+                    $manualBankName = trim($manualBankName);
+
+                    if (
+                        $manualBankName !== ''
+                        && ! in_array(strtolower($manualBankName), $manualBankAliases, true)
+                    ) {
+                        return null;
+                    }
+                }
+
+                $manualBankId = data_get($row, 'manual_bank_id');
+
+                if (is_string($manualBankId)) {
+                    $manualBankId = trim($manualBankId);
+                }
+
+                if ($manualBankId !== null && $manualBankId !== '' && (int) $manualBankId > 0) {
+                    return null;
+                }
+
+                $manualPaymentRequestId = data_get($row, 'manual_payment_request_id');
+
+                if (is_string($manualPaymentRequestId)) {
+                    $manualPaymentRequestId = trim($manualPaymentRequestId);
+                }
+
+                if ($manualPaymentRequestId === null || $manualPaymentRequestId === '') {
+                    return null;
+                }
+
+                $manualPaymentRequestId = (int) $manualPaymentRequestId;
+
+                return $manualPaymentRequestId > 0 ? $manualPaymentRequestId : null;
+            })
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($candidateIds->isEmpty()) {
+            return;
+        }
+
+        $missingIds = array_values(array_diff($candidateIds->all(), array_keys($this->manualPaymentRequestLookupCache)));
+
+        if ($missingIds === []) {
+            return;
+        }
+
+        $manualPaymentRequests = ManualPaymentRequest::query()
+            ->with('manualBank')
+            ->whereIn('id', $missingIds)
+            ->get()
+            ->keyBy('id');
+
+        foreach ($missingIds as $manualPaymentRequestId) {
+            $this->manualPaymentRequestLookupCache[$manualPaymentRequestId] = $manualPaymentRequests->get($manualPaymentRequestId);
+        }
+    }
+
+
+    
     private function manualPaymentPayableLabel(ManualPaymentRequest $manualPaymentRequest): string
     {
         if ($manualPaymentRequest->isWalletTopUp()) {

@@ -374,6 +374,10 @@ class Api {
   static String walletWithdrawalsApi = "wallet/withdrawals";
   static String walletWithdrawalOptionsApi = "wallet/withdrawals/options";
   static String walletTransfersApi = "wallet/transfers";
+  static String walletRecipientLookupApi = "wallet/recipients";
+
+
+
   static String manualPaymentRequestsApi = "manual-payment-requests";
   static String paymentsInitiateApi = "payments/initiate";
   static String submitManualPaymentApi = "payments/manual";

@@ -14,6 +14,16 @@ import 'package:marib/data/model/wallet/wallet_summary.dart';
 import 'package:marib/data/model/wallet/wallet_summary.dart';
 import 'package:marib/data/cubits/wallet/wallet_summary_cubit.dart';
 import 'package:bloc/bloc.dart';
+import 'package:marib/data/model/wallet/wallet_recipient.dart';
+import 'package:marib/data/model/wallet/wallet_summary.dart';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/currency_utils.dart';
+import 'package:marib/data/cubits/wallet/wallet_summary_cubit.dart';
+import 'package:flutter/services.dart';
+
+
+
+
 
 class WalletTransferSheet extends StatefulWidget {
   const WalletTransferSheet({
@@ -33,139 +43,328 @@ class WalletTransferSheet extends StatefulWidget {
 
 class _WalletTransferSheetState extends State<WalletTransferSheet> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final List<CustomFieldBuilder> _fields = [];
+  late final TextEditingController _recipientIdController;
+  late final TextEditingController _amountController;
+  late final TextEditingController _notesController;
+
+  final FocusNode _recipientFocus = FocusNode();
+  final FocusNode _amountFocus = FocusNode();
+  final FocusNode _notesFocus = FocusNode();
+
+  bool _lookupInProgress = false;
 
   @override
   void initState() {
     super.initState();
-    _initialiseFields();
-  }
-
-  void _initialiseFields() {
-    dynamic_field.AbstractField.fieldsData.clear();
-    dynamic_field.AbstractField.files.clear();
-    CustomField.fieldsData.clear();
-    CustomField.files.clear();
-
-    for (final rawField in widget.options.fields) {
-      final fieldMap = Map<String, dynamic>.from(rawField);
-      final builder = CustomFieldBuilder(fieldMap);
-      builder.stateUpdater(setState);
-      builder.init();
-      _fields.add(builder);
-    }
+    _recipientIdController = TextEditingController();
+    _amountController = TextEditingController();
+    _notesController = TextEditingController();
   }
 
   @override
   void dispose() {
-    dynamic_field.AbstractField.fieldsData.clear();
-    dynamic_field.AbstractField.files.clear();
-    CustomField.fieldsData.clear();
-    CustomField.files.clear();
+    _recipientIdController.dispose();
+    _amountController.dispose();
+    _notesController.dispose();
+    _recipientFocus.dispose();
+    _amountFocus.dispose();
+    _notesFocus.dispose();
     super.dispose();
   }
 
-  Map<String, dynamic> _combinedFieldsData() {
-    final Map<String, dynamic> combined = {};
-    dynamic_field.AbstractField.fieldsData.forEach((key, value) {
-      combined[key.toString()] = value;
-    });
-    CustomField.fieldsData.forEach((key, value) {
-      combined.putIfAbsent(key.toString(), () => value);
-    });
-    return combined;
+  String? _validateRecipient(String? value) {
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return 'يرجى إدخال معرف المستلم';
+    }
+
+    final id = int.tryParse(trimmed);
+    if (id == null || id <= 0) {
+      return 'معرف المستلم يجب أن يكون رقماً صحيحاً';
+    }
+
+    return null;
   }
 
-  double? _extractAmountValue(Map<String, dynamic> combined) {
-    List<dynamic>? values;
-    final preferredKey = widget.options.amountFieldId;
-    if (preferredKey != null && combined.containsKey(preferredKey)) {
-      values = combined[preferredKey] as List<dynamic>?;
+  String? _validateAmountField(String? value) {
+    final amount = _parseAmount(value);
+    if (amount == null || amount <= 0) {
+      return 'يرجى إدخال مبلغ صالح';
     }
-    values ??= combined.entries.firstWhere(
-          (entry) => entry.key.toLowerCase().contains('amount'),
-      orElse: () => const MapEntry<String, dynamic>('', null),
-    ).value as List<dynamic>?;
 
-    if (values == null || values.isEmpty) {
+    final String? constraintMessage = _amountConstraintMessage(amount);
+    if (constraintMessage != null) {
+      return constraintMessage;
+    }
+    return null;
+  }
+
+  String? _validateNotes(String? value) {
+    if (value == null || value.trim().isEmpty) {
       return null;
     }
 
-    for (final raw in values) {
-      final parsed = _toDouble(raw);
-      if (parsed != null) {
-        return parsed;
-      }
+    if (value.trim().length > 1000) {
+      return 'يمكن أن تحتوي الملاحظات على 1000 حرف كحد أقصى';
     }
     return null;
   }
 
-  double? _toDouble(dynamic value) {
-    if (value == null) return null;
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
-    if (value is num) return value.toDouble();
-    if (value is String) {
-      final normalized = value.replaceAll(RegExp(r'[^0-9.,-]'), '').replaceAll(',', '.');
-      return double.tryParse(normalized);
+  double? _parseAmount(String? value) {
+    if (value == null) {
+      return null;
+    }
+    final normalized = value.replaceAll(RegExp(r'[^0-9.,-]'), '').replaceAll(',', '.');
+    return double.tryParse(normalized);
+  }
+
+  String? _amountConstraintMessage(double amount) {
+    final double? minimum = widget.options.minimumAmount;
+    if (minimum != null && amount < minimum) {
+      return 'قيمة التحويل أقل من الحد الأدنى المسموح';
+    }
+
+    final double? maximum = widget.options.maximumAmount;
+    if (maximum != null && amount > maximum) {
+      return 'قيمة التحويل تتجاوز الحد الأعلى المسموح';
+    }
+
+    final double? balance = widget.balance;
+    if (balance != null && amount > balance + 0.0001) {
+      return 'لا يتوفر رصيد كافٍ لإكمال التحويل';
     }
     return null;
   }
 
-  Map<String, dynamic> _buildPayload(Map<String, dynamic> combined) {
-    final Map<String, dynamic> payload = {};
+  Future<void> _submit() async {
+    FocusScope.of(context).unfocus();
 
-    combined.forEach((key, value) {
-      final List<dynamic> values = value is List ? value : <dynamic>[value];
-      final cleaned = values
-          .map((v) => v is String ? v.trim() : v)
-          .where((v) => v != null && (v is! String || v.isNotEmpty))
-          .toList();
-      if (cleaned.isEmpty) return;
-
-      if (cleaned.length == 1) {
-        payload['fields[$key]'] = cleaned.first;
-      } else {
-        for (var i = 0; i < cleaned.length; i++) {
-          payload['fields[$key][$i]'] = cleaned[i];
-        }
-        payload['fields[$key]'] = cleaned.join(',');
-      }
-    });
-
-    final Map<String, dynamic> combinedFiles = {};
-    dynamic_field.AbstractField.files.forEach((key, value) {
-      combinedFiles[key.toString()] = value;
-    });
-    CustomField.files.forEach((key, value) {
-      combinedFiles.putIfAbsent(key.toString(), () => value);
-    });
-
-    combinedFiles.forEach((key, value) {
-      final match = RegExp(r'(?:custom_field|fields)_files\[(.+?)\]').firstMatch(key);
-      final fieldKey = match != null ? match.group(1) : key;
-      payload['fields_files[$fieldKey]'] = value;
-    });
-
-    if (widget.options.clientTag != null && widget.options.clientTag!.isNotEmpty) {
-      payload['client_tag'] = widget.options.clientTag;
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
     }
 
-    final amountValue = _extractAmountValue(combined);
-    if (amountValue != null) {
-      payload['amount'] = amountValue;
+    final clientTag = widget.options.clientTag;
+    if (clientTag == null || clientTag.isEmpty) {
+      HelperUtils.showSnackBarMessage(context, 'لا يمكن إتمام التحويل بدون معرف العميل');
+      return;
     }
 
-    final String? activeCurrency = _resolveActiveCurrency();
-    if (activeCurrency != null && !payload.containsKey('currency')) {
-      payload['currency'] = activeCurrency;
+    final recipientId = int.tryParse(_recipientIdController.text.trim());
+    final double? amount = _parseAmount(_amountController.text.trim());
+    if (recipientId == null || amount == null) {
+      HelperUtils.showSnackBarMessage(context, 'يرجى التحقق من بيانات التحويل');
+      return;
     }
 
+    final constraintMessage = _amountConstraintMessage(amount);
+    if (constraintMessage != null) {
+      HelperUtils.showSnackBarMessage(context, constraintMessage);
+      return;
+    }
 
-    return payload;
+    final notes = _notesController.text.trim();
+
+    WalletRecipient recipient;
+    setState(() {
+      _lookupInProgress = true;
+    });
+
+    try {
+      final transfersCubit = context.read<WalletTransfersCubit>();
+      recipient = await transfersCubit.fetchRecipient(recipientId);
+    } catch (error) {
+      if (!mounted) return;
+      HelperUtils.showSnackBarMessage(
+        context,
+        error.toString(),
+      );
+      setState(() {
+        _lookupInProgress = false;
+      });
+      return;
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _lookupInProgress = false;
+    });
+
+    final confirmed = await _showConfirmationDialog(
+      recipient,
+      amount,
+      _currencyLabel(),
+      notes.isEmpty ? null : notes,
+    );
+
+    if (!confirmed || !mounted) {
+      return;
+    }
+
+    final payload = <String, dynamic>{
+      'recipient_id': recipient.id,
+      'amount': amount,
+      'client_tag': clientTag,
+      if (notes.isNotEmpty) 'notes': notes,
+    };
+
+    final submissionCurrency = _resolveSubmissionCurrency();
+    if (submissionCurrency != null) {
+      payload['currency'] = submissionCurrency;
+    }
+
+    try {
+      final cubit = context.read<WalletTransfersCubit>();
+      final response = await cubit.submitTransfer(payload);
+      if (!mounted) return;
+      Navigator.of(context).pop<Map<String, dynamic>>(response);
+      final message = response['message']?.toString() ?? 'تم إرسال التحويل بنجاح';
+      HelperUtils.showSnackBarMessage(context, message);
+    } catch (error) {
+      if (!mounted) return;
+      HelperUtils.showSnackBarMessage(context, error.toString());
+    }
   }
 
+  Future<bool> _showConfirmationDialog(
+      WalletRecipient recipient,
+      double amount,
+      String? currencyLabel,
+      String? notes,
+      ) async {
+    final theme = Theme.of(context);
 
+    final amountText = amount.toStringAsFixed(2);
+
+    return await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: context.color.backgroundColor,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          title: Text(
+            'تأكيد التحويل',
+            style: theme.textTheme.titleMedium,
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildConfirmationRow('اسم المستلم', recipient.name, theme),
+              const SizedBox(height: 8),
+              _buildConfirmationRow(
+                'رقم الجوال',
+                recipient.mobile ?? 'غير متاح',
+                theme,
+              ),
+              const SizedBox(height: 8),
+              _buildConfirmationRow(
+                'المبلغ',
+                currencyLabel == null ? amountText : '$amountText $currencyLabel',
+                theme,
+              ),
+              if (notes != null) ...[
+                const SizedBox(height: 8),
+                _buildConfirmationRow('الملاحظات', notes, theme),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: theme.colorScheme.onPrimary,
+              ),
+              child: const Text('تأكيد'),
+            ),
+          ],
+        );
+      },
+    ) ??
+        false;
+  }
+
+  Widget _buildConfirmationRow(String label, String value, ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.textTheme.bodySmall?.color?.withOpacity(0.7) ??
+                theme.colorScheme.onSurface.withOpacity(0.6),
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: theme.textTheme.bodyLarge,
+        ),
+      ],
+    );
+  }
+
+  String? _currencyLabel() {
+    final direct = widget.currency ?? widget.options.currency;
+    final normalized = CurrencyUtils.normalizeCurrencyCode(direct);
+    final summary = _activeSummary();
+    if (summary != null && (direct == null || direct.isEmpty)) {
+      final label = summary.currency;
+      final code = summary.currencyCode ?? CurrencyUtils.normalizeCurrencyCode(summary.currency);
+      return CurrencyUtils.displayToken(
+        label: label,
+        fallback: code,
+        code: code,
+      ) ??
+          code ??
+          label;
+    }
+
+    if (direct == null || direct.isEmpty) {
+      return normalized;
+    }
+
+    return CurrencyUtils.displayToken(
+      label: direct,
+      fallback: normalized,
+      code: normalized,
+    ) ??
+        normalized ??
+        direct;
+  }
+
+  String? _resolveSubmissionCurrency() {
+    final fromOptions = CurrencyUtils.normalizeCurrencyCode(widget.options.currency);
+    if (fromOptions != null) {
+      return fromOptions;
+    }
+    final fromWidget = CurrencyUtils.normalizeCurrencyCode(widget.currency);
+    if (fromWidget != null) {
+      return fromWidget;
+    }
+
+    return _resolveActiveCurrency();
+  }
+
+  WalletSummary? _activeSummary() {
+    final WalletSummaryCubit? summaryCubit = _maybeReadCubit<WalletSummaryCubit>(context);
+    final WalletSummaryState? summaryState = summaryCubit?.state;
+
+    if (summaryState is WalletSummaryLoadSuccess) {
+      return summaryState.summary;
+    }
+    if (summaryState is WalletSummaryLoading && summaryState.previous != null) {
+      return summaryState.previous!.summary;
+    }
+    return null;
+  }
 
   String? _resolveActiveCurrency() {
     final String? fromProp = CurrencyUtils.normalizeCurrencyCode(widget.currency);
@@ -173,17 +372,8 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
       return fromProp;
     }
 
-    final WalletSummaryCubit? summaryCubit =
-    _maybeReadCubit<WalletSummaryCubit>(context);
-    final WalletSummaryState? summaryState = summaryCubit?.state;
+    final WalletSummary? summary = _activeSummary();
 
-    WalletSummary? summary;
-    if (summaryState is WalletSummaryLoadSuccess) {
-      summary = summaryState.summary;
-    } else if (summaryState is WalletSummaryLoading &&
-        summaryState.previous != null) {
-      summary = summaryState.previous!.summary;
-    }
 
     if (summary != null) {
       final String? directCode = summary.currencyCode;
@@ -191,15 +381,15 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
         return CurrencyUtils.normalizeCurrencyCode(directCode) ?? directCode;
       }
 
-      final String? normalized =
-      CurrencyUtils.normalizeCurrencyCode(summary.currency);
+      final String? normalized = CurrencyUtils.normalizeCurrencyCode(summary.currency);
+
       if (normalized != null) {
         return normalized;
       }
 
       final parsed = CurrencyUtils.parseCurrency(summary.raw);
-      final String? parsedCode = parsed.code ??
-          CurrencyUtils.normalizeCurrencyCode(parsed.display);
+      final String? parsedCode = parsed.code ?? CurrencyUtils.normalizeCurrencyCode(parsed.display);
+
       if (parsedCode != null) {
         return parsedCode;
       }
@@ -216,64 +406,11 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
     }
   }
 
-  bool _validateAmount(double? amount) {
-    if (amount == null) {
-      HelperUtils.showSnackBarMessage(context, 'يرجى تحديد المبلغ المراد تحويله');
-      return false;
-    }
-
-    if (widget.options.minimumAmount != null && amount < widget.options.minimumAmount!) {
-      HelperUtils.showSnackBarMessage(
-        context,
-        'قيمة التحويل أقل من الحد الأدنى المسموح',
-      );
-      return false;
-    }
-
-    if (widget.options.maximumAmount != null && amount > widget.options.maximumAmount!) {
-      HelperUtils.showSnackBarMessage(
-        context,
-        'قيمة التحويل تتجاوز الحد الأعلى المسموح',
-      );
-      return false;
-    }
-
-    if (widget.balance != null && amount > widget.balance! + 0.0001) {
-      HelperUtils.showSnackBarMessage(context, 'لا يتوفر رصيد كافٍ لإكمال التحويل');
-      return false;
-    }
-
-    return true;
-  }
-
-  Future<void> _submit() async {
-    if (!(_formKey.currentState?.validate() ?? false)) {
-      return;
-    }
-
-    final combined = _combinedFieldsData();
-    final amount = _extractAmountValue(combined);
-    if (!_validateAmount(amount)) {
-      return;
-    }
-
-    final payload = _buildPayload(combined);
-
-    try {
-      final cubit = context.read<WalletTransfersCubit>();
-      final response = await cubit.submitTransfer(payload);
-      if (!mounted) return;
-      Navigator.of(context).pop<Map<String, dynamic>>(response);
-      final message = response['message']?.toString() ?? 'تم إرسال التحويل بنجاح';
-      HelperUtils.showSnackBarMessage(context, message);
-    } catch (e) {
-      if (!mounted) return;
-      HelperUtils.showSnackBarMessage(context, e.toString());
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final currencyLabel = _currencyLabel();
     return DraggableScrollableSheet(
       expand: false,
       maxChildSize: 0.95,
@@ -311,44 +448,88 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
                       ),
                       Text(
                         'تحويل رصيد',
-                        style: Theme.of(context).textTheme.titleLarge,
+                        style: theme.textTheme.titleLarge,
                       ),
                       const SizedBox(height: 4),
                       if (widget.balance != null)
                         Text(
-                          'الرصيد المتاح: ${widget.balance!.toStringAsFixed(2)} ${widget.currency?.toUpperCase() ?? ''}',
-                          style: Theme.of(context).textTheme.bodyMedium,
+                          'الرصيد المتاح: ${widget.balance!.toStringAsFixed(2)} ${currencyLabel ?? ''}',
+                          style: theme.textTheme.bodyMedium,
                         ),
                       const SizedBox(height: 16),
                     ],
                   ),
                 ),
-                if (_fields.isEmpty)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24),
-                      child: Center(
-                        child: Text(
-                          'لا توجد حقول لإتمام عملية التحويل حالياً.',
-                          style: Theme.of(context).textTheme.bodyMedium,
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+              TextFormField(
+              controller: _recipientIdController,
+              focusNode: _recipientFocus,
+              textInputAction: TextInputAction.next,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'معرف المستلم',
+                hintText: 'أدخل رقم المستخدم',
+                        ),
+              validator: _validateRecipient,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+              ],
+              onFieldSubmitted: (_) {
+                _amountFocus.requestFocus();
+              },
+                      ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _amountController,
+                  focusNode: _amountFocus,
+                  textInputAction: TextInputAction.next,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: 'المبلغ',
+                    hintText: '0.00',
+                    suffixText: currencyLabel,
+                  ),
+                  validator: _validateAmountField,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                  ],
+                  onFieldSubmitted: (_) {
+                    _notesFocus.requestFocus();
+                  },
+                ),
+                if (widget.options.minimumAmount != null ||
+                    widget.options.maximumAmount != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Text(
+                        _amountHintText(),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.textTheme.bodySmall?.color?.withOpacity(0.7) ??
+                              theme.colorScheme.onSurface.withOpacity(0.6),
                         ),
                       ),
                     ),
-                  )
-                else
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                        final field = _fields[index];
-                        field.stateUpdater(setState);
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8.0),
-                          child: field.build(context),
-                        );
-                      },
-                      childCount: _fields.length,
-                    ),
                   ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _notesController,
+                  focusNode: _notesFocus,
+                  textInputAction: TextInputAction.newline,
+                  keyboardType: TextInputType.multiline,
+                  maxLines: 4,
+                  decoration: const InputDecoration(
+                    labelText: 'ملاحظات (اختياري)',
+                    hintText: 'أدخل أي ملاحظات إضافية',
+                  ),
+                  validator: _validateNotes,
+                ),
+              ],
+                  ),
+          ),
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 20),
@@ -357,13 +538,12 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
                         final submitting = state is WalletTransferSubmitting;
                         return UiUtils.buildButton(
                           context,
-                          onPressed: () {
-                            _submit();
-                          },
+                          onPressed: submitting || _lookupInProgress ? null : _submit,
+
                           buttonTitle: 'تنفيذ التحويل',
                           titleWhenProgress: 'جاري الإرسال...',
                           isInProgress: submitting,
-                          disabled: submitting,
+                          disabled: submitting || _lookupInProgress,
                           showProgressTitle: true,
                           height: 48,
                           radius: 8,
@@ -378,5 +558,24 @@ class _WalletTransferSheetState extends State<WalletTransferSheet> {
         );
       },
     );
+  }
+
+  String _amountHintText() {
+    final buffer = StringBuffer();
+    final min = widget.options.minimumAmount;
+    final max = widget.options.maximumAmount;
+
+    if (min != null) {
+      buffer.write('الحد الأدنى: ${min.toStringAsFixed(2)}');
+    }
+
+    if (max != null) {
+      if (buffer.isNotEmpty) {
+        buffer.write(' • ');
+      }
+      buffer.write('الحد الأعلى: ${max.toStringAsFixed(2)}');
+    }
+
+    return buffer.toString();
   }
 }

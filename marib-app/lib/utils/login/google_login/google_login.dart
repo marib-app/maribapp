@@ -3,6 +3,13 @@ import 'package:marib/utils/login/lib/login_system.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:marib/data/helper/widgets.dart';
+import 'package:marib/utils/constant.dart';
+
+
+
+
+
 
 class GoogleLogin extends LoginSystem {
   GoogleSignIn? _googleSignIn;
@@ -61,6 +68,22 @@ class GoogleLogin extends LoginSystem {
 
   @override
   void onEvent(MLoginState state) {
-    // TODO: implement onEvent
+    final context = Constant.navigatorKey.currentContext;
+
+    if (state is MProgress) {
+      if (context != null) {
+        Widgets.showLoader(context);
+      }
+      return;
+    }
+
+    if (state is MFail) {
+      _resetGoogleSignIn();
+    }
+
+    if (context != null) {
+      Widgets.hideLoder(context);
+    }
+
   }
 }

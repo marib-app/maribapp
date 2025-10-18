@@ -285,9 +285,12 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     if (!mounted) return;
 
     final transferOptions = _extractTransferOptions(baseOptions);
-    if (transferOptions == null || transferOptions.fields.isEmpty) {
+    if (transferOptions == null ||
+        transferOptions.clientTag == null ||
+        transferOptions.clientTag!.isEmpty) {
+
       HelperUtils.showSnackBarMessage(
-          context, 'لا توجد حقول متاحة لعملية التحويل حالياً.');
+          context, 'لا تتوفر إعدادات صالحة لعملية التحويل حالياً.');
       return;
     }
 

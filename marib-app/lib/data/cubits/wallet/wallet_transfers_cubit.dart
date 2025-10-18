@@ -1,6 +1,9 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:marib/data/repositories/wallet_operations_repository.dart';
+import 'package:marib/data/model/wallet/wallet_recipient.dart';
+
+
 
 abstract class WalletTransfersState {}
 
@@ -42,6 +45,12 @@ class WalletTransfersCubit extends Cubit<WalletTransfersState> {
       rethrow;
     }
   }
+
+
+  Future<WalletRecipient> fetchRecipient(int recipientId) {
+    return _repository.fetchTransferRecipient(recipientId: recipientId);
+  }
+
 
   void refresh() {
     emit(WalletTransfersInitial());

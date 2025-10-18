@@ -3,16 +3,18 @@ import 'package:flutter/material.dart';
 
 class BlurredRouter<T> extends PageRoute<T> {
   final WidgetBuilder builder;
-  final AxisDirection axisDirection;
+  final AxisDirection? axisDirection;
   final Duration? duration;
   final bool? barrierDismiss;
   final double? barrierOpacity;
+  final Offset? entryOffset;
 
   BlurredRouter({
     required this.builder,
     this.barrierDismiss,
-    this.axisDirection = AxisDirection.down,
+    this.axisDirection,
     this.duration,
+    this.entryOffset,
     this.barrierOpacity,
     super.settings,
   }) : super(fullscreenDialog: false);
@@ -46,21 +48,24 @@ class BlurredRouter<T> extends PageRoute<T> {
   @override
   Widget buildTransitions(BuildContext context, Animation<double> animation,
       Animation<double> secondaryAnimation, Widget child) {
-    final Offset entryOffset = _offsetForDirection(axisDirection);
+    final Offset resolvedOffset = entryOffset ??
+        (axisDirection != null
+            ? _offsetForDirection(axisDirection!)
+            : Offset.zero);
 
     final Animation<Offset> slideAnimation = animation.drive(
       TweenSequence<Offset>(
         <TweenSequenceItem<Offset>>[
           TweenSequenceItem<Offset>(
             tween: Tween<Offset>(
-              begin: entryOffset,
-              end: entryOffset * 0.2,
+              begin: resolvedOffset,
+              end: resolvedOffset * 0.2,
             ).chain(CurveTween(curve: Curves.easeOut)),
             weight: 60,
           ),
           TweenSequenceItem<Offset>(
             tween: Tween<Offset>(
-              begin: entryOffset * 0.2,
+              begin: resolvedOffset * 0.2,
               end: Offset.zero,
             ).chain(CurveTween(curve: Curves.easeOutBack)),
             weight: 40,

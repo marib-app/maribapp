@@ -3841,6 +3841,31 @@ class ApiController extends Controller {
     }
 
 
+    public function walletRecipient(User $recipient): void
+    {
+        try {
+            $user = Auth::user();
+
+            if ($user && $user->id === $recipient->id) {
+                ResponseService::validationError('Cannot transfer funds to the same account.');
+            }
+
+            $maskedMobile = $this->maskMobileNumber($recipient->mobile);
+
+            ResponseService::successResponse('Wallet recipient fetched successfully', [
+                'id' => $recipient->id,
+                'name' => $recipient->name,
+                'mobile' => $maskedMobile,
+            ]);
+        } catch (Throwable $th) {
+            ResponseService::logErrorResponse($th, 'API Controller -> walletRecipient');
+            ResponseService::errorResponse('Failed to fetch wallet recipient details');
+        }
+    }
+
+
+
+
     public function showWalletWithdrawalRequest(int $withdrawalRequestId): void
     {
         try {
@@ -5435,6 +5460,49 @@ class ApiController extends Controller {
             return [$debitTransaction, $creditTransaction, false];
         });
     }
+
+
+
+    private function maskMobileNumber(?string $mobile): ?string
+    {
+        if ($mobile === null || $mobile === '') {
+            return null;
+        }
+
+        $characters = preg_split('//u', $mobile, -1, PREG_SPLIT_NO_EMPTY);
+
+        if ($characters === false || $characters === null) {
+            return null;
+        }
+
+        $digitCount = 0;
+        foreach ($characters as $character) {
+            if (ctype_digit($character)) {
+                $digitCount++;
+            }
+        }
+
+        if ($digitCount <= 3) {
+            return $mobile;
+        }
+
+        $digitsToMask = $digitCount - 3;
+        $masked = 0;
+
+        foreach ($characters as $index => $character) {
+            if (!ctype_digit($character)) {
+                continue;
+            }
+
+            if ($masked < $digitsToMask) {
+                $characters[$index] = '*';
+                $masked++;
+            }
+        }
+
+        return implode('', $characters);
+    }
+
 
     private function buildWalletTransferMeta(
         string $direction,

@@ -955,18 +955,20 @@ class NotificationService {
     }
 
     final bool isFullyAuthenticated = HiveUtils.isUserAuthenticated();
-    Map<String, dynamic>? extraHeaders;
+    Map<String, String>? extraHeaders;
 
     if (!isFullyAuthenticated) {
       final String? jwt = _normalizeNotificationValue(HiveUtils.getJWT());
       if (jwt == null) {
+        await HiveUtils.setUserDetail(
+            key: _pendingFcmTokenKey, value: normalizedToken);
         log(
           'Skipping FCM token upload: missing JWT for partially authenticated user',
           name: 'NotificationService',
         );
         return;
       }
-      extraHeaders = <String, dynamic>{'Authorization': 'Bearer $jwt'};
+      extraHeaders = <String, String>{'Authorization': 'Bearer $jwt'};
     }
 
     try {

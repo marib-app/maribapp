@@ -1298,7 +1298,8 @@ class UiUtils {
   static Future showBlurredDialoge(
       BuildContext context, {
         required BlurDialoge dialoge,
-        AxisDirection axisDirection = AxisDirection.down,
+        AxisDirection? axisDirection,
+        Offset? entryOffset,
         double? barrierOpacity,
       }) async {
     return await Navigator.push(
@@ -1307,6 +1308,7 @@ class UiUtils {
         barrierDismiss: true,
         axisDirection: axisDirection,
         barrierOpacity: barrierOpacity,
+        entryOffset: entryOffset,
         builder: (context) {
           // يكفي نتأكد إنه Widget ونرجعه
           if (dialoge is Widget) return dialoge as Widget;

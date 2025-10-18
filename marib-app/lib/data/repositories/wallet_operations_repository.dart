@@ -6,6 +6,7 @@ import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/payment/manual_payment.dart';
 import 'package:marib/data/model/wallet/manual_payment_requests_summary.dart';
 import 'package:marib/utils/currency_utils.dart';
+import 'package:marib/data/model/wallet/wallet_recipient.dart';
 
 class WalletOperationsRepository {
   Future<WalletWithdrawalsResult> fetchWithdrawals({
@@ -139,6 +140,28 @@ class WalletOperationsRepository {
 
     return Map<String, dynamic>.from(response);
   }
+
+
+  Future<WalletRecipient> fetchTransferRecipient({
+    required int recipientId,
+  }) async {
+    final response = await Api.get(
+      url: '${Api.walletRecipientLookupApi}/$recipientId',
+    );
+
+    final dynamic data = response['data'] ?? response['recipient'];
+    if (data is Map<String, dynamic>) {
+      return WalletRecipient.fromMap(data);
+    }
+    if (data is Map) {
+      return WalletRecipient.fromMap(
+        data.map((key, value) => MapEntry(key.toString(), value)),
+      );
+    }
+
+    throw ApiException('تعذر العثور على بيانات المستلم');
+  }
+
 
   Future<DataOutput<ManualPayment>> fetchManualPaymentRequests({
     int page = 1,

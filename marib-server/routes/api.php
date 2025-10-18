@@ -155,7 +155,8 @@ Route::prefix('wifi-cabin')
 
 
     Route::post('wallet/transfers', [ApiController::class, 'transferRequest']);
-
+    Route::get('wallet/recipients/{recipient}', [ApiController::class, 'walletRecipient'])
+        ->whereNumber('recipient');
 
     Route::get('manual-banks', [ApiController::class, 'getManualBanks']);
     Route::get('manual-payments/banks', [ApiController::class, 'getManualBanks']);

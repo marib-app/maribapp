@@ -11,6 +11,8 @@ import 'package:dio/dio.dart';
 class WifiRepository {
   const WifiRepository();
 
+  static const int _maxBatchUploadSizeBytes = 5 * 1024 * 1024;
+  static const List<String> _allowedBatchExtensions = <String>['csv', 'xls', 'xlsx'];
 
 
   Map<String, dynamic> _mapify(dynamic value) {
@@ -151,6 +153,36 @@ class WifiRepository {
     return plans;
   }
 
+
+  Future<List<WifiPlan>> fetchManagedPlans({int? networkId}) async {
+    final Map<String, dynamic>? query =
+    networkId != null ? <String, dynamic>{'network': networkId} : null;
+
+    final response = await Api.get(
+      url: Api.wifiPlansApi,
+      queryParameters: query,
+    );
+
+    final dynamic container = response['data'] ??
+        response['plans'] ??
+        response['wifi_plans'] ??
+        response['items'];
+
+    final List<dynamic> rawList = List<dynamic>.from(_listify(container));
+    if (rawList.isEmpty && container is List) {
+      rawList.addAll(container);
+    }
+
+    final List<WifiPlan> plans = rawList
+        .map((dynamic element) => _mapify(element))
+        .where((map) => map.isNotEmpty)
+        .map(WifiPlan.fromJson)
+        .toList();
+
+    return plans;
+  }
+
+
   Future<List<WifiPaymentGateway>> fetchPaymentGateways() async {
     final response = await Api.get(url: Api.wifiPaymentGatewaysApi);
     final dynamic container = response['data'] ??
@@ -255,7 +287,40 @@ class WifiRepository {
   }
 
 
+  Future<Map<String, dynamic>> uploadPlanBatch({
+    required int planId,
+    required MultipartFile file,
+  }) async {
+    if (planId <= 0) {
+      throw ArgumentError.value(planId, 'planId', 'must be positive');
+    }
 
+    final String fileName = file.filename ?? '';
+    final String extension =
+    fileName.contains('.') ? fileName.split('.').last.toLowerCase() : '';
+    if (!_allowedBatchExtensions.contains(extension)) {
+      throw ArgumentError(
+        'Unsupported voucher file type "$extension". Allowed extensions: '
+            '${_allowedBatchExtensions.join(', ')}.',
+      );
+    }
+
+    final int? length = file.length;
+    if (length != null && length > _maxBatchUploadSizeBytes) {
+      throw ArgumentError(
+        'Voucher file exceeds the maximum size of 5 MB.',
+      );
+    }
+
+    final payload = <String, dynamic>{
+      'file': file,
+    };
+
+    return Api.post(
+      url: Api.wifiPlanBatchesApi(planId),
+      parameter: payload,
+    );
+  }
 
 
 

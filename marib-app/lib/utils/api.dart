@@ -395,6 +395,11 @@ class Api {
 
   static String wifiNetworksApi = "wifi/networks";
   static String wifiNetworkPlansApi(int id) => "wifi/networks/$id/plans";
+
+  static String wifiPlansApi = "wifi/plans";
+  static String wifiPlanBatchesApi(int planId) => "wifi/plans/$planId/batches";
+
+
   static String wifiPaymentGatewaysApi = "wifi/payment-gateways";
   static String wifiPlanPurchaseApi(int planId) => "wifi/plans/$planId/purchase";
   static String wifiOrderCodeApi(int transactionId) => "wifi/orders/$transactionId/code";

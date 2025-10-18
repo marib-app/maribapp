@@ -181,7 +181,7 @@ class PaymentRequestTableQuery
 
         $walletGatewayNameParts = [];
         if ($supportsManualGatewayName) {
-            $walletGatewayNameParts[] = "NULLIF(mpr.gateway_name, '')";
+            $walletGatewayNameParts[] = $sanitizeManualBankAlias('mpr.gateway_name');
         }
         $walletPaymentGatewayNameParts = [];
         if ($supportsPaymentGatewayName) {
@@ -196,7 +196,7 @@ class PaymentRequestTableQuery
 
         $walletTopUpGatewayNameParts = [];
         if ($supportsManualGatewayName) {
-            $walletTopUpGatewayNameParts[] = "NULLIF(mpr.gateway_name, '')";
+            $walletTopUpGatewayNameParts[] = $sanitizeManualBankAlias('mpr.gateway_name');
 
 
         }

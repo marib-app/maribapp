@@ -148,6 +148,8 @@ class HomeTabView extends StatefulWidget {
 }
 
 class _HomeTabViewState extends State<HomeTabView> {
+  static const int _gridCrossAxisCount = 2;
+
   late final ScrollController controller;
 
   int? _activeSubcatId; // الفئة الفرعية المختارة حالياً
@@ -515,7 +517,7 @@ class _HomeTabViewState extends State<HomeTabView> {
   Widget _sectionsLoadingPlaceholder({required bool showAll}) {
 
 
-    const int crossAxisCount = 2;
+    const int crossAxisCount = _gridCrossAxisCount;
     final int shimmerRows = showAll ? 2 : 2;
     final int childCount = crossAxisCount * shimmerRows;
 
@@ -1250,7 +1252,7 @@ class _HomeTabViewState extends State<HomeTabView> {
     ),
     gridDelegate:
     SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
-              crossAxisCount: 2,
+      crossAxisCount: _gridCrossAxisCount,
               height: _gridCardHeight,
               mainAxisSpacing: 7,
               crossAxisSpacing: 10,
@@ -1290,7 +1292,7 @@ class _HomeTabViewState extends State<HomeTabView> {
           padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
           sliver: SliverGrid(
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
-              crossAxisCount: 2,
+              crossAxisCount: _gridCrossAxisCount,
               height: _gridCardHeight,
               mainAxisSpacing: 7,
               crossAxisSpacing: 10,
@@ -1339,6 +1341,8 @@ class _HomeTabViewState extends State<HomeTabView> {
       final List<_HomeTabEntry> entries = _buildItemEntries(
         state.items,
         isLoadingMore: state.isLoadingMore,
+        isList: isList,
+        gridCrossAxisCount: _gridCrossAxisCount,
       );
 
       if (isList) {
@@ -1368,9 +1372,12 @@ class _HomeTabViewState extends State<HomeTabView> {
       return const _KeepAliveNativeAd();
 
     case _HomeTabEntryType.loadingMore:
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      child: UiUtils.progress(),
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: List<Widget>.generate(
+          entry.shimmerCount,
+              (_) => _listShimmer(context),
+        ),
                     );
                 }
               },
@@ -1399,6 +1406,8 @@ class _HomeTabViewState extends State<HomeTabView> {
   List<_HomeTabEntry> _buildItemEntries(
       List<ItemSummary> items, {
         required bool isLoadingMore,
+        required bool isList,
+        required int gridCrossAxisCount,
       }) {
     final List<_HomeTabEntry> entries = <_HomeTabEntry>[];
     final int step = max(1, Constant.nativeAdsAfterItemNumber);
@@ -1414,7 +1423,9 @@ class _HomeTabViewState extends State<HomeTabView> {
     }
 
     if (isLoadingMore) {
-      entries.add(const _HomeTabEntry.loadingMore());
+      final int shimmerCount = isList ? 1 : max(1, gridCrossAxisCount);
+      entries.add(_HomeTabEntry.loadingMore(shimmerCount: shimmerCount));
+
     }
 
     return entries;
@@ -1446,7 +1457,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                 sliver: SliverGrid(
                   gridDelegate:
                   SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
-                    crossAxisCount: 2,
+                    crossAxisCount: _gridCrossAxisCount,
                     height: _gridCardHeight,
                     mainAxisSpacing: 7,
                     crossAxisSpacing: 10,
@@ -1489,11 +1500,23 @@ class _HomeTabViewState extends State<HomeTabView> {
           cursor++;
           break;
         case _HomeTabEntryType.loadingMore:
+          final int shimmerCount = max(1, entry.shimmerCount);
+
           slivers.add(
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: UiUtils.progress(),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+              sliver: SliverGrid(
+                gridDelegate:
+                SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
+                  crossAxisCount: _gridCrossAxisCount,
+                  height: _gridCardHeight,
+                  mainAxisSpacing: 7,
+                  crossAxisSpacing: 10,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                      (context, index) => _gridShimmer(context),
+                  childCount: shimmerCount,
+                ),
               ),
             ),
           );
@@ -1664,7 +1687,11 @@ enum _HomeTabEntryType { item, ad, loadingMore }
 
 
 class _HomeTabEntry {
-  const _HomeTabEntry._(this.type, {this.itemIndex});
+  const _HomeTabEntry._(
+      this.type, {
+        this.itemIndex,
+        this.shimmerCount = 1,
+      });
 
   const _HomeTabEntry.item(int index)
       : this._(
@@ -1677,13 +1704,17 @@ class _HomeTabEntry {
     _HomeTabEntryType.ad,
   );
 
-  const _HomeTabEntry.loadingMore()
+  const _HomeTabEntry.loadingMore({int shimmerCount = 1})
+
       : this._(
     _HomeTabEntryType.loadingMore,
+    shimmerCount: shimmerCount,
+
   );
 
   final _HomeTabEntryType type;
   final int? itemIndex;
+  final int shimmerCount;
 }
 
 

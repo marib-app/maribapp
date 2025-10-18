@@ -1,17 +1,22 @@
 import 'dart:typed_data';
-
-  import 'package:dio/dio.dart';
-  import 'package:file_picker/file_picker.dart';
-  import 'package:flutter/foundation.dart';
-  import 'package:flutter/material.dart';
-  import 'package:meta/meta.dart';
+import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:meta/meta.dart';
+import 'package:marib/utils/api.dart';
+import 'package:marib/data/model/wifi/wifi_plan.dart';
+import 'package:marib/data/wifi/wifi_repository.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/utils/helper_utils.dart';
 
-  import 'package:marib/data/model/wifi/wifi_plan.dart';
-  import 'package:marib/data/wifi/wifi_repository.dart';
-  import 'package:marib/utils/extensions/extensions.dart';
-  import 'package:marib/utils/helper_utils.dart';
+
+
+
+
+
+
 
 abstract class WifiAddNetworkFormState<T extends StatefulWidget>
     extends State<T> {
@@ -686,5 +691,23 @@ class WifiAddNetworkFormTestHarnessState
   @override
   void handleCompletion(Map<String, dynamic> result) {
     widget.onComplete?.call(result);
+  }
+
+
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: context.color.backgroundColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(child: buildFormContent()),
+            buildSubmitButton(),
+          ],
+        ),
+      ),
+    );
   }
 }

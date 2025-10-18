@@ -1,11 +1,14 @@
 <?php
 
 namespace App\Http\Resources;
-use App\Models\WalletTransaction;
 
+
+use App\Models\ManualPaymentRequest;
+use App\Models\WalletTransaction;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Throwable;
 
 class ManualPaymentRequestResource extends JsonResource
@@ -14,7 +17,7 @@ class ManualPaymentRequestResource extends JsonResource
     {
         $paymentTransaction = $this->whenLoaded('paymentTransaction');
 
-        if ($paymentTransaction instanceof EloquentModel && !$paymentTransaction->relationLoaded('order')) {
+        if ($paymentTransaction instanceof EloquentModel && ! $paymentTransaction->relationLoaded('order')) {
             $paymentTransaction->load('order');
         }
 
@@ -24,7 +27,7 @@ class ManualPaymentRequestResource extends JsonResource
         if (
             $paymentTransaction instanceof EloquentModel
             && $paymentTransaction->payableIsWalletTransaction()
-            && !$paymentTransaction->relationLoaded('walletTransaction')
+            && ! $paymentTransaction->relationLoaded('walletTransaction')
         ) {
             
             $paymentTransaction->load('walletTransaction');
@@ -38,10 +41,14 @@ class ManualPaymentRequestResource extends JsonResource
             ? $paymentTransaction->walletTransaction
             : null;
             
-            $gatewayKey = $paymentTransaction?->payment_gateway
+        $gatewayKey = $paymentTransaction?->payment_gateway
             ?? data_get($this->meta, 'gateway')
+            ?? data_get($this->meta, 'payment_gateway')
             ?? 'manual_bank';
 
+        $canonicalGateway = ManualPaymentRequest::canonicalGateway($gatewayKey) ?? 'manual_banks';
+        $manualBankName = $this->resolveManualBankName($manualBank, $paymentTransaction);
+        $gatewayLabel = $this->resolvePaymentGatewayLabel($canonicalGateway, $manualBankName, $gatewayKey, $paymentTransaction);
 
         $paymentStatus = $this->normalizePaymentStatus($paymentTransaction?->payment_status);
         $manualReference = $this->reference
@@ -78,9 +85,17 @@ class ManualPaymentRequestResource extends JsonResource
                 'logo_url' => $this->generateSignedUrl($manualBank->logo ?? null),
                 'qr_code_url' => $this->generateSignedUrl($manualBank->qr_code ?? null),
             ]) : null,
-            'amount' => $this->whenNotNull($this->amount, fn() => (float) $this->amount),
+            'manual_bank_name' => $manualBankName,
+            'amount' => $this->whenNotNull($this->amount, fn () => (float) $this->amount),
+            
             'currency' => $this->currency,
             'payment_gateway' => $gatewayKey,
+
+            'payment_gateway_key' => $canonicalGateway,
+            'payment_gateway_canonical' => $canonicalGateway,
+            'payment_gateway_normalized' => $canonicalGateway,
+            'payment_gateway_label' => $gatewayLabel,
+            'payment_gateway_name' => $gatewayLabel,
 
 
             'reference' => $this->reference,
@@ -169,4 +184,177 @@ class ManualPaymentRequestResource extends JsonResource
             default => 'pending',
         };
     }
+
+
+
+
+    /**
+     * @param  EloquentModel|null  $manualBank
+     * @param  EloquentModel|null  $paymentTransaction
+     */
+    private function resolveManualBankName($manualBank, $paymentTransaction): ?string
+    {
+        $aliases = $this->manualBankAliases();
+
+        $meta = is_array($this->meta) ? $this->meta : [];
+        $transactionMeta = $paymentTransaction instanceof EloquentModel && is_array($paymentTransaction->meta)
+            ? $paymentTransaction->meta
+            : [];
+
+        $candidates = [
+            data_get($this, 'manual_bank_name'),
+            data_get($this, 'bank_name'),
+            data_get($this, 'bank_account_name'),
+            data_get($meta, 'manual_bank.name'),
+            data_get($meta, 'manual_bank.bank_name'),
+            data_get($meta, 'manual_bank.beneficiary_name'),
+            data_get($meta, 'bank.name'),
+            data_get($meta, 'bank.bank_name'),
+            data_get($meta, 'bank.beneficiary_name'),
+            data_get($transactionMeta, 'manual_bank.name'),
+            data_get($transactionMeta, 'manual_bank.bank_name'),
+            data_get($transactionMeta, 'manual_bank.beneficiary_name'),
+            data_get($transactionMeta, 'bank.name'),
+            data_get($transactionMeta, 'bank.bank_name'),
+            data_get($transactionMeta, 'bank.beneficiary_name'),
+            data_get($manualBank, 'name'),
+            data_get($manualBank, 'bank_name'),
+            data_get($manualBank, 'beneficiary_name'),
+        ];
+
+        foreach ($candidates as $candidate) {
+            $resolved = $this->sanitizeManualBankName($candidate, $aliases);
+
+            if ($resolved !== null) {
+                return $resolved;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  EloquentModel|null  $paymentTransaction
+     */
+    private function resolvePaymentGatewayLabel(
+        ?string $canonicalGateway,
+        ?string $manualBankName,
+        mixed $rawGateway,
+        $paymentTransaction
+    ): string {
+        $canonicalGateway = $canonicalGateway ?? 'manual_banks';
+        $aliases = $this->manualBankAliases();
+
+        $meta = is_array($this->meta) ? $this->meta : [];
+        $transactionMeta = $paymentTransaction instanceof EloquentModel && is_array($paymentTransaction->meta)
+            ? $paymentTransaction->meta
+            : [];
+
+        $candidates = [];
+
+        if ($canonicalGateway === 'manual_banks' && $manualBankName !== null) {
+            $candidates[] = $manualBankName;
+        }
+
+        $candidates = array_merge($candidates, [
+            data_get($this, 'payment_gateway_label'),
+            data_get($this, 'payment_gateway_name'),
+            data_get($this, 'gateway_name'),
+            data_get($meta, 'payment_gateway_label'),
+            data_get($meta, 'payment_gateway_name'),
+            data_get($meta, 'gateway_name'),
+            data_get($meta, 'manual.gateway_name'),
+            data_get($transactionMeta, 'payment_gateway_label'),
+            data_get($transactionMeta, 'payment_gateway_name'),
+            data_get($transactionMeta, 'gateway_name'),
+            data_get($transactionMeta, 'manual.gateway_name'),
+        ]);
+
+        foreach ($candidates as $candidate) {
+            $resolved = $this->sanitizeManualBankName($candidate, $aliases);
+
+            if ($resolved !== null) {
+                return $resolved;
+            }
+        }
+
+        return match ($canonicalGateway) {
+            'manual_banks' => $manualBankName ?? __('Manual Banks'),
+            'east_yemen_bank' => __('East Yemen Bank Gateway'),
+            'wallet' => __('Wallet'),
+            'cash' => __('Cash'),
+            default => $this->fallbackGatewayLabel($rawGateway),
+        };
+    }
+
+    private function fallbackGatewayLabel(mixed $rawGateway): string
+    {
+        if (is_string($rawGateway) && trim($rawGateway) !== '') {
+            return Str::of($rawGateway)
+                ->replace(['_', '-'], ' ')
+                ->trim()
+                ->title()
+                ->value();
+        }
+
+        return __('Manual Banks');
+    }
+
+    private function sanitizeManualBankName(mixed $value, array $aliases): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (! is_string($value) && ! is_numeric($value)) {
+            return null;
+        }
+
+        $string = trim((string) $value);
+
+        if ($string === '') {
+            return null;
+        }
+
+        $normalized = strtolower($string);
+
+        if (in_array($normalized, $aliases, true)) {
+            return null;
+        }
+
+        return $string;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function manualBankAliases(): array
+    {
+        $aliases = array_merge(
+            ManualPaymentRequest::manualBankGatewayAliases(),
+            [
+                'manual bank',
+                'manual banks',
+                'manual bank transfer',
+                'manual banks transfer',
+                'bank manual',
+                'bank manual transfer',
+                'manual transfer',
+                'manual transfers',
+                'bank transfer',
+                'bank transfers',
+            ]
+        );
+
+        $aliases = array_map(static function ($alias) {
+            if (! is_string($alias)) {
+                return '';
+            }
+
+            return strtolower(trim((string) $alias));
+        }, $aliases);
+
+        return array_values(array_filter(array_unique($aliases), static fn ($alias) => $alias !== ''));
+    }
+
 }

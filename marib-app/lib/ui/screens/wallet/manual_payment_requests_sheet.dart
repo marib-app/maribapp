@@ -368,7 +368,7 @@ class _ManualPaymentTile extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'بوابة الدفع: ${payment.paymentGateway}',
+              'بوابة الدفع: ${payment.gatewayLabel}',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 4),

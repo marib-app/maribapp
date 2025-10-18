@@ -12,6 +12,10 @@ class ManualPayment {
     this.transactionReference,
     this.manualReference,
     required this.paymentGateway,
+    required this.paymentGatewayKey,
+    this.paymentGatewayLabel,
+    this.manualBankName,
+    this.manualBank,
     required this.paymentStatus,
     this.status,
     this.transactionStatus,
@@ -43,6 +47,10 @@ class ManualPayment {
   final String? manualReference;
   final String paymentGateway;
   final String paymentStatus;
+  final String paymentGatewayKey;
+  final String? paymentGatewayLabel;
+  final String? manualBankName;
+  final Map<String, dynamic>? manualBank;
   final String? status;
   final String? transactionStatus;
   final double amount;
@@ -100,7 +108,9 @@ class ManualPayment {
         final trimmed = value.trim();
         return trimmed.isEmpty ? null : trimmed;
       }
-      return '$value'.trim().isEmpty ? null : '$value'.trim();
+      final converted = value.toString().trim();
+      return converted.isEmpty ? null : converted;
+
     }
 
     int? toInt(dynamic value) {
@@ -115,7 +125,7 @@ class ManualPayment {
       if (value is num) return value.toDouble();
       final str = toStr(value);
       if (str == null) return 0.0;
-      final sanitized = str.replaceAll(RegExp(r'[^0-9\.\-]'), '');
+      final sanitized = str.replaceAll(RegExp(r'[^0-9.-]'), '');
       return double.tryParse(sanitized) ?? 0.0;
     }
 
@@ -141,6 +151,13 @@ class ManualPayment {
     final metadata = mapify(json['metadata']) ?? mapify(json['meta']);
     final context = mapify(json['context']) ?? mapify(metadata?['context']);
     final payable = mapify(json['payable']) ?? mapify(metadata?['payable']);
+    final manualBankData = mapify(json['manual_bank']) ??
+        mapify(manualData?['manual_bank']) ??
+        mapify(metadata?['manual_bank']);
+    final bankMeta = manualBankData ?? mapify(metadata?['bank']);
+    final manualMeta = mapify(metadata?['manual']);
+
+
 
     final paymentTransactionId =
     toStr(json['payment_transaction_id'] ?? json['transaction_id'] ?? json['id']);
@@ -170,6 +187,16 @@ class ManualPayment {
     ) ??
         'manual_bank';
 
+    final gatewayKeyCandidate = toStr(
+      json['payment_gateway_key'] ??
+          json['payment_gateway_canonical'] ??
+          json['payment_gateway_normalized'],
+    ) ??
+        paymentGatewayRaw;
+    final canonicalGateway = _canonicalGateway(gatewayKeyCandidate);
+
+
+
     final paymentStatus = toStr(
       json['payment_status'] ??
           manualData?['payment_status'] ??
@@ -189,6 +216,31 @@ class ManualPayment {
           manualData?['transaction_status'] ??
           metadata?['transaction_status'],
     );
+
+
+
+
+
+    String? candidateOrNull(dynamic source) => toStr(source);
+
+    final manualBankName = _firstMeaningfulLabel([
+      candidateOrNull(json['manual_bank_name']),
+      candidateOrNull(manualData?['manual_bank_name']),
+      candidateOrNull(metadata?['manual_bank_name']),
+      candidateOrNull(manualData?['bank_name']),
+      candidateOrNull(manualData?['bank_account_name']),
+      candidateOrNull(manualData?['bankAccountName']),
+      candidateOrNull(metadata?['bank_name']),
+      candidateOrNull(metadata?['bank.account_name']),
+      candidateOrNull(manualBankData?['name']),
+      candidateOrNull(manualBankData?['bank_name']),
+      candidateOrNull(manualBankData?['beneficiary_name']),
+      candidateOrNull(manualBankData?['account_name']),
+      candidateOrNull(bankMeta?['name']),
+      candidateOrNull(bankMeta?['bank_name']),
+      candidateOrNull(bankMeta?['beneficiary_name']),
+    ]);
+
 
 
     DateTime? resolveTimestamp(Iterable<dynamic> candidates) {
@@ -213,9 +265,30 @@ class ManualPayment {
       manualData?['updatedAt'],
       metadata?['updatedAt'],
     ]) ??
+        DateTime.now();
+
+    final paymentGatewayLabel = _firstMeaningfulLabel([
+      candidateOrNull(json['payment_gateway_label']),
+      candidateOrNull(json['payment_gateway_name']),
+      candidateOrNull(manualData?['payment_gateway_label']),
+      candidateOrNull(manualData?['payment_gateway_name']),
+      candidateOrNull(manualData?['gateway_name']),
+      candidateOrNull(metadata?['payment_gateway_label']),
+      candidateOrNull(metadata?['payment_gateway_name']),
+      candidateOrNull(metadata?['gateway_name']),
+      candidateOrNull(manualMeta?['payment_gateway_label']),
+      candidateOrNull(manualMeta?['payment_gateway_name']),
+      candidateOrNull(manualMeta?['gateway_name']),
+      candidateOrNull(manualBankData?['display_name']),
+      candidateOrNull(bankMeta?['display_name']),
+      manualBankName,
+    ]) ??
+        _defaultGatewayLabel(canonicalGateway, manualBankName, paymentGatewayRaw);
 
 
-          DateTime.now();
+    final manualBank = manualBankData == null
+        ? null
+        : Map<String, dynamic>.unmodifiable(manualBankData);
 
 
 
@@ -226,7 +299,12 @@ class ManualPayment {
       transactionIdentifier: transactionIdentifier,
       transactionReference: transactionReference,
       manualReference: manualReference,
-      paymentGateway: paymentGateway,
+      paymentGateway: paymentGatewayRaw,
+      paymentGatewayKey: canonicalGateway,
+      paymentGatewayLabel: paymentGatewayLabel,
+      manualBankName: manualBankName,
+      manualBank: manualBank,
+
       paymentStatus: paymentStatus,
 
       status: status,
@@ -256,6 +334,174 @@ class ManualPayment {
       manualPaymentData: manualData,
     );
   }
+
+
+
+  static const Map<String, String> _gatewayAliasMap = <String, String>{
+    'manual': 'manual_bank',
+    'manual_bank': 'manual_bank',
+    'manualbanks': 'manual_bank',
+    'manual_banks': 'manual_bank',
+    'manualbank': 'manual_bank',
+    'manualpayment': 'manual_bank',
+    'manual_payment': 'manual_bank',
+    'manualtransfer': 'manual_bank',
+    'manual_transfer': 'manual_bank',
+    'manualgateway': 'manual_bank',
+    'manual_gateway': 'manual_bank',
+    'manualmethod': 'manual_bank',
+    'manual_method': 'manual_bank',
+    'bank': 'manual_bank',
+    'banks': 'manual_bank',
+    'banktransfer': 'manual_bank',
+    'bank_transfer': 'manual_bank',
+    'bankmanual': 'manual_bank',
+    'bank_manual': 'manual_bank',
+    'bankmanualtransfer': 'manual_bank',
+    'bank_manual_transfer': 'manual_bank',
+    'manualpayments': 'manual_bank',
+    'manual_payments': 'manual_bank',
+    'manualbanking': 'manual_bank',
+    'manual_banking': 'manual_bank',
+    'offline': 'manual_bank',
+    'internal': 'manual_bank',
+    'east': 'east_yemen_bank',
+    'east_yemen_bank': 'east_yemen_bank',
+    'eastyemenbank': 'east_yemen_bank',
+    'east_yemen': 'east_yemen_bank',
+    'bankalsharq': 'east_yemen_bank',
+    'bank_alsharq': 'east_yemen_bank',
+    'wallet': 'wallet',
+    'walletpayment': 'wallet',
+    'wallet_payment': 'wallet',
+    'walletgateway': 'wallet',
+    'wallet_gateway': 'wallet',
+    'walletbalance': 'wallet',
+    'wallet_balance': 'wallet',
+    'walletpay': 'wallet',
+    'wallet_pay': 'wallet',
+    'wallettopup': 'wallet',
+    'wallet_top_up': 'wallet',
+    'walletdeposit': 'wallet',
+    'wallet_deposit': 'wallet',
+    'cash': 'cash',
+    'cod': 'cash',
+    'cash_on_delivery': 'cash',
+    'cashondelivery': 'cash',
+    'cashpayment': 'cash',
+    'cash_payment': 'cash',
+    'payondelivery': 'cash',
+    'pay_on_delivery': 'cash',
+  };
+
+  static const Set<String> _manualGatewayLabelAliases = <String>{
+    'manual',
+    'manual bank',
+    'manual banks',
+    'manual_bank',
+    'manual_banks',
+    'manualbank',
+    'manualbanks',
+    'manual payment',
+    'manual payments',
+    'manual_payment',
+    'manual_payments',
+    'manual transfer',
+    'manual transfers',
+    'manual_transfer',
+    'manual_transfers',
+    'bank transfer',
+    'bank transfers',
+    'bank_transfer',
+    'bank_transfers',
+    'bank manual',
+    'bank manuals',
+    'bank_manual',
+    'bank_manuals',
+    'bank manual transfer',
+    'bank manual transfers',
+    'manual bank transfer',
+    'manual bank transfers',
+    'manualbanks transfer',
+    'manualbanks transfers',
+    'manual bank gateway',
+    'manual gateway',
+    'manual gateways',
+    'manual_gateway',
+    'manual_gateways',
+    'offline',
+    'internal',
+  };
+
+  static String? _canonicalGatewayOrNull(String? value) {
+    if (value == null) {
+      return null;
+    }
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    final lowercase = trimmed.toLowerCase();
+    final sanitized = lowercase.replaceAll(RegExp(r'[^a-z0-9]+'), '_');
+    final collapsed = sanitized.replaceAll('_', '');
+    return _gatewayAliasMap[sanitized] ??
+        _gatewayAliasMap[lowercase] ??
+        _gatewayAliasMap[collapsed];
+  }
+
+  static String _canonicalGateway(String? value) {
+    return _canonicalGatewayOrNull(value) ?? 'manual_bank';
+  }
+
+  static String? _sanitizeGatewayLabel(String? value) {
+    if (value == null) {
+      return null;
+    }
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    final lowercase = trimmed.toLowerCase();
+    if (_manualGatewayLabelAliases.contains(lowercase)) {
+      return null;
+    }
+    return trimmed;
+  }
+
+  static String? _firstMeaningfulLabel(Iterable<String?> candidates) {
+    for (final candidate in candidates) {
+      final sanitized = _sanitizeGatewayLabel(candidate);
+      if (sanitized != null) {
+        return sanitized;
+      }
+    }
+    return null;
+  }
+
+  static String _defaultGatewayLabel(String gatewayKey, String? manualBankName, String? rawGateway) {
+    switch (gatewayKey) {
+      case 'manual_bank':
+        return manualBankName ?? 'التحويل البنكي اليدوي';
+      case 'east_yemen_bank':
+        return 'بوابة بنك الشرق الإلكترونية';
+      case 'wallet':
+        return 'المحفظة';
+      case 'cash':
+        return 'الدفع النقدي';
+      default:
+        if (manualBankName != null && manualBankName.trim().isNotEmpty) {
+          return manualBankName;
+        }
+        if (rawGateway != null && rawGateway.trim().isNotEmpty) {
+          final sanitized = rawGateway.replaceAll(RegExp(r'[_-]+'), ' ').trim();
+          return sanitized.isEmpty ? rawGateway.trim() : sanitized;
+        }
+        return 'التحويل البنكي اليدوي';
+    }
+  }
+
+
+
 
   String get normalizedStatus {
     final raw = resolvedStatus;
@@ -348,15 +594,46 @@ class ManualPayment {
     return false;
   }
 
-  String get normalizedGateway => paymentGateway.toLowerCase().trim();
+  String get normalizedGateway => paymentGatewayKey.toLowerCase().trim();
 
   bool get isEastYemen => normalizedGateway == 'east_yemen_bank';
 
   bool get isManualBank => normalizedGateway == 'manual_bank';
 
-  String get gatewayLabel => isEastYemen
-      ? 'بوابة بنك الشرق الإلكترونية'
-      : 'التحويل البنكي اليدوي';
+  String get gatewayLabel {
+    final manualLabel = manualBankName?.trim();
+    if (isManualBank && manualLabel != null && manualLabel.isNotEmpty) {
+      return manualLabel;
+    }
+
+    final resolvedLabel = paymentGatewayLabel?.trim();
+    if (resolvedLabel != null && resolvedLabel.isNotEmpty) {
+      return resolvedLabel;
+    }
+
+    if (isEastYemen) {
+      return 'بوابة بنك الشرق الإلكترونية';
+    }
+
+    switch (normalizedGateway) {
+      case 'wallet':
+        return 'المحفظة';
+      case 'cash':
+        return 'الدفع النقدي';
+    }
+
+    if (isManualBank) {
+      return 'التحويل البنكي اليدوي';
+    }
+
+    final raw = paymentGateway.trim();
+    if (raw.isNotEmpty) {
+      final sanitized = raw.replaceAll(RegExp(r'[_-]+'), ' ').trim();
+      return sanitized.isEmpty ? raw : sanitized;
+    }
+
+    return 'التحويل البنكي اليدوي';
+  }
 
   bool get isApproved => _matchesStatus(_successStatuses);
 

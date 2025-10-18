@@ -366,15 +366,19 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
 
   void _onToggleMetalWatchlist(int metalId) {
     context.read<CurrencyCubit>().toggleMetalWatchlist(metalId);
+  }
 
+  void _onAssetFilterChanged(AssetFilterType filter) {
+    context.read<CurrencyCubit>().changeAssetFilter(filter);
+  }
 
-    void _onAssetFilterChanged(AssetFilterType filter) {
-      context.read<CurrencyCubit>().changeAssetFilter(filter);
-    }
+  void _onDirectionFilterChanged(RateChangeFilter filter) {
+    context.read<CurrencyCubit>().changeChangeDirectionFilter(filter);
+  }
 
-    void _onDirectionFilterChanged(RateChangeFilter filter) {
-      context.read<CurrencyCubit>().changeChangeDirectionFilter(filter);
-    }
+  void _onNotificationFrequencyChanged(String value) {
+    context.read<CurrencyCubit>().changeNotificationFrequency(value);
+  }
 
   void _onHistoryRangeSelected(int? currencyId, int days) {
     if (days != 1 && days != 3 && days != 7) {

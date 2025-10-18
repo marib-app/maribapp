@@ -854,10 +854,12 @@ class UiUtils {
 
 
 
-  static Widget progress({double? width,
+  static Widget progress({
+    double? width,
     double? height,
     Color? normalProgressColor,
-    bool? showWhite}) {
+    bool? showWhite,
+  }) {
     if (Constant.useLottieProgress) {
       return LottieBuilder.asset(
         "assets/lottie/${showWhite == true
@@ -868,8 +870,30 @@ class UiUtils {
         delegates: const LottieDelegates(values: []),
       );
     } else {
-      return CircularProgressIndicator(
-        color: normalProgressColor,
+      const double defaultDimension = 36;
+      final double resolvedWidth = width ?? defaultDimension;
+      final double resolvedHeight = height ?? defaultDimension;
+      final double indicatorSize = max(0.0, min(resolvedWidth, resolvedHeight));
+      final double resolvedStrokeWidth = indicatorSize >= defaultDimension
+          ? 4.0
+          : max(2.0, indicatorSize / 6);
+
+      return SizedBox(
+        width: resolvedWidth,
+        height: resolvedHeight,
+        child: Center(
+          child: SizedBox(
+            width: indicatorSize,
+            height: indicatorSize,
+            child: CircularProgressIndicator(
+              strokeWidth: resolvedStrokeWidth,
+              valueColor: normalProgressColor != null
+                  ? AlwaysStoppedAnimation<Color?>(normalProgressColor)
+                  : null,
+            ),
+          ),
+        ),
+
       );
     }
   }

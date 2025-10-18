@@ -208,10 +208,20 @@ class ManualPaymentRequestController extends Controller
                 $canonicalGateway = 'manual_banks';
             }
 
+            $manualBankName = $this->resolveManualBankName($requestRow);
+
+
+
             $row['payment_gateway_key'] = $canonicalGateway ?? 'manual_banks';
-            $row['payment_gateway'] = $this->gatewayLabel($canonicalGateway ?? 'manual_banks');
-            $row['payment_gateway_name'] = $this->paymentRequestGatewayName($requestRow);
-            $row['manual_bank_name'] = $this->resolveManualBankName($requestRow);
+
+            $row['manual_bank_name'] = $manualBankName;
+            $row['payment_gateway'] = $this->gatewayLabel(
+                $canonicalGateway ?? 'manual_banks',
+                $manualBankName
+            );
+            $row['payment_gateway_name'] = $manualBankName
+                ?? $this->paymentRequestGatewayName($requestRow);
+
 
             $row['formatted_amount'] = number_format($requestRow->amount, 2)
                 . ($requestRow->currency ? ' ' . $requestRow->currency : '');
@@ -338,8 +348,15 @@ class ManualPaymentRequestController extends Controller
                 'amount_fmt' => number_format($amount, 2, '.', ''),
                 'currency' => $row->currency ?? '',
                 'payment_gateway' => $channel ?? $row->channel,
-                'payment_gateway_label' => $this->paymentRequestChannelLabel($channel ?? $row->channel),
-                'payment_gateway_name' => $this->paymentRequestGatewayName($row),
+
+                'payment_gateway_label' => $this->paymentRequestChannelLabel(
+                    $channel ?? $row->channel,
+                    $manualBankName
+                ),
+                'payment_gateway_name' => $manualBankName
+                    ?? $this->paymentRequestGatewayName($row),
+
+
                 'manual_bank_name' => $manualBankName,
                 'category' => $row->category,
                 'department' => $row->department ?? null,
@@ -1465,8 +1482,19 @@ class ManualPaymentRequestController extends Controller
         };
     }
 
-    private function paymentRequestChannelLabel(?string $channel): string
+    private function paymentRequestChannelLabel(?string $channel, ?string $manualBankName = null): string
     {
+
+        $manualBankName = is_string($manualBankName) ? trim($manualBankName) : null;
+
+        if ($manualBankName !== null && $manualBankName !== '') {
+            $aliases = ManualPaymentRequest::manualBankGatewayAliases();
+
+            if (! in_array(strtolower($manualBankName), $aliases, true)) {
+                return $manualBankName;
+            }
+        }
+
         $normalized = $this->normalizePaymentRequestChannel($channel);
 
         if ($normalized !== null) {
@@ -1762,6 +1790,7 @@ class ManualPaymentRequestController extends Controller
 
         $propertyNames = ['payment_gateway_name'];
 
+        $manualBankName = null;
 
 
         if ($normalizedChannel === 'manual_banks' || $normalizedChannel === null) {
@@ -1833,7 +1862,7 @@ class ManualPaymentRequestController extends Controller
                 ->value();
         }
 
-        return $this->paymentRequestChannelLabel(data_get($row, 'channel'));
+        return $this->paymentRequestChannelLabel(data_get($row, 'channel'), $manualBankName);
     }
 
 
@@ -2200,9 +2229,21 @@ class ManualPaymentRequestController extends Controller
     }
 
 
-    private function gatewayLabel(string $gateway): string
+    private function gatewayLabel(string $gateway, ?string $manualBankName = null): string
 
     {
+
+        $manualBankName = is_string($manualBankName) ? trim($manualBankName) : null;
+
+        if ($manualBankName !== null && $manualBankName !== '') {
+            $aliases = ManualPaymentRequest::manualBankGatewayAliases();
+
+            if (! in_array(strtolower($manualBankName), $aliases, true)) {
+                return $manualBankName;
+            }
+        }
+
+
         $canonical = ManualPaymentRequest::canonicalGateway($gateway);
 
         if ($canonical === 'manual_bank') {

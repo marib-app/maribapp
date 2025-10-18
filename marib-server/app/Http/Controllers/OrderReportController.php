@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\ManualPaymentRequestTableService;
 use App\Services\BootstrapTableService;
 use App\Services\DepartmentReportService;
+use App\Services\ManualPaymentRequestPresenter;
 
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -29,17 +30,22 @@ class OrderReportController extends Controller
      * @var DepartmentReportService
      */
     protected DepartmentReportService $departmentReportService;
+    protected ManualPaymentRequestPresenter $manualPaymentRequestPresenter;
 
 
     /**
      * إنشاء مثيل جديد للمتحكم
      */
-    public function __construct(DepartmentReportService $departmentReportService)
+    public function __construct(
+        DepartmentReportService $departmentReportService,
+        ManualPaymentRequestPresenter $manualPaymentRequestPresenter
+    )
+
     {
         // لا حاجة لـ middleware هنا، سيتم فحص الصلاحيات في كل دالة
 
-                $this->departmentReportService = $departmentReportService;
-
+        $this->departmentReportService = $departmentReportService;
+        $this->manualPaymentRequestPresenter = $manualPaymentRequestPresenter;
     }
 
     /**
@@ -676,11 +682,17 @@ class OrderReportController extends Controller
     {
         ResponseService::noPermissionThenSendJson('reports-orders');
 
-        $manualPaymentRequest->load(['user', 'paymentTransaction.order', 'histories.user', 'reviewer']);
-        return view('payments.manual.show', [
+        $manualPaymentRequest = $this->manualPaymentRequestPresenter->loadRelations($manualPaymentRequest);
+        $timelineData = $this->manualPaymentRequestPresenter->timelineData($manualPaymentRequest);
+        $presentationContext = $this->manualPaymentRequestPresenter->presentationData($manualPaymentRequest);
+
+        return view('payments.manual.show', array_merge([
+
+
             'request' => $manualPaymentRequest,
-            'canReview' => Auth::user()->can('manual-payments-review') && $manualPaymentRequest->isPending(),
-        ]);
+            'canReview' => Auth::user()->can('manual-payments-review') && $manualPaymentRequest->isOpen(),
+            'timelineData' => $timelineData,
+        ], $presentationContext));
     }
 
     private function buildManualPaymentsBaseQuery(Request $request): array

@@ -524,12 +524,32 @@ class OrderApiController extends Controller
                     && $existingTransaction->payment_status !== 'succeed') {
                     $intentIdempotencyKey = $intentIdempotencyKey
                         ?: (string) ($existingTransaction->idempotency_key ?? $idempotencyKey);
-                    $existingTransaction = $this->confirmDefaultWalletPaymentIntent(
-                        $user,
-                        $order,
-                        $existingTransaction,
-                        $intentIdempotencyKey
-                    );
+                    try {
+                        $existingTransaction = $this->confirmDefaultWalletPaymentIntent(
+                            $user,
+                            $order,
+                            $existingTransaction,
+                            $intentIdempotencyKey
+                        );
+                    } catch (ValidationException $exception) {
+                        Log::info('orders.default_payment_intent.skipped', [
+                            'order_id' => $order->getKey(),
+                            'user_id' => $user->getKey(),
+                            'method' => $existingTransaction->payment_gateway,
+                            'message' => $exception->getMessage(),
+                        ]);
+
+                        return null;
+                    } catch (Throwable $throwable) {
+                        Log::warning('orders.default_payment_intent.failed', [
+                            'order_id' => $order->getKey(),
+                            'user_id' => $user->getKey(),
+                            'method' => $existingTransaction->payment_gateway,
+                            'message' => $throwable->getMessage(),
+                        ]);
+
+                        return null;
+                    }
                 }
 
                 return $existingTransaction;

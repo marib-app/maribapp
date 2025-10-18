@@ -13,13 +13,8 @@ import 'package:marib/utils/extensions/extensions.dart';
   import 'package:marib/utils/extensions/extensions.dart';
   import 'package:marib/utils/helper_utils.dart';
 
-  abstract class WifiAddNetworkFormState<T extends StatefulWidget>
-  extends State<T> {
-
-
-
-  }
-abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
+abstract class WifiAddNetworkFormState<T extends StatefulWidget>
+    extends State<T> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _contactController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
@@ -35,6 +30,8 @@ abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
 
   WifiRepository get repository;
 
+  @protected
+  void handleCompletion(Map<String, dynamic> result);
 
   @override
   void initState() {
@@ -156,7 +153,10 @@ abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
     );
   }
 
-  Widget buildSubmitButton({EdgeInsetsGeometry padding = const EdgeInsets.all(16)}) {
+  Widget buildSubmitButton({
+    EdgeInsetsGeometry padding = const EdgeInsets.all(16),
+  }) {
+
     return Padding(
       padding: padding,
       child: SizedBox(
@@ -239,7 +239,8 @@ abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
         file: voucherMultipart,
       );
 
-      final Map<String, dynamic> batchPayload = _extractBatchPayload(batchResponse)
+      final Map<String, dynamic> batchPayload =
+      _extractBatchPayload(batchResponse)
         ..['plan_id'] = _selectedPlan!.id;
 
       final String batchMessage = _buildBatchMessage(batchPayload);
@@ -279,7 +280,9 @@ abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
 
 
       final String? existingMessage = result['message'] as String?;
-      final String? combinedMessage = _combineMessages(existingMessage, batchMessage);
+      final String? combinedMessage =
+      _combineMessages(existingMessage, batchMessage);
+
       if (combinedMessage != null) {
         result['message'] = combinedMessage;
       }
@@ -323,7 +326,10 @@ abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
       final PlatformFile file = result.files.single;
       final String extension = (file.extension ?? '').toLowerCase();
       if (!_allowedImageExtensions.contains(extension)) {
-        _showError('صيغة الملف غير مدعومة. يرجى اختيار صورة بصيغة PNG أو JPG أو WEBP.');
+        _showError(
+          'صيغة الملف غير مدعومة. يرجى اختيار صورة بصيغة PNG أو JPG أو WEBP.',
+        );
+
         return;
       }
 
@@ -341,7 +347,7 @@ abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
           _loginScreenshotFile = file;
         }
       });
-    } catch (error) {
+    } catch (_) {
       _showError('تعذّر اختيار الملف، حاول مرة أخرى.');
     }
   }
@@ -374,7 +380,10 @@ abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
   MultipartFile? _prepareVoucherMultipart(PlatformFile file) {
     final String extension = (file.extension ?? '').toLowerCase();
     if (!_allowedVoucherExtensions.contains(extension)) {
-      _showError('صيغة ملف القسائم غير مدعومة. يرجى اختيار ملف بصيغة CSV أو XLS أو XLSX.');
+      _showError(
+        'صيغة ملف القسائم غير مدعومة. يرجى اختيار ملف بصيغة CSV أو XLS أو XLSX.',
+      );
+
       return null;
     }
 
@@ -394,21 +403,6 @@ abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
       type: MessageType.error,
     );
   }
-
-  static const int _maxUploadSizeBytes = 4 * 1024 * 1024;
-  static const List<String> _allowedImageExtensions = <String>['jpg', 'jpeg', 'png', 'webp'];
-  static const int _maxVoucherUploadSizeBytes = 5 * 1024 * 1024;
-  static const List<String> _allowedVoucherExtensions = <String>['csv', 'xls', 'xlsx'];
-
-
-
-  String? _stringify(dynamic value) {
-    if (value == null) return null;
-    final String text = value.toString().trim();
-    if (text.isEmpty) return null;
-    return text;
-  }
-
 
 
 
@@ -460,7 +454,10 @@ abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
         ),
       )
           .toList(),
-      onChanged: _isSubmitting || _isLoadingPlans || _availablePlans.isEmpty
+      onChanged: _isSubmitting ||
+          _isLoadingPlans ||
+          _availablePlans.isEmpty
+
           ? null
           : (value) {
         if (value == null) {
@@ -559,7 +556,21 @@ abstract class _AddNetworkFormState<T extends StatefulWidget> extends State<T> {
 
 
 
-  void handleCompletion(Map<String, dynamic> result);
+  String? _stringify(dynamic value) {
+    if (value == null) return null;
+    final String text = value.toString().trim();
+    if (text.isEmpty) return null;
+    return text;
+  }
+
+
+  static const int _maxUploadSizeBytes = 4 * 1024 * 1024;
+  static const List<String> _allowedImageExtensions =
+  <String>['jpg', 'jpeg', 'png', 'webp'];
+  static const int _maxVoucherUploadSizeBytes = 5 * 1024 * 1024;
+  static const List<String> _allowedVoucherExtensions =
+  <String>['csv', 'xls', 'xlsx'];
+
 
 }
 

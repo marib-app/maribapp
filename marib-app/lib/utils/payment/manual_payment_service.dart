@@ -1029,6 +1029,7 @@ class ManualPaymentService {
     String? purpose,
     String? currency,
     int? orderId,
+    int? packageId,
     String? paymentMethod,
     double? amount,
   }) async {
@@ -1041,6 +1042,7 @@ class ManualPaymentService {
         orderId: orderId,
         paymentMethod: paymentMethod,
         amount: amount,
+        packageId: packageId,
 
       );
       return result.banks;
@@ -1054,6 +1056,7 @@ class ManualPaymentService {
     String? purpose,
     String? currency,
     int? orderId,
+    int? packageId,
     String? paymentMethod,
     double? amount,
   }) async {
@@ -1079,7 +1082,8 @@ class ManualPaymentService {
       final String? resolvedPurpose =
           _normalizePurposeForApi(purpose) ?? purpose?.trim();
       final bool walletPurpose = _isWalletPurpose(resolvedPurpose);
-
+      final bool packagePurpose = resolvedPurpose == 'package';
+      final bool orderPurpose = resolvedPurpose == 'order';
       final String? upperCurrency =
       (normalizedCurrency != null && normalizedCurrency.isNotEmpty)
           ? normalizedCurrency.toUpperCase()
@@ -1094,8 +1098,16 @@ class ManualPaymentService {
         }
       }
 
-      final int? sanitizedOrderId = (!walletPurpose && orderId != null && orderId > 0)
-          ? orderId
+      int? sanitizedOrderId;
+      if (orderId != null && orderId > 0) {
+        if (orderPurpose || (!walletPurpose && !packagePurpose)) {
+          sanitizedOrderId = orderId;
+        }
+      }
+
+      final int? sanitizedPackageId = (packagePurpose && packageId != null && packageId > 0)
+          ? packageId
+
           : null;
 
 
@@ -1107,6 +1119,7 @@ class ManualPaymentService {
         if (upperCurrency != null && upperCurrency.isNotEmpty)
           'currency': upperCurrency,
         if (sanitizedOrderId != null) 'order_id': sanitizedOrderId,
+        if (sanitizedPackageId != null) 'package_id': sanitizedPackageId,
 
         if (apiPaymentMethod != null && apiPaymentMethod.isNotEmpty)
           'payment_method': apiPaymentMethod,

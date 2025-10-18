@@ -279,15 +279,21 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       }
 
       final currency = widget.args.normalizedCurrency;
-      final int? orderIdParam = (!isWalletTopUp && widget.args.packageId > 0)
+      final int? resolvedId = (!isWalletTopUp && widget.args.packageId > 0)
           ? widget.args.packageId
           : null;
+      final int? orderIdParam =
+      (resolvedId != null && (purposeParam == 'order' || purposeParam == null))
+          ? resolvedId
+          : null;
+      final int? packageIdParam =
+      (resolvedId != null && purposeParam == 'package') ? resolvedId : null;
 
 
       final settings = await _service.fetchManualPaymentSettings(
         token: widget.args.token,
         purpose: purposeParam,
-
+        packageId: packageIdParam,
         currency: currency,
         orderId: orderIdParam,
         paymentMethod:
@@ -439,9 +445,16 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
 
 
-    final int? orderIdParam = (!isWalletTopUp && widget.args.packageId > 0)
+    final int? resolvedId = (!isWalletTopUp && widget.args.packageId > 0)
         ? widget.args.packageId
         : null;
+    final int? orderIdParam =
+    (resolvedId != null && (purposeParam == 'order' || purposeParam == null))
+        ? resolvedId
+        : null;
+    final int? packageIdParam =
+    (resolvedId != null && purposeParam == 'package') ? resolvedId : null;
+
 
     try {
       final settings = await _service.fetchManualPaymentSettings(
@@ -449,6 +462,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         purpose: purposeParam,
         currency: currency,
         orderId: orderIdParam,
+        packageId: packageIdParam,
 
         paymentMethod:
         ManualPaymentService.paymentMethodForApi(selectedMethod),

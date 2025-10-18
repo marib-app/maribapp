@@ -129,10 +129,10 @@ class PaymentRequestTableQuery
         }
 
         if ($supportsManualBankName) {
-            $manualBankNameParts[] = "NULLIF(mpr.bank_name, '')";
+            $manualBankNameParts[] = $sanitizeManualBankAlias('mpr.bank_name');
         }
         if ($supportsManualBankAccountName) {
-            $manualBankNameParts[] = "NULLIF(mpr.bank_account_name, '')";
+            $manualBankNameParts[] = $sanitizeManualBankAlias('mpr.bank_account_name');
         }
         $manualBankNameSelect = $manualBankNameParts === []
             ? 'NULL'
@@ -160,10 +160,10 @@ class PaymentRequestTableQuery
         }
 
         if ($supportsManualBankName) {
-            $manualGatewayNameParts[] = "NULLIF(mpr.bank_name, '')";
+            $manualGatewayNameParts[] = $sanitizeManualBankAlias('mpr.bank_name');
         }
         if ($supportsManualBankAccountName) {
-            $manualGatewayNameParts[] = "NULLIF(mpr.bank_account_name, '')";
+            $manualGatewayNameParts[] = $sanitizeManualBankAlias('mpr.bank_account_name');
         }
         if ($supportsManualGatewayName) {
             $manualGatewayNameParts[] = $sanitizeManualBankAlias('mpr.gateway_name');

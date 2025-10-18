@@ -695,7 +695,7 @@ class NotificationService {
           },
         );
       } else if (message.data['type'] == "offer") {
-        if (HiveUtils.isUserAuthenticated()) {
+        if (HiveUtils.isUserBasicallyAuthenticated()) {
           var username = message.data['user_name'];
           var itemTitleImage = message.data['item_title_image'];
           var itemTitle = message.data['item_title'];
@@ -900,6 +900,8 @@ class NotificationService {
 
       if (storedToken == currentToken) {
         await HiveUtils.setUserDetail(key: Api.fcmId, value: currentToken);
+        await HiveUtils.setUserDetail(
+            key: _pendingFcmTokenKey, value: currentToken);
         await HiveUtils.setUserDetail(
             key: _pendingFcmTokenKey, value: currentToken);
 

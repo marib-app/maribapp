@@ -1,5 +1,10 @@
 import 'package:marib/data/model/orders/order_payment.dart';
 import 'package:marib/utils/api.dart';
+import 'package:marib/utils/payment/manual_payment_service.dart';
+import 'package:meta/meta.dart';
+
+
+
 
 class OrderPaymentsRepository {
   const OrderPaymentsRepository();
@@ -11,6 +16,13 @@ class OrderPaymentsRepository {
     String? currency,
     Map<String, dynamic>? extraData,
   }) async {
+
+    final String? normalizedCurrency =
+    currency != null && currency.trim().isNotEmpty
+        ? currency.trim().toUpperCase()
+        : null;
+
+
     final Map<String, dynamic> body = <String, dynamic>{
       'purpose': 'order',
       'order_id': orderId,
@@ -18,9 +30,12 @@ class OrderPaymentsRepository {
       'payable_id': _tryParseInt(orderId) ?? orderId,
       if (paymentMethod != null && paymentMethod.trim().isNotEmpty)
         'payment_method': paymentMethod.trim(),
-      if (currency != null && currency.trim().isNotEmpty)
-        'currency': currency.trim().toUpperCase(),
-      if (amount != null) 'amount': _formatAmount(amount),
+      if (normalizedCurrency != null) 'currency': normalizedCurrency,
+      if (amount != null)
+        'amount': _formatAmount(
+          amount,
+          currency: normalizedCurrency,
+        ),
       if (extraData != null) ...extraData,
     };
 
@@ -45,6 +60,12 @@ class OrderPaymentsRepository {
     String? currency,
     Map<String, dynamic>? additionalData,
   }) async {
+
+    final String? normalizedCurrency =
+    currency != null && currency.trim().isNotEmpty
+        ? currency.trim().toUpperCase()
+        : null;
+
     final Map<String, dynamic> body = <String, dynamic>{
       'purpose': 'order',
       'order_id': orderId,
@@ -65,9 +86,14 @@ class OrderPaymentsRepository {
         'payment_reference': reference.trim(),
         'transaction_reference': reference.trim(),
       },
-      if (currency != null && currency.trim().isNotEmpty)
-        'currency': currency.trim().toUpperCase(),
-      if (amount != null) 'amount': _formatAmount(amount),
+      if (normalizedCurrency != null) 'currency': normalizedCurrency,
+      if (amount != null)
+        'amount': _formatAmount(
+          amount,
+          currency: normalizedCurrency,
+        ),
+
+
       if (additionalData != null) ...additionalData,
     };
 
@@ -86,7 +112,31 @@ class OrderPaymentsRepository {
     return int.tryParse(value.trim());
   }
 
-  String _formatAmount(double amount) {
-    return amount.toStringAsFixed(2);
+  @visibleForTesting
+  String formatAmountForTesting(
+      double amount, {
+        String? currency,
+      }) {
+    return _formatAmount(
+      amount,
+      currency: currency,
+    );
+  }
+
+  String _formatAmount(
+      double amount, {
+        String? currency,
+      }) {
+    final String? normalizedCurrency =
+    currency != null && currency.trim().isNotEmpty ? currency : null;
+
+    if (normalizedCurrency == null) {
+      return amount.toStringAsFixed(2);
+    }
+
+    return ManualPaymentService.formatManualPaymentAmount(
+      amount,
+      normalizedCurrency,
+    );
   }
 }

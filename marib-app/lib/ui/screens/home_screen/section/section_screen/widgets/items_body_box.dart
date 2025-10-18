@@ -35,6 +35,7 @@ class ItemsBodyBox extends StatefulWidget {
   final ValueNotifier<int?> selectedCategoryId;
   final bool showShimmer;
   final TextEditingController searchController;
+  final String? categoryName;
 
   // جديد: لا تبني شريط التصنيفات/السلايدر إلا إذا true
   final bool enableTopBar;
@@ -55,6 +56,7 @@ class ItemsBodyBox extends StatefulWidget {
     required this.selectedCategoryId,
     required this.showShimmer,
     required this.searchController,
+    this.categoryName,
     this.enableTopBar = false, // ← افتراضي: مخفي
     this.enableAdSlider = false,
     this.adInterfaceType,
@@ -156,8 +158,13 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
           child: ValueListenableBuilder<ViewMode>(
             valueListenable: _viewMode,
             builder: (context, mode, _) {
+              final String? sanitizedCategoryName = widget.categoryName?.trim();
+              final String effectiveAppBarTitle =
+              (sanitizedCategoryName != null && sanitizedCategoryName.isNotEmpty)
+                  ? sanitizedCategoryName
+                  : "realestate";
               return SmartSearchAppBar(
-                appBarTitle: "realestate",
+                appBarTitle: effectiveAppBarTitle,
                 searchController: widget.searchController,
                 onSearchTap: () {},
                 onSearchChanged: _onSearchInput,

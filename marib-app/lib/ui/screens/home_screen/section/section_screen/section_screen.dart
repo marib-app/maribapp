@@ -481,6 +481,7 @@ class Section_screenState extends State<Section_screen> {
                       child: ItemsBodyBox(
                         key: ValueKey('items_${widget.categoryId}'),
                         categoryId: widget.categoryId,
+                        categoryName: widget.categoryName,
                         selectedCategoryId: selectedCategoryId,
                         showShimmer: showShimmer,
                         searchController: searchController,

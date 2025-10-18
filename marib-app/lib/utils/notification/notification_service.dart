@@ -940,7 +940,9 @@ class NotificationService {
       return;
     }
 
-    if (!HiveUtils.isUserBasicallyAuthenticated()) {
+    final bool isBasicallyAuthenticated = HiveUtils.isUserBasicallyAuthenticated();
+    if (!isBasicallyAuthenticated) {
+
       await HiveUtils.setUserDetail(
           key: _pendingFcmTokenKey, value: normalizedToken);
 
@@ -951,6 +953,22 @@ class NotificationService {
 
       return;
     }
+
+    final bool isFullyAuthenticated = HiveUtils.isUserAuthenticated();
+    Map<String, dynamic>? extraHeaders;
+
+    if (!isFullyAuthenticated) {
+      final String? jwt = _normalizeNotificationValue(HiveUtils.getJWT());
+      if (jwt == null) {
+        log(
+          'Skipping FCM token upload: missing JWT for partially authenticated user',
+          name: 'NotificationService',
+        );
+        return;
+      }
+      extraHeaders = <String, dynamic>{'Authorization': 'Bearer $jwt'};
+    }
+
     try {
       await Api.post(
         url: Api.updateProfileApi,
@@ -959,6 +977,7 @@ class NotificationService {
 
           Api.platformType: Platform.isAndroid ? "android" : "ios",
         },
+        extraHeaders: extraHeaders,
       );
       await HiveUtils.setUserDetail(key: Api.fcmId, value: normalizedToken);
       await HiveUtils.setUserDetail(key: _pendingFcmTokenKey, value: null);

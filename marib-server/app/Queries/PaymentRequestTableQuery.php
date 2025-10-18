@@ -135,11 +135,6 @@ class PaymentRequestTableQuery
 
         $channelExpression = self::channelExpression('pt');
 
-        $paymentGatewayNameParts = [];
-        if ($supportsPaymentGatewayName) {
-            $paymentGatewayNameParts[] = "NULLIF(pt.payment_gateway_name, '')";
-        }
-        $paymentGatewayNameParts[] = "NULLIF(pt.payment_gateway, '')";
 
         $manualBankAliasSqlList = implode(', ', array_map(
             static fn (string $alias): string => "'" . $alias . "'",
@@ -153,6 +148,13 @@ class PaymentRequestTableQuery
                 . " ELSE {$column}"
                 . ' END';
         };
+
+
+        $paymentGatewayNameParts = [];
+        if ($supportsPaymentGatewayName) {
+            $paymentGatewayNameParts[] = $sanitizeManualBankAlias('pt.payment_gateway_name');
+        }
+        $paymentGatewayNameParts[] = $sanitizeManualBankAlias('pt.payment_gateway');
 
 
         $manualGatewayNameParts = [];

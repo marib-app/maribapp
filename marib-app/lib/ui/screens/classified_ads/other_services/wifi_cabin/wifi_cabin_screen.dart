@@ -28,9 +28,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:meta/meta.dart';
 import 'package:marib/utils/helper_utils.dart';
 
-
 class WifiCabinScreen extends StatefulWidget {
   const WifiCabinScreen({super.key});
+
   static Route route(RouteSettings settings) {
     return MaterialPageRoute(
       builder: (_) => const WifiCabinScreen(),
@@ -44,21 +44,18 @@ class WifiCabinScreen extends StatefulWidget {
 }
 
 class _WifiCabinScreenState extends State<WifiCabinScreen> {
-
   late final WifiCabinController _controller;
 
   final WifiRepository _repository = const WifiRepository();
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   final ValueNotifier<List<WifiPurchase>> _purchasesNotifier =
-  ValueNotifier<List<WifiPurchase>>(<WifiPurchase>[]);
+      ValueNotifier<List<WifiPurchase>>(<WifiPurchase>[]);
   final ValueNotifier<bool> _purchasesLoadingNotifier =
-  ValueNotifier<bool>(false);
+      ValueNotifier<bool>(false);
   final ValueNotifier<String?> _purchasesErrorNotifier =
-  ValueNotifier<String?>(null);
+      ValueNotifier<String?>(null);
   bool _hasLoadedPurchases = false;
-
-
 
   @override
   void initState() {
@@ -67,10 +64,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _controller.bootstrap();
       _fetchPurchases();
-
     });
-
-
   }
 
   @override
@@ -84,78 +78,73 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
     super.dispose();
   }
 
-
   @override
   Widget build(BuildContext context) {
-
-
     return AnimatedBuilder(
-        animation: _controller,
-        builder: (context, _) {
-          final state = _controller.viewState;
-          if (_searchController.text != _controller.query) {
-            _searchController.value = _searchController.value.copyWith(
-              text: _controller.query,
-              selection: TextSelection.collapsed(
-                offset: _controller.query.length,
-
+      animation: _controller,
+      builder: (context, _) {
+        final state = _controller.viewState;
+        if (_searchController.text != _controller.query) {
+          _searchController.value = _searchController.value.copyWith(
+            text: _controller.query,
+            selection: TextSelection.collapsed(
+              offset: _controller.query.length,
             ),
-            );
-          }
-          return Scaffold(
-            backgroundColor: context.color.backgroundColor,
-            appBar: UiUtils.buildAppBar(
-              context,
-              showBackButton: true,
-              title: 'wifiCabin'.translate(context),
-            ),
-            body: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Column(
-                children: [
-                _SearchHeaderBar(
-                controller: _searchController,
-                focusNode: _searchFocusNode,
-                isLoading: state.status == WifiCabinLoadStatus.loading &&
-                    !state.hasData,
-                onChanged: (value) => _controller.updateQuery(value),
-                onSubmitted: (value) =>
-                    _controller.updateQuery(value, immediate: true),
-                onClear: _controller.clearQuery,
-                onRefresh: () => _controller.refreshNetworks(force: true),
-              ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
-                  switchInCurve: Curves.easeOut,
-                  switchOutCurve: Curves.easeIn,
-                  child: _buildBodyForState(context, state),
-                  ),
-              ),
-                ],
-            ),
-            ),
-              bottomNavigationBar: SafeArea(
-                minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(52),
-                    backgroundColor: context.color.territoryColor,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () => _openAddNetworkSheet(context),
-                  icon: const Icon(Icons.add),
-                  label: const Text('إضافة شبكة جديدة'),
-            ),
-              ),
           );
-        },
+        }
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: UiUtils.buildAppBar(
+            context,
+            showBackButton: true,
+            title: 'wifiCabin'.translate(context),
+          ),
+          body: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Column(
+              children: [
+                _SearchHeaderBar(
+                  controller: _searchController,
+                  focusNode: _searchFocusNode,
+                  isLoading: state.status == WifiCabinLoadStatus.loading &&
+                      !state.hasData,
+                  onChanged: (value) => _controller.updateQuery(value),
+                  onSubmitted: (value) =>
+                      _controller.updateQuery(value, immediate: true),
+                  onClear: _controller.clearQuery,
+                  onRefresh: () => _controller.refreshNetworks(force: true),
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    switchInCurve: Curves.easeOut,
+                    switchOutCurve: Curves.easeIn,
+                    child: _buildBodyForState(context, state),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          bottomNavigationBar: SafeArea(
+            minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(52),
+                backgroundColor: context.color.territoryColor,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => _openAddNetworkSheet(context),
+              icon: const Icon(Icons.add),
+              label: const Text('إضافة شبكة جديدة'),
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildBodyForState(
-      BuildContext context, WifiCabinViewState state) {
+  Widget _buildBodyForState(BuildContext context, WifiCabinViewState state) {
     final grid = _buildNetworksGrid(state);
 
     switch (state.status) {
@@ -180,7 +169,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
               grid,
               _ErrorBanner(
                 message:
-                state.errorMessage ?? 'تعذّر تحديث الشبكات، حاول مجددًا.',
+                    state.errorMessage ?? 'تعذّر تحديث الشبكات، حاول مجددًا.',
                 onRetry: () => _controller.refreshNetworks(),
               ),
             ],
@@ -188,8 +177,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
         }
         return _ErrorState(
           key: const ValueKey('failure'),
-          message:
-          state.errorMessage ?? 'تعذّر جلب الشبكات في الوقت الحالي.',
+          message: state.errorMessage ?? 'تعذّر جلب الشبكات في الوقت الحالي.',
           onRetry: () => _controller.refreshNetworks(),
         );
     }
@@ -268,8 +256,6 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
     );
   }
 
-
-
   Future<void> _fetchPurchases({bool force = false}) async {
     if (_purchasesLoadingNotifier.value) return;
     if (!force && _hasLoadedPurchases) return;
@@ -288,8 +274,9 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
 
   void _registerPurchase(WifiPurchase purchase) {
     final List<WifiPurchase> current =
-    List<WifiPurchase>.from(_purchasesNotifier.value);
-    final int index = current.indexWhere((element) => element.id == purchase.id);
+        List<WifiPurchase>.from(_purchasesNotifier.value);
+    final int index =
+        current.indexWhere((element) => element.id == purchase.id);
     if (index >= 0) {
       current[index] = purchase;
     } else {
@@ -395,12 +382,11 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
 
   String _describeError(Object error) {
     if (error is ApiHttpException) {
-      final Map<String, dynamic> payload =
-      error.payload is Map<String, dynamic>
+      final Map<String, dynamic> payload = error.payload is Map<String, dynamic>
           ? Map<String, dynamic>.from(error.payload as Map)
           : error.payload is Map
-          ? Map<String, dynamic>.from(error.payload as Map)
-          : <String, dynamic>{};
+              ? Map<String, dynamic>.from(error.payload as Map)
+              : <String, dynamic>{};
       final String? base = _stringify(
         payload['message'] ?? payload['error'] ?? payload['detail'],
       );
@@ -459,9 +445,6 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
     return <String>[single];
   }
 
-
-
-
   Future<void> _openAddNetworkSheet(BuildContext context) async {
     final dynamic result = await showModalBottomSheet<dynamic>(
       context: context,
@@ -469,10 +452,8 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
       useSafeArea: true,
       backgroundColor: context.color.backgroundColor,
       builder: (_) => _AddNetworkSheet(
-
         repository: _repository,
       ),
-
     );
 
     if (result != null) {
@@ -481,20 +462,21 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
       String? message;
       if (result is Map) {
         final map = Map<String, dynamic>.from(result as Map);
-        message = (map['message'] as String?) ?? (() {
-          final String? name = map['name'] as String?;
-          final String? status = map['status'] as String?;
-          if (name != null && status != null) {
-            return 'تم إرسال طلب الشبكة "$name" (الحالة: $status)';
-          }
-          if (name != null) {
-            return 'تمت إضافة الشبكة "$name" بنجاح';
-          }
-          if (status != null) {
-            return 'تم إرسال الطلب (الحالة: $status)';
-          }
-          return null;
-        })();
+        message = (map['message'] as String?) ??
+            (() {
+              final String? name = map['name'] as String?;
+              final String? status = map['status'] as String?;
+              if (name != null && status != null) {
+                return 'تم إرسال طلب الشبكة "$name" (الحالة: $status)';
+              }
+              if (name != null) {
+                return 'تمت إضافة الشبكة "$name" بنجاح';
+              }
+              if (status != null) {
+                return 'تم إرسال الطلب (الحالة: $status)';
+              }
+              return null;
+            })();
       } else if (result is String) {
         message = 'تمت إضافة الشبكة "$result" بنجاح';
       }
@@ -506,8 +488,8 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
     }
   }
 
-  Future<void> _openPlansSheet(BuildContext context, WifiNetwork network) async {
-
+  Future<void> _openPlansSheet(
+      BuildContext context, WifiNetwork network) async {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -522,7 +504,6 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
     );
   }
 }
-
 
 class _SearchHeaderBar extends StatelessWidget {
   const _SearchHeaderBar({
@@ -549,10 +530,8 @@ class _SearchHeaderBar extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-
       decoration: BoxDecoration(
         color: color.secondaryColor.withOpacity(0.2),
-
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -568,7 +547,6 @@ class _SearchHeaderBar extends StatelessWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-
               Expanded(
                 child: ValueListenableBuilder<TextEditingValue>(
                   valueListenable: controller,
@@ -585,10 +563,10 @@ class _SearchHeaderBar extends StatelessWidget {
                         suffixIcon: value.text.isEmpty
                             ? null
                             : IconButton(
-                          tooltip: 'مسح البحث',
-                          icon: const Icon(Icons.clear),
-                          onPressed: onClear,
-                        ),
+                                tooltip: 'مسح البحث',
+                                icon: const Icon(Icons.clear),
+                                onPressed: onClear,
+                              ),
                       ),
                     );
                   },
@@ -608,10 +586,10 @@ class _SearchHeaderBar extends StatelessWidget {
                   ),
                   child: isLoading
                       ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2.2),
-                  )
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2.2),
+                        )
                       : const Icon(Icons.refresh),
                 ),
               ),
@@ -661,7 +639,6 @@ class _NetworksGrid extends StatelessWidget {
     }
 
     return GridView.builder(
-
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
         mainAxisSpacing: 12,
@@ -674,9 +651,8 @@ class _NetworksGrid extends StatelessWidget {
         final String subtitle = network.planCount > 0
             ? 'عدد الفئات: ${network.planCount}'
             : 'اطلع على تفاصيل الشبكة';
-        final String? currencyBadge = network.currencies.isNotEmpty
-            ? network.currencies.first
-            : null;
+        final String? currencyBadge =
+            network.currencies.isNotEmpty ? network.currencies.first : null;
 
         return _WifiNetworkCard(
           name: network.name,
@@ -691,7 +667,6 @@ class _NetworksGrid extends StatelessWidget {
 }
 
 class _WifiNetworkCard extends StatelessWidget {
-
   const _WifiNetworkCard({
     required this.name,
     required this.subtitle,
@@ -700,13 +675,11 @@ class _WifiNetworkCard extends StatelessWidget {
     required this.onTap,
   });
 
-
   final String name;
   final String subtitle;
   final String? imageUrl;
   final String? currencyBadge;
   final VoidCallback onTap;
-
 
   @override
   Widget build(BuildContext context) {
@@ -814,7 +787,6 @@ class _WifiNetworkCard extends StatelessWidget {
                 fontSize: 11,
               ),
             ),
-
           ],
         ),
       ),
@@ -822,11 +794,7 @@ class _WifiNetworkCard extends StatelessWidget {
   }
 }
 
-
-
 class _PlansSheet extends StatefulWidget {
-
-
   const _PlansSheet({
     required this.network,
     required this.onRegisterPurchase,
@@ -839,7 +807,6 @@ class _PlansSheet extends StatefulWidget {
   final Future<void> Function({bool force}) onRefreshPurchases;
   final Future<void> Function(WifiPurchase) onShowCodes;
 
-
   @override
   State<_PlansSheet> createState() => _PlansSheetState();
 }
@@ -849,7 +816,6 @@ class _PlansSheetState extends State<_PlansSheet> {
   List<WifiPlan> _plans = <WifiPlan>[];
   bool _isLoading = false;
   String? _error;
-
 
   @override
   void initState() {
@@ -887,7 +853,6 @@ class _PlansSheetState extends State<_PlansSheet> {
       }
     });
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -1094,8 +1059,8 @@ class _PlansSheetState extends State<_PlansSheet> {
     final messenger = ScaffoldMessenger.of(context);
 
     if (result.isPending) {
-      final String message = result.message ??
-          'تم إرسال طلب الدفع. سنخطرك عند اكتمال المعالجة.';
+      final String message =
+          result.message ?? 'تم إرسال طلب الدفع. سنخطرك عند اكتمال المعالجة.';
       messenger.showSnackBar(SnackBar(content: Text(message)));
       unawaited(widget.onRefreshPurchases(force: true));
       return;
@@ -1117,8 +1082,6 @@ class _PlansSheetState extends State<_PlansSheet> {
     }
   }
 }
-
-
 
 class _LoginScreenshotPreview extends StatelessWidget {
   const _LoginScreenshotPreview({required this.imageUrl});
@@ -1237,16 +1200,11 @@ class _LoginScreenshotPreview extends StatelessWidget {
   }
 }
 
-
-
 class _PlanTile extends StatelessWidget {
-
   const _PlanTile({required this.plan, required this.onSelect});
-
 
   final WifiPlan plan;
   final VoidCallback onSelect;
-
 
   @override
   Widget build(BuildContext context) {
@@ -1342,22 +1300,24 @@ class _WifiPlanHighlights extends StatelessWidget {
         children: labels
             .map(
               (label) => Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: color.backgroundColor,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: color.secondaryColor.withOpacity(0.35)),
-            ),
-            child: Text(
-              label,
-              style: TextStyle(
-                color: color.textDefaultColor.withOpacity(0.85),
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: color.backgroundColor,
+                  borderRadius: BorderRadius.circular(10),
+                  border:
+                      Border.all(color: color.secondaryColor.withOpacity(0.35)),
+                ),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: color.textDefaultColor.withOpacity(0.85),
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
-            ),
-          ),
-        )
+            )
             .toList(),
       ),
     );
@@ -1376,7 +1336,7 @@ class _CheckoutSheet extends StatefulWidget {
 class _CheckoutSheetState extends State<_CheckoutSheet> {
   final WifiRepository _repository = const WifiRepository();
   final Map<String, WifiPaymentGateway> _gatewayEntities =
-  <String, WifiPaymentGateway>{};
+      <String, WifiPaymentGateway>{};
 
   int _quantity = 1;
   String _gateway = 'wallet';
@@ -1387,8 +1347,6 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
   bool _acknowledged = false;
 
   num get total => widget.plan.price * _quantity;
-
-
 
   @override
   void initState() {
@@ -1414,16 +1372,16 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
       views = gateways
           .map(
             (gateway) => PaymentGatewayView(
-          id: gateway.id,
-          name: gateway.name,
-          description: gateway.description,
-        ),
-      )
+              id: gateway.id,
+              name: gateway.name,
+              description: gateway.description,
+            ),
+          )
           .toList();
 
       if (views.isEmpty) {
-        final WifiPaymentGateway fallback =
-        const WifiPaymentGateway(id: 'wallet', name: 'المحفظة', isWallet: true);
+        final WifiPaymentGateway fallback = const WifiPaymentGateway(
+            id: 'wallet', name: 'المحفظة', isWallet: true);
         lookup = <String, WifiPaymentGateway>{fallback.id: fallback};
         views = const <PaymentGatewayView>[
           PaymentGatewayView(id: 'wallet', name: 'المحفظة'),
@@ -1436,8 +1394,8 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
           ? _extractErrorMessage(error.payload) ?? error.toString()
           : error.toString();
       if (_gateways.isEmpty) {
-        final WifiPaymentGateway fallback =
-        const WifiPaymentGateway(id: 'wallet', name: 'المحفظة', isWallet: true);
+        final WifiPaymentGateway fallback = const WifiPaymentGateway(
+            id: 'wallet', name: 'المحفظة', isWallet: true);
         lookup = <String, WifiPaymentGateway>{fallback.id: fallback};
         views = const <PaymentGatewayView>[
           PaymentGatewayView(id: 'wallet', name: 'المحفظة'),
@@ -1472,9 +1430,9 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
   }
 
   String _pickDefaultGatewayId(
-      List<WifiPaymentGateway> gateways,
-      String fallbackId,
-      ) {
+    List<WifiPaymentGateway> gateways,
+    String fallbackId,
+  ) {
     for (final gateway in gateways) {
       if (gateway.isDefault) {
         return gateway.id;
@@ -1608,12 +1566,11 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
           return Container(
             decoration: BoxDecoration(
               color: color.backgroundColor,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Column(
-
               children: [
-
                 const SizedBox(height: 8),
                 Container(
                   height: 4,
@@ -1639,7 +1596,8 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        widget.plan.description ?? 'راجع تفاصيل الخطة قبل المتابعة.',
+                        widget.plan.description ??
+                            'راجع تفاصيل الخطة قبل المتابعة.',
                         style: TextStyle(
                           color: color.textDefaultColor.withOpacity(0.7),
                         ),
@@ -1665,7 +1623,8 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                           const SizedBox(width: 12),
                           _QtyStepper(
                             value: _quantity,
-                            onChanged: (value) => setState(() => _quantity = value),
+                            onChanged: (value) =>
+                                setState(() => _quantity = value),
                           ),
                         ],
                       ),
@@ -1708,8 +1667,7 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                             child: Text(
                               'لا توجد طرق دفع متاحة حالياً.',
                               style: TextStyle(
-                                color:
-                                color.textDefaultColor.withOpacity(0.75),
+                                color: color.textDefaultColor.withOpacity(0.75),
                               ),
                             ),
                           ),
@@ -1733,8 +1691,7 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                                 ),
                                 TextButton(
                                   onPressed: _loadGateways,
-                                  child:
-                                  const Text('إعادة محاولة تحميل الطرق'),
+                                  child: const Text('إعادة محاولة تحميل الطرق'),
                                 ),
                               ],
                             ),
@@ -1767,7 +1724,8 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                                 child: Text(
                                   'الكرت يباع من صاحب الشبكة مباشرة. التطبيق يوفر وسيط الدفع فقط ولا يضمن صلاحية الكود أو الخدمة.',
                                   style: TextStyle(
-                                    color: color.textDefaultColor.withOpacity(0.8),
+                                    color:
+                                        color.textDefaultColor.withOpacity(0.8),
                                     fontSize: 12.5,
                                   ),
                                 ),
@@ -1780,8 +1738,8 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                           value: _acknowledged,
                           onChanged: _isSubmitting
                               ? null
-                              : (value) =>
-                              setState(() => _acknowledged = value ?? false),
+                              : (value) => setState(
+                                  () => _acknowledged = value ?? false),
                           controlAffinity: ListTileControlAffinity.leading,
                           contentPadding: EdgeInsets.zero,
                           title: Text(
@@ -1803,34 +1761,34 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                     height: 48,
                     child: ElevatedButton(
                       onPressed:
-                      (_isSubmitting || !_acknowledged) ? null : _onConfirm,
+                          (_isSubmitting || !_acknowledged) ? null : _onConfirm,
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 200),
                         child: _isSubmitting
                             ? Row(
-                          key: const ValueKey('processing'),
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Text('جارٍ معالجة الدفع'),
-                          ],
-                        )
+                                key: const ValueKey('processing'),
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Text('جارٍ معالجة الدفع'),
+                                ],
+                              )
                             : Row(
-                          key: const ValueKey('confirm'),
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.check_circle_outline),
-                            SizedBox(width: 8),
-                            Text('تأكيد الدفع'),
-                          ],
-                        ),
+                                key: const ValueKey('confirm'),
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  Icon(Icons.check_circle_outline),
+                                  SizedBox(width: 8),
+                                  Text('تأكيد الدفع'),
+                                ],
+                              ),
                       ),
                     ),
                   ),
@@ -1851,19 +1809,13 @@ class _QtyStepper extends StatelessWidget {
   final int value;
   final ValueChanged<int> onChanged;
 
-
-
   @override
   Widget build(BuildContext context) {
     final color = context.color;
     return Container(
-
-
       decoration: BoxDecoration(
-
         borderRadius: BorderRadius.circular(12),
         color: color.secondaryColor.withOpacity(0.2),
-
       ),
       child: Row(
         children: [
@@ -1900,7 +1852,6 @@ class _TotalBar extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         color: color.secondaryColor.withOpacity(0.2),
@@ -1934,17 +1885,12 @@ class _GatewayPicker extends StatelessWidget {
     required this.value,
     required this.onChanged,
     this.enabled = true,
-
   });
-
-
 
   final List<PaymentGatewayView> gateways;
   final String value;
   final ValueChanged<String> onChanged;
   final bool enabled;
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -1954,28 +1900,28 @@ class _GatewayPicker extends StatelessWidget {
       children: gateways
           .map(
             (gateway) => RadioListTile<String>(
-          value: gateway.id,
-          groupValue: value,
+              value: gateway.id,
+              groupValue: value,
               onChanged: enabled
                   ? (val) {
-                if (val != null) onChanged(val);
-              }
+                      if (val != null) onChanged(val);
+                    }
                   : null,
-          title: Text(
-            gateway.name,
-            style: TextStyle(color: color.textDefaultColor),
-          ),
+              title: Text(
+                gateway.name,
+                style: TextStyle(color: color.textDefaultColor),
+              ),
               subtitle: gateway.description != null
                   ? Text(
-                gateway.description!,
-                style: TextStyle(
-                  color: color.textDefaultColor.withOpacity(0.65),
-                  fontSize: 12,
-                ),
-              )
+                      gateway.description!,
+                      style: TextStyle(
+                        color: color.textDefaultColor.withOpacity(0.65),
+                        fontSize: 12,
+                      ),
+                    )
                   : null,
-        ),
-      )
+            ),
+          )
           .toList(),
     );
   }
@@ -2067,7 +2013,6 @@ class _PurchasesSheetState extends State<_PurchasesSheet> {
     widget.errorListenable.addListener(_onChanged);
   }
 
-
   void _syncFromListenable() {
     _purchases = widget.purchasesListenable.value.toList();
     _isLoading = widget.loadingListenable.value;
@@ -2077,7 +2022,6 @@ class _PurchasesSheetState extends State<_PurchasesSheet> {
   void _onChanged() {
     if (!mounted) return;
     setState(_syncFromListenable);
-
   }
 
   @override
@@ -2106,7 +2050,7 @@ class _PurchasesSheetState extends State<_PurchasesSheet> {
             decoration: BoxDecoration(
               color: color.backgroundColor,
               borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(16)),
+                  const BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Column(
               children: [
@@ -2158,9 +2102,9 @@ class _PurchasesSheetState extends State<_PurchasesSheet> {
   }
 
   Widget _buildBody(
-      BuildContext context,
-      ScrollController controller,
-      ) {
+    BuildContext context,
+    ScrollController controller,
+  ) {
     final color = context.color;
     if (_isLoading && _purchases.isEmpty) {
       return const Center(child: CircularProgressIndicator());
@@ -2300,7 +2244,7 @@ class _PurchaseTile extends StatelessWidget {
     final bool pending = _isPending(status);
     final DateTime? createdAt = purchase.createdAt;
     final String? created =
-    createdAt != null ? dateFormat.format(createdAt.toLocal()) : null;
+        createdAt != null ? dateFormat.format(createdAt.toLocal()) : null;
     final String? totalText = purchase.total != null
         ? '${purchase.total!.toStringAsFixed(2)} ${purchase.currency ?? ''}'
         : null;
@@ -2389,7 +2333,7 @@ class _PurchaseTile extends StatelessWidget {
               if (created != null) const Spacer(),
               Container(
                 padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: pending
                       ? color.secondaryColor.withOpacity(0.3)
@@ -2399,8 +2343,9 @@ class _PurchaseTile extends StatelessWidget {
                 child: Text(
                   status,
                   style: TextStyle(
-                    color:
-                    pending ? color.textDefaultColor : color.backgroundColor,
+                    color: pending
+                        ? color.textDefaultColor
+                        : color.backgroundColor,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -2431,28 +2376,28 @@ class _PurchaseTile extends StatelessWidget {
               children: purchase.codes
                   .map(
                     (code) => Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: color.backgroundColor,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: color.secondaryColor.withOpacity(0.4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color.backgroundColor,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: color.secondaryColor.withOpacity(0.4),
+                        ),
+                      ),
+                      child: SelectableText(
+                        code,
+                        style: TextStyle(
+                          color: color.textDefaultColor,
+                          fontFamily: 'monospace',
+                          letterSpacing: 1.0,
+                          fontSize: 13,
+                        ),
+                      ),
                     ),
-                  ),
-                  child: SelectableText(
-                    code,
-                    style: TextStyle(
-                      color: color.textDefaultColor,
-                      fontFamily: 'monospace',
-                      letterSpacing: 1.0,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              )
+                  )
                   .toList(),
             ),
           ] else
@@ -2467,15 +2412,11 @@ class _PurchaseTile extends StatelessWidget {
       ),
     );
   }
-
 }
-
 
 class _AddNetworkSheet extends StatefulWidget {
   const _AddNetworkSheet({WifiRepository? repository})
       : repository = repository ?? const WifiRepository();
-
-
 
   final WifiRepository repository;
 
@@ -2484,11 +2425,8 @@ class _AddNetworkSheet extends StatefulWidget {
 }
 
 class _AddNetworkSheetState extends _OwnerRequestFormState<_AddNetworkSheet> {
-
-
   @override
   WifiRepository get repository => widget.repository;
-
 
   @override
   void handleCompletion(Map<String, dynamic> result) {
@@ -2497,46 +2435,133 @@ class _AddNetworkSheetState extends _OwnerRequestFormState<_AddNetworkSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final color = context.color;
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
 
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.9,
-      minChildSize: 0.6,
-      maxChildSize: 0.95,
-      builder: (context, controller) {
-        return Container(
-          decoration: BoxDecoration(
-            color: color.backgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      child: Material(
+        color: colors.surface,
+        child: DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.9,
+          minChildSize: 0.6,
+          maxChildSize: 0.95,
+          builder: (sheetContext, controller) {
+            return Column(
+              children: [
+                _buildSheetHeader(sheetContext),
+                const Divider(height: 1),
+                Expanded(
+                  child: buildFormContent(
+                    controller: controller,
+                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+                    showHeading: false,
+                  ),
+                ),
+                SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                    child: buildSubmitButton(padding: EdgeInsets.zero),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSheetHeader(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final onSurface = colors.onSurface;
+    final accent = colors.territoryColor;
+    final textTheme = theme.textTheme;
+
+    return Container(
+      width: double.infinity,
+      color: colors.surface,
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Align(
+            alignment: Alignment.center,
+            child: Container(
+              width: 44,
+              height: 4,
+              decoration: BoxDecoration(
+                color: onSurface.withOpacity(.18),
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
           ),
-          child: Column(
-
+          const SizedBox(height: 18),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 8),
-              Container(
-                height: 4,
-                width: 44,
-                decoration: BoxDecoration(
-                  color: color.secondaryColor,
-                  borderRadius: BorderRadius.circular(4),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'أضف شبكتك',
+                      style:
+                          (textTheme.titleMedium ?? const TextStyle()).copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'أدخل بيانات الشبكة وملفات الاعتماد ليتمكن فريقنا من مراجعتها ونشرها.',
+                      style:
+                          (textTheme.bodySmall ?? const TextStyle()).copyWith(
+                        color: onSurface.withOpacity(.7),
+                        height: 1.4,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'تأكد من صحة وسيلة التواصل والملفات المرفقة قبل الإرسال.',
+                      style:
+                          (textTheme.bodySmall ?? const TextStyle()).copyWith(
+                        color: onSurface.withOpacity(.6),
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: buildFormContent(controller: controller),
-
+              const SizedBox(width: 12),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: accent.withOpacity(.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: IconButton(
+                  tooltip: 'إغلاق',
+                  splashRadius: 22,
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  icon: Icon(
+                    Icons.close_rounded,
+                    color: accent,
+                  ),
+                ),
               ),
-              buildSubmitButton(),
-
             ],
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }
-
 
 class _AddNetworkScreen extends StatefulWidget {
   const _AddNetworkScreen({WifiRepository? repository})
@@ -2582,14 +2607,15 @@ class _AddNetworkScreenState extends _OwnerRequestFormState<_AddNetworkScreen> {
   }
 }
 
-
-
-
-abstract class _OwnerRequestFormState<T extends StatefulWidget> extends State<T> {
-
+abstract class _OwnerRequestFormState<T extends StatefulWidget>
+    extends State<T> {
   static const int _maxUploadSizeBytes = 4 * 1024 * 1024;
-  static const List<String> _allowedImageExtensions = <String>['jpg', 'jpeg', 'png', 'webp'];
-
+  static const List<String> _allowedImageExtensions = <String>[
+    'jpg',
+    'jpeg',
+    'png',
+    'webp'
+  ];
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _contactController = TextEditingController();
@@ -2614,70 +2640,83 @@ abstract class _OwnerRequestFormState<T extends StatefulWidget> extends State<T>
   Widget buildFormContent({
     ScrollController? controller,
     EdgeInsetsGeometry? padding,
+    bool showHeading = true,
   }) {
-    final color = context.color;
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+    final onSurface = theme.colorScheme.onSurface;
     final EdgeInsetsGeometry effectivePadding =
         padding ?? const EdgeInsets.symmetric(horizontal: 16);
+
+    final List<Widget> children = <Widget>[];
+
+    if (showHeading) {
+      children
+        ..add(
+          Text(
+            'أضف شبكتك',
+            style: (textTheme.titleMedium ?? const TextStyle()).copyWith(
+              fontWeight: FontWeight.w800,
+              color: onSurface,
+            ),
+          ),
+        )
+        ..add(const SizedBox(height: 16));
+    }
+
+    children.addAll([
+      TextField(
+        controller: _nameController,
+        enabled: !_isSubmitting,
+        decoration: const InputDecoration(
+          labelText: 'اسم الشبكة',
+        ),
+      ),
+      const SizedBox(height: 16),
+      _OwnerRequestFilePickerTile(
+        title: 'شعار الشبكة',
+        placeholder: 'ارفع صورة الشعار',
+        fileName: _logoFile?.name,
+        isBusy: _isSubmitting,
+        onTap: () => _pickImage(isLogo: true),
+      ),
+      const SizedBox(height: 16),
+      _OwnerRequestFilePickerTile(
+        title: 'صورة صفحة الدخول',
+        placeholder: 'ارفع صورة توضح صفحة الدخول',
+        fileName: _loginScreenshotFile?.name,
+        isBusy: _isSubmitting,
+        onTap: () => _pickImage(isLogo: false),
+      ),
+      const SizedBox(height: 16),
+      TextField(
+        controller: _contactController,
+        enabled: !_isSubmitting,
+        decoration: const InputDecoration(
+          labelText: 'وسيلة التواصل',
+          hintText: 'مثال: 777123456 أو @account',
+        ),
+      ),
+      const SizedBox(height: 16),
+      TextField(
+        controller: _notesController,
+        enabled: !_isSubmitting,
+        maxLines: 4,
+        decoration: const InputDecoration(
+          labelText: 'ملاحظات إضافية (اختياري)',
+        ),
+      ),
+    ]);
 
     return ListView(
       controller: controller,
       padding: effectivePadding,
-      children: [
-        Text(
-          'أضف شبكتك',
-          style: TextStyle(
-            color: color.textDefaultColor,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _nameController,
-          enabled: !_isSubmitting,
-          decoration: const InputDecoration(
-            labelText: 'اسم الشبكة',
-          ),
-        ),
-        const SizedBox(height: 16),
-        _OwnerRequestFilePickerTile(
-          title: 'شعار الشبكة',
-          placeholder: 'ارفع صورة الشعار',
-          fileName: _logoFile?.name,
-          isBusy: _isSubmitting,
-          onTap: () => _pickImage(isLogo: true),
-        ),
-        const SizedBox(height: 16),
-        _OwnerRequestFilePickerTile(
-          title: 'صورة صفحة الدخول',
-          placeholder: 'ارفع صورة توضح صفحة الدخول',
-          fileName: _loginScreenshotFile?.name,
-          isBusy: _isSubmitting,
-          onTap: () => _pickImage(isLogo: false),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _contactController,
-          enabled: !_isSubmitting,
-          decoration: const InputDecoration(
-            labelText: 'وسيلة التواصل',
-            hintText: 'مثال: 777123456 أو @account',
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _notesController,
-          enabled: !_isSubmitting,
-          maxLines: 4,
-          decoration: const InputDecoration(
-            labelText: 'ملاحظات إضافية (اختياري)',
-          ),
-        ),
-      ],
+      children: children,
     );
   }
 
-  Widget buildSubmitButton({EdgeInsetsGeometry padding = const EdgeInsets.all(16)}) {
+  Widget buildSubmitButton(
+      {EdgeInsetsGeometry padding = const EdgeInsets.all(16)}) {
     return Padding(
       padding: padding,
       child: SizedBox(
@@ -2687,10 +2726,10 @@ abstract class _OwnerRequestFormState<T extends StatefulWidget> extends State<T>
           onPressed: _isSubmitting ? null : _onSubmit,
           child: _isSubmitting
               ? const SizedBox(
-            width: 22,
-            height: 22,
-            child: CircularProgressIndicator(strokeWidth: 2.5),
-          )
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2.5),
+                )
               : const Text('إرسال الطلب'),
         ),
       ),
@@ -2714,9 +2753,6 @@ abstract class _OwnerRequestFormState<T extends StatefulWidget> extends State<T>
       return;
     }
 
-
-
-
     if (_logoFile == null) {
       _showError('يرجى رفع صورة شعار الشبكة.');
       return;
@@ -2728,16 +2764,15 @@ abstract class _OwnerRequestFormState<T extends StatefulWidget> extends State<T>
     }
 
     final MultipartFile? logoMultipart = _prepareMultipart(_logoFile!);
-    final MultipartFile? loginMultipart = _prepareMultipart(_loginScreenshotFile!);
+    final MultipartFile? loginMultipart =
+        _prepareMultipart(_loginScreenshotFile!);
 
     if (logoMultipart == null || loginMultipart == null) {
-
       return;
     }
 
     setState(() => _isSubmitting = true);
     try {
-
       final Map<String, dynamic> response = await repository.createOwnerRequest(
         name: name,
         contact: contact,
@@ -2790,9 +2825,6 @@ abstract class _OwnerRequestFormState<T extends StatefulWidget> extends State<T>
     }
   }
 
-
-
-
   Future<void> _pickImage({required bool isLogo}) async {
     if (_isSubmitting) return;
     FocusScope.of(context).unfocus();
@@ -2811,7 +2843,8 @@ abstract class _OwnerRequestFormState<T extends StatefulWidget> extends State<T>
       final PlatformFile file = result.files.single;
       final String extension = (file.extension ?? '').toLowerCase();
       if (!_allowedImageExtensions.contains(extension)) {
-        _showError('صيغة الملف غير مدعومة. يرجى اختيار صورة بصيغة PNG أو JPG أو WEBP.');
+        _showError(
+            'صيغة الملف غير مدعومة. يرجى اختيار صورة بصيغة PNG أو JPG أو WEBP.');
         return;
       }
 
@@ -2859,8 +2892,6 @@ abstract class _OwnerRequestFormState<T extends StatefulWidget> extends State<T>
     return null;
   }
 
-
-
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
@@ -2874,8 +2905,6 @@ abstract class _OwnerRequestFormState<T extends StatefulWidget> extends State<T>
     return text;
   }
 }
-
-
 
 class _OwnerRequestFilePickerTile extends StatelessWidget {
   const _OwnerRequestFilePickerTile({
@@ -2900,48 +2929,48 @@ class _OwnerRequestFilePickerTile extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-      Text(
-      title,
-      style: TextStyle(
-        color: color.textDefaultColor,
-        fontWeight: FontWeight.w600,
+        Text(
+          title,
+          style: TextStyle(
+            color: color.textDefaultColor,
+            fontWeight: FontWeight.w600,
           ),
-    ),
-    const SizedBox(height: 8),
-    GestureDetector(
-    onTap: isBusy ? null : onTap,
-    child: Container(
-    height: 72,
-    decoration: BoxDecoration(
-    color: color.secondaryColor,
-    borderRadius: BorderRadius.circular(12),
-    border: Border.all(color: color.borderColor.darken(12)),
-    ),
-    padding: const EdgeInsets.symmetric(horizontal: 16),
-    child: Row(
-    children: [
-    Icon(
-    Icons.cloud_upload_outlined,
-    color: color.territoryColor,
-    size: 28,
-    ),
-    const SizedBox(width: 12),
-    Expanded(
-    child: Text(
-    hasFile ? fileName! : placeholder,
-    maxLines: 2,
-    overflow: TextOverflow.ellipsis,
-    style: TextStyle(
-    color: hasFile
-    ? color.textDefaultColor
-        : color.textDefaultColor.withOpacity(0.6),
-    ),
-    ),
-    ),
-    ],
-    ),
+        ),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: isBusy ? null : onTap,
+          child: Container(
+            height: 72,
+            decoration: BoxDecoration(
+              color: color.secondaryColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: color.borderColor.darken(12)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.cloud_upload_outlined,
+                  color: color.territoryColor,
+                  size: 28,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    hasFile ? fileName! : placeholder,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: hasFile
+                          ? color.textDefaultColor
+                          : color.textDefaultColor.withOpacity(0.6),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-    ),
+        ),
       ],
     );
   }
@@ -2950,7 +2979,6 @@ class _OwnerRequestFilePickerTile extends StatelessWidget {
 /* ========================== نماذج عرض (View Models) ========================== */
 class _LoadingOverlay extends StatelessWidget {
   const _LoadingOverlay();
-
 
   @override
   Widget build(BuildContext context) {

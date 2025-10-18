@@ -318,15 +318,22 @@ class LoginScreenState extends State<SignUpMainScreen> {
                 .toString()
                 .isNotEmpty;
 
+        final bool shouldAuthenticate =
+            hasAccountType && isEmailVerified && hasCompleteName;
+
+        if (shouldAuthenticate) {
+          HiveUtils.setUserIsAuthenticated(true);
+          await NotificationService.resendPendingTokenIfNeeded();
+        }
+
         context.read<UserDetailsCubit>().fill(HiveUtils.getUserDetails());
         FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
           context,
           clearCacheBeforeFetch: true,
         );
 
-        if (hasAccountType && isEmailVerified && hasCompleteName) {
-          HiveUtils.setUserIsAuthenticated(true);
-          await NotificationService.resendPendingTokenIfNeeded();
+        if (shouldAuthenticate) {
+
           if ((HiveUtils.getCityName() ?? '').isNotEmpty &&
               HiveUtils.getCityName() != 'null') {
             HelperUtils.killPreviousPages(

@@ -13,6 +13,8 @@ use App\Services\CurrencyIconStorageService;
 use App\Services\CurrencyRateHistoryService;
 use App\Services\ResponseService;
 use Carbon\Carbon;
+use DateTimeInterface;
+use App\Models\CurrencyRateChangeLog;
 use Illuminate\Http\Request;
 use App\Services\CurrencyDataMonitor;
 use Illuminate\Http\UploadedFile;
@@ -518,6 +520,30 @@ class CurrencyController extends Controller
     }
 
 
+
+    public function changeLogs(Request $request)
+    {
+        ResponseService::noAnyPermissionThenSendJson(['currency-rate-list']);
+
+        $perPage = (int) max(1, min((int) $request->integer('per_page', 15), 100));
+
+        $logs = CurrencyRateChangeLog::query()
+            ->with([
+                'currencyRate:id,currency_name',
+                'governorate:id,name,code',
+                'user:id,name,email',
+            ])
+            ->when($request->filled('currency_rate_id'), fn ($query) => $query->where('currency_rate_id', $request->integer('currency_rate_id')))
+            ->when($request->filled('governorate_id'), fn ($query) => $query->where('governorate_id', $request->integer('governorate_id')))
+            ->when($request->filled('change_type'), fn ($query) => $query->where('change_type', $request->input('change_type')))
+            ->orderByDesc('changed_at')
+            ->paginate($perPage);
+
+        return response()->json($logs);
+    }
+
+
+
     public function backfillHistory(Request $request, CurrencyRate $currency): \Illuminate\Http\JsonResponse
     {
         ResponseService::noAnyPermissionThenSendJson(['currency-rate-edit']);
@@ -964,6 +990,41 @@ class CurrencyController extends Controller
         return $trimmed === '' ? null : $trimmed;
     }
 
+
+    private function formatQuoteLogValues(?CurrencyRateQuote $quote): ?array
+    {
+        if (!$quote) {
+            return null;
+        }
+
+        return [
+            'sell_price' => $quote->sell_price !== null ? (string) $quote->sell_price : null,
+            'buy_price' => $quote->buy_price !== null ? (string) $quote->buy_price : null,
+            'source' => $quote->source,
+            'quoted_at' => $this->formatQuoteTimestamp($quote->quoted_at),
+            'is_default' => (bool) $quote->is_default,
+        ];
+    }
+
+    private function formatQuoteTimestamp($value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if ($value instanceof DateTimeInterface) {
+            return Carbon::instance($value)->toIso8601String();
+        }
+
+        return Carbon::parse($value)->toIso8601String();
+    }
+
+    private function snapshotsAreDifferent(?array $before, ?array $after): bool
+    {
+        return $before !== $after;
+    }
+
+
     private function persistCurrencyQuotes(CurrencyRate $currency, array $quotesPayload, int $defaultGovernorateId): void
     {
         $quotes = collect($quotesPayload)
@@ -992,14 +1053,45 @@ class CurrencyController extends Controller
             ]);
         }
 
-        $currency->quotes()
-            ->whereNotIn('governorate_id', $quotes->pluck('governorate_id'))
-            ->delete();
+        $existingQuotes = $currency->quotes()->get()->keyBy('governorate_id');
+        $incomingGovernorateIds = $quotes->pluck('governorate_id')->map(fn ($id) => (int) $id)->all();
+        $logEntries = [];
+        $userId = Auth::id();
+        $timestamp = now();
+
+        $quotesToDelete = $existingQuotes->filter(
+            fn (CurrencyRateQuote $quote) => !in_array((int) $quote->governorate_id, $incomingGovernorateIds, true)
+        );
+
+        if ($quotesToDelete->isNotEmpty()) {
+            $currency->quotes()->whereIn('id', $quotesToDelete->pluck('id'))->delete();
+
+            foreach ($quotesToDelete as $quote) {
+                $logEntries[] = [
+                    'currency_rate_id' => $currency->id,
+                    'governorate_id' => $quote->governorate_id,
+                    'change_type' => 'deleted',
+                    'previous_values' => $this->formatQuoteLogValues($quote),
+                    'new_values' => null,
+                    'changed_by' => $userId,
+                    'changed_at' => $timestamp,
+                ];
+            }
+
+            $existingQuotes = $existingQuotes->except($quotesToDelete->keys());
+        }
+
+
 
         $defaultQuote = null;
 
         foreach ($quotes as $quote) {
             $isDefault = $quote['governorate_id'] === $defaultGovernorateId;
+
+            /** @var CurrencyRateQuote|null $existingQuote */
+            $existingQuote = $existingQuotes->get($quote['governorate_id']);
+            $previousSnapshot = $this->formatQuoteLogValues($existingQuote);
+
 
             $stored = $currency->quotes()->updateOrCreate(
                 [
@@ -1014,6 +1106,35 @@ class CurrencyController extends Controller
                 ]
             );
 
+
+
+            $newSnapshot = $this->formatQuoteLogValues($stored);
+
+            if ($existingQuote) {
+                if ($this->snapshotsAreDifferent($previousSnapshot, $newSnapshot)) {
+                    $logEntries[] = [
+                        'currency_rate_id' => $currency->id,
+                        'governorate_id' => $stored->governorate_id,
+                        'change_type' => 'updated',
+                        'previous_values' => $previousSnapshot,
+                        'new_values' => $newSnapshot,
+                        'changed_by' => $userId,
+                        'changed_at' => $timestamp,
+                    ];
+                }
+            } else {
+                $logEntries[] = [
+                    'currency_rate_id' => $currency->id,
+                    'governorate_id' => $stored->governorate_id,
+                    'change_type' => 'created',
+                    'previous_values' => null,
+                    'new_values' => $newSnapshot,
+                    'changed_by' => $userId,
+                    'changed_at' => $timestamp,
+                ];
+            }
+
+
             if ($isDefault) {
                 $defaultQuote = $stored;
             }
@@ -1023,6 +1144,14 @@ class CurrencyController extends Controller
             ->where('governorate_id', '!=', $defaultGovernorateId)
             ->where('is_default', true)
             ->update(['is_default' => false]);
+
+
+        if (!empty($logEntries)) {
+            foreach ($logEntries as $entry) {
+                CurrencyRateChangeLog::create($entry);
+            }
+        }
+
 
         $currency->applyDefaultQuoteSnapshot($defaultQuote);
     }

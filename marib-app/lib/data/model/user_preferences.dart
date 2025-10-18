@@ -5,11 +5,10 @@ class UserPreferences {
     Set<int>? metalWatchlist,
     this.notificationFrequency = 'daily',
     Map<int, String>? currencyNotificationRegions,
-
-
   })  : currencyWatchlist = currencyWatchlist ?? const <int>{},
         metalWatchlist = metalWatchlist ?? const <int>{},
-        currencyNotificationRegions = currencyNotificationRegions ?? const <int, String>{};
+        currencyNotificationRegions =
+            currencyNotificationRegions ?? const <int, String>{};
 
   final String? favoriteGovernorateCode;
   final Set<int> currencyWatchlist;
@@ -23,26 +22,23 @@ class UserPreferences {
     Set<int>? metalWatchlist,
     String? notificationFrequency,
     Map<int, String>? currencyNotificationRegions,
-
   }) {
     final Set<int> effectiveCurrency =
-    (currencyWatchlist ?? this.currencyWatchlist).toSet();
+        (currencyWatchlist ?? this.currencyWatchlist).toSet();
     final Set<int> effectiveMetal =
-    (metalWatchlist ?? this.metalWatchlist).toSet();
+        (metalWatchlist ?? this.metalWatchlist).toSet();
     final Map<int, String> effectiveRegions = Map<int, String>.from(
       currencyNotificationRegions ?? this.currencyNotificationRegions,
     );
 
-
     return UserPreferences(
       favoriteGovernorateCode:
-      favoriteGovernorateCode ?? this.favoriteGovernorateCode,
+          favoriteGovernorateCode ?? this.favoriteGovernorateCode,
       currencyWatchlist: effectiveCurrency,
       metalWatchlist: effectiveMetal,
       notificationFrequency:
-      notificationFrequency ?? this.notificationFrequency,
+          notificationFrequency ?? this.notificationFrequency,
       currencyNotificationRegions: effectiveRegions,
-
     );
   }
 
@@ -52,11 +48,9 @@ class UserPreferences {
       'currency_watchlist': currencyWatchlist.toList(),
       'metal_watchlist': metalWatchlist.toList(),
       'notification_frequency': notificationFrequency,
-
       'currency_notification_regions': currencyNotificationRegions.map(
-            (int key, String value) => MapEntry(key.toString(), value),
+        (int key, String value) => MapEntry(key.toString(), value),
       ),
-
     };
   }
 
@@ -70,7 +64,6 @@ class UserPreferences {
       }
       return const <int>{};
     }
-
 
     Map<int, String> _parseRegions(dynamic value) {
       if (value is Map) {
@@ -87,19 +80,17 @@ class UserPreferences {
       return const <int, String>{};
     }
 
-
-
     return UserPreferences(
       favoriteGovernorateCode:
-      (json['favorite_governorate_code'] ?? json['favoriteGovernorateCode'])
-          ?.toString(),
+          (json['favorite_governorate_code'] ?? json['favoriteGovernorateCode'])
+              ?.toString(),
       currencyWatchlist:
-      _parseSet(json['currency_watchlist'] ?? json['currencyWatchlist']),
+          _parseSet(json['currency_watchlist'] ?? json['currencyWatchlist']),
       metalWatchlist:
-      _parseSet(json['metal_watchlist'] ?? json['metalWatchlist']),
+          _parseSet(json['metal_watchlist'] ?? json['metalWatchlist']),
       notificationFrequency: (json['notification_frequency'] ??
-          json['notificationFrequency'] ??
-          'daily')
+              json['notificationFrequency'] ??
+              'daily')
           .toString(),
       currencyNotificationRegions: _parseRegions(
         json['currency_notification_regions'] ??

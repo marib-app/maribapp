@@ -362,6 +362,12 @@ class Section_screenState extends State<Section_screen> {
   // =========================
   void _handleLoadMoreState(bool isLoading) {
     if (_isLoadingMore == isLoading) return;
+
+    if (!mounted) {
+      // يحمي setState من استدعاءات onLoadMore المتأخرة بعد التخلص من الودجت.
+      return;
+    }
+
     setState(() => _isLoadingMore = isLoading);
   }
 

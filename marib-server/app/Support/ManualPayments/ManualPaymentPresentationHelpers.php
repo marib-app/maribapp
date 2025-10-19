@@ -17,6 +17,7 @@ trait ManualPaymentPresentationHelpers
     protected array $manualPaymentRequestLookupCache = [];
 
     protected array $manualBankLookupCache = [];
+    protected array $paymentTransactionColumnSupportCache = [];
 
     protected ?bool $manualBankTableSupported = null;
 
@@ -348,6 +349,19 @@ trait ManualPaymentPresentationHelpers
 
         return $this->manualPaymentColumnSupportCache[$column];
     }
+
+
+
+    protected function paymentTransactionsSupportsColumn(string $column): bool
+    {
+        if (! array_key_exists($column, $this->paymentTransactionColumnSupportCache)) {
+            $this->paymentTransactionColumnSupportCache[$column] = Schema::hasTable('payment_transactions')
+                && Schema::hasColumn('payment_transactions', $column);
+        }
+
+        return $this->paymentTransactionColumnSupportCache[$column];
+    }
+
 
     protected function manualBankLookupSupported(): bool
     {

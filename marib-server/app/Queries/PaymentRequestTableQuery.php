@@ -467,7 +467,7 @@ class PaymentRequestTableQuery
             ->selectRaw("NULLIF(mpr.payable_type, '') as payable_type")
             ->selectRaw('mpr.payable_id as payable_id')
             ->selectRaw($manualGatewayKeyExpression . ' as gateway_key')
-            ->selectRaw(self::channelExpressionFromGateway($manualGatewayKeyExpression, 'mpr.payable_type') . ' as channel')
+            ->selectRaw($manualRequestChannelExpression . ' as channel')
             ->selectRaw($manualRequestGatewayNameSelect . ' as gateway_name')
             ->selectRaw(self::categoryExpression('mpr') . ' as category')
             ->selectRaw(

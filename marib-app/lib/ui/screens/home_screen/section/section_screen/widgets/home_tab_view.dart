@@ -101,6 +101,7 @@ class HomeTabView extends StatefulWidget {
 
   // وضع العرض الخارجي (Grid/List)
   final ValueListenable<ViewMode> viewModeListenable;
+  final double bottomPadding;
 
   final String? specialRequestSectionSlug;
 
@@ -129,6 +130,7 @@ class HomeTabView extends StatefulWidget {
     required this.viewModeListenable,
 
     this.specialRequestSectionSlug,
+    this.bottomPadding = 0.0,
 
     this.enableAdSlider = false, // افتراضي: مخفي
     this.adInterfaceType,
@@ -1182,7 +1184,10 @@ class _HomeTabViewState extends State<HomeTabView> {
 
               // فاصل متوسط
               SliverToBoxAdapter(child: SizedBox(height: gapMedium)),
-
+              if (widget.bottomPadding > 0)
+                SliverToBoxAdapter(
+                  child: SizedBox(height: widget.bottomPadding),
+                ),
               // ============= القائمة الرئيسية (كما هي عندك) =============
               // ملاحظة: داخل _itemsSliver احرص على استخدام SliverList/SliverGrid
               // مع addRepaintBoundaries: true, addAutomaticKeepAlives: false,

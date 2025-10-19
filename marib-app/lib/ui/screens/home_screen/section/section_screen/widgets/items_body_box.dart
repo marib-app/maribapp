@@ -36,6 +36,7 @@ class ItemsBodyBox extends StatefulWidget {
   final bool showShimmer;
   final TextEditingController searchController;
   final String? categoryName;
+  final double bottomContentPadding;
 
   // جديد: لا تبني شريط التصنيفات/السلايدر إلا إذا true
   final bool enableTopBar;
@@ -67,6 +68,7 @@ class ItemsBodyBox extends StatefulWidget {
     this.onLoadMore,
     this.specialRequestSectionSlug,
     this.onScrollDirectionChanged,
+    this.bottomContentPadding = 0.0,
 
     super.key,
   });
@@ -265,6 +267,7 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
                   categoryId: widget.categoryId,
                   searchController: widget.searchController,
                   viewModeListenable: _viewMode,
+                  bottomPadding: widget.bottomContentPadding,
 
                   // موجودة عندك مسبقًا:
                   currentSortBy: widget.sortBy,

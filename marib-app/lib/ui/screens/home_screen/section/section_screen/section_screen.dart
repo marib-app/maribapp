@@ -73,6 +73,14 @@ class Section_screenState extends State<Section_screen> {
   // متغيرات الحالة / الأداء
   // =========================
 
+
+  static const double _kFilterSortBarVerticalPadding = 16.0;
+  static const double _kFilterSortBarMinButtonHeight = 44.0;
+  static const double _kFilterSortBarMaxButtonHeight = 52.0;
+  static const double _kBottomBarMinimumSafeArea = 12.0;
+
+
+
   // ✅ تحويل categoryId مرة واحدة
   static const int _defaultCategoryId = 0;
 
@@ -193,7 +201,22 @@ class Section_screenState extends State<Section_screen> {
     );
   }
 
+  double _estimateFilterSortBarHeight(MediaQueryData mediaQuery) {
+    final double fallbackHeight =
+    (mediaQuery.size.height * 0.08)
+        .clamp(_kFilterSortBarMinButtonHeight, _kFilterSortBarMaxButtonHeight)
+        .toDouble();
+    return fallbackHeight + _kFilterSortBarVerticalPadding;
+  }
 
+  double _calculateBottomBarHeight(BuildContext context) {
+    final MediaQueryData mediaQuery = MediaQuery.of(context);
+    final double filterSortBarHeight = _estimateFilterSortBarHeight(mediaQuery);
+    final double safeBottom = mediaQuery.viewPadding.bottom;
+    final double effectiveSafeBottom =
+    safeBottom >= _kBottomBarMinimumSafeArea ? safeBottom : _kBottomBarMinimumSafeArea;
+    return filterSortBarHeight + effectiveSafeBottom;
+  }
 
   void _requestFeaturedSections({int? rootId, String? slug}) {
     final String? normalizedInterface =
@@ -521,18 +544,11 @@ class Section_screenState extends State<Section_screen> {
             _loadingStart = null;
           }
         },
-        child: Scaffold(
-          backgroundColor: context.color.primaryColor,
-          appBar: null, // AppBar داخل ItemsBodyBox
-
-          bottomNavigationBar: ValueListenableBuilder<bool>(
-            valueListenable: _showBottomBar,
-            builder: (context, show, _) {
-              if (!show) {
-                return const SizedBox.shrink();
-              }
-
-              return SafeArea(
+        child: ValueListenableBuilder<bool>(
+          valueListenable: _showBottomBar,
+          builder: (context, show, _) {
+            final Widget? bottomBar = show
+                ? SafeArea(
                 top: false,
                 left: false,
                 right: false,
@@ -594,14 +610,19 @@ class Section_screenState extends State<Section_screen> {
                         Navigator.pushNamed(context, '/mapSearch');
                       }
                           : null,
-                    );
-                  },
+                        );
+                      },
                 ),
-              );
-            },
-          ),
+            )
+                : null;
+            final double bottomContentPadding =
+            show ? _calculateBottomBarHeight(context) : 0.0;
 
-          body: Column(
+            return Scaffold(
+              backgroundColor: context.color.primaryColor,
+              appBar: null, // AppBar داخل ItemsBodyBox
+              bottomNavigationBar: bottomBar,
+              body: Column(
             children: [
               Expanded(
                 child: RepaintBoundary(
@@ -621,6 +642,8 @@ class Section_screenState extends State<Section_screen> {
                         key: ValueKey('items_${widget.categoryId}'),
                         categoryId: widget.categoryId,
                         categoryName: widget.categoryName,
+                        bottomContentPadding: bottomContentPadding,
+
                         selectedCategoryId: selectedCategoryId,
                         showShimmer: showShimmer,
                         searchController: searchController,

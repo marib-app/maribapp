@@ -280,9 +280,58 @@ class ManualPaymentRequestController extends Controller
     {
         ResponseService::noAnyPermissionThenSendJson(['manual-payments-list', 'manual-payments-review']);
 
+        $allowedColumnAliases = [
+            'reference',
+            'user_name',
+            'user_mobile',
+            'amount',
+            'currency',
+            'category',
+            'status',
+            'channel',
+            'created_at',
+            'department',
+            'manual_bank_name',
+            'source',
+        ];
 
-       $columnsInput = collect($request->input('columns', []))
-            ->map(function ($column) {
+
+
+
+        $columnAliasMap = [
+            'transaction_id' => 'reference',
+            'reference' => 'reference',
+            'user_name' => 'user_name',
+            'user_mobile' => 'user_mobile',
+            'amount_fmt' => 'amount',
+            'amount_formatted' => 'amount',
+            'amount' => 'amount',
+            'currency' => 'currency',
+            'payment_gateway_label' => 'channel',
+            'payment_gateway_name' => 'channel',
+            'payment_gateway' => 'channel',
+            'channel_label' => 'channel',
+            'channel_name' => 'channel',
+            'channel' => 'channel',
+            'department_label' => 'department',
+            'department' => 'department',
+            'payable_label' => 'category',
+            'category_label' => 'category',
+            'payable_type' => 'category',
+            'category' => 'category',
+            'status_label' => 'status',
+            'status' => 'status',
+            'status_group' => 'status',
+            'created_at_human' => 'created_at',
+            'created_at' => 'created_at',
+            'manual_bank_name' => 'manual_bank_name',
+            'source' => 'source',
+        ];
+
+        $columnsInput = collect($request->input('columns', []))
+            ->map(function ($column) use ($columnAliasMap, $allowedColumnAliases) {
+
+
                 if (! is_array($column)) {
                     return $column;
                 }
@@ -304,6 +353,14 @@ class ManualPaymentRequestController extends Controller
                     if (Str::contains($normalized, '.')) {
                         $normalized = Str::afterLast($normalized, '.');
                     }
+
+                    $normalized = $columnAliasMap[$normalized] ?? $normalized;
+
+                    if (! in_array($normalized, $allowedColumnAliases, true)) {
+                        $column[$key] = null;
+                        continue;
+                    }
+
 
                     $column[$key] = $normalized;
                 }
@@ -412,36 +469,43 @@ class ManualPaymentRequestController extends Controller
             }
             $manualBankName = $this->resolveManualBankName($row);
 
+            $createdAt = $row->created_at ? Carbon::parse($row->created_at) : null;
+
+            $categoryLabel = $this->paymentRequestPayableLabel($row);
+
+
             return [
+                'reference' => $row->reference ?? $transactionId,
                 'transaction_id' => $transactionId,
                 'user_name' => $row->user_name ?? '—',
                 'user_mobile' => $row->user_mobile ?? '—',
+                'amount' => $amount,
                 'amount_fmt' => number_format($amount, 2, '.', ''),
                 'currency' => $row->currency ?? '',
                 'manual_payment_request_id' => $row->manual_payment_request_id,
-                'payment_gateway' => $channel ?? $row->channel,
-
-                'payment_gateway_label' => $this->paymentRequestChannelLabel(
+                'channel' => $channel ?? $row->channel,
+                'channel_label' => $this->paymentRequestChannelLabel(
                     $channel ?? $row->channel,
                     $manualBankName
                 ),
-                'payment_gateway_name' => $manualBankName
+                'channel_name' => $manualBankName
                     ?? $this->paymentRequestGatewayName($row),
 
 
                 'manual_bank_name' => $manualBankName,
                 'category' => $row->category,
+                'category_label' => $categoryLabel,
                 'department' => $row->department ?? null,
                 'department_label' => $this->paymentRequestDepartmentLabel($row->department ?? null),
                 'payable_type' => $row->payable_type ?? null,
                 'payable_id' => $row->payable_id ?? null,
-                'payable_label' => $this->paymentRequestPayableLabel($row),
-                'status' => $row->status_group,
+                'payable_label' => $categoryLabel,
+                'status' => $row->status ?? $row->status_group,
                 'status_group' => $row->status_group,
                 'status_label' => $this->paymentRequestStatusLabel($row->status_group),
-                'created_at_human' => $row->created_at
-                    ? Carbon::parse($row->created_at)->format('Y-m-d H:i')
-                    : '—',
+                'created_at' => $createdAt?->toDateTimeString(),
+                'created_at_human' => $createdAt?->format('Y-m-d H:i') ?? '—',
+                'source' => $row->source ?? null,
                 'actions' => $this->paymentRequestActionsFromRow($row),
             ];
         })->values();
@@ -1640,22 +1704,30 @@ class ManualPaymentRequestController extends Controller
             'transaction_id' => 'reference',
             'reference' => 'reference',
             'user_name' => 'user_name',
+            'user_mobile' => 'user_mobile',
             'amount_fmt' => 'amount',
+            'amount_formatted' => 'amount',
             'amount' => 'amount',
             'currency' => 'currency',
             'payment_gateway_label' => 'channel',
             'payment_gateway_name' => 'channel',
             'payment_gateway' => 'channel',
+            'channel_label' => 'channel',
+            'channel_name' => 'channel',
+            'channel' => 'channel',
             'department_label' => 'department',
             'department' => 'department',
             'payable_label' => 'category',
+            'category_label' => 'category',
             'payable_type' => 'category',
             'category' => 'category',
             'status_label' => 'status',
             'status' => 'status',
-            'status_group' => 'status_group',
+            'status_group' => 'status',
             'created_at_human' => 'created_at',
             'created_at' => 'created_at',
+            'manual_bank_name' => 'manual_bank_name',
+            'source' => 'source',
         ];
 
         $columnKey = null;
@@ -1688,14 +1760,16 @@ class ManualPaymentRequestController extends Controller
                 $allowedColumns = [
                     'reference',
                     'user_name',
+                    'user_mobile',
                     'amount',
                     'currency',
                     'channel',
                     'department',
                     'category',
                     'status',
-                    'status_group',
                     'created_at',
+                    'manual_bank_name',
+                    'source',
                 ];
 
                 return in_array($normalized, $allowedColumns, true) ? $normalized : null;
@@ -1716,6 +1790,7 @@ class ManualPaymentRequestController extends Controller
                 6 => 'category',
                 7 => 'status',
                 8 => 'created_at',
+                9 => 'reference',
             ];
 
             $columnKey = $fallbackColumns[$columnIndex] ?? 'created_at';
@@ -1724,14 +1799,16 @@ class ManualPaymentRequestController extends Controller
         $allowedOrderColumns = [
             'reference' => ['column' => 'reference', 'raw' => false],
             'user_name' => ['column' => 'user_name', 'raw' => false],
+            'user_mobile' => ['column' => 'user_mobile', 'raw' => false],
             'amount' => ['column' => 'amount', 'raw' => false],
             'currency' => ['column' => 'currency', 'raw' => false],
             'channel' => ['column' => 'channel', 'raw' => false],
             'department' => ['column' => 'department', 'raw' => false],
             'category' => ['column' => 'category', 'raw' => true],
             'status' => ['column' => 'status', 'raw' => true],
-            'status_group' => ['column' => 'status_group', 'raw' => true],
             'created_at' => ['column' => 'created_at', 'raw' => false],
+            'manual_bank_name' => ['column' => 'manual_bank_name', 'raw' => false],
+            'source' => ['column' => 'source', 'raw' => false],
         ];
 
         if (! isset($allowedOrderColumns[$columnKey])) {

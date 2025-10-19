@@ -1416,28 +1416,47 @@
                 order: [[8, 'desc']],
                 columns: [
                     {
-                        data: 'transaction_id',
-                        name: 'transaction_id',
+                        data: 'reference',
+                        name: 'reference',
                         defaultContent: '—',
-                        render: function (data) {
-                            return data ?? '—';
+                        render: function (data, type, row) {
+                            if (type !== 'display') {
+                                return data ?? row?.transaction_id ?? '';
+                            }
+
+                            return (row?.reference ?? row?.transaction_id ?? data ?? '—').toString();
                         }
                     },
                     { data: 'user_name', name: 'user_name', defaultContent: '—' },
-                    { data: 'amount_fmt', name: 'amount', defaultContent: '0.00', className: 'text-end text-nowrap' },
+                    {
+                        data: 'amount',
+                        name: 'amount',
+                        defaultContent: '0.00',
+                        className: 'text-end text-nowrap',
+                        render: function (data, type, row) {
+                            if (type === 'display') {
+                                const value = typeof row?.amount_fmt === 'string'
+                                    ? row.amount_fmt
+                                    : Number(data ?? 0).toFixed(2);
+                                return value;
+                            }
+
+                            return data ?? row?.amount ?? 0;
+                        }
+                    },
                     { data: 'currency', name: 'currency', defaultContent: '' },
                     {
-                        data: 'payment_gateway_name',
+                        data: 'channel',
                         name: 'channel',
                         defaultContent: '—',
                         render: function (data, type, row) {
                             if (type !== 'display') {
-                                return data ?? row?.payment_gateway_label ?? '';
+                                return data ?? row?.channel_label ?? '';
                             }
 
-                            const key = normalizeManualPaymentGateway(row?.payment_gateway ?? '') ?? '';
+                            const key = normalizeManualPaymentGateway(row?.channel ?? '') ?? '';
                             const classes = MANUAL_PAYMENT_GATEWAY_STYLES[key] ?? 'bg-secondary';
-                            const label = (row?.payment_gateway_name ?? row?.payment_gateway_label ?? data ?? '—').toString();
+                            const label = (row?.channel_name ?? row?.channel_label ?? data ?? '—').toString();
 
 
                             return '<span class="badge ' + classes + '">' + label + '</span>';
@@ -1446,17 +1465,19 @@
 
 
                     {
-                        data: 'department_label',
+                        data: 'department',
                         name: 'department',
                         defaultContent: '—',
                         render: function (data, type, row) {
+                            const label = row?.department_label ?? data ?? '—';
+
+                            
                             if (type !== 'display') {
-                                return data ?? '';
+                                return row?.department_label ?? data ?? '';
                             }
 
                             const key = (row?.department ?? '').toString().toLowerCase();
                             const classes = MANUAL_PAYMENT_DEPARTMENT_STYLES[key] ?? 'bg-secondary';
-                            const label = data ?? '—';
 
                             return '<span class="badge ' + classes + '">' + label + '</span>';
                         }
@@ -1464,39 +1485,56 @@
 
 
                     {
-                        data: 'payable_label',
+                        data: 'category',
                         name: 'category',
                         defaultContent: '—',
                         render: function (data, type, row) {
+                            const label = row?.category_label ?? data ?? '—';
+
+
                             if (type !== 'display') {
-                                return data ?? '';
+                                return row?.category_label ?? data ?? '';
                             }
 
                             const key = normalizeManualPaymentCategory(row?.category ?? row?.payable_type ?? '') ?? '';
                             const classes = MANUAL_PAYMENT_CATEGORY_STYLES[key] ?? 'bg-secondary';
-                            const label = data ?? '—';
 
                             return '<span class="badge ' + classes + '">' + label + '</span>';
                         }
                     },
                     
                     {
-                        data: 'status_label',
+                        data: 'status',
                         name: 'status',
                         defaultContent: '—',
                         render: function (data, type, row) {
+                            const label = row?.status_label ?? data ?? '—';
+
+
                             if (type !== 'display') {
-                                return data ?? '';
+                                return label ?? '';
                             }
 
                             const key = normalizeManualPaymentStatus(row?.status ?? '') ?? '';
                             const classes = MANUAL_PAYMENT_STATUS_STYLES[key] ?? 'bg-secondary';
-                            const label = data ?? '—';
 
                             return '<span class="badge ' + classes + '">' + label + '</span>';
                         }
                     },
-                    { data: 'created_at_human', name: 'created_at', defaultContent: '—', className: 'text-nowrap' },
+                    {
+                        data: 'created_at',
+                        name: 'created_at',
+                        defaultContent: '—',
+                        className: 'text-nowrap',
+                        render: function (data, type, row) {
+                            if (type === 'display') {
+                                return row?.created_at_human ?? data ?? '—';
+                            }
+
+                            return data ?? row?.created_at ?? '';
+                        }
+                    },
+                    
                     {
                         data: 'actions',
                         orderable: false,

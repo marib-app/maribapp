@@ -607,6 +607,17 @@ class SubcatsDeferredBlockState extends State<SubcatsDeferredBlock> {
     return widget.builderWhenReady();
   }
 
+
+  /// إتاحة الشيمر الافتراضي للاستخدام الخارجي مع المحافظة على القيم الحالية.
+  Widget buildDefaultShimmer(
+      BuildContext context,
+      double rowHeight,
+      int rows,
+      ) {
+    return _defaultShimmer(context, rowHeight, rows);
+  }
+
+
   // شيمر افتراضي: صف أفقي 4 عناصر بنفس ارتفاع الشبكة لتجنّب الاهتزاز
   Widget _defaultShimmer(BuildContext context, double rowHeight, int rows) {
     final theme = Theme.of(context);

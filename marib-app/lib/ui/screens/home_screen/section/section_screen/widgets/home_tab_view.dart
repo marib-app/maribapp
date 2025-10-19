@@ -1040,6 +1040,26 @@ class _HomeTabViewState extends State<HomeTabView> {
                               final catState =
                                   context.watch<FetchCategoryCubit>().state;
                               if (catState is! FetchCategorySuccess) {
+
+                                final subcatsBlockState =
+                                context.findAncestorStateOfType<
+                                    SubcatsDeferredBlockState>();
+
+                                if (subcatsBlockState != null) {
+                                  final shimmerBuilder =
+                                      subcatsBlockState.widget.shimmerBuilder;
+                                  return shimmerBuilder?.call(
+                                    context,
+                                    rowHeight,
+                                    maxRows,
+                                  ) ??
+                                      subcatsBlockState.buildDefaultShimmer(
+                                        context,
+                                        rowHeight,
+                                        maxRows,
+                                      );
+                                }
+
                                 return subcatShimmerBuilder(
                                   context,
                                   rowHeight,

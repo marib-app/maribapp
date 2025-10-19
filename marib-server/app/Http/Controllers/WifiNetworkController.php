@@ -121,6 +121,22 @@ class WifiNetworkController extends Controller
         $maxAttempts = $supportsSlug ? 5 : 3;
         $walletConstraintRetried = false;
 
+        $isOwnerNetworkRequest = $this->isOwnerNetworkRequest($networkData['meta'] ?? null);
+
+        if ($user && $isOwnerNetworkRequest) {
+            $existingNetwork = WifiNetwork::query()
+                ->where('user_id', $user->getKey())
+                ->latest('id')
+                ->first();
+
+            if ($existingNetwork) {
+                $network = $this->applyNetworkUpdates($existingNetwork, $networkData);
+
+                return response()->json(['data' => ['id' => $network->getKey()]], 201);
+            }
+        }
+
+
         for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
 
              if ($walletAccount) {
@@ -169,17 +185,8 @@ class WifiNetworkController extends Controller
                             ], 422);
                         }
 
-                        $updateData = Arr::except($networkData, ['slug']);
+                        $network = $this->applyNetworkUpdates($existingNetwork, $networkData);
 
-                        if ($updateData !== []) {
-                            $existingNetwork->fill($updateData);
-
-                            if ($existingNetwork->isDirty()) {
-                                $existingNetwork->save();
-                            }
-                        }
-
-                        $network = $existingNetwork->fresh();
 
                         break;
                     }
@@ -203,17 +210,8 @@ class WifiNetworkController extends Controller
                         ->first();
 
                     if ($existingNetwork) {
-                        $updateData = Arr::except($networkData, ['slug']);
+                        $network = $this->applyNetworkUpdates($existingNetwork, $networkData);
 
-                        if ($updateData !== []) {
-                            $existingNetwork->fill($updateData);
-
-                            if ($existingNetwork->isDirty()) {
-                                $existingNetwork->save();
-                            }
-                        }
-
-                        $network = $existingNetwork->fresh();
 
                         break;
                     }
@@ -661,6 +659,49 @@ class WifiNetworkController extends Controller
 
         return $normalized === [] ? null : $normalized;
     }
+
+
+
+    private function isOwnerNetworkRequest(mixed $meta): bool
+    {
+        if (! is_array($meta)) {
+            return false;
+        }
+
+        $requestType = Str::of((string) Arr::get($meta, 'request_type', ''))
+            ->trim()
+            ->lower()
+            ->replace('-', '_')
+            ->toString();
+
+        if ($requestType === 'owner_network') {
+            return true;
+        }
+
+        $source = Str::of((string) Arr::get($meta, 'source', ''))
+            ->trim()
+            ->lower()
+            ->replace('-', '_')
+            ->toString();
+
+        return $source === 'mobile_app' && $requestType === '';
+    }
+
+    private function applyNetworkUpdates(WifiNetwork $network, array $networkData): WifiNetwork
+    {
+        $updateData = Arr::except($networkData, ['slug']);
+
+        if ($updateData !== []) {
+            $network->fill($updateData);
+
+            if ($network->isDirty()) {
+                $network->save();
+            }
+        }
+
+        return $network->fresh();
+    }
+
 
 
     private function resolveWalletAccount(?\App\Models\User $user, ?int $requestedWalletId = null): ?WalletAccount

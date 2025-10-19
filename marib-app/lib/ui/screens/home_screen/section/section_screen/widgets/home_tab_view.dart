@@ -200,6 +200,7 @@ class _HomeTabViewState extends State<HomeTabView> {
       _activeSubcatId = null;
     }
     setState(() {});
+    _scheduleScrollReset();
   }
 
 
@@ -224,6 +225,28 @@ class _HomeTabViewState extends State<HomeTabView> {
       filter: effectiveFilter,
     );
   }
+
+  void _scheduleScrollReset() {
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !controller.hasClients) {
+        return;
+      }
+      controller
+          .animateTo(
+        0,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      )
+          .catchError((_) {
+        if (!mounted || !controller.hasClients) {
+          return;
+        }
+        controller.jumpTo(0);
+      });
+    });
+  }
+
 
 
   // =========================
@@ -861,6 +884,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                                       _activeSubcatId = null;
                                       setState(() {});
                                       _fetchItemsForCategory(categoryId);
+                                      _scheduleScrollReset();
                                     },
 
                                     // في فئة علوية ≠ "الكل": اضغط فرعيّة ⇒ فلترة مباشرة وتظليل الفرعيّة
@@ -873,6 +897,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                                       setState(
                                               () => _activeSubcatId = categoryId);
                                       _fetchItemsForCategory(categoryId);
+                                      _scheduleScrollReset();
                                     },
                                   ),
                                   SizedBox(

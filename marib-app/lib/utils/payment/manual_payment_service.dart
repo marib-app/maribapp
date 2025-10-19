@@ -763,26 +763,14 @@ class ManualPaymentService {
 
     final deduped = <String, Map<String, dynamic>>{};
     for (final map in results) {
-      final bankId = _stringify(map['manual_bank_id']) ??
-          _stringify(map['manualBankId']) ??
-
+      final id = _stringify(map['id']) ??
           _stringify(map['bank_id']) ??
-          _stringify(map['bankId']) ??
-          _stringify(map['id']);
-      final accountId = _stringify(map['bank_account_id']) ??
-          _stringify(map['bankAccountId']) ??
-          _stringify(map['bankAccountID']) ??
-          _stringify(map['manual_bank_account_id']) ??
-          _stringify(map['manualBankAccountId']) ??
-          _stringify(map['account_id']) ??
-          _stringify(map['accountId']);
-      final accountNumber = _stringify(map['account_number']) ??
-
-
+          _stringify(map['bankId']);
+      final account = _stringify(map['account_number']) ??
           _stringify(map['accountNumber']);
       final bankName = _stringify(map['bank_name']) ??
           _stringify(map['name']);
-      final key = '${bankId ?? ''}|${accountId ?? ''}|${accountNumber ?? ''}|${bankName ?? ''}';
+      final key = '${id ?? ''}|${account ?? ''}|${bankName ?? ''}';
       deduped.putIfAbsent(key, () => map);
     }
 
@@ -803,21 +791,11 @@ class ManualPaymentService {
       return trimmed;
     }
 
-
-    String _normalizedAccountId(String? value) {
-      final trimmed = value?.trim();
-      return trimmed == null ? '' : trimmed;
-    }
-
-
-
     String _bankKey(BankAccount bank) {
-      final idPart = bank.manualBankId != 0 ? bank.manualBankId.toString() : '';
-      final accountIdPart = _normalizedAccountId(bank.accountId);
-
+      final idPart = bank.id != 0 ? bank.id.toString() : '';
       final accountPart = _trimOrEmpty(bank.accountNumber);
       final namePart = _trimOrEmpty(bank.bankName);
-      return '$idPart|$accountIdPart|$accountPart|$namePart';
+      return '$idPart|$accountPart|$namePart';
     }
 
     String? _preferString(String? current, String? candidate) {
@@ -834,10 +812,7 @@ class ManualPaymentService {
 
     BankAccount _mergeAccounts(BankAccount base, BankAccount addition) {
       return BankAccount(
-        manualBankId:
-        base.manualBankId != 0 ? base.manualBankId : addition.manualBankId,
-        accountId: _preferString(base.accountId, addition.accountId),
-
+        id: base.id != 0 ? base.id : addition.id,
         bankName: _trimOrEmpty(base.bankName).isNotEmpty
             ? base.bankName
             : addition.bankName,
@@ -1039,27 +1014,9 @@ class ManualPaymentService {
           }
           return;
         }
-        if (value is DateTime) {
-          target[fieldKey] = value.toIso8601String();
-          return;
-        }
-        final String valueStr;
-        if (value is String) {
-          final trimmed = value.trim();
-          if (trimmed.isEmpty) {
-            return;
-          }
-          valueStr = trimmed;
-        } else {
-          final converted = value.toString();
-          if (converted.trim().isEmpty) {
-            return;
-          }
-          valueStr = converted;
-        }
-        target[fieldKey] = valueStr;
-
-
+        target[fieldKey] = value is DateTime
+            ? value.toIso8601String()
+            : value.toString();
       });
     }
 
@@ -1072,7 +1029,6 @@ class ManualPaymentService {
     String? purpose,
     String? currency,
     int? orderId,
-    int? packageId,
     String? paymentMethod,
     double? amount,
   }) async {
@@ -1085,7 +1041,6 @@ class ManualPaymentService {
         orderId: orderId,
         paymentMethod: paymentMethod,
         amount: amount,
-        packageId: packageId,
 
       );
       return result.banks;
@@ -1099,7 +1054,6 @@ class ManualPaymentService {
     String? purpose,
     String? currency,
     int? orderId,
-    int? packageId,
     String? paymentMethod,
     double? amount,
   }) async {
@@ -1125,8 +1079,7 @@ class ManualPaymentService {
       final String? resolvedPurpose =
           _normalizePurposeForApi(purpose) ?? purpose?.trim();
       final bool walletPurpose = _isWalletPurpose(resolvedPurpose);
-      final bool packagePurpose = resolvedPurpose == 'package';
-      final bool orderPurpose = resolvedPurpose == 'order';
+
       final String? upperCurrency =
       (normalizedCurrency != null && normalizedCurrency.isNotEmpty)
           ? normalizedCurrency.toUpperCase()
@@ -1141,16 +1094,8 @@ class ManualPaymentService {
         }
       }
 
-      int? sanitizedOrderId;
-      if (orderId != null && orderId > 0) {
-        if (orderPurpose || (!walletPurpose && !packagePurpose)) {
-          sanitizedOrderId = orderId;
-        }
-      }
-
-      final int? sanitizedPackageId = (packagePurpose && packageId != null && packageId > 0)
-          ? packageId
-
+      final int? sanitizedOrderId = (!walletPurpose && orderId != null && orderId > 0)
+          ? orderId
           : null;
 
 
@@ -1162,7 +1107,6 @@ class ManualPaymentService {
         if (upperCurrency != null && upperCurrency.isNotEmpty)
           'currency': upperCurrency,
         if (sanitizedOrderId != null) 'order_id': sanitizedOrderId,
-        if (sanitizedPackageId != null) 'package_id': sanitizedPackageId,
 
         if (apiPaymentMethod != null && apiPaymentMethod.isNotEmpty)
           'payment_method': apiPaymentMethod,
@@ -1368,9 +1312,7 @@ class ManualPaymentService {
   Future<ManualPaymentSubmissionResult> submitManualPayment({
 
     required String token,
-    required int manualBankId,
-    String? bankAccountId,
-
+    required int bankId,
     required String intentId,
     String? transactionId,
     String? payableType,
@@ -1390,8 +1332,7 @@ class ManualPaymentService {
   }) async {
     return _submitManualPayment(
       token: token,
-      manualBankId: manualBankId,
-      bankAccountId: bankAccountId,
+      bankId: bankId,
       intentId: intentId,
       transactionId: transactionId,
       payableType: payableType,
@@ -1413,9 +1354,7 @@ class ManualPaymentService {
   Future<ManualPaymentSubmissionResult> _submitManualPayment({
 
     required String token,
-    required int manualBankId,
-    String? bankAccountId,
-
+    required int bankId,
     required String intentId,
     String? transactionId,
     String? payableType,
@@ -1439,15 +1378,12 @@ class ManualPaymentService {
     final formattedAmount =
     formatManualPaymentAmount(amount, normalizedCurrency);
 
-    final String? trimmedAccountId = bankAccountId?.toString().trim();
 
     final Map<String, dynamic> formMap = {
       'payment_method': ManualPaymentService.paymentMethodForApi('manual_bank'),
 
-      'manual_bank_id': manualBankId,
-      'bank_id': manualBankId,
-      if (trimmedAccountId != null && trimmedAccountId.isNotEmpty)
-        'bank_account_id': trimmedAccountId,
+      'bank_id': bankId,
+      'bank_account_id': bankId,
 
       'amount': formattedAmount,
       'currency': normalizedCurrency,

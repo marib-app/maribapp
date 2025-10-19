@@ -1,6 +1,5 @@
 class BankAccount {
-  final int manualBankId;
-  final String? accountId;
+  final int id;
   final String bankName;
   final String? accountName;
   final String? accountNumber;
@@ -12,11 +11,8 @@ class BankAccount {
   final bool isActive;
   final int? displayOrder;
 
-  int get id => manualBankId;
-
-  const BankAccount({
-    required this.manualBankId,
-    this.accountId,
+  BankAccount({
+    required this.id,
     required this.bankName,
     this.accountName,
     this.accountNumber,
@@ -63,34 +59,19 @@ class BankAccount {
       return null;
     }
 
-    String? accountIdFromKeys(List<String> keys) {
-      final value = stringFromKeys(keys);
-      return value == null || value.isEmpty ? null : value;
-    }
-
-
     return BankAccount(
-      manualBankId: intFromKeys(const [
-        'manual_bank_id',
-        'manualBankId',
+
+      id: intFromKeys(const [
+        'id',
         'bank_id',
         'bankId',
         'bankID',
-        'id',
-      ]) ??
-          0,
-      accountId: accountIdFromKeys(const [
-
-
         'bank_account_id',
         'bankAccountId',
         'bankAccountID',
-        'manual_bank_account_id',
-        'manualBankAccountId',
-        'account_id',
-        'accountId',
-        'accountID',
-      ]),
+      ]) ??
+          0,
+
 
       bankName: j['bank_name'] ?? j['name'] ?? '',
       accountName: stringFromKeys(const [

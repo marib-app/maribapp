@@ -74,11 +74,9 @@ class _BankTransferScreenState extends State<BankTransferScreen>
   bool _loadingBanks = false;
   bool _loadingWallet = false;
 
-  int? _selectedManualBankId;
-  String? _selectedBankAccountId;
-  String? _pressedBankKey; // لتأثير الضغط (Scale)
-  String? _highlightedAccountNameBankKey; // تأثير الضغط على اسم المستفيد
-
+  int? _selectedBankId;
+  int? _pressedBankId; // لتأثير الضغط (Scale)
+  int? _highlightedAccountNameBankId; // تأثير الضغط على اسم المستفيد
   bool _walletBalancePressed = false; // تأثير الضغط على رصيد المحفظة
 
   WalletSummary? _walletSummary;
@@ -97,8 +95,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
 
 
-  static const String _eastYemenPressedKey = '__east_yemen__';
-  static const String _walletPressedKey = '__wallet__';
+  static const int _eastYemenPressedKey = -1000;
+  static const int _walletPressedKey = -1001;
   static const List<String> _allowedReceiptExtensions = <String>[
     'jpg',
     'jpeg',
@@ -200,46 +198,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
   }
 
 
-  String _normalizedAccountId(String? value) {
-    final trimmed = value?.trim();
-    if (trimmed == null || trimmed.isEmpty) {
-      return '';
-    }
-    return trimmed;
-  }
-
-  String _bankCardKey(BankAccount bank) {
-    final accountIdPart = _normalizedAccountId(bank.accountId);
-    return '${bank.manualBankId}:$accountIdPart';
-  }
-
-  bool _bankMatchesSelection(BankAccount bank) {
-    final selectedManualId = _selectedManualBankId;
-    if (selectedManualId == null) {
-      return false;
-    }
-    if (selectedManualId != bank.manualBankId) {
-      return false;
-    }
-    final selectedAccountId = _normalizedAccountId(_selectedBankAccountId);
-    final bankAccountId = _normalizedAccountId(bank.accountId);
-    return selectedAccountId == bankAccountId;
-  }
-
-  void _assignManualBankSelection(BankAccount? bank) {
-    if (bank == null) {
-      _clearManualBankSelection();
-      return;
-    }
-    _selectedManualBankId = bank.manualBankId;
-    final normalizedAccountId = _normalizedAccountId(bank.accountId);
-    _selectedBankAccountId = normalizedAccountId.isEmpty ? null : normalizedAccountId;
-  }
-
-  void _clearManualBankSelection() {
-    _selectedManualBankId = null;
-    _selectedBankAccountId = null;
-  }
 
 
   String _resolvedPurpose() {
@@ -321,21 +279,15 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       }
 
       final currency = widget.args.normalizedCurrency;
-      final int? resolvedId = (!isWalletTopUp && widget.args.packageId > 0)
+      final int? orderIdParam = (!isWalletTopUp && widget.args.packageId > 0)
           ? widget.args.packageId
           : null;
-      final int? orderIdParam =
-      (resolvedId != null && (purposeParam == 'order' || purposeParam == null))
-          ? resolvedId
-          : null;
-      final int? packageIdParam =
-      (resolvedId != null && purposeParam == 'package') ? resolvedId : null;
 
 
       final settings = await _service.fetchManualPaymentSettings(
         token: widget.args.token,
         purpose: purposeParam,
-        packageId: packageIdParam,
+
         currency: currency,
         orderId: orderIdParam,
         paymentMethod:
@@ -372,53 +324,53 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
         if (normalizedGateway == _eastYemenMethod && _eastYemenBank != null) {
           _selectedMethod = _eastYemenMethod;
-          _clearManualBankSelection();
+          _selectedBankId = null;
 
         } else if (normalizedGateway == _walletMethod && walletOptionAllowed) {
 
           _selectedMethod = _walletMethod;
-          _clearManualBankSelection();
+          _selectedBankId = null;
 
         } else if (normalizedGateway == _manualBankMethod && _banks.isNotEmpty) {
           _selectedMethod = _manualBankMethod;
-          _assignManualBankSelection(_banks.first);
-          } else if (_eastYemenBank != null) {
+          _selectedBankId = _banks.first.id;
+        } else if (_eastYemenBank != null) {
 
           _selectedMethod = _eastYemenMethod;
-          _clearManualBankSelection();
+          _selectedBankId = null;
         } else if (walletOptionAllowed) {
           _selectedMethod = _walletMethod;
-          _clearManualBankSelection();
+          _selectedBankId = null;
         } else if (_banks.isNotEmpty) {
           _selectedMethod = _manualBankMethod;
-          _assignManualBankSelection(_banks.first);
+          _selectedBankId = _banks.first.id;
         } else {
           _selectedMethod = null;
-          _clearManualBankSelection();
+          _selectedBankId = null;
         }
         if (_selectedMethod == null &&
             normalizedGateway == _walletMethod &&
             walletOptionAllowed) {
 
           _selectedMethod = _walletMethod;
-          _clearManualBankSelection();
+          _selectedBankId = null;
         }
 
 
         if (!walletOptionAllowed && _selectedMethod == _walletMethod) {
           if (_eastYemenBank != null) {
             _selectedMethod = _eastYemenMethod;
-            _clearManualBankSelection();
+            _selectedBankId = null;
           } else if (_banks.isNotEmpty) {
             _selectedMethod = _manualBankMethod;
-            _assignManualBankSelection(_banks.first);
+            _selectedBankId = _banks.first.id;
           } else {
             _selectedMethod = null;
-            _clearManualBankSelection();
+            _selectedBankId = null;
           }
         }
 
-        _pressedBankKey = null;
+        _pressedBankId = null;
         _attempted = false;
       });
     } finally {
@@ -463,16 +415,13 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       void assignFallback() {
         if (_eastYemenBank != null) {
           _selectedMethod = _eastYemenMethod;
-          _clearManualBankSelection();
+          _selectedBankId = null;
         } else if (_banks.isNotEmpty) {
           _selectedMethod = _manualBankMethod;
-          if (_selectedManualBankId == null) {
-            _assignManualBankSelection(_banks.first);
-          }
-
+          _selectedBankId ??= _banks.first.id;
         } else {
           _selectedMethod = null;
-          _clearManualBankSelection();
+          _selectedBankId = null;
         }
       }
 
@@ -490,16 +439,9 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
 
 
-    final int? resolvedId = (!isWalletTopUp && widget.args.packageId > 0)
+    final int? orderIdParam = (!isWalletTopUp && widget.args.packageId > 0)
         ? widget.args.packageId
         : null;
-    final int? orderIdParam =
-    (resolvedId != null && (purposeParam == 'order' || purposeParam == null))
-        ? resolvedId
-        : null;
-    final int? packageIdParam =
-    (resolvedId != null && purposeParam == 'package') ? resolvedId : null;
-
 
     try {
       final settings = await _service.fetchManualPaymentSettings(
@@ -507,7 +449,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         purpose: purposeParam,
         currency: currency,
         orderId: orderIdParam,
-        packageId: packageIdParam,
 
         paymentMethod:
         ManualPaymentService.paymentMethodForApi(selectedMethod),
@@ -656,9 +597,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     }
     if (_usingManualBank) {
       if (!_senderOk) return false;
-      final manualBankId = _selectedManualBankId ?? 0;
-      return manualBankId > 0 && _receiptOk;
-
+      return _selectedBankId != null && _receiptOk;
     }
 
     if (_usingWallet) {
@@ -873,23 +812,9 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         );
 
       } else {
-
-        final int manualBankId = _selectedManualBankId ?? 0;
-        final String? selectedAccountId = _selectedBankAccountId;
-        if (manualBankId <= 0) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('تعذّر تحديد الحساب البنكي، يرجى المحاولة لاحقًا.')),
-            );
-          }
-          return;
-        }
-
         result = await _service.submitManualPayment(
           token: widget.args.token,
-          manualBankId: manualBankId,
-          bankAccountId: selectedAccountId,
-
+          bankId: _selectedBankId!,
           intentId: intentId,
           transactionId: transactionId,
           payableType: payableType,

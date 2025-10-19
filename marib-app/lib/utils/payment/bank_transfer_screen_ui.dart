@@ -11,7 +11,7 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
     if (_selectedMethod == _BankTransferScreenState._manualBankMethod &&
         _banks.isNotEmpty) {
       for (final bank in _banks) {
-        if (_bankMatchesSelection(bank)) {
+        if (bank.id == _selectedBankId) {
           selectedBank = bank;
           break;
         }
@@ -171,7 +171,7 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
     _gatewayCard(
     config: _eastYemenBank!,
     selected: _usingEastYemen,
-      pressed: _pressedBankKey == _BankTransferScreenState._eastYemenPressedKey,
+    pressed: _pressedBankId == _BankTransferScreenState._eastYemenPressedKey,
     onSurface: onSurface,
     ),
           const SizedBox(height: 12),
@@ -184,12 +184,10 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
 
     ...List.generate(_banks.length, (i) {
     final b = _banks[i];
-    final bankKey = _bankCardKey(b);
-
     final selected = _selectedMethod == _BankTransferScreenState._manualBankMethod &&
-        _bankMatchesSelection(b);
+    _selectedBankId == b.id;
 
-    final pressed = _pressedBankKey == bankKey;
+    final pressed = _pressedBankId == b.id;
 
     final accountName = (b.accountName ?? '').trim();
     final accountNumber = (b.accountNumber ?? '').trim();
@@ -207,12 +205,10 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
     return Padding(
         padding: const EdgeInsets.only(bottom: 10),
         child: InkWell(
-          onHighlightChanged: (h) => setState(() =>
-          _pressedBankKey = h ? bankKey : null),
-
+          onHighlightChanged: (h) => setState(() => _pressedBankId = h ? b.id : null),
           onTap: () => setState(() {
             _selectedMethod = _BankTransferScreenState._manualBankMethod;
-            _assignManualBankSelection(b);
+            _selectedBankId = b.id;
             _attempted = false;
           }),
           borderRadius: BorderRadius.circular(14),
@@ -266,8 +262,8 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
                               final isNumeric = raw.isNotEmpty &&
                                   RegExp(r'^[0-9٠-٩]+$').hasMatch(raw);
                               final title = isNumeric ? 'رقم الحساب' : 'حوالة باسم';
-                              final highlighted =
-                                  _highlightedAccountNameBankKey == bankKey;                              final highlightBorderColor = highlighted
+                              final highlighted = _highlightedAccountNameBankId == b.id;
+                              final highlightBorderColor = highlighted
                                   ? context.color.territoryColor
                                   .withOpacity(Theme.of(context).brightness == Brightness.dark ? .7 : .5)
                                   : onSurface.withOpacity(.12);
@@ -296,13 +292,13 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
                               child: InkWell(
                               onHighlightChanged: (h) {
                               if (h &&
-                                  _highlightedAccountNameBankKey != bankKey) {
+                              _highlightedAccountNameBankId != b.id) {
                               setState(() =>
-                              _highlightedAccountNameBankKey = bankKey);
+                              _highlightedAccountNameBankId = b.id);
                               } else if (!h &&
-                                  _highlightedAccountNameBankKey == bankKey) {
+                              _highlightedAccountNameBankId == b.id) {
                               setState(() =>
-                              _highlightedAccountNameBankKey = null);
+                              _highlightedAccountNameBankId = null);
                               }
                               },
                               onTap: () => _copyValueToClipboard(
@@ -526,7 +522,7 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
     final bool hasError = _walletError != null;
     final bool selected = _usingWallet;
     final bool pressed =
-        _pressedBankKey == _BankTransferScreenState._walletPressedKey;
+        _pressedBankId == _BankTransferScreenState._walletPressedKey;
 
     final errorMessage = () {
       if (!hasError) return null;
@@ -568,11 +564,11 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
       padding: const EdgeInsets.only(bottom: 10),
       child: InkWell(
           onHighlightChanged: (h) =>
-              setState(() => _pressedBankKey =
+              setState(() => _pressedBankId =
               h ? _BankTransferScreenState._walletPressedKey : null),
           onTap: () => setState(() {
             _selectedMethod = _BankTransferScreenState._walletMethod;
-            _clearManualBankSelection();
+            _selectedBankId = null;
             _attempted = false;
           }),
           borderRadius: BorderRadius.circular(14),
@@ -879,11 +875,11 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: InkWell(
-        onHighlightChanged: (h) => setState(() => _pressedBankKey =
+        onHighlightChanged: (h) => setState(() => _pressedBankId =
         h ? _BankTransferScreenState._eastYemenPressedKey : null),
         onTap: () => setState(() {
           _selectedMethod = _BankTransferScreenState._eastYemenMethod;
-          _clearManualBankSelection();
+          _selectedBankId = null;
           _attempted = false;
         }),
         borderRadius: BorderRadius.circular(14),

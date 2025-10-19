@@ -6219,7 +6219,19 @@ class ApiController extends Controller {
 
         try {
             $service = Service::findOrFail($request->service_id);
-            $status = $request->input('status', ServiceReview::STATUS_APPROVED);
+            $authenticatedUser = Auth::user();
+
+            $requestedStatus = $request->input('status');
+            $isOwner = $authenticatedUser && (int) ($service->owner_id ?? 0) === (int) $authenticatedUser->id;
+            $canManageService = $authenticatedUser
+                ? $this->serviceAuthorizationService->userCanManageService($authenticatedUser, $service)
+                : false;
+
+            $canAccessAllStatuses = $authenticatedUser && ($isOwner || $canManageService);
+            $status = $canAccessAllStatuses
+                ? ($requestedStatus ?? ServiceReview::STATUS_APPROVED)
+                : ServiceReview::STATUS_APPROVED;
+
 
             $reviewsQuery = ServiceReview::where('service_id', $service->id)
                 ->with('user:id,name,profile')
@@ -6235,7 +6247,6 @@ class ApiController extends Controller {
                 ->where('status', ServiceReview::STATUS_APPROVED)
                 ->avg('rating');
 
-            $authenticatedUser = Auth::user();
 
             $response = [
                 'service_id'     => $service->id,

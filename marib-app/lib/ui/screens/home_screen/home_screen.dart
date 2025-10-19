@@ -193,7 +193,9 @@ class HomeScreenState extends State<HomeScreen>
     return BlocBuilder<FetchHomeScreenCubit, FetchHomeScreenState>(
       buildWhen: (prev, curr) => prev.runtimeType != curr.runtimeType,
       builder: (context, state) {
-        if (state is FetchHomeScreenInProgress) {
+        if (state is FetchHomeScreenInitial ||
+            state is FetchHomeScreenInProgress) {
+
           return SliverToBoxAdapter(child: homeShimmerEffect(context));
         }
 

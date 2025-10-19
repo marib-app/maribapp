@@ -25,6 +25,70 @@ php artisan cache:clear; php artisan config:clear ;  php artisan route:clear
 
 
 
+
+
+
+
+
+
+
+
+// نسخه احتياطية مرقمه 
+
+
+# 1) حضّر التاريخ وحدد البادئة
+$ts = Get-Date -Format 'yyyy-MM-dd HH:mm'
+$prefix = 'backup_maribsrv_'
+
+# 2) اجلب أحدث التاجز من GitHub واحسب الرقم التالي
+git fetch --tags
+$last = (git tag -l "$prefix*" |
+  ForEach-Object { $_ -replace '^backup_maribsrv_','' } |
+  Where-Object { $_ -match '^\d+$' } |
+  Sort-Object {[int]$_} -Descending |
+  Select-Object -First 1)
+$next = if ($last) { [int]$last + 1 } else { 1 }
+$tag  = "$prefix$next"
+
+# 3) خزّن لقطة الكود (مع دعم عدم وجود تغييرات)
+git add -A
+git diff --cached --quiet
+if ($LASTEXITCODE -eq 0) {
+  git commit --allow-empty -m "checkpoint: $ts"
+} else {
+  git commit -m "checkpoint: $ts"
+}
+
+# 4) أنشئ التاج وادفعه + ادفع main
+git tag -a $tag -m "Backup $tag @ $ts"
+git push origin HEAD:main
+git push origin $tag
+
+# 5) اعرض النتيجة
+git tag -l "$prefix*"
+Write-Host "Created tag: $tag at $ts"
+
+
+الناتج سيكون:
+
+ backup_maribsrv_1, ثم backup_maribsrv_2, backup_maribsrv_3…
+ 
+ تلقائيًا. التاريخ محفوظ في رسالة التاج والكومِت.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 > **تلميح:** يُفضَّل فتح PowerShell داخل هذا المسار دائمًا قبل أي أوامر Git.
 
 ---

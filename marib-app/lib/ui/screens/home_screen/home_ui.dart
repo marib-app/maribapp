@@ -896,18 +896,17 @@ extension on _BadgeDot {
 
 Widget homeShimmerEffect(BuildContext context) {
   const defaultPadding = 16.0;
-  return SingleChildScrollView(
-    child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: defaultPadding),
-      child: Column(
-        children: [
-          const _ShimmerBox(h: 52),
-          const SizedBox(height: 12),
-          const _ShimmerBox(h: 170),
-          const SizedBox(height: 24),
-          const _ShimmerBox(h: 52),
-          const SizedBox(height: 12),
-          SizedBox(
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 24, horizontal: defaultPadding),
+    child: Column(
+      children: [
+        const _ShimmerBox(h: 52),
+        const SizedBox(height: 12),
+        const _ShimmerBox(h: 170),
+        const SizedBox(height: 24),
+        const _ShimmerBox(h: 52),
+        const SizedBox(height: 12),
+        SizedBox(
             height: 100,
             child: ListView.builder(
               shrinkWrap: true,
@@ -924,17 +923,16 @@ Widget homeShimmerEffect(BuildContext context) {
                     SizedBox(height: 4),
                     _ShimmerBox(h: 10, w: 60),
                   ],
-                ),
               ),
             ),
           ),
+        ),
+      const SizedBox(height: 12),
+      for (int i = 0; i < 6; i++) ...[
+  const _ShimmerBox(h: 52),
           const SizedBox(height: 12),
-          for (int i = 0; i < 6; i++) ...[
-            const _ShimmerBox(h: 52),
-            const SizedBox(height: 12),
-          ]
-        ],
-      ),
+      ]
+      ],
     ),
   );
 }

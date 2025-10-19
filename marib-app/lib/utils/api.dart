@@ -399,7 +399,6 @@ class Api {
 
   static String wifiCodeEventsApi(int codeId) => "wifi/codes/$codeId/events";
 
-  static String serviceRequestsIndexApi = "service-requests";
   static String serviceRequestsCreateApi = "service-requests";
   static String serviceRequestsAlternativeCreateApi = "services/requests";
 

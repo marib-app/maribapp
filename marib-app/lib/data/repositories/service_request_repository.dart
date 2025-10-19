@@ -5,43 +5,7 @@ import 'package:marib/data/model/service_request_model.dart';
 import 'package:marib/utils/api.dart';
 
 class ServiceRequestRepository {
-  Future<List<ServiceRequestModel>> fetchRequests({
-    required String status,
-    int? categoryId,
-  }) async {
-    try {
-      final response = await Api.get(
-        url: Api.serviceRequestsIndexApi,
-        queryParameters: {
-          'status': status,
-          if (categoryId != null) 'category_id': categoryId.toString(),
-        },
-      );
 
-      dynamic data = response['data'] ?? response['requests'] ?? response;
-      if (data is Map && data.containsKey('data')) {
-        data = data['data'];
-      }
-
-      final List list = data is List
-          ? data
-          : data is Map
-          ? data.values.whereType<List>().expand((e) => e).toList()
-          : const [];
-
-      return list
-          .whereType<Map>()
-          .map((e) => ServiceRequestModel.fromJson(e.cast<String, dynamic>()))
-          .toList();
-    } on ApiHttpException catch (e) {
-      if (e.statusCode == 404 || e.statusCode == 405) {
-        return const <ServiceRequestModel>[];
-      }
-      rethrow;
-    } catch (e) {
-      rethrow;
-    }
-  }
 
   Future<ServiceRequestModel> createRequest({
     required int serviceId,

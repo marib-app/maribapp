@@ -73,8 +73,7 @@ class Section_screenState extends State<Section_screen> {
   static const double _kBottomBarMinimumSafeArea = 12.0;
 
   static const Duration _bottomBarAnimationDuration =
-  Duration(milliseconds: 320);
-
+      Duration(milliseconds: 320);
 
   // ✅ تحويل categoryId مرة واحدة
   static const int _defaultCategoryId = 0;
@@ -170,7 +169,6 @@ class Section_screenState extends State<Section_screen> {
     return int.tryParse(resolved) ?? (categoryIdOverride ?? _catId);
   }
 
-
   int _resolveSelectedCategoryFallback() {
     final int? selected = selectedCategoryId.value;
     if (selected == null || selected <= 0) {
@@ -178,8 +176,6 @@ class Section_screenState extends State<Section_screen> {
     }
     return selected;
   }
-
-
 
   ItemFilterModel _buildEffectiveFilter({
     ItemFilterModel? base,
@@ -532,7 +528,10 @@ class Section_screenState extends State<Section_screen> {
         child: ValueListenableBuilder<bool>(
             valueListenable: _showBottomBar,
             builder: (context, show, _) {
-              final Widget bottomBar = AnimatedSwitcher(
+              final double bottomContentPadding =
+                  _calculateBottomBarHeight(context);
+
+              final Widget animatedBottomBar = AnimatedSwitcher(
                 duration: _bottomBarAnimationDuration,
                 layoutBuilder:
                     (Widget? currentChild, List<Widget> previousChildren) {
@@ -544,8 +543,7 @@ class Section_screenState extends State<Section_screen> {
                     ],
                   );
                 },
-                transitionBuilder:
-                    (Widget child, Animation<double> animation) {
+                transitionBuilder: (Widget child, Animation<double> animation) {
                   final Animation<double> fadeAnimation = CurvedAnimation(
                     parent: animation,
                     curve: Curves.easeOut,
@@ -570,141 +568,155 @@ class Section_screenState extends State<Section_screen> {
                 },
                 child: show
                     ? SafeArea(
-                  key: const ValueKey('bottom_bar_visible'),
-                  top: false,
-                  left: false,
-                  right: false,
-                  minimum: const EdgeInsets.only(bottom: 12),
-                  child: ValueListenableBuilder<int?>(
-                    valueListenable: selectedCategoryId,
-                    builder: (context, selectedId, _) {
-                      final int effectiveCategoryId =
-                          selectedId ?? _catId;
-                      final bool showMap = !{
-                        Constant.computerRootCategoryId,
-                        Constant.sheinRootCategoryId,
-                        Constant.storeRootCategoryId,
-                      }.contains(effectiveCategoryId);
+                        key: const ValueKey('bottom_bar_visible'),
+                        top: false,
+                        left: false,
+                        right: false,
+                        minimum: const EdgeInsets.only(bottom: 12),
+                        child: ValueListenableBuilder<int?>(
+                          valueListenable: selectedCategoryId,
+                          builder: (context, selectedId, _) {
+                            final int effectiveCategoryId =
+                                selectedId ?? _catId;
+                            final bool showMap = !{
+                              Constant.computerRootCategoryId,
+                              Constant.sheinRootCategoryId,
+                              Constant.storeRootCategoryId,
+                            }.contains(effectiveCategoryId);
 
-                      return FilterSortBar(
-                        categoryIds: widget.categoryIds,
-                        categoryId: widget.categoryId,
-                        searchController: searchController,
-                        onFilterChanged: (newFilter) {
-                          final ItemFilterModel effectiveFilter =
-                          _buildEffectiveFilter(
-                            base: newFilter,
-                          );
-                          filter = effectiveFilter;
-                          final int resolvedCategoryId =
-                          _resolveCategoryIdInt(
-                            source: effectiveFilter,
-                          );
+                            return FilterSortBar(
+                              categoryIds: widget.categoryIds,
+                              categoryId: widget.categoryId,
+                              searchController: searchController,
+                              onFilterChanged: (newFilter) {
+                                final ItemFilterModel effectiveFilter =
+                                    _buildEffectiveFilter(
+                                  base: newFilter,
+                                );
+                                filter = effectiveFilter;
+                                final int resolvedCategoryId =
+                                    _resolveCategoryIdInt(
+                                  source: effectiveFilter,
+                                );
 
-                          if (_isValidCategoryId(newFilter?.categoryId) &&
-                              selectedCategoryId.value !=
-                                  resolvedCategoryId) {
-                            selectedCategoryId.value =
-                                resolvedCategoryId;
-                          }
+                                if (_isValidCategoryId(newFilter?.categoryId) &&
+                                    selectedCategoryId.value !=
+                                        resolvedCategoryId) {
+                                  selectedCategoryId.value = resolvedCategoryId;
+                                }
 
-                          context
-                              .read<FetchItemSummaryCubit>()
-                              .fetchSummaries(
-                            categoryId: resolvedCategoryId,
-                            search: searchController.text,
-                            filter: effectiveFilter,
-                            sortBy: sortBy,
-                          );
-                        },
-                        onSortChanged: (newSort) {
-                          sortBy = newSort;
+                                context
+                                    .read<FetchItemSummaryCubit>()
+                                    .fetchSummaries(
+                                      categoryId: resolvedCategoryId,
+                                      search: searchController.text,
+                                      filter: effectiveFilter,
+                                      sortBy: sortBy,
+                                    );
+                              },
+                              onSortChanged: (newSort) {
+                                sortBy = newSort;
 
-                          final ItemFilterModel effectiveFilter =
-                          _buildEffectiveFilter();
-                          filter = effectiveFilter;
-                          final int resolvedCategoryId =
-                          _resolveCategoryIdInt(
-                            source: effectiveFilter,
-                          );
+                                final ItemFilterModel effectiveFilter =
+                                    _buildEffectiveFilter();
+                                filter = effectiveFilter;
+                                final int resolvedCategoryId =
+                                    _resolveCategoryIdInt(
+                                  source: effectiveFilter,
+                                );
 
-                          context
-                              .read<FetchItemSummaryCubit>()
-                              .fetchSummaries(
-                            categoryId: resolvedCategoryId,
-                            search: searchController.text,
-                            filter: effectiveFilter,
-                            sortBy: sortBy,
-                          );
-                        },
-                        showMapButton: showMap,
-                        onMapSearchTap: showMap
-                            ? () {
-                          Navigator.pushNamed(
-                              context, '/mapSearch');
-                        }
-                            : null,
-                      );
-                    },
-                  ),
-                )
+                                context
+                                    .read<FetchItemSummaryCubit>()
+                                    .fetchSummaries(
+                                      categoryId: resolvedCategoryId,
+                                      search: searchController.text,
+                                      filter: effectiveFilter,
+                                      sortBy: sortBy,
+                                    );
+                              },
+                              showMapButton: showMap,
+                              onMapSearchTap: showMap
+                                  ? () {
+                                      Navigator.pushNamed(
+                                          context, '/mapSearch');
+                                    }
+                                  : null,
+                            );
+                          },
+                        ),
+                      )
                     : const SizedBox.shrink(
-                  key: ValueKey('bottom_bar_hidden'),
+                        key: ValueKey('bottom_bar_hidden'),
                       ),
               );
-              final double bottomContentPadding =
-                  show ? _calculateBottomBarHeight(context) : 0.0;
 
               return Scaffold(
                 backgroundColor: context.color.primaryColor,
                 appBar: null, // AppBar داخل ItemsBodyBox
-                bottomNavigationBar: bottomBar,
-                body: Column(
+                body: Stack(
                   children: [
-                    Expanded(
-                      child: RepaintBoundary(
-                        child: NotificationListener<ScrollNotification>(
-                          onNotification: (_) => false,
-                          child: RefreshIndicator(
-                            onRefresh: _handleRefresh,
-                            color: context.color.territoryColor,
-                            displacement: 40,
-                            strokeWidth: 3.0,
-                            triggerMode: RefreshIndicatorTriggerMode.onEdge,
-                            notificationPredicate: (notification) {
-                              if (_isLoadingMore) return false;
-                              return defaultScrollNotificationPredicate(
-                                  notification);
-                            },
-                            child: ItemsBodyBox(
-                              key: ValueKey('items_${widget.categoryId}'),
-                              categoryId: widget.categoryId,
-                              categoryName: widget.categoryName,
-                              bottomContentPadding: bottomContentPadding,
+                    Positioned.fill(
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: RepaintBoundary(
+                              child: NotificationListener<ScrollNotification>(
+                                onNotification: (_) => false,
+                                child: RefreshIndicator(
+                                  onRefresh: _handleRefresh,
+                                  color: context.color.territoryColor,
+                                  displacement: 40,
+                                  strokeWidth: 3.0,
+                                  triggerMode:
+                                      RefreshIndicatorTriggerMode.onEdge,
+                                  notificationPredicate: (notification) {
+                                    if (_isLoadingMore) return false;
+                                    return defaultScrollNotificationPredicate(
+                                        notification);
+                                  },
+                                  child: ItemsBodyBox(
+                                    key: ValueKey('items_${widget.categoryId}'),
+                                    categoryId: widget.categoryId,
+                                    categoryName: widget.categoryName,
+                                    bottomContentPadding: bottomContentPadding,
 
-                              selectedCategoryId: selectedCategoryId,
-                              showShimmer: showShimmer,
-                              searchController: searchController,
-                              specialRequestSectionSlug: _requestSectionSlug,
-                              enableTopBar: _showSlider,
-                              enableAdSlider: _showAdSlider,
-                              // إن كانت موجودة عندك
-                              adInterfaceType: _sliderInterfaceType,
-                              // ← تمرير الواجهة المعتمدة دائمًا
-                              sortBy: sortBy,
-                              // ← جديد
-                              filter: filter,
-                              // ← جديد
-                              enableSubcats: _showSlider,
-                              // ← نفس منطق التأجيل (أظهر بعد Success)
-                              onLoadMore: _handleLoadMoreState,
-                              onScrollDirectionChanged: (isScrollingUp) {
-                                if (_showBottomBar.value != isScrollingUp) {
-                                  _showBottomBar.value = isScrollingUp;
-                                }
-                              },
+                                    selectedCategoryId: selectedCategoryId,
+                                    showShimmer: showShimmer,
+                                    searchController: searchController,
+                                    specialRequestSectionSlug:
+                                        _requestSectionSlug,
+                                    enableTopBar: _showSlider,
+                                    enableAdSlider: _showAdSlider,
+                                    // إن كانت موجودة عندك
+                                    adInterfaceType: _sliderInterfaceType,
+                                    // ← تمرير الواجهة المعتمدة دائمًا
+                                    sortBy: sortBy,
+                                    // ← جديد
+                                    filter: filter,
+                                    // ← جديد
+                                    enableSubcats: _showSlider,
+                                    // ← نفس منطق التأجيل (أظهر بعد Success)
+                                    onLoadMore: _handleLoadMoreState,
+                                    onScrollDirectionChanged: (isScrollingUp) {
+                                      if (_showBottomBar.value !=
+                                          isScrollingUp) {
+                                        _showBottomBar.value = isScrollingUp;
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
+                        ],
+                      ),
+                    ),
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        ignoring: !show,
+                        child: Align(
+                          alignment: Alignment.bottomCenter,
+                          child: animatedBottomBar,
                         ),
                       ),
                     ),

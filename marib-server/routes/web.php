@@ -371,13 +371,30 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
     Route::group(['middleware' => ['permission:currency-rate-list|currency-rate-create|currency-rate-edit|currency-rate-delete|currency-rate-import']], static function () {
 
         Route::get('/currency', [CurrencyController::class, 'index'])->name('currency.index');
-        Route::post('/currency', [CurrencyController::class, 'store'])->name('currency.store');
-        Route::post('/currency/import', [CurrencyController::class, 'import'])->name('currency.import');
+        Route::get('/currency/create', [CurrencyController::class, 'create'])
+            ->middleware('permission:currency-rate-create')
+            ->name('currency.create');
+        Route::post('/currency', [CurrencyController::class, 'store'])
+            ->middleware('permission:currency-rate-create')
+            ->name('currency.store');
+        Route::post('/currency/import', [CurrencyController::class, 'import'])
+            ->middleware('permission:currency-rate-import')
+            ->name('currency.import');
+
+
         Route::get('/currency/show', [CurrencyController::class, 'show'])->name('currency.show');
-        Route::get('/currency/logs', [CurrencyController::class, 'changeLogs'])->name('currency.logs');        
-        Route::put('/currency/{id}', [CurrencyController::class, 'update'])->name('currency.update');
-        Route::delete('/currency/{id}', [CurrencyController::class, 'destroy'])->name('currency.destroy');
-        Route::delete('/currency/{id}/icon', [CurrencyController::class, 'destroyIcon'])->name('currency.icon.destroy');
+        Route::get('/currency/logs', [CurrencyController::class, 'changeLogs'])->name('currency.logs');
+        Route::put('/currency/{id}', [CurrencyController::class, 'update'])
+            ->middleware('permission:currency-rate-edit')
+            ->name('currency.update');
+        Route::delete('/currency/{id}', [CurrencyController::class, 'destroy'])
+            ->middleware('permission:currency-rate-delete')
+            ->name('currency.destroy');
+        Route::delete('/currency/{id}/icon', [CurrencyController::class, 'destroyIcon'])
+            ->middleware('permission:currency-rate-edit')
+            ->name('currency.icon.destroy');
+
+            
     });
 
     /* ------------------------------- أسعار المعادن Metal Rates ------------------------------ */

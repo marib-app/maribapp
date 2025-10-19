@@ -55,6 +55,15 @@ class CurrencyController extends Controller
 
     }
 
+    public function create()
+    {
+        $governorates = Governorate::orderBy('name')->get();
+
+        return view('currency.create', compact('governorates'));
+
+
+    }
+
 
 
 
@@ -277,8 +286,16 @@ class CurrencyController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
+            if ($request->expectsJson()) {
+                return response()->json(['errors' => $validator->errors()], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
+            return redirect()
+                ->back()
+                ->withErrors($validator)
+                ->withInput();
+            
+            }
 
         $iconData = $this->extractIconData($request);
         $quotesPayload = $this->normalizeQuotes($request->input('quotes', []));
@@ -299,14 +316,20 @@ class CurrencyController extends Controller
         });
         CurrencyCreated::dispatch($currency->id, $defaultGovernorateId);
 
+        $message = __('Currency rate created successfully');
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'data' => $currency,
+            ]);
+        }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Currency rate created successfully',
-            'data' => $currency,
+        return redirect()
+            ->route('currency.index')
+            ->with('success', $message);
 
-        ]);
     }
 
 

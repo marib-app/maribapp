@@ -276,6 +276,14 @@ class ClassifiedModel {
     // الأساسية
     id          = _asInt(json['id']);
     userId      = _asInt(_pick(json, ['user_id','userId']));
+
+    if (userId == null) {
+      final ownerRaw = json['owner'];
+      if (ownerRaw is Map) {
+        userId = _asInt(ownerRaw['id']) ?? _asInt(ownerRaw['user_id']);
+      }
+    }
+
     categoryId  = _asInt(_pick(json, ['category_id','categoryId']));
     title       = _asString(_pick(json, ['title','name']));
     slug        = _asString(json['slug']);

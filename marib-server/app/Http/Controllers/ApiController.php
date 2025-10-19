@@ -6890,8 +6890,10 @@ private function mapService(Service $s): array
         $expiry = (string) $expiry;
     }
 
-        $owner = $s->relationLoaded('owner') ? $s->getRelation('owner') : null;
-
+    $owner = $s->relationLoaded('owner') ? $s->getRelation('owner') : null;
+    $ownerId = $owner
+        ? (int) $owner->id
+        : ($s->owner_id !== null ? (int) $s->owner_id : null);
 
     return [
         'id'                => (int) $s->id,
@@ -6901,6 +6903,8 @@ private function mapService(Service $s): array
         'is_main'           => (bool) $s->is_main,
         'service_type'      => $s->service_type,
         'status'            => (bool) $s->status,
+        'owner_id'          => $ownerId,
+        'user_id'           => $ownerId,
         'views'             => (int) ($s->views ?? 0),
         'expiry_date'       => $expiry,
 
@@ -6924,7 +6928,7 @@ private function mapService(Service $s): array
         'direct_to_user'    => (bool) $s->direct_to_user,
         'direct_user_id'    => $s->direct_user_id ? (int) $s->direct_user_id : null,
         'owner'             => $owner ? [
-            'id'    => (int) $owner->id,
+            'id'    => $ownerId,
             'name'  => $owner->name,
             'email' => $owner->email,
         ] : null,

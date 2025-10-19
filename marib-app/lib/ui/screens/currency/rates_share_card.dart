@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' hide TextDirection;
+import 'package:marib/data/model/currency_rate.dart';
 
 import 'package:marib/data/model/metal_rate.dart';
 
@@ -118,27 +119,24 @@ class _RatesShareContent extends StatelessWidget {
       sections.add(const SizedBox(height: 12));
     }
 
-    if (viewState.displayRates.isNotEmpty) {
+    final List<CurrencyRate> currencyRates = viewState.displayRates
+        .whereType<CurrencyRate>()
+        .toList(growable: false);
+    final List<MetalRate> inlineMetalRates = viewState.displayRates
+        .whereType<MetalRate>()
+        .toList(growable: false);
+
+    if (currencyRates.isNotEmpty) {
+
       sections
         ..add(Text('العملات', style: sectionStyle))
         ..add(const SizedBox(height: 8));
 
-      for (final dynamic rate in viewState.displayRates) {
-        final String name = _readString(() => rate.currencyName) ??
-            _readMapString(rate, 'currency_name') ??
-            _readString(() => rate.currencyNameAr) ??
-            'عملة غير معروفة';
-        final String buy = _formatPrice(
-          _readDynamic(() => rate.buyPrice) ?? _readMapValue(rate, 'buy_price'),
-          numberFormat,
-        );
-        final String sell = _formatPrice(
-          _readDynamic(() => rate.sellPrice) ?? _readMapValue(rate, 'sell_price'),
-          numberFormat,
-        );
-        final String source = _readString(() => rate.quoteSource) ??
-            _readMapString(rate, 'quote_source') ??
-            'غير متاح';
+      for (final CurrencyRate rate in currencyRates) {
+        final String name = _readString(() => rate.currencyName) ?? 'عملة غير معروفة';
+        final String buy = _formatPrice(rate.buyPrice, numberFormat);
+        final String sell = _formatPrice(rate.sellPrice, numberFormat);
+        final String source = _normalizeSource(rate.quoteSource);
 
         sections.add(_ShareRateRow(
           title: name,
@@ -152,12 +150,30 @@ class _RatesShareContent extends StatelessWidget {
       addDivider();
     }
 
-    if (viewState.displayGoldRates.isNotEmpty) {
+    List<MetalRate> _mergeMetalRates(
+        List<MetalRate> existing,
+        Iterable<MetalRate> additional,
+        ) {
+      final Map<int, MetalRate> merged = <int, MetalRate>{};
+      for (final MetalRate rate in existing) {
+        merged[rate.id] = rate;
+      }
+
+      for (final MetalRate rate in additional) {
+        merged.putIfAbsent(rate.id, () => rate);
+      }
+      return merged.values.toList(growable: false);
+    }
+
+    void addMetalSection(String title, List<MetalRate> rates) {
+      if (rates.isEmpty) {
+        return;
+      }
       sections
-        ..add(Text('أسعار الذهب', style: sectionStyle))
+        ..add(Text(title, style: sectionStyle))
         ..add(const SizedBox(height: 8));
 
-      for (final MetalRate rate in viewState.displayGoldRates) {
+      for (final MetalRate rate in rates) {
         sections.add(_ShareRateRow(
           title: rate.displayName,
           subtitle:
@@ -171,24 +187,23 @@ class _RatesShareContent extends StatelessWidget {
       addDivider();
     }
 
-    if (viewState.displaySilverRates.isNotEmpty) {
-      sections
-        ..add(Text('أسعار الفضة', style: sectionStyle))
-        ..add(const SizedBox(height: 8));
 
-      for (final MetalRate rate in viewState.displaySilverRates) {
-        sections.add(_ShareRateRow(
-          title: rate.displayName,
-          subtitle:
-          'شراء: ${numberFormat.format(rate.buyPrice)} | بيع: ${numberFormat.format(rate.sellPrice)}',
-          source: 'المصدر: ${_normalizeSource(rate.source)}',
-          textColor: textColor,
-          bodyStyle: bodyStyle,
-        ));
-      }
+    final List<MetalRate> goldRates = _mergeMetalRates(
+      viewState.displayGoldRates,
+      inlineMetalRates.where((MetalRate rate) => rate.isGold),
+    );
+    final List<MetalRate> silverRates = _mergeMetalRates(
+      viewState.displaySilverRates,
+      inlineMetalRates.where((MetalRate rate) => rate.isSilver),
+    );
+    final List<MetalRate> otherMetalRates = inlineMetalRates
+        .where((MetalRate rate) => !rate.isGold && !rate.isSilver)
+        .toList(growable: false);
 
-      addDivider();
-    }
+    addMetalSection('أسعار الذهب', goldRates);
+    addMetalSection('أسعار الفضة', silverRates);
+    addMetalSection('أسعار المعادن الأخرى', otherMetalRates);
+
 
     final DateTime? currencyUpdatedAt = viewState.lastUpdatedAt;
     if (currencyUpdatedAt != null) {
@@ -232,30 +247,6 @@ class _RatesShareContent extends StatelessWidget {
     return null;
   }
 
-  dynamic _readDynamic(dynamic Function() accessor) {
-    try {
-      return accessor();
-    } catch (_) {
-      return null;
-    }
-  }
-
-  String? _readMapString(dynamic value, String key) {
-    if (value is Map<String, dynamic>) {
-      final dynamic result = value[key];
-      if (result is String && result.trim().isNotEmpty) {
-        return result.trim();
-      }
-    }
-    return null;
-  }
-
-  dynamic _readMapValue(dynamic value, String key) {
-    if (value is Map<String, dynamic>) {
-      return value[key];
-    }
-    return null;
-  }
 
   String _normalizeSource(String? raw) {
     if (raw == null || raw.trim().isEmpty) {

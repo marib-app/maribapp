@@ -634,7 +634,7 @@ class ManualPaymentRequestController extends Controller
         $statusTotals = (clone $query)
             ->select('status_group', DB::raw('COUNT(*) as aggregate_total'))
             ->groupBy('status_group')
-            ->pluck('aggregate_total', 'status_group');
+            ->pluck('aggregate_total', 'status') ;
 
         $gatewayTotals = (clone $query)
             ->select('channel', DB::raw('COUNT(*) as aggregate_total'))

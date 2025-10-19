@@ -794,8 +794,8 @@ class RatesTabView extends StatelessWidget {
     final divider = _isDark(context) ? Colors.white12 : Colors.black12;
     final NumberFormat formatter = NumberFormat('#,##0.###', 'en');
 
-    String format(double value) {
-      if (value.isNaN || value.isInfinite) {
+    String format(double? value) {
+      if (value == null || value.isNaN || value.isInfinite) {
         return '--';
       }
       return formatter.format(value);

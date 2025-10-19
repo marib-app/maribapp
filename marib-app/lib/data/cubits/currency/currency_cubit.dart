@@ -407,8 +407,9 @@ class CurrencyCubit extends Cubit<CurrencyState> {
   }
 
   bool _matchesMetalChangeFilter(MetalRate rate) {
-    final double delta = rate.sellPrice - rate.buyPrice;
-
+    final double sellPrice = rate.sellPrice ?? 0;
+    final double buyPrice = rate.buyPrice ?? 0;
+    final double delta = sellPrice - buyPrice;
     switch (_changeFilter) {
       case RateChangeFilter.all:
         return true;

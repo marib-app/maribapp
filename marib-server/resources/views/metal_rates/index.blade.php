@@ -16,6 +16,7 @@
 
 @push('scripts')
     @include('metal_rates.partials.icon_preview_scripts')
+    @include('metal_rates.partials.quote_table_scripts')
 
 @endpush
 
@@ -79,10 +80,21 @@
                                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ $rate->id }}" aria-expanded="false" aria-controls="collapse{{ $rate->id }}">
                                                 <div class="d-flex flex-column flex-md-row w-100">
                                                     <strong class="me-md-3">{{ $rate->display_name }}</strong>
+
+
+                                                    @php
+                                                        $defaultQuote = $rate->quotes->firstWhere('is_default', true);
+                                                        $displayBuy = $defaultQuote?->buy_price ?? $rate->buy_price;
+                                                        $displaySell = $defaultQuote?->sell_price ?? $rate->sell_price;
+                                                        $displaySource = $defaultQuote?->source ?? $rate->source;
+                                                        $displayQuotedAt = optional($defaultQuote?->quoted_at ?? $rate->quoted_at)->format('Y-m-d H:i');
+                                                    @endphp
+
                                                     <div class="text-muted small">
-                                                        <span class="me-2">{{ __('Buy') }}: <strong>{{ number_format((float) $rate->buy_price, 3) }}</strong></span>
-                                                        <span class="me-2">{{ __('Sell') }}: <strong>{{ number_format((float) $rate->sell_price, 3) }}</strong></span>
-                                                        <span>{{ __('Updated at') }}: {{ optional($rate->updated_at)->format('Y-m-d H:i') }}</span>
+                                                        <span class="me-2">{{ __('Buy') }}: <strong>{{ $displayBuy !== null ? number_format((float) $displayBuy, 3) : '—' }}</strong></span>
+                                                        <span class="me-2">{{ __('Sell') }}: <strong>{{ $displaySell !== null ? number_format((float) $displaySell, 3) : '—' }}</strong></span>
+                                                        <span class="me-2">{{ __('Source') }}: {{ $displaySource ?: '—' }}</span>
+                                                        <span>{{ __('Updated at') }}: {{ $displayQuotedAt ?: '—' }}</span>
                                                     </div>
                                                 </div>
                                             </button>
@@ -104,23 +116,28 @@
                                                                         <input type="hidden" name="karat" value="">
                                                                     @endif
                                                                 </div>
-                                                                <div class="row g-2">
-                                                                    <div class="col-6">
-                                                                        <label class="form-label">{{ __('Buy price') }}</label>
-                                                                        <input type="number" step="0.001" min="0" class="form-control" name="buy_price" value="{{ $rate->buy_price }}" required>
-                                                                    </div>
-                                                                    <div class="col-6">
-                                                                        <label class="form-label">{{ __('Sell price') }}</label>
-                                                                        <input type="number" step="0.001" min="0" class="form-control" name="sell_price" value="{{ $rate->sell_price }}" required>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="mb-3 mt-3">
-                                                                    <label class="form-label">{{ __('Source') }}</label>
-                                                                    <input type="text" class="form-control" name="source" value="{{ $rate->source }}">
-                                                                </div>
-                                                                <div class="mb-3">
-                                                                    <label class="form-label">{{ __('Quote timestamp') }}</label>
-                                                                    <input type="datetime-local" class="form-control" name="quoted_at" value="{{ optional($rate->quoted_at)->format('Y-m-d\TH:i') }}">
+                                                                 <div class="mb-4">
+                                                                    <label class="form-label">{{ __('Governorate quotes') }}</label>
+                                                                    @php
+                                                                        $quoteMap = $rate->quotes
+                                                                            ->mapWithKeys(fn($quote) => [
+                                                                                $quote->governorate_id => [
+                                                                                    'sell_price' => $quote->sell_price,
+                                                                                    'buy_price' => $quote->buy_price,
+                                                                                    'source' => $quote->source,
+                                                                                    'quoted_at' => optional($quote->quoted_at)->toIso8601String(),
+                                                                                    'is_default' => (bool) $quote->is_default,
+                                                                                ],
+                                                                            ])
+                                                                            ->all();
+                                                                        $defaultQuoteId = optional($rate->quotes->firstWhere('is_default', true))->governorate_id ?? $defaultGovernorateId;
+                                                                    @endphp
+                                                                    @include('metal_rates.partials.quote-table', [
+                                                                        'governorates' => $governorates,
+                                                                        'quotes' => $quoteMap,
+                                                                        'context' => 'update-' . $rate->id,
+                                                                        'defaultGovernorateId' => $defaultQuoteId,
+                                                                    ])
                                                                 </div>
 
 

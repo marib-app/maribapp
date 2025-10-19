@@ -6,6 +6,9 @@
 
 @push('scripts')
     @include('metal_rates.partials.icon_preview_scripts')
+    @include('metal_rates.partials.quote_table_scripts')
+
+
 @endpush
 
 @section('page-title')
@@ -62,25 +65,14 @@
                                     <div class="form-text">{{ __('Leave empty for silver.') }}</div>
                                 </div>
 
-                                <div class="row g-2">
-                                    <div class="col-6">
-                                        <label for="buy_price" class="form-label">{{ __('Buy price') }}</label>
-                                        <input type="number" step="0.001" min="0" class="form-control" id="buy_price" name="buy_price" value="{{ old('buy_price') }}" required>
-                                    </div>
-                                    <div class="col-6">
-                                        <label for="sell_price" class="form-label">{{ __('Sell price') }}</label>
-                                        <input type="number" step="0.001" min="0" class="form-control" id="sell_price" name="sell_price" value="{{ old('sell_price') }}" required>
-                                    </div>
-                                </div>
-
-                                <div class="mb-3 mt-3">
-                                    <label for="source" class="form-label">{{ __('Source (optional)') }}</label>
-                                    <input type="text" class="form-control" id="source" name="source" value="{{ old('source') }}">
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="quoted_at" class="form-label">{{ __('Quote timestamp (optional)') }}</label>
-                                    <input type="datetime-local" class="form-control" id="quoted_at" name="quoted_at" value="{{ old('quoted_at') }}">
+                                <div class="mb-4">
+                                    <label class="form-label">{{ __('Governorate quotes') }}</label>
+                                    @include('metal_rates.partials.quote-table', [
+                                        'governorates' => $governorates,
+                                        'quotes' => [],
+                                        'context' => 'create',
+                                        'defaultGovernorateId' => $defaultGovernorateId,
+                                    ])
                                 </div>
 
                                 <div class="mb-3">

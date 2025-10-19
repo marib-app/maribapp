@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 
 
+use App\Events\CurrencyRatesUpdated;
 use App\Events\CurrencyCreated;
 use App\Jobs\BackfillCurrencyRateHistory;
 use App\Models\CurrencyRate;
@@ -365,6 +366,27 @@ class CurrencyController extends Controller
             $this->persistCurrencyQuotes($currency, $quotesPayload, $defaultGovernorateId);
             return $currency->fresh(['quotes.governorate']);
         });
+
+
+
+        CurrencyRatesUpdated::dispatch(
+            $currency->id,
+            $currency->quotes
+                ->map(static function (CurrencyRateQuote $quote): array {
+                    return [
+                        'governorate_id' => $quote->governorate_id,
+                        'governorate_code' => $quote->governorate?->code,
+                        'governorate_name' => $quote->governorate?->name,
+                        'sell_price' => $quote->sell_price,
+                        'buy_price' => $quote->buy_price,
+                        'is_default' => (bool) $quote->is_default,
+                    ];
+                })
+                ->values()
+                ->all()
+        );
+
+
 
         return response()->json([
             'success' => true,

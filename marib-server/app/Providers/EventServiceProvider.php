@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Events\CurrencyRatesUpdated;
+use App\Listeners\SendCurrencyRatesUpdatedNotification;
 use App\Events\CompetitionAnnounced;
 use App\Events\CurrencyCreated;
 use App\Events\ManualPaymentRequestCreated;
@@ -64,6 +66,10 @@ class EventServiceProvider extends ServiceProvider
         CurrencyCreated::class => [
             SendCurrencyCreatedNotification::class,
         ],
+        CurrencyRatesUpdated::class => [
+            SendCurrencyRatesUpdatedNotification::class,
+        ],
+
 
         DelegateAssignmentsUpdated::class => [
             

@@ -13,6 +13,7 @@ use App\Models\WalletTransaction;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Database\Eloquent\Model;
+use App\Queries\PaymentRequestTableQuery;
 
 use App\Models\UserFcmToken;
 use App\Services\BootstrapTableService;

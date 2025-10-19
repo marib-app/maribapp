@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 use App\Models\Item;
 use App\Models\ManualBank;
+use App\Queries\PaymentRequestTableQuery;
 
 use App\Models\ManualPaymentRequest;
 use App\Models\ManualPaymentRequestHistory;

@@ -522,7 +522,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
         onRefreshPurchases: _fetchPurchases,
         onShowCodes: _showCodesDialog,
 
-        allowPlanCreation: _shouldAllowPlanCreation(network),
+        allowPlanCreation: shouldAllowPlanCreationForNetwork(network),
       ),
     );
 
@@ -652,27 +652,306 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
   }
 
   bool _shouldAllowPlanCreation(WifiNetwork network) {
-    final Map<String, dynamic>? meta = network.meta;
-    final List<String?> statuses = <String?>[
-      if (meta?['owner_request'] is Map)
-        (meta!['owner_request'] as Map)['status']?.toString(),
-      meta?['owner_request_status']?.toString(),
-      meta?['status']?.toString(),
+    return shouldAllowPlanCreationForNetwork(network);
+  }
+}
+
+@visibleForTesting
+bool shouldAllowPlanCreationForNetwork(WifiNetwork network) {
+  final Map<String, dynamic>? meta = network.meta;
+  final Iterable<String> statuses = _extractNetworkStatuses(meta);
+
+  final bool hasApprovedStatus = statuses.any(_isApprovedNetworkStatus);
+  if (hasApprovedStatus) {
+    return true;
+  }
+
+  if (network.planCount > 0) {
+    return true;
+  }
+
+  final bool hasPendingStatus = statuses.any(_isPendingNetworkStatus);
+  final bool statusMissing = statuses.isEmpty;
+  final bool isOwner = _isNetworkOwnedByCurrentUser(meta);
+  final bool originatedFromOwnerFlow = _originatedFromMobileOwnerFlow(meta);
+
+  if (originatedFromOwnerFlow) {
+    return true;
+  }
+
+  if (isOwner && (hasPendingStatus || statusMissing)) {
+    return true;
+  }
+
+  return false;
+}
+
+Iterable<String> _extractNetworkStatuses(Map<String, dynamic>? meta) {
+  if (meta == null || meta.isEmpty) {
+    return const Iterable<String>.empty();
+  }
+
+  final List<String> statuses = <String>[];
+
+  void addStatus(dynamic value) {
+    final String? normalized = _normalizeText(value);
+    if (normalized != null) {
+      statuses.add(normalized);
+    }
+  }
+
+  final dynamic ownerRequest = meta['owner_request'];
+  if (ownerRequest is Map) {
+    addStatus(ownerRequest['status']);
+  } else if (ownerRequest is Iterable) {
+    for (final dynamic element in ownerRequest) {
+      addStatus(element);
+    }
+  } else {
+    addStatus(ownerRequest);
+  }
+
+  addStatus(meta['owner_request_status']);
+  addStatus(meta['status']);
+
+  return statuses;
+}
+
+bool _isApprovedNetworkStatus(String status) {
+  const Set<String> approvedStatuses = <String>{
+    'approved',
+    'active',
+    'published',
+    'enabled',
+    'live',
+  };
+
+  return approvedStatuses.contains(status);
+}
+
+bool _isPendingNetworkStatus(String status) {
+  const Set<String> pendingStatuses = <String>{
+    'pending',
+    'draft',
+    'awaiting_approval',
+    'in_review',
+    'under_review',
+    'submitted',
+    'processing',
+  };
+
+  return pendingStatuses.contains(status);
+}
+
+bool _isNetworkOwnedByCurrentUser(Map<String, dynamic>? meta) {
+  if (meta == null || meta.isEmpty) {
+    return false;
+  }
+
+  final Iterable<dynamic> ownerFlags = <dynamic>[
+    meta['is_owner'],
+    meta['owned_by_me'],
+    meta['owned_by_user'],
+    meta['is_my_network'],
+    meta['is_current_user_owner'],
+    meta['current_user_is_owner'],
+    meta['owner_is_current_user'],
+    meta['is_owner_flag'],
+    meta['is_owned_by_current_user'],
+  ];
+
+  for (final dynamic candidate in ownerFlags) {
+    final bool? parsed = _tryParseBool(candidate);
+    if (parsed == true) {
+      return true;
+    }
+  }
+
+  final dynamic owner = meta['owner'];
+  if (owner is Map<String, dynamic>) {
+    final Iterable<dynamic> ownerMapFlags = <dynamic>[
+      owner['is_owner'],
+      owner['is_me'],
+      owner['is_current_user'],
+      owner['is_mine'],
+      owner['owned_by_me'],
     ];
 
-    bool approved = statuses.any((status) {
-      if (status == null) return false;
-      final String normalized = status.toLowerCase();
-      return normalized == 'approved' ||
-          normalized == 'active' ||
-          normalized == 'published' ||
-          normalized == 'enabled';
-    });
-
-    if (!approved && network.planCount > 0) {
-      approved = true;
+    for (final dynamic candidate in ownerMapFlags) {
+      final bool? parsed = _tryParseBool(candidate);
+      if (parsed == true) {
+        return true;
+      }
     }
 
-    return approved;
+    final int? ownerId = _tryParseInt(owner['id'] ?? owner['user_id']);
+    final int? currentUserId = _tryParseInt(
+      meta['current_user_id'] ?? meta['user_id'] ?? meta['owner_user_id'],
+    );
+
+    if (ownerId != null && currentUserId != null && ownerId == currentUserId) {
+      return true;
+    }
   }
+
+  return false;
+}
+
+bool _originatedFromMobileOwnerFlow(Map<String, dynamic>? meta) {
+  if (meta == null || meta.isEmpty) {
+    return false;
+  }
+
+  const Set<String> ownerFlowTokens = <String>{
+    'mobile_owner_flow',
+    'owner_network',
+    'mobile-owner-flow',
+    'mobile_owner',
+    'owner_mobile',
+  };
+
+  const Set<String> sourceTokens = <String>{
+    'mobile_app',
+    'mobile-app',
+  };
+
+  bool hasToken(dynamic value) {
+    return _containsToken(value, <String>{
+      ...ownerFlowTokens,
+      ...sourceTokens,
+    });
+  }
+
+  final Iterable<dynamic> directCandidates = <dynamic>[
+    meta['source'],
+    meta['origin'],
+    meta['request_type'],
+    meta['requestType'],
+    meta['request_source'],
+    meta['requestSource'],
+    meta['request_origin'],
+    meta['requestOrigin'],
+    meta['creation_source'],
+    meta['creationSource'],
+    meta['created_via'],
+    meta['createdVia'],
+  ];
+
+  for (final dynamic candidate in directCandidates) {
+    if (hasToken(candidate)) {
+      return true;
+    }
+  }
+
+  if (hasToken(meta['owner_request'])) {
+    return true;
+  }
+
+  return false;
+}
+
+bool? _tryParseBool(dynamic value) {
+  if (value == null) {
+    return null;
+  }
+
+  if (value is bool) {
+    return value;
+  }
+
+  if (value is num) {
+    return value != 0;
+  }
+
+  if (value is String) {
+    final String normalized = value.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return null;
+    }
+
+    const Set<String> truthy = <String>{'true', '1', 'yes', 'y'};
+    const Set<String> falsy = <String>{'false', '0', 'no', 'n'};
+
+    if (truthy.contains(normalized)) {
+      return true;
+    }
+    if (falsy.contains(normalized)) {
+      return false;
+    }
+  }
+
+  return null;
+}
+
+int? _tryParseInt(dynamic value) {
+  if (value == null) {
+    return null;
+  }
+
+  if (value is int) {
+    return value;
+  }
+
+
+
+  if (value is num) {
+    return value.toInt();
+  }
+
+
+
+  if (value is String) {
+    return int.tryParse(value.trim());
+  }
+
+  return int.tryParse(value.toString());
+}
+
+bool _containsToken(dynamic value, Set<String> tokens) {
+  if (value == null) {
+    return false;
+  }
+
+  if (value is String) {
+    final String? normalized = _normalizeText(value);
+    if (normalized == null) {
+      return false;
+    }
+    return tokens.contains(normalized);
+  }
+
+  if (value is Iterable) {
+    for (final dynamic element in value) {
+      if (_containsToken(element, tokens)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  if (value is Map) {
+    for (final dynamic element in value.values) {
+      if (_containsToken(element, tokens)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  return _containsToken(value.toString(), tokens);
+}
+
+String? _normalizeText(dynamic value) {
+  if (value == null) {
+    return null;
+  }
+
+  if (value is String) {
+    final String normalized = value.trim().toLowerCase();
+    return normalized.isEmpty ? null : normalized;
+  }
+
+  return _normalizeText(value.toString());
+
+
 }

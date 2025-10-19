@@ -23,6 +23,7 @@ class WifiPlansSheet extends StatefulWidget {
     required this.onRefreshPurchases,
     required this.onShowCodes,
     this.allowPlanCreation = false,
+    this.repository = const WifiRepository(),
 
   });
 
@@ -31,13 +32,13 @@ class WifiPlansSheet extends StatefulWidget {
   final Future<void> Function({bool force}) onRefreshPurchases;
   final Future<void> Function(WifiPurchase) onShowCodes;
   final bool allowPlanCreation;
+  final WifiRepository repository;
 
   @override
   State<WifiPlansSheet> createState() => WifiPlansSheetState();
 }
 
 class WifiPlansSheetState extends State<WifiPlansSheet> {
-  final WifiRepository _repository = const WifiRepository();
   List<WifiPlan> _plans = <WifiPlan>[];
   bool _isLoading = false;
   String? _error;
@@ -62,7 +63,7 @@ class WifiPlansSheetState extends State<WifiPlansSheet> {
     String? errorMessage;
 
     try {
-      fetched = await _repository.fetchNetworkPlans(widget.network.id);
+      fetched = await widget.repository.fetchNetworkPlans(widget.network.id);
     } catch (error) {
       errorMessage = error.toString();
     }

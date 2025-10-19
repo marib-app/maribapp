@@ -2151,7 +2151,25 @@ class ManualPaymentRequestController extends Controller
             'app\\models\\wallettransaction',
         ];
 
-        $categorySource = "LOWER(COALESCE(NULLIF(mpr.category, ''), NULLIF(mpr.payable_type, ''), NULLIF(pt.payable_type, '')))";
+        $categorySourceParts = [
+            "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_payment_request.category')), '')",
+            "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_payment_request.payable_type')), '')",
+            "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.payload.category')), '')",
+            "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.payload.payable_type')), '')",
+            "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.category')), '')",
+            "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.payable_type')), '')",
+            "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.category')), '')",
+            "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.payable_type')), '')",
+            "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.payload.category')), '')",
+            "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.payload.payable_type')), '')",
+            "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.category')), '')",
+            "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.payable_type')), '')",
+            "NULLIF(mpr.payable_type, '')",
+            "NULLIF(pt.payable_type, '')",
+        ];
+        $categorySource = 'LOWER(COALESCE(' . implode(', ', $categorySourceParts) . '))';
+        
+        
         $categoryExpression = sprintf(
             "CASE
                 WHEN %s IN (%s) THEN 'orders'

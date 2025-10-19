@@ -529,7 +529,7 @@ class Section_screenState extends State<Section_screen> {
             valueListenable: _showBottomBar,
             builder: (context, show, _) {
               final double bottomContentPadding =
-                  _calculateBottomBarHeight(context);
+              show ? _calculateBottomBarHeight(context) : 0.0;
 
               final Widget animatedBottomBar = AnimatedSwitcher(
                 duration: _bottomBarAnimationDuration,

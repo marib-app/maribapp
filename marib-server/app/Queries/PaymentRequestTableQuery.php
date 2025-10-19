@@ -91,6 +91,9 @@ class PaymentRequestTableQuery
             && Schema::hasColumn('payment_transactions', 'payment_gateway_name');
         $supportsPaymentTransactionMeta = Schema::hasTable('payment_transactions')
             && Schema::hasColumn('payment_transactions', 'meta');
+        $supportsWalletMeta = Schema::hasTable('wallet_transactions')
+            && Schema::hasColumn('wallet_transactions', 'meta');
+
 
         $supportsOrderLookup = Schema::hasTable('orders');
         $supportsOrderDepartment = $supportsOrderLookup
@@ -145,28 +148,76 @@ class PaymentRequestTableQuery
             $sanitizedManualBankAccountName,
         ], static fn (?string $part): bool => $part !== null));
 
-        $manualBankMetaExpressions = [];
+        $paymentTransactionManualBankMetaExpressions = [];
 
         if ($supportsPaymentTransactionMeta) {
-            $manualBankMetaExpressions = [
-                "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_bank.name'))",
-                "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual.bank.name'))",
-                "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.bank.name'))",
-                "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.bank_name'))",
-            ];
-
-            $manualBankMetaExpressions = array_map(
+            $paymentTransactionManualBankMetaExpressions = array_map(
                 $sanitizeManualBankAlias,
-                $manualBankMetaExpressions
+                [
+                    "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_bank.name'))",
+                    "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual.bank.name'))",
+                    "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.bank.name'))",
+                    "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.bank_name'))",
+                ]
             );
         }
 
-        $manualBankNameParts = array_merge($manualBankLookupParts, $manualBankRequestParts, $manualBankMetaExpressions);
+        $manualRequestMetaBankExpressions = [];
 
+        if ($supportsManualMeta) {
+            $manualRequestMetaBankExpressions = array_map(
+                
+                $sanitizeManualBankAlias,
+                [
+                    "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.name'))",
+                    "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.name'))",
+                ]
+            
+            );
+        }
 
-        $manualBankNameSelect = $manualBankNameParts === []
+        $walletTransactionMetaBankExpressions = [];
+
+        if ($supportsWalletMeta) {
+            $walletTransactionMetaBankExpressions = [
+                $sanitizeManualBankAlias("JSON_UNQUOTE(JSON_EXTRACT(wt.meta, '$.bank.name'))"),
+            ];
+        }
+
+        $paymentManualBankNameParts = array_merge(
+            $manualBankLookupParts,
+            $manualBankRequestParts,
+            $paymentTransactionManualBankMetaExpressions
+        );
+
+        $walletManualBankNameParts = array_merge(
+            $manualBankLookupParts,
+            $manualBankRequestParts,
+            $manualRequestMetaBankExpressions,
+            $walletTransactionMetaBankExpressions
+        );
+
+        $manualRequestManualBankNameParts = array_merge(
+            $manualBankLookupParts,
+            $manualBankRequestParts,
+            $manualRequestMetaBankExpressions
+        );
+
+        $paymentManualBankNameSelect = $paymentManualBankNameParts === []
             ? 'NULL'
-            : 'COALESCE(' . implode(', ', $manualBankNameParts) . ')';
+            : 'COALESCE(' . implode(', ', $paymentManualBankNameParts) . ')';
+
+        $walletManualBankNameSelect = $walletManualBankNameParts === []
+            ? 'NULL'
+            : 'COALESCE(' . implode(', ', $walletManualBankNameParts) . ')';
+
+
+
+        $manualRequestManualBankNameSelect = $manualRequestManualBankNameParts === []
+
+
+        ? 'NULL'
+            : 'COALESCE(' . implode(', ', $manualRequestManualBankNameParts) . ')';
 
         $channelExpression = self::channelExpression('pt');
 
@@ -354,7 +405,7 @@ class PaymentRequestTableQuery
             ->selectRaw("COALESCE(mpr.reference, CONCAT('TX-', pt.id)) as reference")
             ->selectRaw('pt.created_at')
             ->selectRaw($departmentSelect)
-            ->selectRaw($manualBankNameSelect . ' as manual_bank_name')
+            ->selectRaw($paymentManualBankNameSelect . ' as manual_bank_name')
             ->selectRaw(($supportsManualBankId ? 'mpr.manual_bank_id' : 'NULL') . ' as manual_bank_id')
             ->selectRaw("'payment_transactions' as source")
             ->leftJoin('users', 'users.id', '=', 'pt.user_id')
@@ -416,6 +467,16 @@ class PaymentRequestTableQuery
         $walletResolvedPayableTypeExpression = "LOWER(NULLIF(mpr.payable_type, ''))";
 
 
+
+        $walletTopUpReasons = array_values(array_unique([
+            ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP,
+            'wallet_top_up',
+            'wallet-top-up',
+            'wallet_topup',
+            'admin_manual_credit',
+        ]));
+
+
         $walletTopUps = DB::table('wallet_transactions as wt')
             ->selectRaw("CONCAT('wt-', wt.id) as row_key")
             ->selectRaw('NULL as payment_transaction_id')
@@ -443,7 +504,7 @@ class PaymentRequestTableQuery
             ->selectRaw("COALESCE(mpr.reference, CONCAT('WT-', wt.id)) as reference")
             ->selectRaw('wt.created_at')
             ->selectRaw($departmentSelect)
-            ->selectRaw($manualBankNameSelect . ' as manual_bank_name')
+            ->selectRaw($walletManualBankNameSelect . ' as manual_bank_name')
             ->selectRaw(($supportsManualBankId ? 'mpr.manual_bank_id' : 'NULL') . ' as manual_bank_id')
             ->selectRaw("'wallet_transactions' as source")
             ->join('wallet_accounts as wa', 'wa.id', '=', 'wt.wallet_account_id')
@@ -491,13 +552,10 @@ class PaymentRequestTableQuery
 
             ->whereNull('wt.payment_transaction_id')
             ->where('wt.type', 'credit')
-            ->where(static function (Builder $query): void {
-                $query->where('wt.meta->reason', ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP)
-                    ->orWhere('wt.meta->reason', 'wallet_top_up')
-                    ->orWhere('wt.meta->reason', 'wallet-top-up')
-                    ->orWhere('wt.meta->reason', 'wallet_topup')
-                    ->orWhere('wt.meta->reason', 'admin_manual_credit');
-            })
+            ->whereIn(
+                DB::raw("JSON_UNQUOTE(JSON_EXTRACT(wt.meta, '$.\"reason\"'))"),
+                $walletTopUpReasons
+            )
             ->whereNotNull('wt.manual_payment_request_id');
 
 
@@ -526,7 +584,7 @@ class PaymentRequestTableQuery
             ->selectRaw("COALESCE(NULLIF(mpr.reference, ''), CONCAT('MPR-', mpr.id)) as reference")
             ->selectRaw('mpr.created_at')
             ->selectRaw($departmentSelect)
-            ->selectRaw($manualBankNameSelect . ' as manual_bank_name')
+            ->selectRaw($manualRequestManualBankNameSelect . ' as manual_bank_name')
             ->selectRaw(($supportsManualBankId ? 'mpr.manual_bank_id' : 'NULL') . ' as manual_bank_id')
             ->selectRaw("'manual_payment_requests' as source")
             ->leftJoin('users', 'users.id', '=', 'mpr.user_id')

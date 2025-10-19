@@ -205,78 +205,39 @@ class UserProfileScreenState extends State<ShowUserProfileScreen>
           /// - تم إبقاء الواجهة الفعلية في ProfileScreenUI (ملف منفصل) لتبسيط الصيانة.
           body: ScrollConfiguration(
             behavior: RemoveGlow(),
-            child: CustomScrollView(
+            child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              keyboardDismissBehavior:
-              ScrollViewKeyboardDismissBehavior.onDrag,
-              slivers: [
-                if (widget.from != "login") _buildCollapsibleAppBar(context),
-                ...ProfileScreenUI(
-                  tabController: _tabController,
-                  adTabs: adTabs,
-                  onEditProfilePressed: () {
-                    HelperUtils.goToNextPage(
-                      Routes.completeProfile,
-                      context,
-                      false,
-                      args: {
-                        "from": "profile",
-                        "allowProfileRoute": true,
-                      },
-                    );
-                  },
-                  onShareProfilePressed: () {
-                    // TODO: منطق المشاركة (Share API / Dynamic Links ...)
-                  },
-                  onAvatarEditPressed: showPicker,
-                  buildProfileImage: getProfileImage,
-                ).buildSlivers(context),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              child: ProfileScreenUI(
+                // التبويبات + الحالات
+                tabController: _tabController,
+                adTabs: adTabs,
 
-  SliverAppBar _buildCollapsibleAppBar(BuildContext context) {
-    final canPop = Navigator.of(context).canPop();
-    return SliverAppBar(
-      backgroundColor: context.color.primaryColor,
-      surfaceTintColor: Colors.transparent,
-      pinned: true,
-      floating: false,
-      expandedHeight: 140,
-      collapsedHeight: kToolbarHeight + 16,
-      toolbarHeight: kToolbarHeight + 16,
-      automaticallyImplyLeading: false,
-      leading: canPop
-          ? IconButton(
-        icon: const Icon(Icons.arrow_back),
-        color: context.color.territoryColor,
-        onPressed: () => Navigator.of(context).maybePop(),
-      )
-          : null,
-      actions: const <Widget>[],
-      shadowColor: Colors.transparent,
-      flexibleSpace: FlexibleSpaceBar(
-        collapseMode: CollapseMode.pin,
-        titlePadding: const EdgeInsetsDirectional.only(start: 16, bottom: 12),
-        title: Text(
-          "profileTab".translate(context),
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: context.color.territoryColor,
-            fontWeight: FontWeight.w600,
+                // زر "تعديل الملف الشخصي":
+                // نمرّر allowProfileRoute=true حتى لا يعترضه الحارس الموجود في الراوتر.
+                onEditProfilePressed: () {
+                  HelperUtils.goToNextPage(
+                    Routes.completeProfile,
+                    context,
+                    false,
+                    args: {
+                      "from": "profile",
+                      "allowProfileRoute": true, // ← ضروري للسماح بالانتقال
+                    },
+                  );
+                },
+
+                // زر "مشاركة الملف" (جاهز للتنفيذ لاحقًا)
+                onShareProfilePressed: () {
+                  // TODO: منطق المشاركة (Share API / Dynamic Links ...)
+                },
+
+                // زر تغيير صورة الحساب (يفتح BottomSheet)
+                onAvatarEditPressed: showPicker,
+
+                // باني صورة الحساب
+                buildProfileImage: getProfileImage,
               ),
-        ),
-        background: Container(
-          alignment: AlignmentDirectional.bottomStart,
-          padding: const EdgeInsetsDirectional.only(start: 16, bottom: 56),
-          child: Text(
-            "profileTab".translate(context),
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: context.color.territoryColor,
-              fontWeight: FontWeight.bold,
             ),
           ),
         ),

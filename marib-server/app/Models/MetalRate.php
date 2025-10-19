@@ -22,6 +22,12 @@ class MetalRate extends Model
         'buy_price',
         'sell_price',
         'source',
+        'icon_path',
+        'icon_alt',
+        'icon_uploaded_by',
+        'icon_uploaded_at',
+        'icon_removed_by',
+        'icon_removed_at',
         'quoted_at',
     ];
 
@@ -30,6 +36,8 @@ class MetalRate extends Model
         'buy_price' => 'decimal:3',
         'sell_price' => 'decimal:3',
         'quoted_at' => 'datetime',
+        'icon_uploaded_at' => 'datetime',
+        'icon_removed_at' => 'datetime',
     ];
 
     public function updates(): HasMany

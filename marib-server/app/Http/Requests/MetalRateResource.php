@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources;
 
+
+use App\Services\MetalIconStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -23,6 +25,9 @@ class MetalRateResource extends JsonResource
             'buy_price' => (float) $this->buy_price,
             'sell_price' => (float) $this->sell_price,
             'source' => $this->source,
+            'icon_url' => app(MetalIconStorageService::class)->getUrl($this->icon_path),
+            'icon_alt' => $this->icon_alt,
+
             'quoted_at' => $this->quoted_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),

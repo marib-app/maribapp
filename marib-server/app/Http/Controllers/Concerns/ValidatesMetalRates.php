@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Concerns;
 
 use App\Models\MetalRate;
+use App\Services\MetalIconStorageService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
 trait ValidatesMetalRates
@@ -17,6 +19,9 @@ trait ValidatesMetalRates
             'sell_price' => ['required', 'numeric', 'min:0'],
             'source' => ['nullable', 'string', 'max:255'],
             'quoted_at' => ['nullable', 'date'],
+            'icon' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,svg', 'max:2048'],
+            'icon_alt' => ['nullable', 'string', 'max:255'],
+            'remove_icon' => ['sometimes', 'boolean'],
         ]);
 
         $data->after(function ($validator) use ($request, $metalRate) {
@@ -63,6 +68,52 @@ trait ValidatesMetalRates
 
         return $payload;
     }
+
+
+    protected function resolveMetalIconPayload(Request $request, MetalIconStorageService $iconStorageService, ?MetalRate $metalRate = null): array
+    {
+        $payload = [];
+        $hasNewIcon = $request->hasFile('icon');
+        $removeIcon = $request->boolean('remove_icon');
+        $hasAltField = $request->has('icon_alt');
+        $rawAlt = $hasAltField ? (string) $request->input('icon_alt') : null;
+        $iconAlt = $rawAlt !== null ? trim($rawAlt) : null;
+
+        if ($iconAlt === '') {
+            $iconAlt = null;
+        }
+
+        if ($hasNewIcon) {
+            $payload['icon_path'] = $iconStorageService->storeIcon($request->file('icon'), $metalRate?->icon_path);
+            $payload['icon_alt'] = $iconAlt;
+            $payload['icon_uploaded_by'] = Auth::id();
+            $payload['icon_uploaded_at'] = now();
+            $payload['icon_removed_by'] = null;
+            $payload['icon_removed_at'] = null;
+
+            return $payload;
+        }
+
+        if ($removeIcon && $metalRate) {
+            $iconStorageService->deleteIcon($metalRate->icon_path);
+
+            $payload['icon_path'] = null;
+            $payload['icon_alt'] = null;
+            $payload['icon_uploaded_by'] = null;
+            $payload['icon_uploaded_at'] = null;
+            $payload['icon_removed_by'] = Auth::id();
+            $payload['icon_removed_at'] = now();
+
+            return $payload;
+        }
+
+        if ($metalRate && $hasAltField) {
+            $payload['icon_alt'] = $iconAlt;
+        }
+
+        return $payload;
+    }
+
 
     protected function validateMetalRateSchedule(Request $request): array
     {

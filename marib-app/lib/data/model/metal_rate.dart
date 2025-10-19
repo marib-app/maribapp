@@ -10,6 +10,12 @@ class MetalRate {
   final DateTime? updatedAt;
   final DateTime? createdAt;
   final bool isWatchlisted;
+  final String? iconUrl;
+  final String? iconAlt;
+
+  static const Object _sentinel = Object();
+
+
 
   const MetalRate({
     required this.id,
@@ -23,7 +29,8 @@ class MetalRate {
     required this.updatedAt,
     required this.createdAt,
     this.isWatchlisted = false,
-
+    this.iconUrl,
+    this.iconAlt,
   });
 
   bool get isGold => metalType.toLowerCase() == 'gold';
@@ -50,7 +57,8 @@ class MetalRate {
     DateTime? updatedAt,
     DateTime? createdAt,
     bool? isWatchlisted,
-
+    Object? iconUrl = _sentinel,
+    Object? iconAlt = _sentinel,
   }) {
     return MetalRate(
       id: id ?? this.id,
@@ -64,7 +72,12 @@ class MetalRate {
       updatedAt: updatedAt ?? this.updatedAt,
       createdAt: createdAt ?? this.createdAt,
       isWatchlisted: isWatchlisted ?? this.isWatchlisted,
-
+      iconUrl: identical(iconUrl, _sentinel)
+          ? this.iconUrl
+          : iconUrl as String?,
+      iconAlt: identical(iconAlt, _sentinel)
+          ? this.iconAlt
+          : iconAlt as String?,
     );
   }
 
@@ -87,6 +100,20 @@ class MetalRate {
       return null;
     }
 
+    String? _parseString(dynamic value) {
+      if (value == null) return null;
+      if (value is String) {
+        final String trimmed = value.trim();
+        return trimmed.isEmpty ? null : trimmed;
+      }
+      return value.toString();
+    }
+
+    final String? parsedIconUrl = _parseString(
+      json['icon_url'] ?? json['iconUrl'],
+    );
+
+
     return MetalRate(
       id: (json['id'] as num?)?.toInt() ?? 0,
       metalType: (json['metal_type'] ?? json['metalType'] ?? '').toString(),
@@ -99,7 +126,8 @@ class MetalRate {
       updatedAt: _parseDate(json['updated_at'] ?? json['updatedAt']),
       createdAt: _parseDate(json['created_at'] ?? json['createdAt']),
       isWatchlisted: json['is_watchlisted'] == true,
-
+      iconUrl: parsedIconUrl,
+      iconAlt: _parseString(json['icon_alt'] ?? json['iconAlt']),
     );
   }
 }

@@ -120,6 +120,10 @@ class GoldTabView extends StatelessWidget {
   Widget _row(BuildContext context, MetalRate rate, bool isWatchlisted) {
     final onBg = _isDark(context) ? Colors.white : Colors.black;
 
+    final Color borderColor = onBg.withOpacity(0.25);
+    final Color fallbackIconColor = Colors.amber[700] ?? Colors.amber;
+
+
     final nameStyle = Theme
         .of(context)
         .textTheme
@@ -176,22 +180,76 @@ class GoldTabView extends StatelessWidget {
           ),
         );
 
+
+    Widget buildFallbackIcon() {
+      return Container(
+        width: 28,
+        height: 28,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: borderColor),
+        ),
+        child: Icon(
+          Icons.workspace_premium,
+          size: 16,
+          color: fallbackIconColor,
+        ),
+      );
+    }
+
+    Widget buildIcon() {
+      final String? iconUrl = rate.iconUrl;
+      if (iconUrl != null && iconUrl.isNotEmpty) {
+        final String semanticsLabel = rate.iconAlt != null && rate.iconAlt!.trim().isNotEmpty
+            ? rate.iconAlt!
+            : 'أيقونة ${rate.displayName}';
+
+        return Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: borderColor),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Semantics(
+            label: semanticsLabel,
+            child: Image.network(
+              iconUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => buildFallbackIcon(),
+              loadingBuilder: (context, child, progress) {
+                if (progress == null) {
+                  return child;
+                }
+
+                return Center(
+                  child: SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(brand),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      }
+
+      return buildFallbackIcon();
+    }
+
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Row(
         children: [
-          // دائرة ذهب
-          Container(
-            width: 28,
-            height: 28,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: onBg.withOpacity(0.25)),
-            ),
-            child: Icon(
-                Icons.workspace_premium, size: 16, color: Colors.amber[700]),
-          ),
+          // أيقونة المعدن
+          buildIcon(),
           const SizedBox(width: 10),
 
           Expanded(

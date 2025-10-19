@@ -1,8 +1,131 @@
 @extends('layouts.main')
 
+
+
+@php
+    use Illuminate\Support\Facades\Storage;
+@endphp
+
+
+
 @section('title')
     {{ __('Metal Rates Management') }}
 @endsection
+
+
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const inputs = document.querySelectorAll('[data-metal-icon-input]');
+
+            inputs.forEach(function (input) {
+                const previewId = input.dataset.metalIconPreview;
+                const wrapperId = input.dataset.metalIconWrapper;
+                const preview = previewId ? document.getElementById(previewId) : null;
+                const wrapper = wrapperId ? document.getElementById(wrapperId) : (preview ? preview.closest('[data-metal-icon-preview-container]') : null);
+                const rateId = input.dataset.metalRateId;
+                let objectUrl = null;
+
+                const resetPreview = function () {
+                    if (preview) {
+                        const originalSrc = preview.getAttribute('data-original-src') || '';
+                        const originalAlt = preview.getAttribute('data-original-alt') || '';
+
+                        if (objectUrl) {
+                            URL.revokeObjectURL(objectUrl);
+                            objectUrl = null;
+                        }
+
+                        if (originalSrc) {
+                            preview.src = originalSrc;
+                            preview.alt = originalAlt || preview.alt || '';
+                            preview.style.display = '';
+                            if (wrapper) {
+                                wrapper.classList.remove('d-none');
+                                wrapper.dataset.hasOriginal = '1';
+                            }
+                        } else {
+                            preview.src = '#';
+                            preview.alt = '';
+                            preview.style.display = 'none';
+                            if (wrapper) {
+                                wrapper.classList.add('d-none');
+                                wrapper.dataset.hasOriginal = '';
+                            }
+                        }
+                    }
+                };
+
+                if (wrapper && preview) {
+                    const originalSrc = preview.getAttribute('data-original-src') || '';
+                    if (originalSrc) {
+                        wrapper.dataset.hasOriginal = '1';
+                        preview.style.display = '';
+                    } else if (!(input.files && input.files.length)) {
+                        preview.style.display = 'none';
+                    }
+                }
+
+                input.addEventListener('change', function () {
+                    if (objectUrl) {
+                        URL.revokeObjectURL(objectUrl);
+                        objectUrl = null;
+                    }
+
+                    if (input.files && input.files[0]) {
+                        const file = input.files[0];
+                        objectUrl = URL.createObjectURL(file);
+
+                        if (preview) {
+                            preview.src = objectUrl;
+                            preview.alt = file.name;
+                            preview.style.display = '';
+                        }
+
+                        if (wrapper) {
+                            wrapper.classList.remove('d-none');
+                            wrapper.dataset.hasOriginal = wrapper.dataset.hasOriginal || '';
+                        }
+                    } else {
+                        resetPreview();
+                    }
+                });
+
+                const clearButtons = document.querySelectorAll('[data-metal-icon-clear-input="' + input.id + '"]');
+                clearButtons.forEach(function (button) {
+                    button.addEventListener('click', function (event) {
+                        event.preventDefault();
+                        input.value = '';
+                        resetPreview();
+                    });
+                });
+
+                if (rateId) {
+                    const removeButton = document.querySelector('[data-metal-icon-remove="' + rateId + '"]');
+                    if (removeButton) {
+                        removeButton.addEventListener('click', function () {
+                            if (preview) {
+                                preview.setAttribute('data-original-src', '');
+                                preview.setAttribute('data-original-alt', '');
+                            }
+
+                            const altField = document.getElementById('metal_icon_alt_' + rateId);
+                            if (altField) {
+                                altField.value = '';
+                            }
+
+                            input.value = '';
+                            resetPreview();
+                        });
+                    }
+                }
+            });
+        });
+    </script>
+@endpush
+
+
 
 @section('page-title')
     <div class="page-title">
@@ -45,7 +168,7 @@
                         <h5 class="card-title mb-0">{{ __('Add metal rate') }}</h5>
                     </div>
                     <div class="card-body">
-                        <form action="{{ route('metal-rates.store') }}" method="POST" class="needs-validation" novalidate>
+                        <form action="{{ route('metal-rates.store') }}" method="POST" class="needs-validation" novalidate enctype="multipart/form-data">
                             @csrf
                             <div class="mb-3">
                                 <label for="metal_type" class="form-label">{{ __('Metal type') }}</label>
@@ -82,6 +205,25 @@
                                 <label for="quoted_at" class="form-label">{{ __('Quote timestamp (optional)') }}</label>
                                 <input type="datetime-local" class="form-control" id="quoted_at" name="quoted_at" value="{{ old('quoted_at') }}">
                             </div>
+
+
+
+                            <div class="mb-3">
+                                <label for="create_icon" class="form-label">{{ __('Icon (optional)') }}</label>
+                                <input type="file" class="form-control" id="create_icon" name="icon" accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml" data-metal-icon-input data-metal-icon-preview="create_icon_preview">
+                                <div class="form-text">{{ __('Allowed types: JPG, PNG, WEBP, SVG. Max size: 2MB.') }}</div>
+                                <div class="mt-2 d-none" id="create_icon_preview_wrapper" data-metal-icon-preview-container>
+                                    <img src="#" alt="" id="create_icon_preview" class="img-thumbnail" style="max-height: 120px;" data-original-src="" data-original-alt="">
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="create_icon_alt" class="form-label">{{ __('Icon alternative text') }}</label>
+                                <input type="text" class="form-control" id="create_icon_alt" name="icon_alt" value="{{ old('icon_alt') }}" maxlength="255" placeholder="{{ __('Describe the icon for screen readers') }}">
+                                <div class="form-text">{{ __('Optional, helps with accessibility when an icon is provided.') }}</div>
+                            </div>
+
+
 
                             <div class="d-grid">
                                 <button type="submit" class="btn btn-primary">{{ __('Save metal rate') }}</button>
@@ -123,7 +265,7 @@
                                                     <div class="col-md-6">
                                                         <h6>{{ __('Update rate') }}</h6>
                                                         @can('metal-rate-edit')
-                                                            <form action="{{ route('metal-rates.update', $rate) }}" method="POST" class="mb-3">
+                                                            <form action="{{ route('metal-rates.update', $rate) }}" method="POST" class="mb-3" enctype="multipart/form-data">
                                                                 @csrf
                                                                 @method('PUT')
                                                                 <input type="hidden" name="metal_type" value="{{ $rate->metal_type }}">
@@ -152,6 +294,32 @@
                                                                     <label class="form-label">{{ __('Quote timestamp') }}</label>
                                                                     <input type="datetime-local" class="form-control" name="quoted_at" value="{{ optional($rate->quoted_at)->format('Y-m-d\TH:i') }}">
                                                                 </div>
+
+
+                                                                <div class="mb-3">
+                                                                    <label class="form-label" for="metal_icon_{{ $rate->id }}">{{ __('Icon (optional)') }}</label>
+                                                                    <input type="file" class="form-control" id="metal_icon_{{ $rate->id }}" name="icon" accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml" data-metal-icon-input data-metal-icon-preview="metal_icon_preview_{{ $rate->id }}" data-metal-icon-wrapper="metal_icon_wrapper_{{ $rate->id }}" data-metal-rate-id="{{ $rate->id }}">
+                                                                    <div class="form-text">{{ __('Uploading a new file replaces the previous icon.') }}</div>
+                                                                    <div class="mt-2 {{ $rate->icon_path ? '' : 'd-none' }}" id="metal_icon_wrapper_{{ $rate->id }}" data-metal-icon-preview-container>
+                                                                        <img src="{{ $rate->icon_path ? Storage::url($rate->icon_path) : '#' }}" alt="{{ $rate->icon_alt ?? __('Current icon') }}" id="metal_icon_preview_{{ $rate->id }}" class="img-thumbnail" style="max-height: 120px; {{ $rate->icon_path ? '' : 'display:none;' }}" data-original-src="{{ $rate->icon_path ? Storage::url($rate->icon_path) : '' }}" data-original-alt="{{ $rate->icon_alt ?? '' }}">
+                                                                        @if($rate->icon_path)
+                                                                            <div class="mt-2 d-flex gap-2" data-metal-icon-actions>
+                                                                                <button type="submit" name="remove_icon" value="1" class="btn btn-outline-danger btn-sm" formnovalidate data-metal-icon-remove="{{ $rate->id }}">{{ __('Remove icon') }}</button>
+                                                                                <button type="button" class="btn btn-outline-secondary btn-sm" data-metal-icon-clear-input="metal_icon_{{ $rate->id }}">{{ __('Clear selection') }}</button>
+                                                                            </div>
+                                                                        @else
+                                                                            <div class="mt-2 d-flex gap-2">
+                                                                                <button type="button" class="btn btn-outline-secondary btn-sm" data-metal-icon-clear-input="metal_icon_{{ $rate->id }}">{{ __('Clear selection') }}</button>
+                                                                            </div>
+                                                                        @endif
+                                                                    </div>
+                                                                </div>
+                                                                <div class="mb-3">
+                                                                    <label class="form-label" for="metal_icon_alt_{{ $rate->id }}">{{ __('Icon alternative text') }}</label>
+                                                                    <input type="text" class="form-control" id="metal_icon_alt_{{ $rate->id }}" name="icon_alt" value="{{ $rate->icon_alt }}" maxlength="255" placeholder="{{ __('Describe the icon for screen readers') }}">
+                                                                </div>
+
+
                                                                 <div class="d-flex gap-2">
                                                                     <button type="submit" class="btn btn-primary">{{ __('Save changes') }}</button>
                                                                 </div>

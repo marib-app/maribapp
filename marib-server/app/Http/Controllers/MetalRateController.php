@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\ValidatesMetalRates;
 use App\Models\MetalRate;
 use App\Models\MetalRateUpdate;
+use App\Services\MetalIconStorageService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,6 +14,10 @@ use Illuminate\Support\Facades\Auth;
 class MetalRateController extends Controller
 {
     use ValidatesMetalRates;
+
+    public function __construct(private readonly MetalIconStorageService $iconStorageService)
+    {
+    }
 
     public function index(): View
     {
@@ -35,6 +40,14 @@ class MetalRateController extends Controller
     {
         $payload = $this->validateMetalRatePayload($request);
 
+        $iconPayload = $this->resolveMetalIconPayload($request, $this->iconStorageService);
+
+        unset($payload['remove_icon'], $payload['icon_alt']);
+
+        $payload = array_merge($payload, $iconPayload);
+
+
+
         MetalRate::create($payload);
 
         return redirect()
@@ -45,6 +58,17 @@ class MetalRateController extends Controller
     public function update(Request $request, MetalRate $metalRate): RedirectResponse
     {
         $payload = $this->validateMetalRatePayload($request, $metalRate);
+
+
+
+
+        $iconPayload = $this->resolveMetalIconPayload($request, $this->iconStorageService, $metalRate);
+
+        unset($payload['remove_icon'], $payload['icon_alt']);
+
+        $payload = array_merge($payload, $iconPayload);
+
+
 
         $metalRate->update($payload);
 

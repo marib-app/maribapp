@@ -38,6 +38,7 @@ import 'package:marib/ui/screens/my_review_screen.dart';
 import 'package:marib/ui/screens/sold_out_bought_screen.dart';
 import 'package:marib/ui/screens/support_screen.dart';
 import 'package:marib/ui/screens/user_profile/edit_profile.dart';
+import 'package:marib/ui/screens/item/items_list_shein.dart';
 
 
 import 'package:flutter/cupertino.dart';
@@ -582,7 +583,7 @@ class Routes {
 
 
       case itemsListShein:
-        return ItemsList.route(routeSettings);
+        return ItemsListShein.route(routeSettings);
 
       case itemsListSeller:
         return ItemsListSeller.route(routeSettings);

@@ -1176,8 +1176,14 @@ class _HomeTabViewState extends State<HomeTabView> {
 
               ..._sectionsBlock(selectedCategoryId, isList),
 
-              // فاصل متوسط
-              SliverToBoxAdapter(child: SizedBox(height: gapMedium)),
+              // فاصل متوسط (يتأثر بحالة ظهور شريط التنقل السفلي)
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: widget.bottomPadding > 0 ? gapMedium : 0.0,
+                ),
+              ),
+
+
               if (widget.bottomPadding > 0)
                 SliverToBoxAdapter(
                   child: SizedBox(height: widget.bottomPadding),
@@ -1188,8 +1194,12 @@ class _HomeTabViewState extends State<HomeTabView> {
               // ومفاتيح مستقرة + itemExtent/prototypeItem إن أمكن
               ..._buildItemsSlivers(isList),
 
-              // فاصل أخير
-              SliverToBoxAdapter(child: SizedBox(height: gapMedium)),
+              // فاصل أخير (يتأثر بحالة ظهور شريط التنقل السفلي)
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: widget.bottomPadding > 0 ? gapMedium : 0.0,
+                ),
+              ),
             ],
           ),
         );

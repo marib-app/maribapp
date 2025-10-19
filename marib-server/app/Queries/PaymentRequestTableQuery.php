@@ -68,15 +68,12 @@ class PaymentRequestTableQuery
             && Schema::hasColumn('manual_payment_requests', 'department');
         $supportsManualGatewayName = Schema::hasTable('manual_payment_requests')
             && Schema::hasColumn('manual_payment_requests', 'gateway_name');
-        $supportsManualBankName = Schema::hasTable('manual_payment_requests')
-            && Schema::hasColumn('manual_payment_requests', 'bank_name');
-        $supportsManualBankAccountName = Schema::hasTable('manual_payment_requests')
-            && Schema::hasColumn('manual_payment_requests', 'bank_account_name');
+
 
         $supportsManualBankId = Schema::hasTable('manual_payment_requests')
             && Schema::hasColumn('manual_payment_requests', 'manual_bank_id');
 
-                    $supportsManualMeta = Schema::hasTable('manual_payment_requests')
+        $supportsManualMeta = Schema::hasTable('manual_payment_requests')
             && Schema::hasColumn('manual_payment_requests', 'meta');
 
         $supportsManualBankLookupTable = Schema::hasTable('manual_banks');
@@ -127,12 +124,7 @@ class PaymentRequestTableQuery
                 . ' END';
         };
 
-        $sanitizedManualBankName = $supportsManualBankName
-            ? $sanitizeManualBankAlias('mpr.bank_name')
-            : null;
-        $sanitizedManualBankAccountName = $supportsManualBankAccountName
-            ? $sanitizeManualBankAlias('mpr.bank_account_name')
-            : null;
+
 
         $manualBankLookupParts = [];
 
@@ -143,10 +135,26 @@ class PaymentRequestTableQuery
             $manualBankLookupParts[] = $sanitizeManualBankAlias('manual_bank_lookup.beneficiary_name');
         }
 
-        $manualBankRequestParts = array_values(array_filter([
-            $sanitizedManualBankName,
-            $sanitizedManualBankAccountName,
-        ], static fn (?string $part): bool => $part !== null));
+        $manualBankRequestParts = [];
+
+        if ($supportsManualMeta) {
+            $manualBankRequestParts = array_map(
+                $sanitizeManualBankAlias,
+                [
+                    "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.name'))",
+                    "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.bank_name'))",
+                    "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.beneficiary_name'))",
+                    "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual.bank.name'))",
+                    "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual.bank.bank_name'))",
+                    "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual.bank.beneficiary_name'))",
+                    "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.name'))",
+                    "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.bank_name'))",
+                    "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.beneficiary_name'))",
+                    "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_payment_request.bank.name'))",
+                    "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_payment_request.manual_bank.name'))",
+                ]
+            );
+        }
 
         $paymentTransactionManualBankMetaExpressions = [];
 
@@ -228,15 +236,11 @@ class PaymentRequestTableQuery
 
         }
 
-        $manualGatewayRequestParts = array_values(array_filter([
-            $sanitizedManualBankName,
-            $sanitizedManualBankAccountName,
-            $supportsManualGatewayName ? $sanitizeManualBankAlias('mpr.gateway_name') : null,
-        ], static fn (?string $part): bool => $part !== null));
+        $manualGatewayRequestParts = $manualBankRequestParts;
 
-        if ($supportsManualMeta) {
-            $manualGatewayRequestParts[] = $sanitizeManualBankAlias("JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.name'))");
-            $manualGatewayRequestParts[] = $sanitizeManualBankAlias("JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.name'))");
+
+        if ($supportsManualGatewayName) {
+            array_unshift($manualGatewayRequestParts, $sanitizeManualBankAlias('mpr.gateway_name'));
         }
 
 

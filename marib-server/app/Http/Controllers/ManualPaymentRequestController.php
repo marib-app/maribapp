@@ -2214,6 +2214,8 @@ class ManualPaymentRequestController extends Controller
 
 
         $manualBankNameExpression = "COALESCE(
+            NULLIF(TRIM(manual_bank_lookup.name), ''),
+            NULLIF(TRIM(manual_bank_lookup.beneficiary_name), ''),
             JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.payload.bank.name')),
             JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual.bank.name')),
             JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual.bank.bank_name')),
@@ -2232,9 +2234,8 @@ class ManualPaymentRequestController extends Controller
             JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual.bank.beneficiary_name')),
             JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.name')),
             JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.bank_name')),
-            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.beneficiary_name')),
-            mpr.bank_name,
-            mpr.bank_account_name
+            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.beneficiary_name'))
+
         )";
 
         $manualGatewayKeyCandidates = [
@@ -2292,6 +2293,10 @@ class ManualPaymentRequestController extends Controller
                 $join->on('mpr.id', '=', 'pt.manual_payment_request_id')
                     ->orOn('mpr.payment_transaction_id', '=', 'pt.id');
             })
+            ->leftJoin('manual_banks as manual_bank_lookup', function ($join) use ($manualBankIdExpression) {
+                $join->on('manual_bank_lookup.id', '=', DB::raw($manualBankIdExpression));
+            })
+
             ->leftJoin('users', 'users.id', '=', 'pt.user_id')
             ->leftJoin('orders as o', function ($join) use ($orderTypeArray) {
                 $join->on('o.id', '=', 'pt.payable_id');
@@ -2335,6 +2340,11 @@ class ManualPaymentRequestController extends Controller
                 $join->on('pt.id', '=', 'mpr.payment_transaction_id')
                     ->orOn('pt.manual_payment_request_id', '=', 'mpr.id');
             })
+
+            ->leftJoin('manual_banks as manual_bank_lookup', function ($join) use ($manualBankIdExpression) {
+                $join->on('manual_bank_lookup.id', '=', DB::raw($manualBankIdExpression));
+            })
+
             ->leftJoin('users', 'users.id', '=', 'mpr.user_id')
             ->leftJoin('orders as o', function ($join) use ($orderTypeArray) {
                 $join->on('o.id', '=', 'mpr.payable_id');

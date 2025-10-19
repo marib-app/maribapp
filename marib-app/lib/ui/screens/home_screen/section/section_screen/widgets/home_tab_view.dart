@@ -1217,12 +1217,7 @@ class _HomeTabViewState extends State<HomeTabView> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.inbox_outlined,
-              size: 40,
-              color: messageColor,
-            ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 2),
             Text(
               'لقد شاهدت كل النتائج',
               textAlign: TextAlign.center,

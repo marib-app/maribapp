@@ -251,6 +251,13 @@ class OrderReportController extends Controller
             ->selectRaw('COUNT(*) as total_count, COALESCE(SUM(amount), 0) as total_amount')
             ->first();
 
+        $totalsData = [
+            'count' => (int) data_get($totals, 'total_count', 0),
+            'amount' => (float) data_get($totals, 'total_amount', 0),
+        ];
+
+
+
         $statusBreakdown = (clone $baseQuery)
             ->select('status', DB::raw('COUNT(*) as total_count'), DB::raw('COALESCE(SUM(amount), 0) as total_amount'))
             ->groupBy('status')
@@ -318,10 +325,8 @@ class OrderReportController extends Controller
             'revenueTrend' => $revenueTrend,
             'statusOptions' => $statusOptions,
             'timeBuckets' => $timeBuckets,
-            'totals' => [
-                'count' => $totals->total_count ?? 0,
-                'amount' => $totals->total_amount ?? 0,
-            ],
+            'totals' => $totalsData,
+
         ]);
     }
 

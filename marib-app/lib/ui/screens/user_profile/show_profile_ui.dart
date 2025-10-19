@@ -17,7 +17,7 @@ import 'package:marib/utils/responsiveSize.dart';
 
 /// واجهة شاشة الملف الشخصي (عرض فقط) — تستقبل كل شيء عبر Params.
 /// لا يوجد منطق بيانات هنا؛ أي منطق يجب أن يبقى خارج هذا الملف.
-class ProfileScreenUI extends StatelessWidget {
+class ProfileScreenUI {
   final TabController tabController;
   final List<Map<String, String>> adTabs;
 
@@ -29,7 +29,6 @@ class ProfileScreenUI extends StatelessWidget {
   final Widget Function() buildProfileImage;
 
   const ProfileScreenUI({
-    super.key,
     required this.tabController,
     required this.adTabs,
     required this.onEditProfilePressed,
@@ -38,20 +37,21 @@ class ProfileScreenUI extends StatelessWidget {
     required this.buildProfileImage,
   });
 
-  @override
-  Widget build(BuildContext context) {
-    final height = MediaQuery.of(context).size.height;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 6),
-        _HeaderSection(buildProfileImage: buildProfileImage),
-        const SizedBox(height: 11),
-        const _StatsRow(),
-        const SizedBox(height: 14),
-
-        _ProfileButtons(
+  /// يبني قائمة Slivers تُستخدم داخل CustomScrollView/NestedScrollView.
+  List<Widget> buildSlivers(BuildContext context) {
+    return [
+    const SliverToBoxAdapter(child: SizedBox(height: 6)),
+    SliverToBoxAdapter(
+    child: _HeaderSection(
+    buildProfileImage: buildProfileImage,
+    onAvatarEditPressed: onAvatarEditPressed,
+    ),
+    ),
+    const SliverToBoxAdapter(child: SizedBox(height: 11)),
+    const SliverToBoxAdapter(child: _StatsRow()),
+    const SliverToBoxAdapter(child: SizedBox(height: 14)),
+    SliverToBoxAdapter(
+    child: _ProfileButtons(
           onEditProfilePressed: onEditProfilePressed,
           onShareProfilePressed: onShareProfilePressed,
         ),
@@ -62,13 +62,11 @@ class ProfileScreenUI extends StatelessWidget {
           controller: tabController,
           adTabs: adTabs,
         ),
-
-        const SizedBox(height: 8),
-
-        // ملاحظة: لأن الواجهة تُستخدم داخل SingleChildScrollView في الشاشة الأم،
-        // نعطي TabBarView ارتفاعًا ثابتًا نسبيًا من الشاشة حتى يكون لها قيود صالحة.
-        SizedBox(
-          height: height * 0.7,
+    ),
+    SliverFillRemaining(
+    fillOverscroll: true,
+    child: ColoredBox(
+    color: context.color.primaryColor,
           child: TabBarView(
             controller: tabController,
             physics: const BouncingScrollPhysics(),
@@ -78,8 +76,9 @@ class ProfileScreenUI extends StatelessWidget {
             }).toList(),
           ),
         ),
-      ],
-    );
+    ),
+    ];
+
   }
 }
 

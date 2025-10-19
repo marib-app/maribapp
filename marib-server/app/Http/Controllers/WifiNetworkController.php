@@ -933,6 +933,16 @@ class WifiNetworkController extends Controller
         $mentionsUser = str_contains($message, 'user_id')
             || ($constraint !== '' && str_contains($constraint, 'user_id'));
 
+
+
+        if (! $mentionsNetwork && $mentionsUser) {
+            $mentionsNetwork = str_contains($message, 'duplicate')
+                || str_contains($message, 'unique')
+                || ($constraint !== '' && (str_contains($constraint, 'duplicate') || str_contains($constraint, 'unique')));
+        }
+
+
+
         if (! $mentionsNetwork || ! $mentionsUser) {
             return false;
         }

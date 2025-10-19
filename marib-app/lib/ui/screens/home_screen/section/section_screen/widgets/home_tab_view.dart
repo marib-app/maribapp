@@ -871,158 +871,154 @@ class _HomeTabViewState extends State<HomeTabView> {
                           final double rowHeight =
                               circleSize + _gap + _titleHeight;
 
+                          Widget subcatShimmerBuilder(
+                              BuildContext context,
+                              double dynamicRowHeight,
+                              int dynamicRows,
+                              ) {
+                            final colorScheme = Theme.of(context).colorScheme;
+                            final base = colorScheme.shimmerBaseColor;
+                            final highlight =
+                                colorScheme.shimmerHighlightColor;
+                            final content = colorScheme.shimmerContentColor;
+                            const double indicatorGap = 6.0;
+                            const double indicatorHeight = 8.0;
+                            const int placeholderDots = 4;
+                            final double shimmerGridHeight =
+                                dynamicRowHeight * dynamicRows +
+                                    _rowSpacing * (dynamicRows - 1);
+
+                            return SizedBox(
+                              height: shimmerGridHeight +
+                                  indicatorGap +
+                                  indicatorHeight,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: _hPad),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    SizedBox(
+                                      height: shimmerGridHeight,
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: List.generate(dynamicRows,
+                                                (rowIndex) {
+                                              return Padding(
+                                                padding: EdgeInsets.only(
+                                                    top: rowIndex == 0
+                                                        ? 0
+                                                        : _rowSpacing),
+                                                child: Row(
+                                                  mainAxisAlignment:
+                                                  MainAxisAlignment.spaceBetween,
+                                                  children: List.generate(
+                                                      itemsPerRow, (_) {
+                                                    return SizedBox(
+                                                      width: itemWidth,
+                                                      child: Column(
+                                                        mainAxisSize:
+                                                        MainAxisSize.min,
+                                                        children: [
+                                                        Shimmer.fromColors(
+                                                        baseColor: base,
+                                                        highlightColor: highlight,
+                                                        period: const Duration(
+                                                            milliseconds: 1150),
+                                                        child: Container(
+                                                          width: circleSize,
+                                                          height: circleSize,
+                                                          decoration:
+                                                          BoxDecoration(
+                                                            color: content,
+                                                            borderRadius:
+                                                            BorderRadius
+                                                                .circular(20),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: _gap),
+                                                      SizedBox(
+                                                        height: _titleHeight,
+                                                        child: Align(
+                                                          alignment:
+                                                          Alignment.topCenter,
+                                                          child:
+                                                          Shimmer.fromColors(
+                                                            baseColor: base,
+                                                            highlightColor:
+                                                            highlight,
+                                                            period: const Duration(
+                                                                milliseconds:
+                                                                1150),
+                                                            child: Container(
+                                                              height: 12,
+                                                              width: itemWidth,
+                                                              decoration:
+                                                              BoxDecoration(
+                                                                color: base,
+                                                                borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                    6),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                        ],
+                                                      ),
+                                                    );
+                                                  }),
+                                                ),
+                                              );
+                                                }),
+                                      ),
+                                    ),
+                                    const SizedBox(height: indicatorGap),
+                                    SizedBox(
+                                      height: indicatorHeight,
+                                      child: Row(
+                                        mainAxisAlignment:
+                                        MainAxisAlignment.center,
+                                        children: List.generate(placeholderDots,
+                                                (dotIndex) {
+                                              final bool isActive = dotIndex == 0;
+                                              final double width =
+                                              isActive ? 18.0 : 8.0;
+
+                                              return Shimmer.fromColors(
+                                                  baseColor: base,
+                                                  highlightColor: highlight,
+                                                  period: const Duration(
+                                                      milliseconds: 1150),
+                                                  child: Container(
+                                                    margin: const EdgeInsets.symmetric(
+                                                        horizontal: 4),
+                                                    width: width,
+                                                    height: indicatorHeight,
+                                                    decoration: BoxDecoration(
+                                                      color: base,
+                                                      borderRadius:
+                                                      BorderRadius.circular(20),
+                                              ),
+                                                  ),
+                                              );
+                                                }),
+                                      ),
+                                    ),
+                                      ],
+                                  ),
+                              ),
+                            );
+                          }
+
                           return SubcatsDeferredBlock(
                             enabled: widget.enableSubcats,
                             // ← لا نبدأ إلا بعد فتح القسم
                             rowHeight: rowHeight,
                             maxRows: maxRows,
-                            shimmerBuilder:
-                                (context, dynamicRowHeight, dynamicRows) {
-                              final colorScheme = Theme.of(context).colorScheme;
-                              final base = colorScheme.shimmerBaseColor;
-                              final highlight =
-                                  colorScheme.shimmerHighlightColor;
-                              final content = colorScheme.shimmerContentColor;
-                              const double indicatorGap = 6.0;
-                              const double indicatorHeight = 8.0;
-                              const int placeholderDots = 4;
-                              final double shimmerGridHeight =
-                                  dynamicRowHeight * dynamicRows +
-                                      _rowSpacing * (dynamicRows - 1);
-
-                              return SizedBox(
-                                height: shimmerGridHeight +
-                                    indicatorGap +
-                                    indicatorHeight,
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: _hPad),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      SizedBox(
-                                        height: shimmerGridHeight,
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: List.generate(dynamicRows,
-                                              (rowIndex) {
-                                            return Padding(
-                                              padding: EdgeInsets.only(
-                                                  top: rowIndex == 0
-                                                      ? 0
-                                                      : _rowSpacing),
-                                              child: Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment
-                                                        .spaceBetween,
-                                                children: List.generate(
-                                                    itemsPerRow, (_) {
-                                                  return SizedBox(
-                                                    width: itemWidth,
-                                                    child: Column(
-                                                      mainAxisSize:
-                                                          MainAxisSize.min,
-                                                      children: [
-                                                        Shimmer.fromColors(
-                                                          baseColor: base,
-                                                          highlightColor:
-                                                              highlight,
-                                                          period:
-                                                              const Duration(
-                                                                  milliseconds:
-                                                                      1150),
-                                                          child: Container(
-                                                            width: circleSize,
-                                                            height: circleSize,
-                                                            decoration:
-                                                                BoxDecoration(
-                                                              color: content,
-                                                              borderRadius:
-                                                                  BorderRadius
-                                                                      .circular(
-                                                                          20),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                        const SizedBox(
-                                                            height: _gap),
-                                                        SizedBox(
-                                                          height: _titleHeight,
-                                                          child: Align(
-                                                            alignment: Alignment
-                                                                .topCenter,
-                                                            child: Shimmer
-                                                                .fromColors(
-                                                              baseColor: base,
-                                                              highlightColor:
-                                                                  highlight,
-                                                              period:
-                                                                  const Duration(
-                                                                      milliseconds:
-                                                                          1150),
-                                                              child: Container(
-                                                                height: 12,
-                                                                width:
-                                                                    itemWidth,
-                                                                decoration:
-                                                                    BoxDecoration(
-                                                                  color: base,
-                                                                  borderRadius:
-                                                                      BorderRadius
-                                                                          .circular(
-                                                                              6),
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  );
-                                                }),
-                                              ),
-                                            );
-                                          }),
-                                        ),
-                                      ),
-                                      const SizedBox(height: indicatorGap),
-                                      SizedBox(
-                                        height: indicatorHeight,
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: List.generate(
-                                              placeholderDots, (dotIndex) {
-                                            final bool isActive = dotIndex == 0;
-                                            final double width =
-                                                isActive ? 18.0 : 8.0;
-
-                                            return Shimmer.fromColors(
-                                              baseColor: base,
-                                              highlightColor: highlight,
-                                              period: const Duration(
-                                                  milliseconds: 1150),
-                                              child: Container(
-                                                margin:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 4),
-                                                width: width,
-                                                height: indicatorHeight,
-                                                decoration: BoxDecoration(
-                                                  color: base,
-                                                  borderRadius:
-                                                      BorderRadius.circular(20),
-                                                ),
-                                              ),
-                                            );
-                                          }),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
+                            shimmerBuilder: subcatShimmerBuilder,
                             // انتظر نجاح جلب التصنيفات (أو اكتمال مؤقت)
                             onDeferLoad: () async {
                               final catCubit =
@@ -1044,11 +1040,11 @@ class _HomeTabViewState extends State<HomeTabView> {
                               final catState =
                                   context.watch<FetchCategoryCubit>().state;
                               if (catState is! FetchCategorySuccess) {
-                                // لو لم تصل البيانات بعد، أبقِ على مساحة الشيمر
-                                final double fallbackHeight =
-                                    rowHeight * maxRows +
-                                        _rowSpacing * (maxRows - 1);
-                                return SizedBox(height: fallbackHeight);
+                                return subcatShimmerBuilder(
+                                  context,
+                                  rowHeight,
+                                  maxRows,
+                                );
                               }
 
                               // حدّد الجذر (تصنيف القسم) ثم اختر الأب الحالي

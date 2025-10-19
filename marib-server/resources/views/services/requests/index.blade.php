@@ -68,7 +68,7 @@
                            aria-describedby="mydesc"
                            id="table_list"
                            data-toggle="table"
-                           data-url="{{ route('service.requests.show', 'list') }}"
+                           data-url="{{ route('service.requests.datatable') }}"
                            data-click-to-select="true"
                            data-side-pagination="server"
                            data-pagination="true"

@@ -327,7 +327,7 @@
                                         aria-describedby="requestsTableCaption"
                                         id="requestsTable"
                                         data-toggle="table"
-                                        data-url="{{ route('service.requests.show', ['id' => $category->id]) }}"
+                                        data-url="{{ route('service.requests.datatable', ['category_id' => $category->id]) }}"
                                         data-click-to-select="true"
                                         data-side-pagination="server"
                                         data-pagination="true"
@@ -575,7 +575,7 @@
     const CATEGORY_ROUTE_TEMPLATE = "{{ route('services.category', ['category' => '__CATEGORY__']) }}";
     const CATEGORY_ID = Number("{{ (int) $category->id }}");
 
-    const REQUESTS_INDEX_URL = "{{ route('service.requests.show', ['id' => $category->id]) }}";
+    const REQUESTS_INDEX_URL = "{{ route('service.requests.datatable', ['category_id' => $category->id]) }}";
     const CATEGORY_REVIEWS_URL = "{{ route('services.category.reviews', $category) }}";
     
     const STATUS_URL = "{{ route('common.status.change') }}";

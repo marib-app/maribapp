@@ -193,7 +193,7 @@ class ServiceRequestController extends Controller
         $serviceRequest->save();
 
 
-        $deeplink = url(sprintf('/service-requests/show/%d', $serviceRequest->getKey()));
+        $deeplink = route('service.requests.show', $serviceRequest->getKey());
         $notificationPayload = [
             'service_request_id' => $serviceRequest->getKey(),
             'status' => $serviceRequest->status,

@@ -53,7 +53,7 @@ class ServiceRequest extends Model
 
     protected function getAdminNotificationLink(): ?string
     {
-        return url(sprintf('/service-requests/show/%d', $this->getKey()));
+        return route('service.requests.show', $this->getKey());
     }
 
     protected function getAdminNotificationMeta(): array

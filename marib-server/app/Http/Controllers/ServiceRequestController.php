@@ -12,6 +12,7 @@ use App\Services\ServiceAuthorizationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 /**
@@ -82,7 +83,7 @@ class ServiceRequestController extends Controller
      | - الفلاتر: الفئة + الحالة
      | - إصلاح حدّ الصفوف: limit افتراضي 50 + دعم limit=all أو limit<=0 لعرض الكل
      |=========================================================================*/
-    public function show(Request $request)
+    public function datatable(Request $request)
     {
         try {
 
@@ -114,9 +115,6 @@ class ServiceRequestController extends Controller
                     'service.category:id,name',
                     'user:id,name',
                 ])
-                ->withTrashed()
-
-
                 ->withTrashed();
 
             if ($user = Auth::user()) {
@@ -186,20 +184,13 @@ class ServiceRequestController extends Controller
                 if (Auth::user()->can('service-requests-list')) {
                     $operate .= BootstrapTableService::button(
                         'fa fa-eye',
-                        '#',
-                        ['editdata', 'btn-light-danger'],
+                        route('service.requests.show', $r->id),
+                        ['btn-outline-primary'],
+
+
                         [
-                            'title'          => __('View'),
-                            'data-bs-target' => '#editModal',
-                            'data-bs-toggle' => 'modal',
-                            'data-json'      => htmlspecialchars(json_encode([
-                                'service_title' => $serviceTitle,
-                                'user_name'     => $userName,
-                                'status'        => $r->status,
-                                'note'          => $r->note,
-                                'payload'       => $r->payload, // تُعرض كاملة في المودال
-                                'created_at'    => optional($r->created_at)->toDateTimeString(),
-                            ], JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8'),
+                            'title' => __('View'),
+
                         ]
                     );
                 }
@@ -221,6 +212,7 @@ class ServiceRequestController extends Controller
                         route('service.requests.destroy', $r->id)
                     );
                 }
+                $customFields = $this->normalizePayloadEntriesForView($r->payload, false);
 
                 // تشكيل الصف
                 $dataRows[] = [
@@ -235,6 +227,20 @@ class ServiceRequestController extends Controller
                     'updated_at'      => optional($r->updated_at)->toDateTimeString(),
                     'active_status'   => empty($r->deleted_at),         // IF deleted_at is empty => true
                     'operate'         => $operate,
+                    'custom_fields'   => array_map(static function (array $entry) {
+                        return [
+                            'label'      => $entry['label'],
+                            'value'      => $entry['display'],
+                            'values'     => $entry['value_list'],
+                            'display'    => $entry['display'],
+                            'is_file'    => $entry['is_file'],
+                            'file_url'   => $entry['file_url'],
+                            'file_name'  => $entry['file_name'],
+                            'note'       => $entry['note'],
+                            'value_list' => $entry['value_list'],
+                        ];
+                    }, $customFields),
+
                 ];
             }
 
@@ -244,9 +250,44 @@ class ServiceRequestController extends Controller
             ]);
 
         } catch (Throwable $th) {
-            ResponseService::logErrorResponse($th, "ServiceRequestController --> show");
+            ResponseService::logErrorResponse($th, "ServiceRequestController --> datatable");
             ResponseService::errorResponse();
         }
+    }
+
+
+
+    public function show($id)
+    {
+        ResponseService::noAnyPermissionThenRedirect([
+            'service-requests-list',
+            'service-requests-update',
+            'service-requests-delete',
+        ]);
+
+        $serviceRequest = ServiceRequest::with([
+                'service.category',
+                'user',
+            ])
+            ->withTrashed()
+            ->findOrFail($id);
+
+        $user = Auth::user();
+        if (!$user || !$this->serviceAuthorizationService->userCanManageService($user, $serviceRequest->service)) {
+            abort(403, __('You are not authorized to manage this service.'));
+        }
+
+        $payloadEntries = $this->normalizePayloadEntriesForView($serviceRequest->payload, true);
+        $attachmentEntries = array_values(array_filter($payloadEntries, static fn (array $entry): bool => $entry['is_file']));
+
+        return view('services.requests.show', [
+            'serviceRequest'    => $serviceRequest,
+            'service'           => $serviceRequest->service,
+            'category'          => optional($serviceRequest->service)->category,
+            'applicant'         => $serviceRequest->user,
+            'payloadEntries'    => $payloadEntries,
+            'attachmentEntries' => $attachmentEntries,
+        ]);
     }
 
     /* =========================================================================
@@ -292,7 +333,7 @@ class ServiceRequestController extends Controller
                     $statusLabel = ucfirst($r->status);
                     $body  = 'تم تحديث حالة طلبك إلى: ' . $statusLabel;
 
-                    $deeplink = url(sprintf('/service-requests/show/%d', $r->getKey()));
+                    $deeplink = route('service.requests.show', $r->getKey());
 
                     $dataPayload = [
                         'service_request_id' => $r->getKey(),
@@ -419,4 +460,218 @@ class ServiceRequestController extends Controller
             return '-';
         }
     }
+
+
+
+
+
+    private function normalizePayloadEntriesForView($payload, bool $resolveFileUrl = true): array
+    {
+        if (!is_array($payload) || $payload === []) {
+            return [];
+        }
+
+        $entries = [];
+
+        if ($this->isAssociativeArray($payload)) {
+            $index = 0;
+            foreach ($payload as $key => $value) {
+                $entries[] = $this->buildPayloadEntryForView([
+                    'name'  => $key,
+                    'label' => $key,
+                    'value' => $value,
+                ], $index++, $resolveFileUrl);
+            }
+
+            return array_values(array_filter($entries));
+        }
+
+        foreach ($payload as $index => $entry) {
+            $normalized = $this->buildPayloadEntryForView($entry, (int) $index, $resolveFileUrl);
+            if ($normalized !== null) {
+                $entries[] = $normalized;
+            }
+        }
+
+        return array_values(array_filter($entries));
+    }
+
+    private function buildPayloadEntryForView($entry, int $index, bool $resolveFileUrl): ?array
+    {
+        $fallbackLabel = __('Field #:number', ['number' => $index + 1]);
+
+        if (!is_array($entry)) {
+            $display = $this->stringifyPayloadValue($entry) ?? '-';
+
+            return [
+                'label'      => $fallbackLabel,
+                'note'       => null,
+                'type'       => null,
+                'display'    => $display,
+                'value_list' => [],
+                'is_file'    => false,
+                'file_url'   => null,
+                'file_path'  => null,
+                'file_name'  => null,
+            ];
+        }
+
+        $label = trim((string) ($entry['label'] ?? $entry['title'] ?? $entry['name'] ?? $entry['key'] ?? ''));
+        if ($label === '') {
+            $label = $fallbackLabel;
+        }
+
+        $note = $entry['note'] ?? null;
+        if (is_string($note)) {
+            $note = trim($note);
+            if ($note === '') {
+                $note = null;
+            }
+        } else {
+            $note = null;
+        }
+
+        $type = strtolower((string) ($entry['type'] ?? ''));
+
+        $values = [];
+        if (isset($entry['values']) && is_array($entry['values'])) {
+            $values = array_values(array_filter(array_map(function ($value) {
+                return $this->stringifyPayloadValue($value);
+            }, $entry['values']), static fn ($value) => $value !== null));
+        }
+
+        $value = $entry['display_value'] ?? ($entry['value'] ?? null);
+        if (is_array($value) && empty($values)) {
+            $values = array_values(array_filter(array_map(function ($value) {
+                return $this->stringifyPayloadValue($value);
+            }, $value), static fn ($value) => $value !== null));
+            $value = null;
+        } elseif (!is_array($value)) {
+            $value = $this->stringifyPayloadValue($value);
+        } else {
+            $value = null;
+        }
+
+        $isFile = $type === 'fileinput' || isset($entry['file_url']) || isset($entry['file_path']);
+        $filePath = isset($entry['file_path']) && is_string($entry['file_path']) ? $entry['file_path'] : null;
+        if ($isFile && $filePath === null && isset($entry['value']) && is_string($entry['value'])) {
+            $filePath = $entry['value'];
+        }
+
+        $fileUrl = isset($entry['file_url']) && is_string($entry['file_url']) ? $entry['file_url'] : null;
+        $fileName = null;
+        $display = null;
+
+        if ($isFile) {
+            if ($resolveFileUrl) {
+                $fileUrl = $fileUrl ?: $this->resolveFileUrl($filePath);
+            }
+
+            $fileName = $this->resolveFileName($fileUrl, $filePath, $label, $index);
+            $display = $fileName ?: '-';
+        } else {
+            $display = $value ?? (!empty($values) ? implode(', ', $values) : '-');
+        }
+
+        if ($display === null || $display === '') {
+            $display = '-';
+        }
+
+        return [
+            'label'      => $label,
+            'note'       => $note,
+            'type'       => $type ?: null,
+            'display'    => $display,
+            'value_list' => $values,
+            'is_file'    => $isFile,
+            'file_url'   => $fileUrl,
+            'file_path'  => $filePath,
+            'file_name'  => $fileName,
+        ];
+    }
+
+    private function stringifyPayloadValue($value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_bool($value)) {
+            return $value ? __('Yes') : __('No');
+        }
+
+        if (is_scalar($value)) {
+            $string = trim((string) $value);
+            return $string === '' ? null : $string;
+        }
+
+        if (is_object($value) && method_exists($value, '__toString')) {
+            $string = trim((string) $value);
+            return $string === '' ? null : $string;
+        }
+
+        if (is_array($value)) {
+            $encoded = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            return $encoded === '[]' ? null : $encoded;
+        }
+
+        return null;
+    }
+
+    private function resolveFileUrl(?string $pathOrUrl): ?string
+    {
+        if (!is_string($pathOrUrl) || $pathOrUrl === '') {
+            return null;
+        }
+
+        if (filter_var($pathOrUrl, FILTER_VALIDATE_URL)) {
+            return $pathOrUrl;
+        }
+
+        try {
+            if (Storage::disk('public')->exists($pathOrUrl)) {
+                return Storage::disk('public')->url($pathOrUrl);
+            }
+        } catch (Throwable) {
+            // تجاهل أي أخطاء في الوصول للتخزين واستمر بإرجاع مسار عام
+        }
+
+        return url($pathOrUrl);
+    }
+
+    private function resolveFileName(?string $fileUrl, ?string $filePath, string $fallbackLabel, int $index): string
+    {
+        $candidates = [];
+
+        if (is_string($filePath) && $filePath !== '') {
+            $candidates[] = $filePath;
+        }
+
+        if (is_string($fileUrl) && $fileUrl !== '') {
+            $candidates[] = $fileUrl;
+        }
+
+        foreach ($candidates as $candidate) {
+            $path = parse_url($candidate, PHP_URL_PATH) ?: $candidate;
+            $basename = basename($path);
+            if ($basename !== '' && $basename !== '/') {
+                return $basename;
+            }
+        }
+
+        $fallback = trim($fallbackLabel);
+        if ($fallback !== '') {
+            return $fallback;
+        }
+
+        return __('Attachment #:number', ['number' => $index + 1]);
+    }
+
+    private function isAssociativeArray(array $array): bool
+    {
+        return array_keys($array) !== range(0, count($array) - 1);
+    }
+
+
+
 }

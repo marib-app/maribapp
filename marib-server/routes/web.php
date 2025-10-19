@@ -643,7 +643,9 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
             ->group(function () {
                 
             Route::get('/',                     [ServiceRequestController::class, 'index'])->name('index');
-            Route::get('/show/{id}',            [ServiceRequestController::class, 'show'])->name('show');
+            Route::get('/datatable',            [ServiceRequestController::class, 'datatable'])->name('datatable');
+            Route::get('/{serviceRequest}',     [ServiceRequestController::class, 'show'])->name('show');
+            
             Route::post('/approval/{id}',       [ServiceRequestController::class, 'updateApproval'])->name('approval');
             Route::delete('/{id}',              [ServiceRequestController::class, 'destroy'])->name('destroy');
         });

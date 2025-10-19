@@ -722,27 +722,50 @@ class WifiNetworkController extends Controller
     {
         $message = strtolower($exception->getMessage());
 
-        if (! str_contains($message, 'wifi_networks')) {
+        $errorInfo = $exception->errorInfo ?? [];
+        $constraint = strtolower((string) ($errorInfo[2] ?? ''));
+        $sqlState = $exception->getCode();
+        $driverCode = isset($errorInfo[1]) ? (int) $errorInfo[1] : null;
+
+        $mentionsSlug = str_contains($message, 'slug')
+            || ($constraint !== '' && str_contains($constraint, 'slug'));
+
+
+        if (! $mentionsSlug && $errorInfo !== []) {
+            foreach ($errorInfo as $value) {
+                if (! is_string($value)) {
+                    continue;
+                }
+
+                if (str_contains(strtolower($value), 'slug')) {
+                    $mentionsSlug = true;
+                    break;
+                }
+            }
+        }
+
+        if (! $mentionsSlug) {
+
+
             return false;
         }
 
-        if (str_contains($message, 'slug')) {
+        if (str_contains($message, 'duplicate') || str_contains($message, 'unique')) {
+
             return true;
         }
 
-        $constraint = strtolower((string) ($exception->errorInfo[2] ?? ''));
+        if ($constraint !== '' && (str_contains($constraint, 'duplicate') || str_contains($constraint, 'unique'))) {
 
-        if ($constraint !== '' && str_contains($constraint, 'slug')) {
             return true;
         }
 
-        $driverCode = isset($exception->errorInfo[1]) ? (int) $exception->errorInfo[1] : null;
+        if (in_array($sqlState, ['23000', '23505'], true)) {
 
-        if ($driverCode !== null && in_array($driverCode, [19, 1062, 1555, 23505], true)) {
             return true;
         }
 
-        return false;
+        return $driverCode !== null && in_array($driverCode, [19, 1062, 1555, 23505], true);
     }
 
 }

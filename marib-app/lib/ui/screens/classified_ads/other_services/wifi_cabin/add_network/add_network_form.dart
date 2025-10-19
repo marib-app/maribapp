@@ -115,13 +115,34 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
   Widget buildSubmitButton({
     EdgeInsetsGeometry padding = const EdgeInsets.all(16),
   }) {
+
+    final palette = context.color;
+
+
     return Padding(
       padding: padding,
       child: SizedBox(
         width: double.infinity,
-        height: 48,
+        height: 56,
         child: ElevatedButton(
           onPressed: _isSubmitting ? null : _onSubmit,
+          style: ElevatedButton.styleFrom(
+            elevation: 0,
+            minimumSize: const Size.fromHeight(56),
+            backgroundColor: palette.territoryColor,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: palette.borderColor,
+            disabledForegroundColor: Colors.white.withOpacity(0.72),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ).merge(
+            ButtonStyle(
+              overlayColor:
+              WidgetStatePropertyAll(Colors.white.withOpacity(.08)),
+            ),
+          ),
+
           child: _isSubmitting
               ? const SizedBox(
                   width: 22,

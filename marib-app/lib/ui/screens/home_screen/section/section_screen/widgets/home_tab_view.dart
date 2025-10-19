@@ -150,16 +150,11 @@ class _HomeTabViewState extends State<HomeTabView> {
 
   int? _activeSubcatId; // الفئة الفرعية المختارة حالياً
   int? _lastTopCatId; // لملاحظة تغيّر التصنيف العلوي وإعادة ضبط الفرعيات
-  bool _hasRequestedInitialFeatured = false;
   bool? _lastReportedScrollIsUp;
 
   // ✅ قفل تحميل المزيد + تباطؤ بسيط لتجنّب سيل الاستدعاءات
   bool _isLoadingMore = false;
 
-  final Map<int, String> _rootIdentifierByCategoryId = <int, String>{};
-  final Map<int, String> _slugByCategoryId = <int, String>{};
-  final Map<String, String> _slugByRootIdentifier = <String, String>{};
-  int? _lastRequestedRootId;
 
 
 
@@ -175,18 +170,7 @@ class _HomeTabViewState extends State<HomeTabView> {
 
     _lastTopCatId = widget.selectedCategoryId.value;
 
-    final cubit = context.read<FetchHomeScreenCubit>();
-    if (cubit.state is! FetchHomeScreenInitial) {
-      _hasRequestedInitialFeatured = true;
-    }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _hasRequestedInitialFeatured) {
-        return;
-      }
-      _hasRequestedInitialFeatured = true;
-      _loadFeaturedSectionsForRoot(widget.selectedCategoryId.value);
-    });
   }
 
   @override
@@ -214,7 +198,6 @@ class _HomeTabViewState extends State<HomeTabView> {
     if (_lastTopCatId != normalizedSelected) {
       _lastTopCatId = normalizedSelected;
       _activeSubcatId = null;
-      _loadFeaturedSectionsForRoot(widget.selectedCategoryId.value);
     }
     setState(() {});
   }
@@ -294,60 +277,7 @@ class _HomeTabViewState extends State<HomeTabView> {
     }
   }
 
-  String? _getCachedRootIdentifier(int? categoryId) {
-    if (categoryId == null || categoryId <= 0) {
-      return null;
-    }
 
-    final String? value = _rootIdentifierByCategoryId[categoryId];
-    if (value == null) {
-      return null;
-    }
-
-    final String trimmed = value.trim();
-    if (trimmed.isEmpty) {
-      _rootIdentifierByCategoryId.remove(categoryId);
-      return null;
-    }
-
-    if (!identical(value, trimmed)) {
-      _rootIdentifierByCategoryId[categoryId] = trimmed;
-    }
-
-    return trimmed;
-  }
-
-  String? _getSlugForRootIdentifier(String? rootIdentifier) {
-    if (rootIdentifier == null || rootIdentifier.isEmpty) {
-      return null;
-    }
-
-    final String? value = _slugByRootIdentifier[rootIdentifier];
-    if (value == null) {
-      return null;
-    }
-
-    final String trimmed = value.trim();
-    if (trimmed.isEmpty) {
-      _slugByRootIdentifier.remove(rootIdentifier);
-      return null;
-    }
-
-    if (!identical(value, trimmed)) {
-      _slugByRootIdentifier[rootIdentifier] = trimmed;
-    }
-
-    return trimmed;
-  }
-
-  String? _cleanSlug(String? value) {
-    if (value == null) {
-      return null;
-    }
-
-    final String trimmed = value.trim();
-    return trimmed.isEmpty ? null : trimmed;
-  }
 
   void _handleScrollDirectionChange() {
     if (!controller.hasClients) {
@@ -396,210 +326,7 @@ class _HomeTabViewState extends State<HomeTabView> {
     widget.onScrollDirectionChanged?.call(isScrollingUp);
   }
 
-  void _cacheRootIdentifiers({
-    required List<HomeScreenSection> sections,
-    int? rootId,
-    String? requestedRootIdentifier,
-  }) {
-    final String? requested = requestedRootIdentifier?.trim();
-    String? canonicalRoot;
 
-    for (final HomeScreenSection section in sections) {
-      final String? sectionRoot = section.rootIdentifier?.trim();
-      final String? sectionSlug = _cleanSlug(section.slug);
-
-      if (sectionRoot == null || sectionRoot.isEmpty) {
-        continue;
-      }
-      canonicalRoot ??= sectionRoot;
-
-      if (sectionSlug != null) {
-        _slugByRootIdentifier[sectionRoot] = sectionSlug;
-        if (requested != null && requested.isNotEmpty) {
-          _slugByRootIdentifier.putIfAbsent(requested, () => sectionSlug);
-        }
-        if (rootId != null && rootId > 0) {
-          final String? existingRootSlug = _slugByCategoryId[rootId];
-          if (existingRootSlug == null || existingRootSlug.isEmpty) {
-            _slugByCategoryId[rootId] = sectionSlug;
-          }
-        }
-      }
-
-      if (rootId != null && rootId > 0) {
-        final String? existingRootIdentifier =
-            _rootIdentifierByCategoryId[rootId];
-        if (existingRootIdentifier == null ||
-            existingRootIdentifier.trim().isEmpty ||
-            existingRootIdentifier == rootId.toString() ||
-            existingRootIdentifier.trim() != sectionRoot) {
-          _rootIdentifierByCategoryId[rootId] = sectionRoot;
-        }
-      }
-
-      final Iterable<int> categoryIds = section.sectionData == null
-          ? const <int>[]
-          : section.sectionData!
-              .map((ItemModel item) => item.categoryId)
-              .whereType<int>();
-
-      for (final int categoryId in categoryIds) {
-        if (categoryId <= 0) {
-          continue;
-        }
-
-        final String? existing = _rootIdentifierByCategoryId[categoryId];
-        if (existing == null ||
-            existing.trim().isEmpty ||
-            existing == categoryId.toString() ||
-            existing.trim() != sectionRoot) {
-          _rootIdentifierByCategoryId[categoryId] = sectionRoot;
-        }
-        if (sectionSlug != null) {
-          final String? existingSlug = _slugByCategoryId[categoryId];
-          if (existingSlug == null || existingSlug.isEmpty) {
-            _slugByCategoryId[categoryId] = sectionSlug;
-          }
-        }
-      }
-    }
-    final String? resolvedRoot = canonicalRoot ??
-        (requested != null && requested.isNotEmpty ? requested : null);
-
-    if (rootId != null && rootId > 0 && resolvedRoot != null) {
-      final String trimmed = resolvedRoot.trim();
-      if (trimmed.isNotEmpty) {
-        _rootIdentifierByCategoryId[rootId] = trimmed;
-      }
-    }
-  }
-
-  String? _resolveRootSlug(int? rootId) {
-    return _getCachedRootIdentifier(rootId);
-  }
-
-  void _loadFeaturedSectionsForRoot(int? rootId) {
-    final String? interfaceType =
-        SliderInterfaceMapper.normalize(widget.adInterfaceType) ??
-            widget.adInterfaceType?.trim();
-
-    if (interfaceType == null || interfaceType.isEmpty) {
-      return;
-    }
-
-    _hasRequestedInitialFeatured = true;
-    _lastRequestedRootId = rootId;
-    final String? cachedRootIdentifier = _getCachedRootIdentifier(rootId);
-    final String? rootIdentifier = FeaturedSectionUtils.resolveRootIdentifier(
-      interfaceType: interfaceType,
-      rootCategoryId: rootId,
-      cachedRootIdentifier: cachedRootIdentifier,
-    );
-    String? resolvedSlug = _getSlugForRootIdentifier(rootIdentifier);
-
-    if (resolvedSlug == null && rootId != null && rootId > 0) {
-      resolvedSlug = _slugByCategoryId[rootId];
-    }
-
-    context.read<FetchHomeScreenCubit>().loadFeaturedSections(
-          interfaceType: interfaceType,
-          rootIdentifier: rootIdentifier,
-          slug: resolvedSlug,
-        );
-  }
-
-  bool _matchesRoot(HomeScreenSection section, String? rootSlug, bool showAll) {
-    final String? sectionRoot = section.rootIdentifier?.trim();
-    if (showAll || rootSlug == null || rootSlug.isEmpty) {
-      return true;
-    }
-
-    if (sectionRoot == null || sectionRoot.isEmpty) {
-      return false;
-    }
-
-    return sectionRoot == rootSlug;
-  }
-
-  bool _itemMatchesCategory(ItemModel item, int targetCategoryId) {
-    if (targetCategoryId <= 0) {
-      return true;
-    }
-
-    bool matchesDynamic(dynamic value) {
-      if (value == null) return false;
-      if (value is int) return value == targetCategoryId;
-      if (value is num) return value.toInt() == targetCategoryId;
-      if (value is String) {
-        final int? parsed = int.tryParse(value);
-        if (parsed != null) {
-          return parsed == targetCategoryId;
-        }
-      }
-      return false;
-    }
-
-    if (matchesDynamic(item.categoryId) || matchesDynamic(item.category?.id)) {
-      return true;
-    }
-
-    final String? allCategoryIds = item.allCategoryIds;
-    if (allCategoryIds == null || allCategoryIds.trim().isEmpty) {
-      return false;
-    }
-
-    for (final Match match in RegExp(r'\d+').allMatches(allCategoryIds)) {
-      final String value = match.group(0)!;
-      final int? parsed = int.tryParse(value);
-      if (parsed != null && parsed == targetCategoryId) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  Widget _sectionsLoadingPlaceholder({required bool showAll}) {
-    const int crossAxisCount = _gridCrossAxisCount;
-    final int shimmerRows = showAll ? 2 : 2;
-    final int childCount = crossAxisCount * shimmerRows;
-
-    return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
-      sliver: SliverGrid(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) => _gridShimmer(context),
-          childCount: childCount,
-        ),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
-          crossAxisCount: crossAxisCount,
-          height: _gridCardHeight,
-          mainAxisSpacing: 7,
-          crossAxisSpacing: 10,
-        ),
-      ),
-    );
-  }
-
-  Widget _sectionsEmptyPlaceholder({VoidCallback? onRetry}) {
-    final Widget content = const NoDataFound();
-
-    if (onRetry == null) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-        child: content,
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onRetry,
-        child: content,
-      ),
-    );
-  }
 
   // =========================
   // اختيار مفتاح السلايدر بكلفة منخفضة
@@ -752,10 +479,7 @@ class _HomeTabViewState extends State<HomeTabView> {
     // ✅ فيزياء التمرير حسب المنصة (أخف على أندرويد)
     final platform = Theme.of(context).platform;
 
-    // ✅ هل نخفي الأقسام/التصنيفات عند وجود بحث/فلتر؟
-    final hasQuery = widget.searchController.text.trim().isNotEmpty;
-    final hasFilter = Constant.itemFilter != null;
-    final hideBlocks = hasQuery || hasFilter;
+
     final int? selectedCategoryId = widget.selectedCategoryId.value;
 
     return ValueListenableBuilder<ViewMode>(
@@ -837,7 +561,6 @@ class _HomeTabViewState extends State<HomeTabView> {
                       if (_lastTopCatId != normalizedSelected) {
                         _lastTopCatId = normalizedSelected;
                         _activeSubcatId = null;
-                        _loadFeaturedSectionsForRoot(selectedId);
                       }
                       return LayoutBuilder(
                         builder: (context, constraints) {
@@ -1174,7 +897,6 @@ class _HomeTabViewState extends State<HomeTabView> {
                 ),
               ),
 
-              ..._sectionsBlock(selectedCategoryId, isList),
 
               // فاصل متوسط (يتأثر بحالة ظهور شريط التنقل السفلي)
               SliverToBoxAdapter(
@@ -1204,106 +926,7 @@ class _HomeTabViewState extends State<HomeTabView> {
     );
   }
 
-  // أقسام الهوم: SectionsAdapter أو شبكة منتجات للتصنيف المحدد
 
-  List<Widget> _sectionsBlock(int? selectedId, bool _) {
-    final bool showAll = selectedId == null || selectedId == 0;
-    final FetchHomeScreenState state =
-        context.watch<FetchHomeScreenCubit>().state;
-
-    if (state is FetchHomeScreenInitial || state is FetchHomeScreenInProgress) {
-      return <Widget>[
-        _sectionsLoadingPlaceholder(showAll: showAll),
-      ];
-    }
-
-    if (state is FetchHomeScreenFail) {
-      return <Widget>[
-        SliverToBoxAdapter(
-          child: _sectionsEmptyPlaceholder(
-            onRetry: () => _loadFeaturedSectionsForRoot(selectedId),
-          ),
-        ),
-      ];
-    }
-
-    if (state is FetchHomeScreenSuccess) {
-      final int? cachingRootId = _lastRequestedRootId ?? selectedId;
-      _cacheRootIdentifiers(
-        sections: state.sections,
-        rootId: cachingRootId,
-        requestedRootIdentifier: state.rootIdentifier,
-      );
-
-      final String? rootSlug = showAll ? null : _resolveRootSlug(selectedId);
-
-      final List<HomeScreenSection> filteredSections = state.sections
-          .where((s) => _matchesRoot(s, rootSlug, showAll))
-          .toList();
-
-      if (filteredSections.isEmpty) {
-        return <Widget>[
-          SliverToBoxAdapter(
-            child: _sectionsEmptyPlaceholder(
-              onRetry: () => _loadFeaturedSectionsForRoot(selectedId),
-            ),
-          ),
-        ];
-      }
-
-      if (showAll) {
-        return <Widget>[
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) => SectionsAdapter(
-                section: filteredSections[index],
-              ),
-              childCount: filteredSections.length,
-            ),
-          ),
-        ];
-      }
-
-      final int targetCategoryId = selectedId ?? 0;
-      final List<ItemModel> products = filteredSections
-          .expand((s) => s.sectionData ?? const <ItemModel>[])
-          .where((i) => _itemMatchesCategory(i, targetCategoryId))
-          .toList();
-
-      if (products.isEmpty) {
-        return <Widget>[
-          SliverToBoxAdapter(
-            child: _sectionsEmptyPlaceholder(
-              onRetry: () => _loadFeaturedSectionsForRoot(selectedId),
-            ),
-          ),
-        ];
-      }
-
-      return <Widget>[
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
-          sliver: SliverGrid(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) => ICard(item: products[index]),
-              childCount: products.length,
-            ),
-            gridDelegate:
-                SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
-              crossAxisCount: _gridCrossAxisCount,
-              height: _gridCardHeight,
-              mainAxisSpacing: 7,
-              crossAxisSpacing: 10,
-            ),
-          ),
-        ),
-      ];
-    }
-
-    return const <Widget>[
-      SliverToBoxAdapter(child: SizedBox(height: 1)),
-    ];
-  }
 
   // قائمة الإعلانات (مربوطة بوضع العرض)
 

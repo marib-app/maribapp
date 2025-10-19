@@ -117,7 +117,10 @@ class FilterSortBar extends StatelessWidget {
                         constraints.maxHeight.isFinite &&
                             constraints.maxHeight > 0;
                     final double desiredHeight = hasBoundedHeight
-                        ? math.max(44.0, constraints.maxHeight)
+                        ? constraints.maxHeight
+                        .clamp(44.0, fallbackHeight)
+                        .toDouble()
+
                         : fallbackHeight;
 
                     Widget buttonWrapper(Widget child) {

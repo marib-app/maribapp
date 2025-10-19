@@ -15,6 +15,7 @@ import 'package:marib/data/cubits/request_device/request_device_cubit.dart';
 
 
 // مكوّن البطاقة كما هو (نفس القياسات، الألوان، والخطوط)
+
 class SpecialRequestCard extends StatelessWidget {
   final String sectionSlug;
 

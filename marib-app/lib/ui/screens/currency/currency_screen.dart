@@ -72,7 +72,7 @@ class CurrencyScreen extends StatelessWidget {
 }
 
 class _CurrencyScreenLogic extends StatefulWidget {
-  const _CurrencyScreenLogic();
+  const _CurrencyScreenLogic({super.key});
 
   @override
   State<_CurrencyScreenLogic> createState() => _CurrencyScreenLogicState();

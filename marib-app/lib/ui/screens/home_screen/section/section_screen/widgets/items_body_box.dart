@@ -133,16 +133,22 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
       effectiveCategoryId = currentState.categoryId;
     } else {
       final int? selectedCategoryId = widget.selectedCategoryId.value;
-      effectiveCategoryId = selectedCategoryId ?? _catId;
+      effectiveCategoryId =
+      (selectedCategoryId == null || selectedCategoryId <= 0)
+          ? _catId
+          : selectedCategoryId;
+
     }
 
     final ItemFilterModel? sourceFilter =
-    (currentState is FetchItemSummarySuccess && currentState.filter != null)
+    (currentState is FetchItemSummarySuccess &&
+        currentState.filter != null)
         ? currentState.filter
         : widget.filter;
 
-    final ItemFilterModel? normalizedFilter =
-    sourceFilter?.copyWith(categoryId: effectiveCategoryId.toString());
+    final ItemFilterModel? normalizedFilter = sourceFilter?.copyWith(
+      categoryId: effectiveCategoryId.toString(),
+    );
 
     fetchCubit
 
@@ -231,19 +237,32 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
                             parentId: _catId,
                             selectedCategoryId: selectedId,
                             onCategorySelected: (id) {
-                              if (widget.selectedCategoryId.value != id) {
-                                widget.selectedCategoryId.value = id;
+                              final int rawId = id ?? 0;
+                              final int effectiveId =
+                              rawId <= 0 ? _catId : rawId;
+                              if (widget.selectedCategoryId.value != rawId) {
+                                widget.selectedCategoryId.value = rawId;
+
+
                               }
-                              final query = widget.searchController.text.trim();
+                              final query =
+                              widget.searchController.text.trim();
+                              final ItemFilterModel? baseFilter =
+                                  widget.filter;
+                              final ItemFilterModel? nextFilter =
+                              baseFilter == null
+                                  ? null
+                                  : baseFilter.copyWith(
+                                categoryId:
+                                effectiveId.toString(),
+                              );
                               context
                                   .read<FetchItemSummaryCubit>()
                                   .fetchSummaries(
-                                categoryId: id ?? _catId,
+                                categoryId: effectiveId,
                                 search: query,
                                 sortBy: widget.sortBy,
-                                filter: widget.filter?.copyWith(
-                                  categoryId: (id ?? _catId).toString(),
-                                ),
+                                filter: nextFilter,
                               );
                               _lastExecutedQuery = query;
                             },

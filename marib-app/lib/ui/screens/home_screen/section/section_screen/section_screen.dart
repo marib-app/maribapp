@@ -166,6 +166,17 @@ class Section_screenState extends State<Section_screen> {
     return int.tryParse(resolved) ?? (categoryIdOverride ?? _catId);
   }
 
+
+  int _resolveSelectedCategoryFallback() {
+    final int? selected = selectedCategoryId.value;
+    if (selected == null || selected <= 0) {
+      return _catId;
+    }
+    return selected;
+  }
+
+
+
   ItemFilterModel _buildEffectiveFilter({
     ItemFilterModel? base,
     int? categoryIdOverride,
@@ -213,7 +224,7 @@ class Section_screenState extends State<Section_screen> {
       context.read<FetchHomeScreenCubit>().fetch();
       return;
     }
-    final int? effectiveRootId = rootId ?? selectedCategoryId.value ?? _catId;
+    final int effectiveRootId = rootId ?? _resolveSelectedCategoryFallback();
 
     final FetchHomeScreenState cubitState =
         context.read<FetchHomeScreenCubit>().state;
@@ -273,7 +284,6 @@ class Section_screenState extends State<Section_screen> {
     // إعداد معرف الفئة الأساسي
     // =========================
     _catId = _parseInitialCategoryId(widget.categoryId);
-    selectedCategoryId.value = _catId;
 
     // (اختياري) لو هذه المتغيرات عندك أصلاً — وإلا احذف السطور الثلاثة:
     // searchbody = {};
@@ -437,7 +447,7 @@ class Section_screenState extends State<Section_screen> {
 
       // إعادة تحميل أقسام الإعلانات المميزة عند السحب للتحديث
       _requestFeaturedSections(
-        rootId: selectedCategoryId.value ?? _catId,
+        rootId: resolvedCategoryId,
       );
 
       // (اختياري)

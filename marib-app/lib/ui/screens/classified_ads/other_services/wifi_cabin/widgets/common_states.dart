@@ -151,19 +151,19 @@ class WifiEmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: color.textDefaultColor.withOpacity(0.75),
-                  fontSize: 13,
-                ),
-                const SizedBox(height: 12),
-
-                if (onAction != null)
-            OutlinedButton(
-              onPressed: onAction,
-              child: Text(actionLabel ?? 'إعادة المحاولة'),
+              subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: color.textDefaultColor.withOpacity(0.75),
+                fontSize: 13,
+              ),
             ),
+            const SizedBox(height: 12),
+            if (onAction != null)
+              OutlinedButton(
+                onPressed: onAction,
+                child: Text(actionLabel ?? 'إعادة المحاولة'),
+              ),
           ],
         );
 
@@ -174,8 +174,6 @@ class WifiEmptyState extends StatelessWidget {
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
             child: Center(child: content),
           ),
-        )
-        ,
         );
       },
     );

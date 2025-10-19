@@ -196,6 +196,7 @@ class PaymentRequestTableQuery
 
 
         $manualGatewayKeyCandidates = [];
+        $manualGatewayFallback = "'manual_bank'";
 
         if ($supportsManualMeta) {
             $manualGatewayKeyCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.channel')), '')";
@@ -210,8 +211,11 @@ class PaymentRequestTableQuery
 
         $manualGatewayKeyCandidates = array_values(array_filter($manualGatewayKeyCandidates, static fn (?string $part): bool => $part !== null));
 
-        $manualGatewayKeyExpression = 'LOWER(COALESCE(' . implode(', ', array_merge($manualGatewayKeyCandidates, ["'manual_bank'"])) . '))';
-
+        if ($manualGatewayKeyCandidates === []) {
+            $manualGatewayKeyExpression = $manualGatewayFallback;
+        } else {
+            $manualGatewayKeyExpression = 'LOWER(COALESCE(' . implode(', ', array_merge($manualGatewayKeyCandidates, [$manualGatewayFallback])) . '))';
+        }
 
         if ($manualGatewayNameCoreParts === []) {
             $manualRequestGatewayCustomNameSelect = 'NULL';

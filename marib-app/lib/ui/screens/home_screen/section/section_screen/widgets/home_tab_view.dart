@@ -137,15 +137,7 @@ class HomeTabView extends StatefulWidget {
   State<HomeTabView> createState() => _HomeTabViewState();
 }
 
-class _CategoryNavigationPayload {
-  final String routeName;
-  final Map<String, dynamic> arguments;
 
-  const _CategoryNavigationPayload({
-    required this.routeName,
-    required this.arguments,
-  });
-}
 
 class _HomeTabViewState extends State<HomeTabView> {
   static const int _gridCrossAxisCount = 2;
@@ -165,90 +157,7 @@ class _HomeTabViewState extends State<HomeTabView> {
   final Map<String, String> _slugByRootIdentifier = <String, String>{};
   int? _lastRequestedRootId;
 
-  _CategoryNavigationPayload? _buildCategoryNavigationPayload({
-    required CategoryModel category,
-    required CategoryModel rootCategory,
-    CategoryModel? parentCategory,
-  }) {
-    final int? categoryId = category.id;
-    if (categoryId == null || categoryId <= 0) {
-      return null;
-    }
 
-    final List<String> categoryIds = <String>[];
-    void addCategoryId(int? value) {
-      if (value == null || value <= 0) {
-        return;
-      }
-      final String idAsString = value.toString();
-      if (!categoryIds.contains(idAsString)) {
-        categoryIds.add(idAsString);
-      }
-    }
-
-    final int? rootId = rootCategory.id ?? int.tryParse(widget.categoryId);
-    addCategoryId(rootId);
-
-    if (parentCategory != null && parentCategory.id != categoryId) {
-      addCategoryId(parentCategory.id);
-    }
-
-    addCategoryId(categoryId);
-
-    final String interfaceType = _resolveInterfaceType(
-      category: category,
-      parent: parentCategory,
-      root: rootCategory,
-    );
-
-    final Map<String, dynamic> arguments = <String, dynamic>{
-      'catID': categoryId.toString(),
-      'catName': category.name ?? '',
-      'categoryIds': categoryIds,
-      'interfaceType': interfaceType,
-    };
-
-    final String routeName = _resolveItemsListRoute(interfaceType);
-
-    return _CategoryNavigationPayload(
-      routeName: routeName,
-      arguments: arguments,
-    );
-  }
-
-  String _resolveInterfaceType({
-    required CategoryModel category,
-    CategoryModel? parent,
-    required CategoryModel root,
-  }) {
-    final Iterable<String?> sources = <String?>[
-      category.interfaceType,
-      parent?.interfaceType,
-      root.interfaceType,
-      widget.adInterfaceType,
-    ];
-
-    for (final String? source in sources) {
-      final String? normalized = SliderInterfaceMapper.normalize(source);
-      if (normalized != null && normalized.isNotEmpty) {
-        return normalized;
-      }
-    }
-
-    return 'all';
-  }
-
-  String _resolveItemsListRoute(String? interfaceType) {
-    final String? normalized = SliderInterfaceMapper.normalize(interfaceType);
-    switch (normalized) {
-      case 'shein_products':
-        return Routes.itemsListShein;
-      case 'e_store':
-        return Routes.itemsListSeller;
-      default:
-        return Routes.itemsList;
-    }
-  }
 
   @override
   void initState() {
@@ -302,6 +211,30 @@ class _HomeTabViewState extends State<HomeTabView> {
     }
     setState(() {});
   }
+
+
+
+
+  void _fetchItemsForCategory(int categoryId) {
+    if (categoryId <= 0) {
+      return;
+    }
+
+    final fetchCubit = context.read<FetchItemSummaryCubit>();
+    final String query = widget.searchController.text.trim();
+    final String? resolvedSortBy = widget.currentSortBy ?? widget.sortBy;
+    final ItemFilterModel? baseFilter = widget.currentFilter ?? widget.filter;
+    final ItemFilterModel? effectiveFilter =
+    baseFilter?.copyWith(categoryId: categoryId.toString());
+
+    fetchCubit.fetchSummaries(
+      categoryId: categoryId,
+      search: query,
+      sortBy: resolvedSortBy,
+      filter: effectiveFilter,
+    );
+  }
+
 
   // =========================
 
@@ -1143,51 +1076,31 @@ class _HomeTabViewState extends State<HomeTabView> {
                                     // في تبويب "الكل": اضغط فرعيّة ⇒ انقل شريط التصنيفات للفئة واضبط الجلب لها
                                     onTopCategoryPick: (c) {
                                       if (!isTopLevel) return;
-                                      widget.selectedCategoryId.value = c.id;
-                                      _activeSubcatId =
-                                          null; // سنعرض أبناء الفئة المختارة الآن
-                                      setState(() {});
-                                      final _CategoryNavigationPayload?
-                                          payload =
-                                          _buildCategoryNavigationPayload(
-                                        category: c,
-                                        rootCategory: root,
-                                        parentCategory: root,
-                                      );
-
-                                      if (payload == null || !mounted) {
+                                      final int? categoryId = c.id;
+                                      if (categoryId == null || categoryId <= 0) {
                                         return;
                                       }
 
-                                      Navigator.pushNamed(
-                                        context,
-                                        payload.routeName,
-                                        arguments: payload.arguments,
-                                      );
+                                      if (widget.selectedCategoryId.value !=
+                                          categoryId) {
+                                        widget.selectedCategoryId.value = categoryId;
+                                      }
+
+                                      _activeSubcatId = null;
+                                      setState(() {});
+                                      _fetchItemsForCategory(categoryId);
                                     },
 
                                     // في فئة علوية ≠ "الكل": اضغط فرعيّة ⇒ فلترة مباشرة وتظليل الفرعيّة
                                     onSubcatPick: (c) {
-                                      setState(() => _activeSubcatId = c.id);
-
-                                      final _CategoryNavigationPayload?
-                                          payload =
-                                          _buildCategoryNavigationPayload(
-                                        category: c,
-                                        rootCategory: root,
-                                        parentCategory: currentParent == root
-                                            ? null
-                                            : currentParent,
-                                      );
-
-                                      if (payload == null || !mounted) {
+                                      final int? categoryId = c.id;
+                                      if (categoryId == null || categoryId <= 0) {
                                         return;
                                       }
-                                      Navigator.pushNamed(
-                                        context,
-                                        payload.routeName,
-                                        arguments: payload.arguments,
-                                      );
+
+                                      setState(
+                                              () => _activeSubcatId = categoryId);
+                                      _fetchItemsForCategory(categoryId);
                                     },
                                   ),
                                   SizedBox(

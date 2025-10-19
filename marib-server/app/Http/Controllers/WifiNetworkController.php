@@ -232,10 +232,10 @@ class WifiNetworkController extends Controller
 
 
 
-                if ($user && $this->isWalletAssignmentConstraint($exception)) {
+                if ($user && $this->isWalletAssignmentConstraint($exception, $networkData)) {
                     if (! $walletConstraintRetried) {
                         $walletConstraintRetried = true;
-                        $walletAccount = $this->resolveWalletAccount($user, $walletAccount?->getKey());
+                        $walletAccount = $this->resolveWalletAccount($user, null);
                         
                         if ($walletAccount) {
                             $networkData['wallet_id'] = $walletAccount->getKey();
@@ -681,20 +681,34 @@ class WifiNetworkController extends Controller
             return false;
         }
 
-        $requestType = Str::of((string) Arr::get($meta, 'request_type', ''))
-            ->trim()
-            ->lower()
-            ->replace('-', '_')
+        $requestTypeRaw = Arr::get($meta, 'request_type');
+
+        if ($requestTypeRaw === null) {
+            $requestTypeRaw = Arr::get($meta, 'requestType');
+        }
+
+        $requestType = Str::of((string) $requestTypeRaw)
+        
+        ->trim()
+            ->snake('_')
+
             ->toString();
 
         if ($requestType === 'owner_network') {
             return true;
         }
 
-        $source = Str::of((string) Arr::get($meta, 'source', ''))
-            ->trim()
-            ->lower()
-            ->replace('-', '_')
+        $sourceRaw = Arr::get($meta, 'source');
+
+        if ($sourceRaw === null) {
+            $sourceRaw = Arr::get($meta, 'request_source');
+        }
+
+        $source = Str::of((string) $sourceRaw)
+        
+        ->trim()
+            ->snake('_')
+
             ->toString();
 
         return $source === 'mobile_app' && $requestType === '';
@@ -842,24 +856,39 @@ class WifiNetworkController extends Controller
 
 
 
-    private function isWalletAssignmentConstraint(QueryException $exception): bool
+    private function isWalletAssignmentConstraint(QueryException $exception, array $networkData = []): bool
     {
         $message = strtolower($exception->getMessage());
 
-        if (str_contains($message, 'wallet_accounts') || str_contains($message, 'wallet_id')) {
-            return true;
-        }
-
         $constraint = strtolower((string) ($exception->errorInfo[2] ?? ''));
 
-        if ($constraint !== '' && (str_contains($constraint, 'wallet_accounts') || str_contains($constraint, 'wallet_id'))) {
-            return true;
-        }
+        $mentionsWallet = str_contains($message, 'wallet_accounts')
+            || str_contains($message, 'wallet_id')
+            || str_contains($message, 'wallet')
+            || ($constraint !== '' && (
+                str_contains($constraint, 'wallet_accounts')
+                || str_contains($constraint, 'wallet_id')
+                || str_contains($constraint, 'wallet')
+            ));
 
         $driverCode = isset($exception->errorInfo[1]) ? (int) $exception->errorInfo[1] : null;
 
-        return $driverCode !== null && in_array($driverCode, [1062, 1555, 23505], true)
-            && (str_contains($message, 'wallet') || str_contains($constraint, 'wallet'));
+        if ($mentionsWallet) {
+            
+            return true;
+        }
+
+        $foreignKeyViolation = str_contains($message, 'foreign key constraint')
+            || str_contains($constraint, 'foreign key');
+
+
+        if ($foreignKeyViolation && array_key_exists('wallet_id', $networkData)) {
+            return true;
+        }
+
+        return $driverCode !== null && in_array($driverCode, [1062, 1452, 1555, 23505], true)
+            && $foreignKeyViolation
+            && array_key_exists('wallet_id', $networkData);
     }
 
 
@@ -949,7 +978,7 @@ class WifiNetworkController extends Controller
                 || str_contains($constraint, 'wallet_id');
         }
 
-        
+
         if (! $mentionsNetwork) {
             return false;
         }

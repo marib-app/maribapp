@@ -141,8 +141,10 @@ class HomeTabView extends StatefulWidget {
 
 class _HomeTabViewState extends State<HomeTabView> {
   static const int _gridCrossAxisCount = 2;
+  static const double _scrollDirectionChangeThreshold = 40.0;
 
   late final ScrollController controller;
+  double _lastReportedScrollOffset = 0.0;
 
   int? _activeSubcatId; // الفئة الفرعية المختارة حالياً
   int? _lastTopCatId; // لملاحظة تغيّر التصنيف العلوي وإعادة ضبط الفرعيات
@@ -163,6 +165,9 @@ class _HomeTabViewState extends State<HomeTabView> {
   void initState() {
     super.initState();
     controller = ScrollController();
+
+    _lastReportedScrollOffset = controller.initialScrollOffset;
+
     widget.selectedCategoryId.addListener(_onSelectedCategoryChanged);
     controller.addListener(_handleScrollDirectionChange);
 
@@ -347,8 +352,8 @@ class _HomeTabViewState extends State<HomeTabView> {
       return;
     }
 
-    final ScrollDirection direction = controller.position.userScrollDirection;
-
+    final ScrollPosition position = controller.position;
+    final ScrollDirection direction = position.userScrollDirection;
     bool? isScrollingUp;
     switch (direction) {
       case ScrollDirection.forward:
@@ -362,11 +367,30 @@ class _HomeTabViewState extends State<HomeTabView> {
         break;
     }
 
-    if (isScrollingUp == null || _lastReportedScrollIsUp == isScrollingUp) {
+    if (isScrollingUp == null) {
+      return;
+    }
+
+    final double offsetDelta = position.pixels - _lastReportedScrollOffset;
+    final bool movedBeyondThreshold = isScrollingUp
+        ? offsetDelta <= -_scrollDirectionChangeThreshold
+        : offsetDelta >= _scrollDirectionChangeThreshold;
+
+    if (_lastReportedScrollIsUp == isScrollingUp) {
+      if (movedBeyondThreshold) {
+        _lastReportedScrollOffset = position.pixels;
+      }
+      return;
+    }
+
+    if (!movedBeyondThreshold) {
+
       return;
     }
 
     _lastReportedScrollIsUp = isScrollingUp;
+    _lastReportedScrollOffset = position.pixels;
+
     widget.onScrollDirectionChanged?.call(isScrollingUp);
   }
 

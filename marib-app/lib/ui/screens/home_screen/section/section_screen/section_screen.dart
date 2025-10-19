@@ -72,6 +72,10 @@ class Section_screenState extends State<Section_screen> {
   static const double _kFilterSortBarMaxButtonHeight = 52.0;
   static const double _kBottomBarMinimumSafeArea = 12.0;
 
+  static const Duration _bottomBarAnimationDuration =
+  Duration(milliseconds: 320);
+
+
   // ✅ تحويل categoryId مرة واحدة
   static const int _defaultCategoryId = 0;
 
@@ -528,83 +532,126 @@ class Section_screenState extends State<Section_screen> {
         child: ValueListenableBuilder<bool>(
             valueListenable: _showBottomBar,
             builder: (context, show, _) {
-              final Widget? bottomBar = show
-                  ? SafeArea(
-                      top: false,
-                      left: false,
-                      right: false,
-                      minimum: const EdgeInsets.only(bottom: 12),
-                      child: ValueListenableBuilder<int?>(
-                        valueListenable: selectedCategoryId,
-                        builder: (context, selectedId, _) {
-                          final int effectiveCategoryId = selectedId ?? _catId;
-                          final bool showMap = !{
-                            Constant.computerRootCategoryId,
-                            Constant.sheinRootCategoryId,
-                            Constant.storeRootCategoryId,
-                          }.contains(effectiveCategoryId);
+              final Widget bottomBar = AnimatedSwitcher(
+                duration: _bottomBarAnimationDuration,
+                layoutBuilder:
+                    (Widget? currentChild, List<Widget> previousChildren) {
+                  return Stack(
+                    alignment: Alignment.bottomCenter,
+                    children: <Widget>[
+                      ...previousChildren,
+                      if (currentChild != null) currentChild,
+                    ],
+                  );
+                },
+                transitionBuilder:
+                    (Widget child, Animation<double> animation) {
+                  final Animation<double> fadeAnimation = CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOut,
+                    reverseCurve: Curves.easeIn,
+                  );
+                  final Animation<Offset> slideAnimation = Tween<Offset>(
+                    begin: const Offset(0, 1),
+                    end: Offset.zero,
+                  ).animate(CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutCubic,
+                    reverseCurve: Curves.easeInCubic,
+                  ));
 
-                          return FilterSortBar(
-                            categoryIds: widget.categoryIds,
-                            categoryId: widget.categoryId,
-                            searchController: searchController,
-                            onFilterChanged: (newFilter) {
-                              final ItemFilterModel effectiveFilter =
-                                  _buildEffectiveFilter(
-                                base: newFilter,
-                              );
-                              filter = effectiveFilter;
-                              final int resolvedCategoryId =
-                                  _resolveCategoryIdInt(
-                                source: effectiveFilter,
-                              );
+                  return SlideTransition(
+                    position: slideAnimation,
+                    child: FadeTransition(
+                      opacity: fadeAnimation,
+                      child: child,
+                    ),
+                  );
+                },
+                child: show
+                    ? SafeArea(
+                  key: const ValueKey('bottom_bar_visible'),
+                  top: false,
+                  left: false,
+                  right: false,
+                  minimum: const EdgeInsets.only(bottom: 12),
+                  child: ValueListenableBuilder<int?>(
+                    valueListenable: selectedCategoryId,
+                    builder: (context, selectedId, _) {
+                      final int effectiveCategoryId =
+                          selectedId ?? _catId;
+                      final bool showMap = !{
+                        Constant.computerRootCategoryId,
+                        Constant.sheinRootCategoryId,
+                        Constant.storeRootCategoryId,
+                      }.contains(effectiveCategoryId);
 
-                              if (_isValidCategoryId(newFilter?.categoryId) &&
-                                  selectedCategoryId.value !=
-                                      resolvedCategoryId) {
-                                selectedCategoryId.value = resolvedCategoryId;
-                              }
+                      return FilterSortBar(
+                        categoryIds: widget.categoryIds,
+                        categoryId: widget.categoryId,
+                        searchController: searchController,
+                        onFilterChanged: (newFilter) {
+                          final ItemFilterModel effectiveFilter =
+                          _buildEffectiveFilter(
+                            base: newFilter,
+                          );
+                          filter = effectiveFilter;
+                          final int resolvedCategoryId =
+                          _resolveCategoryIdInt(
+                            source: effectiveFilter,
+                          );
 
-                              context
-                                  .read<FetchItemSummaryCubit>()
-                                  .fetchSummaries(
-                                    categoryId: resolvedCategoryId,
-                                    search: searchController.text,
-                                    filter: effectiveFilter,
-                                    sortBy: sortBy,
-                                  );
-                            },
-                            onSortChanged: (newSort) {
-                              sortBy = newSort;
+                          if (_isValidCategoryId(newFilter?.categoryId) &&
+                              selectedCategoryId.value !=
+                                  resolvedCategoryId) {
+                            selectedCategoryId.value =
+                                resolvedCategoryId;
+                          }
 
-                              final ItemFilterModel effectiveFilter =
-                                  _buildEffectiveFilter();
-                              filter = effectiveFilter;
-                              final int resolvedCategoryId =
-                                  _resolveCategoryIdInt(
-                                source: effectiveFilter,
-                              );
-
-                              context
-                                  .read<FetchItemSummaryCubit>()
-                                  .fetchSummaries(
-                                    categoryId: resolvedCategoryId,
-                                    search: searchController.text,
-                                    filter: effectiveFilter,
-                                    sortBy: sortBy,
-                                  );
-                            },
-                            showMapButton: showMap,
-                            onMapSearchTap: showMap
-                                ? () {
-                                    Navigator.pushNamed(context, '/mapSearch');
-                                  }
-                                : null,
+                          context
+                              .read<FetchItemSummaryCubit>()
+                              .fetchSummaries(
+                            categoryId: resolvedCategoryId,
+                            search: searchController.text,
+                            filter: effectiveFilter,
+                            sortBy: sortBy,
                           );
                         },
+                        onSortChanged: (newSort) {
+                          sortBy = newSort;
+
+                          final ItemFilterModel effectiveFilter =
+                          _buildEffectiveFilter();
+                          filter = effectiveFilter;
+                          final int resolvedCategoryId =
+                          _resolveCategoryIdInt(
+                            source: effectiveFilter,
+                          );
+
+                          context
+                              .read<FetchItemSummaryCubit>()
+                              .fetchSummaries(
+                            categoryId: resolvedCategoryId,
+                            search: searchController.text,
+                            filter: effectiveFilter,
+                            sortBy: sortBy,
+                          );
+                        },
+                        showMapButton: showMap,
+                        onMapSearchTap: showMap
+                            ? () {
+                          Navigator.pushNamed(
+                              context, '/mapSearch');
+                        }
+                            : null,
+                      );
+                    },
+                  ),
+                )
+                    : const SizedBox.shrink(
+                  key: ValueKey('bottom_bar_hidden'),
                       ),
-                    )
-                  : null;
+              );
               final double bottomContentPadding =
                   show ? _calculateBottomBarHeight(context) : 0.0;
 

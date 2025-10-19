@@ -86,7 +86,12 @@ class ProfileScreenUI {
 /// تم استخدام BlocBuilder للتحديث الفوري عند تغيّر بيانات المستخدم.
 class _HeaderSection extends StatelessWidget {
   final Widget Function() buildProfileImage;
-  const _HeaderSection({required this.buildProfileImage});
+  final VoidCallback onAvatarEditPressed;
+  const _HeaderSection({
+    required this.buildProfileImage,
+    required this.onAvatarEditPressed,
+  });
+
 
   @override
   Widget build(BuildContext context) {
@@ -96,22 +101,29 @@ class _HeaderSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // إطار صورة بروفايل دائري
-          Container(
-            height: 100.rh(context),
-            width: 100.rw(context),
-            alignment: AlignmentDirectional.center,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: context.color.territoryColor,
-                width: 2,
-              ),
-            ),
-            child: ClipOval(
-              child: SizedBox(
-                width: 92.rw(context),
-                height: 92.rh(context),
-                child: buildProfileImage(),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onAvatarEditPressed,
+              customBorder: const CircleBorder(),
+              child: Container(
+                height: 100.rh(context),
+                width: 100.rw(context),
+                alignment: AlignmentDirectional.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: context.color.territoryColor,
+                    width: 2,
+                  ),
+                ),
+                child: ClipOval(
+                  child: SizedBox(
+                    width: 92.rw(context),
+                    height: 92.rh(context),
+                    child: buildProfileImage(),
+                  ),
+                ),
               ),
             ),
           ),
@@ -355,6 +367,7 @@ class _ProfileTabBar extends StatelessWidget {
 
   // حدث تغيير التبويب (اختياري)
   final void Function(int index)? onTap;
+  static const double preferredHeight = kToolbarHeight + 16;
 
   const _ProfileTabBar({
     required this.controller,
@@ -370,7 +383,7 @@ class _ProfileTabBar extends StatelessWidget {
     ((textStyle?.fontSize ?? 16) / 6).clamp(2.0, 4.0);
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       padding: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
         color: context.color.secondaryColor.withOpacity(0.05),
@@ -458,5 +471,37 @@ class _Badge extends StatelessWidget {
         style: TextStyle(fontSize: 12, color: cs.primary),
       ),
     );
+  }
+}
+
+
+
+class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+  final double height;
+
+  const _SliverTabBarDelegate({required this.child, required this.height});
+
+  @override
+  double get minExtent => height;
+
+  @override
+  double get maxExtent => height;
+
+  @override
+  Widget build(
+      BuildContext context,
+      double shrinkOffset,
+      bool overlapsContent,
+      ) {
+    return ColoredBox(
+      color: context.color.primaryColor,
+      child: child,
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _SliverTabBarDelegate oldDelegate) {
+    return oldDelegate.height != height || oldDelegate.child != child;
   }
 }

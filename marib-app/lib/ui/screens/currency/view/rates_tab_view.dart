@@ -327,17 +327,22 @@ class RatesTabView extends StatelessWidget {
     int effectiveRangeDays = selectedRangeDays;
     if (!availableRanges.contains(effectiveRangeDays) &&
         availableRanges.isNotEmpty) {
-      if (availableRanges.contains(state.defaultHistoryRangeDays)) {
-        effectiveRangeDays = state.defaultHistoryRangeDays;
-      } else if (availableRanges.contains(7)) {
-        effectiveRangeDays = 7;
-      } else if (availableRanges.contains(3)) {
-        effectiveRangeDays = 3;
-      } else if (availableRanges.contains(1)) {
-        effectiveRangeDays = 1;
-      } else {
-        effectiveRangeDays = availableRanges.first;
+      final List<int> fallbackOrder = <int>{
+        state.defaultHistoryRangeDays,
+        1,
+        3,
+        7,
+      }.toList();
+
+      int? resolvedFallback;
+      for (final int candidate in fallbackOrder) {
+        if (availableRanges.contains(candidate)) {
+          resolvedFallback = candidate;
+          break;
+        }
       }
+      effectiveRangeDays = resolvedFallback ?? availableRanges.first;
+
     }
 
     final CurrencyHistoryRange? selectedRange =

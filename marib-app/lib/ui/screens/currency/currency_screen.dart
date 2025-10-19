@@ -89,7 +89,7 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
   double _convertedAmount = 0.0;
   bool _hasCalculated = false;
   final Map<int, int> _selectedHistoryRanges = <int, int>{};
-  int _defaultHistoryRange = 7;
+  int _defaultHistoryRange = 1;
   bool _isSharingRates = false;
 
 

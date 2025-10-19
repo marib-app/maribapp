@@ -9,6 +9,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 // Cubit + Model (عدّل المسارات حسب مشروعك)
 import 'package:marib/data/cubits/category/fetch_category_cubit.dart';
 import 'package:marib/data/model/category_model.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:marib/ui/theme/extensions/shimmer_colors.dart';
 
 /// شريط تبويبات الفئات:
 /// - [parentId]: رقم التصنيف الأب الذي سنعرض أبناءه.
@@ -66,9 +68,36 @@ class _CategoriesBarState extends State<CategoriesBar> {
       builder: (context, catState) {
         // حالة التحميل/غير الجاهز: شريط بارتفاع ثابت مع مؤشر
         if (catState is! FetchCategorySuccess) {
-          return const SizedBox(
+          final colorScheme = Theme.of(context).colorScheme;
+          const shimmerCount = 6;
+          const placeholderWidths = <double>[72, 88, 64, 96, 80, 84];
+
+          return SizedBox(
+
             height: _barHeight,
-            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Shimmer.fromColors(
+                baseColor: colorScheme.shimmerBaseColor,
+                highlightColor: colorScheme.shimmerHighlightColor,
+                period: const Duration(milliseconds: 1100),
+                child: ListView.separated(
+                  physics: const NeverScrollableScrollPhysics(),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: shimmerCount,
+                  separatorBuilder: (_, __) => const SizedBox(width: 6),
+                  itemBuilder: (_, index) => Container(
+                    width: placeholderWidths[index % placeholderWidths.length],
+                    height: _chipHeight,
+                    decoration: BoxDecoration(
+                      color: colorScheme.shimmerContentColor,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
           );
         }
 

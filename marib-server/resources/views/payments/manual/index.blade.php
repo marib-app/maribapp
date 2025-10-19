@@ -1417,16 +1417,18 @@
                 columns: [
                     {
                         data: 'transaction_id',
+                        name: 'transaction_id',
                         defaultContent: '—',
                         render: function (data) {
                             return data ?? '—';
                         }
                     },
-                    { data: 'user_name', defaultContent: '—' },
-                    { data: 'amount_fmt', defaultContent: '0.00', className: 'text-end text-nowrap' },
-                    { data: 'currency', defaultContent: '' },
+                    { data: 'user_name', name: 'user_name', defaultContent: '—' },
+                    { data: 'amount_fmt', name: 'amount', defaultContent: '0.00', className: 'text-end text-nowrap' },
+                    { data: 'currency', name: 'currency', defaultContent: '' },
                     {
                         data: 'payment_gateway_name',
+                        name: 'channel',
                         defaultContent: '—',
                         render: function (data, type, row) {
                             if (type !== 'display') {
@@ -1445,6 +1447,7 @@
 
                     {
                         data: 'department_label',
+                        name: 'department',
                         defaultContent: '—',
                         render: function (data, type, row) {
                             if (type !== 'display') {
@@ -1462,6 +1465,7 @@
 
                     {
                         data: 'payable_label',
+                        name: 'category',
                         defaultContent: '—',
                         render: function (data, type, row) {
                             if (type !== 'display') {
@@ -1478,6 +1482,7 @@
                     
                     {
                         data: 'status_label',
+                        name: 'status',
                         defaultContent: '—',
                         render: function (data, type, row) {
                             if (type !== 'display') {
@@ -1491,7 +1496,7 @@
                             return '<span class="badge ' + classes + '">' + label + '</span>';
                         }
                     },
-                    { data: 'created_at_human', defaultContent: '—', className: 'text-nowrap' },
+                    { data: 'created_at_human', name: 'created_at', defaultContent: '—', className: 'text-nowrap' },
                     {
                         data: 'actions',
                         orderable: false,

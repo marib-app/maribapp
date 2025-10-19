@@ -279,6 +279,44 @@ class ManualPaymentRequestController extends Controller
     {
         ResponseService::noAnyPermissionThenSendJson(['manual-payments-list', 'manual-payments-review']);
 
+
+       $columnsInput = collect($request->input('columns', []))
+            ->map(function ($column) {
+                if (! is_array($column)) {
+                    return $column;
+                }
+
+                foreach (['data', 'name'] as $key) {
+                    if (! isset($column[$key]) || ! is_string($column[$key])) {
+                        continue;
+                    }
+
+                    $normalized = trim($column[$key]);
+
+                    if ($normalized === '') {
+                        $column[$key] = null;
+                        continue;
+                    }
+
+                    $normalized = trim($normalized, "`\"[]");
+
+                    if (Str::contains($normalized, '.')) {
+                        $normalized = Str::afterLast($normalized, '.');
+                    }
+
+                    $column[$key] = $normalized;
+                }
+
+                return $column;
+            })
+            ->values();
+
+        if ($columnsInput->isNotEmpty()) {
+            $request->merge(['columns' => $columnsInput->toArray()]);
+        }
+
+
+
         $draw = (int) $request->input('draw', 0);
         $start = max((int) $request->input('start', $request->input('offset', 0)), 0);
 
@@ -340,9 +378,16 @@ class ManualPaymentRequestController extends Controller
 
         $recordsFiltered = (clone $filteredQuery)->count();
 
-        [$orderColumn, $orderDirection] = $this->resolvePaymentRequestOrder($request);
+        [$orderColumn, $orderDirection, $useRawOrder] = $this->resolvePaymentRequestOrder($request);
 
-        $orderedQuery = (clone $filteredQuery)->orderBy($orderColumn, $orderDirection);
+        $orderedQuery = clone $filteredQuery;
+
+        if ($useRawOrder) {
+            $orderedQuery->orderByRaw($orderColumn . ' ' . $orderDirection);
+        } else {
+            $orderedQuery->orderBy($orderColumn, $orderDirection);
+        }
+
 
         if ($length !== null) {
             $orderedQuery->skip($start)->take($length);
@@ -1593,6 +1638,7 @@ class ManualPaymentRequestController extends Controller
             'category' => 'category',
             'status_label' => 'status',
             'status' => 'status',
+            'status_group' => 'status_group',
             'created_at_human' => 'created_at',
             'created_at' => 'created_at',
         ];
@@ -1633,6 +1679,7 @@ class ManualPaymentRequestController extends Controller
                     'department',
                     'category',
                     'status',
+                    'status_group',
                     'created_at',
                 ];
 
@@ -1659,8 +1706,27 @@ class ManualPaymentRequestController extends Controller
             $columnKey = $fallbackColumns[$columnIndex] ?? 'created_at';
         }
 
-        return [$columnKey, $direction];
-    
+        $allowedOrderColumns = [
+            'reference' => ['column' => 'reference', 'raw' => false],
+            'user_name' => ['column' => 'user_name', 'raw' => false],
+            'amount' => ['column' => 'amount', 'raw' => false],
+            'currency' => ['column' => 'currency', 'raw' => false],
+            'channel' => ['column' => 'channel', 'raw' => false],
+            'department' => ['column' => 'department', 'raw' => false],
+            'category' => ['column' => 'category', 'raw' => true],
+            'status' => ['column' => 'status', 'raw' => true],
+            'status_group' => ['column' => 'status_group', 'raw' => true],
+            'created_at' => ['column' => 'created_at', 'raw' => false],
+        ];
+
+        if (! isset($allowedOrderColumns[$columnKey])) {
+            $columnKey = 'created_at';
+        }
+
+        $orderColumn = $allowedOrderColumns[$columnKey];
+
+        return [$orderColumn['column'], $direction, (bool) $orderColumn['raw']];
+            
     }
 
 

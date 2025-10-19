@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 use App\Models\Item;
 use App\Models\ManualBank;
-use App\Queries\PaymentRequestTableQuery;
 
 use App\Models\ManualPaymentRequest;
 use App\Models\ManualPaymentRequestHistory;
@@ -1989,76 +1988,43 @@ class ManualPaymentRequestController extends Controller
         );
 
 
-        $supportsPaymentTransactionMeta = $this->paymentTransactionsSupportsColumn('meta');
-        $supportsManualRequestMeta = $this->manualPaymentRequestsSupportsColumn('meta');
 
-        $manualBankIdParts = [
-            'mpr.manual_bank_id',
-        ];
-
-        if ($supportsPaymentTransactionMeta) {
-            $manualBankIdParts = array_merge($manualBankIdParts, [
-                "CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual.bank.id')), '') AS UNSIGNED)",
-                "CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_bank.id')), '') AS UNSIGNED)",
-                "CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.manual_bank_id')), '') AS UNSIGNED)",
-                "CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.bank_id')), '') AS UNSIGNED)",
-            ]);
-        }
-
-        if ($supportsManualRequestMeta) {
-            $manualBankIdParts = array_merge($manualBankIdParts, [
-                "CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual.bank.id')), '') AS UNSIGNED)",
-                "CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.id')), '') AS UNSIGNED)",
-                "CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.id')), '') AS UNSIGNED)",
-            ]);
-        }
-
-        $manualBankIdExpression = $manualBankIdParts === []
-            ? 'NULL'
-            : 'COALESCE(' . implode(",\n            ", $manualBankIdParts) . ')';
-
-        $manualBankNameParts = [];
-
-        if ($supportsPaymentTransactionMeta) {
-            $manualBankNameParts = array_merge($manualBankNameParts, [
-                "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.payload.bank.name'))",
-                "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual.bank.name'))",
-                "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual.bank.bank_name'))",
-                "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual.bank.beneficiary_name'))",
-                "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.bank.name'))",
-                "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_bank.name'))",
-                "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_bank.bank_name'))",
-                "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_bank.beneficiary_name'))",
-                "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.bank.name'))",
-                "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.manual_bank.name'))",
-            ]);
-        }
-
-        if ($supportsManualRequestMeta) {
-            $manualBankNameParts = array_merge($manualBankNameParts, [
-                "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.name'))",
-                "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.bank_name'))",
-                "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.beneficiary_name'))",
-                "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual.bank.name'))",
-                "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual.bank.bank_name'))",
-                "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual.bank.beneficiary_name'))",
-                "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.name'))",
-                "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.bank_name'))",
-                "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.beneficiary_name'))",
-            ]);
-        }
-
-        $manualBankNameParts = array_merge($manualBankNameParts, [
-            'mpr.bank_name',
-            'mpr.bank_account_name',
-        ]);
+        $manualBankIdExpression = "COALESCE(
+            mpr.manual_bank_id,
+            CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual.bank.id')), '') AS UNSIGNED),
+            CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_bank.id')), '') AS UNSIGNED),
+            CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.manual_bank_id')), '') AS UNSIGNED),
+            CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.bank_id')), '') AS UNSIGNED),
+            CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual.bank.id')), '') AS UNSIGNED),
+            CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.id')), '') AS UNSIGNED),
+            CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.id')), '') AS UNSIGNED)
+        )";
 
 
 
-
-        $manualBankNameExpression = $manualBankNameParts === []
-            ? 'NULL'
-            : 'COALESCE(' . implode(",\n            ", $manualBankNameParts) . ')';
+        $manualBankNameExpression = "COALESCE(
+            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.payload.bank.name')),
+            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual.bank.name')),
+            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual.bank.bank_name')),
+            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual.bank.beneficiary_name')),
+            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.bank.name')),
+            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_bank.name')),
+            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_bank.bank_name')),
+            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_bank.beneficiary_name')),
+            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.bank.name')),
+            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.manual_bank.name')),
+            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.name')),
+            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.bank_name')),
+            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.beneficiary_name')),
+            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual.bank.name')),
+            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual.bank.bank_name')),
+            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual.bank.beneficiary_name')),
+            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.name')),
+            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.bank_name')),
+            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.beneficiary_name')),
+            mpr.bank_name,
+            mpr.bank_account_name
+        )";
 
         $channelColumn = "LOWER(NULLIF(TRIM(mpr.channel), ''))";
         $manualGatewayAliases = ManualPaymentRequest::manualBankGatewayAliases();
@@ -2114,8 +2080,10 @@ class ManualPaymentRequestController extends Controller
             ->where('pt.payment_gateway', 'manual_bank')
             ->whereBetween('pt.created_at', [$startDate, $endDate])
 
-            ->whereNull('pt.manual_payment_request_id')
-            ->whereNull('mpr.id')
+            ->where(function ($query) {
+                $query->whereNull('pt.manual_payment_request_id')
+                    ->whereNull('mpr.id');
+            })
 
             ->selectRaw('COALESCE(mpr.id, pt.id) as id')
             ->selectRaw('pt.id as payment_transaction_id')

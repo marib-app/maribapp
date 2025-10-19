@@ -5,10 +5,7 @@ namespace App\Support\ManualPayments;
 use App\Models\ManualBank;
 use App\Models\ManualPaymentRequest;
 use Carbon\Carbon;
-use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Throwable;
@@ -20,7 +17,6 @@ trait ManualPaymentPresentationHelpers
     protected array $manualPaymentRequestLookupCache = [];
 
     protected array $manualBankLookupCache = [];
-    protected array $paymentTransactionColumnSupportCache = [];
 
     protected ?bool $manualBankTableSupported = null;
 
@@ -346,93 +342,12 @@ trait ManualPaymentPresentationHelpers
     protected function manualPaymentRequestsSupportsColumn(string $column): bool
     {
         if (! array_key_exists($column, $this->manualPaymentColumnSupportCache)) {
-            $this->manualPaymentColumnSupportCache[$column] = $this->supportsColumn('manual_payment_requests', $column);
-
+            $this->manualPaymentColumnSupportCache[$column] = Schema::hasTable('manual_payment_requests')
+                && Schema::hasColumn('manual_payment_requests', $column);
         }
 
         return $this->manualPaymentColumnSupportCache[$column];
     }
-
-
-
-    protected function paymentTransactionsSupportsColumn(string $column): bool
-    {
-        if (! array_key_exists($column, $this->paymentTransactionColumnSupportCache)) {
-            $this->paymentTransactionColumnSupportCache[$column] = $this->supportsColumn('payment_transactions', $column);
-
-        }
-
-        return $this->paymentTransactionColumnSupportCache[$column];
-    }
-
-
-
-    protected function supportsColumn(string $table, string $column): bool
-    {
-        $connectionName = $this->resolveManualPaymentConnectionName();
-
-        try {
-            $schema = Schema::connection($connectionName);
-
-            if (! $schema->hasTable($table) || ! $schema->hasColumn($table, $column)) {
-                return false;
-            }
-
-            try {
-                DB::connection($connectionName)
-                    ->table($table)
-                    ->select($column)
-                    ->whereRaw('1 = 0')
-                    ->first();
-            } catch (QueryException $exception) {
-                $message = strtolower($exception->getMessage());
-
-                if (
-                    str_contains($message, 'unknown column')
-                    || str_contains($message, 'no such column')
-                    || str_contains($message, 'invalid column name')
-                ) {
-                    return false;
-                }
-
-                Log::warning('ManualPaymentPresentationHelpers: column probe failed', [
-                    'table' => $table,
-                    'column' => $column,
-                    'connection' => $connectionName,
-                    'error' => $exception->getMessage(),
-                ]);
-
-                return false;
-            }
-
-            return true;
-        } catch (Throwable $throwable) {
-            Log::warning('ManualPaymentPresentationHelpers: unable to determine column support', [
-                'table' => $table,
-                'column' => $column,
-                'connection' => $connectionName,
-                'error' => $throwable->getMessage(),
-            ]);
-
-            return false;
-        }
-    }
-
-
-
-    protected function resolveManualPaymentConnectionName(): string
-    {
-        static $connectionName;
-
-        if ($connectionName === null) {
-            $modelConnection = (new ManualPaymentRequest())->getConnectionName();
-            $connectionName = $modelConnection ?: DB::getDefaultConnection();
-        }
-
-        return $connectionName;
-    }
-
-
 
     protected function manualBankLookupSupported(): bool
     {

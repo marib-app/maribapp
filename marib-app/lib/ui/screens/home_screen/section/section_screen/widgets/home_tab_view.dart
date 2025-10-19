@@ -1178,16 +1178,11 @@ class _HomeTabViewState extends State<HomeTabView> {
 
               // فاصل متوسط (يتأثر بحالة ظهور شريط التنقل السفلي)
               SliverToBoxAdapter(
-                child: SizedBox(
-                  height: widget.bottomPadding > 0 ? gapMedium : 0.0,
-                ),
+                child: SizedBox(height: gapMedium),
+
               ),
 
 
-              if (widget.bottomPadding > 0)
-                SliverToBoxAdapter(
-                  child: SizedBox(height: widget.bottomPadding),
-                ),
               // ============= القائمة الرئيسية (كما هي عندك) =============
               // ملاحظة: داخل _itemsSliver احرص على استخدام SliverList/SliverGrid
               // مع addRepaintBoundaries: true, addAutomaticKeepAlives: false,
@@ -1196,10 +1191,12 @@ class _HomeTabViewState extends State<HomeTabView> {
 
               // فاصل أخير (يتأثر بحالة ظهور شريط التنقل السفلي)
               SliverToBoxAdapter(
-                child: SizedBox(
-                  height: widget.bottomPadding > 0 ? gapMedium : 0.0,
-                ),
+                child: SizedBox(height: gapMedium),
               ),
+              if (widget.bottomPadding > 0)
+                SliverToBoxAdapter(
+                  child: SizedBox(height: widget.bottomPadding),
+                ),
             ],
           ),
         );

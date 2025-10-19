@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Schema;
 class WifiNetworkController extends Controller
 {
     private ?bool $wifiNetworkHasSlugColumn = null;
+    private ?bool $walletAccountsHaveCurrencyColumn = null;
 
     public function index(Request $request): JsonResponse
     {
@@ -70,7 +71,7 @@ class WifiNetworkController extends Controller
 
 
         $user = $request->user();
-        $walletAccount = $this->resolveWalletAccount($user, null);
+        $walletAccount = null;
 
         $fillable = (new WifiNetwork())->getFillable();
 
@@ -93,7 +94,12 @@ class WifiNetworkController extends Controller
         $networkData['meta'] = $this->normalizeMeta($meta);
         
         $networkData['user_id'] = $user?->getKey();
-        $networkData['wallet_id'] = $walletAccount?->getKey();
+        if ($walletAccount) {
+            $networkData['wallet_id'] = $walletAccount->getKey();
+        } else {
+            unset($networkData['wallet_id']);
+        }
+        
         $networkData['commission_rate'] = $networkData['commission_rate'] ?? 0;
         $networkData['commission_flat'] = $networkData['commission_flat'] ?? 0;
         $networkData['is_active'] = $networkData['is_active'] ?? true;
@@ -112,9 +118,16 @@ class WifiNetworkController extends Controller
             ->all();
 
         $network = null;
-        $maxAttempts = $supportsSlug ? 5 : 1;
+        $maxAttempts = $supportsSlug ? 5 : 3;
 
         for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
+
+            if ($user) {
+                $walletAccount = $this->resolveWalletAccount($user, null);
+                $networkData['wallet_id'] = $walletAccount?->getKey();
+            }
+
+
             try {
                 $network = WifiNetwork::create($networkData);
                 break;
@@ -132,6 +145,18 @@ class WifiNetworkController extends Controller
                             'slug' => [__('The Wi-Fi network link is already in use. Please try a different name.')],
                         ],
                     ], 422);
+
+
+                }
+
+                if ($user && $this->isWalletAssignmentConstraint($exception)) {
+                    if ($attempt < $maxAttempts - 1) {
+                        $walletAccount = null;
+                        unset($networkData['wallet_id']);
+
+                        continue;
+                    }
+
                 
                 }
 
@@ -405,6 +430,16 @@ class WifiNetworkController extends Controller
     }
 
 
+    private function walletAccountsHaveCurrencyColumn(): bool
+    {
+        if ($this->walletAccountsHaveCurrencyColumn === null) {
+            $this->walletAccountsHaveCurrencyColumn = Schema::hasColumn('wallet_accounts', 'currency');
+        }
+
+        return $this->walletAccountsHaveCurrencyColumn;
+    }
+
+
     private function prepareSlug(?string $slug, string $name, ?int $ignoreId = null): string
     {
 
@@ -547,32 +582,32 @@ class WifiNetworkController extends Controller
         }
 
         $query = WalletAccount::query()->where('user_id', $user->getKey());
-        $walletsHaveCurrency = Schema::hasColumn('wallet_accounts', 'currency');
+        $walletsHaveCurrency = $this->walletAccountsHaveCurrencyColumn();
 
         if ($requestedWalletId) {
-            return $query->whereKey($requestedWalletId)->first();
+            return (clone $query)->whereKey($requestedWalletId)->first();
         }
 
         if (! $walletsHaveCurrency) {
-            $wallet = $query->first();
+            $wallet = (clone $query)->first();
 
-            if (! $wallet) {
-                try {
-                    $wallet = WalletAccount::create([
-                        'user_id' => $user->getKey(),
-                        'balance' => 0,
-                    ]);
-                } catch (QueryException $exception) {
-                    if (! $this->isDuplicateWalletAccountException($exception)) {
-                        throw $exception;
-                    }
-
-                    $wallet = $query->first();
-                }
+            if ($wallet) {
+                return $wallet;
             }
 
+            try {
+                return WalletAccount::create([
+                    'user_id' => $user->getKey(),
+                    'balance' => 0,
+                ]);
+            } catch (QueryException $exception) {
+                if (! $this->isDuplicateWalletAccountException($exception)) {
+                    throw $exception;
+                }
 
-            return $wallet;
+
+                return (clone $query)->first();
+            }
 
         }
 
@@ -581,31 +616,29 @@ class WifiNetworkController extends Controller
 
         $wallet = $this->findWalletAccountByCurrency($query, $defaultCurrency);
 
-        if (! $wallet) {
-            $walletAttributes = [
+        if ($wallet) {
+            return $wallet;
+        }
+        try {
+            return WalletAccount::create([
+
 
                 'user_id' => $user->getKey(),
                 'balance' => 0,
-            ];
+                'currency' => $defaultCurrency,
+            ]);
+        } catch (QueryException $exception) {
+            if (! $this->isDuplicateWalletAccountException($exception)) {
+                throw $exception;
 
-            if ($walletsHaveCurrency) {
-                $walletAttributes['currency'] = $defaultCurrency;
+
             }
 
-            try {
-                $wallet = WalletAccount::create($walletAttributes);
-            } catch (QueryException $exception) {
-                if (! $this->isDuplicateWalletAccountException($exception)) {
-                    throw $exception;
-                }
-
-                $wallet = $this->findWalletAccountByCurrency($query, $defaultCurrency)
-                    ?? $query->first();
-            }
-        
+            return $this->findWalletAccountByCurrency($query, $defaultCurrency)
+                ?? (clone $query)->first();
         }
 
-        return $wallet;
+
     }
 
     private function findWalletAccountByCurrency(Builder $query, string $currency): ?WalletAccount
@@ -640,6 +673,29 @@ class WifiNetworkController extends Controller
         return in_array($driverCode, [1062, 1555, 23505], true)
             || str_contains($message, 'wallet_accounts_user_currency_unique');
     }
+
+
+
+    private function isWalletAssignmentConstraint(QueryException $exception): bool
+    {
+        $message = strtolower($exception->getMessage());
+
+        if (str_contains($message, 'wallet_accounts') || str_contains($message, 'wallet_id')) {
+            return true;
+        }
+
+        $constraint = strtolower((string) ($exception->errorInfo[2] ?? ''));
+
+        if ($constraint !== '' && (str_contains($constraint, 'wallet_accounts') || str_contains($constraint, 'wallet_id'))) {
+            return true;
+        }
+
+        $driverCode = isset($exception->errorInfo[1]) ? (int) $exception->errorInfo[1] : null;
+
+        return $driverCode !== null && in_array($driverCode, [1062, 1555, 23505], true)
+            && (str_contains($message, 'wallet') || str_contains($constraint, 'wallet'));
+    }
+
 
 
 

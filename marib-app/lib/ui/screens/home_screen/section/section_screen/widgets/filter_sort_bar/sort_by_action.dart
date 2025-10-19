@@ -26,8 +26,9 @@ class SortByAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textColor = colorScheme.onPrimaryContainer;
+    final palette = context.color;
+    final textColor = palette.textDefaultColor;
+
 
     return FilterSortActionButton(
       onTap: () => _openSheet(context),

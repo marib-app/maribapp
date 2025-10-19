@@ -581,6 +581,9 @@ class Routes {
         return ItemsList.route(routeSettings);
 
 
+      case itemsListShein:
+        return ItemsList.route(routeSettings);
+
       case itemsListSeller:
         return ItemsListSeller.route(routeSettings);
 

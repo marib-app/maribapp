@@ -1,4 +1,3 @@
-
 import 'home_tab_view.dart';
 import 'package:marib/data/cubits/item/fetch_item_summary_cubit.dart';
 import 'package:marib/ui/theme/theme.dart';
@@ -37,8 +36,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 
 import 'package:marib/ui/screens/sliders/slider_widget.dart';
 
-
 import '../SubcatsHorizontalGrid.dart';
+
 //import 'package:marib/ui/screens/home/section/Items_List/item/sections_adapter.dart';
 import 'package:marib/ui/screens/item/cards/horizontal_card.dart';
 import 'package:marib/ui/screens/native_ads_screen.dart';
@@ -46,16 +45,12 @@ import 'package:marib/ui/screens/widgets/errors/no_data_found.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 import 'package:marib/utils/sliver_grid_delegate_with_fixed_cross_axis_count_and_fixed_height.dart';
 
-
-
 import 'slider_widget.dart';
 import 'smart_search_app_bar.dart';
 import '../../../../item/cards/sections_adapter.dart';
 import 'package:marib/data/model/item_filter_model.dart'; // ← مهم
 
-
 import 'package:marib/utils/screen_scaler.dart';
-
 
 ///==============================================================================
 ///                                   ItemsBodyBox
@@ -78,7 +73,6 @@ import '../widgets/home_tab_view.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:marib/data/model/item_filter_model.dart';
 
-
 import 'package:shimmer/shimmer.dart';
 
 import 'fetch_item_details_cubit.dart';
@@ -91,8 +85,6 @@ import 'package:flutter/rendering.dart';
 //==============================================================================
 ///                                   HomeTabView
 //==============================================================================
-
-
 
 class HomeTabView extends StatefulWidget {
   final ValueNotifier<int?> selectedCategoryId;
@@ -108,7 +100,6 @@ class HomeTabView extends StatefulWidget {
   // NEW: لا تبني/تجلب السلايدر إلا بعد Success
   final bool enableAdSlider;
 
-
   final String? adInterfaceType; // ← جديد
   // NEW 👇
   final bool enableSubcats;
@@ -121,35 +112,39 @@ class HomeTabView extends StatefulWidget {
   final ValueChanged<bool>? onLoadMore;
   final ValueChanged<bool>? onScrollDirectionChanged;
 
-
-
   const HomeTabView({
     required this.selectedCategoryId,
     required this.categoryId,
     required this.searchController,
     required this.viewModeListenable,
-
     this.specialRequestSectionSlug,
     this.bottomPadding = 0.0,
-
     this.enableAdSlider = false, // افتراضي: مخفي
     this.adInterfaceType,
     // NEW 👇
 
-    this.currentSortBy,                 // ← جديد
-    this.currentFilter,                 // ← جديد
-    this.enableSubcats = true,          // ← جديد (افتراضي)
+    this.currentSortBy, // ← جديد
+    this.currentFilter, // ← جديد
+    this.enableSubcats = true, // ← جديد (افتراضي)
     this.onScrollDirectionChanged,
-
     this.sortBy,
     this.filter,
     this.onLoadMore,
-
     super.key,
   });
 
   @override
   State<HomeTabView> createState() => _HomeTabViewState();
+}
+
+class _CategoryNavigationPayload {
+  final String routeName;
+  final Map<String, dynamic> arguments;
+
+  const _CategoryNavigationPayload({
+    required this.routeName,
+    required this.arguments,
+  });
 }
 
 class _HomeTabViewState extends State<HomeTabView> {
@@ -162,7 +157,6 @@ class _HomeTabViewState extends State<HomeTabView> {
   bool _hasRequestedInitialFeatured = false;
   bool? _lastReportedScrollIsUp;
 
-
   // ✅ قفل تحميل المزيد + تباطؤ بسيط لتجنّب سيل الاستدعاءات
   bool _isLoadingMore = false;
 
@@ -171,6 +165,90 @@ class _HomeTabViewState extends State<HomeTabView> {
   final Map<String, String> _slugByRootIdentifier = <String, String>{};
   int? _lastRequestedRootId;
 
+  _CategoryNavigationPayload? _buildCategoryNavigationPayload({
+    required CategoryModel category,
+    required CategoryModel rootCategory,
+    CategoryModel? parentCategory,
+  }) {
+    final int? categoryId = category.id;
+    if (categoryId == null || categoryId <= 0) {
+      return null;
+    }
+
+    final List<String> categoryIds = <String>[];
+    void addCategoryId(int? value) {
+      if (value == null || value <= 0) {
+        return;
+      }
+      final String idAsString = value.toString();
+      if (!categoryIds.contains(idAsString)) {
+        categoryIds.add(idAsString);
+      }
+    }
+
+    final int? rootId = rootCategory.id ?? int.tryParse(widget.categoryId);
+    addCategoryId(rootId);
+
+    if (parentCategory != null && parentCategory.id != categoryId) {
+      addCategoryId(parentCategory.id);
+    }
+
+    addCategoryId(categoryId);
+
+    final String interfaceType = _resolveInterfaceType(
+      category: category,
+      parent: parentCategory,
+      root: rootCategory,
+    );
+
+    final Map<String, dynamic> arguments = <String, dynamic>{
+      'catID': categoryId.toString(),
+      'catName': category.name ?? '',
+      'categoryIds': categoryIds,
+      'interfaceType': interfaceType,
+    };
+
+    final String routeName = _resolveItemsListRoute(interfaceType);
+
+    return _CategoryNavigationPayload(
+      routeName: routeName,
+      arguments: arguments,
+    );
+  }
+
+  String _resolveInterfaceType({
+    required CategoryModel category,
+    CategoryModel? parent,
+    required CategoryModel root,
+  }) {
+    final Iterable<String?> sources = <String?>[
+      category.interfaceType,
+      parent?.interfaceType,
+      root.interfaceType,
+      widget.adInterfaceType,
+    ];
+
+    for (final String? source in sources) {
+      final String? normalized = SliderInterfaceMapper.normalize(source);
+      if (normalized != null && normalized.isNotEmpty) {
+        return normalized;
+      }
+    }
+
+    return 'all';
+  }
+
+  String _resolveItemsListRoute(String? interfaceType) {
+    final String? normalized = SliderInterfaceMapper.normalize(interfaceType);
+    switch (normalized) {
+      case 'shein_products':
+        return Routes.itemsListShein;
+      case 'e_store':
+        return Routes.itemsListSeller;
+      default:
+        return Routes.itemsList;
+    }
+  }
 
   @override
   void initState() {
@@ -193,10 +271,7 @@ class _HomeTabViewState extends State<HomeTabView> {
       _hasRequestedInitialFeatured = true;
       _loadFeaturedSectionsForRoot(widget.selectedCategoryId.value);
     });
-
   }
-
-
 
   @override
   void dispose() {
@@ -227,14 +302,13 @@ class _HomeTabViewState extends State<HomeTabView> {
     }
     setState(() {});
   }
+
   // =========================
 
   double _adSliderHeight(BuildContext context) {
-    final w = MediaQuery
-        .of(context)
-        .size
-        .width;
-    const horizontalPadding = 24.0; // 12 يسار + 12 يمين (نفس الـ Padding اللي تستخدمه)
+    final w = MediaQuery.of(context).size.width;
+    const horizontalPadding =
+        24.0; // 12 يسار + 12 يمين (نفس الـ Padding اللي تستخدمه)
     final contentW = w - horizontalPadding;
 
     // اختَر نفس نسبة الصور الفعلية للسلايدر (عدّلها لو عندك نسبة مختلفة):
@@ -246,7 +320,6 @@ class _HomeTabViewState extends State<HomeTabView> {
     // سقف وحد أدنى عشان ما يكون صغير/كبير زيادة
     return h.clamp(140.0, 220.0);
   }
-
 
   // =========================
   // تحميل لانهائي بهدوء
@@ -263,7 +336,6 @@ class _HomeTabViewState extends State<HomeTabView> {
     return n.metrics.pixels >= n.metrics.maxScrollExtent - 200;
   }
 
-
   Future<void> _maybeLoadMore() async {
     if (_isLoadingMore) return;
     final cubit = context.read<FetchItemSummaryCubit>();
@@ -279,19 +351,13 @@ class _HomeTabViewState extends State<HomeTabView> {
     } finally {
       _isLoadingMore = false;
       widget.onLoadMore?.call(false);
-
     }
   }
-
 
   String? _getCachedRootIdentifier(int? categoryId) {
     if (categoryId == null || categoryId <= 0) {
       return null;
-
-
     }
-
-
 
     final String? value = _rootIdentifierByCategoryId[categoryId];
     if (value == null) {
@@ -310,8 +376,6 @@ class _HomeTabViewState extends State<HomeTabView> {
 
     return trimmed;
   }
-
-
 
   String? _getSlugForRootIdentifier(String? rootIdentifier) {
     if (rootIdentifier == null || rootIdentifier.isEmpty) {
@@ -345,16 +409,12 @@ class _HomeTabViewState extends State<HomeTabView> {
     return trimmed.isEmpty ? null : trimmed;
   }
 
-
-
-
   void _handleScrollDirectionChange() {
     if (!controller.hasClients) {
       return;
     }
 
-    final ScrollDirection direction =
-        controller.position.userScrollDirection;
+    final ScrollDirection direction = controller.position.userScrollDirection;
 
     bool? isScrollingUp;
     switch (direction) {
@@ -369,8 +429,7 @@ class _HomeTabViewState extends State<HomeTabView> {
         break;
     }
 
-    if (isScrollingUp == null ||
-        _lastReportedScrollIsUp == isScrollingUp) {
+    if (isScrollingUp == null || _lastReportedScrollIsUp == isScrollingUp) {
       return;
     }
 
@@ -378,18 +437,13 @@ class _HomeTabViewState extends State<HomeTabView> {
     widget.onScrollDirectionChanged?.call(isScrollingUp);
   }
 
-
-
   void _cacheRootIdentifiers({
     required List<HomeScreenSection> sections,
     int? rootId,
     String? requestedRootIdentifier,
-
-
   }) {
     final String? requested = requestedRootIdentifier?.trim();
     String? canonicalRoot;
-
 
     for (final HomeScreenSection section in sections) {
       final String? sectionRoot = section.rootIdentifier?.trim();
@@ -415,7 +469,7 @@ class _HomeTabViewState extends State<HomeTabView> {
 
       if (rootId != null && rootId > 0) {
         final String? existingRootIdentifier =
-        _rootIdentifierByCategoryId[rootId];
+            _rootIdentifierByCategoryId[rootId];
         if (existingRootIdentifier == null ||
             existingRootIdentifier.trim().isEmpty ||
             existingRootIdentifier == rootId.toString() ||
@@ -424,12 +478,11 @@ class _HomeTabViewState extends State<HomeTabView> {
         }
       }
 
-
       final Iterable<int> categoryIds = section.sectionData == null
           ? const <int>[]
           : section.sectionData!
-          .map((ItemModel item) => item.categoryId)
-          .whereType<int>();
+              .map((ItemModel item) => item.categoryId)
+              .whereType<int>();
 
       for (final int categoryId in categoryIds) {
         if (categoryId <= 0) {
@@ -451,8 +504,8 @@ class _HomeTabViewState extends State<HomeTabView> {
         }
       }
     }
-    final String? resolvedRoot =
-        canonicalRoot ?? (requested != null && requested.isNotEmpty ? requested : null);
+    final String? resolvedRoot = canonicalRoot ??
+        (requested != null && requested.isNotEmpty ? requested : null);
 
     if (rootId != null && rootId > 0 && resolvedRoot != null) {
       final String trimmed = resolvedRoot.trim();
@@ -462,13 +515,8 @@ class _HomeTabViewState extends State<HomeTabView> {
     }
   }
 
-
-
   String? _resolveRootSlug(int? rootId) {
     return _getCachedRootIdentifier(rootId);
-
-
-
   }
 
   void _loadFeaturedSectionsForRoot(int? rootId) {
@@ -494,13 +542,11 @@ class _HomeTabViewState extends State<HomeTabView> {
       resolvedSlug = _slugByCategoryId[rootId];
     }
 
-
     context.read<FetchHomeScreenCubit>().loadFeaturedSections(
-      interfaceType: interfaceType,
-      rootIdentifier: rootIdentifier,
-      slug: resolvedSlug,
-
-    );
+          interfaceType: interfaceType,
+          rootIdentifier: rootIdentifier,
+          slug: resolvedSlug,
+        );
   }
 
   bool _matchesRoot(HomeScreenSection section, String? rootSlug, bool showAll) {
@@ -515,7 +561,6 @@ class _HomeTabViewState extends State<HomeTabView> {
 
     return sectionRoot == rootSlug;
   }
-
 
   bool _itemMatchesCategory(ItemModel item, int targetCategoryId) {
     if (targetCategoryId <= 0) {
@@ -535,8 +580,7 @@ class _HomeTabViewState extends State<HomeTabView> {
       return false;
     }
 
-    if (matchesDynamic(item.categoryId) ||
-        matchesDynamic(item.category?.id)) {
+    if (matchesDynamic(item.categoryId) || matchesDynamic(item.category?.id)) {
       return true;
     }
 
@@ -556,20 +600,16 @@ class _HomeTabViewState extends State<HomeTabView> {
     return false;
   }
 
-
   Widget _sectionsLoadingPlaceholder({required bool showAll}) {
-
-
     const int crossAxisCount = _gridCrossAxisCount;
     final int shimmerRows = showAll ? 2 : 2;
     final int childCount = crossAxisCount * shimmerRows;
-
 
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
       sliver: SliverGrid(
         delegate: SliverChildBuilderDelegate(
-              (context, index) => _gridShimmer(context),
+          (context, index) => _gridShimmer(context),
           childCount: childCount,
         ),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
@@ -623,19 +663,13 @@ class _HomeTabViewState extends State<HomeTabView> {
     return null;
   }
 
-
   // ✅ أضف هنا:
   double get _gridCardHeight {
-    final h = MediaQuery
-        .of(context)
-        .size
-        .height;
+    final h = MediaQuery.of(context).size.height;
     return h / 3.5.rh(context); // أو h / 3.5 فقط
   }
 
-
 // شيمر السلايدر
-
 
   Widget _buildAdSliderShimmer() {
     final theme = Theme.of(context);
@@ -660,7 +694,8 @@ class _HomeTabViewState extends State<HomeTabView> {
               child: SizedBox(
                 height: hImage,
                 width: double.infinity,
-                child: Container(color: content), // لازم لون مصمت عشان الشيمر يبان
+                child:
+                    Container(color: content), // لازم لون مصمت عشان الشيمر يبان
               ),
             ),
           ),
@@ -694,7 +729,6 @@ class _HomeTabViewState extends State<HomeTabView> {
     );
   }
 
-
 // ثابت عرض الحافة لليمين/اليسار
   double kAdSliderHPad = 12.0;
 
@@ -718,11 +752,8 @@ class _HomeTabViewState extends State<HomeTabView> {
   double kMinImgH = 100.0;
   double kMaxImgH = 640.0;
 
-
   double _sliderContentWidth(BuildContext ctx) {
-    return MediaQuery
-        .sizeOf(ctx)
-        .width - (kAdSliderHPad * 2);
+    return MediaQuery.sizeOf(ctx).width - (kAdSliderHPad * 2);
   }
 
   double _adSliderImageHeight(BuildContext ctx) {
@@ -740,47 +771,33 @@ class _HomeTabViewState extends State<HomeTabView> {
     final tot = _adSliderTotalHeight(ctx);
     final reserve = _dotsReserveHeight(ctx);
 
-    debugPrint(
-        'AD_SLIDER heights: image=$img, total=$tot, reserve=$reserve');
+    debugPrint('AD_SLIDER heights: image=$img, total=$tot, reserve=$reserve');
   }
-
 
 // الارتفاع الأساسي حسب العرض والنسبة
   double _adSliderBaseHeight(BuildContext context) {
-    final w = MediaQuery
-        .of(context)
-        .size
-        .width;
+    final w = MediaQuery.of(context).size.width;
     final contentW = w - (kAdSliderHPad * 2);
     final h = contentW / kSliderAspect;
     // قيود اختيارية (عدّلها حسب تصميمك)
     return h.clamp(kMinImgH, kMaxImgH);
   }
 
-
   @override
   Widget build(BuildContext context) {
     // ========= فواصل محسوبة مرّة واحدة =========
-    final scrH = MediaQuery
-        .sizeOf(context)
-        .height;
+    final scrH = MediaQuery.sizeOf(context).height;
     final gapSmall = (scrH * 0.01).clamp(6, 16).toDouble();
     final gapMedium = (scrH * 0.02).clamp(12, 32).toDouble();
 
     // ✅ فيزياء التمرير حسب المنصة (أخف على أندرويد)
-    final platform = Theme
-        .of(context)
-        .platform;
-
+    final platform = Theme.of(context).platform;
 
     // ✅ هل نخفي الأقسام/التصنيفات عند وجود بحث/فلتر؟
-    final hasQuery = widget.searchController.text
-        .trim()
-        .isNotEmpty;
+    final hasQuery = widget.searchController.text.trim().isNotEmpty;
     final hasFilter = Constant.itemFilter != null;
     final hideBlocks = hasQuery || hasFilter;
     final int? selectedCategoryId = widget.selectedCategoryId.value;
-
 
     return ValueListenableBuilder<ViewMode>(
       valueListenable: widget.viewModeListenable,
@@ -790,9 +807,9 @@ class _HomeTabViewState extends State<HomeTabView> {
             SliderInterfaceMapper.normalize(widget.adInterfaceType) ??
                 widget.adInterfaceType?.trim();
         final String sliderInterfaceType =
-        (resolvedInterfaceType == null || resolvedInterfaceType.isEmpty)
-            ? 'homepage'
-            : resolvedInterfaceType;
+            (resolvedInterfaceType == null || resolvedInterfaceType.isEmpty)
+                ? 'homepage'
+                : resolvedInterfaceType;
         final bool showAdSlider = widget.enableAdSlider;
 
         // ✅ استمع للتمرير هنا (بدل بعثرة المنطق داخل عناصر داخلية)
@@ -807,39 +824,32 @@ class _HomeTabViewState extends State<HomeTabView> {
             controller: controller,
             cacheExtent: 800, // ✅ تحميل مسبق معتدل يقلل التقطيع
             slivers: [
-
-
               // ============= السلايدر =============
 
               SliverToBoxAdapter(
                 child: showAdSlider
                     ? Padding(
-                  padding:
-                  EdgeInsets.symmetric(horizontal: kAdSliderHPad),
-                  child: ClipRRect(
-                    borderRadius:
-                    BorderRadius.circular(kAdSliderRadius),
-                    child: SizedBox(
-                      height: _adSliderTotalHeight(context),
-                      // صورة + دوتس (نفس الإجمالي)
-                      width: double.infinity,
-                      child: RepaintBoundary(
-                        child: SliderWidget(
-                          key: ValueKey(
-                              'slider_$sliderInterfaceType'),
-                          interfaceType: sliderInterfaceType,
+                        padding:
+                            EdgeInsets.symmetric(horizontal: kAdSliderHPad),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(kAdSliderRadius),
+                          child: SizedBox(
+                            height: _adSliderTotalHeight(context),
+                            // صورة + دوتس (نفس الإجمالي)
+                            width: double.infinity,
+                            child: RepaintBoundary(
+                              child: SliderWidget(
+                                key: ValueKey('slider_$sliderInterfaceType'),
+                                interfaceType: sliderInterfaceType,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                        ),
-                )
+                      )
                     : (widget.enableAdSlider
-
-                    ? _buildAdSliderShimmer()
-                    : const SizedBox.shrink()),
-
+                        ? _buildAdSliderShimmer()
+                        : const SizedBox.shrink()),
               ),
-
 
               // فاصل صغير
               SliverToBoxAdapter(child: SizedBox(height: gapSmall)),
@@ -856,7 +866,6 @@ class _HomeTabViewState extends State<HomeTabView> {
                 SliverToBoxAdapter(child: SizedBox(height: gapSmall)),
               ],
 
-
               // ============= التصنيفات الفرعية (دائمًا ظاهرة) =============
 
               SliverToBoxAdapter(
@@ -864,313 +873,337 @@ class _HomeTabViewState extends State<HomeTabView> {
                   child: ValueListenableBuilder<int?>(
                     valueListenable: widget.selectedCategoryId,
                     builder: (context, selectedId, ___) {
-        // عند تغيّر التصنيف العلوي صفّر اختيار الفرعيّة (اختياري)
+                      // عند تغيّر التصنيف العلوي صفّر اختيار الفرعيّة (اختياري)
                       final int normalizedSelected = selectedId ?? 0;
                       if (_lastTopCatId != normalizedSelected) {
                         _lastTopCatId = normalizedSelected;
                         _activeSubcatId = null;
                         _loadFeaturedSectionsForRoot(selectedId);
+                      }
+                      return LayoutBuilder(
+                        builder: (context, constraints) {
+                          const double _rowSpacing = 12.0;
+                          const double _hPad = 12.0;
+                          const double _spacing = 10.0;
+                          const double _gap = 6.0;
+                          const double _titleHeight = 30.0;
 
-        }
-        return LayoutBuilder(
-        builder: (context, constraints) {
-          const double _rowSpacing = 12.0;
-        const double _hPad = 12.0;
-        const double _spacing = 10.0;
-        const double _gap = 6.0;
-        const double _titleHeight = 30.0;
+                          final double maxWidth = constraints.maxWidth;
+                          final double availableWidth = maxWidth - (_hPad * 2);
+                          int itemsPerRow = 1;
+                          for (int cols = 1; cols <= 6; cols++) {
+                            final double widthForItems =
+                                availableWidth - (_spacing * (cols - 1));
+                            final double perItem = widthForItems / cols;
+                            if (perItem >= 70.0) {
+                              itemsPerRow = cols;
+                            } else {
+                              break;
+                            }
+                          }
 
-        final double maxWidth = constraints.maxWidth;
-          final double availableWidth = maxWidth - (_hPad * 2);
-          int itemsPerRow = 1;
-          for (int cols = 1; cols <= 6; cols++) {
-            final double widthForItems = availableWidth - (_spacing * (cols - 1));
-            final double perItem = widthForItems / cols;
-            if (perItem >= 70.0) {
-              itemsPerRow = cols;
-            } else {
-              break;
-            }
-          }
+                          const int maxRows = 2;
+                          final double widthForItems =
+                              (availableWidth - (_spacing * (itemsPerRow - 1)))
+                                  .clamp(0.0, 4000.0);
 
-          const int maxRows = 2;
-          final double widthForItems =
-          (availableWidth - (_spacing * (itemsPerRow - 1))).clamp(0.0, 4000.0);
+                          final double itemWidth =
+                              (widthForItems / itemsPerRow).clamp(70.0, 120.0);
+                          final double circleSize =
+                              (itemWidth * 0.82).clamp(48.0, 64.0);
+                          final double rowHeight =
+                              circleSize + _gap + _titleHeight;
 
+                          return SubcatsDeferredBlock(
+                            enabled: widget.enableSubcats,
+                            // ← لا نبدأ إلا بعد فتح القسم
+                            rowHeight: rowHeight,
+                            maxRows: maxRows,
+                            shimmerBuilder:
+                                (context, dynamicRowHeight, dynamicRows) {
+                              final colorScheme = Theme.of(context).colorScheme;
+                              final base = colorScheme.shimmerBaseColor;
+                              final highlight =
+                                  colorScheme.shimmerHighlightColor;
+                              final content = colorScheme.shimmerContentColor;
+                              const double indicatorGap = 6.0;
+                              const double indicatorHeight = 8.0;
+                              const int placeholderDots = 4;
+                              final double shimmerGridHeight =
+                                  dynamicRowHeight * dynamicRows +
+                                      _rowSpacing * (dynamicRows - 1);
 
-        final double itemWidth =
-        (widthForItems / itemsPerRow).clamp(70.0, 120.0);
-        final double circleSize = (itemWidth * 0.82).clamp(48.0, 64.0);
-        final double rowHeight = circleSize + _gap + _titleHeight;
-
-        return SubcatsDeferredBlock(
-        enabled: widget.enableSubcats,     // ← لا نبدأ إلا بعد فتح القسم
-        rowHeight: rowHeight,
-          maxRows: maxRows,
-          shimmerBuilder: (context, dynamicRowHeight, dynamicRows) {
-
-            final colorScheme = Theme.of(context).colorScheme;
-            final base = colorScheme.shimmerBaseColor;
-            final highlight = colorScheme.shimmerHighlightColor;
-            final content = colorScheme.shimmerContentColor;
-        const double indicatorGap = 6.0;
-        const double indicatorHeight = 8.0;
-          const int placeholderDots = 4;
-          final double shimmerGridHeight =
-              dynamicRowHeight * dynamicRows + _rowSpacing * (dynamicRows - 1);
-
-
-        return SizedBox(
-          height: shimmerGridHeight + indicatorGap + indicatorHeight,
-        child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: _hPad),
-        child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-        SizedBox(
-        height: shimmerGridHeight,
-        child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: List.generate(dynamicRows, (rowIndex) {
-        return Padding(
-        padding: EdgeInsets.only(top: rowIndex == 0 ? 0 : _rowSpacing),
-        child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: List.generate(itemsPerRow, (_) {
-        return SizedBox(
-        width: itemWidth,
-        child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-        Shimmer.fromColors(
-        baseColor: base,
-          highlightColor: highlight,
-        period: const Duration(milliseconds: 1150),
-        child: Container(
-        width: circleSize,
-        height: circleSize,
-        decoration: BoxDecoration(
-          color: content,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        ),
-        ),
-        const SizedBox(height: _gap),
-        SizedBox(
-        height: _titleHeight,
-        child: Align(
-        alignment: Alignment.topCenter,
-        child: Shimmer.fromColors(
-        baseColor: base,
-          highlightColor: highlight,
-        period: const Duration(milliseconds: 1150),
-        child: Container(
-        height: 12,
-        width: itemWidth,
-        decoration: BoxDecoration(
-        color: base,
-        borderRadius:
-        BorderRadius.circular(6),
-        ),
-        ),
-        ),
-        ),
-        ),
-        ],
-        ),
-        );
-        }),
-        ),
-        );
-        }),
-        ),
-
-
-
-
-
+                              return SizedBox(
+                                height: shimmerGridHeight +
+                                    indicatorGap +
+                                    indicatorHeight,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: _hPad),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      SizedBox(
+                                        height: shimmerGridHeight,
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: List.generate(dynamicRows,
+                                              (rowIndex) {
+                                            return Padding(
+                                              padding: EdgeInsets.only(
+                                                  top: rowIndex == 0
+                                                      ? 0
+                                                      : _rowSpacing),
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
+                                                children: List.generate(
+                                                    itemsPerRow, (_) {
+                                                  return SizedBox(
+                                                    width: itemWidth,
+                                                    child: Column(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        Shimmer.fromColors(
+                                                          baseColor: base,
+                                                          highlightColor:
+                                                              highlight,
+                                                          period:
+                                                              const Duration(
+                                                                  milliseconds:
+                                                                      1150),
+                                                          child: Container(
+                                                            width: circleSize,
+                                                            height: circleSize,
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              color: content,
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          20),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                            height: _gap),
+                                                        SizedBox(
+                                                          height: _titleHeight,
+                                                          child: Align(
+                                                            alignment: Alignment
+                                                                .topCenter,
+                                                            child: Shimmer
+                                                                .fromColors(
+                                                              baseColor: base,
+                                                              highlightColor:
+                                                                  highlight,
+                                                              period:
+                                                                  const Duration(
+                                                                      milliseconds:
+                                                                          1150),
+                                                              child: Container(
+                                                                height: 12,
+                                                                width:
+                                                                    itemWidth,
+                                                                decoration:
+                                                                    BoxDecoration(
+                                                                  color: base,
+                                                                  borderRadius:
+                                                                      BorderRadius
+                                                                          .circular(
+                                                                              6),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  );
+                                                }),
+                                              ),
+                                            );
+                                          }),
+                                        ),
                                       ),
-        const SizedBox(height: indicatorGap),
-        SizedBox(
-        height: indicatorHeight,
-        child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(placeholderDots, (dotIndex) {
-        final bool isActive = dotIndex == 0;
-        final double width = isActive ? 18.0 : 8.0;
+                                      const SizedBox(height: indicatorGap),
+                                      SizedBox(
+                                        height: indicatorHeight,
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: List.generate(
+                                              placeholderDots, (dotIndex) {
+                                            final bool isActive = dotIndex == 0;
+                                            final double width =
+                                                isActive ? 18.0 : 8.0;
 
-        return Shimmer.fromColors(
-        baseColor: base,
-          highlightColor: highlight,
-        period:
-        const Duration(milliseconds: 1150),
-        child: Container(
-        margin:
-        const EdgeInsets.symmetric(horizontal: 4),
-        width: width,
-        height: indicatorHeight,
-        decoration: BoxDecoration(
-        color: base,
-        borderRadius: BorderRadius.circular(20),
-        ),
-        ),
-        );
-        }),
-        ),
+                                            return Shimmer.fromColors(
+                                              baseColor: base,
+                                              highlightColor: highlight,
+                                              period: const Duration(
+                                                  milliseconds: 1150),
+                                              child: Container(
+                                                margin:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 4),
+                                                width: width,
+                                                height: indicatorHeight,
+                                                decoration: BoxDecoration(
+                                                  color: base,
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
+                                                ),
+                                              ),
+                                            );
+                                          }),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                            // انتظر نجاح جلب التصنيفات (أو اكتمال مؤقت)
+                            onDeferLoad: () async {
+                              final catCubit =
+                                  context.read<FetchCategoryCubit>();
+                              if (catCubit.state is! FetchCategorySuccess) {
+                                catCubit.fetchCategories();
+                                try {
+                                  await catCubit.stream
+                                      .firstWhere(
+                                          (s) => s is FetchCategorySuccess)
+                                      .timeout(const Duration(seconds: 2));
+                                } catch (_) {
+                                  // تجاهل في حال انتهاء المهلة، سيستمر الشيمر حتى تتوفر البيانات
+                                }
+                              }
+                            },
+                            // المحتوى الحقيقي بعد الجاهزية
+                            builderWhenReady: () {
+                              final catState =
+                                  context.watch<FetchCategoryCubit>().state;
+                              if (catState is! FetchCategorySuccess) {
+                                // لو لم تصل البيانات بعد، أبقِ على مساحة الشيمر
+                                final double fallbackHeight =
+                                    rowHeight * maxRows +
+                                        _rowSpacing * (maxRows - 1);
+                                return SizedBox(height: fallbackHeight);
+                              }
 
+                              // حدّد الجذر (تصنيف القسم) ثم اختر الأب الحالي
+                              final int rootId =
+                                  int.tryParse(widget.categoryId) ?? 0;
+                              final CategoryModel root =
+                                  catState.categories.firstWhere(
+                                (c) => c.id == rootId,
+                                orElse: () => CategoryModel(
+                                    id: rootId, name: '', children: const []),
+                              );
+                              final List<CategoryModel> rootChildren =
+                                  root.children ?? const <CategoryModel>[];
 
-        ),
+                              final bool isTopLevel =
+                                  (selectedId == null || selectedId == 0);
 
+                              // إن كان "الكل" → الأب = الجذر، غير ذلك → الأب = التصنيف المختار إن وُجد، وإلا الجذر
+                              final CategoryModel currentParent = isTopLevel
+                                  ? root
+                                  : (rootChildren.firstWhere(
+                                      (c) => c.id == selectedId,
+                                      orElse: () => root,
+                                    ));
 
+                              // لو الأب الحالي بلا أبناء، اعرض أبناء الجذر كي لا يختفي الشريط
+                              final List<CategoryModel> subcats =
+                                  (currentParent.children?.isNotEmpty ?? false)
+                                      ? (currentParent.children!)
+                                      : rootChildren;
 
+                              if (subcats.isEmpty)
+                                return const SizedBox.shrink();
 
-          ],
-        ),
-        ),
-        );
-        },
-          // انتظر نجاح جلب التصنيفات (أو اكتمال مؤقت)
-          onDeferLoad: () async {
-            final catCubit = context.read<FetchCategoryCubit>();
-            if (catCubit.state is! FetchCategorySuccess) {
-              catCubit.fetchCategories();
-              try {
-                await catCubit.stream
-                    .firstWhere((s) => s is FetchCategorySuccess)
-                    .timeout(const Duration(seconds: 2));
-              } catch (_) {
-                // تجاهل في حال انتهاء المهلة، سيستمر الشيمر حتى تتوفر البيانات
-              }
-            }
-          },
-          // المحتوى الحقيقي بعد الجاهزية
-          builderWhenReady: () {
-            final catState =
-                context.watch<FetchCategoryCubit>().state;
-            if (catState is! FetchCategorySuccess) {
-              // لو لم تصل البيانات بعد، أبقِ على مساحة الشيمر
-              final double fallbackHeight =
-                  rowHeight * maxRows + _rowSpacing * (maxRows - 1);
-              return SizedBox(height: fallbackHeight);
+                              final brand =
+                                  Theme.of(context).colorScheme.primary;
 
-            }
+                              return Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SubcatsHorizontalGrid(
+                                    subcats: subcats,
+                                    selectedId: _activeSubcatId,
+                                    // تظليل الفرعيّة المختارة
+                                    brand: brand,
+                                    isTopLevel: isTopLevel,
+                                    onTap: (_) {},
 
-            // حدّد الجذر (تصنيف القسم) ثم اختر الأب الحالي
-            final int rootId = int.tryParse(widget.categoryId) ?? 0;
-            final CategoryModel root = catState.categories.firstWhere(
-                  (c) => c.id == rootId,
-              orElse: () =>
-                  CategoryModel(id: rootId, name: '', children: const []),
-            );
-            final List<CategoryModel> rootChildren =
-                root.children ?? const <CategoryModel>[];
+                                    // في تبويب "الكل": اضغط فرعيّة ⇒ انقل شريط التصنيفات للفئة واضبط الجلب لها
+                                    onTopCategoryPick: (c) {
+                                      if (!isTopLevel) return;
+                                      widget.selectedCategoryId.value = c.id;
+                                      _activeSubcatId =
+                                          null; // سنعرض أبناء الفئة المختارة الآن
+                                      setState(() {});
+                                      final _CategoryNavigationPayload?
+                                          payload =
+                                          _buildCategoryNavigationPayload(
+                                        category: c,
+                                        rootCategory: root,
+                                        parentCategory: root,
+                                      );
 
-            final bool isTopLevel =
-            (selectedId == null || selectedId == 0);
+                                      if (payload == null || !mounted) {
+                                        return;
+                                      }
 
-            // إن كان "الكل" → الأب = الجذر، غير ذلك → الأب = التصنيف المختار إن وُجد، وإلا الجذر
-            final CategoryModel currentParent = isTopLevel
-                ? root
-                : (rootChildren.firstWhere(
-                  (c) => c.id == selectedId,
-              orElse: () => root,
-            ));
+                                      Navigator.pushNamed(
+                                        context,
+                                        payload.routeName,
+                                        arguments: payload.arguments,
+                                      );
+                                    },
 
-            // لو الأب الحالي بلا أبناء، اعرض أبناء الجذر كي لا يختفي الشريط
-            final List<CategoryModel> subcats =
-            (currentParent.children?.isNotEmpty ?? false)
-                ? (currentParent.children!)
-                : rootChildren;
+                                    // في فئة علوية ≠ "الكل": اضغط فرعيّة ⇒ فلترة مباشرة وتظليل الفرعيّة
+                                    onSubcatPick: (c) {
+                                      setState(() => _activeSubcatId = c.id);
 
-            if (subcats.isEmpty) return const SizedBox.shrink();
+                                      final _CategoryNavigationPayload?
+                                          payload =
+                                          _buildCategoryNavigationPayload(
+                                        category: c,
+                                        rootCategory: root,
+                                        parentCategory: currentParent == root
+                                            ? null
+                                            : currentParent,
+                                      );
 
-            final brand = Theme.of(context).colorScheme.primary;
-
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SubcatsHorizontalGrid(
-                  subcats: subcats,
-                  selectedId: _activeSubcatId,   // تظليل الفرعيّة المختارة
-                  brand: brand,
-                  isTopLevel: isTopLevel,
-                  onTap: (_) {},
-
-                  // في تبويب "الكل": اضغط فرعيّة ⇒ انقل شريط التصنيفات للفئة واضبط الجلب لها
-                  onTopCategoryPick: (c) {
-                    if (!isTopLevel) return;
-                    widget.selectedCategoryId.value = c.id;
-                    _activeSubcatId = null; // سنعرض أبناء الفئة المختارة الآن
-                    setState(() {});
-                    context
-                        .read<FetchItemSummaryCubit>()
-                        .fetchSummaries(
-                      categoryId: c.id ?? 0,
-                      search: widget.searchController.text.trim(),
-                      sortBy: widget.sortBy,
-                      filter: widget.filter?.copyWith(
-                        categoryId: (c.id ?? 0).toString(),
-                      ),
-                    );
-                  },
-
-                  // في فئة علوية ≠ "الكل": اضغط فرعيّة ⇒ فلترة مباشرة وتظليل الفرعيّة
-                  onSubcatPick: (c) {
-                    if (isTopLevel) {
-                      widget.selectedCategoryId.value = c.id;
-                      _activeSubcatId = null;
-                      setState(() {});
-                      context
-                          .read<FetchItemSummaryCubit>()
-                          .fetchSummaries(
-                        categoryId: c.id ?? 0,
-                        search: widget.searchController.text.trim(),
-                        sortBy: widget.sortBy,
-                        filter: widget.filter?.copyWith(
-                          categoryId: (c.id ?? 0).toString(),
-                        ),
-                      );
-
-                    } else {
-                      setState(() => _activeSubcatId = c.id);
-                      context
-                          .read<FetchItemSummaryCubit>()
-                          .fetchSummaries(
-                        categoryId: c.id ?? 0,
-                        search: widget.searchController.text.trim(),
-                        sortBy: widget.sortBy,
-                        filter: widget.filter?.copyWith(
-                          categoryId: (c.id ?? 0).toString(),
-                        ),
-                      );
-                    }
-                  },
-                ),
-
-                SizedBox(
-                  // تجنّب cast من num: احسب clamp يدويًا
-                  height: () {
-                    final h = MediaQuery.sizeOf(context).height * 0.01;
-                    if (h < 6.0) return 6.0;
-                    if (h > 16.0) return 16.0;
-                    return h;
-                  }(),
-                ),
-
-
-              ],
-            );
-          },
-
-
-
-
-
-
-
-
-
-
+                                      if (payload == null || !mounted) {
+                                        return;
+                                      }
+                                      Navigator.pushNamed(
+                                        context,
+                                        payload.routeName,
+                                        arguments: payload.arguments,
+                                      );
+                                    },
+                                  ),
+                                  SizedBox(
+                                    // تجنّب cast من num: احسب clamp يدويًا
+                                    height: () {
+                                      final h =
+                                          MediaQuery.sizeOf(context).height *
+                                              0.01;
+                                      if (h < 6.0) return 6.0;
+                                      if (h > 16.0) return 16.0;
+                                      return h;
+                                    }(),
+                                  ),
+                                ],
+                              );
+                            },
                           );
                         },
                       );
@@ -1180,7 +1213,6 @@ class _HomeTabViewState extends State<HomeTabView> {
               ),
 
               ..._sectionsBlock(selectedCategoryId, isList),
-
 
               // فاصل متوسط
               SliverToBoxAdapter(child: SizedBox(height: gapMedium)),
@@ -1203,7 +1235,6 @@ class _HomeTabViewState extends State<HomeTabView> {
     );
   }
 
-
   // أقسام الهوم: SectionsAdapter أو شبكة منتجات للتصنيف المحدد
 
   List<Widget> _sectionsBlock(int? selectedId, bool _) {
@@ -1211,10 +1242,7 @@ class _HomeTabViewState extends State<HomeTabView> {
     final FetchHomeScreenState state =
         context.watch<FetchHomeScreenCubit>().state;
 
-
-    if (state is FetchHomeScreenInitial ||
-        state is FetchHomeScreenInProgress) {
-
+    if (state is FetchHomeScreenInitial || state is FetchHomeScreenInProgress) {
       return <Widget>[
         _sectionsLoadingPlaceholder(showAll: showAll),
       ];
@@ -1222,14 +1250,13 @@ class _HomeTabViewState extends State<HomeTabView> {
 
     if (state is FetchHomeScreenFail) {
       return <Widget>[
-    SliverToBoxAdapter(
-    child: _sectionsEmptyPlaceholder(
+        SliverToBoxAdapter(
+          child: _sectionsEmptyPlaceholder(
             onRetry: () => _loadFeaturedSectionsForRoot(selectedId),
-    ),
-    ),
+          ),
+        ),
       ];
     }
-
 
     if (state is FetchHomeScreenSuccess) {
       final int? cachingRootId = _lastRequestedRootId ?? selectedId;
@@ -1239,22 +1266,19 @@ class _HomeTabViewState extends State<HomeTabView> {
         requestedRootIdentifier: state.rootIdentifier,
       );
 
+      final String? rootSlug = showAll ? null : _resolveRootSlug(selectedId);
 
-          final String? rootSlug = showAll ? null : _resolveRootSlug(selectedId);
-
-          final List<HomeScreenSection> filteredSections = state.sections
-              .where((s) => _matchesRoot(s, rootSlug, showAll))
-              .toList();
+      final List<HomeScreenSection> filteredSections = state.sections
+          .where((s) => _matchesRoot(s, rootSlug, showAll))
+          .toList();
 
       if (filteredSections.isEmpty) {
         return <Widget>[
-    SliverToBoxAdapter(
-    child: _sectionsEmptyPlaceholder(
-
-
+          SliverToBoxAdapter(
+            child: _sectionsEmptyPlaceholder(
               onRetry: () => _loadFeaturedSectionsForRoot(selectedId),
-    ),
-    ),
+            ),
+          ),
         ];
       }
 
@@ -1262,7 +1286,7 @@ class _HomeTabViewState extends State<HomeTabView> {
         return <Widget>[
           SliverList(
             delegate: SliverChildBuilderDelegate(
-                  (context, index) => SectionsAdapter(
+              (context, index) => SectionsAdapter(
                 section: filteredSections[index],
               ),
               childCount: filteredSections.length,
@@ -1279,55 +1303,9 @@ class _HomeTabViewState extends State<HomeTabView> {
 
       if (products.isEmpty) {
         return <Widget>[
-    SliverToBoxAdapter(
-    child: _sectionsEmptyPlaceholder(
-
+          SliverToBoxAdapter(
+            child: _sectionsEmptyPlaceholder(
               onRetry: () => _loadFeaturedSectionsForRoot(selectedId),
-    ),
-    ),
-        ];
-      }
-
-      return <Widget>[
-    SliverPadding(
-    padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
-    sliver: SliverGrid(
-    delegate: SliverChildBuilderDelegate(
-    (context, index) => ICard(item: products[index]),
-    childCount: products.length,
-    ),
-    gridDelegate:
-    SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
-      crossAxisCount: _gridCrossAxisCount,
-              height: _gridCardHeight,
-              mainAxisSpacing: 7,
-              crossAxisSpacing: 10,
-            ),
-    ),
-    ),
-      ];
-    }
-
-    return const <Widget>[
-      SliverToBoxAdapter(child: SizedBox(height: 1)),
-    ];
-  }
-
-
-  // قائمة الإعلانات (مربوطة بوضع العرض)
-
-  List<Widget> _buildItemsSlivers(bool isList) {
-    final FetchItemSummaryState state =
-        context.watch<FetchItemSummaryCubit>().state;
-
-    if (state is FetchItemSummaryInitial ||
-        state is FetchItemSummaryLoading) {
-      if (isList) {
-        return <Widget>[
-    SliverList(
-    delegate: SliverChildBuilderDelegate(
-    (context, index) => _listShimmer(context),
-    childCount: 8,
             ),
           ),
         ];
@@ -1337,14 +1315,58 @@ class _HomeTabViewState extends State<HomeTabView> {
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
           sliver: SliverGrid(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => ICard(item: products[index]),
+              childCount: products.length,
+            ),
+            gridDelegate:
+                SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
+              crossAxisCount: _gridCrossAxisCount,
+              height: _gridCardHeight,
+              mainAxisSpacing: 7,
+              crossAxisSpacing: 10,
+            ),
+          ),
+        ),
+      ];
+    }
+
+    return const <Widget>[
+      SliverToBoxAdapter(child: SizedBox(height: 1)),
+    ];
+  }
+
+  // قائمة الإعلانات (مربوطة بوضع العرض)
+
+  List<Widget> _buildItemsSlivers(bool isList) {
+    final FetchItemSummaryState state =
+        context.watch<FetchItemSummaryCubit>().state;
+
+    if (state is FetchItemSummaryInitial || state is FetchItemSummaryLoading) {
+      if (isList) {
+        return <Widget>[
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => _listShimmer(context),
+              childCount: 8,
+            ),
+          ),
+        ];
+      }
+
+      return <Widget>[
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+          sliver: SliverGrid(
+            gridDelegate:
+                SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
               crossAxisCount: _gridCrossAxisCount,
               height: _gridCardHeight,
               mainAxisSpacing: 7,
               crossAxisSpacing: 10,
             ),
             delegate: SliverChildBuilderDelegate(
-                  (context, index) => _gridShimmer(context),
+              (context, index) => _gridShimmer(context),
               childCount: 8,
             ),
           ),
@@ -1366,21 +1388,22 @@ class _HomeTabViewState extends State<HomeTabView> {
     if (state is FetchItemSummarySuccess) {
       if (state.items.isEmpty) {
         return <Widget>[
-    SliverToBoxAdapter(
-    child: Center(
-    child: Padding(
-    padding: const EdgeInsets.all(16),
-    child: NoDataFound(
-    onTap: () => context.read<FetchItemSummaryCubit>().fetchSummaries(
-    categoryId: int.tryParse(widget.categoryId) ?? 0,
-    search: widget.searchController.text.trim(),
-    sortBy: widget.sortBy,
-    filter: widget.filter,
-    ),
+          SliverToBoxAdapter(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: NoDataFound(
+                  onTap: () =>
+                      context.read<FetchItemSummaryCubit>().fetchSummaries(
+                            categoryId: int.tryParse(widget.categoryId) ?? 0,
+                            search: widget.searchController.text.trim(),
+                            sortBy: widget.sortBy,
+                            filter: widget.filter,
+                          ),
                 ),
               ),
-           ),
-         ),
+            ),
+          ),
         ];
       }
 
@@ -1393,45 +1416,42 @@ class _HomeTabViewState extends State<HomeTabView> {
 
       if (isList) {
         return <Widget>[
-    SliverList(
-
-
+          SliverList(
             delegate: SliverChildBuilderDelegate(
-    (context, index) {
-    final _HomeTabEntry entry = entries[index];
-    switch (entry.type) {
-    case _HomeTabEntryType.item:
-    final ItemSummary summary =
-    state.items[entry.itemIndex!];
-    final ItemModel item = summary.toItemModelSkeleton();
-    return Padding(
-    padding: const EdgeInsets.symmetric(
-    horizontal: 15,
-    vertical: 3,
-    ),
-    child: GestureDetector(
-    onTap: () => _navigateToDetails(context, item),
-    child: ItemHorizontalCard(item: item),
-    ),
+              (context, index) {
+                final _HomeTabEntry entry = entries[index];
+                switch (entry.type) {
+                  case _HomeTabEntryType.item:
+                    final ItemSummary summary = state.items[entry.itemIndex!];
+                    final ItemModel item = summary.toItemModelSkeleton();
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 15,
+                        vertical: 3,
+                      ),
+                      child: GestureDetector(
+                        onTap: () => _navigateToDetails(context, item),
+                        child: ItemHorizontalCard(item: item),
+                      ),
                     );
-    case _HomeTabEntryType.ad:
-      return const _KeepAliveNativeAd();
+                  case _HomeTabEntryType.ad:
+                    return const _KeepAliveNativeAd();
 
-    case _HomeTabEntryType.loadingMore:
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: List<Widget>.generate(
-          entry.shimmerCount,
-              (_) => _listShimmer(context),
-        ),
+                  case _HomeTabEntryType.loadingMore:
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: List<Widget>.generate(
+                        entry.shimmerCount,
+                        (_) => _listShimmer(context),
+                      ),
                     );
                 }
               },
-    childCount: entries.length,
-    addAutomaticKeepAlives: false,
-    addRepaintBoundaries: true,
+              childCount: entries.length,
+              addAutomaticKeepAlives: false,
+              addRepaintBoundaries: true,
             ),
-           ),
+          ),
         ];
       }
 
@@ -1443,18 +1463,16 @@ class _HomeTabViewState extends State<HomeTabView> {
     ];
   }
 
-
   // بناء أقسام العناصر (مع إدراج إعلان بين كل مقطع وآخر)
-
 
   // بناء أقسام العناصر مع فواصل وإعلانات
 
   List<_HomeTabEntry> _buildItemEntries(
-      List<ItemSummary> items, {
-        required bool isLoadingMore,
-        required bool isList,
-        required int gridCrossAxisCount,
-      }) {
+    List<ItemSummary> items, {
+    required bool isLoadingMore,
+    required bool isList,
+    required int gridCrossAxisCount,
+  }) {
     final List<_HomeTabEntry> entries = <_HomeTabEntry>[];
     final int step = max(1, Constant.nativeAdsAfterItemNumber);
 
@@ -1464,23 +1482,21 @@ class _HomeTabViewState extends State<HomeTabView> {
           ((index + 1) % step == 0) && (index + 1 < items.length);
       if (shouldInsertAd) {
         entries.add(const _HomeTabEntry.ad());
-
       }
     }
 
     if (isLoadingMore) {
       final int shimmerCount = isList ? 1 : max(1, gridCrossAxisCount);
       entries.add(_HomeTabEntry.loadingMore(shimmerCount: shimmerCount));
-
     }
 
     return entries;
   }
 
   List<Widget> _buildGridModeSlivers(
-      List<_HomeTabEntry> entries,
-      List<ItemSummary> items,
-      ) {
+    List<_HomeTabEntry> entries,
+    List<ItemSummary> items,
+  ) {
     final List<Widget> slivers = <Widget>[];
     int cursor = 0;
 
@@ -1499,19 +1515,18 @@ class _HomeTabViewState extends State<HomeTabView> {
             slivers.add(
               SliverPadding(
                 padding:
-                const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+                    const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
                 sliver: SliverGrid(
                   gridDelegate:
-                  SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
+                      SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
                     crossAxisCount: _gridCrossAxisCount,
                     height: _gridCardHeight,
                     mainAxisSpacing: 7,
                     crossAxisSpacing: 10,
                   ),
                   delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                      final ItemSummary summary =
-                      items[batchIndices[index]];
+                    (context, index) {
+                      final ItemSummary summary = items[batchIndices[index]];
                       final ItemModel item = summary.toItemModelSkeleton();
                       return GestureDetector(
                         onTap: () => _navigateToDetails(context, item),
@@ -1553,14 +1568,14 @@ class _HomeTabViewState extends State<HomeTabView> {
               padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
               sliver: SliverGrid(
                 gridDelegate:
-                SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
+                    SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
                   crossAxisCount: _gridCrossAxisCount,
                   height: _gridCardHeight,
                   mainAxisSpacing: 7,
                   crossAxisSpacing: 10,
                 ),
                 delegate: SliverChildBuilderDelegate(
-                      (context, index) => _gridShimmer(context),
+                  (context, index) => _gridShimmer(context),
                   childCount: shimmerCount,
                 ),
               ),
@@ -1572,11 +1587,11 @@ class _HomeTabViewState extends State<HomeTabView> {
 
       if (entry.type == _HomeTabEntryType.item) {
         // تم تحريك المؤشر داخل الحلقة الداخلية.
-      }    }
+      }
+    }
 
     return slivers;
   }
-
 
   // ====== الشيمرات ======
   Widget _listShimmer(BuildContext context) {
@@ -1587,16 +1602,9 @@ class _HomeTabViewState extends State<HomeTabView> {
         decoration: BoxDecoration(
           border: Border.all(
             width: 1.5,
-            color: Theme
-                .of(context)
-                .colorScheme
-                .onSurface
-                .withOpacity(0.2),
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
           ),
-          color: Theme
-              .of(context)
-              .colorScheme
-              .surface,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(18),
         ),
         child: Row(
@@ -1629,16 +1637,9 @@ class _HomeTabViewState extends State<HomeTabView> {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
-          color: Theme
-              .of(context)
-              .colorScheme
-              .surface,
+          color: Theme.of(context).colorScheme.surface,
           border: Border.all(
-            color: Theme
-                .of(context)
-                .colorScheme
-                .onSurface
-                .withOpacity(0.2),
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
           ),
         ),
         child: Column(
@@ -1680,20 +1681,9 @@ class _HomeTabViewState extends State<HomeTabView> {
       arguments: {'model': item},
     );
   }
-
-
-
 }
 
-
-
-
-
-
-
-
 // أثر التحميل
-
 
 Widget buildItemsShimmer(BuildContext context) {
   return Padding(
@@ -1716,9 +1706,12 @@ Widget buildItemsShimmer(BuildContext context) {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              CustomShimmer(width: 100.rw(context), height: 10, borderRadius: 7),
-              CustomShimmer(width: 150.rw(context), height: 10, borderRadius: 7),
-              CustomShimmer(width: 120.rw(context), height: 10, borderRadius: 7),
+              CustomShimmer(
+                  width: 100.rw(context), height: 10, borderRadius: 7),
+              CustomShimmer(
+                  width: 150.rw(context), height: 10, borderRadius: 7),
+              CustomShimmer(
+                  width: 120.rw(context), height: 10, borderRadius: 7),
               CustomShimmer(width: 80.rw(context), height: 10, borderRadius: 7),
             ],
           ),
@@ -1728,42 +1721,36 @@ Widget buildItemsShimmer(BuildContext context) {
   );
 }
 
-
 enum _HomeTabEntryType { item, ad, loadingMore }
-
 
 class _HomeTabEntry {
   const _HomeTabEntry._(
-      this.type, {
-        this.itemIndex,
-        this.shimmerCount = 1,
-      });
+    this.type, {
+    this.itemIndex,
+    this.shimmerCount = 1,
+  });
 
   const _HomeTabEntry.item(int index)
       : this._(
-    _HomeTabEntryType.item,
-    itemIndex: index,
-  );
+          _HomeTabEntryType.item,
+          itemIndex: index,
+        );
 
   const _HomeTabEntry.ad()
       : this._(
-    _HomeTabEntryType.ad,
-  );
+          _HomeTabEntryType.ad,
+        );
 
   const _HomeTabEntry.loadingMore({int shimmerCount = 1})
-
       : this._(
-    _HomeTabEntryType.loadingMore,
-    shimmerCount: shimmerCount,
-
-  );
+          _HomeTabEntryType.loadingMore,
+          shimmerCount: shimmerCount,
+        );
 
   final _HomeTabEntryType type;
   final int? itemIndex;
   final int shimmerCount;
 }
-
-
 
 Widget buildGridShimmer(BuildContext context) {
   return Container(
@@ -1792,7 +1779,8 @@ Widget buildGridShimmer(BuildContext context) {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CustomShimmer(width: 100.rw(context), height: 12, borderRadius: 8),
+              CustomShimmer(
+                  width: 100.rw(context), height: 12, borderRadius: 8),
               const SizedBox(height: 6),
               CustomShimmer(width: 70.rw(context), height: 12, borderRadius: 8),
             ],
@@ -1804,13 +1792,6 @@ Widget buildGridShimmer(BuildContext context) {
     ),
   );
 }
-
-
-
-
-
-
-
 
 class _KeepAliveNativeAd extends StatefulWidget {
   const _KeepAliveNativeAd({super.key});

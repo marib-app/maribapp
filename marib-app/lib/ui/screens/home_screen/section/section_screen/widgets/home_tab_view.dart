@@ -1003,6 +1003,7 @@ class _HomeTabViewState extends State<HomeTabView> {
     }
 
     if (state is FetchItemSummarySuccess) {
+      final bool showLoadingMoreError = state.loadingMoreError;
       if (state.items.isEmpty) {
         return <Widget>[
           SliverToBoxAdapter(
@@ -1070,14 +1071,24 @@ class _HomeTabViewState extends State<HomeTabView> {
             ),
           ),
         ];
-        if (hasLoadingMoreEntry) {
+        if (hasLoadingMoreEntry && !showLoadingMoreError) {
           slivers.add(_buildLoadingMoreIndicatorSliver(context));
         }
+
+        if (showLoadingMoreError) {
+          slivers.add(_buildLoadingMoreErrorSliver(context));
+        }
+
 
         return slivers;
       }
 
-      return _buildGridModeSlivers(context, entries, state.items);
+      final List<Widget> gridSlivers =
+      _buildGridModeSlivers(context, entries, state.items, showLoadingMoreError);
+      if (showLoadingMoreError) {
+        gridSlivers.add(_buildLoadingMoreErrorSliver(context));
+      }
+      return gridSlivers;
     }
 
     return const <Widget>[
@@ -1199,11 +1210,37 @@ class _HomeTabViewState extends State<HomeTabView> {
         // تم تحريك المؤشر داخل الحلقة الداخلية.
       }
     }
-    if (hasLoadingMoreEntry) {
+    if (hasLoadingMoreEntry && !showLoadingMoreError) {
       slivers.add(_buildLoadingMoreIndicatorSliver(context));
     }
     return slivers;
   }
+
+  Widget _buildLoadingMoreErrorSliver(BuildContext context) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              'تعذر تحميل المزيد، حاول مجددًا',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: () =>
+                  context.read<FetchItemSummaryCubit>().loadMoreSummaries(),
+              child: const Text('إعادة المحاولة'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 
 
   Widget _buildLoadingMoreIndicatorSliver(BuildContext context) {

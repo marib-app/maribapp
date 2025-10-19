@@ -201,6 +201,19 @@ class WifiNetworkController extends Controller
 
 
 
+                if ($walletAccount) {
+                    $walletFallback = $this->handleWalletConstraintFallback($walletAccount, $user, $networkData);
+
+                    if ($walletFallback instanceof WifiNetwork) {
+                        $network = $walletFallback;
+
+                        break;
+                    }
+
+                    if ($walletFallback instanceof JsonResponse) {
+                        return $walletFallback;
+                    }
+                }
 
 
                 if ($user && $this->isDuplicateWifiNetworkOwnerException($exception)) {
@@ -704,6 +717,30 @@ class WifiNetworkController extends Controller
 
 
 
+   private function handleWalletConstraintFallback(WalletAccount $walletAccount, ?\App\Models\User $user, array $networkData): JsonResponse|WifiNetwork|null
+    {
+        $existingNetwork = WifiNetwork::query()
+            ->where('wallet_id', $walletAccount->getKey())
+            ->latest('id')
+            ->first();
+
+        if (! $existingNetwork) {
+            return null;
+        }
+
+        if ($user && $existingNetwork->user_id !== $user->getKey()) {
+            return response()->json([
+                'message' => __('Unable to create the Wi-Fi network.'),
+                'errors' => [
+                    'wallet_id' => [__('This wallet is already linked to another Wi-Fi network.')],
+                ],
+            ], 422);
+        }
+
+        return $this->applyNetworkUpdates($existingNetwork, $networkData);
+    }
+
+
     private function resolveWalletAccount(?\App\Models\User $user, ?int $requestedWalletId = null): ?WalletAccount
     {
         if ($user === null) {
@@ -888,6 +925,7 @@ class WifiNetworkController extends Controller
         $driverCode = isset($errorInfo[1]) ? (int) $errorInfo[1] : null;
 
         $mentionsWallet = str_contains($message, 'wallet_id')
+            || str_contains($message, 'wallet account')
             || str_contains($message, 'wallet')
             || ($constraint !== '' && (str_contains($constraint, 'wallet_id') || str_contains($constraint, 'wallet')));
 
@@ -896,8 +934,22 @@ class WifiNetworkController extends Controller
         }
 
         $mentionsNetwork = str_contains($message, 'wifi_networks')
-            || ($constraint !== '' && str_contains($constraint, 'wifi_networks'));
+            || str_contains($message, 'wifi network')
+            || ($constraint !== '' && (str_contains($constraint, 'wifi_networks') || str_contains($constraint, 'wifi_network')));
 
+        if (! $mentionsNetwork) {
+            $mentionsNetwork = str_contains($message, 'into `wifi_networks`')
+                || str_contains($message, 'into "wifi_networks"')
+                || str_contains($message, 'table "wifi_networks"')
+                || str_contains($message, 'table `wifi_networks`');
+        }
+
+        if (! $mentionsNetwork) {
+            $mentionsNetwork = str_contains($message, "for key 'wallet_id'")
+                || str_contains($constraint, 'wallet_id');
+        }
+
+        
         if (! $mentionsNetwork) {
             return false;
         }

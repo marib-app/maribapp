@@ -16,17 +16,14 @@ import 'package:marib/data/model/currency_history.dart';
 import 'currency_filters.dart';
 import 'package:marib/data/model/currency_history.dart';
 
-
-
-
 part 'currency_state.dart';
 
 class CurrencyCubit extends Cubit<CurrencyState> {
   CurrencyCubit(
-      this._currencyRepository,
-      this._preferenceRepository,
-      this._metalRepository,
-      ) : super(CurrencyInitial());
+    this._currencyRepository,
+    this._preferenceRepository,
+    this._metalRepository,
+  ) : super(CurrencyInitial());
 
   final UserPreferenceRepository _preferenceRepository;
 
@@ -38,8 +35,6 @@ class CurrencyCubit extends Cubit<CurrencyState> {
   bool _showWatchlistOnly = false;
   AssetFilterType _assetFilter = AssetFilterType.all;
   RateChangeFilter _changeFilter = RateChangeFilter.all;
-
-
 
   Future<void> initialize() async {
     _preferences = await _preferenceRepository.loadLocalPreferences();
@@ -54,7 +49,7 @@ class CurrencyCubit extends Cubit<CurrencyState> {
     if (HiveUtils.isUserAuthenticated() &&
         await _preferenceRepository.hasPendingSync()) {
       final UserPreferences? remote =
-      await _preferenceRepository.updateRemotePreferences(_preferences);
+          await _preferenceRepository.updateRemotePreferences(_preferences);
       if (remote != null) {
         _preferences = remote;
       }
@@ -72,13 +67,12 @@ class CurrencyCubit extends Cubit<CurrencyState> {
     final String? requestedCode =
         governorateCode ?? _preferences.favoriteGovernorateCode;
 
-
     emit(CurrencyLoading());
     try {
       final CurrencyRatesBundle bundle = await _currencyRepository
           .getCurrencyRates(governorateCode: requestedCode);
-      final MetalRatesBundle metalBundle = await _metalRepository
-          .getMetalRates(governorateCode: requestedCode);
+      final MetalRatesBundle metalBundle =
+          await _metalRepository.getMetalRates(governorateCode: requestedCode);
 
       if (bundle.rates.isEmpty) {
         emit(CurrencyError('لا توجد بيانات متاحة'));
@@ -106,15 +100,13 @@ class CurrencyCubit extends Cubit<CurrencyState> {
       _notificationOptions = bundle.notificationOptions;
 
       String? resolvedGovernorateCode = requestedCode ??
-
-
           bundle.requestedGovernorateCode ??
           bundle.appliedGovernorate?.code ??
           bundle.requestedGovernorate?.code;
 
       if (persistSelection) {
-        final UserPreferences updated =
-        _preferences.copyWith(favoriteGovernorateCode: resolvedGovernorateCode);
+        final UserPreferences updated = _preferences.copyWith(
+            favoriteGovernorateCode: resolvedGovernorateCode);
         await _persistPreferences(updated, syncRemote: true);
       }
 
@@ -125,7 +117,7 @@ class CurrencyCubit extends Cubit<CurrencyState> {
           .toList(growable: false);
 
       Map<int, CurrencyHistoryBundle> historyMap =
-      <int, CurrencyHistoryBundle>{};
+          <int, CurrencyHistoryBundle>{};
       if (currencyIds.isNotEmpty) {
         historyMap = await _currencyRepository.getCurrencyHistory(
           currencyIds: currencyIds,
@@ -133,24 +125,21 @@ class CurrencyCubit extends Cubit<CurrencyState> {
         );
       }
 
-
       final List<CurrencyRate> currencyRates = bundle.rates
           .map(
             (CurrencyRate rate) => rate.copyWith(
-          isWatchlisted:
-          _preferences.currencyWatchlist.contains(rate.id),
-          history: historyMap[rate.id],
-        ),
-      )
+              isWatchlisted: _preferences.currencyWatchlist.contains(rate.id),
+              history: historyMap[rate.id],
+            ),
+          )
           .toList(growable: false);
 
       final List<MetalRate> metalRates = metalBundle.rates
           .map(
             (MetalRate rate) => rate.copyWith(
-          isWatchlisted:
-          _preferences.metalWatchlist.contains(rate.id),
-        ),
-      )
+              isWatchlisted: _preferences.metalWatchlist.contains(rate.id),
+            ),
+          )
           .toList(growable: false);
 
       emit(CurrencySuccess(
@@ -164,13 +153,12 @@ class CurrencyCubit extends Cubit<CurrencyState> {
         appliedGovernorate: bundle.appliedGovernorate,
         usedFallback: bundle.usedFallback || metalBundle.usedFallback,
         requestedGovernorateCode:
-        resolvedGovernorateCode ?? bundle.requestedGovernorateCode,
+            resolvedGovernorateCode ?? bundle.requestedGovernorateCode,
         preferences: _preferences,
         notificationOptions: _notificationOptions,
         showWatchlistOnly: _showWatchlistOnly,
         assetFilter: _assetFilter,
         changeFilter: _changeFilter,
-
       ));
     } catch (error) {
       emit(CurrencyError(error.toString()));
@@ -189,7 +177,8 @@ class CurrencyCubit extends Cubit<CurrencyState> {
 
     if (_showWatchlistOnly) {
       final Set<int> watchlist = _preferences.currencyWatchlist;
-      filtered = filtered.where((CurrencyRate rate) => watchlist.contains(rate.id));
+      filtered =
+          filtered.where((CurrencyRate rate) => watchlist.contains(rate.id));
     }
 
     return filtered.toList(growable: false);
@@ -203,7 +192,8 @@ class CurrencyCubit extends Cubit<CurrencyState> {
     }
     if (_showWatchlistOnly) {
       final Set<int> watchlist = _preferences.metalWatchlist;
-      filtered = filtered.where((MetalRate rate) => watchlist.contains(rate.id));
+      filtered =
+          filtered.where((MetalRate rate) => watchlist.contains(rate.id));
     }
 
     return filtered.toList(growable: false);
@@ -211,9 +201,9 @@ class CurrencyCubit extends Cubit<CurrencyState> {
 
   Future<void> changeGovernorate(String? governorateCode) async {
     final String? trimmed =
-    governorateCode != null && governorateCode.isNotEmpty
-        ? governorateCode
-        : null;
+        governorateCode != null && governorateCode.isNotEmpty
+            ? governorateCode
+            : null;
     await getCurrencyRates(
       governorateCode: trimmed,
       persistSelection: true,
@@ -225,8 +215,6 @@ class CurrencyCubit extends Cubit<CurrencyState> {
     await _preferenceRepository.saveWatchlistFilter(enabled);
     _refreshSuccessState();
   }
-
-
 
   Future<void> changeAssetFilter(AssetFilterType filter) async {
     if (_assetFilter == filter) {
@@ -245,8 +233,6 @@ class CurrencyCubit extends Cubit<CurrencyState> {
     await _preferenceRepository.saveChangeFilter(filter.storageValue);
     _refreshSuccessState();
   }
-
-
 
   Future<void> toggleCurrencyWatchlist(int currencyId) async {
     final Set<int> updated = Set<int>.from(_preferences.currencyWatchlist);
@@ -290,12 +276,10 @@ class CurrencyCubit extends Cubit<CurrencyState> {
     _refreshSuccessState();
   }
 
-
-
   Future<void> changeCurrencyNotificationRegion(
-      int currencyId,
-      String? governorateCode,
-      ) async {
+    int currencyId,
+    String? governorateCode,
+  ) async {
     if (currencyId <= 0) {
       return;
     }
@@ -305,9 +289,9 @@ class CurrencyCubit extends Cubit<CurrencyState> {
     );
 
     final String? normalizedCode =
-    governorateCode != null && governorateCode.trim().isNotEmpty
-        ? governorateCode.trim()
-        : null;
+        governorateCode != null && governorateCode.trim().isNotEmpty
+            ? governorateCode.trim()
+            : null;
 
     if (normalizedCode == null) {
       updatedRegions.remove(currencyId);
@@ -322,11 +306,10 @@ class CurrencyCubit extends Cubit<CurrencyState> {
     _refreshSuccessState();
   }
 
-
   Future<void> _persistPreferences(
-      UserPreferences preferences, {
-        required bool syncRemote,
-      }) async {
+    UserPreferences preferences, {
+    required bool syncRemote,
+  }) async {
     _preferences = preferences;
     final bool isAuthenticated = HiveUtils.isUserAuthenticated();
 
@@ -337,7 +320,7 @@ class CurrencyCubit extends Cubit<CurrencyState> {
 
     if (syncRemote && isAuthenticated) {
       final UserPreferences? remote =
-      await _preferenceRepository.updateRemotePreferences(_preferences);
+          await _preferenceRepository.updateRemotePreferences(_preferences);
       if (remote != null) {
         _preferences = remote;
       }
@@ -352,16 +335,14 @@ class CurrencyCubit extends Cubit<CurrencyState> {
 
     final List<CurrencyRate> updatedCurrency = currentState.currencyRates
         .map((CurrencyRate rate) => rate.copyWith(
-      isWatchlisted:
-      _preferences.currencyWatchlist.contains(rate.id),
-    ))
+              isWatchlisted: _preferences.currencyWatchlist.contains(rate.id),
+            ))
         .toList(growable: false);
 
     final List<MetalRate> updatedMetal = currentState.metalRates
         .map((MetalRate rate) => rate.copyWith(
-      isWatchlisted:
-      _preferences.metalWatchlist.contains(rate.id),
-    ))
+              isWatchlisted: _preferences.metalWatchlist.contains(rate.id),
+            ))
         .toList(growable: false);
 
     emit(CurrencySuccess(
@@ -383,9 +364,6 @@ class CurrencyCubit extends Cubit<CurrencyState> {
     ));
   }
 
-
-
-
   bool _matchesCurrencyChangeFilter(CurrencyRate rate) {
     final double? delta = _resolveCurrencyChange(rate);
     if (delta == null) {
@@ -393,7 +371,6 @@ class CurrencyCubit extends Cubit<CurrencyState> {
     }
 
     final double resolvedDelta = delta;
-
 
     switch (_changeFilter) {
       case RateChangeFilter.all:
@@ -431,7 +408,8 @@ class CurrencyCubit extends Cubit<CurrencyState> {
         if (summary.isNegativeTrend) {
           return -1;
         }
-        if (summary.changeSellPercent != null && summary.changeSellPercent != 0) {
+        if (summary.changeSellPercent != null &&
+            summary.changeSellPercent != 0) {
           return summary.changeSellPercent;
         }
         if (summary.changeSell != null && summary.changeSell != 0) {
@@ -453,8 +431,6 @@ class CurrencyCubit extends Cubit<CurrencyState> {
     return null;
   }
 
-
-
   double calculateConversion({
     required double amount,
     required String fromCurrency,
@@ -466,7 +442,7 @@ class CurrencyCubit extends Cubit<CurrencyState> {
           (state as CurrencySuccess).currencyRates;
 
       final CurrencyRate fromRate = currencyRates.firstWhere(
-            (CurrencyRate rate) => rate.currencyName == fromCurrency,
+        (CurrencyRate rate) => rate.currencyName == fromCurrency,
         orElse: () => CurrencyRate(
           id: 0,
           currencyName: fromCurrency,
@@ -476,7 +452,7 @@ class CurrencyCubit extends Cubit<CurrencyState> {
       );
 
       final CurrencyRate toRate = currencyRates.firstWhere(
-            (CurrencyRate rate) => rate.currencyName == toCurrency,
+        (CurrencyRate rate) => rate.currencyName == toCurrency,
         orElse: () => CurrencyRate(
           id: 0,
           currencyName: toCurrency,
@@ -486,14 +462,13 @@ class CurrencyCubit extends Cubit<CurrencyState> {
       );
 
       final double fromValue =
-      isBuying ? fromRate.sellPrice : fromRate.buyPrice;
-      final double toValue =
-      isBuying ? toRate.buyPrice : toRate.sellPrice;
+          isBuying ? fromRate.sellPrice : fromRate.buyPrice;
+      final double toValue = isBuying ? toRate.buyPrice : toRate.sellPrice;
 
       // Calculate the conversion
       return amount * (fromValue / toValue);
     }
-    
+
     return 0.0;
   }
 }

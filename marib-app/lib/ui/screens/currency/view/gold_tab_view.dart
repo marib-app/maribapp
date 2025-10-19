@@ -12,7 +12,6 @@ class GoldTabView extends StatelessWidget {
     required this.onShareRates,
     required this.brand,
     required this.onToggleMetalWatchlist,
-
   });
 
   final void Function(int) onToggleMetalWatchlist;
@@ -21,9 +20,7 @@ class GoldTabView extends StatelessWidget {
   final VoidCallback onShareRates;
   final Color brand;
 
-
   DateTime? get _lastUpdated => state.metalsLastUpdatedAt;
-
 
   String? _resolveSource() {
     String? pick(List<MetalRate> rates) {
@@ -39,16 +36,13 @@ class GoldTabView extends StatelessWidget {
     return pick(state.displayGoldRates) ?? pick(state.goldRates);
   }
 
-
-  bool _isDark(BuildContext c) =>
-      Theme
-          .of(c)
-          .brightness == Brightness.dark;
+  bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
 
   String get rateFallbackLabel => 'المتوسط الوطني';
 
   String _headerGovernorateLabel() {
-    final String? applied = state.appliedGovernorateName ?? state.requestedGovernorateName;
+    final String? applied =
+        state.appliedGovernorateName ?? state.requestedGovernorateName;
     if (applied != null && applied.isNotEmpty) {
       return state.usedFallback ? '$applied (افتراضي)' : applied;
     }
@@ -61,7 +55,8 @@ class GoldTabView extends StatelessWidget {
         state.appliedGovernorateName ??
         state.requestedGovernorateName;
 
-    final String base = (name == null || name.isEmpty) ? rateFallbackLabel : name;
+    final String base =
+        (name == null || name.isEmpty) ? rateFallbackLabel : name;
 
     if (rate.quoteUsedFallback || rate.quoteIsDefault) {
       return '$base (افتراضي)';
@@ -77,7 +72,6 @@ class GoldTabView extends StatelessWidget {
 
     return NumberFormat('#,##0.000').format(value);
   }
-
 
   // ——— دوال داخلية ———
   Widget _header(BuildContext context) {
@@ -97,8 +91,8 @@ class GoldTabView extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.workspace_premium_outlined, size: 18,
-              color: onBg.withOpacity(0.7)),
+          Icon(Icons.workspace_premium_outlined,
+              size: 18, color: onBg.withOpacity(0.7)),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -107,14 +101,10 @@ class GoldTabView extends StatelessWidget {
               children: [
                 Text(
                   'أسعار الذهب — $updatedLabel',
-                  style: Theme
-                      .of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(
-                    color: onBg.withOpacity(0.85),
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: onBg.withOpacity(0.85),
+                        fontWeight: FontWeight.w700,
+                      ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textDirection: TextDirection.rtl,
@@ -122,14 +112,10 @@ class GoldTabView extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   'المصدر: $source',
-                  style: Theme
-                      .of(context)
-                      .textTheme
-                      .labelLarge
-                      ?.copyWith(
-                    color: onBg.withOpacity(0.6),
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: onBg.withOpacity(0.6),
+                        fontWeight: FontWeight.w600,
+                      ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   textDirection: TextDirection.rtl,
@@ -137,14 +123,10 @@ class GoldTabView extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   'المحافظة المعروضة: ${_headerGovernorateLabel()}',
-                  style: Theme
-                      .of(context)
-                      .textTheme
-                      .labelSmall
-                      ?.copyWith(
-                    color: onBg.withOpacity(0.6),
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: onBg.withOpacity(0.6),
+                        fontWeight: FontWeight.w500,
+                      ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textDirection: TextDirection.rtl,
@@ -157,7 +139,6 @@ class GoldTabView extends StatelessWidget {
             icon: Icon(Icons.ios_share, size: 18, color: brand),
             splashRadius: 18,
             tooltip: 'مشاركة',
-
           ),
         ],
       ),
@@ -170,26 +151,16 @@ class GoldTabView extends StatelessWidget {
     final Color borderColor = onBg.withOpacity(0.25);
     final Color fallbackIconColor = Colors.amber[700] ?? Colors.amber;
 
-
-    final nameStyle = Theme
-        .of(context)
-        .textTheme
-        .titleSmall
-        ?.copyWith(
-      color: onBg,
-      fontWeight: FontWeight.w800,
-    ) ??
+    final nameStyle = Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: onBg,
+              fontWeight: FontWeight.w800,
+            ) ??
         TextStyle(color: onBg, fontWeight: FontWeight.w800, fontSize: 15.5);
-    final labelStyle = Theme
-        .of(context)
-        .textTheme
-        .labelSmall
-        ?.copyWith(
-      color: onBg.withOpacity(0.6),
-      fontWeight: FontWeight.w700,
-    ) ??
+    final labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: onBg.withOpacity(0.6),
+              fontWeight: FontWeight.w700,
+            ) ??
         TextStyle(color: onBg.withOpacity(0.6), fontWeight: FontWeight.w700);
-
 
     final star = IconButton(
       onPressed: () => onToggleMetalWatchlist(rate.id),
@@ -205,9 +176,7 @@ class GoldTabView extends StatelessWidget {
           : 'إضافة إلى قائمة المراقبة',
     );
 
-
-    Widget chip(String value, Color color) =>
-        Container(
+    Widget chip(String value, Color color) => Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
@@ -215,18 +184,13 @@ class GoldTabView extends StatelessWidget {
           ),
           child: Text(
             value,
-            style: Theme
-                .of(context)
-                .textTheme
-                .labelLarge
-                ?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0.2,
-            ),
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.2,
+                ),
           ),
         );
-
 
     Widget buildFallbackIcon() {
       return Container(
@@ -248,9 +212,10 @@ class GoldTabView extends StatelessWidget {
     Widget buildIcon() {
       final String? iconUrl = rate.iconUrl;
       if (iconUrl != null && iconUrl.isNotEmpty) {
-        final String semanticsLabel = rate.iconAlt != null && rate.iconAlt!.trim().isNotEmpty
-            ? rate.iconAlt!
-            : 'أيقونة ${rate.displayName}';
+        final String semanticsLabel =
+            rate.iconAlt != null && rate.iconAlt!.trim().isNotEmpty
+                ? rate.iconAlt!
+                : 'أيقونة ${rate.displayName}';
 
         return Container(
           width: 28,
@@ -290,7 +255,6 @@ class GoldTabView extends StatelessWidget {
       return buildFallbackIcon();
     }
 
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Row(
@@ -314,7 +278,8 @@ class GoldTabView extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   _governorateLabel(rate),
-                  style: labelStyle.copyWith(fontSize: 11, fontWeight: FontWeight.w600),
+                  style: labelStyle.copyWith(
+                      fontSize: 11, fontWeight: FontWeight.w600),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textDirection: TextDirection.rtl,
@@ -330,10 +295,8 @@ class GoldTabView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text('بيع', style: labelStyle),
-
               const SizedBox(height: 4),
               chip(_format(rate.sellPrice), Colors.orangeAccent),
-
             ],
           ),
           const SizedBox(width: 8),
@@ -341,17 +304,14 @@ class GoldTabView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text('شراء', style: labelStyle),
-
               const SizedBox(height: 4),
               chip(_format(rate.buyPrice), Colors.blueAccent),
-
             ],
           ),
         ],
       ),
     );
   }
-
 
   Widget _empty(BuildContext context) {
     final onBg = _isDark(context) ? Colors.white : Colors.black;
@@ -365,15 +325,10 @@ class GoldTabView extends StatelessWidget {
             state.showWatchlistOnly
                 ? 'لا توجد عناصر مراقبة في الذهب حالياً'
                 : 'لا توجد بيانات ذهب حالياً',
-
-            style: Theme
-                .of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(
-              color: onBg,
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: onBg,
+                  fontWeight: FontWeight.w700,
+                ),
           ),
         ],
       ),
@@ -386,7 +341,6 @@ class GoldTabView extends StatelessWidget {
     final rates = state.displayGoldRates;
 
     return CustomScrollView(
-
       slivers: [
         SliverToBoxAdapter(child: _header(context)),
         if (rates.isEmpty)
@@ -406,4 +360,3 @@ class GoldTabView extends StatelessWidget {
     );
   }
 }
-

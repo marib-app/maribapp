@@ -38,6 +38,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Collection;
+use Carbon\CarbonInterface;
 
 use RuntimeException;
 use Throwable;
@@ -1397,13 +1398,27 @@ class ManualPaymentRequestController extends Controller
 
     private function normalizeManualPaymentDate($value, bool $startOfDay): ?Carbon
     {
-        if (!is_string($value) || trim($value) === '') {
-            return null;
-        }
+        if ($value instanceof CarbonInterface) {
+            $date = $value->copy();
+        } elseif ($value instanceof \DateTimeInterface) {
+            $date = Carbon::instance($value);
+        } elseif (is_string($value)) {
+            $trimmed = trim($value);
 
-        try {
-            $date = Carbon::parse($value);
-        } catch (Throwable $throwable) {
+
+
+            if ($trimmed === '' || strtolower($trimmed) === 'null') {
+                return null;
+            }
+
+            try {
+                $date = Carbon::parse($trimmed);
+            } catch (Throwable) {
+                return null;
+            }
+        } else {
+
+
             return null;
         }
 
@@ -1726,7 +1741,7 @@ class ManualPaymentRequestController extends Controller
         $orderColumn = $allowedOrderColumns[$columnKey];
 
         return [$orderColumn['column'], $direction, (bool) $orderColumn['raw']];
-            
+
     }
 
 
@@ -1954,12 +1969,10 @@ class ManualPaymentRequestController extends Controller
         $startInput = $request->get('start_date', $request->get('date_from'));
         $endInput = $request->get('end_date', $request->get('date_to'));
 
-        $startDate = $startInput
-            ? Carbon::parse($startInput)->startOfDay()
-            : now()->subDays(30)->startOfDay();
-        $endDate = $endInput
-            ? Carbon::parse($endInput)->endOfDay()
-            : now()->endOfDay();
+        $startDate = $this->normalizeManualPaymentDate($startInput, true)
+            ?? now()->subDays(30)->startOfDay();
+        $endDate = $this->normalizeManualPaymentDate($endInput, false)
+            ?? now()->endOfDay();
 
         if ($startDate->greaterThan($endDate)) {
             [$startDate, $endDate] = [$endDate->copy()->startOfDay(), $startDate->copy()->endOfDay()];

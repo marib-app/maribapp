@@ -12,7 +12,6 @@ class SilverTabView extends StatelessWidget {
     required this.state,
     required this.brand,
     required this.onToggleMetalWatchlist,
-
   });
 
   final void Function(int) onToggleMetalWatchlist;
@@ -20,10 +19,7 @@ class SilverTabView extends StatelessWidget {
   final CurrencyViewState state;
   final Color brand;
 
-  bool _isDark(BuildContext c) =>
-      Theme
-          .of(c)
-          .brightness == Brightness.dark;
+  bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
 
   List<MetalRate> get _rates => state.displaySilverRates;
 
@@ -41,7 +37,6 @@ class SilverTabView extends StatelessWidget {
     return pick(state.displaySilverRates) ?? pick(state.silverRates);
   }
 
-
   String _format(double? value) {
     if (value == null) {
       return '—';
@@ -53,7 +48,8 @@ class SilverTabView extends StatelessWidget {
   String get rateFallbackLabel => 'المتوسط الوطني';
 
   String _headerGovernorateLabel() {
-    final String? applied = state.appliedGovernorateName ?? state.requestedGovernorateName;
+    final String? applied =
+        state.appliedGovernorateName ?? state.requestedGovernorateName;
     if (applied != null && applied.isNotEmpty) {
       return state.usedFallback ? '$applied (افتراضي)' : applied;
     }
@@ -66,7 +62,8 @@ class SilverTabView extends StatelessWidget {
         state.appliedGovernorateName ??
         state.requestedGovernorateName;
 
-    final String base = (name == null || name.isEmpty) ? rateFallbackLabel : name;
+    final String base =
+        (name == null || name.isEmpty) ? rateFallbackLabel : name;
 
     if (rate.quoteUsedFallback || rate.quoteIsDefault) {
       return '$base (افتراضي)';
@@ -101,14 +98,10 @@ class SilverTabView extends StatelessWidget {
               children: [
                 Text(
                   'أسعار الفضة — $updatedLabel',
-                  style: Theme
-                      .of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(
-                    color: onBg.withOpacity(0.85),
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: onBg.withOpacity(0.85),
+                        fontWeight: FontWeight.w700,
+                      ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textDirection: TextDirection.rtl,
@@ -116,35 +109,25 @@ class SilverTabView extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   'المصدر: $source',
-                  style: Theme
-                      .of(context)
-                      .textTheme
-                      .labelLarge
-                      ?.copyWith(
-                    color: onBg.withOpacity(0.6),
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: onBg.withOpacity(0.6),
+                        fontWeight: FontWeight.w600,
+                      ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   textDirection: TextDirection.rtl,
                 ),
-
                 const SizedBox(height: 2),
                 Text(
                   'المحافظة المعروضة: ${_headerGovernorateLabel()}',
-                  style: Theme
-                      .of(context)
-                      .textTheme
-                      .labelSmall
-                      ?.copyWith(
-                    color: onBg.withOpacity(0.6),
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: onBg.withOpacity(0.6),
+                        fontWeight: FontWeight.w500,
+                      ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textDirection: TextDirection.rtl,
                 ),
-
               ],
             ),
           ),
@@ -159,24 +142,15 @@ class SilverTabView extends StatelessWidget {
     final Color borderColor = onBg.withOpacity(0.25);
     final Color fallbackIconColor = Colors.grey[400] ?? Colors.grey;
 
-
-    final nameStyle = Theme
-        .of(context)
-        .textTheme
-        .titleSmall
-        ?.copyWith(
-      color: onBg,
-      fontWeight: FontWeight.w800,
-    ) ??
+    final nameStyle = Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: onBg,
+              fontWeight: FontWeight.w800,
+            ) ??
         TextStyle(color: onBg, fontWeight: FontWeight.w800, fontSize: 15.5);
-    final labelStyle = Theme
-        .of(context)
-        .textTheme
-        .labelSmall
-        ?.copyWith(
-      color: onBg.withOpacity(0.6),
-      fontWeight: FontWeight.w700,
-    ) ??
+    final labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: onBg.withOpacity(0.6),
+              fontWeight: FontWeight.w700,
+            ) ??
         TextStyle(color: onBg.withOpacity(0.6), fontWeight: FontWeight.w700);
 
     final star = IconButton(
@@ -193,9 +167,7 @@ class SilverTabView extends StatelessWidget {
           : 'إضافة إلى قائمة المراقبة',
     );
 
-
-    Widget chip(String value, Color color) =>
-        Container(
+    Widget chip(String value, Color color) => Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
@@ -203,15 +175,11 @@ class SilverTabView extends StatelessWidget {
           ),
           child: Text(
             value,
-            style: Theme
-                .of(context)
-                .textTheme
-                .labelLarge
-                ?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0.2,
-            ),
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.2,
+                ),
           ),
         );
 
@@ -220,7 +188,6 @@ class SilverTabView extends StatelessWidget {
       child: Row(
         children: [
           _buildIcon(rate, borderColor, fallbackIconColor),
-
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -237,7 +204,8 @@ class SilverTabView extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   _governorateLabel(rate),
-                  style: labelStyle.copyWith(fontSize: 11, fontWeight: FontWeight.w600),
+                  style: labelStyle.copyWith(
+                      fontSize: 11, fontWeight: FontWeight.w600),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textDirection: TextDirection.rtl,
@@ -282,14 +250,10 @@ class SilverTabView extends StatelessWidget {
             state.showWatchlistOnly
                 ? 'قائمة مراقبة الفضة فارغة حالياً'
                 : 'لا توجد بيانات فضة حالياً',
-            style: Theme
-                .of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(
-              color: onBg,
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: onBg,
+                  fontWeight: FontWeight.w700,
+                ),
           ),
         ],
       ),
@@ -302,19 +266,16 @@ class SilverTabView extends StatelessWidget {
     final rates = _rates;
 
     return CustomScrollView(
-
       slivers: [
         SliverToBoxAdapter(child: _header(context)),
         if (rates.isEmpty)
-
           SliverFillRemaining(hasScrollBody: false, child: _empty(context))
         else
           SliverList.separated(
             itemCount: rates.length,
             itemBuilder: (ctx, i) {
               final MetalRate rate = rates[i];
-              final bool isWatchlisted =
-              state.metalWatchlist.contains(rate.id);
+              final bool isWatchlisted = state.metalWatchlist.contains(rate.id);
               return _row(ctx, rate, isWatchlisted);
             },
             separatorBuilder: (_, __) => Divider(height: 1, color: divider),
@@ -322,7 +283,6 @@ class SilverTabView extends StatelessWidget {
       ],
     );
   }
-
 
   Widget _buildIcon(MetalRate rate, Color borderColor, Color fallbackColor) {
     final String? iconUrl = rate.iconUrl;
@@ -345,9 +305,10 @@ class SilverTabView extends StatelessWidget {
     }
 
     if (iconUrl != null && iconUrl.isNotEmpty) {
-      final String semanticsLabel = rate.iconAlt != null && rate.iconAlt!.trim().isNotEmpty
-          ? rate.iconAlt!
-          : 'أيقونة ${rate.displayName}';
+      final String semanticsLabel =
+          rate.iconAlt != null && rate.iconAlt!.trim().isNotEmpty
+              ? rate.iconAlt!
+              : 'أيقونة ${rate.displayName}';
 
       return Container(
         width: 28,
@@ -386,7 +347,6 @@ class SilverTabView extends StatelessWidget {
 
     return fallback();
   }
-
 }
 
 class _MiniTrendChart extends StatelessWidget {
@@ -402,10 +362,7 @@ class _MiniTrendChart extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: Theme
-                .of(context)
-                .dividerColor
-                .withOpacity(0.12),
+            color: Theme.of(context).dividerColor.withOpacity(0.12),
           ),
         ),
       );
@@ -415,9 +372,7 @@ class _MiniTrendChart extends StatelessWidget {
       painter: _MiniTrendChartPainter(
         values: values,
         color: color,
-        background: Theme
-            .of(context)
-            .canvasColor,
+        background: Theme.of(context).canvasColor,
       ),
     );
   }
@@ -440,17 +395,12 @@ class _MiniTrendChartPainter extends CustomPainter {
       return;
     }
 
-    final double minValue = values.reduce((double a, double b) =>
-    a < b
-        ? a
-        : b);
-    final double maxValue = values.reduce((double a, double b) =>
-    a > b
-        ? a
-        : b);
-    final double range = (maxValue - minValue).abs() < 0.0001
-        ? 1
-        : (maxValue - minValue);
+    final double minValue =
+        values.reduce((double a, double b) => a < b ? a : b);
+    final double maxValue =
+        values.reduce((double a, double b) => a > b ? a : b);
+    final double range =
+        (maxValue - minValue).abs() < 0.0001 ? 1 : (maxValue - minValue);
 
     final Path path = Path();
     for (int i = 0; i < values.length; i++) {
@@ -473,7 +423,8 @@ class _MiniTrendChartPainter extends CustomPainter {
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
 
     final Path areaPath = Path.from(path)
-      ..lineTo(size.width, size.height)..lineTo(0, size.height)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
       ..close();
 
     canvas.drawPath(areaPath, fillPaint);

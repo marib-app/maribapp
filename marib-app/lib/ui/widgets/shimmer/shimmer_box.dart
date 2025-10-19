@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:marib/ui/theme/theme.dart';
 
 class ShimmerBox extends StatelessWidget {
   const ShimmerBox({
@@ -22,16 +23,18 @@ class ShimmerBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     final Color resolvedBase =
-        baseColor ?? theme.colorScheme.surfaceVariant.withOpacity(0.35);
+        baseColor ?? colorScheme.shimmerBaseColor;
     final Color resolvedHighlight =
-        highlightColor ?? theme.colorScheme.surfaceVariant.withOpacity(0.15);
+        highlightColor ?? colorScheme.shimmerHighlightColor;
 
     final Widget child = Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: resolvedBase,
+        color: colorScheme.shimmerContentColor,
         borderRadius: borderRadius ?? BorderRadius.circular(12),
       ),
     );

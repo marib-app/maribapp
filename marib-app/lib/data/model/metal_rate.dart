@@ -19,8 +19,6 @@ class MetalRate {
   final List<MetalRateQuote> quotes;
   static const Object _sentinel = Object();
 
-
-
   const MetalRate({
     required this.id,
     required this.metalType,
@@ -43,6 +41,7 @@ class MetalRate {
   });
 
   bool get isGold => metalType.toLowerCase() == 'gold';
+
   bool get isSilver => metalType.toLowerCase() == 'silver';
 
   String get karatLabel {
@@ -50,7 +49,8 @@ class MetalRate {
       return isSilver ? 'فضة' : displayName;
     }
 
-    final value = karat! % 1 == 0 ? karat!.toInt().toString() : karat!.toStringAsFixed(2);
+    final value =
+        karat! % 1 == 0 ? karat!.toInt().toString() : karat!.toStringAsFixed(2);
     return 'عيار $value';
   }
 
@@ -73,8 +73,6 @@ class MetalRate {
     bool? quoteIsDefault,
     bool? quoteUsedFallback,
     List<MetalRateQuote>? quotes,
-
-
   }) {
     return MetalRate(
       id: id ?? this.id,
@@ -88,12 +86,10 @@ class MetalRate {
       updatedAt: updatedAt ?? this.updatedAt,
       createdAt: createdAt ?? this.createdAt,
       isWatchlisted: isWatchlisted ?? this.isWatchlisted,
-      iconUrl: identical(iconUrl, _sentinel)
-          ? this.iconUrl
-          : iconUrl as String?,
-      iconAlt: identical(iconAlt, _sentinel)
-          ? this.iconAlt
-          : iconAlt as String?,
+      iconUrl:
+          identical(iconUrl, _sentinel) ? this.iconUrl : iconUrl as String?,
+      iconAlt:
+          identical(iconAlt, _sentinel) ? this.iconAlt : iconAlt as String?,
       quoteGovernorateCode: quoteGovernorateCode ?? this.quoteGovernorateCode,
       quoteGovernorateName: quoteGovernorateName ?? this.quoteGovernorateName,
       quoteIsDefault: quoteIsDefault ?? this.quoteIsDefault,
@@ -139,8 +135,8 @@ class MetalRate {
       parsedQuotes = (json['quotes'] as List)
           .whereType<Map>()
           .map((dynamic entry) => MetalRateQuote.fromJson(
-        Map<String, dynamic>.from(entry as Map<dynamic, dynamic>),
-      ))
+                Map<String, dynamic>.from(entry as Map<dynamic, dynamic>),
+              ))
           .toList(growable: false);
     } else {
       parsedQuotes = const <MetalRateQuote>[];
@@ -150,7 +146,8 @@ class MetalRate {
       id: (json['id'] as num?)?.toInt() ?? 0,
       metalType: (json['metal_type'] ?? json['metalType'] ?? '').toString(),
       karat: _parseDouble(json['karat']),
-      displayName: (json['display_name'] ?? json['displayName'] ?? '').toString(),
+      displayName:
+          (json['display_name'] ?? json['displayName'] ?? '').toString(),
       buyPrice: _parseDouble(json['buy_price']),
       sellPrice: _parseDouble(json['sell_price']),
       source: json['source']?.toString(),
@@ -160,11 +157,10 @@ class MetalRate {
       isWatchlisted: json['is_watchlisted'] == true,
       iconUrl: parsedIconUrl,
       iconAlt: _parseString(json['icon_alt'] ?? json['iconAlt']),
-
-      quoteGovernorateCode:
-      _parseString(json['quote_governorate_code'] ?? json['quoteGovernorateCode']),
-      quoteGovernorateName:
-      _parseString(json['quote_governorate_name'] ?? json['quoteGovernorateName']),
+      quoteGovernorateCode: _parseString(
+          json['quote_governorate_code'] ?? json['quoteGovernorateCode']),
+      quoteGovernorateName: _parseString(
+          json['quote_governorate_name'] ?? json['quoteGovernorateName']),
       quoteIsDefault: json['quote_is_default'] == true,
       quoteUsedFallback: json['quote_used_fallback'] == true,
       quotes: parsedQuotes,
@@ -234,7 +230,6 @@ class MetalRateQuote {
       source: _parseString(json['source']),
       quotedAt: _parseDate(json['quoted_at']),
       isDefault: json['is_default'] == true,
-
     );
   }
 }

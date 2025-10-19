@@ -113,7 +113,6 @@ import 'package:marib/ui/screens/widgets/errors/error_screen.dart';
 import 'package:marib/ui/screens/classified_ads/other_services/wifi_cabin/wifi_cabin_screen.dart';
 import 'package:marib/ui/screens/classified_ads/other_services/other_services_screen.dart';
 import 'package:marib/ui/screens/classified_ads/service_add_more_details_screen.dart';
-import 'package:marib/ui/screens/classified_ads/service_requests_screen.dart';
 import 'package:marib/ui/screens/home_screen/section/section_screen/widgets/map_search/map_search_screen.dart'; // عدّل المسار حسب موقع الملف الفعلي
 import 'package:marib/ui/screens/wallet/wallet_screen.dart';
 import 'package:marib/ui/screens/cart/orders_list_screen.dart';
@@ -138,7 +137,6 @@ class Routes {
   static const servicePaymentPage = '/service-payment';
   static const myReviewsScreen = '/myReviewsScreenRoute';
   static const serviceAddMoreDetails = '/service-add-more-details';
-  static const String serviceRequestsPage  = '/service-requests';
   // خدمات اخرى
   static const otherServices = '/other-services';
   static const otherServicesWifiCabin = '/other-services/wifi-cabin';
@@ -377,10 +375,6 @@ class Routes {
 
       case Routes.serviceAddMoreDetails:
         return ServiceAddMoreDetailsScreen.route(routeSettings);
-
-      case Routes.serviceRequestsPage:
-        return ServiceRequestsScreen.route(routeSettings);
-
 
       case productManagementScreen:
         return ProductManagementScreen.route(routeSettings);

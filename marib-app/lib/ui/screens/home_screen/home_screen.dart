@@ -23,13 +23,10 @@ import 'package:marib/data/cubits/home/fetch_home_screen_cubit.dart';
 
 import 'package:marib/data/model/system_settings_model.dart';
 
-
 import 'package:marib/ui/screens/home/widgets/animated_search_bar.dart';
 import 'category_widget_offline.dart';
 import 'package:marib/utils/notification/awsomeNotification.dart';
 import 'package:marib/utils/notification/notification_service.dart';
-
-
 
 //import 'package:marib/ui/code/section/Computers/Computers.dart';
 import 'package:marib/ui/screens/sliders/slider_widget.dart';
@@ -39,17 +36,13 @@ import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/helper_utils.dart';
 //import 'package:marib/ui/code/section/sections/general_section_screen_paged.dart';
 
-
-
-
 import 'home_ui.dart'; // ← الواجهة المنفصلة
-
-
 
 const double sidePadding = 18;
 
 class HomeScreen extends StatefulWidget {
   final String? from;
+
   const HomeScreen({super.key, this.from});
 
   @override
@@ -109,7 +102,8 @@ class HomeScreenState extends State<HomeScreen>
 
   void initializeSettings() {
     final settingsCubit = context.read<FetchSystemSettingsCubit>();
-    if (!const bool.fromEnvironment("force-disable-demo-mode", defaultValue: false)) {
+    if (!const bool.fromEnvironment("force-disable-demo-mode",
+        defaultValue: false)) {
       Constant.isDemoModeOn =
           settingsCubit.getSetting(SystemSetting.demoMode) ?? false;
     }
@@ -187,15 +181,12 @@ class HomeScreenState extends State<HomeScreen>
     );
   }
 
-
-
   Widget _buildHomeContentSliver() {
     return BlocBuilder<FetchHomeScreenCubit, FetchHomeScreenState>(
       buildWhen: (prev, curr) => prev.runtimeType != curr.runtimeType,
       builder: (context, state) {
         if (state is FetchHomeScreenInitial ||
             state is FetchHomeScreenInProgress) {
-
           return SliverToBoxAdapter(child: homeShimmerEffect(context));
         }
 
@@ -309,14 +300,11 @@ class HomeScreenState extends State<HomeScreen>
     );
   }
 
-
-
   // =======================
   // تنقلات الأقسام (عزل الدوال يقلل إنشاء Closures داخل build)
   // =======================
   bool _navLockRealEstate = false;
   final Duration _navThrottle = const Duration(milliseconds: 700);
-
 
   Future<void> _goRealEstate() async {
     if (_navLockRealEstate) return;
@@ -353,17 +341,12 @@ class HomeScreenState extends State<HomeScreen>
 
       // 5) بعد الرجوع (اختياري): حدّث جزء من الصفحة لو لزم
       // context.read<FetchHomeScreenCubit>().refreshIfNeeded();
-
     } finally {
       // فك القفل بعد فترة قصيرة لمنع السبام وتحسين السلاسة
       await Future.delayed(_navThrottle);
       _navLockRealEstate = false;
     }
   }
-
-
-
-
 
   void _goTourism() {
     Navigator.pushNamed(
@@ -385,19 +368,14 @@ class HomeScreenState extends State<HomeScreen>
     });
   }
 
-
-
   void _goShein() {
     Navigator.pushNamed(context, Routes.section_screen, arguments: {
       'catID': "4",
       'catName': "productsShein".translate(context),
       "categoryIds": ["4"],
       "interfaceType": "shein_products",
-
     });
   }
-
-
 
   void _goComputerSection() {
     Navigator.pushNamed(context, Routes.section_screen, arguments: {
@@ -408,7 +386,6 @@ class HomeScreenState extends State<HomeScreen>
     });
   }
 
-
   void _goPublicAds() {
     Navigator.pushNamed(context, Routes.section_screen, arguments: {
       'catID': "6",
@@ -418,8 +395,6 @@ class HomeScreenState extends State<HomeScreen>
     });
   }
 }
-
-
 
 // =============
 // أذونات الإشعارات

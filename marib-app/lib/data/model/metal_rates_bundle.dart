@@ -21,8 +21,8 @@ class MetalRatesBundle {
     final List<dynamic>? data = payload['data'] as List<dynamic>?;
     final List<MetalRate> rates = data != null
         ? data
-        .map((entry) => MetalRate.fromJson(entry as Map<String, dynamic>))
-        .toList(growable: false)
+            .map((entry) => MetalRate.fromJson(entry as Map<String, dynamic>))
+            .toList(growable: false)
         : const [];
 
     DateTime? lastUpdated;
@@ -38,16 +38,17 @@ class MetalRatesBundle {
         lastUpdated = DateTime.tryParse(raw);
       }
 
-
-
-      final dynamic requestedCode = meta['requested_governorate_code'] ?? meta['requestedGovernorateCode'];
+      final dynamic requestedCode = meta['requested_governorate_code'] ??
+          meta['requestedGovernorateCode'];
       if (requestedCode is String && requestedCode.isNotEmpty) {
         requestedGovernorateCode = requestedCode;
       }
 
-      final dynamic appliedGovernorate = meta['applied_governorate'] ?? meta['appliedGovernorate'];
+      final dynamic appliedGovernorate =
+          meta['applied_governorate'] ?? meta['appliedGovernorate'];
       if (appliedGovernorate is Map) {
-        final map = Map<String, dynamic>.from(appliedGovernorate as Map<dynamic, dynamic>);
+        final map = Map<String, dynamic>.from(
+            appliedGovernorate as Map<dynamic, dynamic>);
         final String? code = map['code']?.toString();
         final String? name = map['name']?.toString();
         if (code != null && code.isNotEmpty) {
@@ -61,7 +62,6 @@ class MetalRatesBundle {
       if (meta['used_fallback'] == true || meta['usedFallback'] == true) {
         usedFallback = true;
       }
-
     }
 
     if (lastUpdated == null && rates.isNotEmpty) {

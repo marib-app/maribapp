@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:marib/utils/ui_utils.dart';
 export 'extensions/shimmer_colors.dart';
 
-
 ///Light Theme Colors
 ///This color format is different, isn't it? .You can use hex colors here also but you have to remove '#' symbol and add 0xff instead.
 const Color primaryColor_ = Color(0xFFF6F5FA);
@@ -104,8 +103,6 @@ extension ColorPrefs on ColorScheme {
       UiUtils.getAdaptiveTextColor(backgroundColor);
 
   Color get blackColor => Colors.black;
-
-
 }
 
 // 10pt: Smaller

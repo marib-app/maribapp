@@ -160,15 +160,65 @@ class PackagePaymentService
             $method = 'manual_bank';
             $data['payment_method'] = $method;
             $transaction = $this->findOrCreateTransaction($user, $package, $method, $idempotencyKey, $data);
+            $transactionCurrency = (string) ($transaction->currency ?? Arr::get($data, 'currency'));
 
 
-            $manualPaymentRequest = $this->manualPaymentRequestService->createOrUpdateForManualTransaction(
-                $user,
-                Package::class,
-                $package->getKey(),
-                $transaction,
-                $data
-            );
+            $rawBankName = Arr::get($data, 'bank.name');
+            if (! is_string($rawBankName) || trim($rawBankName) === '') {
+                $rawBankName = Arr::get($data, 'bank_name');
+            }
+
+            $bankName = is_string($rawBankName) ? trim($rawBankName) : null;
+            if ($bankName === '') {
+                $bankName = null;
+            }
+
+            $manualPaymentRequest = $transaction->manualPaymentRequest;
+            $manualBankIdentifier = Arr::get($data, 'manual_bank_id') ?? Arr::get($data, 'bank_id');
+            $manualRequestMeta = Arr::get($data, 'meta');
+            if (! is_array($manualRequestMeta)) {
+                $manualRequestMeta = [];
+            }
+
+            if (! $manualPaymentRequest) {
+                $manualRequestPayload = [
+                    'payment_gateway' => $method,
+                    'currency' => $transactionCurrency,
+                    'reference' => Arr::get($data, 'reference'),
+                    'note' => Arr::get($data, 'note'),
+                    'manual_bank_id' => $manualBankIdentifier,
+                    'receipt_path' => Arr::get($data, 'receipt_path'),
+                    'idempotency_key' => $transaction->idempotency_key ?? $idempotencyKey,
+                    'meta' => $manualRequestMeta,
+                ];
+
+                if ($bankName !== null) {
+                    $manualRequestPayload['bank'] = ['name' => $bankName];
+                }
+
+                $manualPaymentRequest = $this->manualPaymentRequestService->createFromTransaction(
+                    $user,
+                    Package::class,
+                    $package->getKey(),
+                    $transaction,
+                    $manualRequestPayload
+                );
+
+                $transaction->manual_payment_request_id = $manualPaymentRequest->getKey();
+                $transaction->save();
+            }
+
+            $shouldUpdateManualPaymentRequest = $manualBankIdentifier !== null && $manualBankIdentifier !== '';
+
+            if ($shouldUpdateManualPaymentRequest) {
+                $manualPaymentRequest = $this->manualPaymentRequestService->createOrUpdateForManualTransaction(
+                    $user,
+                    Package::class,
+                    $package->getKey(),
+                    $transaction,
+                    $data
+                );
+            }
 
             $manualMeta = array_filter(
                 Arr::only($data, ['note', 'reference', 'attachments', 'receipt_path']),
@@ -181,11 +231,14 @@ class PackagePaymentService
                 }
             );
 
-            if (!empty($data['bank_id']) || !empty($data['bank_account_id'])) {
-                $manualMeta['bank'] = array_filter([
-                    'id' => $data['bank_id'] ?? null,
-                    'account_id' => $data['bank_account_id'] ?? null,
-                ], static fn ($value) => $value !== null && $value !== '');
+            $manualMeta['bank'] = array_filter([
+                'id' => $manualBankIdentifier ?? null,
+                'account_id' => $data['bank_account_id'] ?? null,
+                'name' => $bankName,
+            ], static fn ($value) => $value !== null && $value !== '');
+
+            if ($manualMeta['bank'] === []) {
+                unset($manualMeta['bank']);
             }
 
 
@@ -194,11 +247,9 @@ class PackagePaymentService
                 $manualMeta['metadata'] = $metadata;
             }
 
+            $manualMeta['idempotency_key'] = $transaction->idempotency_key ?? $idempotencyKey;
 
-            $manualMeta['idempotency_key'] = $transaction->idempotency_key;
 
-
-            $transaction->manual_payment_request_id = $manualPaymentRequest->getKey();
             $transaction->payment_status = Arr::get($data, 'auto_confirm') ? 'succeed' : 'pending';
             $transaction->payment_id = $data['reference'] ?? $transaction->payment_id;
             $transaction->meta = array_replace_recursive($transaction->meta ?? [], [

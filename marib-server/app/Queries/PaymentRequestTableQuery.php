@@ -89,7 +89,8 @@ class PaymentRequestTableQuery
 
         $supportsPaymentGatewayName = Schema::hasTable('payment_transactions')
             && Schema::hasColumn('payment_transactions', 'payment_gateway_name');
-
+        $supportsPaymentTransactionMeta = Schema::hasTable('payment_transactions')
+            && Schema::hasColumn('payment_transactions', 'meta');
 
         $supportsOrderLookup = Schema::hasTable('orders');
         $supportsOrderDepartment = $supportsOrderLookup
@@ -144,7 +145,24 @@ class PaymentRequestTableQuery
             $sanitizedManualBankAccountName,
         ], static fn (?string $part): bool => $part !== null));
 
-        $manualBankNameParts = array_merge($manualBankLookupParts, $manualBankRequestParts);
+        $manualBankMetaExpressions = [];
+
+        if ($supportsPaymentTransactionMeta) {
+            $manualBankMetaExpressions = [
+                "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_bank.name'))",
+                "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual.bank.name'))",
+                "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.bank.name'))",
+                "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.bank_name'))",
+            ];
+
+            $manualBankMetaExpressions = array_map(
+                $sanitizeManualBankAlias,
+                $manualBankMetaExpressions
+            );
+        }
+
+        $manualBankNameParts = array_merge($manualBankLookupParts, $manualBankRequestParts, $manualBankMetaExpressions);
+
 
         $manualBankNameSelect = $manualBankNameParts === []
             ? 'NULL'
@@ -177,6 +195,15 @@ class PaymentRequestTableQuery
             $sanitizedManualBankAccountName,
             $supportsManualGatewayName ? $sanitizeManualBankAlias('mpr.gateway_name') : null,
         ], static fn (?string $part): bool => $part !== null));
+
+        if ($supportsPaymentTransactionMeta) {
+            $manualGatewayRequestParts[] = $sanitizeManualBankAlias("JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_bank.name'))");
+            $manualGatewayRequestParts[] = $sanitizeManualBankAlias("JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual.bank.name'))");
+            $manualGatewayRequestParts[] = $sanitizeManualBankAlias("JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.bank.name'))");
+            $manualGatewayRequestParts[] = $sanitizeManualBankAlias("JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.bank_name'))");
+        }
+
+
 
         $manualGatewayNameCoreParts = array_merge(
             
@@ -370,8 +397,21 @@ class PaymentRequestTableQuery
                 }
 
             )
-            ->whereNotNull('pt.manual_payment_request_id');
+            ->where(static function (Builder $query): void {
+                $query->whereNotNull('pt.manual_payment_request_id')
+                    ->orWhere(function (Builder $inner): void {
+                        $inner->whereNotNull('pt.payment_gateway')
+                            ->whereIn(
+                                DB::raw('LOWER(TRIM(pt.payment_gateway))'),
+                                array_map(
+                                    static fn (string $alias): string => strtolower(trim($alias)),
+                                    ManualPaymentRequest::manualBankGatewayAliases()
+                                )
+                            );
+                    });
+            });
 
+            
         $walletResolvedPayableIdExpression = 'COALESCE(mpr.payable_id, wt.id)';
         $walletResolvedPayableTypeExpression = "LOWER(NULLIF(mpr.payable_type, ''))";
 

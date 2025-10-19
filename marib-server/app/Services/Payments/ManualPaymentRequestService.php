@@ -196,6 +196,125 @@ class ManualPaymentRequestService
     }
 
 
+
+
+    /**
+     * Create a minimal manual payment request associated with a payment transaction.
+     *
+     * @param array<string, mixed> $data
+     */
+    public function createFromTransaction(
+        User $user,
+        string $payableType,
+        ?int $payableId,
+        PaymentTransaction $transaction,
+        array $data = []
+    ): ManualPaymentRequest {
+        $normalizeString = static function ($value): ?string {
+            if (! is_string($value)) {
+                return null;
+            }
+
+            $trimmed = trim($value);
+
+            return $trimmed === '' ? null : $trimmed;
+        };
+
+        $manualBankId = Arr::get($data, 'manual_bank_id');
+
+        if ($manualBankId === null) {
+            $manualBankId = Arr::get($data, 'bank_id');
+        }
+
+        if ($manualBankId !== null && $manualBankId !== '') {
+            $manualBankId = (int) $manualBankId;
+
+            if ($manualBankId <= 0) {
+                $manualBankId = null;
+            }
+        } else {
+            $manualBankId = null;
+        }
+
+        $bankName = $normalizeString(Arr::get($data, 'bank.name'))
+            ?? $normalizeString(Arr::get($data, 'bank_name'));
+
+        $currency = $normalizeString(Arr::get($data, 'currency'))
+            ?? $normalizeString($transaction->currency);
+
+        $reference = $normalizeString(Arr::get($data, 'reference'));
+        $userNote = $normalizeString(Arr::get($data, 'note'));
+        $receiptPath = $normalizeString(Arr::get($data, 'receipt_path'));
+
+        $meta = Arr::get($data, 'meta');
+
+        if (! is_array($meta)) {
+            $meta = [];
+        }
+
+        $gateway = $normalizeString(Arr::get($data, 'payment_gateway')) ?? 'manual_bank';
+        data_set($meta, 'gateway', $gateway);
+
+        if ($bankName !== null) {
+            data_set($meta, 'bank.name', $bankName);
+            data_set($meta, 'manual_bank.name', $bankName);
+        }
+
+        $idempotencyKey = $normalizeString(Arr::get($data, 'idempotency_key'))
+            ?? $normalizeString($transaction->idempotency_key);
+
+        if ($idempotencyKey !== null) {
+            data_set($meta, 'idempotency_key', $idempotencyKey);
+        }
+
+        data_set($meta, 'source', Arr::get($data, 'source', 'payments.manual'));
+
+        $transactionMeta = array_filter([
+            'id' => $transaction->getKey(),
+            'amount' => $transaction->amount !== null ? (float) $transaction->amount : null,
+            'currency' => $transaction->currency,
+            'status' => $transaction->payment_status,
+        ], static fn ($value) => $value !== null && $value !== '');
+
+        if ($transactionMeta !== []) {
+            data_set($meta, 'transaction', $transactionMeta);
+        }
+
+        $meta = $this->filterArrayRecursive($meta);
+
+        $department = $this->determineDepartmentForOrderPayable($payableType, $payableId, null);
+
+        $attributes = [
+            'user_id' => $user->getKey(),
+            'manual_bank_id' => $manualBankId,
+            'payable_type' => $payableType,
+            'payable_id' => $payableId,
+            'amount' => $transaction->amount,
+            'currency' => $currency ?? $transaction->currency,
+            'reference' => $reference,
+            'user_note' => $userNote,
+            'receipt_path' => $receiptPath,
+            'status' => ManualPaymentRequest::STATUS_PENDING,
+            'department' => $department,
+            'bank_name' => $bankName,
+            'meta' => $meta === [] ? null : $meta,
+        ];
+
+        return ManualPaymentRequest::create(array_filter(
+            $attributes,
+            static function ($value) {
+                if (is_array($value)) {
+                    return true;
+                }
+
+                return $value !== null && $value !== '';
+            }
+        ));
+    }
+
+
+
+
     private function determineDepartmentForOrderPayable(
         mixed $payableType,
         mixed $payableId,
@@ -324,5 +443,42 @@ class ManualPaymentRequestService
 
 
 
+
+
+
+    /**
+     * @param array<mixed> $values
+     * @return array<mixed>
+     */
+    private function filterArrayRecursive(array $values): array
+    {
+        $filtered = [];
+
+        foreach ($values as $key => $value) {
+            if (is_array($value)) {
+                $value = $this->filterArrayRecursive($value);
+
+                if ($value === []) {
+                    continue;
+                }
+
+                $filtered[$key] = $value;
+
+                continue;
+            }
+
+            if ($value === null) {
+                continue;
+            }
+
+            if (is_string($value) && trim($value) === '') {
+                continue;
+            }
+
+            $filtered[$key] = $value;
+        }
+
+        return $filtered;
+    }
 
 }

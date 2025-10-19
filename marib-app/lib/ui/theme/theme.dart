@@ -1,7 +1,8 @@
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:flutter/material.dart';
-
 import 'package:marib/utils/ui_utils.dart';
+export 'extensions/shimmer_colors.dart';
+
 
 ///Light Theme Colors
 ///This color format is different, isn't it? .You can use hex colors here also but you have to remove '#' symbol and add 0xff instead.
@@ -104,17 +105,7 @@ extension ColorPrefs on ColorScheme {
 
   Color get blackColor => Colors.black;
 
-  Color get shimmerBaseColor => brightness == Brightness.light
-      ? const Color.fromARGB(255, 225, 225, 225)
-      : const Color.fromARGB(255, 150, 150, 150);
 
-  Color get shimmerHighlightColor => brightness == Brightness.light
-      ? Colors.grey.shade100
-      : Colors.grey.shade300;
-
-  Color get shimmerContentColor => brightness == Brightness.light
-      ? Colors.white.withOpacity(0.85)
-      : Colors.white.withOpacity(0.7);
 }
 
 // 10pt: Smaller

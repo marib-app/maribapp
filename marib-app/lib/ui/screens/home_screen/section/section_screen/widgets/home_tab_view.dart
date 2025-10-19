@@ -1410,16 +1410,21 @@ class _HomeTabViewState extends State<HomeTabView> {
       final List<_HomeTabEntry> entries = _buildItemEntries(
         state.items,
         isLoadingMore: state.isLoadingMore,
-        isList: isList,
-        gridCrossAxisCount: _gridCrossAxisCount,
+
       );
 
       if (isList) {
-        return <Widget>[
+        final bool hasLoadingMoreEntry =
+            entries.isNotEmpty && entries.last.type == _HomeTabEntryType.loadingMore;
+        final List<_HomeTabEntry> listEntries = hasLoadingMoreEntry
+            ? entries.sublist(0, entries.length - 1)
+            : entries;
+
+        final List<Widget> slivers = <Widget>[
           SliverList(
             delegate: SliverChildBuilderDelegate(
               (context, index) {
-                final _HomeTabEntry entry = entries[index];
+                final _HomeTabEntry entry = listEntries[index];
                 switch (entry.type) {
                   case _HomeTabEntryType.item:
                     final ItemSummary summary = state.items[entry.itemIndex!];
@@ -1438,24 +1443,24 @@ class _HomeTabViewState extends State<HomeTabView> {
                     return const _KeepAliveNativeAd();
 
                   case _HomeTabEntryType.loadingMore:
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: List<Widget>.generate(
-                        entry.shimmerCount,
-                        (_) => _listShimmer(context),
-                      ),
-                    );
+                    return const SizedBox.shrink();
+
                 }
               },
-              childCount: entries.length,
+              childCount: listEntries.length,
               addAutomaticKeepAlives: false,
               addRepaintBoundaries: true,
             ),
           ),
         ];
+        if (hasLoadingMoreEntry) {
+          slivers.add(_buildLoadingMoreIndicatorSliver(context));
+        }
+
+        return slivers;
       }
 
-      return _buildGridModeSlivers(entries, state.items);
+      return _buildGridModeSlivers(context, entries, state.items);
     }
 
     return const <Widget>[
@@ -1470,8 +1475,7 @@ class _HomeTabViewState extends State<HomeTabView> {
   List<_HomeTabEntry> _buildItemEntries(
     List<ItemSummary> items, {
     required bool isLoadingMore,
-    required bool isList,
-    required int gridCrossAxisCount,
+
   }) {
     final List<_HomeTabEntry> entries = <_HomeTabEntry>[];
     final int step = max(1, Constant.nativeAdsAfterItemNumber);
@@ -1486,8 +1490,8 @@ class _HomeTabViewState extends State<HomeTabView> {
     }
 
     if (isLoadingMore) {
-      final int shimmerCount = isList ? 1 : max(1, gridCrossAxisCount);
-      entries.add(_HomeTabEntry.loadingMore(shimmerCount: shimmerCount));
+      entries.add(const _HomeTabEntry.loadingMore());
+
     }
 
     return entries;
@@ -1495,19 +1499,27 @@ class _HomeTabViewState extends State<HomeTabView> {
 
   List<Widget> _buildGridModeSlivers(
     List<_HomeTabEntry> entries,
-    List<ItemSummary> items,
+      BuildContext context,
+
+      List<ItemSummary> items,
   ) {
+    final bool hasLoadingMoreEntry =
+        entries.isNotEmpty && entries.last.type == _HomeTabEntryType.loadingMore;
+    final List<_HomeTabEntry> gridEntries = hasLoadingMoreEntry
+        ? entries.sublist(0, entries.length - 1)
+        : entries;
+
     final List<Widget> slivers = <Widget>[];
     int cursor = 0;
 
-    while (cursor < entries.length) {
-      final _HomeTabEntry entry = entries[cursor];
+    while (cursor < gridEntries.length) {
+      final _HomeTabEntry entry = gridEntries[cursor];
       switch (entry.type) {
         case _HomeTabEntryType.item:
           final List<int> batchIndices = <int>[];
-          while (cursor < entries.length &&
-              entries[cursor].type == _HomeTabEntryType.item) {
-            batchIndices.add(entries[cursor].itemIndex!);
+          while (cursor < gridEntries.length &&
+              gridEntries[cursor].type == _HomeTabEntryType.item) {
+            batchIndices.add(gridEntries[cursor].itemIndex!);
             cursor++;
           }
 
@@ -1561,26 +1573,7 @@ class _HomeTabViewState extends State<HomeTabView> {
           cursor++;
           break;
         case _HomeTabEntryType.loadingMore:
-          final int shimmerCount = max(1, entry.shimmerCount);
 
-          slivers.add(
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
-              sliver: SliverGrid(
-                gridDelegate:
-                    SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
-                  crossAxisCount: _gridCrossAxisCount,
-                  height: _gridCardHeight,
-                  mainAxisSpacing: 7,
-                  crossAxisSpacing: 10,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => _gridShimmer(context),
-                  childCount: shimmerCount,
-                ),
-              ),
-            ),
-          );
           cursor++;
           break;
       }
@@ -1589,8 +1582,29 @@ class _HomeTabViewState extends State<HomeTabView> {
         // تم تحريك المؤشر داخل الحلقة الداخلية.
       }
     }
-
+    if (hasLoadingMoreEntry) {
+      slivers.add(_buildLoadingMoreIndicatorSliver(context));
+    }
     return slivers;
+  }
+
+
+  Widget _buildLoadingMoreIndicatorSliver(BuildContext context) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Center(
+          child: SizedBox(
+            height: 32,
+            width: 32,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.6,
+              color: context.color.territoryColor,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   // ====== الشيمرات ======
@@ -1727,7 +1741,6 @@ class _HomeTabEntry {
   const _HomeTabEntry._(
     this.type, {
     this.itemIndex,
-    this.shimmerCount = 1,
   });
 
   const _HomeTabEntry.item(int index)
@@ -1741,15 +1754,13 @@ class _HomeTabEntry {
           _HomeTabEntryType.ad,
         );
 
-  const _HomeTabEntry.loadingMore({int shimmerCount = 1})
+  const _HomeTabEntry.loadingMore()
       : this._(
           _HomeTabEntryType.loadingMore,
-          shimmerCount: shimmerCount,
         );
 
   final _HomeTabEntryType type;
   final int? itemIndex;
-  final int shimmerCount;
 }
 
 Widget buildGridShimmer(BuildContext context) {

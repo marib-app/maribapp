@@ -380,6 +380,13 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
     context.read<CurrencyCubit>().changeNotificationFrequency(value);
   }
 
+
+  void _onNotificationRegionChanged(int currencyId, String? governorateCode) {
+    context
+        .read<CurrencyCubit>()
+        .changeCurrencyNotificationRegion(currencyId, governorateCode);
+  }
+
   void _onHistoryRangeSelected(int? currencyId, int days) {
     if (days != 1 && days != 3 && days != 7) {
       return;
@@ -451,6 +458,8 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
               showWatchlistOnly: false,
               selectedHistoryRanges:
               Map<int, int>.from(_selectedHistoryRanges),
+              currencyNotificationRegions: const <int, String>{},
+
               defaultHistoryRangeDays: _defaultHistoryRange,
             ),
             gold: GoldRatesState(
@@ -497,6 +506,8 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
               showWatchlistOnly: false,
               selectedHistoryRanges:
               Map<int, int>.from(_selectedHistoryRanges),
+              currencyNotificationRegions: const <int, String>{},
+
               defaultHistoryRangeDays: _defaultHistoryRange,
             ),
             gold: GoldRatesState(
@@ -610,6 +621,9 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
             showWatchlistOnly: state.showWatchlistOnly,
             selectedHistoryRanges:
             Map<int, int>.from(_selectedHistoryRanges),
+            currencyNotificationRegions:
+            Map<int, String>.from(state.preferences.currencyNotificationRegions),
+
             defaultHistoryRangeDays: _defaultHistoryRange,
           );
 
@@ -662,6 +676,8 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
               showWatchlistOnly: false,
               selectedHistoryRanges:
               Map<int, int>.from(_selectedHistoryRanges),
+              currencyNotificationRegions: const <int, String>{},
+
               defaultHistoryRangeDays: _defaultHistoryRange,
             ),
             gold: GoldRatesState(
@@ -712,6 +728,7 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
           onToggleMetalWatchlist: _onToggleMetalWatchlist,
           onNotificationFrequencyChanged: _onNotificationFrequencyChanged,
           onSelectHistoryRange: _onHistoryRangeSelected,
+          onNotificationRegionChanged: _onNotificationRegionChanged,
           onAssetFilterChanged: _onAssetFilterChanged,
           onDirectionFilterChanged: _onDirectionFilterChanged,
 

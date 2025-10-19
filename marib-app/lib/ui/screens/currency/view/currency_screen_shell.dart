@@ -45,6 +45,7 @@ class CurrencyScreenUI extends StatelessWidget {
     required this.onSelectHistoryRange,
     required this.onAssetFilterChanged,
     required this.onDirectionFilterChanged,
+    required this.onNotificationRegionChanged,
 
   });
 
@@ -64,6 +65,8 @@ class CurrencyScreenUI extends StatelessWidget {
   final VoidCallback onShareRates;
   final void Function(String?) onGovernorateChanged;
   final void Function(int? currencyId, int days) onSelectHistoryRange;
+  final void Function(int currencyId, String? regionCode)
+  onNotificationRegionChanged;
   final void Function(AssetFilterType) onAssetFilterChanged;
   final void Function(RateChangeFilter) onDirectionFilterChanged;
   final List<TextInputFormatter> amountInputFormatters;
@@ -476,6 +479,7 @@ class CurrencyScreenUI extends StatelessWidget {
               onToggleCurrencyWatchlist: onToggleCurrencyWatchlist,
               onToggleMetalWatchlist: onToggleMetalWatchlist,
               onSelectHistoryRange: onSelectHistoryRange,
+              onNotificationRegionChanged: onNotificationRegionChanged,
             ),
             ConvertTabView(
               state: state,

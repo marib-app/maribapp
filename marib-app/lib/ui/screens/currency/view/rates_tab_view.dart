@@ -18,6 +18,7 @@ class RatesTabView extends StatelessWidget {
 
     required this.onToggleCurrencyWatchlist,
     required this.onSelectHistoryRange,
+    required this.onNotificationRegionChanged,
 
 
   });
@@ -28,6 +29,10 @@ class RatesTabView extends StatelessWidget {
   final void Function(int) onToggleCurrencyWatchlist;
   final void Function(int? currencyId, int days) onSelectHistoryRange;
   final void Function(int) onToggleMetalWatchlist;
+  final void Function(int currencyId, String? regionCode)
+  onNotificationRegionChanged;
+
+
 
   bool _isDark(BuildContext c) =>
       Theme
@@ -189,7 +194,8 @@ class RatesTabView extends StatelessWidget {
 
         required int selectedRangeDays,
         required ValueChanged<int> onHistoryRangeSelected,
-
+        int? currencyId,
+        ValueChanged<String?>? onNotificationRegionChanged,
 
       }) {
     final theme = Theme.of(context);
@@ -375,6 +381,131 @@ class RatesTabView extends StatelessWidget {
         ? highLowFormatter.format(summary!.lowSell)
         : null;
 
+
+    const String notificationDefaultValue = '_default_';
+    final Map<int, String> notificationRegions =
+        state.currency.currencyNotificationRegions;
+    final String? storedNotification = currencyId == null
+        ? null
+        : notificationRegions[currencyId];
+    String notificationSelection = notificationDefaultValue;
+    if (storedNotification != null && storedNotification.trim().isNotEmpty) {
+      notificationSelection = storedNotification.trim();
+    }
+
+    Widget? buildNotificationSelector(double availableWidth) {
+      if (currencyId == null || onNotificationRegionChanged == null) {
+        return null;
+      }
+      if (state.governorates.isEmpty) {
+        return null;
+      }
+
+      final List<DropdownMenuItem<String>> items =
+      <DropdownMenuItem<String>>[
+        const DropdownMenuItem<String>(
+          value: notificationDefaultValue,
+          child: Text(
+            'المتوسط الافتراضي الوطني',
+            textDirection: TextDirection.rtl,
+          ),
+        ),
+      ];
+      final Set<String> addedValues = <String>{notificationDefaultValue};
+
+      for (final Map<String, String?> gov in state.governorates) {
+        final String? code = gov['code'];
+        if (code == null) continue;
+        final String trimmedCode = code.trim();
+        if (trimmedCode.isEmpty) continue;
+        if (!addedValues.add(trimmedCode)) {
+          continue;
+        }
+        final String? rawName = gov['name'];
+        final String name =
+        (rawName != null && rawName.trim().isNotEmpty)
+            ? rawName.trim()
+            : trimmedCode;
+        items.add(
+          DropdownMenuItem<String>(
+            value: trimmedCode,
+            child: Text(
+              name,
+              textDirection: TextDirection.rtl,
+            ),
+          ),
+        );
+      }
+
+      if (!addedValues.contains(notificationSelection)) {
+        addedValues.add(notificationSelection);
+        items.add(
+          DropdownMenuItem<String>(
+            value: notificationSelection,
+            child: Text(
+              notificationSelection,
+              textDirection: TextDirection.rtl,
+            ),
+          ),
+        );
+      }
+
+      final Color borderColor = onBg.withOpacity(0.12);
+      final Color iconColor = onBg.withOpacity(0.7);
+
+      return SizedBox(
+        width: availableWidth,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'تنبيهات المحافظة',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: onBg.withOpacity(0.6),
+                fontWeight: FontWeight.w700,
+              ) ??
+                  TextStyle(
+                    color: onBg.withOpacity(0.6),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+              textDirection: TextDirection.rtl,
+            ),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: borderColor),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  key: ValueKey<String>('notification-region-$currencyId'),
+                  value: notificationSelection,
+                  isExpanded: true,
+                  icon: Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: iconColor,
+                  ),
+                  onChanged: (String? value) {
+                    if (value == null) {
+                      return;
+                    }
+                    final String? normalized =
+                    value == notificationDefaultValue ? null : value;
+                    onNotificationRegionChanged(normalized);
+                  },
+                  items: items,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+
     Widget buildRangeSelector() {
       return _HistoryRangeChips(
         availableRanges: availableRanges,
@@ -415,6 +546,9 @@ class RatesTabView extends StatelessWidget {
           child: LayoutBuilder(
             builder: (BuildContext ctx, BoxConstraints cons) {
               final bool narrow = cons.maxWidth < 360;
+
+              final Widget? notificationSelector =
+              buildNotificationSelector(cons.maxWidth);
 
               final Widget leading = Row(
                 mainAxisSize: MainAxisSize.min,
@@ -590,6 +724,12 @@ class RatesTabView extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     priceContent,
+
+                    if (notificationSelector != null) ...[
+                      const SizedBox(height: 12),
+                      notificationSelector,
+                    ],
+
                     const SizedBox(height: 12),
                     buildHistorySection(cons.maxWidth),
                   ],
@@ -610,7 +750,18 @@ class RatesTabView extends StatelessWidget {
                         const SizedBox(width: 16),
                         SizedBox(
                           width: 160,
-                          child: buildHistorySection(160),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (notificationSelector != null) ...[
+                                notificationSelector,
+                                const SizedBox(height: 12),
+                              ],
+                              buildHistorySection(160),
+                            ],
+                          ),
+
                         ),
                       ],
                     ),
@@ -882,6 +1033,9 @@ class RatesTabView extends StatelessWidget {
             selectedRangeDays: state.historyRangeForCurrency(r.id),
             onHistoryRangeSelected: (int days) =>
                 onSelectHistoryRange(r.id, days),
+            currencyId: r.id,
+            onNotificationRegionChanged: (String? code) =>
+                onNotificationRegionChanged(r.id, code),
           );
         }
 
@@ -911,6 +1065,12 @@ class RatesTabView extends StatelessWidget {
           selectedRangeDays: state.historyRangeForCurrency(currencyId),
           onHistoryRangeSelected: (int days) =>
               onSelectHistoryRange(currencyId, days),
+
+          currencyId: currencyId,
+          onNotificationRegionChanged: currencyId == null
+              ? null
+              : (String? code) =>
+              onNotificationRegionChanged(currencyId, code),
         );
       },
     );

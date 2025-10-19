@@ -1,4 +1,80 @@
 import 'dart:async';
+import 'home_tab_view.dart';
+import 'package:marib/data/cubits/item/fetch_item_summary_cubit.dart';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/constant.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/ui/screens/settings/main_activity.dart';
+import 'package:flutter/services.dart';
+import 'package:marib/data/cubits/slider_cubit.dart';
+import 'dart:async';
+import 'dart:math';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:marib/app/routes.dart';
+import 'package:marib/data/cubits/home/fetch_home_screen_cubit.dart';
+import 'package:marib/data/model/item/item_model.dart';
+import 'package:marib/utils/responsiveSize.dart';
+import 'package:marib/utils/sliver_grid_delegate_with_fixed_cross_axis_count_and_fixed_height.dart';
+import 'package:marib/ui/screens/widgets/errors/no_data_found.dart';
+import 'package:marib/ui/screens/native_ads_screen.dart';
+import 'package:flutter/foundation.dart'; // لـ ValueListenable / ValueNotifier
+import 'package:marquee/marquee.dart';
+import 'package:marib/app/routes.dart';
+import 'package:marib/data/cubits/category/fetch_category_cubit.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:marib/data/model/category_model.dart';
+import 'package:marquee/marquee.dart';
+import 'package:marib/utils/screen_scaler.dart';
+import 'dart:math'; // للعمليات الرياضية مثل min
+import 'package:shimmer/shimmer.dart'; // تأثير التوهج أثناء تحميل الصور
+import 'package:cached_network_image/cached_network_image.dart';
+
+// Widgets
+
+import 'package:marib/ui/screens/sliders/slider_widget.dart';
+
+//import 'package:marib/ui/screens/home/section/Items_List/item/sections_adapter.dart';
+import 'package:marib/ui/screens/item/cards/horizontal_card.dart';
+import 'package:marib/ui/screens/native_ads_screen.dart';
+import 'package:marib/ui/screens/widgets/errors/no_data_found.dart';
+import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
+import 'package:marib/utils/sliver_grid_delegate_with_fixed_cross_axis_count_and_fixed_height.dart';
+
+
+import 'package:marib/data/model/item_filter_model.dart'; // ← مهم
+
+import 'package:marib/utils/screen_scaler.dart';
+
+///==============================================================================
+///                                   ItemsBodyBox
+///==============================================================================
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/constant.dart';
+import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/utils/ui_utils.dart';
+
+import 'package:marib/data/cubits/item/fetch_item_summary_cubit.dart';
+import 'package:marib/data/model/item_filter_model.dart';
+
+
+import 'package:shimmer/shimmer.dart';
+import 'package:marib/data/model/item_filter_model.dart';
+
+import 'package:shimmer/shimmer.dart';
+
+import 'package:marib/data/model/home/home_screen_section.dart';
+import 'package:marib/utils/slider_interface_mapper.dart';
+import 'package:marib/utils/featured_section_utils.dart';
+import 'package:flutter/rendering.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -328,7 +404,8 @@ class _ItemsListSheinState extends State<ItemsListShein> {
   }
 
   Widget _buildPinnedHeader(BuildContext context) {
-    final ColorSchemeExt palette = context.color;
+    final ColorScheme palette = context.color;
+
     final TextTheme textTheme = Theme.of(context).textTheme;
 
     return Container(
@@ -506,7 +583,7 @@ class _ItemsListSheinState extends State<ItemsListShein> {
   }
 
   Widget _buildBackButton(BuildContext context) {
-    final ColorSchemeExt palette = context.color;
+    final ColorScheme palette = context.color;
     final TextDirection direction = Directionality.of(context);
     final IconData icon =
     direction == TextDirection.rtl ? Icons.arrow_forward_ios_rounded : Icons.arrow_back_ios_new_rounded;
@@ -556,9 +633,23 @@ class _ItemsListSheinState extends State<ItemsListShein> {
   }
 
   Widget _buildStoryChip(BuildContext context, CategoryModel category) {
-    final ColorSchemeExt palette = context.color;
+    final ColorScheme palette = context.color;
     final bool isSelected = category.id?.toString() == _activeCategoryId;
     final String displayName = category.name ?? '';
+
+
+    final String? imageUrl = category.url?.trim();
+    final bool hasValidImage = imageUrl != null && imageUrl.isNotEmpty;
+
+    final Widget fallbackAvatar = Container(
+      color: palette.primaryColor,
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.category_rounded,
+        color: palette.textSecondaryColor,
+      ),
+    );
+
 
     return GestureDetector(
       onTap: () => _switchCategory(category),
@@ -588,18 +679,18 @@ class _ItemsListSheinState extends State<ItemsListShein> {
             child: Padding(
               padding: const EdgeInsets.all(4),
               child: ClipOval(
-                child: UiUtils.getImage(
-                  category.url,
-                  fit: BoxFit.cover,
-                  height: 56,
-                  width: 56,
-                  fallbackWidget: Container(
-                    color: palette.primaryColor,
-                    child: Icon(
-                      Icons.category_rounded,
-                      color: palette.textSecondaryColor,
-                    ),
-                  ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    fallbackAvatar,
+                    if (hasValidImage)
+                      UiUtils.getImage(
+                        imageUrl!,
+                        fit: BoxFit.cover,
+                        height: 56,
+                        width: 56,
+                      ),
+                  ],
                 ),
               ),
             ),
@@ -852,6 +943,9 @@ class _ItemsListSheinState extends State<ItemsListShein> {
   }
 
   Widget _buildFailureView(String message) {
+    final String displayMessage = message.trim();
+
+
     return CustomScrollView(
       controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
@@ -862,8 +956,22 @@ class _ItemsListSheinState extends State<ItemsListShein> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                SomethingWentWrong(error: message),
-                const SizedBox(height: 16),
+                const SomethingWentWrong(),
+                if (displayMessage.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    child: Text(
+                      displayMessage,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                const SizedBox(height: 8),
+
+
                 ElevatedButton(
                   onPressed: _fetchItems,
                   child: Text('retry'.translate(context)),
@@ -930,7 +1038,7 @@ class _ItemsListSheinState extends State<ItemsListShein> {
                   return Padding(
                     padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: HorizontalCard(item: item),
+                    child: ItemHorizontalCard(item: item),
                   );
                 },
                 childCount: items.length,

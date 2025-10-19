@@ -2026,7 +2026,18 @@ class ManualPaymentRequestController extends Controller
             mpr.bank_account_name
         )";
 
-        $channelColumn = "LOWER(NULLIF(TRIM(mpr.channel), ''))";
+        $manualGatewayKeyCandidates = [
+            "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.channel')), '')",
+            "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.payment_gateway')), '')",
+            "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.gateway')), '')",
+            "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.payment_method')), '')",
+            "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.method')), '')",
+            "CASE WHEN JSON_EXTRACT(mpr.meta, '$.wallet.transaction_id') IS NOT NULL THEN 'wallet' END",
+            "CASE WHEN LOWER(COALESCE(NULLIF(mpr.payable_type, ''), '')) LIKE '%wallet%' THEN 'wallet' END",
+        ];
+        $manualGatewayKeyExpression = 'LOWER(COALESCE(' . implode(', ', array_merge($manualGatewayKeyCandidates, ["'manual_bank'"])) . '))';
+        
+        
         $manualGatewayAliases = ManualPaymentRequest::manualBankGatewayAliases();
         $manualGatewayAliases[] = 'manual_bank';
         $manualGatewayAliases[] = 'manual_banks';
@@ -2045,13 +2056,13 @@ class ManualPaymentRequestController extends Controller
                 WHEN %s IN (%s) THEN 'cash'
                 ELSE 'manual_banks'
             END",
-            $channelColumn,
+            $manualGatewayKeyExpression,
             $this->quoteSqlList($manualGatewayAliases),
-            $channelColumn,
+            $manualGatewayKeyExpression,
             $this->quoteSqlList($eastGatewayAliases),
-            $channelColumn,
+            $manualGatewayKeyExpression,
             $this->quoteSqlList($walletGatewayAliases),
-            $channelColumn,
+            $manualGatewayKeyExpression,
             $this->quoteSqlList($cashGatewayAliases),
             $transactionGatewayColumn,
             $this->quoteSqlList($eastGatewayAliases),

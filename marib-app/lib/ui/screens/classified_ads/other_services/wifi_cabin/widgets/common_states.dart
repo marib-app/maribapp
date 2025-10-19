@@ -77,27 +77,39 @@ class WifiErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = context.color;
 
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.wifi_off, size: 48, color: color.error),
+    return LayoutBuilder(
+        builder: (context, constraints) {
+          final content = Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+              Icon(Icons.wifi_off, size: 48, color: color.error),
           const SizedBox(height: 12),
           Text(
-            message,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: color.textDefaultColor,
-              fontSize: 14,
-            ),
+          message,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+          color: color.textDefaultColor,
+          fontSize: 14,
           ),
           const SizedBox(height: 12),
           ElevatedButton(
-            onPressed: onRetry,
-            child: const Text('إعادة المحاولة'),
+          onPressed: onRetry,
+          child: const Text('إعادة المحاولة'),
           ),
-        ],
-      ),
+          ],
+          );
+
+          return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          physics: const BouncingScrollPhysics(),
+          child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(child: content),
+            ),
+          ),
+          );
+          },
     );
   }
 }
@@ -120,38 +132,50 @@ class WifiEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = context.color;
 
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.wifi_find, size: 52, color: color.secondaryColor),
+    return LayoutBuilder(
+        builder: (context, constraints) {
+          final content = Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+              Icon(Icons.wifi_find, size: 52, color: color.secondaryColor),
           const SizedBox(height: 12),
           Text(
-            title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: color.textDefaultColor,
-              fontWeight: FontWeight.w600,
-              fontSize: 15,
-            ),
+          title,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+          color: color.textDefaultColor,
+          fontWeight: FontWeight.w600,
+          fontSize: 15,
           ),
+            ),
           const SizedBox(height: 8),
           Text(
-            subtitle,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: color.textDefaultColor.withOpacity(0.75),
-              fontSize: 13,
+          subtitle,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+          color: color.textDefaultColor.withOpacity(0.75),
+          fontSize: 13,
+          ),
+              const SizedBox(height: 12),
+              if (onAction != null)
+                OutlinedButton(
+                  onPressed: onAction,
+                  child: Text(actionLabel ?? 'إعادة المحاولة'),
+                ),
+              ],
+          );
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            physics: const BouncingScrollPhysics(),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Center(child: content),
             ),
           ),
-          const SizedBox(height: 12),
-          if (onAction != null)
-            OutlinedButton(
-              onPressed: onAction,
-              child: Text(actionLabel ?? 'إعادة المحاولة'),
-            ),
-        ],
-      ),
+          );
+        },
     );
   }
 }

@@ -194,9 +194,33 @@ class PaymentRequestTableQuery
         $manualGatewayNameParts[] = "'Manual Banks'";
         $manualGatewayNameSelect = 'COALESCE(' . implode(', ', $manualGatewayNameParts) . ')';
 
-        $manualRequestGatewayNameParts = $manualGatewayNameCoreParts;
-        $manualRequestGatewayNameParts[] = "'Manual Banks'";
-        $manualRequestGatewayNameSelect = 'COALESCE(' . implode(', ', $manualRequestGatewayNameParts) . ')';
+        if ($manualGatewayNameCoreParts === []) {
+            $manualRequestGatewayCustomNameSelect = 'NULL';
+        } else {
+            $manualRequestGatewayCustomNameSelect = sprintf(
+                "NULLIF(TRIM(COALESCE(%s)), '')",
+                implode(', ', $manualGatewayNameCoreParts)
+            );
+        }
+
+        $manualRequestChannelExpression = self::channelExpressionFromGateway(
+            $manualGatewayKeyExpression,
+            'mpr.payable_type'
+        );
+
+        $manualRequestGatewayNameSelect = 'CASE'
+            . ($manualRequestGatewayCustomNameSelect !== 'NULL'
+                ? " WHEN {$manualRequestGatewayCustomNameSelect} IS NOT NULL THEN {$manualRequestGatewayCustomNameSelect}"
+                : '')
+            . " WHEN ({$manualRequestChannelExpression}) = 'wallet' THEN 'Wallet'"
+            . " WHEN ({$manualRequestChannelExpression}) = 'east_yemen_bank' THEN 'East Yemen Bank'"
+            . " WHEN ({$manualRequestChannelExpression}) = 'cash' THEN 'Cash'"
+            . " WHEN ({$manualGatewayKeyExpression}) = 'wallet' THEN 'Wallet'"
+            . " WHEN ({$manualGatewayKeyExpression}) = 'east_yemen_bank' THEN 'East Yemen Bank'"
+            . " WHEN ({$manualGatewayKeyExpression}) = 'cash' THEN 'Cash'"
+            . " ELSE 'Manual Banks'"
+            . ' END';
+
 
         $walletPaymentGatewayNameParts = [];
         if ($supportsPaymentGatewayName) {

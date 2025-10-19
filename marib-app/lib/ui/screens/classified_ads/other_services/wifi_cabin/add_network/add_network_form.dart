@@ -10,6 +10,7 @@ import 'package:marib/data/wifi/wifi_repository.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
+import 'package:flutter/services.dart';
 
 abstract class WifiAddNetworkFormState<T extends StatefulWidget>
     extends State<T> {
@@ -89,9 +90,14 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
         TextField(
           controller: _contactController,
           enabled: !_isSubmitting,
+
+          keyboardType: TextInputType.phone,
+          inputFormatters: const <TextInputFormatter>[
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
+          ],
           decoration: const InputDecoration(
             labelText: 'وسيلة التواصل',
-            hintText: 'مثال: 777123456 أو @account',
+            hintText: 'أدخل رقمًا واتساب للتواصل ( خاص بالادارة لن يراه المستخدمين )',
           ),
         ),
         const SizedBox(height: 16),

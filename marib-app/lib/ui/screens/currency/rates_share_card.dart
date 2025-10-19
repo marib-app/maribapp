@@ -177,7 +177,7 @@ class _RatesShareContent extends StatelessWidget {
         sections.add(_ShareRateRow(
           title: rate.displayName,
           subtitle:
-          'شراء: ${numberFormat.format(rate.buyPrice)} | بيع: ${numberFormat.format(rate.sellPrice)}',
+          '${_metalGovernorateLabel(rate)} — شراء: ${_formatPrice(rate.buyPrice, numberFormat)} | بيع: ${_formatPrice(rate.sellPrice, numberFormat)}',
           source: 'المصدر: ${_normalizeSource(rate.source)}',
           textColor: textColor,
           bodyStyle: bodyStyle,
@@ -254,6 +254,25 @@ class _RatesShareContent extends StatelessWidget {
     }
     return raw.trim();
   }
+
+
+
+
+  String _metalGovernorateLabel(MetalRate rate) {
+    final String? name = rate.quoteGovernorateName ??
+        viewState.appliedGovernorateName ??
+        viewState.requestedGovernorateName;
+
+    final String base = (name == null || name.isEmpty) ? 'المتوسط الوطني' : name;
+
+    if (rate.quoteUsedFallback || rate.quoteIsDefault) {
+      return '$base (افتراضي)';
+    }
+
+    return base;
+  }
+
+
 
   String _formatPrice(dynamic value, NumberFormat numberFormat) {
     if (value is num) {

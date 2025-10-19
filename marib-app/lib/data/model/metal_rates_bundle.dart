@@ -3,10 +3,18 @@ import 'package:marib/data/model/metal_rate.dart';
 class MetalRatesBundle {
   final List<MetalRate> rates;
   final DateTime? lastUpdatedAt;
+  final String? requestedGovernorateCode;
+  final String? appliedGovernorateCode;
+  final String? appliedGovernorateName;
+  final bool usedFallback;
 
   const MetalRatesBundle({
     required this.rates,
     required this.lastUpdatedAt,
+    this.requestedGovernorateCode,
+    this.appliedGovernorateCode,
+    this.appliedGovernorateName,
+    this.usedFallback = false,
   });
 
   factory MetalRatesBundle.fromApi(Map<String, dynamic> payload) {
@@ -18,12 +26,42 @@ class MetalRatesBundle {
         : const [];
 
     DateTime? lastUpdated;
+    String? requestedGovernorateCode;
+    String? appliedGovernorateCode;
+    String? appliedGovernorateName;
+    bool usedFallback = false;
+
     final dynamic meta = payload['meta'];
     if (meta is Map<String, dynamic>) {
       final dynamic raw = meta['last_updated_at'] ?? meta['lastUpdatedAt'];
       if (raw is String && raw.isNotEmpty) {
         lastUpdated = DateTime.tryParse(raw);
       }
+
+
+
+      final dynamic requestedCode = meta['requested_governorate_code'] ?? meta['requestedGovernorateCode'];
+      if (requestedCode is String && requestedCode.isNotEmpty) {
+        requestedGovernorateCode = requestedCode;
+      }
+
+      final dynamic appliedGovernorate = meta['applied_governorate'] ?? meta['appliedGovernorate'];
+      if (appliedGovernorate is Map) {
+        final map = Map<String, dynamic>.from(appliedGovernorate as Map<dynamic, dynamic>);
+        final String? code = map['code']?.toString();
+        final String? name = map['name']?.toString();
+        if (code != null && code.isNotEmpty) {
+          appliedGovernorateCode = code;
+        }
+        if (name != null && name.isNotEmpty) {
+          appliedGovernorateName = name;
+        }
+      }
+
+      if (meta['used_fallback'] == true || meta['usedFallback'] == true) {
+        usedFallback = true;
+      }
+
     }
 
     if (lastUpdated == null && rates.isNotEmpty) {
@@ -35,7 +73,13 @@ class MetalRatesBundle {
         return current.isAfter(next) ? current : next;
       });
     }
-
-    return MetalRatesBundle(rates: rates, lastUpdatedAt: lastUpdated);
+    return MetalRatesBundle(
+      rates: rates,
+      lastUpdatedAt: lastUpdated,
+      requestedGovernorateCode: requestedGovernorateCode,
+      appliedGovernorateCode: appliedGovernorateCode,
+      appliedGovernorateName: appliedGovernorateName,
+      usedFallback: usedFallback,
+    );
   }
 }

@@ -45,7 +45,39 @@ class GoldTabView extends StatelessWidget {
           .of(c)
           .brightness == Brightness.dark;
 
-  String _format(double value) => NumberFormat('#,##0.000').format(value);
+  String get rateFallbackLabel => 'المتوسط الوطني';
+
+  String _headerGovernorateLabel() {
+    final String? applied = state.appliedGovernorateName ?? state.requestedGovernorateName;
+    if (applied != null && applied.isNotEmpty) {
+      return state.usedFallback ? '$applied (افتراضي)' : applied;
+    }
+
+    return rateFallbackLabel;
+  }
+
+  String _governorateLabel(MetalRate rate) {
+    final String? name = rate.quoteGovernorateName ??
+        state.appliedGovernorateName ??
+        state.requestedGovernorateName;
+
+    final String base = (name == null || name.isEmpty) ? rateFallbackLabel : name;
+
+    if (rate.quoteUsedFallback || rate.quoteIsDefault) {
+      return '$base (افتراضي)';
+    }
+
+    return base;
+  }
+
+  String _format(double? value) {
+    if (value == null) {
+      return '—';
+    }
+
+    return NumberFormat('#,##0.000').format(value);
+  }
+
 
   // ——— دوال داخلية ———
   Widget _header(BuildContext context) {
@@ -99,6 +131,21 @@ class GoldTabView extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textDirection: TextDirection.rtl,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'المحافظة المعروضة: ${_headerGovernorateLabel()}',
+                  style: Theme
+                      .of(context)
+                      .textTheme
+                      .labelSmall
+                      ?.copyWith(
+                    color: onBg.withOpacity(0.6),
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textDirection: TextDirection.rtl,
                 ),
@@ -253,12 +300,26 @@ class GoldTabView extends StatelessWidget {
           const SizedBox(width: 10),
 
           Expanded(
-            child: Text(
-              rate.displayName,
-              style: nameStyle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textDirection: TextDirection.rtl,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  rate.displayName,
+                  style: nameStyle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textDirection: TextDirection.rtl,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _governorateLabel(rate),
+                  style: labelStyle.copyWith(fontSize: 11, fontWeight: FontWeight.w600),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textDirection: TextDirection.rtl,
+                ),
+              ],
             ),
           ),
           star,

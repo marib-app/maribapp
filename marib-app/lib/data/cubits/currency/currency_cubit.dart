@@ -77,8 +77,8 @@ class CurrencyCubit extends Cubit<CurrencyState> {
     try {
       final CurrencyRatesBundle bundle = await _currencyRepository
           .getCurrencyRates(governorateCode: requestedCode);
-      final MetalRatesBundle metalBundle = await _metalRepository.getMetalRates();
-
+      final MetalRatesBundle metalBundle = await _metalRepository
+          .getMetalRates(governorateCode: requestedCode);
 
       if (bundle.rates.isEmpty) {
         emit(CurrencyError('لا توجد بيانات متاحة'));
@@ -162,7 +162,7 @@ class CurrencyCubit extends Cubit<CurrencyState> {
         governorates: bundle.governorates,
         requestedGovernorate: bundle.requestedGovernorate,
         appliedGovernorate: bundle.appliedGovernorate,
-        usedFallback: bundle.usedFallback,
+        usedFallback: bundle.usedFallback || metalBundle.usedFallback,
         requestedGovernorateCode:
         resolvedGovernorateCode ?? bundle.requestedGovernorateCode,
         preferences: _preferences,

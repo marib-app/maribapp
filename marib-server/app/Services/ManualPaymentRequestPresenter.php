@@ -55,13 +55,8 @@ class ManualPaymentRequestPresenter
 
     public function presentationData(ManualPaymentRequest $manualPaymentRequest): array
     {
-        $paymentTransaction = $manualPaymentRequest->paymentTransaction;
-        $paymentGatewayKey = $paymentTransaction?->payment_gateway ?? $manualPaymentRequest->channel;
-        $paymentGatewayCanonical = ManualPaymentRequest::canonicalGateway($paymentGatewayKey);
-
-        if ($paymentGatewayCanonical === 'manual_bank') {
-            $paymentGatewayCanonical = 'manual_banks';
-        }
+        $paymentGatewayCanonical = $this->resolveManualPaymentGatewayKey($manualPaymentRequest);
+        $paymentGatewayKey = $paymentGatewayCanonical;
 
         $manualBankName = $this->resolveManualBankName($manualPaymentRequest);
         $paymentGatewayLabel = $this->paymentRequestChannelLabel(

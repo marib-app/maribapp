@@ -150,6 +150,34 @@ trait ManualPaymentPresentationHelpers
         };
     }
 
+
+    protected function resolveManualPaymentGatewayKey(ManualPaymentRequest $manualPaymentRequest): string
+    {
+        $gateway = $manualPaymentRequest->paymentTransaction?->payment_gateway;
+        $normalized = ManualPaymentRequest::canonicalGateway($gateway);
+
+        if ($normalized !== null) {
+            return $normalized === 'manual_bank' ? 'manual_banks' : $normalized;
+        }
+
+        $metaGateway = ManualPaymentRequest::canonicalGateway(data_get($manualPaymentRequest->meta, 'gateway'));
+
+        if ($metaGateway !== null) {
+            return $metaGateway === 'manual_bank' ? 'manual_banks' : $metaGateway;
+        }
+
+        if (
+            $manualPaymentRequest->isWalletTopUp()
+            || data_get($manualPaymentRequest->meta, 'wallet.transaction_id')
+        ) {
+            return 'wallet';
+        }
+
+        return 'manual_banks';
+    }
+
+
+
     protected function normalizePaymentRequestChannel($channel): ?string
     {
         if (! is_string($channel)) {

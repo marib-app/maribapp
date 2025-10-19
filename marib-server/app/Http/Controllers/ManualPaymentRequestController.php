@@ -422,13 +422,8 @@ class ManualPaymentRequestController extends Controller
     private function manualPaymentRequestPresentationData(ManualPaymentRequest $manualPaymentRequest): array
     {
 
-        $paymentTransaction = $manualPaymentRequest->paymentTransaction;
-        $paymentGatewayKey = $paymentTransaction?->payment_gateway ?? $manualPaymentRequest->channel;
-        $paymentGatewayCanonical = ManualPaymentRequest::canonicalGateway($paymentGatewayKey);
-
-        if ($paymentGatewayCanonical === 'manual_bank') {
-            $paymentGatewayCanonical = 'manual_banks';
-        }
+        $paymentGatewayCanonical = $this->resolveManualPaymentGatewayKey($manualPaymentRequest);
+        $paymentGatewayKey = $paymentGatewayCanonical;
 
         $manualBankName = $this->resolveManualBankName($manualPaymentRequest);
         $paymentGatewayLabel = $this->paymentRequestChannelLabel(
@@ -1604,38 +1599,7 @@ class ManualPaymentRequestController extends Controller
     
     }
 
-    private function resolveManualPaymentGatewayKey(ManualPaymentRequest $manualPaymentRequest): string
-    {
-        $gateway = $manualPaymentRequest->paymentTransaction?->payment_gateway;
-        $normalized = ManualPaymentRequest::canonicalGateway($gateway);
 
-        if ($normalized !== null) {
-            return $normalized === 'manual_bank' ? 'manual_banks' : $normalized;
-
-        }
-
-        $metaGateway = ManualPaymentRequest::canonicalGateway(data_get($manualPaymentRequest->meta, 'gateway'));
-
-        if ($metaGateway !== null) {
-            return $metaGateway === 'manual_bank' ? 'manual_banks' : $metaGateway;
-
-        }
-
-        if (
-            $manualPaymentRequest->isWalletTopUp()
-            || data_get($manualPaymentRequest->meta, 'wallet.transaction_id')
-        ) {
-            return 'wallet';
-        }
-
-        return 'manual_banks';
-
-        
-    }
-
-
-
-    
     private function manualPaymentPayableLabel(ManualPaymentRequest $manualPaymentRequest): string
     {
         if ($manualPaymentRequest->isWalletTopUp()) {

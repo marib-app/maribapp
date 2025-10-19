@@ -518,10 +518,31 @@ class PaymentController extends Controller
             );
 
             if (! empty($validated['manual_bank_id']) || ! empty($validated['bank_account_id'])) {
-                $manualMeta['bank'] = array_filter([
+                $bankMeta = [
+
                     'id' => $validated['manual_bank_id'] ?? null,
                     'account_id' => $validated['bank_account_id'] ?? null,
-                ], static fn ($value) => $value !== null && $value !== '');
+                ];
+
+                $resolvedBankName = $manualPaymentRequest->bank_name
+                    ?? $manualPaymentRequest->manualBank?->name;
+
+                if (is_string($resolvedBankName) && trim($resolvedBankName) !== '') {
+                    $bankMeta['name'] = trim($resolvedBankName);
+                }
+
+                $resolvedBeneficiary = $manualPaymentRequest->bank_account_name
+                    ?? $manualPaymentRequest->manualBank?->beneficiary_name;
+
+                if (is_string($resolvedBeneficiary) && trim($resolvedBeneficiary) !== '') {
+                    $bankMeta['beneficiary_name'] = trim($resolvedBeneficiary);
+                }
+
+                $manualMeta['bank'] = array_filter(
+                    $bankMeta,
+                    static fn ($value) => $value !== null && $value !== ''
+                );
+            
             }
 
             $metadata = $validated['metadata'] ?? null;

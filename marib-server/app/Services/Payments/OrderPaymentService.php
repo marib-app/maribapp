@@ -253,11 +253,26 @@ class OrderPaymentService
                 }
             );
 
+
+            $resolvedBankName = $bankName
+                ?? $manualPaymentRequest->bank_name
+                ?? $manualPaymentRequest->manualBank?->name;
+
+            $resolvedBeneficiary = $manualPaymentRequest->bank_account_name
+                ?? $manualPaymentRequest->manualBank?->beneficiary_name;
+
+
+
             $manualMeta['bank'] = array_filter([
                 'id' => $manualBankIdentifier ?? null,
                 'account_id' => $data['bank_account_id'] ?? null,
-                'name' => $bankName,
-            ], static fn ($value) => $value !== null && $value !== '');
+                'name' => is_string($resolvedBankName) && trim($resolvedBankName) !== '' ? trim($resolvedBankName) : null,
+                'beneficiary_name' => is_string($resolvedBeneficiary) && trim($resolvedBeneficiary) !== ''
+                    ? trim($resolvedBeneficiary)
+                    : null,
+                
+                
+                ], static fn ($value) => $value !== null && $value !== '');
 
             if ($manualMeta['bank'] === []) {
                 unset($manualMeta['bank']);

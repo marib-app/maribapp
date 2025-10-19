@@ -20,6 +20,7 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\PruneStaleUserFcmTokens::class,
         \App\Console\Commands\CaptureCurrencyRateSnapshotsCommand::class,
         \App\Console\Commands\NormalizeOrderPaymentMethodsCommand::class,
+        \App\Console\Commands\BackfillManualBankPaymentRequestsCommand::class,
 
     ];
     /**

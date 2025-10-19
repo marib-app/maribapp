@@ -5,11 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\WalletTransaction;
-
+use App\Models\ManualPaymentRequest;
+use App\Services\Payments\ManualPaymentRequestService;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
-
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Log;
 
 class PaymentTransaction extends Model
 {
@@ -42,6 +44,39 @@ class PaymentTransaction extends Model
         'meta' => 'array',
         'amount' => 'decimal:2',
     ];
+
+
+    protected static function booted(): void
+    {
+        static::saved(static function (PaymentTransaction $transaction): void {
+            $canonicalGateway = ManualPaymentRequest::canonicalGateway($transaction->payment_gateway);
+
+            if (! in_array($canonicalGateway, ['manual_bank', 'manual_banks'], true)) {
+                return;
+            }
+
+            if ($transaction->manual_payment_request_id !== null) {
+                return;
+            }
+
+            if ($transaction->user_id === null) {
+                return;
+            }
+
+            try {
+                /** @var ManualPaymentRequestService $service */
+                $service = App::make(ManualPaymentRequestService::class);
+
+                $service->ensureManualPaymentRequestForTransaction($transaction);
+            } catch (\Throwable $exception) {
+                Log::error('Failed to ensure manual payment request for manual bank transaction.', [
+                    'payment_transaction_id' => $transaction->getKey(),
+                    'exception' => $exception,
+                ]);
+            }
+        });
+    }
+
 
     public function user(): BelongsTo
     {

@@ -1987,12 +1987,41 @@ class ManualPaymentRequestController extends Controller
             $walletTypeList
         );
 
+
+
+        $manualBankIdExpression = "COALESCE(
+            mpr.manual_bank_id,
+            CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual.bank.id')), '') AS UNSIGNED),
+            CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_bank.id')), '') AS UNSIGNED),
+            CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.manual_bank_id')), '') AS UNSIGNED),
+            CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.bank_id')), '') AS UNSIGNED),
+            CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual.bank.id')), '') AS UNSIGNED),
+            CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.id')), '') AS UNSIGNED),
+            CAST(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.id')), '') AS UNSIGNED)
+        )";
+
+
+
         $manualBankNameExpression = "COALESCE(
             JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.payload.bank.name')),
+            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual.bank.name')),
+            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual.bank.bank_name')),
+            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual.bank.beneficiary_name')),
             JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.bank.name')),
             JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_bank.name')),
+            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_bank.bank_name')),
+            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_bank.beneficiary_name')),
+            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.bank.name')),
+            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.manual_bank.name')),
             JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.name')),
+            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.bank_name')),
+            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.beneficiary_name')),
+            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual.bank.name')),
+            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual.bank.bank_name')),
+            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual.bank.beneficiary_name')),
             JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.name')),
+            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.bank_name')),
+            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.beneficiary_name')),
             mpr.bank_name,
             mpr.bank_account_name
         )";
@@ -2068,7 +2097,7 @@ class ManualPaymentRequestController extends Controller
             ->selectRaw($payableIdExpression . ' as payable_id')
             ->selectRaw($payableTypeExpression . ' as payable_type')
             ->selectRaw($departmentExpression . ' as department')
-            ->selectRaw('mpr.manual_bank_id as manual_bank_id')
+            ->selectRaw($manualBankIdExpression . ' as manual_bank_id')
             ->selectRaw($manualBankNameExpression . ' as manual_bank_name')
             ->selectRaw($walletTransactionExpression . ' as wallet_transaction_id')
             ->selectRaw('pt.created_at as transaction_created_at');
@@ -2104,7 +2133,7 @@ class ManualPaymentRequestController extends Controller
             ->selectRaw($payableIdExpression . ' as payable_id')
             ->selectRaw($payableTypeExpression . ' as payable_type')
             ->selectRaw($departmentExpression . ' as department')
-            ->selectRaw('mpr.manual_bank_id as manual_bank_id')
+            ->selectRaw($manualBankIdExpression . ' as manual_bank_id')
             ->selectRaw($manualBankNameExpression . ' as manual_bank_name')
             ->selectRaw($walletTransactionExpression . ' as wallet_transaction_id')
             ->selectRaw('pt.created_at as transaction_created_at');

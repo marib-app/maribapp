@@ -6,10 +6,11 @@ use App\Models\ManualPaymentRequest;
 use App\Models\Order;
 use App\Models\OrderStatus;
 use App\Models\User;
-use App\Services\ManualPaymentRequestTableService;
 use App\Services\BootstrapTableService;
 use App\Services\DepartmentReportService;
 use App\Services\ManualPaymentRequestPresenter;
+use App\Support\ManualPayments\ManualPaymentPresentationHelpers;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -25,6 +26,7 @@ class OrderReportController extends Controller
 {
 
 
+    use ManualPaymentPresentationHelpers;
 
         /**
      * @var DepartmentReportService
@@ -242,7 +244,7 @@ class OrderReportController extends Controller
         [$baseQuery, $startDate, $endDate, $statusFilter] = $this->buildManualPaymentsBaseQuery($request);
 
 
-        $paginatedQuery = (clone $baseQuery)->with('user')->latest('created_at');
+        $paginatedQuery = (clone $baseQuery)->orderBy('created_at', 'desc');
         $payments = $paginatedQuery->paginate(15)->withQueryString();
 
         $totals = (clone $baseQuery)
@@ -261,7 +263,7 @@ class OrderReportController extends Controller
             ->orderBy('date')
             ->get();
 
-        $statusOptions = ManualPaymentRequest::query()
+        $statusOptions = (clone $baseQuery)
             ->select('status')
             ->distinct()
             ->pluck('status')
@@ -276,11 +278,16 @@ class OrderReportController extends Controller
 
         $timeBuckets = [];
         foreach ($timeBucketsConfig as $key => [$from, $to]) {
-            $bucketQuery = ManualPaymentRequest::query()
-                ->whereBetween('created_at', [$from, $to])
-                ->when($statusFilter, static function ($query, $status) {
-                    $query->where('status', $status);
-                });
+            $bucketRequest = new Request([
+                'start_date' => $from->toDateString(),
+                'end_date' => $to->toDateString(),
+                'status' => $statusFilter,
+            ]);
+
+            $bucketQuery = app(ManualPaymentRequestController::class)
+                ->buildUnifiedManualPaymentsBaseQuery($bucketRequest);
+
+
 
             $timeBuckets[$key] = [
                 'count' => (clone $bucketQuery)->count(),
@@ -548,28 +555,15 @@ class OrderReportController extends Controller
         ]);
     }
 
-    private function manualPaymentsExportGenerator($baseQuery): \Generator
+    private function manualPaymentsExportGenerator(QueryBuilder $baseQuery): \Generator
     {
-        $chunkSize = 500;
-        $lastId = 0;
+        $exportQuery = (clone $baseQuery)
+            ->orderBy('created_at')
+            ->orderBy('id');
 
-        do {
-            $chunk = (clone $baseQuery)
-                ->with('user')
-                ->where('id', '>', $lastId)
-                ->orderBy('id')
-                ->limit($chunkSize)
-                ->get();
-
-            if ($chunk->isEmpty()) {
-                break;
-            }
-
-            foreach ($chunk as $payment) {
-                $lastId = $payment->id;
-                yield $payment;
-            }
-        } while ($chunk->count() === $chunkSize);
+        foreach ($exportQuery->cursor() as $payment) {
+            yield $payment;
+        }
     }
 
     /**
@@ -628,8 +622,8 @@ class OrderReportController extends Controller
         $sortable = [
             'id' => 'id',
             'reference' => 'reference',
-            'payable_type' => 'payable_type',
-            'status' => 'status',
+            'payable_type' => 'category',
+            'status' => 'status_group',
             'submitted_at' => 'created_at',
             'created_at' => 'created_at',
         ];
@@ -644,8 +638,16 @@ class OrderReportController extends Controller
         }
 
         $query = (clone $baseQuery)
-            ->with(['user', 'paymentTransaction.order'])
-            ->search($searchTerm);
+            ->when($searchTerm !== null, function (QueryBuilder $inner) use ($searchTerm) {
+                $like = '%' . $searchTerm . '%';
+                $inner->where(function (QueryBuilder $query) use ($like) {
+                    $query->where('reference', 'LIKE', $like)
+                        ->orWhere('user_name', 'LIKE', $like)
+                        ->orWhere('user_mobile', 'LIKE', $like)
+                        ->orWhere('payment_transaction_id', 'LIKE', $like)
+                        ->orWhere('manual_payment_request_id', 'LIKE', $like);
+                });
+            });
 
         $total = (clone $query)->count();
 
@@ -656,21 +658,34 @@ class OrderReportController extends Controller
 
         $rows = [];
 
-        foreach ($requests as $requestRow) {
-            $row = $requestRow->toArray();
-            $row['user_name'] = $requestRow->user?->name ?? '-';
-            $row['user_mobile'] = $requestRow->user?->mobile ?? '-';
+        $rows = $requests->map(function (object $requestRow) {
+            $manualPaymentRequest = null;
+            if (! empty($requestRow->manual_payment_request_id)) {
+                $manualPaymentRequest = $this->getManualPaymentRequestById((int) $requestRow->manual_payment_request_id);
+            }
 
-            $gateway = $requestRow->paymentTransaction?->payment_gateway;
-            $row['payment_gateway'] = $gateway ? ucwords(str_replace('_', ' ', $gateway)) : '-';
 
-            $row['formatted_amount'] = number_format($requestRow->amount, 2) . ($requestRow->currency ? ' ' . $requestRow->currency : '');
-            $row['submitted_at'] = optional($requestRow->created_at)->format('Y-m-d H:i');
-            $row['status_badge'] = $this->manualPaymentStatusBadge($requestRow->status);
-            $row['operate'] = $this->manualPaymentActionsColumn($requestRow);
+            return [
+                'id' => $requestRow->manual_payment_request_id ?? $requestRow->payment_transaction_id,
+                'reference' => $requestRow->reference ?? ($requestRow->payment_transaction_id
+                    ? 'TX-' . $requestRow->payment_transaction_id
+                    : '-'),
+                'user_name' => $requestRow->user_name ?? '-',
+                'user_mobile' => $requestRow->user_mobile ?? '-',
+                'formatted_amount' => number_format((float) ($requestRow->amount ?? 0), 2)
+                    . ($requestRow->currency ? ' ' . $requestRow->currency : ''),
+                'payable_type' => $this->paymentRequestCategoryLabel($requestRow->category ?? null),
+                'status' => $requestRow->status,
+                'status_badge' => $this->manualPaymentStatusBadge($requestRow->status),
+                'submitted_at' => $requestRow->created_at
+                    ? Carbon::parse($requestRow->created_at)->format('Y-m-d H:i')
+                    : null,
+                'operate' => $manualPaymentRequest ? $this->manualPaymentActionsColumn($manualPaymentRequest) : '',
+            ];
+        })->values();
 
-            $rows[] = $row;
-        }
+
+
 
         return response()->json([
             'total' => $total,
@@ -713,11 +728,18 @@ class OrderReportController extends Controller
 
         $statusFilter = $request->filled('status') ? $request->status : null;
 
-        $baseQuery = ManualPaymentRequest::query()
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->when($statusFilter, static function ($query, $status) {
-                $query->where('status', $status);
-            });
+        $proxyRequest = new Request([
+            'start_date' => $startDate->toDateString(),
+            'end_date' => $endDate->toDateString(),
+            'date_from' => $startDate->toDateString(),
+            'date_to' => $endDate->toDateString(),
+            'status' => $statusFilter,
+        ]);
+
+        $baseQuery = app(ManualPaymentRequestController::class)
+            ->buildUnifiedManualPaymentsBaseQuery($proxyRequest);
+
+
 
         return [$baseQuery, $startDate, $endDate, $statusFilter];
     }
@@ -732,8 +754,13 @@ class OrderReportController extends Controller
         };
     }
 
-    private function manualPaymentActionsColumn(ManualPaymentRequest $manualPaymentRequest): string
+    private function manualPaymentActionsColumn(?ManualPaymentRequest $manualPaymentRequest): string
     {
+
+        if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+            return '';
+        }
+
         return BootstrapTableService::button(
             'fa fa-eye',
             route('reports.manual-payments.show', $manualPaymentRequest),

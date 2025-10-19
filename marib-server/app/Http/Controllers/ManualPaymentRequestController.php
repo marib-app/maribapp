@@ -10,7 +10,6 @@ use App\Models\Order;
 use App\Models\Package;
 use App\Models\PaymentTransaction;
 use App\Models\WalletTransaction;
-use App\Queries\PaymentRequestTableQuery;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Database\Eloquent\Model;
@@ -135,14 +134,14 @@ class ManualPaymentRequestController extends Controller
         $order = in_array($order, ['asc', 'desc'], true) ? $order : 'desc';
 
         $sortable = [
-            'id' => 'manual_payment_requests.id',
-            'reference' => 'manual_payment_requests.reference',
-            'payable_type' => 'manual_payment_requests.payable_type',
-            'status' => 'manual_payment_requests.status',
-            'submitted_at' => 'manual_payment_requests.created_at',
-            'created_at' => 'manual_payment_requests.created_at',
+            'id' => 'id',
+            'reference' => 'reference',
+            'payable_type' => 'payable_type',
+            'status' => 'status_group',
+            'submitted_at' => 'created_at',
+            'created_at' => 'created_at',
         ];
-        $sortColumn = $sortable[$sort] ?? 'manual_payment_requests.created_at';
+        $sortColumn = $sortable[$sort] ?? 'created_at';
 
 
 
@@ -160,21 +159,31 @@ class ManualPaymentRequestController extends Controller
         $from = $request->get('from');
         $to = $request->get('to');
 
-        $baseQuery = ManualPaymentRequest::withoutGlobalScopes();
+        $baseQuery = $this->buildUnifiedManualPaymentsBaseQuery($request);
 
         $overallTotal = (clone $baseQuery)->count();
 
         $query = (clone $baseQuery)
-            ->with([
-                'manualBank',
-                'user',
-                'payable',
-                'paymentTransaction.order',
-            ])
-            ->when($search !== '', fn($q) => $q->search($search))
-            ->when($request->filled('status'), fn($q) => $q->status($request->input('status')))
-            ->when($payableTypeAliases !== [], fn($q) => $q->whereIn('payable_type', $payableTypeAliases))
-            ->when($request->filled('payment_gateway'), fn($q) => $q->paymentGateway($request->input('payment_gateway')))
+            ->when($search !== '', function ($q) use ($search) {
+                $like = '%' . $search . '%';
+                $q->where(function ($inner) use ($like) {
+                    $inner->where('reference', 'LIKE', $like)
+                        ->orWhere('user_name', 'LIKE', $like)
+                        ->orWhere('user_mobile', 'LIKE', $like)
+                        ->orWhere('payment_transaction_id', 'LIKE', $like)
+                        ->orWhere('manual_payment_request_id', 'LIKE', $like);
+                });
+            })
+            ->when($payableTypeAliases !== [], function ($q) use ($payableTypeAliases) {
+                $normalized = array_map(static fn ($alias) => strtolower((string) $alias), $payableTypeAliases);
+                $q->whereIn(DB::raw("LOWER(COALESCE(NULLIF(payable_type, ''), ''))"), $normalized);
+            })
+            ->when($request->filled('payment_gateway'), function ($q) use ($request) {
+                $channel = $this->normalizePaymentRequestChannel($request->input('payment_gateway'));
+                if ($channel !== null) {
+                    $q->where('channel', $channel);
+                }
+            })
             ->when($departmentFilter !== null, function ($q) use ($departmentFilter) {
                 $q->where(function ($inner) use ($departmentFilter) {
                     $inner->where('department', $departmentFilter)
@@ -191,6 +200,8 @@ class ManualPaymentRequestController extends Controller
             ->forPage($page, $limit)
             ->get();
 
+        $this->prefetchManualPaymentRequestsForRows($requests);
+
         $rows = [];
 
 
@@ -198,40 +209,50 @@ class ManualPaymentRequestController extends Controller
 
 
         foreach ($requests as $requestRow) {
-            $row = $requestRow->toArray();
-            $row['user_name'] = $requestRow->user?->name ?? '-';
-            $row['user_mobile'] = $requestRow->user?->mobile ?? '-';
-            $gateway = $requestRow->paymentTransaction?->payment_gateway;
 
 
-            $canonicalGateway = ManualPaymentRequest::canonicalGateway($gateway);
-            if ($canonicalGateway === 'manual_bank') {
-                $canonicalGateway = 'manual_banks';
+            $rowData = (array) $requestRow;
+            $manualBankName = $this->resolveManualBankName($requestRow);
+            $gatewayKey = $requestRow->channel ?? 'manual_banks';
+            if ($gatewayKey === 'manual_bank') {
+                $gatewayKey = 'manual_banks';
             }
 
-            $manualBankName = $this->resolveManualBankName($requestRow);
+            $manualPaymentRequest = null;
+            if (! empty($requestRow->manual_payment_request_id)) {
+                $manualPaymentRequest = $this->getManualPaymentRequestById((int) $requestRow->manual_payment_request_id);
+            }
 
 
 
-            $row['payment_gateway_key'] = $canonicalGateway ?? 'manual_banks';
 
-            $row['manual_bank_name'] = $manualBankName;
-            $row['payment_gateway'] = $this->gatewayLabel(
-                $canonicalGateway ?? 'manual_banks',
-                $manualBankName
-            );
-            $row['payment_gateway_name'] = $manualBankName
+
+            $rowData['id'] = $requestRow->manual_payment_request_id ?? $requestRow->payment_transaction_id;
+            $rowData['user_name'] = $requestRow->user_name ?? '-';
+            $rowData['user_mobile'] = $requestRow->user_mobile ?? '-';
+            $rowData['payment_gateway_key'] = $gatewayKey;
+            $rowData['manual_bank_name'] = $manualBankName;
+            $rowData['payment_gateway_name'] = $manualBankName
+
+
                 ?? $this->paymentRequestGatewayName($requestRow);
+            $rowData['payment_gateway'] = $this->gatewayLabel($gatewayKey, $manualBankName);
+            $rowData['formatted_amount'] = number_format((float) ($requestRow->amount ?? 0), 2)
 
 
-            $row['formatted_amount'] = number_format($requestRow->amount, 2)
+
                 . ($requestRow->currency ? ' ' . $requestRow->currency : '');
-            $row['submitted_at'] = $requestRow->created_at?->format('Y-m-d H:i');
-            $row['status_badge'] = $this->statusBadge($requestRow->status);
-            $row['operate'] = $this->actionsColumn($requestRow);
+
+            $rowData['submitted_at'] = $requestRow->created_at
+                ? Carbon::parse($requestRow->created_at)->format('Y-m-d H:i')
+                : null;
+            $rowData['status_badge'] = $this->statusBadge($requestRow->status);
+            $rowData['status_group'] = $requestRow->status_group ?? null;
+            $rowData['operate'] = $manualPaymentRequest ? $this->actionsColumn($manualPaymentRequest) : '';
 
 
-            $rows[] = $row;
+            $rows[] = $rowData;
+
         }
 
         $lastPage = (int) max(ceil($filteredTotal / $limit), 1);
@@ -282,8 +303,8 @@ class ManualPaymentRequestController extends Controller
         $from = $this->normalizeManualPaymentDate($request->input('from'), true);
         $to = $this->normalizeManualPaymentDate($request->input('to'), false);
 
-        $baseQuery = DB::query()
-            ->fromSub(PaymentRequestTableQuery::make(), 'requests');
+        $baseQuery = $this->buildUnifiedManualPaymentsBaseQuery($request);
+
 
 
         $recordsTotal = (clone $baseQuery)->count();
@@ -300,7 +321,7 @@ class ManualPaymentRequestController extends Controller
                         ->orWhere('wallet_transaction_id', 'LIKE', $like);
                 });
             })
-            ->when($statusFilter, static fn (QueryBuilder $query, string $status) => $query->where('status', $status))
+            ->when($statusFilter, static fn (QueryBuilder $query, string $status) => $query->where('status_group', $status))
             ->when($channelFilter, static fn (QueryBuilder $query, string $channel) => $query->where('channel', $channel))
             ->when($categoryFilter, static fn (QueryBuilder $query, string $category) => $query->where('category', $category))
             ->when($departmentFilter !== null, function (QueryBuilder $query) use ($departmentFilter) {
@@ -369,6 +390,7 @@ class ManualPaymentRequestController extends Controller
                 'payable_id' => $row->payable_id ?? null,
                 'payable_label' => $this->paymentRequestPayableLabel($row),
                 'status' => $row->status,
+                'status_group' => $row->status_group ?? null,
                 'status_label' => $this->paymentRequestStatusLabel($row->status),
                 'created_at_human' => $row->created_at
                     ? Carbon::parse($row->created_at)->format('Y-m-d H:i')
@@ -609,9 +631,9 @@ class ManualPaymentRequestController extends Controller
             ->first();
 
         $statusTotals = (clone $query)
-            ->select('status', DB::raw('COUNT(*) as aggregate_total'))
-            ->groupBy('status')
-            ->pluck('aggregate_total', 'status');
+            ->select('status_group', DB::raw('COUNT(*) as aggregate_total'))
+            ->groupBy('status_group')
+            ->pluck('aggregate_total', 'status_group');
 
         $gatewayTotals = (clone $query)
             ->select('channel', DB::raw('COUNT(*) as aggregate_total'))
@@ -1198,8 +1220,13 @@ class ManualPaymentRequestController extends Controller
         };
     }
 
-    protected function actionsColumn(ManualPaymentRequest $manualPaymentRequest): string
+    protected function actionsColumn(?ManualPaymentRequest $manualPaymentRequest): string
     {
+
+        if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+            return '';
+        }
+
         $buttons = '';
 
         $buttons .= BootstrapTableService::button(
@@ -1816,6 +1843,316 @@ class ManualPaymentRequestController extends Controller
         }
 
     }
+
+
+
+    public function buildUnifiedManualPaymentsBaseQuery(Request $request): QueryBuilder
+    {
+        $startInput = $request->get('start_date', $request->get('date_from'));
+        $endInput = $request->get('end_date', $request->get('date_to'));
+
+        $startDate = $startInput
+            ? Carbon::parse($startInput)->startOfDay()
+            : now()->subDays(30)->startOfDay();
+        $endDate = $endInput
+            ? Carbon::parse($endInput)->endOfDay()
+            : now()->endOfDay();
+
+        if ($startDate->greaterThan($endDate)) {
+            [$startDate, $endDate] = [$endDate->copy()->startOfDay(), $startDate->copy()->endOfDay()];
+        }
+
+        $statusGroups = $this->statusGroupsForFilter($request->input('status'));
+
+        $approvedManualStatuses = [
+            'approved', 'accept', 'accepted', 'complete', 'completed', 'done', 'settled', 'paid', 'success', 'succeed', 'succeeded', 'confirmed',
+        ];
+        $rejectedManualStatuses = [
+            'rejected', 'declined', 'canceled', 'cancelled', 'void', 'failed', 'failure', 'error', 'refunded',
+        ];
+        $underReviewManualStatuses = ['under_review', 'in_review', 'in-review', 'review', 'reviewing', 'processing'];
+        $pendingManualStatuses = ['pending', 'awaiting', 'waiting', 'initiated', 'open', 'new'];
+
+        $manualStatusColumn = "LOWER(NULLIF(TRIM(mpr.status), ''))";
+        $normalizedManualStatus = sprintf(
+            "CASE
+                WHEN %s IS NULL THEN NULL
+                WHEN %s IN (%s) THEN 'approved'
+                WHEN %s IN (%s) THEN 'rejected'
+                WHEN %s IN (%s) THEN 'under_review'
+                WHEN %s IN (%s) THEN 'pending'
+                ELSE 'pending'
+            END",
+            $manualStatusColumn,
+            $manualStatusColumn,
+            $this->quoteSqlList($approvedManualStatuses),
+            $manualStatusColumn,
+            $this->quoteSqlList($rejectedManualStatuses),
+            $manualStatusColumn,
+            $this->quoteSqlList($underReviewManualStatuses),
+            $manualStatusColumn,
+            $this->quoteSqlList($pendingManualStatuses)
+        );
+
+        $paymentStatusColumn = "LOWER(NULLIF(TRIM(pt.payment_status), ''))";
+        $approvedPaymentStatuses = ['approved', 'success', 'succeed', 'succeeded', 'completed', 'complete', 'done', 'paid', 'settled', 'confirmed'];
+        $failedPaymentStatuses = ['failed', 'failure', 'error', 'declined', 'rejected', 'canceled', 'cancelled', 'void', 'refunded'];
+        $normalizedPaymentStatus = sprintf(
+            "CASE
+                WHEN %s IN (%s) THEN 'approved'
+                WHEN %s IN (%s) THEN 'rejected'
+                ELSE 'pending'
+            END",
+            $paymentStatusColumn,
+            $this->quoteSqlList($approvedPaymentStatuses),
+            $paymentStatusColumn,
+            $this->quoteSqlList($failedPaymentStatuses)
+        );
+
+        $statusExpression = sprintf('COALESCE(%s, %s)', $normalizedManualStatus, $normalizedPaymentStatus);
+        $statusGroupExpression = sprintf(
+            "CASE %s
+                WHEN 'approved' THEN 'succeed'
+                WHEN 'succeed' THEN 'succeed'
+                WHEN 'rejected' THEN 'failed'
+                WHEN 'failed' THEN 'failed'
+                ELSE 'pending'
+            END",
+            $statusExpression
+        );
+
+        $orderTypeTokens = ManualPaymentRequest::orderPayableTypeTokens();
+        $orderTypeArray = array_values(array_filter(array_map(static function ($value) {
+            if (! is_string($value)) {
+                return null;
+            }
+
+            $trimmed = strtolower(trim($value));
+
+            return $trimmed === '' ? null : $trimmed;
+        }, $orderTypeTokens)));
+        if ($orderTypeArray === []) {
+            $orderTypeArray = ['order'];
+        }
+        $orderTypeList = $this->quoteSqlList($orderTypeArray);
+
+        $packageTypeAliases = [
+            Package::class,
+            '\\' . Package::class,
+            'package',
+            'packages',
+            'app\\models\\package',
+            'user_purchased_package',
+            'user_purchased_packages',
+            'userpurchasedpackage',
+            'userpurchasedpackages',
+        ];
+        $walletTypeAliases = [
+            ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP,
+            'wallet',
+            'wallet_top_up',
+            'wallet-top-up',
+            'wallettopup',
+            WalletTransaction::class,
+            '\\' . WalletTransaction::class,
+            'app\\models\\wallettransaction',
+        ];
+
+        $categorySource = "LOWER(COALESCE(NULLIF(mpr.category, ''), NULLIF(mpr.payable_type, ''), NULLIF(pt.payable_type, '')))";
+        $categoryExpression = sprintf(
+            "CASE
+                WHEN %s IN (%s) THEN 'orders'
+                WHEN %s IN (%s) THEN 'packages'
+                WHEN %s IN (%s) THEN 'top_ups'
+                WHEN %s LIKE '%%wallet%%' THEN 'top_ups'
+                WHEN %s LIKE '%%package%%' THEN 'packages'
+                ELSE 'orders'
+            END",
+            $categorySource,
+            $orderTypeList,
+            $categorySource,
+            $this->quoteSqlList($packageTypeAliases),
+            $categorySource,
+            $this->quoteSqlList($walletTypeAliases),
+            $categorySource,
+            $categorySource
+        );
+
+        $walletTypeList = $this->quoteSqlList($walletTypeAliases);
+        $walletTransactionExpression = sprintf(
+            "CASE WHEN LOWER(COALESCE(NULLIF(pt.payable_type, ''), NULLIF(mpr.payable_type, ''))) IN (%s)
+                THEN COALESCE(pt.payable_id, mpr.payable_id)
+                ELSE NULL
+            END",
+            $walletTypeList
+        );
+
+        $manualBankNameExpression = "COALESCE(
+            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.payload.bank.name')),
+            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.bank.name')),
+            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_bank.name')),
+            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.name')),
+            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.name')),
+            mpr.bank_name,
+            mpr.bank_account_name
+        )";
+
+        $channelColumn = "LOWER(NULLIF(TRIM(mpr.channel), ''))";
+        $manualGatewayAliases = ManualPaymentRequest::manualBankGatewayAliases();
+        $manualGatewayAliases[] = 'manual_bank';
+        $manualGatewayAliases[] = 'manual_banks';
+        $eastGatewayAliases = ['east', 'east_yemen_bank', 'east-yemen-bank', 'eastyemenbank'];
+        $walletGatewayAliases = ['wallet', 'wallet_gateway', 'wallet_top_up', 'wallet-top-up', 'walletpayment', 'wallet_payment'];
+        $cashGatewayAliases = ['cash', 'cod', 'cash_on_delivery', 'cashcollection', 'cash_collect'];
+        $transactionGatewayColumn = "LOWER(NULLIF(TRIM(pt.payment_gateway), ''))";
+        $channelExpression = sprintf(
+            "CASE
+                WHEN %s IN (%s) THEN 'manual_banks'
+                WHEN %s IN (%s) THEN 'east_yemen_bank'
+                WHEN %s IN (%s) THEN 'wallet'
+                WHEN %s IN (%s) THEN 'cash'
+                WHEN %s IN (%s) THEN 'east_yemen_bank'
+                WHEN %s IN (%s) THEN 'wallet'
+                WHEN %s IN (%s) THEN 'cash'
+                ELSE 'manual_banks'
+            END",
+            $channelColumn,
+            $this->quoteSqlList($manualGatewayAliases),
+            $channelColumn,
+            $this->quoteSqlList($eastGatewayAliases),
+            $channelColumn,
+            $this->quoteSqlList($walletGatewayAliases),
+            $channelColumn,
+            $this->quoteSqlList($cashGatewayAliases),
+            $transactionGatewayColumn,
+            $this->quoteSqlList($eastGatewayAliases),
+            $transactionGatewayColumn,
+            $this->quoteSqlList($walletGatewayAliases),
+            $transactionGatewayColumn,
+            $this->quoteSqlList($cashGatewayAliases)
+        );
+
+        $payableTypeExpression = "COALESCE(NULLIF(mpr.payable_type, ''), NULLIF(pt.payable_type, ''))";
+        $payableIdExpression = 'COALESCE(pt.payable_id, mpr.payable_id)';
+        $departmentExpression = "COALESCE(NULLIF(mpr.department, ''), NULLIF(o.department, ''))";
+
+        $transactions = DB::table('payment_transactions as pt')
+            ->leftJoin('manual_payment_requests as mpr', function ($join) {
+                $join->on('mpr.id', '=', 'pt.manual_payment_request_id')
+                    ->orOn('mpr.payment_transaction_id', '=', 'pt.id');
+            })
+            ->leftJoin('users', 'users.id', '=', 'pt.user_id')
+            ->leftJoin('orders as o', function ($join) use ($orderTypeArray) {
+                $join->on('o.id', '=', 'pt.payable_id');
+                if ($orderTypeArray !== []) {
+                    $join->whereIn(DB::raw("LOWER(COALESCE(NULLIF(pt.payable_type, ''), ''))"), $orderTypeArray);
+                }
+            })
+            ->where('pt.payment_gateway', 'manual_bank')
+            ->whereBetween('pt.created_at', [$startDate, $endDate])
+            ->selectRaw('COALESCE(mpr.id, pt.id) as id')
+            ->selectRaw('pt.id as payment_transaction_id')
+            ->selectRaw('COALESCE(mpr.id, pt.manual_payment_request_id) as manual_payment_request_id')
+            ->selectRaw("COALESCE(NULLIF(mpr.reference, ''), CONCAT('TX-', pt.id)) as reference")
+            ->selectRaw('pt.user_id as user_id')
+            ->selectRaw('users.name as user_name')
+            ->selectRaw('users.mobile as user_mobile')
+            ->selectRaw('pt.amount as amount')
+            ->selectRaw("COALESCE(NULLIF(pt.currency, ''), '') as currency")
+            ->selectRaw('pt.created_at as created_at')
+            ->selectRaw($statusExpression . ' as status')
+            ->selectRaw($statusGroupExpression . ' as status_group')
+            ->selectRaw("'transaction' as source")
+            ->selectRaw($channelExpression . ' as channel')
+            ->selectRaw($categoryExpression . ' as category')
+            ->selectRaw($payableIdExpression . ' as payable_id')
+            ->selectRaw($payableTypeExpression . ' as payable_type')
+            ->selectRaw($departmentExpression . ' as department')
+            ->selectRaw('mpr.manual_bank_id as manual_bank_id')
+            ->selectRaw($manualBankNameExpression . ' as manual_bank_name')
+            ->selectRaw($walletTransactionExpression . ' as wallet_transaction_id')
+            ->selectRaw('pt.created_at as transaction_created_at');
+
+        $requests = DB::table('manual_payment_requests as mpr')
+            ->leftJoin('payment_transactions as pt', function ($join) {
+                $join->on('pt.id', '=', 'mpr.payment_transaction_id')
+                    ->orOn('pt.manual_payment_request_id', '=', 'mpr.id');
+            })
+            ->leftJoin('users', 'users.id', '=', 'mpr.user_id')
+            ->leftJoin('orders as o', function ($join) use ($orderTypeArray) {
+                $join->on('o.id', '=', 'mpr.payable_id');
+                if ($orderTypeArray !== []) {
+                    $join->whereIn(DB::raw("LOWER(COALESCE(NULLIF(mpr.payable_type, ''), ''))"), $orderTypeArray);
+                }
+            })
+            ->whereBetween('mpr.created_at', [$startDate, $endDate])
+            ->selectRaw('mpr.id as id')
+            ->selectRaw('pt.id as payment_transaction_id')
+            ->selectRaw('mpr.id as manual_payment_request_id')
+            ->selectRaw("COALESCE(NULLIF(mpr.reference, ''), CONCAT('TX-', mpr.id)) as reference")
+            ->selectRaw('mpr.user_id as user_id')
+            ->selectRaw('users.name as user_name')
+            ->selectRaw('users.mobile as user_mobile')
+            ->selectRaw('COALESCE(mpr.amount, pt.amount, 0) as amount')
+            ->selectRaw("COALESCE(NULLIF(mpr.currency, ''), NULLIF(pt.currency, ''), '') as currency")
+            ->selectRaw('mpr.created_at as created_at')
+            ->selectRaw($statusExpression . ' as status')
+            ->selectRaw($statusGroupExpression . ' as status_group')
+            ->selectRaw("'request' as source")
+            ->selectRaw($channelExpression . ' as channel')
+            ->selectRaw($categoryExpression . ' as category')
+            ->selectRaw($payableIdExpression . ' as payable_id')
+            ->selectRaw($payableTypeExpression . ' as payable_type')
+            ->selectRaw($departmentExpression . ' as department')
+            ->selectRaw('mpr.manual_bank_id as manual_bank_id')
+            ->selectRaw($manualBankNameExpression . ' as manual_bank_name')
+            ->selectRaw($walletTransactionExpression . ' as wallet_transaction_id')
+            ->selectRaw('pt.created_at as transaction_created_at');
+
+        $union = $transactions->unionAll($requests);
+
+        $query = DB::query()->fromSub($union, 'manual_payments');
+
+        if ($statusGroups !== []) {
+            $query->whereIn('status_group', $statusGroups);
+        }
+
+        return $query;
+    }
+
+    private function statusGroupsForFilter($status): array
+    {
+        if (! is_string($status)) {
+            return [];
+        }
+
+        $normalized = strtolower(trim($status));
+
+        if ($normalized === '' || $normalized === 'null') {
+            return [];
+        }
+
+        return match ($normalized) {
+            'succeed', 'success', 'approved', 'accept', 'accepted' => ['succeed'],
+            'failed', 'failure', 'rejected', 'declined', 'canceled', 'cancelled', 'void' => ['failed'],
+            'pending', 'processing', 'in_review', 'in-review', 'under_review', 'under-review', 'waiting', 'awaiting', 'open', 'new', 'initiated' => ['pending'],
+            default => [],
+        };
+    }
+
+    private function quoteSqlList(array $values): string
+    {
+        $normalized = array_values(array_filter(array_map(function ($value) {
+            if (! is_string($value)) {
+                return null;
+            }
+
+            return "'" . str_replace("'", "''", strtolower(trim($value))) . "'";
+        }, $values), static fn ($value) => $value !== null));
+
+        return $normalized === [] ? "''" : implode(', ', array_unique($normalized));
+    }
+
 
 
     private function gatewayLabel(string $gateway, ?string $manualBankName = null): string

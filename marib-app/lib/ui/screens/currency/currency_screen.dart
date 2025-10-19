@@ -7,6 +7,8 @@
 //
 // المتطلبات:
 //   • currency_screen_ui.dart يحتوي CurrencyScreenUI المتوافقة مع هذه الواجهة.
+import 'package:marib/data/model/currency_rate.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -31,7 +33,6 @@ import 'package:marib/data/repositories/metal_repository.dart';
 import 'rates_share_card.dart';
 
 import 'package:marib/data/model/preference_option.dart';
-import 'package:marib/data/repositories/metal_repository.dart';
 import 'package:marib/data/repositories/preferences/user_preference_repository.dart';
 
 import 'state/state.dart';
@@ -76,6 +77,13 @@ class _CurrencyScreenLogic extends StatefulWidget {
   @override
   State<_CurrencyScreenLogic> createState() => _CurrencyScreenLogicState();
 }
+
+
+@visibleForTesting
+class CurrencyScreenLogicTestHarness extends _CurrencyScreenLogic {
+  const CurrencyScreenLogicTestHarness({super.key});
+}
+
 
 class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
     with TickerProviderStateMixin {
@@ -159,11 +167,27 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
   }
 
   Future<void> _onShareRates(CurrencyViewState viewState) async {
-    final List<dynamic> currencyRates = viewState.displayRates;
+    final List<CurrencyRate> currencyRates =
+    viewState.displayRates.whereType<CurrencyRate>().toList(
+      growable: false,
+    );
+    final List<MetalRate> inlineMetalRates =
+    viewState.displayRates.whereType<MetalRate>().toList(
+      growable: false,
+    );
+
     final List<MetalRate> goldRates = viewState.displayGoldRates;
     final List<MetalRate> silverRates = viewState.displaySilverRates;
 
-    if (currencyRates.isEmpty && goldRates.isEmpty && silverRates.isEmpty) {
+    final List<MetalRate> otherMetalRates = inlineMetalRates
+        .where((MetalRate rate) => !rate.isGold && !rate.isSilver)
+        .toList(growable: false);
+
+    if (currencyRates.isEmpty &&
+        goldRates.isEmpty &&
+        silverRates.isEmpty &&
+        otherMetalRates.isEmpty) {
+
       return;
     }
 
@@ -188,19 +212,17 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
 
       buffer.writeln('💰 أسعار العملات - $applied 💰\n');
 
-      for (final dynamic rate in currencyRates) {
+      for (final CurrencyRate rate in currencyRates) {
+        final String name = rate.currencyName;
+        final String sell = priceFormat.format(rate.sellPrice);
+        final String buy = priceFormat.format(rate.buyPrice);
+        final String? rawSource = rate.quoteSource;
+        final String sourceLabel =
+        (rawSource != null && rawSource.trim().isNotEmpty)
+            ? rawSource.trim()
+            : 'غير متاح';
 
-        final dynamic r = rate;
-        final String name = r.currencyName?.toString() ?? '';
-        final String sell = r.sellPrice?.toString() ?? '';
-        final String buy = r.buyPrice?.toString() ?? '';
-        String sourceLabel = 'غير متاح';
-        try {
-          final dynamic rawSource = r.quoteSource;
-          if (rawSource is String && rawSource.trim().isNotEmpty) {
-            sourceLabel = rawSource.trim();
-          }
-        } catch (_) {}
+
         buffer.writeln('💱 $name');
         buffer.writeln('بيع: $sell');
         buffer.writeln('شراء: $buy');
@@ -242,6 +264,19 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
 
     }
 
+    if (otherMetalRates.isNotEmpty) {
+      buffer.writeln('⚙️ أسعار المعادن الأخرى:');
+      for (final MetalRate rate in otherMetalRates) {
+        final String sourceLabel =
+        rate.source != null && rate.source!.trim().isNotEmpty
+            ? rate.source!.trim()
+            : 'غير متاح';
+        buffer.writeln('• ${rate.displayName}');
+        buffer.writeln(
+            'بيع: ${priceFormat.format(rate.sellPrice)} | شراء: ${priceFormat.format(rate.buyPrice)}');
+        buffer.writeln('المصدر: $sourceLabel\n');
+      }
+    }
 
     if (viewState.metalsLastUpdatedAt != null) {
       buffer.writeln(
@@ -547,19 +582,27 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
           final silverRates = state.metalRates
               .where((rate) => rate.isSilver)
               .toList(growable: false);
+
+
+          final Iterable<CurrencyRate> visibleCurrencies =
+          state.visibleCurrencyRates.whereType<CurrencyRate>();
+          final Iterable<MetalRate> visibleMetals =
+          state.visibleMetalRates.whereType<MetalRate>();
+
+
           final List<dynamic> combinedDisplayRates;
           switch (state.assetFilter) {
             case AssetFilterType.all:
               combinedDisplayRates = <dynamic>[
-                ...state.visibleCurrencyRates,
-                ...state.visibleMetalRates,
+                ...visibleCurrencies,
+                ...visibleMetals,
               ];
               break;
             case AssetFilterType.currencies:
-              combinedDisplayRates = List<dynamic>.of(state.visibleCurrencyRates);
+              combinedDisplayRates = List<dynamic>.of(visibleCurrencies);
               break;
             case AssetFilterType.metals:
-              combinedDisplayRates = List<dynamic>.of(state.visibleMetalRates);
+              combinedDisplayRates = List<dynamic>.of(visibleMetals);
               break;
           }
 

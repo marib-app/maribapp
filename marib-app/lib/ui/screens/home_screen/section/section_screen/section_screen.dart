@@ -11,9 +11,7 @@ import 'package:marib/data/model/item_filter_model.dart';
 import 'package:marib/data/cubits/item/fetch_item_summary_cubit.dart';
 import 'package:marib/data/cubits/home/fetch_home_screen_cubit.dart';
 
-
 import 'package:marib/data/cubits/slider_cubit.dart';
-
 
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
@@ -24,13 +22,11 @@ import 'package:marib/utils/slider_interface_mapper.dart';
 import 'package:marib/utils/featured_section_utils.dart';
 import 'package:marib/utils/logger.dart';
 
-
 class Section_screen extends StatefulWidget {
-  final String categoryId;        // معرف الفئة الحالية
-  final String categoryName;      // اسم الفئة الحالية
+  final String categoryId; // معرف الفئة الحالية
+  final String categoryName; // اسم الفئة الحالية
   final List<String> categoryIds; // قائمة معرفات الفئات
   final String? interfaceType;
-
 
   const Section_screen({
     super.key,
@@ -47,22 +43,20 @@ class Section_screen extends StatefulWidget {
     final Map? arguments = routeSettings.arguments as Map?;
     final dynamic rawInterfaceType = arguments?['interfaceType'];
     final String? interfaceType =
-    rawInterfaceType is String && rawInterfaceType.trim().isNotEmpty
-        ? rawInterfaceType.trim()
-        : null;
+        rawInterfaceType is String && rawInterfaceType.trim().isNotEmpty
+            ? rawInterfaceType.trim()
+            : null;
     return BlurredRouter(
       builder: (_) => BlocProvider(
         create: (context) => FetchHomeScreenCubit(
           defaultInterfaceType: interfaceType,
         ),
-
         child: Section_screen(
           categoryId: arguments?['catID'] as String,
           categoryName: arguments?['catName'],
           categoryIds: arguments?['categoryIds'],
           interfaceType: interfaceType,
         ),
-
       ),
     );
   }
@@ -73,13 +67,10 @@ class Section_screenState extends State<Section_screen> {
   // متغيرات الحالة / الأداء
   // =========================
 
-
   static const double _kFilterSortBarVerticalPadding = 16.0;
   static const double _kFilterSortBarMinButtonHeight = 44.0;
   static const double _kFilterSortBarMaxButtonHeight = 52.0;
   static const double _kBottomBarMinimumSafeArea = 12.0;
-
-
 
   // ✅ تحويل categoryId مرة واحدة
   static const int _defaultCategoryId = 0;
@@ -88,10 +79,8 @@ class Section_screenState extends State<Section_screen> {
   bool _catIdUsedFallback = false;
   bool _hasLoggedFallbackFetch = false;
 
-
   // ✅ حقل البحث + ديباونس
   final TextEditingController searchController = TextEditingController();
-
 
   // ✅ تحميل المزيد
   bool _isLoadingMore = false;
@@ -113,7 +102,6 @@ class Section_screenState extends State<Section_screen> {
   // ✅ تحكم في ظهور شريط الفلترة/الفرز السفلي حسب التمرير
   final ValueNotifier<bool> _showBottomBar = ValueNotifier<bool>(true);
 
-
   // ✅ لإجبار إظهار الشيمر فترة دنيا بعد أول Loading
   bool _sawLoading = false;
   DateTime? _loadingStart;
@@ -127,14 +115,12 @@ class Section_screenState extends State<Section_screen> {
 
   late final String? _requestSectionSlug;
 
-
   bool _isValidCategoryId(String? raw) {
     if (raw == null) return false;
     final String trimmed = raw.trim();
     if (trimmed.isEmpty) return false;
     return int.tryParse(trimmed) != null;
   }
-
 
   int _parseInitialCategoryId(String raw) {
     final String trimmed = raw.trim();
@@ -202,8 +188,7 @@ class Section_screenState extends State<Section_screen> {
   }
 
   double _estimateFilterSortBarHeight(MediaQueryData mediaQuery) {
-    final double fallbackHeight =
-    (mediaQuery.size.height * 0.08)
+    final double fallbackHeight = (mediaQuery.size.height * 0.08)
         .clamp(_kFilterSortBarMinButtonHeight, _kFilterSortBarMaxButtonHeight)
         .toDouble();
     return fallbackHeight + _kFilterSortBarVerticalPadding;
@@ -213,8 +198,9 @@ class Section_screenState extends State<Section_screen> {
     final MediaQueryData mediaQuery = MediaQuery.of(context);
     final double filterSortBarHeight = _estimateFilterSortBarHeight(mediaQuery);
     final double safeBottom = mediaQuery.viewPadding.bottom;
-    final double effectiveSafeBottom =
-    safeBottom >= _kBottomBarMinimumSafeArea ? safeBottom : _kBottomBarMinimumSafeArea;
+    final double effectiveSafeBottom = safeBottom >= _kBottomBarMinimumSafeArea
+        ? safeBottom
+        : _kBottomBarMinimumSafeArea;
     return filterSortBarHeight + effectiveSafeBottom;
   }
 
@@ -227,8 +213,7 @@ class Section_screenState extends State<Section_screen> {
       context.read<FetchHomeScreenCubit>().fetch();
       return;
     }
-    final int? effectiveRootId =
-        rootId ?? selectedCategoryId.value ?? _catId;
+    final int? effectiveRootId = rootId ?? selectedCategoryId.value ?? _catId;
 
     final FetchHomeScreenState cubitState =
         context.read<FetchHomeScreenCubit>().state;
@@ -238,7 +223,7 @@ class Section_screenState extends State<Section_screen> {
     }
 
     final String? resolvedRootIdentifier =
-    FeaturedSectionUtils.resolveRootIdentifier(
+        FeaturedSectionUtils.resolveRootIdentifier(
       interfaceType: normalizedInterface,
       rootCategoryId: effectiveRootId,
       cachedRootIdentifier: cachedRootIdentifier,
@@ -246,12 +231,12 @@ class Section_screenState extends State<Section_screen> {
     final String? cleanedSlug = slug?.trim();
 
     context.read<FetchHomeScreenCubit>().loadFeaturedSections(
-      interfaceType: normalizedInterface,
-
-      slug: (cleanedSlug != null && cleanedSlug.isNotEmpty) ? cleanedSlug : null,
-      rootIdentifier: resolvedRootIdentifier,
-
-    );
+          interfaceType: normalizedInterface,
+          slug: (cleanedSlug != null && cleanedSlug.isNotEmpty)
+              ? cleanedSlug
+              : null,
+          rootIdentifier: resolvedRootIdentifier,
+        );
   }
 
   Future<void> _refreshData({
@@ -267,7 +252,6 @@ class Section_screenState extends State<Section_screen> {
     final int resolvedCategoryId = _resolveCategoryIdInt(
       source: effectiveFilter,
       categoryIdOverride: categoryId,
-
     );
 
     filter = effectiveFilter;
@@ -275,11 +259,11 @@ class Section_screenState extends State<Section_screen> {
     final String query = search ?? searchController.text;
 
     await context.read<FetchItemSummaryCubit>().fetchSummaries(
-      categoryId: resolvedCategoryId,
-      search: query,
-      sortBy: sortBy,
-      filter: effectiveFilter,
-    );
+          categoryId: resolvedCategoryId,
+          search: query,
+          sortBy: sortBy,
+          filter: effectiveFilter,
+        );
   }
 
   @override
@@ -296,7 +280,6 @@ class Section_screenState extends State<Section_screen> {
     // selectedcategoryId = widget.categoryId;
     // selectedcategoryName = widget.categoryName;
     // searchbody[Api.categoryId] = widget.categoryId;
-
 
     // 2) الجلب الأولي بعوامل الموقع
     final country = HiveUtils.getCountryName() ?? "";
@@ -320,7 +303,6 @@ class Section_screenState extends State<Section_screen> {
       longitude: lon,
     );
 
-
     final ItemFilterModel effectiveFilter = _buildEffectiveFilter(
       base: locationFilter,
       categoryIdOverride: _catId,
@@ -339,21 +321,19 @@ class Section_screenState extends State<Section_screen> {
       ),
     );
 
-
     // لضمان توفر البيانات قبل بناء HomeTabView.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _requestFeaturedSections(rootId: _catId);
     });
 
-
     final String? normalizedInterfaceType =
         SliderInterfaceMapper.normalize(widget.interfaceType) ??
             widget.interfaceType?.trim();
     _sliderInterfaceType =
-    (normalizedInterfaceType == null || normalizedInterfaceType.isEmpty)
-        ? 'homepage'
-        : normalizedInterfaceType;
+        (normalizedInterfaceType == null || normalizedInterfaceType.isEmpty)
+            ? 'homepage'
+            : normalizedInterfaceType;
     _hasAdSlider = _sliderInterfaceType.isNotEmpty;
     if (_hasAdSlider) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -363,22 +343,19 @@ class Section_screenState extends State<Section_screen> {
         _requestedSlider = true;
         unawaited(
           context.read<SliderCubit>().fetchSlider(
-            context,
-            forceRefresh: true,
-            interfaceType: _sliderInterfaceType,
-          ),
+                context,
+                forceRefresh: true,
+                interfaceType: _sliderInterfaceType,
+              ),
         );
       });
     }
-
 
     // 3) حالة البداية: اعتبر أننا سنرى Loading حالًا
     showShimmer = true;
     _showSlider = false;
     _showAdSlider = _hasAdSlider;
-
   }
-
 
   String? _resolveRequestSectionSlug() {
     if (_catId == Constant.sheinRootCategoryId) {
@@ -404,8 +381,6 @@ class Section_screenState extends State<Section_screen> {
     }
   }
 
-
-
   @override
   void dispose() {
     _showBottomBar.dispose();
@@ -413,8 +388,6 @@ class Section_screenState extends State<Section_screen> {
     searchController.dispose();
     super.dispose();
   }
-
-
 
   // =========================
   // تحميل لانهائي
@@ -438,17 +411,15 @@ class Section_screenState extends State<Section_screen> {
       HapticFeedback.selectionClick();
       setState(() => showShimmer = true);
 
-
       if (_hasAdSlider) {
         unawaited(
           context.read<SliderCubit>().fetchSlider(
-            context,
-            forceRefresh: true,
-            interfaceType: _sliderInterfaceType,
-          ),
+                context,
+                forceRefresh: true,
+                interfaceType: _sliderInterfaceType,
+              ),
         );
       }
-
 
       final ItemFilterModel effectiveFilter = _buildEffectiveFilter();
       final int resolvedCategoryId = _resolveCategoryIdInt(
@@ -458,17 +429,16 @@ class Section_screenState extends State<Section_screen> {
       filter = effectiveFilter;
 
       await context.read<FetchItemSummaryCubit>().fetchSummaries(
-        categoryId: resolvedCategoryId,
-        search: searchController.text,
-        sortBy: sortBy,
-        filter: effectiveFilter,
-      );
+            categoryId: resolvedCategoryId,
+            search: searchController.text,
+            sortBy: sortBy,
+            filter: effectiveFilter,
+          );
 
       // إعادة تحميل أقسام الإعلانات المميزة عند السحب للتحديث
       _requestFeaturedSections(
         rootId: selectedCategoryId.value ?? _catId,
       );
-
 
       // (اختياري)
       // Constant.itemFilter = null;
@@ -477,8 +447,6 @@ class Section_screenState extends State<Section_screen> {
       if (mounted) setState(() => showShimmer = false);
     }
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -501,8 +469,8 @@ class Section_screenState extends State<Section_screen> {
             _loadingStart = DateTime.now();
 
             setState(() {
-              showShimmer   = true;
-              _showSlider   = false; // اخفِ شريط التصنيفات
+              showShimmer = true;
+              _showSlider = false; // اخفِ شريط التصنيفات
               _showAdSlider = _hasAdSlider; // حافظ على حالة السلايدر الإعلاني
             });
             return;
@@ -515,7 +483,9 @@ class Section_screenState extends State<Section_screen> {
             final elapsed = _loadingStart == null
                 ? _minShimmer
                 : DateTime.now().difference(_loadingStart!);
-            final wait = elapsed >= _minShimmer ? Duration.zero : (_minShimmer - elapsed);
+            final wait = elapsed >= _minShimmer
+                ? Duration.zero
+                : (_minShimmer - elapsed);
 
             if (wait > Duration.zero) {
               await Future.delayed(wait);
@@ -523,9 +493,10 @@ class Section_screenState extends State<Section_screen> {
             }
 
             setState(() {
-              showShimmer   = false;
-              _showSlider   = true;  // أظهر التصنيفات
-              _showAdSlider = _hasAdSlider;  // أظهر السلايدر الإعلاني (يبدأ الجلب الآن)
+              showShimmer = false;
+              _showSlider = true; // أظهر التصنيفات
+              _showAdSlider =
+                  _hasAdSlider; // أظهر السلايدر الإعلاني (يبدأ الجلب الآن)
             });
 
             _sawLoading = false;
@@ -536,8 +507,8 @@ class Section_screenState extends State<Section_screen> {
           if (state is FetchItemSummaryFailure) {
             debugPrint('[Realestate] state=Failure');
             setState(() {
-              showShimmer   = false;
-              _showSlider   = false;
+              showShimmer = false;
+              _showSlider = false;
               _showAdSlider = false;
             });
             _sawLoading = false;
@@ -545,133 +516,146 @@ class Section_screenState extends State<Section_screen> {
           }
         },
         child: ValueListenableBuilder<bool>(
-          valueListenable: _showBottomBar,
-          builder: (context, show, _) {
-            final Widget? bottomBar = show
-                ? SafeArea(
-                top: false,
-                left: false,
-                right: false,
-                minimum: const EdgeInsets.only(bottom: 12),
-                child: ValueListenableBuilder<int?>(
-                  valueListenable: selectedCategoryId,
-                  builder: (context, selectedId, _) {
-                    final int effectiveCategoryId = selectedId ?? _catId;
-                    final bool showMap = !{
-                      Constant.computerRootCategoryId,
-                      Constant.sheinRootCategoryId,
-                      Constant.storeRootCategoryId,
-                    }.contains(effectiveCategoryId);
+            valueListenable: _showBottomBar,
+            builder: (context, show, _) {
+              final Widget? bottomBar = show
+                  ? SafeArea(
+                      top: false,
+                      left: false,
+                      right: false,
+                      minimum: const EdgeInsets.only(bottom: 12),
+                      child: ValueListenableBuilder<int?>(
+                        valueListenable: selectedCategoryId,
+                        builder: (context, selectedId, _) {
+                          final int effectiveCategoryId = selectedId ?? _catId;
+                          final bool showMap = !{
+                            Constant.computerRootCategoryId,
+                            Constant.sheinRootCategoryId,
+                            Constant.storeRootCategoryId,
+                          }.contains(effectiveCategoryId);
 
-                    return FilterSortBar(
-                      categoryIds: widget.categoryIds,
-                      categoryId: widget.categoryId,
-                      searchController: searchController,
-                      onFilterChanged: (newFilter) {
-                        final ItemFilterModel effectiveFilter = _buildEffectiveFilter(
-                          base: newFilter,
-                        );
-                        filter = effectiveFilter;
-                        final int resolvedCategoryId = _resolveCategoryIdInt(
-                          source: effectiveFilter,
-                        );
+                          return FilterSortBar(
+                            categoryIds: widget.categoryIds,
+                            categoryId: widget.categoryId,
+                            searchController: searchController,
+                            onFilterChanged: (newFilter) {
+                              final ItemFilterModel effectiveFilter =
+                                  _buildEffectiveFilter(
+                                base: newFilter,
+                              );
+                              filter = effectiveFilter;
+                              final int resolvedCategoryId =
+                                  _resolveCategoryIdInt(
+                                source: effectiveFilter,
+                              );
 
-                        if (_isValidCategoryId(newFilter?.categoryId) &&
-                            selectedCategoryId.value != resolvedCategoryId) {
-                          selectedCategoryId.value = resolvedCategoryId;
-                        }
+                              if (_isValidCategoryId(newFilter?.categoryId) &&
+                                  selectedCategoryId.value !=
+                                      resolvedCategoryId) {
+                                selectedCategoryId.value = resolvedCategoryId;
+                              }
 
-                        context.read<FetchItemSummaryCubit>().fetchSummaries(
-                          categoryId: resolvedCategoryId,
-                          search: searchController.text,
-                          filter: effectiveFilter,
-                          sortBy: sortBy,
-                        );
-                      },
-                      onSortChanged: (newSort) {
-                        sortBy = newSort;
+                              context
+                                  .read<FetchItemSummaryCubit>()
+                                  .fetchSummaries(
+                                    categoryId: resolvedCategoryId,
+                                    search: searchController.text,
+                                    filter: effectiveFilter,
+                                    sortBy: sortBy,
+                                  );
+                            },
+                            onSortChanged: (newSort) {
+                              sortBy = newSort;
 
-                        final ItemFilterModel effectiveFilter = _buildEffectiveFilter();
-                        filter = effectiveFilter;
-                        final int resolvedCategoryId = _resolveCategoryIdInt(
-                          source: effectiveFilter,
-                        );
+                              final ItemFilterModel effectiveFilter =
+                                  _buildEffectiveFilter();
+                              filter = effectiveFilter;
+                              final int resolvedCategoryId =
+                                  _resolveCategoryIdInt(
+                                source: effectiveFilter,
+                              );
 
-                        context.read<FetchItemSummaryCubit>().fetchSummaries(
-                          categoryId: resolvedCategoryId,
-                          search: searchController.text,
-                          filter: effectiveFilter,
-                          sortBy: sortBy,
-                        );
-                      },
-                      showMapButton: showMap,
-                      onMapSearchTap: showMap
-                          ? () {
-                        Navigator.pushNamed(context, '/mapSearch');
-                      }
-                          : null,
-                        );
-                      },
-                ),
-            )
-                : null;
-            final double bottomContentPadding =
-            show ? _calculateBottomBarHeight(context) : 0.0;
-
-            return Scaffold(
-              backgroundColor: context.color.primaryColor,
-              appBar: null, // AppBar داخل ItemsBodyBox
-              bottomNavigationBar: bottomBar,
-              body: Column(
-            children: [
-              Expanded(
-                child: RepaintBoundary(
-                  child: NotificationListener<ScrollNotification>(
-                    onNotification: (_) => false,
-                    child: RefreshIndicator(
-                      onRefresh: _handleRefresh,
-                      color: context.color.territoryColor,
-                      displacement: 40,
-                      strokeWidth: 3.0,
-                      triggerMode: RefreshIndicatorTriggerMode.onEdge,
-                      notificationPredicate: (notification) {
-                        if (_isLoadingMore) return false;
-                        return defaultScrollNotificationPredicate(notification);
-                      },
-                      child: ItemsBodyBox(
-                        key: ValueKey('items_${widget.categoryId}'),
-                        categoryId: widget.categoryId,
-                        categoryName: widget.categoryName,
-                        bottomContentPadding: bottomContentPadding,
-
-                        selectedCategoryId: selectedCategoryId,
-                        showShimmer: showShimmer,
-                        searchController: searchController,
-                        specialRequestSectionSlug: _requestSectionSlug,
-                        enableTopBar: _showSlider,
-                        enableAdSlider: _showAdSlider,        // إن كانت موجودة عندك
-                        adInterfaceType: _sliderInterfaceType, // ← تمرير الواجهة المعتمدة دائمًا
-                        sortBy: sortBy,                       // ← جديد
-                        filter: filter,                       // ← جديد
-                        enableSubcats: _showSlider,           // ← نفس منطق التأجيل (أظهر بعد Success)
-                        onLoadMore: _handleLoadMoreState,
-                        onScrollDirectionChanged: (isScrollingUp) {
-                          if (_showBottomBar.value != isScrollingUp) {
-                            _showBottomBar.value = isScrollingUp;
-                          }
+                              context
+                                  .read<FetchItemSummaryCubit>()
+                                  .fetchSummaries(
+                                    categoryId: resolvedCategoryId,
+                                    search: searchController.text,
+                                    filter: effectiveFilter,
+                                    sortBy: sortBy,
+                                  );
+                            },
+                            showMapButton: showMap,
+                            onMapSearchTap: showMap
+                                ? () {
+                                    Navigator.pushNamed(context, '/mapSearch');
+                                  }
+                                : null,
+                          );
                         },
-
                       ),
+                    )
+                  : null;
+              final double bottomContentPadding =
+                  show ? _calculateBottomBarHeight(context) : 0.0;
 
+              return Scaffold(
+                backgroundColor: context.color.primaryColor,
+                appBar: null, // AppBar داخل ItemsBodyBox
+                bottomNavigationBar: bottomBar,
+                body: Column(
+                  children: [
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: NotificationListener<ScrollNotification>(
+                          onNotification: (_) => false,
+                          child: RefreshIndicator(
+                            onRefresh: _handleRefresh,
+                            color: context.color.territoryColor,
+                            displacement: 40,
+                            strokeWidth: 3.0,
+                            triggerMode: RefreshIndicatorTriggerMode.onEdge,
+                            notificationPredicate: (notification) {
+                              if (_isLoadingMore) return false;
+                              return defaultScrollNotificationPredicate(
+                                  notification);
+                            },
+                            child: ItemsBodyBox(
+                              key: ValueKey('items_${widget.categoryId}'),
+                              categoryId: widget.categoryId,
+                              categoryName: widget.categoryName,
+                              bottomContentPadding: bottomContentPadding,
+
+                              selectedCategoryId: selectedCategoryId,
+                              showShimmer: showShimmer,
+                              searchController: searchController,
+                              specialRequestSectionSlug: _requestSectionSlug,
+                              enableTopBar: _showSlider,
+                              enableAdSlider: _showAdSlider,
+                              // إن كانت موجودة عندك
+                              adInterfaceType: _sliderInterfaceType,
+                              // ← تمرير الواجهة المعتمدة دائمًا
+                              sortBy: sortBy,
+                              // ← جديد
+                              filter: filter,
+                              // ← جديد
+                              enableSubcats: _showSlider,
+                              // ← نفس منطق التأجيل (أظهر بعد Success)
+                              onLoadMore: _handleLoadMoreState,
+                              onScrollDirectionChanged: (isScrollingUp) {
+                                if (_showBottomBar.value != isScrollingUp) {
+                                  _showBottomBar.value = isScrollingUp;
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-        ),
+              );
+            }),
       ),
     );
   }
-
 }

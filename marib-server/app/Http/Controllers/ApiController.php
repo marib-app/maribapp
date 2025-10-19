@@ -9713,6 +9713,14 @@ public function storeRequestDevice(Request $request)
     public function getManualPaymentRequests(Request $request) {
         $filters = $this->normalizeManualPaymentRequestFilters($request->all());
 
+
+        $gatewayAliasMap = $this->manualPaymentGatewayAliasMap();
+        $gatewayValidationValues = array_values(array_unique(array_merge(
+            array_keys($gatewayAliasMap),
+            array_merge(...array_values($gatewayAliasMap))
+        )));
+
+
         $validator = Validator::make($filters, [
             'status' => ['nullable', Rule::in([
                 ManualPaymentRequest::STATUS_PENDING,
@@ -9720,7 +9728,7 @@ public function storeRequestDevice(Request $request)
                 ManualPaymentRequest::STATUS_APPROVED,
                 ManualPaymentRequest::STATUS_REJECTED,
             ])],
-            'payment_gateway' => ['nullable', Rule::in(['manual_bank', 'east_yemen_bank', 'wallet'])],
+            'payment_gateway' => ['nullable', Rule::in($gatewayValidationValues)],
             'department' => ['nullable', 'string'],
             'page' => ['nullable', 'integer', 'min:1'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
@@ -9735,7 +9743,10 @@ public function storeRequestDevice(Request $request)
 
 
         $status = $validated['status'] ?? $filters['status'] ?? null;
-        $paymentGateway = $validated['payment_gateway'] ?? $filters['payment_gateway'] ?? null;
+        $paymentGateway = $this->normalizeManualPaymentGateway(
+            $validated['payment_gateway'] ?? $filters['payment_gateway'] ?? null
+        );
+        
         $department = array_key_exists('department', $validated)
             ? $validated['department']
             : ($filters['department'] ?? null);
@@ -9774,7 +9785,7 @@ public function storeRequestDevice(Request $request)
                             $transactionQuery->whereIn('payment_gateway', $aliases);
                         });
 
-                        if ($gateway === 'manual_bank') {
+                        if (in_array($gateway, ['manual_banks', 'manual_bank'], true)) {
                             $query->orWhereDoesntHave('paymentTransaction');
                         }
                     });
@@ -9863,13 +9874,13 @@ public function storeRequestDevice(Request $request)
 
     private function normalizeManualPaymentRequestStatus($value): ?string
     {
-        if (!is_string($value)) {
+        if (! is_string($value)) {
             return null;
         }
 
         $normalized = strtolower(trim($value));
 
-        if ($normalized === '') {
+        if ($normalized === '' || $normalized === 'null') {
             return null;
         }
 
@@ -9908,26 +9919,113 @@ public function storeRequestDevice(Request $request)
             return null;
         }
 
-        $map = [
-            'manual' => 'manual_bank',
-            'manual_bank' => 'manual_bank',
-            'manual-bank' => 'manual_bank',
-            'east' => 'east_yemen_bank',
-            'east_yemen_bank' => 'east_yemen_bank',
-            'east-yemen-bank' => 'east_yemen_bank',
-            'wallet' => 'wallet',
-        ];
+        foreach ($this->manualPaymentGatewayAliasMap() as $canonical => $aliases) {
+            if (in_array($normalized, $aliases, true)) {
+                return $canonical;
+            }
+        }
 
-        return $map[$normalized] ?? $normalized;
+        return $normalized;
     }
 
     private function expandManualPaymentGatewayAliases(string $gateway): array
     {
-        return match ($gateway) {
-            'manual_bank' => ['manual_bank', 'manual'],
-            'east_yemen_bank' => ['east_yemen_bank', 'east'],
-            default => [$gateway],
-        };
+        $canonical = $this->normalizeManualPaymentGateway($gateway);
+
+        if ($canonical === null) {
+            return [];
+        }
+
+        $aliases = $this->manualPaymentGatewayAliasMap()[$canonical] ?? [$canonical];
+
+        return array_values(array_unique($aliases));
+    }
+
+    private function manualPaymentGatewayAliasMap(): array
+    {
+        return [
+            'manual_banks' => [
+                'manual_banks',
+                'manual_bank',
+                'manual',
+                'manual-bank',
+                'manual-banks',
+                'manual bank',
+                'manual banks',
+                'manual_payment',
+                'manual-payment',
+                'manual payment',
+                'manualpayment',
+                'manualbank',
+                'manualbanks',
+                'offline',
+                'internal',
+                'bank',
+                'bank_transfer',
+                'bank-transfer',
+                'bank transfer',
+                'banktransfer',
+                'bank_alsharq',
+                'bank-alsharq',
+                'bank alsharq',
+                'bankalsharq',
+                'bank_alsharq_bank',
+                'bank-alsharq-bank',
+                'bank alsharq bank',
+                'bankalsharqbank',
+            ],
+            'east_yemen_bank' => [
+                'east_yemen_bank',
+                'east-yemen-bank',
+                'east yemen bank',
+                'eastyemenbank',
+                'east',
+                'east_yemen',
+                'east-yemen',
+                'east yemen',
+                'bankalsharq',
+                'bank_alsharq',
+                'bank-alsharq',
+                'bank alsharq',
+                'bankalsharqbank',
+                'bank_alsharq_bank',
+                'bank-alsharq-bank',
+                'bank alsharq bank',
+            ],
+            'wallet' => [
+                'wallet',
+                'wallet_balance',
+                'wallet-balance',
+                'wallet balance',
+                'wallet_gateway',
+                'wallet-gateway',
+                'wallet gateway',
+                'wallet_top_up',
+                'wallet-top-up',
+                'wallet top up',
+                'wallet-topup',
+                'wallet topup',
+                'walletpayment',
+                'wallet_payment',
+                'wallet-payment',
+                'wallet payment',
+                'wallettopup',
+            ],
+            'cash' => [
+                'cash',
+                'cod',
+                'cash_on_delivery',
+                'cash-on-delivery',
+                'cash on delivery',
+                'cashcollection',
+                'cash_collection',
+                'cash-collection',
+                'cash collection',
+                'cashcollect',
+                'cash_collect',
+                'cash-collect',
+            ],
+        ];
     }
 
 

@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'home_tab_view.dart';
+import 'package:marib/ui/screens/home_screen/section/section_screen/widgets/home_tab_view.dart';
 import 'package:marib/data/cubits/item/fetch_item_summary_cubit.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/constant.dart';
@@ -441,7 +441,7 @@ class _ItemsListSheinState extends State<ItemsListShein> {
                 tooltip: _isGridMode ? 'List view' : 'Grid view',
                 icon: Icon(
                   _isGridMode ? Icons.view_list_rounded : Icons.grid_view_rounded,
-                  color: palette.textSecondaryColor,
+                  color: palette.textLightColor,
                 ),
               ),
             ],
@@ -482,7 +482,7 @@ class _ItemsListSheinState extends State<ItemsListShein> {
   }
 
   Widget _buildSearchField(BuildContext context) {
-    final ColorSchemeExt palette = context.color;
+    final ColorScheme palette = context.color;
     return Container(
       decoration: BoxDecoration(
         color: palette.primaryColor,
@@ -520,7 +520,7 @@ class _ItemsListSheinState extends State<ItemsListShein> {
               },
               child: Icon(
                 Icons.close_rounded,
-                color: palette.textSecondaryColor,
+                color: palette.textLightColor,
               ),
             ),
         ],
@@ -646,7 +646,7 @@ class _ItemsListSheinState extends State<ItemsListShein> {
       alignment: Alignment.center,
       child: Icon(
         Icons.category_rounded,
-        color: palette.textSecondaryColor,
+        color: palette.textLightColor,
       ),
     );
 
@@ -706,7 +706,7 @@ class _ItemsListSheinState extends State<ItemsListShein> {
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 color: isSelected
                     ? palette.textDefaultColor
-                    : palette.textSecondaryColor,
+                    : palette.textLightColor,
               ),
             ),
           ),

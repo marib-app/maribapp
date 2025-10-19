@@ -55,7 +55,8 @@ class WifiPlanConfigurationScreenState
   final TextEditingController _planNameController = TextEditingController();
   final TextEditingController _categoryController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
-  final TextEditingController _dataAllowanceController = TextEditingController();
+  final TextEditingController _dataAllowanceController =
+      TextEditingController();
   final TextEditingController _validityController = TextEditingController();
 
   bool _dataUnlimited = false;
@@ -75,159 +76,264 @@ class WifiPlanConfigurationScreenState
 
   @override
   Widget build(BuildContext context) {
-    final color = context.color;
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.networkName == null
-              ? 'إعداد فئة البطاقات'
-              : 'فئة جديدة لـ ${widget.networkName}',
+    return ColoredBox(
+      color: theme.colorScheme.surface,
+      child: SafeArea(
+        bottom: false,
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: Material(
+            color: theme.colorScheme.surface,
+            child: Column(
+              children: [
+                _buildHeader(context, onSurface),
+                const Divider(height: 1),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextField(
+                          controller: _planNameController,
+                          enabled: !_isSubmitting,
+                          decoration: const InputDecoration(
+                            labelText: 'اسم البطاقة',
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: _categoryController,
+                          enabled: !_isSubmitting,
+                          decoration: const InputDecoration(
+                            labelText: 'فئة البطاقة',
+                            hintText: 'مثال: بطاقات شهرية أو سياحية',
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: _priceController,
+                          enabled: !_isSubmitting,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: 'السعر',
+                            suffixText:
+                                _resolveCurrencyLabel(widget.defaultCurrency),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          'حجم البيانات',
+                          style: TextStyle(
+                            color: onSurface.withOpacity(.88),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        CheckboxListTile(
+                          value: _dataUnlimited,
+                          onChanged: _isSubmitting
+                              ? null
+                              : (value) {
+                                  setState(() {
+                                    _dataUnlimited = value ?? false;
+                                  });
+                                },
+                          title: const Text('بيانات غير محدودة'),
+                          controlAffinity: ListTileControlAffinity.leading,
+                          contentPadding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        if (!_dataUnlimited) ...[
+                          TextField(
+                            controller: _dataAllowanceController,
+                            enabled: !_isSubmitting,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'البيانات (بالجيجابايت)',
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 24),
+                        Text(
+                          'صلاحية الاستخدام',
+                          style: TextStyle(
+                            color: onSurface.withOpacity(.88),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        CheckboxListTile(
+                          value: _validityUnlimited,
+                          onChanged: _isSubmitting
+                              ? null
+                              : (value) {
+                                  setState(() {
+                                    _validityUnlimited = value ?? false;
+                                  });
+                                },
+                          title: const Text('صلاحية غير محدودة'),
+                          controlAffinity: ListTileControlAffinity.leading,
+                          contentPadding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        if (!_validityUnlimited) ...[
+                          TextField(
+                            controller: _validityController,
+                            enabled: !_isSubmitting,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'الصلاحية (بالأيام)',
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 24),
+                        WifiFilePickerTile(
+                          title: 'ملف أكواد القسائم',
+                          placeholder:
+                              'ارفع ملف CSV أو XLS أو XLSX يحتوي على الأكواد الجديدة',
+                          fileName: _voucherFile?.name,
+                          isBusy: _isSubmitting,
+                          onTap: () {
+                            _pickVoucherFile();
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                    child: _buildSubmitButton(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
-      backgroundColor: context.color.backgroundColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, Color onSurface) {
+    final palette = context.color;
+    final theme = Theme.of(context);
+
+    final String title = widget.networkName == null
+        ? 'إعداد فئة البطاقات'
+        : 'فئة جديدة لـ ${widget.networkName}';
+    final String subtitle = widget.networkName == null
+        ? 'اضبط تفاصيل الباقة وارفع أكواد القسائم الجديدة قبل النشر.'
+        : 'اضبط تفاصيل الباقة وارفع الأكواد المرتبطة بالشبكة.';
+
+    return Container(
+      width: double.infinity,
+      color: theme.colorScheme.surface,
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 44,
+            height: 4,
+            decoration: BoxDecoration(
+              color: onSurface.withOpacity(.18),
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextField(
-                      controller: _planNameController,
-                      enabled: !_isSubmitting,
-                      decoration: const InputDecoration(
-                        labelText: 'اسم البطاقة',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _categoryController,
-                      enabled: !_isSubmitting,
-                      decoration: const InputDecoration(
-                        labelText: 'فئة البطاقة',
-                        hintText: 'مثال: بطاقات شهرية أو سياحية',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _priceController,
-                      enabled: !_isSubmitting,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      decoration: InputDecoration(
-                        labelText: 'السعر',
-                        suffixText: _resolveCurrencyLabel(widget.defaultCurrency),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
                     Text(
-                      'حجم البيانات',
+                      title,
                       style: TextStyle(
-                        color: color.textDefaultColor,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: onSurface,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    CheckboxListTile(
-                      value: _dataUnlimited,
-                      onChanged: _isSubmitting
-                          ? null
-                          : (value) {
-                        setState(() {
-                          _dataUnlimited = value ?? false;
-                        });
-                      },
-                      title: const Text('بيانات غير محدودة'),
-                      controlAffinity: ListTileControlAffinity.leading,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    if (!_dataUnlimited) ...[
-                      TextField(
-                        controller: _dataAllowanceController,
-                        enabled: !_isSubmitting,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        decoration: const InputDecoration(
-                          labelText: 'البيانات (بالجيجابايت)',
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 6),
                     Text(
-                      'صلاحية الاستخدام',
+                      subtitle,
                       style: TextStyle(
-                        color: color.textDefaultColor,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        height: 1.4,
+                        color: onSurface.withOpacity(.65),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    CheckboxListTile(
-                      value: _validityUnlimited,
-                      onChanged: _isSubmitting
-                          ? null
-                          : (value) {
-                        setState(() {
-                          _validityUnlimited = value ?? false;
-                        });
-                      },
-                      title: const Text('صلاحية غير محدودة'),
-                      controlAffinity: ListTileControlAffinity.leading,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    if (!_validityUnlimited) ...[
-                      TextField(
-                        controller: _validityController,
-                        enabled: !_isSubmitting,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'الصلاحية (بالأيام)',
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 24),
-                    WifiFilePickerTile(
-                      title: 'ملف أكواد القسائم',
-                      placeholder:
-                      'ارفع ملف CSV أو XLS أو XLSX يحتوي على الأكواد الجديدة',
-                      fileName: _voucherFile?.name,
-                      isBusy: _isSubmitting,
-                      onTap: () {
-
-                        _pickVoucherFile();
-                      },
-
                     ),
                   ],
                 ),
               ),
-            ),
-            SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: _isSubmitting ? null : _onSubmit,
-                    child: _isSubmitting
-                        ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2.5),
-                    )
-                        : const Text('حفظ ورفع الأكواد'),
+              const SizedBox(width: 12),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: palette.territoryColor.withOpacity(.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: IconButton(
+                  tooltip: 'إغلاق',
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  icon: Icon(
+                    Icons.close_rounded,
+                    color: palette.territoryColor,
                   ),
                 ),
               ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubmitButton(BuildContext context) {
+    final palette = context.color;
+
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: ElevatedButton(
+        onPressed: _isSubmitting ? null : _onSubmit,
+        style: ElevatedButton.styleFrom(
+          elevation: 0,
+          minimumSize: const Size.fromHeight(56),
+          backgroundColor: palette.territoryColor,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: palette.borderColor,
+          disabledForegroundColor: Colors.white.withOpacity(0.72),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ).merge(
+          ButtonStyle(
+            overlayColor: WidgetStatePropertyAll(
+              Colors.white.withOpacity(.08),
             ),
-          ],
+          ),
         ),
+        child: _isSubmitting
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2.5),
+              )
+            : const Text('حفظ ورفع الأكواد'),
       ),
     );
   }
@@ -313,7 +419,7 @@ class WifiPlanConfigurationScreenState
     }
 
     final MultipartFile? voucherMultipart =
-    _prepareVoucherMultipart(_voucherFile!);
+        _prepareVoucherMultipart(_voucherFile!);
     if (voucherMultipart == null) {
       return;
     }
@@ -331,7 +437,7 @@ class WifiPlanConfigurationScreenState
 
     try {
       final Map<String, dynamic> planResponse =
-      await widget.repository.createNetworkPlan(
+          await widget.repository.createNetworkPlan(
         networkId: widget.networkId,
         name: name,
         description: category,
@@ -350,7 +456,7 @@ class WifiPlanConfigurationScreenState
       );
 
       final Map<String, dynamic> planPayload =
-      _extractPlanPayload(planResponse);
+          _extractPlanPayload(planResponse);
       final int planId = _parseId(
         planPayload['id'] ?? planResponse['plan_id'] ?? planResponse['id'],
       );
@@ -360,13 +466,13 @@ class WifiPlanConfigurationScreenState
       }
 
       final Map<String, dynamic> batchResponse =
-      await widget.repository.createPlanBatch(
+          await widget.repository.createPlanBatch(
         planId: planId,
         file: voucherMultipart,
       );
 
       final Map<String, dynamic> batchPayload =
-      _extractBatchPayload(batchResponse)..['plan_id'] = planId;
+          _extractBatchPayload(batchResponse)..['plan_id'] = planId;
 
       if (!mounted) return;
 
@@ -568,8 +674,7 @@ class WifiPlanConfigurationScreenState
   TextEditingController get priceController => _priceController;
 
   @visibleForTesting
-  TextEditingController get dataAllowanceController =>
-      _dataAllowanceController;
+  TextEditingController get dataAllowanceController => _dataAllowanceController;
 
   @visibleForTesting
   TextEditingController get validityController => _validityController;

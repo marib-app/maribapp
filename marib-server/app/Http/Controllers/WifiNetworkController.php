@@ -119,10 +119,20 @@ class WifiNetworkController extends Controller
                 $network = WifiNetwork::create($networkData);
                 break;
             } catch (QueryException $exception) {
-                if ($supportsSlug && $this->isDuplicateWifiNetworkSlugException($exception) && $attempt < $maxAttempts - 1) {
-                    $networkData['slug'] = $this->prepareSlug(null, $validated['name']);
+                if ($supportsSlug && $this->isDuplicateWifiNetworkSlugException($exception)) {
+                    if ($attempt < $maxAttempts - 1) {
+                        $networkData['slug'] = $this->prepareSlug(null, $validated['name']);
 
-                    continue;
+                        continue;
+                    }
+
+                    return response()->json([
+                        'message' => __('Unable to create the Wi-Fi network.'),
+                        'errors' => [
+                            'slug' => [__('The Wi-Fi network link is already in use. Please try a different name.')],
+                        ],
+                    ], 422);
+                
                 }
 
                 report($exception);
@@ -147,7 +157,7 @@ class WifiNetworkController extends Controller
         }
 
 
-        return response()->json(['data' => $network->fresh()], 201);
+        return response()->json(['data' => ['id' => $network->getKey()]], 201);
     
     
     }
@@ -543,9 +553,27 @@ class WifiNetworkController extends Controller
             return $query->whereKey($requestedWalletId)->first();
         }
 
+        if (! $walletsHaveCurrency) {
+            $wallet = $query->first();
 
-                if (! $walletsHaveCurrency) {
-            return $query->first();
+            if (! $wallet) {
+                try {
+                    $wallet = WalletAccount::create([
+                        'user_id' => $user->getKey(),
+                        'balance' => 0,
+                    ]);
+                } catch (QueryException $exception) {
+                    if (! $this->isDuplicateWalletAccountException($exception)) {
+                        throw $exception;
+                    }
+
+                    $wallet = $query->first();
+                }
+            }
+
+
+            return $wallet;
+
         }
 
 

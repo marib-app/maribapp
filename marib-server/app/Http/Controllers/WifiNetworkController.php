@@ -151,6 +151,32 @@ class WifiNetworkController extends Controller
 
                 }
 
+
+                if ($user && $this->isDuplicateWifiNetworkOwnerException($exception)) {
+                    $existingNetwork = WifiNetwork::query()
+                        ->where('user_id', $user->getKey())
+                        ->latest('id')
+                        ->first();
+
+                    if ($existingNetwork) {
+                        $updateData = Arr::except($networkData, ['slug']);
+
+                        if ($updateData !== []) {
+                            $existingNetwork->fill($updateData);
+
+                            if ($existingNetwork->isDirty()) {
+                                $existingNetwork->save();
+                            }
+                        }
+
+                        $network = $existingNetwork->fresh();
+
+                        break;
+                    }
+                }
+
+
+
                 if ($user && $this->isWalletAssignmentConstraint($exception)) {
                     if (! $walletConstraintRetried) {
                         $walletConstraintRetried = true;
@@ -762,6 +788,38 @@ class WifiNetworkController extends Controller
 
         if (in_array($sqlState, ['23000', '23505'], true)) {
 
+            return true;
+        }
+
+        return $driverCode !== null && in_array($driverCode, [19, 1062, 1555, 23505], true);
+    }
+
+   private function isDuplicateWifiNetworkOwnerException(QueryException $exception): bool
+    {
+        $message = strtolower($exception->getMessage());
+        $errorInfo = $exception->errorInfo ?? [];
+        $constraint = strtolower((string) ($errorInfo[2] ?? ''));
+        $sqlState = $exception->getCode();
+        $driverCode = isset($errorInfo[1]) ? (int) $errorInfo[1] : null;
+
+        $mentionsNetwork = str_contains($message, 'wifi_networks')
+            || ($constraint !== '' && str_contains($constraint, 'wifi_networks'));
+        $mentionsUser = str_contains($message, 'user_id')
+            || ($constraint !== '' && str_contains($constraint, 'user_id'));
+
+        if (! $mentionsNetwork || ! $mentionsUser) {
+            return false;
+        }
+
+        if (str_contains($message, 'duplicate') || str_contains($message, 'unique')) {
+            return true;
+        }
+
+        if ($constraint !== '' && (str_contains($constraint, 'duplicate') || str_contains($constraint, 'unique'))) {
+            return true;
+        }
+
+        if (in_array($sqlState, ['23000', '23505'], true)) {
             return true;
         }
 

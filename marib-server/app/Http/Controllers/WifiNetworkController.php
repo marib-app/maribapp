@@ -71,7 +71,7 @@ class WifiNetworkController extends Controller
 
 
         $user = $request->user();
-        $walletAccount = null;
+        $walletAccount = $user ? $this->resolveWalletAccount($user, null) : null;
 
         $fillable = (new WifiNetwork())->getFillable();
 
@@ -119,12 +119,14 @@ class WifiNetworkController extends Controller
 
         $network = null;
         $maxAttempts = $supportsSlug ? 5 : 3;
+        $walletConstraintRetried = false;
 
         for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
 
-            if ($user) {
-                $walletAccount = $this->resolveWalletAccount($user, null);
-                $networkData['wallet_id'] = $walletAccount?->getKey();
+             if ($walletAccount) {
+                $networkData['wallet_id'] = $walletAccount->getKey();
+            } else {
+                unset($networkData['wallet_id']);
             }
 
 
@@ -150,12 +152,28 @@ class WifiNetworkController extends Controller
                 }
 
                 if ($user && $this->isWalletAssignmentConstraint($exception)) {
-                    if ($attempt < $maxAttempts - 1) {
-                        $walletAccount = null;
-                        unset($networkData['wallet_id']);
+                    if (! $walletConstraintRetried) {
+                        $walletConstraintRetried = true;
+                        $walletAccount = $this->resolveWalletAccount($user, $walletAccount?->getKey());
+                        
+                        if ($walletAccount) {
+                            $networkData['wallet_id'] = $walletAccount->getKey();
 
-                        continue;
+                            continue;
+                        }
+
                     }
+
+
+                    report($exception);
+
+                    return response()->json([
+                        'message' => __('Unable to create the Wi-Fi network.'),
+                        'errors' => [
+                            'wallet_id' => [__('We were unable to link your wallet account to the Wi-Fi network. Please try again or contact support.')],
+                        ],
+                    ], 422);
+
 
                 
                 }

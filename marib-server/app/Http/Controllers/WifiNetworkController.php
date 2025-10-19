@@ -152,6 +152,50 @@ class WifiNetworkController extends Controller
                 }
 
 
+
+                if ($walletAccount && $this->isDuplicateWifiNetworkWalletException($exception)) {
+                    $existingNetwork = WifiNetwork::query()
+                        ->where('wallet_id', $walletAccount->getKey())
+                        ->latest('id')
+                        ->first();
+
+                    if ($existingNetwork) {
+                        if ($user && $existingNetwork->user_id !== $user->getKey()) {
+                            return response()->json([
+                                'message' => __('Unable to create the Wi-Fi network.'),
+                                'errors' => [
+                                    'wallet_id' => [__('This wallet is already linked to another Wi-Fi network.')],
+                                ],
+                            ], 422);
+                        }
+
+                        $updateData = Arr::except($networkData, ['slug']);
+
+                        if ($updateData !== []) {
+                            $existingNetwork->fill($updateData);
+
+                            if ($existingNetwork->isDirty()) {
+                                $existingNetwork->save();
+                            }
+                        }
+
+                        $network = $existingNetwork->fresh();
+
+                        break;
+                    }
+
+                    return response()->json([
+                        'message' => __('Unable to create the Wi-Fi network.'),
+                        'errors' => [
+                            'wallet_id' => [__('This wallet is already linked to another Wi-Fi network.')],
+                        ],
+                    ], 422);
+                }
+
+
+
+
+
                 if ($user && $this->isDuplicateWifiNetworkOwnerException($exception)) {
                     $existingNetwork = WifiNetwork::query()
                         ->where('user_id', $user->getKey())
@@ -794,7 +838,48 @@ class WifiNetworkController extends Controller
         return $driverCode !== null && in_array($driverCode, [19, 1062, 1555, 23505], true);
     }
 
-   private function isDuplicateWifiNetworkOwnerException(QueryException $exception): bool
+    private function isDuplicateWifiNetworkWalletException(QueryException $exception): bool
+    {
+        $message = strtolower($exception->getMessage());
+        $errorInfo = $exception->errorInfo ?? [];
+        $constraint = strtolower((string) ($errorInfo[2] ?? ''));
+        $sqlState = $exception->getCode();
+        $driverCode = isset($errorInfo[1]) ? (int) $errorInfo[1] : null;
+
+        $mentionsWallet = str_contains($message, 'wallet_id')
+            || str_contains($message, 'wallet')
+            || ($constraint !== '' && (str_contains($constraint, 'wallet_id') || str_contains($constraint, 'wallet')));
+
+        if (! $mentionsWallet) {
+            return false;
+        }
+
+        $mentionsNetwork = str_contains($message, 'wifi_networks')
+            || ($constraint !== '' && str_contains($constraint, 'wifi_networks'));
+
+        if (! $mentionsNetwork) {
+            return false;
+        }
+
+        if (str_contains($message, 'duplicate') || str_contains($message, 'unique')) {
+            return true;
+        }
+
+        if ($constraint !== '' && (str_contains($constraint, 'duplicate') || str_contains($constraint, 'unique'))) {
+            return true;
+        }
+
+        if (in_array($sqlState, ['23000', '23505'], true)) {
+            return true;
+        }
+
+        return $driverCode !== null && in_array($driverCode, [19, 1062, 1555, 23505], true);
+    }
+
+    private function isDuplicateWifiNetworkOwnerException(QueryException $exception): bool
+    
+    
+    
     {
         $message = strtolower($exception->getMessage());
         $errorInfo = $exception->errorInfo ?? [];

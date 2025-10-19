@@ -6620,7 +6620,7 @@ class ApiController extends Controller {
         ]);
 
 
-        $payload = $this->mapService($service);
+        $payload = $this->mapService($service, true);
 
         ResponseService::successResponse('Service fetched successfully.', $payload);
     }
@@ -6644,7 +6644,7 @@ class ApiController extends Controller {
             
             ->where('owner_id', $user->id)
             ->get()
-            ->map(fn(Service $service) => $this->mapService($service))
+            ->map(fn(Service $service) => $this->mapService($service, true))
             ->values()
             ->all();
 
@@ -6696,7 +6696,7 @@ class ApiController extends Controller {
         ]);
 
 
-        ResponseService::successResponse('Service updated successfully.', $this->mapService($service));
+        ResponseService::successResponse('Service updated successfully.', $this->mapService($service, true));
     }
 
     public function deleteOwnedService(Request $request, Service $service)
@@ -6870,8 +6870,11 @@ class ApiController extends Controller {
 
 /**
  * يحوّل كائن Service إلى مصفوفة JSON جاهزة للتطبيق.
+ *  *
+ * @param  Service  $s
+ * @param  bool     $includeOwnerEmail هل يجب تضمين البريد الإلكتروني للمالك؟
  */
-private function mapService(Service $s): array
+private function mapService(Service $s, bool $includeOwnerEmail = false): array
 {
 
 
@@ -6927,11 +6930,10 @@ private function mapService(Service $s): array
 
         'direct_to_user'    => (bool) $s->direct_to_user,
         'direct_user_id'    => $s->direct_user_id ? (int) $s->direct_user_id : null,
-        'owner'             => $owner ? [
-            'id'    => $ownerId,
-            'name'  => $owner->name,
-            'email' => $owner->email,
-        ] : null,
+        'owner'             => $owner ? array_merge([
+            'id'   => $ownerId,
+            'name' => $owner->name,
+        ], $includeOwnerEmail ? ['email' => $owner->email] : []) : null,
 
 
         'service_uid'       => $s->service_uid,

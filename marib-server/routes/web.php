@@ -394,7 +394,7 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
             ->middleware('permission:currency-rate-edit')
             ->name('currency.icon.destroy');
 
-            
+
     });
 
     /* ------------------------------- أسعار المعادن Metal Rates ------------------------------ */
@@ -404,8 +404,14 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
         'middleware' => ['permission:metal-rate-list|metal-rate-create|metal-rate-edit|metal-rate-delete|metal-rate-schedule'],
     ], static function () {
         Route::get('/', [MetalRateController::class, 'index'])->name('index');
-        Route::post('/', [MetalRateController::class, 'store'])->name('store');
-        Route::put('/{metalRate}', [MetalRateController::class, 'update'])
+        Route::get('/create', [MetalRateController::class, 'create'])
+            ->middleware('permission:metal-rate-create')
+            ->name('create');
+        Route::post('/', [MetalRateController::class, 'store'])
+            ->middleware('permission:metal-rate-create')
+            ->name('store');
+            
+            Route::put('/{metalRate}', [MetalRateController::class, 'update'])
             ->whereNumber('metalRate')
             ->name('update');
         Route::delete('/{metalRate}', [MetalRateController::class, 'destroy'])

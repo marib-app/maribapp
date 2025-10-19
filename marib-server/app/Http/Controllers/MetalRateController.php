@@ -36,6 +36,13 @@ class MetalRateController extends Controller
         ]);
     }
 
+
+    public function create(): View
+    {
+        return view('metal_rates.create');
+    }
+
+
     public function store(Request $request): RedirectResponse
     {
         $payload = $this->validateMetalRatePayload($request);

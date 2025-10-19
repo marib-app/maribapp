@@ -15,114 +15,8 @@
 
 
 @push('scripts')
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const inputs = document.querySelectorAll('[data-metal-icon-input]');
+    @include('metal_rates.partials.icon_preview_scripts')
 
-            inputs.forEach(function (input) {
-                const previewId = input.dataset.metalIconPreview;
-                const wrapperId = input.dataset.metalIconWrapper;
-                const preview = previewId ? document.getElementById(previewId) : null;
-                const wrapper = wrapperId ? document.getElementById(wrapperId) : (preview ? preview.closest('[data-metal-icon-preview-container]') : null);
-                const rateId = input.dataset.metalRateId;
-                let objectUrl = null;
-
-                const resetPreview = function () {
-                    if (preview) {
-                        const originalSrc = preview.getAttribute('data-original-src') || '';
-                        const originalAlt = preview.getAttribute('data-original-alt') || '';
-
-                        if (objectUrl) {
-                            URL.revokeObjectURL(objectUrl);
-                            objectUrl = null;
-                        }
-
-                        if (originalSrc) {
-                            preview.src = originalSrc;
-                            preview.alt = originalAlt || preview.alt || '';
-                            preview.style.display = '';
-                            if (wrapper) {
-                                wrapper.classList.remove('d-none');
-                                wrapper.dataset.hasOriginal = '1';
-                            }
-                        } else {
-                            preview.src = '#';
-                            preview.alt = '';
-                            preview.style.display = 'none';
-                            if (wrapper) {
-                                wrapper.classList.add('d-none');
-                                wrapper.dataset.hasOriginal = '';
-                            }
-                        }
-                    }
-                };
-
-                if (wrapper && preview) {
-                    const originalSrc = preview.getAttribute('data-original-src') || '';
-                    if (originalSrc) {
-                        wrapper.dataset.hasOriginal = '1';
-                        preview.style.display = '';
-                    } else if (!(input.files && input.files.length)) {
-                        preview.style.display = 'none';
-                    }
-                }
-
-                input.addEventListener('change', function () {
-                    if (objectUrl) {
-                        URL.revokeObjectURL(objectUrl);
-                        objectUrl = null;
-                    }
-
-                    if (input.files && input.files[0]) {
-                        const file = input.files[0];
-                        objectUrl = URL.createObjectURL(file);
-
-                        if (preview) {
-                            preview.src = objectUrl;
-                            preview.alt = file.name;
-                            preview.style.display = '';
-                        }
-
-                        if (wrapper) {
-                            wrapper.classList.remove('d-none');
-                            wrapper.dataset.hasOriginal = wrapper.dataset.hasOriginal || '';
-                        }
-                    } else {
-                        resetPreview();
-                    }
-                });
-
-                const clearButtons = document.querySelectorAll('[data-metal-icon-clear-input="' + input.id + '"]');
-                clearButtons.forEach(function (button) {
-                    button.addEventListener('click', function (event) {
-                        event.preventDefault();
-                        input.value = '';
-                        resetPreview();
-                    });
-                });
-
-                if (rateId) {
-                    const removeButton = document.querySelector('[data-metal-icon-remove="' + rateId + '"]');
-                    if (removeButton) {
-                        removeButton.addEventListener('click', function () {
-                            if (preview) {
-                                preview.setAttribute('data-original-src', '');
-                                preview.setAttribute('data-original-alt', '');
-                            }
-
-                            const altField = document.getElementById('metal_icon_alt_' + rateId);
-                            if (altField) {
-                                altField.value = '';
-                            }
-
-                            input.value = '';
-                            resetPreview();
-                        });
-                    }
-                }
-            });
-        });
-    </script>
 @endpush
 
 
@@ -161,84 +55,18 @@
         </div>
 
         <div class="row">
-            @can('metal-rate-create')
-                <div class="col-lg-4">
-                <div class="card h-100">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">{{ __('Add metal rate') }}</h5>
-                    </div>
-                    <div class="card-body">
-                        <form action="{{ route('metal-rates.store') }}" method="POST" class="needs-validation" novalidate enctype="multipart/form-data">
-                            @csrf
-                            <div class="mb-3">
-                                <label for="metal_type" class="form-label">{{ __('Metal type') }}</label>
-                                <select name="metal_type" id="metal_type" class="form-select" required>
-                                    <option value="" disabled selected>{{ __('Select type') }}</option>
-                                    <option value="gold" @selected(old('metal_type') === 'gold')>{{ __('Gold') }}</option>
-                                    <option value="silver" @selected(old('metal_type') === 'silver')>{{ __('Silver') }}</option>
-                                </select>
-                            </div>
+            <div class="col-12">
 
-                            <div class="mb-3">
-                                <label for="karat" class="form-label">{{ __('Karat (for gold only)') }}</label>
-                                <input type="number" step="0.01" min="0" max="999" class="form-control" id="karat" name="karat" value="{{ old('karat') }}" placeholder="24">
-                                <div class="form-text">{{ __('Leave empty for silver.') }}</div>
-                            </div>
-
-                            <div class="row g-2">
-                                <div class="col-6">
-                                    <label for="buy_price" class="form-label">{{ __('Buy price') }}</label>
-                                    <input type="number" step="0.001" min="0" class="form-control" id="buy_price" name="buy_price" value="{{ old('buy_price') }}" required>
-                                </div>
-                                <div class="col-6">
-                                    <label for="sell_price" class="form-label">{{ __('Sell price') }}</label>
-                                    <input type="number" step="0.001" min="0" class="form-control" id="sell_price" name="sell_price" value="{{ old('sell_price') }}" required>
-                                </div>
-                            </div>
-
-                            <div class="mb-3 mt-3">
-                                <label for="source" class="form-label">{{ __('Source (optional)') }}</label>
-                                <input type="text" class="form-control" id="source" name="source" value="{{ old('source') }}">
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="quoted_at" class="form-label">{{ __('Quote timestamp (optional)') }}</label>
-                                <input type="datetime-local" class="form-control" id="quoted_at" name="quoted_at" value="{{ old('quoted_at') }}">
-                            </div>
-
-
-
-                            <div class="mb-3">
-                                <label for="create_icon" class="form-label">{{ __('Icon (optional)') }}</label>
-                                <input type="file" class="form-control" id="create_icon" name="icon" accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml" data-metal-icon-input data-metal-icon-preview="create_icon_preview">
-                                <div class="form-text">{{ __('Allowed types: JPG, PNG, WEBP, SVG. Max size: 2MB.') }}</div>
-                                <div class="mt-2 d-none" id="create_icon_preview_wrapper" data-metal-icon-preview-container>
-                                    <img src="#" alt="" id="create_icon_preview" class="img-thumbnail" style="max-height: 120px;" data-original-src="" data-original-alt="">
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="create_icon_alt" class="form-label">{{ __('Icon alternative text') }}</label>
-                                <input type="text" class="form-control" id="create_icon_alt" name="icon_alt" value="{{ old('icon_alt') }}" maxlength="255" placeholder="{{ __('Describe the icon for screen readers') }}">
-                                <div class="form-text">{{ __('Optional, helps with accessibility when an icon is provided.') }}</div>
-                            </div>
-
-
-
-                            <div class="d-grid">
-                                <button type="submit" class="btn btn-primary">{{ __('Save metal rate') }}</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-                </div>
-            @endcan
-
-            <div class="{{ auth()->user()?->can('metal-rate-create') ? 'col-lg-8' : 'col-lg-12' }}">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">{{ __('Existing metal rates') }}</h5>
-                        <span class="badge bg-light text-dark">{{ $metalRates->count() }}</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-light text-dark">{{ $metalRates->count() }}</span>
+                            @can('metal-rate-create')
+                                <a href="{{ route('metal-rates.create') }}" class="btn btn-primary btn-sm">{{ __('Add metal rate') }}</a>
+                            @endcan
+                        </div>
+                    
                     </div>
                     <div class="card-body">
                         @if ($metalRates->isEmpty())

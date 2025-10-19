@@ -1057,6 +1057,12 @@ class _HomeTabViewState extends State<HomeTabView> {
           slivers.add(_buildLoadingMoreIndicatorSliver(context));
         }
 
+
+        if (!context.read<FetchItemSummaryCubit>().hasMoreData()) {
+          slivers.add(_buildEndOfResultsSliver(context));
+        }
+
+
         if (showLoadingMoreError) {
           slivers.add(_buildLoadingMoreErrorSliver(context));
         }
@@ -1190,8 +1196,44 @@ class _HomeTabViewState extends State<HomeTabView> {
     if (hasLoadingMoreEntry && !showLoadingMoreError) {
       slivers.add(_buildLoadingMoreIndicatorSliver(context));
     }
+
+    if (!context.read<FetchItemSummaryCubit>().hasMoreData()) {
+      slivers.add(_buildEndOfResultsSliver(context));
+    }
+
     return slivers;
   }
+
+
+
+  Widget _buildEndOfResultsSliver(BuildContext context) {
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+    final TextTheme textTheme = Theme.of(context).textTheme;
+    final Color messageColor = colorScheme.onSurface.withOpacity(0.6);
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 32, 24, 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.inbox_outlined,
+              size: 40,
+              color: messageColor,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'لقد شاهدت كل النتائج',
+              textAlign: TextAlign.center,
+              style: textTheme.bodyMedium?.copyWith(color: messageColor),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 
   Widget _buildLoadingMoreErrorSliver(BuildContext context) {
     return SliverToBoxAdapter(

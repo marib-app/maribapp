@@ -178,15 +178,25 @@ class PaymentRequestTableQuery
             $supportsManualGatewayName ? $sanitizeManualBankAlias('mpr.gateway_name') : null,
         ], static fn (?string $part): bool => $part !== null));
 
-        $manualGatewayNameParts = array_merge(
+        $manualGatewayNameCoreParts = array_merge(
+            
             $manualGatewayLookupParts,
             $manualGatewayRequestParts,
+
+        );
+
+        $manualGatewayNameParts = array_merge(
+            $manualGatewayNameCoreParts,
+
             $paymentGatewayNameParts,
         );
         
         $manualGatewayNameParts[] = "'Manual Banks'";
         $manualGatewayNameSelect = 'COALESCE(' . implode(', ', $manualGatewayNameParts) . ')';
 
+        $manualRequestGatewayNameParts = $manualGatewayNameCoreParts;
+        $manualRequestGatewayNameParts[] = "'Manual Banks'";
+        $manualRequestGatewayNameSelect = 'COALESCE(' . implode(', ', $manualRequestGatewayNameParts) . ')';
 
         $walletPaymentGatewayNameParts = [];
         if ($supportsPaymentGatewayName) {
@@ -434,7 +444,7 @@ class PaymentRequestTableQuery
             ->selectRaw('mpr.payable_id as payable_id')
             ->selectRaw($manualGatewayKeyExpression . ' as gateway_key')
             ->selectRaw(self::channelExpressionFromGateway($manualGatewayKeyExpression, 'mpr.payable_type') . ' as channel')
-            ->selectRaw($manualGatewayNameSelect . ' as gateway_name')
+            ->selectRaw($manualRequestGatewayNameSelect . ' as gateway_name')
             ->selectRaw(self::categoryExpression('mpr') . ' as category')
             ->selectRaw(
                 self::statusExpression(

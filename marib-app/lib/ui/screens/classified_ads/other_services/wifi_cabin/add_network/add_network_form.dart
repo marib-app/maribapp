@@ -90,9 +90,8 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
         TextField(
           controller: _contactController,
           enabled: !_isSubmitting,
-
           keyboardType: TextInputType.phone,
-          inputFormatters: const <TextInputFormatter>[
+          inputFormatters: <TextInputFormatter>[
             FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
           ],
           decoration: const InputDecoration(

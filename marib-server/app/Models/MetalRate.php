@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Services\MetalRateQuoteService;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collections\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 class MetalRate extends Model
@@ -19,16 +21,12 @@ class MetalRate extends Model
     protected $fillable = [
         'metal_type',
         'karat',
-        'buy_price',
-        'sell_price',
-        'source',
         'icon_path',
         'icon_alt',
         'icon_uploaded_by',
         'icon_uploaded_at',
         'icon_removed_by',
         'icon_removed_at',
-        'quoted_at',
     ];
 
     protected $casts = [
@@ -44,6 +42,17 @@ class MetalRate extends Model
     {
         return $this->hasMany(MetalRateUpdate::class);
     }
+
+    public function quotes(): HasMany
+    {
+        return $this->hasMany(MetalRateQuote::class);
+    }
+
+    public function defaultQuote(): HasOne
+    {
+        return $this->hasOne(MetalRateQuote::class)->where('is_default', true);
+    }
+
 
     public function pendingUpdates(): HasMany
     {
@@ -77,14 +86,26 @@ class MetalRate extends Model
 
     public function applyScheduledUpdate(MetalRateUpdate $update): void
     {
-        $this->forceFill([
-            'buy_price' => $update->buy_price,
-            'sell_price' => $update->sell_price,
-            'source' => $update->source,
-            'quoted_at' => $update->scheduled_for instanceof CarbonInterface
-                ? $update->scheduled_for
-                : now(),
-        ])->save();
+        $quotedAt = $update->scheduled_for instanceof CarbonInterface
+            ? $update->scheduled_for
+            : now();
+
+        /** @var MetalRateQuoteService $quoteService */
+        $quoteService = app(MetalRateQuoteService::class);
+        $defaultGovernorateId = $quoteService->resolveDefaultGovernorateId();
+
+        $quoteService->syncQuotes(
+            $this,
+            [[
+                'governorate_id' => $defaultGovernorateId,
+                'sell_price' => $update->sell_price,
+                'buy_price' => $update->buy_price,
+                'source' => $update->source,
+                'quoted_at' => $quotedAt,
+            ]],
+            $defaultGovernorateId,
+            $update->created_by
+        );
 
         $update->markApplied();
     }
@@ -104,4 +125,61 @@ class MetalRate extends Model
 
         return $typeName;
     }
+
+
+
+    /**
+     * @return array{0: MetalRateQuote|null, 1: Governorate|null, 2: bool}
+     */
+    public function resolveQuoteForGovernorate(?Governorate $requestedGovernorate): array
+    {
+        /** @var Collection<int, MetalRateQuote> $quotes */
+        $quotes = $this->relationLoaded('quotes')
+            ? $this->quotes
+            : $this->quotes()->with('governorate')->get();
+
+        $resolvedQuote = null;
+        $usedFallback = false;
+
+        if ($requestedGovernorate) {
+            $resolvedQuote = $quotes->firstWhere('governorate_id', $requestedGovernorate->id);
+        }
+
+        if (!$resolvedQuote) {
+            $resolvedQuote = $quotes->firstWhere('is_default', true);
+            if ($requestedGovernorate && $resolvedQuote) {
+                $usedFallback = true;
+            }
+        }
+
+        if (!$resolvedQuote) {
+            $resolvedQuote = $quotes->first();
+            if ($requestedGovernorate && $resolvedQuote) {
+                $usedFallback = true;
+            }
+        }
+
+        $governorate = $resolvedQuote?->relationLoaded('governorate')
+            ? $resolvedQuote->governorate
+            : ($resolvedQuote?->governorate()->first());
+
+        return [$resolvedQuote, $governorate, $usedFallback];
+    }
+
+    public function applyDefaultQuoteSnapshot(?MetalRateQuote $quote): void
+    {
+        if (!$quote) {
+            return;
+        }
+
+        $quotedAt = $quote->quoted_at instanceof CarbonInterface ? $quote->quoted_at : now();
+
+        $this->forceFill([
+            'sell_price' => $quote->sell_price,
+            'buy_price' => $quote->buy_price,
+            'source' => $quote->source,
+            'quoted_at' => $quotedAt,
+        ])->save();
+    }
+
 }

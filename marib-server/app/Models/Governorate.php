@@ -24,4 +24,9 @@ class Governorate extends Model
     {
         return $this->hasMany(CurrencyRateQuote::class);
     }
+    public function metalQuotes(): HasMany
+    {
+        return $this->hasMany(MetalRateQuote::class);
+    }
+
 }

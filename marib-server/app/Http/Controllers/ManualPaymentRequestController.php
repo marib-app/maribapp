@@ -247,7 +247,7 @@ class ManualPaymentRequestController extends Controller
             $rowData['submitted_at'] = $requestRow->created_at
                 ? Carbon::parse($requestRow->created_at)->format('Y-m-d H:i')
                 : null;
-            $rowData['status_badge'] = $this->statusBadge($requestRow->status);
+            $rowData['status_badge'] = $this->statusBadge($requestRow->status_group ?? null);
             $rowData['status_group'] = $requestRow->status_group ?? null;
             $rowData['operate'] = $manualPaymentRequest ? $this->actionsColumn($manualPaymentRequest) : '';
 
@@ -390,9 +390,9 @@ class ManualPaymentRequestController extends Controller
                 'payable_type' => $row->payable_type ?? null,
                 'payable_id' => $row->payable_id ?? null,
                 'payable_label' => $this->paymentRequestPayableLabel($row),
-                'status' => $row->status,
-                'status_group' => $row->status_group ?? null,
-                'status_label' => $this->paymentRequestStatusLabel($row->status),
+                'status' => $row->status_group,
+                'status_group' => $row->status_group,
+                'status_label' => $this->paymentRequestStatusLabel($row->status_group),
                 'created_at_human' => $row->created_at
                     ? Carbon::parse($row->created_at)->format('Y-m-d H:i')
                     : '—',
@@ -634,7 +634,7 @@ class ManualPaymentRequestController extends Controller
         $statusTotals = (clone $query)
             ->select('status_group', DB::raw('COUNT(*) as aggregate_total'))
             ->groupBy('status_group')
-            ->pluck('aggregate_total', 'status') ;
+            ->pluck('aggregate_total', 'status_group');
 
         $gatewayTotals = (clone $query)
             ->select('channel', DB::raw('COUNT(*) as aggregate_total'))
@@ -691,9 +691,9 @@ class ManualPaymentRequestController extends Controller
             if ($departmentSummary !== []) {
                 $departmentStats = (clone $query)
                     ->whereIn('department', array_keys($departmentSummary))
-                    ->select('department', 'status')
+                    ->select('department', 'status_group')
                     ->selectRaw('COUNT(*) as aggregate_total')
-                    ->groupBy('department', 'status')
+                    ->groupBy('department', 'status_group')
                     ->get();
 
                 foreach ($departmentStats as $stat) {
@@ -704,7 +704,7 @@ class ManualPaymentRequestController extends Controller
                     }
 
                     $total = (int) ($stat->aggregate_total ?? 0);
-                    $status = is_string($stat->status) ? strtolower($stat->status) : '';
+                    $status = is_string($stat->status_group) ? strtolower($stat->status_group) : '';
 
                     $departmentSummary[$departmentKey]['total'] += $total;
 
@@ -1209,13 +1209,12 @@ class ManualPaymentRequestController extends Controller
 
     protected function statusBadge(?string $status): string
     {
-        $normalized = $this->normalizeManualPaymentStatus($status) ?? $status;
+        $normalized = $this->normalizePaymentRequestStatus($status) ?? 'pending';
 
         return match ($normalized) {
 
-            ManualPaymentRequest::STATUS_APPROVED => '<span class="badge bg-success">' . trans('Approved') . '</span>',
-            ManualPaymentRequest::STATUS_REJECTED => '<span class="badge bg-danger">' . trans('Rejected') . '</span>',
-            ManualPaymentRequest::STATUS_UNDER_REVIEW => '<span class="badge bg-info text-dark">' . trans('Under Review') . '</span>',
+            'succeed' => '<span class="badge bg-success">' . trans('Success') . '</span>',
+            'failed' => '<span class="badge bg-danger">' . trans('Failed') . '</span>',
             default => '<span class="badge bg-warning text-dark">' . trans('Pending') . '</span>',
 
         };

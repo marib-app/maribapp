@@ -3,19 +3,27 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ValidatesMetalRates;
+use App\Models\Governorate;
 use App\Models\MetalRate;
 use App\Models\MetalRateUpdate;
+use App\Services\MetalRateQuoteService;
 use App\Services\MetalIconStorageService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Arr;
+
 
 class MetalRateController extends Controller
 {
     use ValidatesMetalRates;
 
-    public function __construct(private readonly MetalIconStorageService $iconStorageService)
+    public function __construct(
+        private readonly MetalIconStorageService $iconStorageService,
+        private readonly MetalRateQuoteService $metalRateQuoteService
+    )
+    
     {
     }
 
@@ -24,38 +32,56 @@ class MetalRateController extends Controller
         MetalRateUpdate::applyDueUpdates();
 
         $metalRates = MetalRate::query()
-            ->with(['pendingUpdates' => function ($query) {
-                $query->orderBy('scheduled_for');
-            }])
+            ->with([
+                'pendingUpdates' => function ($query) {
+                    $query->orderBy('scheduled_for');
+                },
+                'quotes.governorate',
+            ])
+
+
             ->orderBy('metal_type')
             ->orderBy('karat')
             ->get();
 
         return view('metal_rates.index', [
             'metalRates' => $metalRates,
+            'governorates' => Governorate::query()->orderBy('name')->get(),
+            'defaultGovernorateId' => $this->metalRateQuoteService->resolveDefaultGovernorateId(),
+
         ]);
     }
 
 
     public function create(): View
     {
-        return view('metal_rates.create');
+        return view('metal_rates.create', [
+            'governorates' => Governorate::query()->orderBy('name')->get(),
+            'defaultGovernorateId' => $this->metalRateQuoteService->resolveDefaultGovernorateId(),
+        ]);
+    
     }
 
 
     public function store(Request $request): RedirectResponse
     {
-        $payload = $this->validateMetalRatePayload($request);
+        $validated = $this->validateMetalRatePayload($request);
+
+        $metalAttributes = Arr::only($validated['metal'], ['metal_type', 'karat']);
+
 
         $iconPayload = $this->resolveMetalIconPayload($request, $this->iconStorageService);
 
-        unset($payload['remove_icon'], $payload['icon_alt']);
-
-        $payload = array_merge($payload, $iconPayload);
-
+        /** @var MetalRate $metal */
+        $metal = MetalRate::create(array_merge($metalAttributes, $iconPayload));
 
 
-        MetalRate::create($payload);
+        $this->metalRateQuoteService->syncQuotes(
+            $metal,
+            $validated['quotes'],
+            $validated['default_governorate_id'],
+            Auth::id()
+        );
 
         return redirect()
             ->route('metal-rates.index')
@@ -64,21 +90,26 @@ class MetalRateController extends Controller
 
     public function update(Request $request, MetalRate $metalRate): RedirectResponse
     {
-        $payload = $this->validateMetalRatePayload($request, $metalRate);
+        $validated = $this->validateMetalRatePayload($request, $metalRate);
 
+        $metalAttributes = Arr::only($validated['metal'], ['metal_type', 'karat']);
 
 
 
         $iconPayload = $this->resolveMetalIconPayload($request, $this->iconStorageService, $metalRate);
 
-        unset($payload['remove_icon'], $payload['icon_alt']);
-
-        $payload = array_merge($payload, $iconPayload);
+        $metalRate->update(array_merge($metalAttributes, $iconPayload));
 
 
 
-        $metalRate->update($payload);
+        $this->metalRateQuoteService->syncQuotes(
+            $metalRate,
+            $validated['quotes'],
+            $validated['default_governorate_id'],
+            Auth::id()
+        );
 
+        
         return redirect()
             ->route('metal-rates.index')
             ->with('success', __('تم تحديث سعر المعدن بنجاح.'));

@@ -385,7 +385,7 @@ class PaymentRequestTableQuery
             ->selectRaw(
                 self::statusExpression(
                     "LOWER(COALESCE(NULLIF(pt.payment_status, ''), NULLIF(mpr.status, ''), 'pending'))"
-                ) . ' as status'
+                ) . ' as status_group'
             )
             ->selectRaw("COALESCE(mpr.reference, CONCAT('TX-', pt.id)) as reference")
             ->selectRaw('pt.created_at')
@@ -476,7 +476,7 @@ class PaymentRequestTableQuery
             ->selectRaw(
                 self::statusExpression(
                     "LOWER(COALESCE(NULLIF(mpr.status, ''), 'succeed'))"
-                ) . ' as status'
+                ) . ' as status_group'
             )
             ->selectRaw("COALESCE(mpr.reference, CONCAT('WT-', wt.id)) as reference")
             ->selectRaw('wt.created_at')
@@ -555,7 +555,7 @@ class PaymentRequestTableQuery
             ->selectRaw(
                 self::statusExpression(
                     "LOWER(COALESCE(NULLIF(mpr.status, ''), 'pending'))"
-                ) . ' as status'
+                ) . ' as status_group'
             )
             ->selectRaw("COALESCE(NULLIF(mpr.reference, ''), CONCAT('MPR-', mpr.id)) as reference")
             ->selectRaw('mpr.created_at')

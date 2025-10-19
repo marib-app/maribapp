@@ -7,17 +7,23 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\MetalRateResource;
 use App\Models\MetalRate;
 use App\Services\MetalIconStorageService;
+use App\Services\MetalRateQuoteService;
 use App\Models\MetalRateUpdate;
 use App\Services\ResponseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Arr;
 
 class MetalRateManagementController extends Controller
 {
     use ValidatesMetalRates;
 
 
-    public function __construct(private readonly MetalIconStorageService $iconStorageService)
+    public function __construct(
+        private readonly MetalIconStorageService $iconStorageService,
+        private readonly MetalRateQuoteService $metalRateQuoteService
+    )
+    
     {
     }
 
@@ -27,7 +33,7 @@ class MetalRateManagementController extends Controller
         MetalRateUpdate::applyDueUpdates();
 
         $rates = MetalRate::query()
-            ->with('pendingUpdates')
+            ->with(['pendingUpdates', 'quotes.governorate'])
             ->orderBy('metal_type')
             ->orderBy('karat')
             ->get();
@@ -40,23 +46,32 @@ class MetalRateManagementController extends Controller
 
     public function store(Request $request)
     {
-        $payload = $this->validateMetalRatePayload($request);
+        $validated = $this->validateMetalRatePayload($request);
 
+        $metalAttributes = Arr::only($validated['metal'], ['metal_type', 'karat']);
 
 
         $iconPayload = $this->resolveMetalIconPayload($request, $this->iconStorageService);
 
-        unset($payload['remove_icon'], $payload['icon_alt']);
+        /** @var MetalRate $rate */
+        $rate = MetalRate::create(array_merge($metalAttributes, $iconPayload));
 
-        $payload = array_merge($payload, $iconPayload);
+        $this->metalRateQuoteService->syncQuotes(
+            $rate,
+            $validated['quotes'],
+            $validated['default_governorate_id'],
+            Auth::id()
+        );
 
 
 
-        $rate = MetalRate::create($payload);
+        $rate->refresh();
+        $rate->load('quotes.governorate');
+
 
         return ResponseService::successResponse(
             __('تم إضافة سعر المعدن بنجاح.'),
-            new MetalRateResource($rate->fresh())
+            new MetalRateResource($rate)
         );
     }
 
@@ -64,30 +79,44 @@ class MetalRateManagementController extends Controller
     {
         $metalRate->refreshDueSchedules();
 
+
+        $metalRate->refresh();
+        $metalRate->load(['pendingUpdates', 'quotes.governorate']);
+
+
+
         return ResponseService::successResponse(
             __('تم جلب سعر المعدن بنجاح.'),
-            new MetalRateResource($metalRate->fresh('pendingUpdates'))
+            new MetalRateResource($metalRate)
         );
     }
 
     public function update(Request $request, MetalRate $metalRate)
     {
-        $payload = $this->validateMetalRatePayload($request, $metalRate);
+        $validated = $this->validateMetalRatePayload($request, $metalRate);
+        $metalAttributes = Arr::only($validated['metal'], ['metal_type', 'karat']);
 
 
         $iconPayload = $this->resolveMetalIconPayload($request, $this->iconStorageService, $metalRate);
 
-        unset($payload['remove_icon'], $payload['icon_alt']);
+        $metalRate->update(array_merge($metalAttributes, $iconPayload));
 
-        $payload = array_merge($payload, $iconPayload);
+        $this->metalRateQuoteService->syncQuotes(
+            $metalRate,
+            $validated['quotes'],
+            $validated['default_governorate_id'],
+            Auth::id()
+        );
 
 
 
-        $metalRate->update($payload);
+        $metalRate->refresh();
+        $metalRate->load(['pendingUpdates', 'quotes.governorate']);
 
+        
         return ResponseService::successResponse(
             __('تم تحديث سعر المعدن بنجاح.'),
-            new MetalRateResource($metalRate->fresh('pendingUpdates'))
+            new MetalRateResource($metalRate)
         );
     }
 

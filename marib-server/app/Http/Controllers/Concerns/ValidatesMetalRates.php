@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Concerns;
 use App\Models\MetalRate;
 use App\Services\MetalIconStorageService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+
 
 trait ValidatesMetalRates
 {
@@ -15,10 +17,13 @@ trait ValidatesMetalRates
         $data = Validator::make($request->all(), [
             'metal_type' => ['required', 'in:' . implode(',', [MetalRate::TYPE_GOLD, MetalRate::TYPE_SILVER])],
             'karat' => ['nullable', 'numeric', 'min:0', 'max:999'],
-            'buy_price' => ['required', 'numeric', 'min:0'],
-            'sell_price' => ['required', 'numeric', 'min:0'],
-            'source' => ['nullable', 'string', 'max:255'],
-            'quoted_at' => ['nullable', 'date'],
+            'quotes' => ['required', 'array'],
+            'quotes.*.governorate_id' => ['required', 'exists:governorates,id'],
+            'quotes.*.sell_price' => ['nullable', 'numeric', 'min:0'],
+            'quotes.*.buy_price' => ['nullable', 'numeric', 'min:0'],
+            'quotes.*.source' => ['nullable', 'string', 'max:255'],
+            'quotes.*.quoted_at' => ['nullable', 'date'],
+            'default_governorate_id' => ['required', 'exists:governorates,id'],
             'icon' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,svg', 'max:2048'],
             'icon_alt' => ['nullable', 'string', 'max:255'],
             'remove_icon' => ['sometimes', 'boolean'],
@@ -32,12 +37,7 @@ trait ValidatesMetalRates
                 $validator->errors()->add('karat', __('حقل العيار مطلوب للذهب.'));
             }
 
-            $buy = (float) $request->input('buy_price');
-            $sell = (float) $request->input('sell_price');
 
-            if ($sell < $buy) {
-                $validator->errors()->add('sell_price', __('يجب أن يكون سعر البيع أعلى من أو يساوي سعر الشراء.'));
-            }
 
             $existsQuery = MetalRate::query()
                 ->where('metal_type', $metalType)
@@ -54,19 +54,63 @@ trait ValidatesMetalRates
             if ($existsQuery->exists()) {
                 $validator->errors()->add('karat', __('تم تسجيل هذا المعدن مسبقًا.'));
             }
+            $quotes = $request->input('quotes', []);
+            $hasDefault = false;
+            $hasCompleteQuote = false;
+            $defaultGovernorateId = (int) $request->input('default_governorate_id');
+
+            foreach ($quotes as $quote) {
+                $sell = Arr::get($quote, 'sell_price');
+                $buy = Arr::get($quote, 'buy_price');
+                $governorateId = (int) Arr::get($quote, 'governorate_id');
+
+                if ($sell !== null && $buy !== null) {
+                    $hasCompleteQuote = true;
+
+                    if ((float) $sell < (float) $buy) {
+                        $validator->errors()->add(
+                            'quotes.' . $governorateId . '.sell_price',
+                            __('يجب أن يكون سعر البيع أعلى من أو يساوي سعر الشراء لكل محافظة.')
+                        );
+                    }
+                }
+
+                if ($governorateId === $defaultGovernorateId && $sell !== null && $buy !== null) {
+                    $hasDefault = true;
+                }
+            }
+
+
+
+            if (!$hasCompleteQuote) {
+                $validator->errors()->add('quotes', __('يرجى إدخال سعر بيع وشراء على الأقل لمحافظة واحدة.'));
+            }
+
+            if (!$hasDefault) {
+                $validator->errors()->add(
+                    'default_governorate_id',
+                    __('يجب تحديد محافظة افتراضية تحتوي على سعر بيع وشراء.')
+                );
+            }
         });
 
         $payload = $data->validate();
 
-        if ($payload['metal_type'] === MetalRate::TYPE_SILVER) {
-            $payload['karat'] = null;
-        }
+        $payload['karat'] = $payload['metal_type'] === MetalRate::TYPE_SILVER
+            ? null
+            : $payload['karat'];
 
-        if (empty($payload['quoted_at'])) {
-            $payload['quoted_at'] = now();
-        }
-
-        return $payload;
+        return [
+            'metal' => Arr::only($payload, [
+                'metal_type',
+                'karat',
+                'icon',
+                'icon_alt',
+                'remove_icon',
+            ]),
+            'quotes' => $payload['quotes'],
+            'default_governorate_id' => (int) $payload['default_governorate_id'],
+        ];
     }
 
 

@@ -7,7 +7,56 @@ import 'package:marib/data/model/category_model.dart';
 import 'package:shimmer/shimmer.dart';
 import 'shimmer_colors.dart';
 import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
+import 'dart:async';
+import 'package:marib/ui/screens/home_screen/section/section_screen/widgets/home_tab_view.dart';
+import 'package:marib/data/cubits/item/fetch_item_summary_cubit.dart';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/constant.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/ui/screens/settings/main_activity.dart';
+import 'package:flutter/services.dart';
+import 'package:marib/data/cubits/slider_cubit.dart';
+import 'dart:async';
+import 'dart:math';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:marib/app/routes.dart';
+import 'package:marib/data/cubits/home/fetch_home_screen_cubit.dart';
+import 'package:marib/data/model/item/item_model.dart';
+import 'package:marib/utils/responsiveSize.dart';
+import 'package:marib/utils/sliver_grid_delegate_with_fixed_cross_axis_count_and_fixed_height.dart';
+import 'package:marib/ui/screens/widgets/errors/no_data_found.dart';
+import 'package:marib/ui/screens/native_ads_screen.dart';
+import 'package:flutter/foundation.dart'; // لـ ValueListenable / ValueNotifier
+import 'package:marquee/marquee.dart';
+import 'package:marib/app/routes.dart';
+import 'package:marib/data/cubits/category/fetch_category_cubit.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:marib/data/model/category_model.dart';
+import 'package:marquee/marquee.dart';
+import 'package:marib/utils/screen_scaler.dart';
+import 'dart:math'; // للعمليات الرياضية مثل min
+import 'package:shimmer/shimmer.dart'; // تأثير التوهج أثناء تحميل الصور
+import 'package:cached_network_image/cached_network_image.dart';
 
+// Widgets
+
+import 'package:marib/ui/screens/sliders/slider_widget.dart';
+
+//import 'package:marib/ui/screens/home/section/Items_List/item/sections_adapter.dart';
+import 'package:marib/ui/screens/item/cards/horizontal_card.dart';
+import 'package:marib/ui/screens/native_ads_screen.dart';
+import 'package:marib/ui/screens/widgets/errors/no_data_found.dart';
+import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
+import 'package:marib/utils/sliver_grid_delegate_with_fixed_cross_axis_count_and_fixed_height.dart';
+
+
+import 'package:marib/data/model/item_filter_model.dart'; // ← مهم
+
+import 'package:marib/utils/screen_scaler.dart';
 
 const double _subcatCardRadius = 20.0;
 
@@ -252,6 +301,9 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
 }
 
 class _SubcatCircle extends StatelessWidget {
+  static const Duration _animationDuration = Duration(milliseconds: 200);
+  static const double _innerPadding = 4;
+
   final String label;
   final bool selected;
   final VoidCallback onTap;
@@ -275,97 +327,75 @@ class _SubcatCircle extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final textColor = theme.textTheme.bodyMedium?.color ?? colorScheme.onSurface;
+    final hasImage = useImage && (imageUrl?.isNotEmpty ?? false);
 
-    final shimmerBase = colorScheme.shimmerBaseColor;
-    final shimmerHighlight = colorScheme.shimmerHighlightColor;
-    final shimmerContent = colorScheme.shimmerContentColor;
 
-    final cardRadius = BorderRadius.circular(_subcatCardRadius);
-    final unselectedBackground = Color.alphaBlend(
-      colorScheme.surfaceVariant.withOpacity(theme.brightness == Brightness.dark ? 0.35 : 0.18),
-      colorScheme.surface,
-    );
-    final selectedBackground = Color.alphaBlend(
-      brand.withOpacity(theme.brightness == Brightness.dark ? 0.18 : 0.12),
-      colorScheme.surface,
-    );
     final borderColor = selected
-        ? brand
-        : colorScheme.outline.withOpacity(theme.brightness == Brightness.dark ? 0.35 : 0.2);
-    final boxShadow = selected
-        ? [
-      BoxShadow(
-        color: brand.withOpacity(theme.brightness == Brightness.dark ? 0.35 : 0.25),
-        blurRadius: 18,
-        spreadRadius: 1,
-        offset: const Offset(0, 6),
-      ),
-    ]
-        : [
-      BoxShadow(
-        color: colorScheme.shadow.withOpacity(theme.brightness == Brightness.dark ? 0.25 : 0.06),
-        blurRadius: 10,
-        spreadRadius: 0,
-        offset: const Offset(0, 4),
-      ),
-    ];
+        ? Colors.transparent
+        : colorScheme.borderColor.withOpacity(0.6);
 
-    final titleStyle = TextStyle(
-      fontSize: 12,
-      fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-      color: selected ? brand : textColor.withOpacity(.9),
-      height: 1.1,
+    final gradient = selected
+        ? LinearGradient(
+      colors: [
+        colorScheme.territoryColor,
+        colorScheme.borderColor.withOpacity(0.6),
+      ],
+    )
+        : null;
+
+    Widget buildFallbackAvatar() => Container(
+      color: colorScheme.primaryColor,
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.category_rounded,
+        color: colorScheme.textLightColor,
+        size: circleSize * 0.5,
+      ),
     );
 
-    Widget avatar;
-    if (useImage) {
-      Widget shimmerTile() => ShimmerBox(
-        width: circleSize,
-        height: circleSize,
-        borderRadius: cardRadius,
-            baseColor: shimmerBase,
-            highlightColor: shimmerHighlight,
-      );
+    final Widget avatar = ClipOval(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          buildFallbackAvatar(),
+          if (hasImage)
+            CachedNetworkImage(
+              imageUrl: imageUrl!,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => buildFallbackAvatar(),
+              errorWidget: (_, __, ___) => buildFallbackAvatar(),
+            ),
+        ],
+      ),
+    );
 
-      avatar = ClipRRect(
-        borderRadius: cardRadius,
-        child: CachedNetworkImage(
-          imageUrl: imageUrl!,
-          fit: BoxFit.cover,
-          placeholder: (_, __) => shimmerTile(),
-          errorWidget: (_, __, ___) => shimmerTile(),
-
-        ),
-      );
-    } else {
-      avatar = Icon(
-        Icons.category_outlined,
-        size: circleSize * .55,
-        color: selected ? brand : textColor.withOpacity(.8),
-      );
-    }
+    final baseLabelStyle = theme.textTheme.labelMedium;
+    final textColor = selected
+        ? colorScheme.textDefaultColor
+        : colorScheme.textLightColor;
+    final titleStyle =
+        baseLabelStyle?.copyWith(color: textColor) ?? TextStyle(color: textColor);
 
     return InkWell(
       onTap: onTap,
-      borderRadius: cardRadius,
+      borderRadius: BorderRadius.circular(circleSize),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // الصندوق الدائري مع إبراز الاختيار
           AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
+            duration: _animationDuration,
             curve: Curves.easeOut,
             width: circleSize,
             height: circleSize,
             decoration: BoxDecoration(
-              borderRadius: cardRadius,
-              color: selected ? selectedBackground : unselectedBackground,
-              border: Border.all(color: borderColor, width: selected ? 1.6 : 1),
-              boxShadow: boxShadow,
+              shape: BoxShape.circle,
+              gradient: gradient,
+              color: selected ? null : colorScheme.surface,
+              border: Border.all(color: borderColor, width: 1.4),
             ),
-            alignment: Alignment.center,
-            clipBehavior: Clip.antiAlias,
+            padding: const EdgeInsets.all(_innerPadding),
+
             child: avatar,
           ),
 
@@ -380,7 +410,7 @@ class _SubcatCircle extends StatelessWidget {
               children: [
                 _FittedOrMarquee(text: label, style: titleStyle),
                 AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
+                  duration: _animationDuration,
                   curve: Curves.easeOut,
                   margin: const EdgeInsets.only(top: 4),
                   height: selected ? 3 : 0,

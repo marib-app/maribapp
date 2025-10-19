@@ -1498,10 +1498,10 @@ class _HomeTabViewState extends State<HomeTabView> {
   }
 
   List<Widget> _buildGridModeSlivers(
-    List<_HomeTabEntry> entries,
       BuildContext context,
-
+      List<_HomeTabEntry> entries,
       List<ItemSummary> items,
+
   ) {
     final bool hasLoadingMoreEntry =
         entries.isNotEmpty && entries.last.type == _HomeTabEntryType.loadingMore;

@@ -13,6 +13,7 @@ import 'package:marib/data/wifi/wifi_repository.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 
 import 'checkout_sheet.dart';
+
 enum WifiPlansSheetResult { addPlan }
 
 class WifiPlansSheet extends StatefulWidget {
@@ -24,7 +25,6 @@ class WifiPlansSheet extends StatefulWidget {
     required this.onShowCodes,
     this.allowPlanCreation = false,
     this.repository = const WifiRepository(),
-
   });
 
   final WifiNetwork network;
@@ -83,6 +83,7 @@ class WifiPlansSheetState extends State<WifiPlansSheet> {
   @override
   Widget build(BuildContext context) {
     final color = context.color;
+    final theme = Theme.of(context);
 
     return DraggableScrollableSheet(
       expand: false,
@@ -90,205 +91,247 @@ class WifiPlansSheetState extends State<WifiPlansSheet> {
       minChildSize: 0.6,
       maxChildSize: 0.95,
       builder: (context, controller) {
-        return Container(
-          decoration: BoxDecoration(
-            color: color.backgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-          ),
-          child: Column(
-            children: [
-              const SizedBox(height: 8),
-              Container(
-                height: 4,
-                width: 44,
-                decoration: BoxDecoration(
-                  color: color.secondaryColor,
-                  borderRadius: BorderRadius.circular(4),
+        return ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: Material(
+            color: theme.colorScheme.surface,
+            child: Column(
+              children: [
+                _buildSheetHeader(theme),
+                const Divider(height: 1),
+                Expanded(
+                  child: Builder(
+                    builder: (_) => _buildSheetBody(context, controller),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    const Icon(Icons.wifi),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        widget.network.name,
-                        style: TextStyle(
-                          color: color.textDefaultColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      'خطط الشبكة',
-                      style: TextStyle(
-                        color: color.textDefaultColor.withOpacity(0.8),
-                      ),
-                    ),
-                    if (widget.allowPlanCreation) ...[
-                      const SizedBox(width: 8),
-                      TextButton.icon(
-                        onPressed: () => Navigator.of(context)
-                            .pop(WifiPlansSheetResult.addPlan),
-                        icon: const Icon(Icons.add),
-                        label: const Text('إضافة فئة'),
-                      ),
-                    ],
-                  ],
+                SafeArea(
+                  top: false,
+                  minimum: EdgeInsets.fromLTRB(20, 12, 20, 16),
+                  child: const SizedBox.shrink(),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: Builder(
-                  builder: (_) {
-                    if (_isLoading && _plans.isEmpty) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (_error != null && _plans.isEmpty) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.error_outline,
-                                  size: 36, color: color.error),
-                              const SizedBox(height: 12),
-                              Text(
-                                _error!,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: color.textDefaultColor,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              ElevatedButton(
-                                onPressed: () => _fetchPlans(force: true),
-                                child: const Text('إعادة المحاولة'),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-                    if (_plans.isEmpty) {
-                      return SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 32,
-                        ),
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 40),
-                            Icon(Icons.layers_outlined,
-                                size: 48, color: color.secondaryColor),
-                            const SizedBox(height: 16),
-                            Text(
-                              'لا توجد خطط متاحة حالياً',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: color.textDefaultColor.withOpacity(0.7),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'جرّب تحديث الشبكة لاحقاً لمعرفة أحدث العروض.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: color.textDefaultColor.withOpacity(0.6),
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-                    final List<Widget> listChildren = <Widget>[];
-
-                    if (_isLoading) {
-                      listChildren.add(
-                        const Padding(
-                          padding: EdgeInsets.only(bottom: 12),
-                          child: LinearProgressIndicator(minHeight: 2),
-                        ),
-                      );
-                    }
-
-                    if (_error != null) {
-                      listChildren.add(
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: color.error.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  _error!,
-                                  style: TextStyle(
-                                    color: color.error,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () => _fetchPlans(force: true),
-                                child: const Text('تحديث'),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-
-                    if (widget.network.loginScreenshotUrl != null) {
-                      listChildren.addAll(
-                        [
-                          WifiLoginScreenshotPreview(
-                            imageUrl: widget.network.loginScreenshotUrl!,
-                          ),
-                          const SizedBox(height: 12),
-                        ],
-                      );
-                    }
-
-                    for (int i = 0; i < _plans.length; i++) {
-                      if (i > 0) {
-                        listChildren.add(const SizedBox(height: 10));
-                      }
-                      listChildren.add(
-                        WifiPlanTile(
-                          plan: _plans[i],
-                          onSelect: () => _openCheckout(context, _plans[i]),
-                        ),
-                      );
-                    }
-
-                    listChildren.add(const SizedBox(height: 16));
-
-                    return RefreshIndicator(
-                      onRefresh: () => _fetchPlans(force: true),
-                      child: ListView(
-                        controller: controller,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        children: listChildren,
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildSheetHeader(ThemeData theme) {
+    final color = context.color;
+    final onSurface = theme.colorScheme.onSurface;
+
+    return Container(
+      width: double.infinity,
+      color: theme.colorScheme.surface,
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 44,
+            height: 4,
+            decoration: BoxDecoration(
+              color: onSurface.withOpacity(.18),
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: color.secondaryColor.withOpacity(.18),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Icon(
+                    Icons.wifi,
+                    size: 20,
+                    color: color.territoryColor,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.network.name,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'خطط الشبكة',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: onSurface.withOpacity(.65),
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (widget.allowPlanCreation) ...[
+                const SizedBox(width: 12),
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: color.territoryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    minimumSize: const Size(0, 40),
+                  ),
+                  onPressed: () =>
+                      Navigator.of(context).pop(WifiPlansSheetResult.addPlan),
+                  icon: const Icon(Icons.add),
+                  label: const Text('إضافة فئة'),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSheetBody(BuildContext context, ScrollController controller) {
+    const contentPadding = EdgeInsets.fromLTRB(20, 16, 20, 24);
+    final theme = Theme.of(context);
+    final color = context.color;
+
+    if (_plans.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: () => _fetchPlans(force: true),
+        child: ListView(
+          controller: controller,
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: contentPadding,
+          children: [
+            const SizedBox(height: 64),
+            if (_isLoading) ...[
+              Center(child: CircularProgressIndicator()),
+            ] else if (_error != null) ...[
+              Icon(Icons.error_outline, size: 44, color: color.error),
+              const SizedBox(height: 16),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: () => _fetchPlans(force: true),
+                child: const Text('إعادة المحاولة'),
+              ),
+            ] else ...[
+              Icon(Icons.layers_outlined,
+                  size: 48, color: color.secondaryColor),
+              const SizedBox(height: 16),
+              Text(
+                'لا توجد خطط متاحة حالياً',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'جرّب تحديث الشبكة لاحقاً لمعرفة أحدث العروض.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withOpacity(.65),
+                  height: 1.4,
+                ),
+              ),
+            ],
+            const SizedBox(height: 64),
+          ],
+        ),
+      );
+    }
+
+    final List<Widget> listChildren = <Widget>[];
+
+    if (_isLoading) {
+      listChildren.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: LinearProgressIndicator(minHeight: 3),
+        ),
+      );
+    }
+
+    if (_error != null) {
+      listChildren.add(
+        Container(
+          padding: const EdgeInsets.all(14),
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: color.error.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  _error!,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: color.error,
+                    height: 1.3,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () => _fetchPlans(force: true),
+                child: const Text('تحديث'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (widget.network.loginScreenshotUrl != null) {
+      listChildren.addAll(
+        [
+          WifiLoginScreenshotPreview(
+            imageUrl: widget.network.loginScreenshotUrl!,
+          ),
+          const SizedBox(height: 12),
+        ],
+      );
+    }
+
+    for (int i = 0; i < _plans.length; i++) {
+      if (i > 0) {
+        listChildren.add(const SizedBox(height: 12));
+      }
+      listChildren.add(
+        WifiPlanTile(
+          plan: _plans[i],
+          onSelect: () => _openCheckout(context, _plans[i]),
+        ),
+      );
+    }
+
+    listChildren.add(const SizedBox(height: 24));
+
+    return RefreshIndicator(
+      onRefresh: () => _fetchPlans(force: true),
+      child: ListView(
+        controller: controller,
+        padding: contentPadding,
+        children: listChildren,
+      ),
     );
   }
 

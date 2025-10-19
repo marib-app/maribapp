@@ -1600,10 +1600,47 @@ class ManualPaymentRequestController extends Controller
         $columnKey = null;
 
         if (isset($columnDefinitions[$columnIndex]) && is_array($columnDefinitions[$columnIndex])) {
-            $dataKey = $columnDefinitions[$columnIndex]['data'] ?? null;
-            if (is_string($dataKey) && $dataKey !== '') {
-                $columnKey = $columnMap[$dataKey] ?? null;
-            }
+            $columnDefinition = $columnDefinitions[$columnIndex];
+
+            $resolveColumn = static function ($value) use ($columnMap) {
+                if (! is_string($value)) {
+                    return null;
+                }
+
+                $normalized = trim($value);
+
+                if ($normalized === '') {
+                    return null;
+                }
+
+                $normalized = trim($normalized, "`\"[]");
+
+                if (str_contains($normalized, '.')) {
+                    $parts = explode('.', $normalized);
+                    $normalized = end($parts) ?: $normalized;
+                }
+
+                if (isset($columnMap[$normalized])) {
+                    return $columnMap[$normalized];
+                }
+
+                $allowedColumns = [
+                    'reference',
+                    'user_name',
+                    'amount',
+                    'currency',
+                    'channel',
+                    'department',
+                    'category',
+                    'status',
+                    'created_at',
+                ];
+
+                return in_array($normalized, $allowedColumns, true) ? $normalized : null;
+            };
+
+            $columnKey = $resolveColumn($columnDefinition['data'] ?? null)
+                ?? $resolveColumn($columnDefinition['name'] ?? null);
         }
 
         if ($columnKey === null) {

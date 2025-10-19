@@ -2080,10 +2080,8 @@ class ManualPaymentRequestController extends Controller
             ->where('pt.payment_gateway', 'manual_bank')
             ->whereBetween('pt.created_at', [$startDate, $endDate])
 
-            ->where(function ($query) {
-                $query->whereNull('pt.manual_payment_request_id')
-                    ->whereNull('mpr.id');
-            })
+            ->whereNull('pt.manual_payment_request_id')
+            ->whereNull('mpr.id')
 
             ->selectRaw('COALESCE(mpr.id, pt.id) as id')
             ->selectRaw('pt.id as payment_transaction_id')

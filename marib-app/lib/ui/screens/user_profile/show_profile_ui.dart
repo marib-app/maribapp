@@ -40,27 +40,31 @@ class ProfileScreenUI {
   /// يبني قائمة Slivers تُستخدم داخل CustomScrollView/NestedScrollView.
   List<Widget> buildSlivers(BuildContext context) {
     return [
-    const SliverToBoxAdapter(child: SizedBox(height: 6)),
-    SliverToBoxAdapter(
-    child: _HeaderSection(
-    buildProfileImage: buildProfileImage,
-    onAvatarEditPressed: onAvatarEditPressed,
-    ),
-    ),
-    const SliverToBoxAdapter(child: SizedBox(height: 11)),
-    const SliverToBoxAdapter(child: _StatsRow()),
-    const SliverToBoxAdapter(child: SizedBox(height: 14)),
-    SliverToBoxAdapter(
-    child: _ProfileButtons(
-          onEditProfilePressed: onEditProfilePressed,
-          onShareProfilePressed: onShareProfilePressed,
+      const SliverToBoxAdapter(child: SizedBox(height: 6)),
+      SliverToBoxAdapter(
+        child: _HeaderSection(
+          buildProfileImage: buildProfileImage,
+          onAvatarEditPressed: onAvatarEditPressed,
         ),
 
-        const SizedBox(height: 14),
-
-        _ProfileTabBar(
-          controller: tabController,
-          adTabs: adTabs,
+      ),
+      const SliverToBoxAdapter(child: SizedBox(height: 11)),
+      const SliverToBoxAdapter(child: _StatsRow()),
+      const SliverToBoxAdapter(child: SizedBox(height: 14)),
+      SliverToBoxAdapter(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _ProfileButtons(
+              onEditProfilePressed: onEditProfilePressed,
+              onShareProfilePressed: onShareProfilePressed,
+            ),
+            const SizedBox(height: 14),
+            _ProfileTabBar(
+              controller: tabController,
+              adTabs: adTabs,
+            ),
+          ],
         ),
     ),
     SliverFillRemaining(

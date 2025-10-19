@@ -69,6 +69,11 @@ class UserPreferenceController extends Controller
             $preference->metal_watchlist = $validated['metal_watchlist'] ?? [];
         }
 
+
+        if (array_key_exists('currency_notification_regions', $validated)) {
+            $preference->currency_notification_regions = $validated['currency_notification_regions'] ?? [];
+        }
+
         if (array_key_exists('notification_frequency', $validated)) {
             $preference->notification_frequency = $validated['notification_frequency'] ?? NotificationFrequency::DAILY->value;
         }

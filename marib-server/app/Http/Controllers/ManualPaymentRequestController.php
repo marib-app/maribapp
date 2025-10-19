@@ -2290,8 +2290,8 @@ class ManualPaymentRequestController extends Controller
 
         $transactions = DB::table('payment_transactions as pt')
             ->leftJoin('manual_payment_requests as mpr', function ($join) {
-                $join->on('mpr.id', '=', 'pt.manual_payment_request_id')
-                    ->orOn('mpr.payment_transaction_id', '=', 'pt.id');
+                $join->on('pt.manual_payment_request_id', '=', 'mpr.id');
+
             })
             ->leftJoin('manual_banks as manual_bank_lookup', function ($join) use ($manualBankIdExpression) {
                 $join->on('manual_bank_lookup.id', '=', DB::raw($manualBankIdExpression));
@@ -2337,8 +2337,8 @@ class ManualPaymentRequestController extends Controller
 
         $requests = DB::table('manual_payment_requests as mpr')
             ->leftJoin('payment_transactions as pt', function ($join) {
-                $join->on('pt.id', '=', 'mpr.payment_transaction_id')
-                    ->orOn('pt.manual_payment_request_id', '=', 'mpr.id');
+                $join->on('pt.manual_payment_request_id', '=', 'mpr.id');
+
             })
 
             ->leftJoin('manual_banks as manual_bank_lookup', function ($join) use ($manualBankIdExpression) {

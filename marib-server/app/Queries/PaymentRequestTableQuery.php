@@ -3,11 +3,14 @@
 namespace App\Queries;
 
 use App\Models\ManualPaymentRequest;
+use Illuminate\Database\Query\JoinClause;
+use Illuminate\Database\QueryException;
 use App\Models\WalletTransaction;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Query\JoinClause;
+use Throwable;
 
 class PaymentRequestTableQuery
 {
@@ -64,37 +67,44 @@ class PaymentRequestTableQuery
     {
 
 
-        $supportsDepartment = Schema::hasTable('manual_payment_requests')
-            && Schema::hasColumn('manual_payment_requests', 'department');
-        $supportsManualGatewayName = Schema::hasTable('manual_payment_requests')
-            && Schema::hasColumn('manual_payment_requests', 'gateway_name');
-        $supportsManualBankName = Schema::hasTable('manual_payment_requests')
-            && Schema::hasColumn('manual_payment_requests', 'bank_name');
-        $supportsManualBankAccountName = Schema::hasTable('manual_payment_requests')
-            && Schema::hasColumn('manual_payment_requests', 'bank_account_name');
+        $connectionName = self::resolveConnectionName();
+        $schema = Schema::connection($connectionName);
 
-        $supportsManualBankId = Schema::hasTable('manual_payment_requests')
-            && Schema::hasColumn('manual_payment_requests', 'manual_bank_id');
+        $supportsManualPaymentRequests = $schema->hasTable('manual_payment_requests');
+        $supportsDepartment = $supportsManualPaymentRequests
+            && $schema->hasColumn('manual_payment_requests', 'department');
+        $supportsManualGatewayName = $supportsManualPaymentRequests
+            && $schema->hasColumn('manual_payment_requests', 'gateway_name');
+        $supportsManualBankName = $supportsManualPaymentRequests
+            && $schema->hasColumn('manual_payment_requests', 'bank_name');
+        $supportsManualBankAccountName = $supportsManualPaymentRequests
+            && $schema->hasColumn('manual_payment_requests', 'bank_account_name');
 
-                    $supportsManualMeta = Schema::hasTable('manual_payment_requests')
-            && Schema::hasColumn('manual_payment_requests', 'meta');
 
-        $supportsManualBankLookupTable = Schema::hasTable('manual_banks');
+
+        $supportsManualBankId = $supportsManualPaymentRequests
+            && $schema->hasColumn('manual_payment_requests', 'manual_bank_id');
+
+        $supportsManualMeta = $supportsManualPaymentRequests
+            && self::tableSupportsColumn('manual_payment_requests', 'meta', $connectionName);
+
+        $supportsManualBankLookupTable = $schema->hasTable('manual_banks');
         $supportsManualBankLookup = $supportsManualBankId && $supportsManualBankLookupTable;
         $supportsManualBankLookupName = $supportsManualBankLookup
-            && Schema::hasColumn('manual_banks', 'name');
+            && $schema->hasColumn('manual_banks', 'name');
         $supportsManualBankLookupBeneficiaryName = $supportsManualBankLookup
-            && Schema::hasColumn('manual_banks', 'beneficiary_name');
+            && $schema->hasColumn('manual_banks', 'beneficiary_name');
 
 
-        $supportsPaymentGatewayName = Schema::hasTable('payment_transactions')
-            && Schema::hasColumn('payment_transactions', 'payment_gateway_name');
-        $supportsPaymentTransactionMeta = Schema::hasTable('payment_transactions')
-            && Schema::hasColumn('payment_transactions', 'meta');
+        $supportsPaymentTransactions = $schema->hasTable('payment_transactions');
+        $supportsPaymentGatewayName = $supportsPaymentTransactions
+            && $schema->hasColumn('payment_transactions', 'payment_gateway_name');
+        $supportsPaymentTransactionMeta = $supportsPaymentTransactions
+            && self::tableSupportsColumn('payment_transactions', 'meta', $connectionName);
 
-        $supportsOrderLookup = Schema::hasTable('orders');
+        $supportsOrderLookup = $schema->hasTable('orders');
         $supportsOrderDepartment = $supportsOrderLookup
-            && Schema::hasColumn('orders', 'department');
+            && $schema->hasColumn('orders', 'department');
         $orderPayableTypeAliases = ManualPaymentRequest::orderPayableTypeAliases();
 
         $departmentParts = [];
@@ -323,7 +333,9 @@ class PaymentRequestTableQuery
 
         $paymentResolvedPayableTypeExpression = "LOWER(COALESCE(NULLIF(pt.payable_type, ''), NULLIF(mpr.payable_type, '')))";
         $paymentResolvedPayableIdExpression = 'COALESCE(pt.payable_id, mpr.payable_id)';
-
+        $paymentTransactionStatusExpression = self::statusExpression(
+            "LOWER(COALESCE(NULLIF(pt.payment_status, ''), NULLIF(mpr.status, ''), 'pending'))"
+        );
 
         $paymentTransactions = DB::table('payment_transactions as pt')
             ->selectRaw("CONCAT('pt-', pt.id) as row_key")
@@ -346,11 +358,8 @@ class PaymentRequestTableQuery
             ->selectRaw(self::channelExpression('pt') . ' as channel')
             ->selectRaw($gatewayNameSelect . ' as gateway_name')
             ->selectRaw(self::categoryExpression('pt') . ' as category')
-            ->selectRaw(
-                self::statusExpression(
-                    "LOWER(COALESCE(NULLIF(pt.payment_status, ''), NULLIF(mpr.status, ''), 'pending'))"
-                ) . ' as status'
-            )
+            ->selectRaw($paymentTransactionStatusExpression . ' as status')
+            ->selectRaw(self::statusGroupExpression($paymentTransactionStatusExpression) . ' as status_group')
             ->selectRaw("COALESCE(mpr.reference, CONCAT('TX-', pt.id)) as reference")
             ->selectRaw('pt.created_at')
             ->selectRaw($departmentSelect)
@@ -414,7 +423,9 @@ class PaymentRequestTableQuery
             
         $walletResolvedPayableIdExpression = 'COALESCE(mpr.payable_id, wt.id)';
         $walletResolvedPayableTypeExpression = "LOWER(NULLIF(mpr.payable_type, ''))";
-
+        $walletTopUpStatusExpression = self::statusExpression(
+            "LOWER(COALESCE(NULLIF(mpr.status, ''), 'succeed'))"
+        );
 
         $walletTopUps = DB::table('wallet_transactions as wt')
             ->selectRaw("CONCAT('wt-', wt.id) as row_key")
@@ -435,11 +446,8 @@ class PaymentRequestTableQuery
             ->selectRaw("'wallet' as channel")
             ->selectRaw($walletGatewayNameSelect . ' as gateway_name')
             ->selectRaw("'top_ups' as category")
-            ->selectRaw(
-                self::statusExpression(
-                    "LOWER(COALESCE(NULLIF(mpr.status, ''), 'succeed'))"
-                ) . ' as status'
-            )
+            ->selectRaw($walletTopUpStatusExpression . ' as status')
+            ->selectRaw(self::statusGroupExpression($walletTopUpStatusExpression) . ' as status_group')
             ->selectRaw("COALESCE(mpr.reference, CONCAT('WT-', wt.id)) as reference")
             ->selectRaw('wt.created_at')
             ->selectRaw($departmentSelect)
@@ -501,6 +509,10 @@ class PaymentRequestTableQuery
             ->whereNotNull('wt.manual_payment_request_id');
 
 
+        $manualRequestStatusExpression = self::statusExpression(
+            "LOWER(COALESCE(NULLIF(mpr.status, ''), 'pending'))"
+        );
+
 
         $manualRequests = DB::table('manual_payment_requests as mpr')
             ->selectRaw("CONCAT('mpr-', mpr.id) as row_key")
@@ -518,11 +530,8 @@ class PaymentRequestTableQuery
             ->selectRaw($manualRequestChannelExpression . ' as channel')
             ->selectRaw($manualRequestGatewayNameSelect . ' as gateway_name')
             ->selectRaw(self::categoryExpression('mpr') . ' as category')
-            ->selectRaw(
-                self::statusExpression(
-                    "LOWER(COALESCE(NULLIF(mpr.status, ''), 'pending'))"
-                ) . ' as status'
-            )
+            ->selectRaw($manualRequestStatusExpression . ' as status')
+            ->selectRaw(self::statusGroupExpression($manualRequestStatusExpression) . ' as status_group')
             ->selectRaw("COALESCE(NULLIF(mpr.reference, ''), CONCAT('MPR-', mpr.id)) as reference")
             ->selectRaw('mpr.created_at')
             ->selectRaw($departmentSelect)
@@ -688,6 +697,20 @@ class PaymentRequestTableQuery
         END";
     }
 
+
+    private static function statusGroupExpression(string $statusExpression): string
+    {
+        $successValues = self::sqlList(['approved', 'succeed']);
+        $failedValues = self::sqlList(['rejected', 'failed']);
+
+        return "CASE
+            WHEN ({$statusExpression}) IN {$successValues} THEN 'succeed'
+            WHEN ({$statusExpression}) IN {$failedValues} THEN 'failed'
+            ELSE 'pending'
+        END";
+    }
+
+
     private static function sqlList(array $values): string
     {
         $escaped = array_map(static function ($value) {
@@ -696,4 +719,67 @@ class PaymentRequestTableQuery
 
         return '(' . implode(',', $escaped) . ')';
     }
+
+
+
+
+    private static function resolveConnectionName(): string
+    {
+        $connection = (new ManualPaymentRequest())->getConnectionName();
+
+        return $connection ?: DB::getDefaultConnection();
+    }
+
+    private static function tableSupportsColumn(string $table, string $column, ?string $connectionName = null): bool
+    {
+        $connectionName ??= self::resolveConnectionName();
+
+        try {
+            $schema = Schema::connection($connectionName);
+
+            if (!$schema->hasTable($table) || !$schema->hasColumn($table, $column)) {
+                return false;
+            }
+
+            $connection = DB::connection($connectionName);
+
+            try {
+                $connection->table($table)
+                    ->select($column)
+                    ->whereRaw('1 = 0')
+                    ->first();
+            } catch (QueryException $exception) {
+                $message = strtolower($exception->getMessage());
+
+                if (
+                    str_contains($message, 'unknown column')
+                    || str_contains($message, 'no such column')
+                    || str_contains($message, 'invalid column name')
+                ) {
+                    return false;
+                }
+
+                Log::warning('PaymentRequestTableQuery: column probe failed', [
+                    'table' => $table,
+                    'column' => $column,
+                    'connection' => $connectionName,
+                    'error' => $exception->getMessage(),
+                ]);
+
+                return false;
+            }
+
+            return true;
+        } catch (Throwable $throwable) {
+            Log::warning('PaymentRequestTableQuery: unable to determine column support', [
+                'table' => $table,
+                'column' => $column,
+                'connection' => $connectionName,
+                'error' => $throwable->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
 }

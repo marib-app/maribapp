@@ -172,9 +172,8 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
 
     final bool isLoading = context.select<FetchItemSummaryCubit, bool>(
           (c) => c.state is FetchItemSummaryLoading,
-
-
     );
+    final bool showTopPlaceholder = widget.showShimmer || !widget.enableTopBar;
 
     return PopScope(
       canPop: true,
@@ -227,7 +226,7 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (widget.enableTopBar)
+                  if (widget.enableTopBar && !showTopPlaceholder)
                     ValueListenableBuilder<int?>(
                       valueListenable: widget.selectedCategoryId,
                       builder: (context, selectedId, _) {
@@ -270,7 +269,7 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
                         );
                       },
                     )
-                  else
+                  else if (showTopPlaceholder)
                     _buildTopBarShimmerExact(),  // ← شيمر مطابق تمامًا للهيكل
 
                   const SizedBox(height: 6), // ← نفس الفاصل في الحالتين
@@ -287,6 +286,7 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
                   searchController: widget.searchController,
                   viewModeListenable: _viewMode,
                   bottomPadding: widget.bottomContentPadding,
+                  showShimmer: widget.showShimmer,
 
                   // موجودة عندك مسبقًا:
                   currentSortBy: widget.sortBy,

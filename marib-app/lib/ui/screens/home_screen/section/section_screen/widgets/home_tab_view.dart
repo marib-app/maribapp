@@ -94,6 +94,7 @@ class HomeTabView extends StatefulWidget {
   // وضع العرض الخارجي (Grid/List)
   final ValueListenable<ViewMode> viewModeListenable;
   final double bottomPadding;
+  final bool showShimmer;
 
   final String? specialRequestSectionSlug;
 
@@ -122,6 +123,7 @@ class HomeTabView extends StatefulWidget {
     this.enableAdSlider = false, // افتراضي: مخفي
     this.adInterfaceType,
     // NEW 👇
+    required this.showShimmer,
 
     this.currentSortBy, // ← جديد
     this.currentFilter, // ← جديد
@@ -1014,7 +1016,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                           }
 
                           return SubcatsDeferredBlock(
-                            enabled: widget.enableSubcats,
+                            enabled: widget.enableSubcats && !widget.showShimmer,
                             // ← لا نبدأ إلا بعد فتح القسم
                             rowHeight: rowHeight,
                             maxRows: maxRows,
@@ -1037,6 +1039,13 @@ class _HomeTabViewState extends State<HomeTabView> {
                             },
                             // المحتوى الحقيقي بعد الجاهزية
                             builderWhenReady: () {
+                              if (widget.showShimmer) {
+                                return subcatShimmerBuilder(
+                                  context,
+                                  rowHeight,
+                                  maxRows,
+                                );
+                              }
                               final catState =
                                   context.watch<FetchCategoryCubit>().state;
                               if (catState is! FetchCategorySuccess) {

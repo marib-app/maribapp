@@ -74,9 +74,11 @@ class _BankTransferScreenState extends State<BankTransferScreen>
   bool _loadingBanks = false;
   bool _loadingWallet = false;
 
-  int? _selectedBankId;
-  int? _pressedBankId; // لتأثير الضغط (Scale)
-  int? _highlightedAccountNameBankId; // تأثير الضغط على اسم المستفيد
+  int? _selectedManualBankId;
+  String? _selectedBankAccountId;
+  String? _pressedBankKey; // لتأثير الضغط (Scale)
+  String? _highlightedAccountNameBankKey; // تأثير الضغط على اسم المستفيد
+
   bool _walletBalancePressed = false; // تأثير الضغط على رصيد المحفظة
 
   WalletSummary? _walletSummary;
@@ -95,8 +97,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
 
 
-  static const int _eastYemenPressedKey = -1000;
-  static const int _walletPressedKey = -1001;
+  static const String _eastYemenPressedKey = '__east_yemen__';
+  static const String _walletPressedKey = '__wallet__';
   static const List<String> _allowedReceiptExtensions = <String>[
     'jpg',
     'jpeg',
@@ -198,6 +200,46 @@ class _BankTransferScreenState extends State<BankTransferScreen>
   }
 
 
+  String _normalizedAccountId(String? value) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return '';
+    }
+    return trimmed;
+  }
+
+  String _bankCardKey(BankAccount bank) {
+    final accountIdPart = _normalizedAccountId(bank.accountId);
+    return '${bank.manualBankId}:$accountIdPart';
+  }
+
+  bool _bankMatchesSelection(BankAccount bank) {
+    final selectedManualId = _selectedManualBankId;
+    if (selectedManualId == null) {
+      return false;
+    }
+    if (selectedManualId != bank.manualBankId) {
+      return false;
+    }
+    final selectedAccountId = _normalizedAccountId(_selectedBankAccountId);
+    final bankAccountId = _normalizedAccountId(bank.accountId);
+    return selectedAccountId == bankAccountId;
+  }
+
+  void _assignManualBankSelection(BankAccount? bank) {
+    if (bank == null) {
+      _clearManualBankSelection();
+      return;
+    }
+    _selectedManualBankId = bank.manualBankId;
+    final normalizedAccountId = _normalizedAccountId(bank.accountId);
+    _selectedBankAccountId = normalizedAccountId.isEmpty ? null : normalizedAccountId;
+  }
+
+  void _clearManualBankSelection() {
+    _selectedManualBankId = null;
+    _selectedBankAccountId = null;
+  }
 
 
   String _resolvedPurpose() {
@@ -330,53 +372,53 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
         if (normalizedGateway == _eastYemenMethod && _eastYemenBank != null) {
           _selectedMethod = _eastYemenMethod;
-          _selectedBankId = null;
+          _clearManualBankSelection();
 
         } else if (normalizedGateway == _walletMethod && walletOptionAllowed) {
 
           _selectedMethod = _walletMethod;
-          _selectedBankId = null;
+          _clearManualBankSelection();
 
         } else if (normalizedGateway == _manualBankMethod && _banks.isNotEmpty) {
           _selectedMethod = _manualBankMethod;
-          _selectedBankId = _banks.first.id;
-        } else if (_eastYemenBank != null) {
+          _assignManualBankSelection(_banks.first);
+          } else if (_eastYemenBank != null) {
 
           _selectedMethod = _eastYemenMethod;
-          _selectedBankId = null;
+          _clearManualBankSelection();
         } else if (walletOptionAllowed) {
           _selectedMethod = _walletMethod;
-          _selectedBankId = null;
+          _clearManualBankSelection();
         } else if (_banks.isNotEmpty) {
           _selectedMethod = _manualBankMethod;
-          _selectedBankId = _banks.first.id;
+          _assignManualBankSelection(_banks.first);
         } else {
           _selectedMethod = null;
-          _selectedBankId = null;
+          _clearManualBankSelection();
         }
         if (_selectedMethod == null &&
             normalizedGateway == _walletMethod &&
             walletOptionAllowed) {
 
           _selectedMethod = _walletMethod;
-          _selectedBankId = null;
+          _clearManualBankSelection();
         }
 
 
         if (!walletOptionAllowed && _selectedMethod == _walletMethod) {
           if (_eastYemenBank != null) {
             _selectedMethod = _eastYemenMethod;
-            _selectedBankId = null;
+            _clearManualBankSelection();
           } else if (_banks.isNotEmpty) {
             _selectedMethod = _manualBankMethod;
-            _selectedBankId = _banks.first.id;
+            _assignManualBankSelection(_banks.first);
           } else {
             _selectedMethod = null;
-            _selectedBankId = null;
+            _clearManualBankSelection();
           }
         }
 
-        _pressedBankId = null;
+        _pressedBankKey = null;
         _attempted = false;
       });
     } finally {
@@ -421,13 +463,16 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       void assignFallback() {
         if (_eastYemenBank != null) {
           _selectedMethod = _eastYemenMethod;
-          _selectedBankId = null;
+          _clearManualBankSelection();
         } else if (_banks.isNotEmpty) {
           _selectedMethod = _manualBankMethod;
-          _selectedBankId ??= _banks.first.id;
+          if (_selectedManualBankId == null) {
+            _assignManualBankSelection(_banks.first);
+          }
+
         } else {
           _selectedMethod = null;
-          _selectedBankId = null;
+          _clearManualBankSelection();
         }
       }
 
@@ -611,7 +656,9 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     }
     if (_usingManualBank) {
       if (!_senderOk) return false;
-      return _selectedBankId != null && _receiptOk;
+      final manualBankId = _selectedManualBankId ?? 0;
+      return manualBankId > 0 && _receiptOk;
+
     }
 
     if (_usingWallet) {
@@ -826,9 +873,23 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         );
 
       } else {
+
+        final int manualBankId = _selectedManualBankId ?? 0;
+        final String? selectedAccountId = _selectedBankAccountId;
+        if (manualBankId <= 0) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('تعذّر تحديد الحساب البنكي، يرجى المحاولة لاحقًا.')),
+            );
+          }
+          return;
+        }
+
         result = await _service.submitManualPayment(
           token: widget.args.token,
-          bankId: _selectedBankId!,
+          manualBankId: manualBankId,
+          bankAccountId: selectedAccountId,
+
           intentId: intentId,
           transactionId: transactionId,
           payableType: payableType,

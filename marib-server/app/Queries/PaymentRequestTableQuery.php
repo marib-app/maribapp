@@ -75,6 +75,10 @@ class PaymentRequestTableQuery
 
         $supportsManualBankId = Schema::hasTable('manual_payment_requests')
             && Schema::hasColumn('manual_payment_requests', 'manual_bank_id');
+
+                    $supportsManualMeta = Schema::hasTable('manual_payment_requests')
+            && Schema::hasColumn('manual_payment_requests', 'meta');
+
         $supportsManualBankLookupTable = Schema::hasTable('manual_banks');
         $supportsManualBankLookup = $supportsManualBankId && $supportsManualBankLookupTable;
         $supportsManualBankLookupName = $supportsManualBankLookup
@@ -399,7 +403,107 @@ class PaymentRequestTableQuery
             })
             ->whereNotNull('wt.manual_payment_request_id');
 
-        return $paymentTransactions->unionAll($walletTopUps);
+        $manualGatewayKeyCandidates = [];
+
+        if ($supportsManualMeta) {
+            $manualGatewayKeyCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.channel')), '')";
+            $manualGatewayKeyCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.payment_gateway')), '')";
+            $manualGatewayKeyCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.gateway')), '')";
+            $manualGatewayKeyCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.payment_method')), '')";
+            $manualGatewayKeyCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.method')), '')";
+            $manualGatewayKeyCandidates[] = "CASE WHEN JSON_EXTRACT(mpr.meta, '$.wallet.transaction_id') IS NOT NULL THEN 'wallet' END";
+        }
+
+        $manualGatewayKeyCandidates[] = "CASE WHEN LOWER(COALESCE(NULLIF(mpr.payable_type, ''), '')) LIKE '%wallet%' THEN 'wallet' END";
+
+        $manualGatewayKeyCandidates = array_values(array_filter($manualGatewayKeyCandidates, static fn (?string $part): bool => $part !== null));
+
+        $manualGatewayKeyExpression = 'LOWER(COALESCE(' . implode(', ', array_merge($manualGatewayKeyCandidates, ["'manual_bank'" ])) . '))';
+
+        $manualRequests = DB::table('manual_payment_requests as mpr')
+            ->selectRaw("CONCAT('mpr-', mpr.id) as row_key")
+            ->selectRaw('NULL as payment_transaction_id')
+            ->selectRaw('NULL as wallet_transaction_id')
+            ->selectRaw('mpr.id as manual_payment_request_id')
+            ->selectRaw('mpr.user_id')
+            ->selectRaw('users.name as user_name')
+            ->selectRaw('users.mobile as user_mobile')
+            ->selectRaw('mpr.amount')
+            ->selectRaw("COALESCE(NULLIF(mpr.currency, ''), '') as currency")
+            ->selectRaw("NULLIF(mpr.payable_type, '') as payable_type")
+            ->selectRaw('mpr.payable_id as payable_id')
+            ->selectRaw($manualGatewayKeyExpression . ' as gateway_key')
+            ->selectRaw(self::channelExpressionFromGateway($manualGatewayKeyExpression, 'mpr.payable_type') . ' as channel')
+            ->selectRaw($manualGatewayNameSelect . ' as gateway_name')
+            ->selectRaw(self::categoryExpression('mpr') . ' as category')
+            ->selectRaw(
+                self::statusExpression(
+                    "LOWER(COALESCE(NULLIF(mpr.status, ''), 'pending'))"
+                ) . ' as status'
+            )
+            ->selectRaw("COALESCE(NULLIF(mpr.reference, ''), CONCAT('MPR-', mpr.id)) as reference")
+            ->selectRaw('mpr.created_at')
+            ->selectRaw($departmentSelect)
+            ->selectRaw($manualBankNameSelect . ' as manual_bank_name')
+            ->selectRaw(($supportsManualBankId ? 'mpr.manual_bank_id' : 'NULL') . ' as manual_bank_id')
+            ->selectRaw("'manual_payment_requests' as source")
+            ->leftJoin('users', 'users.id', '=', 'mpr.user_id')
+            ->when(
+                $supportsManualBankLookup,
+                static fn (Builder $query) => $query->leftJoin(
+                    'manual_banks as manual_bank_lookup',
+                    'manual_bank_lookup.id',
+                    '=',
+                    'mpr.manual_bank_id'
+                )
+            )
+            ->when(
+                $supportsOrderLookup,
+                static function (Builder $query) use (
+                    $orderPayableTypeAliases
+                ): void {
+                    $query->leftJoin(
+                        'orders as order_lookup',
+                        static function (JoinClause $join) use (
+                            $orderPayableTypeAliases
+                        ): void {
+                            $join->on(
+                                'order_lookup.id',
+                                '=',
+                                'mpr.payable_id'
+                            )->whereIn(
+                                DB::raw("LOWER(NULLIF(mpr.payable_type, ''))"),
+                                $orderPayableTypeAliases
+                            );
+                        }
+                    );
+                }
+            )
+            ->whereNotExists(static function (Builder $query): void {
+                $query->selectRaw('1')
+                    ->from('payment_transactions as pt')
+                    ->whereColumn('pt.manual_payment_request_id', 'mpr.id');
+            })
+            ->whereNotExists(static function (Builder $query): void {
+                $query->selectRaw('1')
+                    ->from('wallet_transactions as wt')
+                    ->whereColumn('wt.manual_payment_request_id', 'mpr.id')
+                    ->whereNull('wt.payment_transaction_id')
+                    ->where('wt.type', 'credit')
+                    ->where(static function (Builder $inner): void {
+                        $inner->where('wt.meta->reason', ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP)
+                            ->orWhere('wt.meta->reason', 'wallet_top_up')
+                            ->orWhere('wt.meta->reason', 'wallet-top-up')
+                            ->orWhere('wt.meta->reason', 'wallet_topup')
+                            ->orWhere('wt.meta->reason', 'admin_manual_credit');
+                    });
+            });
+
+        $result = $paymentTransactions->unionAll($walletTopUps);
+
+        return $result->unionAll($manualRequests);
+    
+    
     }
 
     private static function gatewayExpression(string $alias): string
@@ -409,7 +513,11 @@ class PaymentRequestTableQuery
 
     private static function channelExpression(string $alias): string
     {
-        $gateway = self::gatewayExpression($alias);
+        return self::channelExpressionFromGateway(self::gatewayExpression($alias), "{$alias}.payable_type");
+    }
+
+    private static function channelExpressionFromGateway(string $gatewayExpression, ?string $payableTypeColumn = null): string
+    {
 
         $eastValues = self::sqlList([
             'east_yemen_bank',
@@ -457,13 +565,16 @@ class PaymentRequestTableQuery
             'cash_collect',
         ]);
 
+        
+        $walletFallback = $payableTypeColumn !== null
+            ? " WHEN LOWER({$payableTypeColumn}) LIKE '%wallet%' THEN 'wallet'"
+            : '';
 
         return "CASE
-            WHEN {$gateway} IN {$eastValues} THEN 'east_yemen_bank'
-            WHEN {$gateway} IN {$manualValues} THEN 'manual_banks'
-            WHEN {$gateway} IN {$walletValues} THEN 'wallet'
-            WHEN {$gateway} IN {$cashValues} THEN 'cash'
-            WHEN LOWER({$alias}.payable_type) LIKE '%wallet%' THEN 'wallet'
+            WHEN {$gatewayExpression} IN {$eastValues} THEN 'east_yemen_bank'
+            WHEN {$gatewayExpression} IN {$manualValues} THEN 'manual_banks'
+            WHEN {$gatewayExpression} IN {$walletValues} THEN 'wallet'
+            WHEN {$gatewayExpression} IN {$cashValues} THEN 'cash'{$walletFallback}
             ELSE 'manual_banks'
         END";
     }

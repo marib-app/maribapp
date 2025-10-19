@@ -84,8 +84,8 @@ class ManualPaymentRequestController extends Controller
 
         $departments = $this->departmentReportService->availableDepartments();
         $paymentRequestBase = DB::query()
-            ->fromSub(PaymentRequestTableQuery::make(), 'requests')
-            ->whereNotNull('manual_payment_request_id');
+            ->fromSub(PaymentRequestTableQuery::make(), 'requests');
+
 
 
         $summaryData = $this->summarizePaymentRequests($paymentRequestBase);
@@ -283,8 +283,8 @@ class ManualPaymentRequestController extends Controller
         $to = $this->normalizeManualPaymentDate($request->input('to'), false);
 
         $baseQuery = DB::query()
-            ->fromSub(PaymentRequestTableQuery::make(), 'requests')
-            ->whereNotNull('manual_payment_request_id');
+            ->fromSub(PaymentRequestTableQuery::make(), 'requests');
+
 
         $recordsTotal = (clone $baseQuery)->count();
 

@@ -124,7 +124,6 @@ class HomeTabView extends StatefulWidget {
     this.adInterfaceType,
     // NEW 👇
     required this.showShimmer,
-
     this.currentSortBy, // ← جديد
     this.currentFilter, // ← جديد
     this.enableSubcats = true, // ← جديد (افتراضي)
@@ -138,8 +137,6 @@ class HomeTabView extends StatefulWidget {
   @override
   State<HomeTabView> createState() => _HomeTabViewState();
 }
-
-
 
 class _HomeTabViewState extends State<HomeTabView> {
   static const int _gridCrossAxisCount = 2;
@@ -155,9 +152,6 @@ class _HomeTabViewState extends State<HomeTabView> {
   // ✅ قفل تحميل المزيد + تباطؤ بسيط لتجنّب سيل الاستدعاءات
   bool _isLoadingMore = false;
 
-
-
-
   @override
   void initState() {
     super.initState();
@@ -169,8 +163,6 @@ class _HomeTabViewState extends State<HomeTabView> {
     controller.addListener(_handleScrollDirectionChange);
 
     _lastTopCatId = widget.selectedCategoryId.value;
-
-
   }
 
   @override
@@ -203,9 +195,6 @@ class _HomeTabViewState extends State<HomeTabView> {
     _scheduleScrollReset();
   }
 
-
-
-
   void _fetchItemsForCategory(int categoryId) {
     if (categoryId <= 0) {
       return;
@@ -216,7 +205,7 @@ class _HomeTabViewState extends State<HomeTabView> {
     final String? resolvedSortBy = widget.currentSortBy ?? widget.sortBy;
     final ItemFilterModel? baseFilter = widget.currentFilter ?? widget.filter;
     final ItemFilterModel? effectiveFilter =
-    baseFilter?.copyWith(categoryId: categoryId.toString());
+        baseFilter?.copyWith(categoryId: categoryId.toString());
 
     fetchCubit.fetchSummaries(
       categoryId: categoryId,
@@ -246,8 +235,6 @@ class _HomeTabViewState extends State<HomeTabView> {
       });
     });
   }
-
-
 
   // =========================
 
@@ -300,8 +287,6 @@ class _HomeTabViewState extends State<HomeTabView> {
     }
   }
 
-
-
   void _handleScrollDirectionChange() {
     if (!controller.hasClients) {
       return;
@@ -339,7 +324,6 @@ class _HomeTabViewState extends State<HomeTabView> {
     }
 
     if (!movedBeyondThreshold) {
-
       return;
     }
 
@@ -348,8 +332,6 @@ class _HomeTabViewState extends State<HomeTabView> {
 
     widget.onScrollDirectionChanged?.call(isScrollingUp);
   }
-
-
 
   // =========================
   // اختيار مفتاح السلايدر بكلفة منخفضة
@@ -502,7 +484,6 @@ class _HomeTabViewState extends State<HomeTabView> {
     // ✅ فيزياء التمرير حسب المنصة (أخف على أندرويد)
     final platform = Theme.of(context).platform;
 
-
     final int? selectedCategoryId = widget.selectedCategoryId.value;
 
     return ValueListenableBuilder<ViewMode>(
@@ -620,14 +601,13 @@ class _HomeTabViewState extends State<HomeTabView> {
                               circleSize + _gap + _titleHeight;
 
                           Widget subcatShimmerBuilder(
-                              BuildContext context,
-                              double dynamicRowHeight,
-                              int dynamicRows,
-                              ) {
+                            BuildContext context,
+                            double dynamicRowHeight,
+                            int dynamicRows,
+                          ) {
                             final colorScheme = Theme.of(context).colorScheme;
                             final base = colorScheme.shimmerBaseColor;
-                            final highlight =
-                                colorScheme.shimmerHighlightColor;
+                            final highlight = colorScheme.shimmerHighlightColor;
                             final content = colorScheme.shimmerContentColor;
                             const double indicatorGap = 6.0;
                             const double indicatorHeight = 8.0;
@@ -651,76 +631,81 @@ class _HomeTabViewState extends State<HomeTabView> {
                                       child: Column(
                                         mainAxisSize: MainAxisSize.min,
                                         children: List.generate(dynamicRows,
-                                                (rowIndex) {
-                                              return Padding(
-                                                padding: EdgeInsets.only(
-                                                    top: rowIndex == 0
-                                                        ? 0
-                                                        : _rowSpacing),
-                                                child: Row(
-                                                  mainAxisAlignment:
-                                                  MainAxisAlignment.spaceBetween,
-                                                  children: List.generate(
-                                                      itemsPerRow, (_) {
-                                                    return SizedBox(
-                                                      width: itemWidth,
-                                                      child: Column(
-                                                        mainAxisSize:
+                                            (rowIndex) {
+                                          return Padding(
+                                            padding: EdgeInsets.only(
+                                                top: rowIndex == 0
+                                                    ? 0
+                                                    : _rowSpacing),
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: List.generate(
+                                                  itemsPerRow, (_) {
+                                                return SizedBox(
+                                                  width: itemWidth,
+                                                  child: Column(
+                                                    mainAxisSize:
                                                         MainAxisSize.min,
-                                                        children: [
-                                                        Shimmer.fromColors(
+                                                    children: [
+                                                      Shimmer.fromColors(
                                                         baseColor: base,
-                                                        highlightColor: highlight,
+                                                        highlightColor:
+                                                            highlight,
                                                         period: const Duration(
                                                             milliseconds: 1150),
                                                         child: Container(
                                                           width: circleSize,
                                                           height: circleSize,
                                                           decoration:
-                                                          BoxDecoration(
+                                                              BoxDecoration(
                                                             color: content,
                                                             borderRadius:
-                                                            BorderRadius
-                                                                .circular(20),
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        20),
                                                           ),
                                                         ),
                                                       ),
-                                                      const SizedBox(height: _gap),
+                                                      const SizedBox(
+                                                          height: _gap),
                                                       SizedBox(
                                                         height: _titleHeight,
                                                         child: Align(
-                                                          alignment:
-                                                          Alignment.topCenter,
-                                                          child:
-                                                          Shimmer.fromColors(
+                                                          alignment: Alignment
+                                                              .topCenter,
+                                                          child: Shimmer
+                                                              .fromColors(
                                                             baseColor: base,
                                                             highlightColor:
-                                                            highlight,
-                                                            period: const Duration(
-                                                                milliseconds:
-                                                                1150),
+                                                                highlight,
+                                                            period:
+                                                                const Duration(
+                                                                    milliseconds:
+                                                                        1150),
                                                             child: Container(
                                                               height: 12,
                                                               width: itemWidth,
                                                               decoration:
-                                                              BoxDecoration(
+                                                                  BoxDecoration(
                                                                 color: base,
                                                                 borderRadius:
-                                                                BorderRadius
-                                                                    .circular(
-                                                                    6),
+                                                                    BorderRadius
+                                                                        .circular(
+                                                                            6),
                                                               ),
                                                             ),
                                                           ),
                                                         ),
                                                       ),
-                                                        ],
-                                                      ),
-                                                    );
-                                                  }),
-                                                ),
-                                              );
-                                                }),
+                                                    ],
+                                                  ),
+                                                );
+                                              }),
+                                            ),
+                                          );
+                                        }),
                                       ),
                                     ),
                                     const SizedBox(height: indicatorGap),
@@ -728,41 +713,43 @@ class _HomeTabViewState extends State<HomeTabView> {
                                       height: indicatorHeight,
                                       child: Row(
                                         mainAxisAlignment:
-                                        MainAxisAlignment.center,
+                                            MainAxisAlignment.center,
                                         children: List.generate(placeholderDots,
-                                                (dotIndex) {
-                                              final bool isActive = dotIndex == 0;
-                                              final double width =
+                                            (dotIndex) {
+                                          final bool isActive = dotIndex == 0;
+                                          final double width =
                                               isActive ? 18.0 : 8.0;
 
-                                              return Shimmer.fromColors(
-                                                  baseColor: base,
-                                                  highlightColor: highlight,
-                                                  period: const Duration(
-                                                      milliseconds: 1150),
-                                                  child: Container(
-                                                    margin: const EdgeInsets.symmetric(
-                                                        horizontal: 4),
-                                                    width: width,
-                                                    height: indicatorHeight,
-                                                    decoration: BoxDecoration(
-                                                      color: base,
-                                                      borderRadius:
-                                                      BorderRadius.circular(20),
+                                          return Shimmer.fromColors(
+                                            baseColor: base,
+                                            highlightColor: highlight,
+                                            period: const Duration(
+                                                milliseconds: 1150),
+                                            child: Container(
+                                              margin:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 4),
+                                              width: width,
+                                              height: indicatorHeight,
+                                              decoration: BoxDecoration(
+                                                color: base,
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
                                               ),
-                                                  ),
-                                              );
-                                                }),
+                                            ),
+                                          );
+                                        }),
                                       ),
                                     ),
-                                      ],
-                                  ),
+                                  ],
+                                ),
                               ),
                             );
                           }
 
                           return SubcatsDeferredBlock(
-                            enabled: widget.enableSubcats && !widget.showShimmer,
+                            enabled:
+                                widget.enableSubcats && !widget.showShimmer,
                             // ← لا نبدأ إلا بعد فتح القسم
                             rowHeight: rowHeight,
                             maxRows: maxRows,
@@ -795,19 +782,18 @@ class _HomeTabViewState extends State<HomeTabView> {
                               final catState =
                                   context.watch<FetchCategoryCubit>().state;
                               if (catState is! FetchCategorySuccess) {
-
                                 final subcatsBlockState =
-                                context.findAncestorStateOfType<
-                                    SubcatsDeferredBlockState>();
+                                    context.findAncestorStateOfType<
+                                        SubcatsDeferredBlockState>();
 
                                 if (subcatsBlockState != null) {
                                   final shimmerBuilder =
                                       subcatsBlockState.widget.shimmerBuilder;
                                   return shimmerBuilder?.call(
-                                    context,
-                                    rowHeight,
-                                    maxRows,
-                                  ) ??
+                                        context,
+                                        rowHeight,
+                                        maxRows,
+                                      ) ??
                                       subcatsBlockState.buildDefaultShimmer(
                                         context,
                                         rowHeight,
@@ -872,13 +858,15 @@ class _HomeTabViewState extends State<HomeTabView> {
                                     onTopCategoryPick: (c) {
                                       if (!isTopLevel) return;
                                       final int? categoryId = c.id;
-                                      if (categoryId == null || categoryId <= 0) {
+                                      if (categoryId == null ||
+                                          categoryId <= 0) {
                                         return;
                                       }
 
                                       if (widget.selectedCategoryId.value !=
                                           categoryId) {
-                                        widget.selectedCategoryId.value = categoryId;
+                                        widget.selectedCategoryId.value =
+                                            categoryId;
                                       }
 
                                       _activeSubcatId = null;
@@ -890,12 +878,13 @@ class _HomeTabViewState extends State<HomeTabView> {
                                     // في فئة علوية ≠ "الكل": اضغط فرعيّة ⇒ فلترة مباشرة وتظليل الفرعيّة
                                     onSubcatPick: (c) {
                                       final int? categoryId = c.id;
-                                      if (categoryId == null || categoryId <= 0) {
+                                      if (categoryId == null ||
+                                          categoryId <= 0) {
                                         return;
                                       }
 
                                       setState(
-                                              () => _activeSubcatId = categoryId);
+                                          () => _activeSubcatId = categoryId);
                                       _fetchItemsForCategory(categoryId);
                                       _scheduleScrollReset();
                                     },
@@ -922,13 +911,10 @@ class _HomeTabViewState extends State<HomeTabView> {
                 ),
               ),
 
-
               // فاصل متوسط (يتأثر بحالة ظهور شريط التنقل السفلي)
               SliverToBoxAdapter(
                 child: SizedBox(height: gapMedium),
-
               ),
-
 
               // ============= القائمة الرئيسية (كما هي عندك) =============
               // ملاحظة: داخل _itemsSliver احرص على استخدام SliverList/SliverGrid
@@ -950,8 +936,6 @@ class _HomeTabViewState extends State<HomeTabView> {
       },
     );
   }
-
-
 
   // قائمة الإعلانات (مربوطة بوضع العرض)
 
@@ -1028,12 +1012,11 @@ class _HomeTabViewState extends State<HomeTabView> {
       final List<_HomeTabEntry> entries = _buildItemEntries(
         state.items,
         isLoadingMore: state.isLoadingMore,
-
       );
 
       if (isList) {
-        final bool hasLoadingMoreEntry =
-            entries.isNotEmpty && entries.last.type == _HomeTabEntryType.loadingMore;
+        final bool hasLoadingMoreEntry = entries.isNotEmpty &&
+            entries.last.type == _HomeTabEntryType.loadingMore;
         final List<_HomeTabEntry> listEntries = hasLoadingMoreEntry
             ? entries.sublist(0, entries.length - 1)
             : entries;
@@ -1062,7 +1045,6 @@ class _HomeTabViewState extends State<HomeTabView> {
 
                   case _HomeTabEntryType.loadingMore:
                     return const SizedBox.shrink();
-
                 }
               },
               childCount: listEntries.length,
@@ -1079,12 +1061,11 @@ class _HomeTabViewState extends State<HomeTabView> {
           slivers.add(_buildLoadingMoreErrorSliver(context));
         }
 
-
         return slivers;
       }
 
-      final List<Widget> gridSlivers =
-      _buildGridModeSlivers(context, entries, state.items, showLoadingMoreError);
+      final List<Widget> gridSlivers = _buildGridModeSlivers(
+          context, entries, state.items, showLoadingMoreError);
       if (showLoadingMoreError) {
         gridSlivers.add(_buildLoadingMoreErrorSliver(context));
       }
@@ -1103,7 +1084,6 @@ class _HomeTabViewState extends State<HomeTabView> {
   List<_HomeTabEntry> _buildItemEntries(
     List<ItemSummary> items, {
     required bool isLoadingMore,
-
   }) {
     final List<_HomeTabEntry> entries = <_HomeTabEntry>[];
     final int step = max(1, Constant.nativeAdsAfterItemNumber);
@@ -1119,23 +1099,21 @@ class _HomeTabViewState extends State<HomeTabView> {
 
     if (isLoadingMore) {
       entries.add(const _HomeTabEntry.loadingMore());
-
     }
 
     return entries;
   }
 
   List<Widget> _buildGridModeSlivers(
-      BuildContext context,
-      List<_HomeTabEntry> entries,
-      List<ItemSummary> items,
-
+    BuildContext context,
+    List<_HomeTabEntry> entries,
+    List<ItemSummary> items,
+    bool showLoadingMoreError,
   ) {
-    final bool hasLoadingMoreEntry =
-        entries.isNotEmpty && entries.last.type == _HomeTabEntryType.loadingMore;
-    final List<_HomeTabEntry> gridEntries = hasLoadingMoreEntry
-        ? entries.sublist(0, entries.length - 1)
-        : entries;
+    final bool hasLoadingMoreEntry = entries.isNotEmpty &&
+        entries.last.type == _HomeTabEntryType.loadingMore;
+    final List<_HomeTabEntry> gridEntries =
+        hasLoadingMoreEntry ? entries.sublist(0, entries.length - 1) : entries;
 
     final List<Widget> slivers = <Widget>[];
     int cursor = 0;
@@ -1201,7 +1179,6 @@ class _HomeTabViewState extends State<HomeTabView> {
           cursor++;
           break;
         case _HomeTabEntryType.loadingMore:
-
           cursor++;
           break;
       }
@@ -1240,8 +1217,6 @@ class _HomeTabViewState extends State<HomeTabView> {
       ),
     );
   }
-
-
 
   Widget _buildLoadingMoreIndicatorSliver(BuildContext context) {
     return SliverToBoxAdapter(

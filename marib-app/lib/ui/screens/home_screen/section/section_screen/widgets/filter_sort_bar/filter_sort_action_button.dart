@@ -15,7 +15,7 @@ class FilterSortActionButton extends StatelessWidget {
     required this.onTap,
     required this.icon,
     required this.label,
-    this.padding = const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+    this.padding = const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
     this.iconTextSpacing = 8,
     this.borderRadius = 18,
   });
@@ -27,6 +27,24 @@ class FilterSortActionButton extends StatelessWidget {
     final onBaseColor = scheme.onPrimaryContainer;
     final highlightColor = scheme.primary;
     final radius = BorderRadius.circular(borderRadius);
+    final textDirection = Directionality.of(context);
+    final iconWidget = IconTheme.merge(
+      data: IconThemeData(color: onBaseColor, size: 22),
+      child: icon,
+    );
+    final labelWidget = Flexible(
+      child: Text(
+        label,
+        maxLines: 2,
+        softWrap: true,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          color: onBaseColor,
+        ),
+      ),
+    );
+
 
     return Material(
       color: Colors.transparent,
@@ -55,28 +73,17 @@ class FilterSortActionButton extends StatelessWidget {
           ),
           child: Padding(
             padding: padding,
-            child: IntrinsicHeight(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  IconTheme.merge(
-                    data: IconThemeData(color: onBaseColor, size: 22),
-                    child: icon,
-                  ),
-                  SizedBox(height: iconTextSpacing),
-                  Text(
-                    label,
-                    maxLines: 2,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: onBaseColor,
-                    ),
-                  ),
-                ],
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              textDirection: textDirection,
+              children: [
+                iconWidget,
+                if (iconTextSpacing > 0)
+                  SizedBox(width: iconTextSpacing),
+                labelWidget,
+              ],
             ),
           ),
         ),

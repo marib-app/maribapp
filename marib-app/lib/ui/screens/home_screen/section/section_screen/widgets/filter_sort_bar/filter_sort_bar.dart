@@ -124,10 +124,8 @@ class FilterSortBar extends StatelessWidget {
                       return SizedBox(
 
                         width: buttonWidth,
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(minHeight: desiredHeight),
-                          child: child,
-                        ),
+                        height: desiredHeight,
+                        child: child,
                       );
                     }
 

@@ -343,16 +343,33 @@ class SplashScreen extends StatefulWidget {
 class SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
   late final SplashController _controller;
+  late final AnimationController _dotsController;
+  bool _showIntroUi = false;
+  Timer? _introTimer;
+
 
   @override
   void initState() {
     super.initState();
     _controller = SplashController(context)..init();
+    _dotsController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+
+    _introTimer = Timer(const Duration(seconds: 1), () {
+      if (!mounted) return;
+      setState(() {
+        _showIntroUi = true;
+      });
+    });
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _introTimer?.cancel();
+    _dotsController.dispose();
     super.dispose();
   }
 
@@ -396,10 +413,24 @@ class SplashScreenState extends State<SplashScreen>
                     child: Column(
                       children: [
                         SizedBox(
-                          width: 500, height: 30,
+                          width: 500,
+                          height: 30,
+
                           child: Lottie.asset('assets/lottie/data.json', fit: BoxFit.cover),
                         ),
-                        const SizedBox(height: 545),
+                        SizedBox(
+                          height: 545,
+                          child: Center(
+                            child: AnimatedOpacity(
+                              opacity: _showIntroUi ? 1 : 0,
+                              duration: const Duration(milliseconds: 500),
+                              curve: Curves.easeInOut,
+                              child: _IntroContent(
+                                dotsAnimation: _dotsController,
+                              ),
+                            ),
+                          ),
+                        ),
 
                       ],
                     ),
@@ -414,4 +445,59 @@ class SplashScreenState extends State<SplashScreen>
   }
 
 
+}
+
+class _IntroContent extends StatelessWidget {
+  const _IntroContent({required this.dotsAnimation});
+
+  final Animation<double> dotsAnimation;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color textColor = Theme.of(context).colorScheme.onPrimary;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AnimatedBuilder(
+          animation: dotsAnimation,
+          builder: (context, _) {
+            final int step = ((dotsAnimation.value * 3).floor() % 3) + 1;
+            final String dots = '.' * step;
+            return AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: child,
+              ),
+              child: Text(
+                'مرحباً بك$dots',
+                key: ValueKey<int>(step),
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: textColor,
+                  fontWeight: FontWeight.w700,
+                ) ??
+                    TextStyle(
+                      color: textColor,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 24),
+        SizedBox(
+          height: 48,
+          width: 48,
+          child: CircularProgressIndicator(
+            strokeWidth: 4,
+            valueColor: AlwaysStoppedAnimation<Color>(textColor),
+            backgroundColor: textColor.withOpacity(0.2),
+          ),
+        ),
+      ],
+    );
+  }
 }

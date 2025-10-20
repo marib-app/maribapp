@@ -124,20 +124,64 @@ class NotificationService {
       _walletNotificationController.stream;
 
 
-  static requestPermission() async {}
+  static Future<void> requestPermission() async {
+    try {
+      final FirebaseMessaging messaging = FirebaseMessaging.instance;
+      NotificationSettings settings = await messaging.getNotificationSettings();
 
-/*  static int? getPrice(dynamic price) {
-    if (price == null || price.toString().trim().isEmpty) {
-      return null;
+      if (settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional) {
+        await _configureForegroundPresentationOptions();
+        return;
+      }
+
+      settings = await messaging.requestPermission(
+        alert: true,
+        announcement: true,
+        badge: true,
+        carPlay: false,
+        criticalAlert: false,
+        provisional: true,
+        sound: true,
+      );
+
+      switch (settings.authorizationStatus) {
+        case AuthorizationStatus.authorized:
+          log('Notification permission granted');
+          await _configureForegroundPresentationOptions();
+          break;
+        case AuthorizationStatus.provisional:
+          log('Notification permission granted provisionally');
+          await _configureForegroundPresentationOptions();
+          break;
+        case AuthorizationStatus.denied:
+          log('Notification permission denied');
+          break;
+        default:
+          log('Notification permission status: '
+              '${settings.authorizationStatus}');
+      }
+    } catch (error, stackTrace) {
+      log(
+        'Error requesting notification permissions: $error',
+        name: 'NotificationService',
+        stackTrace: stackTrace,
+      );
     }
-    if (price is double) {
-      return price.toInt();
+  }
+
+  static Future<void> _configureForegroundPresentationOptions() async {
+    if (Platform.isIOS || Platform.isMacOS) {
+      await FirebaseMessaging.instance
+          .setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
     }
-    if (price is String) {
-      return int.parse(price);
-    }
-    return price;
-  }*/
+  }
+
+
 
   static double? getPrice(dynamic price) {
     if (price == null || price

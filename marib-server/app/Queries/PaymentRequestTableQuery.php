@@ -144,6 +144,7 @@ class PaymentRequestTableQuery
                 $sanitizeManualBankAlias,
                 [
                     "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.name'))",
+                    "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.payload.bank.name'))",
                     "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.bank_name'))",
                     "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.beneficiary_name'))",
                     "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual.bank.name'))",
@@ -168,6 +169,7 @@ class PaymentRequestTableQuery
                     "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_bank.bank_name'))",
                     "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_bank.beneficiary_name'))",
                     "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual.bank.name'))",
+                    "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.payload.bank.name'))",
                     "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.bank.name'))",
                     "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.bank_name'))",
                 ]
@@ -192,6 +194,7 @@ class PaymentRequestTableQuery
         if ($supportsPaymentTransactionMeta) {
             foreach ([
                 "$.payload.bank_name",
+                "$.payload.bank.name",
                 "$.manual_bank.name",
                 "$.manual.bank.name",
                 "$.manual.bank.bank_name",
@@ -208,6 +211,7 @@ class PaymentRequestTableQuery
         if ($supportsManualMeta) {
             foreach ([
                 "$.payload.bank_name",
+                "$.payload.bank.name",
                 "$.manual_bank.name",
                 "$.manual.bank.name",
                 "$.manual.bank.bank_name",
@@ -257,6 +261,7 @@ class PaymentRequestTableQuery
 
         if ($supportsManualMeta) {
             foreach ([
+                "$.payload.bank.name",
                 "$.bank.name",
                 "$.manual_bank.name",
                 "$.manual_bank.bank_name",
@@ -273,6 +278,7 @@ class PaymentRequestTableQuery
 
         if ($supportsWalletMeta) {
             foreach ([
+                "$.payload.bank.name",
                 "$.bank.name",
                 "$.manual_bank.name",
                 "$.manual.bank.name",
@@ -296,6 +302,7 @@ class PaymentRequestTableQuery
         if ($supportsWalletMeta) {
             foreach ([
                 "$.payload.bank_name",
+                "$.payload.bank.name",
                 "$.manual_bank.name",
                 "$.manual_bank.bank_name",
                 "$.manual_bank.beneficiary_name",
@@ -314,6 +321,7 @@ class PaymentRequestTableQuery
         if ($supportsManualMeta) {
             foreach ([
                 "$.payload.bank_name",
+                "$.payload.bank.name",
                 "$.manual_bank.name",
                 "$.manual_bank.bank_name",
                 "$.manual_bank.beneficiary_name",
@@ -364,6 +372,7 @@ class PaymentRequestTableQuery
 
         if ($supportsManualMeta) {
             foreach ([
+                "$.payload.bank.name",
                 "$.bank.name",
                 "$.manual_bank.name",
                 "$.manual_bank.bank_name",
@@ -477,6 +486,7 @@ class PaymentRequestTableQuery
         if ($supportsManualMeta) {
             foreach ([
                 "$.payload.bank_name",
+                "$.payload.bank.name",
                 "$.manual_bank.name",
                 "$.manual_bank.bank_name",
                 "$.manual_bank.beneficiary_name",

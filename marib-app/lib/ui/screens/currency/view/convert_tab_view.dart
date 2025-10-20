@@ -9,7 +9,7 @@ import 'package:flutter/foundation.dart';
 
 import '../state/state.dart';
 
-class ConvertTabView extends StatelessWidget {
+class ConvertTabView extends StatefulWidget {
   const ConvertTabView({
     super.key,
     required this.state,
@@ -36,6 +36,52 @@ class ConvertTabView extends StatelessWidget {
   final Color brand;
   final void Function(String?) onGovernorateChanged;
   final VoidCallback? onShowAdvancedDetails;
+
+  @override
+  State<ConvertTabView> createState() => _ConvertTabViewState();
+}
+
+class _ConvertTabViewState extends State<ConvertTabView> {
+  late final TextEditingController _fromCurrencyController;
+  late final TextEditingController _toCurrencyController;
+
+  CurrencyViewState get state => widget.state;
+
+  TextEditingController get amountController => widget.amountController;
+
+  ValueChanged<String> get onChangeFrom => widget.onChangeFrom;
+
+  ValueChanged<String> get onChangeTo => widget.onChangeTo;
+
+  ValueChanged<String> get onAmountChanged => widget.onAmountChanged;
+
+  VoidCallback get onReset => widget.onReset;
+
+  VoidCallback get onConvert => widget.onConvert;
+
+  List<TextInputFormatter> get amountInputFormatters =>
+      widget.amountInputFormatters;
+
+  Color get brand => widget.brand;
+
+  void Function(String?) get onGovernorateChanged =>
+      widget.onGovernorateChanged;
+
+  VoidCallback? get onShowAdvancedDetails => widget.onShowAdvancedDetails;
+
+  @override
+  void initState() {
+    super.initState();
+    _fromCurrencyController = TextEditingController();
+    _toCurrencyController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _fromCurrencyController.dispose();
+    _toCurrencyController.dispose();
+    super.dispose();
+  }
 
   bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
 
@@ -327,6 +373,31 @@ class ConvertTabView extends StatelessWidget {
     );
   }
 
+  void _syncController(
+    TextEditingController controller,
+    String selection,
+    List<String> options,
+  ) {
+    final String trimmed = selection.trim();
+    final String? normalized =
+        (trimmed.isEmpty || !options.contains(trimmed)) ? null : trimmed;
+    final String newText = normalized ?? '';
+    if (controller.text != newText) {
+      controller.value = controller.value.copyWith(
+        text: newText,
+        selection: TextSelection.collapsed(offset: newText.length),
+      );
+    }
+  }
+
+  String? _normalizedSelection(String selection, List<String> options) {
+    final String trimmed = selection.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    return options.contains(trimmed) ? trimmed : null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final edge = const EdgeInsets.fromLTRB(12, 8, 12, 18);
@@ -340,6 +411,9 @@ class ConvertTabView extends StatelessWidget {
         .where((r) => _name(r) != state.fromCurrency)
         .map(_name)
         .toList(growable: false);
+
+    _syncController(_fromCurrencyController, state.fromCurrency, fromOptions);
+    _syncController(_toCurrencyController, state.toCurrency, toOptions);
 
     return SafeArea(
       child: LayoutBuilder(
@@ -364,43 +438,103 @@ class ConvertTabView extends StatelessWidget {
                 children: [
                   _governorateSection(context),
                   const SizedBox(height: 16),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: _currencyPickerCard(
-                          context,
-                          label: 'من',
-                          selectedValue: state.fromCurrency,
-                          options: fromOptions,
-                          iconPrefix: 'fromCurrencyIcon',
-                          dropdownKey: const Key('fromCurrencyDropdownField'),
-                          onChanged: (String? value) {
-                            if (value != null) {
-                              onChangeFrom(value);
-                            }
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      _swapButton(isDarkContext),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _currencyPickerCard(
-                          context,
-                          label: 'إلى',
-                          selectedValue: state.toCurrency,
-                          options: toOptions,
-                          iconPrefix: 'toCurrencyIcon',
-                          dropdownKey: const Key('toCurrencyDropdownField'),
-                          onChanged: (String? value) {
-                            if (value != null) {
-                              onChangeTo(value);
-                            }
-                          },
-                        ),
-                      ),
-                    ],
+                  LayoutBuilder(
+                    builder:
+                        (BuildContext context, BoxConstraints pairConstraints) {
+                      const double breakpoint = 560;
+                      final bool isCompact = !pairConstraints.hasBoundedWidth ||
+                          pairConstraints.maxWidth <= breakpoint;
+
+                      if (isCompact) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _currencyPickerCard(
+                              context,
+                              label: 'من',
+                              selectedValue: state.fromCurrency,
+                              options: fromOptions,
+                              iconPrefix: 'fromCurrencyIcon',
+                              dropdownKey:
+                                  const Key('fromCurrencyDropdownField'),
+                              controller: _fromCurrencyController,
+                              onChanged: (String? value) {
+                                if (value != null) {
+                                  onChangeFrom(value);
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            Center(child: _swapButton(isDarkContext)),
+                            const SizedBox(height: 12),
+                            _currencyPickerCard(
+                              context,
+                              label: 'إلى',
+                              selectedValue: state.toCurrency,
+                              options: toOptions,
+                              iconPrefix: 'toCurrencyIcon',
+                              dropdownKey: const Key('toCurrencyDropdownField'),
+                              controller: _toCurrencyController,
+                              onChanged: (String? value) {
+                                if (value != null) {
+                                  onChangeTo(value);
+                                }
+                              },
+                            ),
+                          ],
+                        );
+                      }
+
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Flexible(
+                            flex: 3,
+                            child: _currencyPickerCard(
+                              context,
+                              label: 'من',
+                              selectedValue: state.fromCurrency,
+                              options: fromOptions,
+                              iconPrefix: 'fromCurrencyIcon',
+                              dropdownKey:
+                                  const Key('fromCurrencyDropdownField'),
+                              controller: _fromCurrencyController,
+                              onChanged: (String? value) {
+                                if (value != null) {
+                                  onChangeFrom(value);
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Flexible(
+                            flex: 1,
+                            child: Align(
+                              alignment: Alignment.topCenter,
+                              child: _swapButton(isDarkContext),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Flexible(
+                            flex: 3,
+                            child: _currencyPickerCard(
+                              context,
+                              label: 'إلى',
+                              selectedValue: state.toCurrency,
+                              options: toOptions,
+                              iconPrefix: 'toCurrencyIcon',
+                              dropdownKey: const Key('toCurrencyDropdownField'),
+                              controller: _toCurrencyController,
+                              onChanged: (String? value) {
+                                if (value != null) {
+                                  onChangeTo(value);
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 18),
                   _labeledBox(
@@ -440,6 +574,7 @@ class ConvertTabView extends StatelessWidget {
     required List<String> options,
     required String iconPrefix,
     required Key dropdownKey,
+    required TextEditingController controller,
     required ValueChanged<String?> onChanged,
   }) {
     final bool isDark = _isDark(context);
@@ -451,11 +586,12 @@ class ConvertTabView extends StatelessWidget {
             ?.copyWith(fontWeight: FontWeight.w700) ??
         const TextStyle(fontWeight: FontWeight.w700);
 
-    final List<DropdownMenuItem<String>> menuItems = options
+    final List<DropdownMenuEntry<String>> menuItems = options
         .map(
-          (String currency) => DropdownMenuItem<String>(
+          (String currency) => DropdownMenuEntry<String>(
             value: currency,
-            child: _CurrencyMenuRow(
+            label: currency,
+            labelWidget: _CurrencyMenuRow(
               label: currency,
               iconKey: ValueKey('${iconPrefix}_menu_$currency'),
             ),
@@ -463,10 +599,9 @@ class ConvertTabView extends StatelessWidget {
         )
         .toList(growable: false);
 
-    String? normalizedSelected =
-        (selectedValue.isEmpty || !options.contains(selectedValue))
-            ? null
-            : selectedValue;
+    final String? normalizedSelected =
+        _normalizedSelection(selectedValue, options) ??
+            _normalizedSelection(controller.text, options);
 
     final String avatarLabel =
         normalizedSelected ?? (options.isNotEmpty ? options.first : label);
@@ -477,7 +612,7 @@ class ConvertTabView extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: isDark ? 0 : 2,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -487,37 +622,44 @@ class ConvertTabView extends StatelessWidget {
               textDirection: TextDirection.rtl,
             ),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                _CurrencyAvatar(
-                  key: ValueKey('${iconPrefix}_selected'),
-                  label: avatarLabel,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: IntrinsicWidth(
-                    child: DropdownButtonFormField<String>(
-                      key: dropdownKey,
-                      value: normalizedSelected,
-                      isExpanded: true,
-                      isDense: true,
-                      menuMaxHeight: 360,
-                      alignment: AlignmentDirectional.centerEnd,
-                      items: menuItems,
-                      onChanged: onChanged,
-                      decoration: InputDecoration(
-                        border: _border(context),
-                        enabledBorder: _border(context),
-                        focusedBorder: _border(context),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        ),
-                      ),
+            LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints fieldConstraints) {
+                return DropdownMenu<String>(
+                  key: dropdownKey,
+                  controller: controller,
+                  initialSelection: normalizedSelected,
+                  width: fieldConstraints.maxWidth.isFinite
+                      ? fieldConstraints.maxWidth
+                      : null,
+                  onSelected: onChanged,
+                  dropdownMenuEntries: menuItems,
+                  inputDecorationTheme: InputDecorationTheme(
+                    border: _border(context),
+                    enabledBorder: _border(context),
+                    focusedBorder: _border(context),
+                    contentPadding: const EdgeInsetsDirectional.fromSTEB(
+                      12,
+                      14,
+                      12,
+                      14,
                     ),
                   ),
-                ),
-              ],
+                  textStyle: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                  leadingIcon: Padding(
+                    padding: const EdgeInsetsDirectional.only(start: 8),
+                    child: _CurrencyAvatar(
+                      key: ValueKey('${iconPrefix}_selected'),
+                      label: avatarLabel,
+                      radius: 16,
+                    ),
+                  ),
+                  trailingIcon: const Icon(Icons.expand_more_rounded),
+                  menuHeight: 360,
+                );
+              },
             ),
           ],
         ),
@@ -648,8 +790,9 @@ class _CurrencyMenuRow extends StatelessWidget {
               label,
               textDirection: TextDirection.rtl,
               textAlign: TextAlign.right,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              maxLines: 3,
+              softWrap: true,
+              overflow: TextOverflow.visible,
             ),
           ),
         ],

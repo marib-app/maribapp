@@ -10,8 +10,6 @@ import 'package:path_provider/path_provider.dart';
 
 import 'frame_stats_accumulator.dart';
 
-
-
 class PerformanceMonitor {
   PerformanceMonitor._();
 
@@ -160,7 +158,6 @@ class PerformanceMonitor {
     await file.writeAsString(encoder.convert(payload));
     debugPrint('Performance metrics written to: ${file.path}');
     _completedSessions.clear();
-
   }
 
   Map<String, dynamic> _groupSessionsByRoute(
@@ -250,7 +247,6 @@ class PerformanceMonitor {
     }
   }
 
-
   void _enforceCompletedSessionLimit() {
     if (_completedSessions.length <= _maxCompletedSessions) {
       return;
@@ -311,8 +307,6 @@ class PerformanceMonitor {
     return (endUs - startUs) / 1000.0;
   }
 
-
-
   static int countDroppedFrames(Duration frameDuration) {
     if (frameDuration <= _frameBudget) {
       return 0;
@@ -333,7 +327,6 @@ class _RoutePerformanceSession {
   final int startedAtUs;
   final DateTime wallClockStartedAt;
   final FrameStatsAccumulator _frameStats = FrameStatsAccumulator();
-
 
   int totalFrames = 0;
   int droppedFrames = 0;

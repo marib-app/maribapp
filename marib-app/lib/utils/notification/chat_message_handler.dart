@@ -14,19 +14,16 @@ class ChatMessageHandler {
   static final ValueNotifier<ParticipantStatus?> participantStatusNotifier =
       ValueNotifier<ParticipantStatus?>(null);
 
-
   static List<ChatMessageModal> get currentMessages =>
       List<ChatMessageModal>.unmodifiable(<ChatMessageModal>[
         ..._localMessages,
         ..._remoteMessages,
       ]);
 
-
-
   static void add(ChatMessageModal chat) {
     if (chat.id != null && chat.id! > 0 && chat.isSentNow == false) {
       final int existingIndex =
-      _remoteMessages.indexWhere((element) => element.id == chat.id);
+          _remoteMessages.indexWhere((element) => element.id == chat.id);
       if (existingIndex != -1) {
         _remoteMessages[existingIndex] = chat;
       } else {
@@ -132,14 +129,12 @@ class ChatMessageHandler {
         _localMessages.removeAt(index).copyWith(id: id, isSentNow: false);
 
     final int remoteIndex =
-    _remoteMessages.indexWhere((element) => element.id == id);
+        _remoteMessages.indexWhere((element) => element.id == id);
 
     if (remoteIndex != -1) {
       _remoteMessages[remoteIndex] = updated;
-
     } else {
       _remoteMessages.insert(0, updated);
-
     }
     _emit();
   }
@@ -149,7 +144,6 @@ class ChatMessageHandler {
       return;
     }
     final Set<int> remoteIds = _remoteMessages
-
         .where((element) => (element.id ?? 0) > 0)
         .map((element) => element.id!)
         .toSet();
@@ -171,6 +165,5 @@ class ChatMessageHandler {
     }
 
     _chatMessageStream.sink.add(currentMessages);
-
   }
 }

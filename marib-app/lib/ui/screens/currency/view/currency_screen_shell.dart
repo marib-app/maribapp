@@ -99,12 +99,12 @@ class CurrencyScreenUI extends StatelessWidget {
                   switchOutCurve: Curves.easeInOut,
                   child: showFilters
                       ? KeyedSubtree(
-                    key: const ValueKey('rates-compact-filters'),
-                    child: _buildCompactFilters(context, brand, onBg),
-                  )
+                          key: const ValueKey('rates-compact-filters'),
+                          child: _buildCompactFilters(context, brand, onBg),
+                        )
                       : const SizedBox.shrink(
-                    key: ValueKey('rates-compact-filters-hidden'),
-                  ),
+                          key: ValueKey('rates-compact-filters-hidden'),
+                        ),
                 );
               },
             ),
@@ -342,7 +342,6 @@ class CurrencyScreenUI extends StatelessWidget {
               icon: Icons.trending_down,
             ),
             const SizedBox(width: 12),
-
             watchlistChip,
           ],
         ),
@@ -601,6 +600,7 @@ class CurrencyScreenUI extends StatelessWidget {
               onConvert: onConvert,
               amountInputFormatters: amountInputFormatters,
               brand: brand,
+              onGovernorateChanged: onGovernorateChanged,
             ),
             MetalsTabView(
               onShareRates: onShareRates,

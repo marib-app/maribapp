@@ -89,7 +89,25 @@ class CurrencyScreenUI extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildSegmentedTabs(context, brand, bg, onBg),
-            _buildCompactFilters(context, brand, onBg),
+            AnimatedBuilder(
+              animation: tabController,
+              builder: (context, child) {
+                final bool showFilters = tabController.index == 0;
+                return AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  switchInCurve: Curves.easeInOut,
+                  switchOutCurve: Curves.easeInOut,
+                  child: showFilters
+                      ? KeyedSubtree(
+                    key: const ValueKey('rates-compact-filters'),
+                    child: _buildCompactFilters(context, brand, onBg),
+                  )
+                      : const SizedBox.shrink(
+                    key: ValueKey('rates-compact-filters-hidden'),
+                  ),
+                );
+              },
+            ),
             const SizedBox(height: 4),
             Expanded(child: _buildBody(context, brand, onBg)),
           ],

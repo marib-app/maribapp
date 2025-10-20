@@ -219,7 +219,7 @@ class SplashController extends ChangeNotifier {
   /// مؤقت بسيط لعرض السبلّاش
   void _startTimer() {
     _timer?.cancel();
-    _timer = Timer(const Duration(seconds: 1), () {
+    _timer = Timer(const Duration(seconds: 5), () {
       isTimerCompleted = true;
       notifyListeners();
       _tryNavigate();

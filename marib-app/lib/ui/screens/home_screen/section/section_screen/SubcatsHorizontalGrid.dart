@@ -220,9 +220,14 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
         final gridHeight =
             rowHeight * maxRows + _verticalSpacingBetweenRows * (maxRows - 1);
         final bool includeLeading = hasLeading && slotsPerPage > 1;
-        final int desiredFirstPageCategories = min(4, totalSubcats);
+        final int availableSlotsForCategories = includeLeading
+            ? max(0, slotsPerPage - 1)
+            : slotsPerPage;
+        final int desiredFirstPageCategories =
+        min(totalSubcats, availableSlotsForCategories);
+
         final int firstPageCapacity = includeLeading
-            ? min(desiredFirstPageCategories, max(0, slotsPerPage - 1))
+            ? desiredFirstPageCategories
             : slotsPerPage;
         final int otherPageCapacity = slotsPerPage;
         final int pages;
@@ -299,18 +304,24 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
                       : isFirstPage
                           ? firstPageCapacity
                           : otherPageCapacity;
+                  var categoriesAdded = 0;
                   for (var i = 0; i < capacityForPage; i++) {
                     final absoluteIndex = start + i;
                     if (absoluteIndex >= totalSubcats) {
                       pageEntries.add(null);
                     } else {
+                      categoriesAdded++;
                       pageEntries.add(
                         _GridEntry.category(widget.subcats[absoluteIndex]),
                       );
                     }
                   }
-                  while (pageEntries.length < slotsPerPage) {
-                    pageEntries.add(null);
+                  final consumedAllCategories =
+                      start + categoriesAdded >= totalSubcats;
+                  if (consumedAllCategories) {
+                    while (pageEntries.length < slotsPerPage) {
+                      pageEntries.add(null);
+                    }
                   }
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: _hPad),

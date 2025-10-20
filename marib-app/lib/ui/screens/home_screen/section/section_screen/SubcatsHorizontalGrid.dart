@@ -94,9 +94,11 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
   static const double _hPad = 12.0;
   static const double _spacing = 10.0;
 
-  int _itemsPerPage = 4;
+  int _slotsPerPage = 4;
   int _itemsPerRow = 4;
   int _maxRows = 1;
+  int _firstPageCapacity = 4;
+  bool _includeLeading = false;
 
   late final PageController _pageController;
   int _current = 0;
@@ -106,11 +108,31 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
     return widget.subcats.indexWhere((c) => c.id == id);
   }
 
-  int _pageOfIndex(int index, {int? itemsPerPage}) {
+  int _pageOfIndex(int index,
+      {bool? includeLeading, int? firstPageCapacity, int? slotsPerPage}) {
+    return _pageOfIndexWithConfig(
+      index,
+      includeLeading: includeLeading ?? _includeLeading,
+      firstPageCapacity: firstPageCapacity ?? _firstPageCapacity,
+      slotsPerPage: slotsPerPage ?? _slotsPerPage,
+    );
+  }
+
+  int _pageOfIndexWithConfig(int index,
+      {required bool includeLeading,
+        required int firstPageCapacity,
+        required int slotsPerPage}) {
+
     if (index < 0) return 0;
-    final perPage = itemsPerPage ?? _itemsPerPage;
-    if (perPage <= 0) return 0;
-    return index ~/ perPage;
+    if (slotsPerPage <= 0) return 0;
+    if (!includeLeading) {
+      return index ~/ slotsPerPage;
+    }
+    if (firstPageCapacity <= 0) return 0;
+    if (index < firstPageCapacity) return 0;
+    final remaining = index - firstPageCapacity;
+    if (slotsPerPage <= 0) return 0;
+    return 1 + remaining ~/ slotsPerPage;
   }
 
   int _initialPage() {
@@ -197,29 +219,50 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
             rowHeight * maxRows + _verticalSpacingBetweenRows * (maxRows - 1);
         final bool includeLeading =
             widget.leadingBuilder != null && widget.isTopLevel && slotsPerPage > 1;
-        final int categoriesPerPage = includeLeading
+        final int firstPageCapacity = includeLeading
             ? max(1, slotsPerPage - 1)
             : slotsPerPage;
-        final pages = categoriesPerPage <= 0
-            ? 0
-            : (total / categoriesPerPage).ceil();
+        final int otherPageCapacity = slotsPerPage;
+        final int pages;
+        if (slotsPerPage <= 0) {
+          pages = 0;
+        } else if (!includeLeading) {
+          pages = (total / slotsPerPage).ceil();
+        } else {
+          final remaining = max(0, total - firstPageCapacity);
+          final additional = remaining == 0
+              ? 0
+              : (remaining / otherPageCapacity).ceil();
+          pages = 1 + additional;
+        }
 
 
         if (_itemsPerRow != itemsPerRow ||
             _maxRows != maxRows ||
-            _itemsPerPage != categoriesPerPage) {
+            _slotsPerPage != slotsPerPage ||
+            _firstPageCapacity != firstPageCapacity ||
+            _includeLeading != includeLeading) {
+
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
             final idx = _indexOf(widget.selectedId);
-            final targetPage =
-            _pageOfIndex(idx, itemsPerPage: categoriesPerPage);
+            final targetPage = _pageOfIndexWithConfig(
+              idx,
+              includeLeading: includeLeading,
+              firstPageCapacity: firstPageCapacity,
+              slotsPerPage: slotsPerPage,
+            );
+
             final safePages = pages == 0 ? 1 : pages;
             final clamped = targetPage.clamp(0, safePages - 1);
             final shouldJump = _current != clamped;
             setState(() {
               _itemsPerRow = itemsPerRow;
               _maxRows = maxRows;
-              _itemsPerPage = categoriesPerPage;
+              _slotsPerPage = slotsPerPage;
+              _firstPageCapacity = firstPageCapacity;
+              _includeLeading = includeLeading;
+
               _current = clamped;
             });
             if (shouldJump && _pageController.hasClients) {
@@ -238,14 +281,27 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
                 itemCount: pages,
                 onPageChanged: (i) => setState(() => _current = i),
                 itemBuilder: (ctx, pageIndex) {
-                  final start = pageIndex * categoriesPerPage;
+                  final bool isFirstPage = pageIndex == 0;
+                  final start = !includeLeading
+                      ? pageIndex * otherPageCapacity
+                      : isFirstPage
+                      ? 0
+                      : firstPageCapacity +
+                      (pageIndex - 1) * otherPageCapacity;
+
                   final pageEntries = <_GridEntry?>[];
-                  if (includeLeading) {
+                  if (includeLeading && isFirstPage) {
+
                     pageEntries.add(
                       _GridEntry.leading(widget.leadingBuilder!),
                     );
                   }
-                  for (var i = 0; i < categoriesPerPage; i++) {
+                  final capacityForPage = !includeLeading
+                      ? otherPageCapacity
+                      : isFirstPage
+                      ? firstPageCapacity
+                      : otherPageCapacity;
+                  for (var i = 0; i < capacityForPage; i++) {
                     final absoluteIndex = start + i;
                     if (absoluteIndex >= total) {
                       pageEntries.add(null);

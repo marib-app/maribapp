@@ -137,7 +137,6 @@ class CardPlanet extends StatelessWidget {
                     ),
                   ),
                 ),
-
               const Spacer(flex: 2),
               Directionality(
                 textDirection: TextDirection.rtl,
@@ -330,119 +329,134 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: data[currentIndex.value].backgroundGradientColors.last,
-      body: GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onHorizontalDragUpdate: (_) {}, // تمكين التفاعل بالسحب على كامل الشاشة
-        child: Stack(
-          children: [
-            ConcentricPageView(
-              reverse: true,
-              onChange: (i) => currentIndex.value = i,
-              itemCount: data.length,
-              colors: data.map((e) => e.backgroundGradientColors.last).toList(),
-              itemBuilder: (index) => ValueListenableBuilder<int>(
+      body: ValueListenableBuilder<int>(
+        valueListenable: currentIndex,
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onHorizontalDragUpdate: (_) {},
+          // تمكين التفاعل بالسحب على كامل الشاشة
+          child: Stack(
+            children: [
+              ConcentricPageView(
+                reverse: true,
+                onChange: (i) => currentIndex.value = i,
+                itemCount: data.length,
+                colors:
+                    data.map((e) => e.backgroundGradientColors.last).toList(),
+                itemBuilder: (index) => ValueListenableBuilder<int>(
+                  valueListenable: currentIndex,
+                  builder: (context, activeIndex, _) {
+                    return CardPlanet(
+                      data: data[index],
+                      isActive: index == activeIndex,
+                      compositions: _preloadedCompositions,
+                    );
+                  },
+                ),
+                onFinish: () {
+                  HiveUtils.setUserIsNotNew();
+                  Navigator.of(context)
+                      .pushNamedAndRemoveUntil(Routes.login, (_) => false);
+                },
+              ),
+              ValueListenableBuilder<int>(
                 valueListenable: currentIndex,
-                builder: (context, activeIndex, _) {
-                  return CardPlanet(
-                    data: data[index],
-                    isActive: index == activeIndex,
-                    compositions: _preloadedCompositions,
+                builder: (context, index, _) {
+                  return Positioned(
+                    bottom: 20,
+                    left: 0,
+                    right: 0,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(data.length, (i) {
+                        final reversedIndex = data.length - 1 - i;
+                        final selected = reversedIndex == index;
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          width: selected ? 18 : 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: selected ? Colors.white : Colors.white38,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        );
+                      }),
+                    ),
                   );
                 },
               ),
-              onFinish: () {
-                HiveUtils.setUserIsNotNew();
-                Navigator.of(context)
-                    .pushNamedAndRemoveUntil(Routes.login, (_) => false);
-              },
-            ),
-            ValueListenableBuilder<int>(
-              valueListenable: currentIndex,
-              builder: (context, index, _) {
-                return Positioned(
-                  bottom: 20,
-                  left: 0,
-                  right: 0,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(data.length, (i) {
-                      final reversedIndex = data.length - 1 - i;
-                      final selected = reversedIndex == index;
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        width: selected ? 18 : 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: selected ? Colors.white : Colors.white38,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      );
-                    }),
-                  ),
-                );
-              },
-            ),
-            ValueListenableBuilder<int>(
-              valueListenable: currentIndex,
-              builder: (context, index, _) {
-                if (!_showHint || index == data.length - 1) {
-                  return const SizedBox.shrink();
-                }
-                return Positioned(
-                  bottom: 100,
-                  left: 0,
-                  right: 0,
-                  child: IgnorePointer(
-                    ignoring: true,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.swipe_right, color: Colors.white70),
-                        SizedBox(height: 6),
-                        Text(
-                          "اسحب لليمين للمتابعة",
-                          style: TextStyle(color: Colors.white70, fontSize: 14),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-            Positioned(
-              left: 20,
-              bottom: 60,
-              child: ValueListenableBuilder<int>(
+              ValueListenableBuilder<int>(
                 valueListenable: currentIndex,
                 builder: (context, index, _) {
-                  return index == data.length - 1
-                      ? ElevatedButton(
-                          onPressed: () {
-                            HiveUtils.setUserIsNotNew();
-                            Navigator.of(context).pushNamedAndRemoveUntil(
-                                Routes.login, (_) => false);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.black,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 24, vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            elevation: 8,
+                  if (!_showHint || index == data.length - 1) {
+                    return const SizedBox.shrink();
+                  }
+                  return Positioned(
+                    bottom: 100,
+                    left: 0,
+                    right: 0,
+                    child: IgnorePointer(
+                      ignoring: true,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.swipe_right, color: Colors.white70),
+                          SizedBox(height: 6),
+                          Text(
+                            "اسحب لليمين للمتابعة",
+                            style:
+                                TextStyle(color: Colors.white70, fontSize: 14),
                           ),
-                          child: const Text("ابدأ الآن",
-                              style: TextStyle(fontWeight: FontWeight.bold)),
-                        )
-                      : const SizedBox();
+                        ],
+                      ),
+                    ),
+                  );
                 },
               ),
-            ),
-          ],
+              Positioned(
+                left: 20,
+                bottom: 60,
+                child: ValueListenableBuilder<int>(
+                  valueListenable: currentIndex,
+                  builder: (context, index, _) {
+                    return index == data.length - 1
+                        ? ElevatedButton(
+                            onPressed: () {
+                              HiveUtils.setUserIsNotNew();
+                              Navigator.of(context).pushNamedAndRemoveUntil(
+                                  Routes.login, (_) => false);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.black,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 24, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              elevation: 8,
+                            ),
+                            child: const Text(
+                              "ابدأ الآن",
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          )
+                        : const SizedBox();
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
+        builder: (context, index, child) {
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeInOut,
+            color: data[index].backgroundGradientColors.last,
+            child: child,
+          );
+        },
       ),
     );
   }

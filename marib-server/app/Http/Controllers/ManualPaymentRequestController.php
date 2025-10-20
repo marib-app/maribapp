@@ -2310,13 +2310,13 @@ class ManualPaymentRequestController extends Controller
         if ($manualGatewayAliasesForFilter === []) {
             $manualGatewayAliasesForFilter = ['manual_bank', 'manual_banks'];
         }
-
         $manualGatewayAliasesForFilter = array_values(array_unique(array_filter(array_merge(
             $manualGatewayAliasesForFilter,
             $walletGatewayAliases
-        ), static fn ($alias) => is_string($alias) && $alias !== ''))));
+        ), static fn ($alias) => is_string($alias) && trim($alias) !== '')));
 
-        
+
+
         $transactions = DB::table('payment_transactions as pt')
             ->leftJoin('manual_payment_requests as mpr', function ($join) {
                 $join->on('pt.manual_payment_request_id', '=', 'mpr.id');

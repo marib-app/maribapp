@@ -581,6 +581,7 @@
             cash: @json(__('Cash')),
         };
 
+        const MANUAL_PAYMENT_GATEWAYS_WITH_BANK_NAME = ['manual_banks', 'east_yemen_bank', 'wallet'];
 
         const MANUAL_PAYMENT_DEPARTMENT_STYLES = {
             shein: 'bg-info text-dark',
@@ -784,15 +785,20 @@
                 return trimmed;
             };
 
-            if (normalized === 'manual_banks') {
-                const manualBankCandidates = [
-                    safeRow.manual_bank_name,
-                    safeRow.channel_name,
-                    safeRow.channel_label,
-                    safeRow.gateway_label,
-                    safeRow.payment_gateway_name,
-                    safeRow.payment_gateway_label,
-                ];
+            const preferManualBankLabel = normalized
+                && MANUAL_PAYMENT_GATEWAYS_WITH_BANK_NAME.includes(normalized);
+
+            const manualBankCandidates = [
+                safeRow.manual_bank_name,
+                safeRow.bank_name,
+                safeRow.channel_name,
+                safeRow.channel_label,
+                safeRow.gateway_label,
+                safeRow.payment_gateway_name,
+                safeRow.payment_gateway_label,
+            ];
+
+            if (preferManualBankLabel) {
 
                 for (const candidate of manualBankCandidates) {
                     const resolved = valueOrNull(candidate);
@@ -801,24 +807,23 @@
                         continue;
                     }
 
-                    if (normalizeManualPaymentGateway(resolved) === 'manual_banks') {
-                        continue;
+                    const normalizedCandidate = normalizeManualPaymentGateway(resolved);
+
+                    if (normalizedCandidate
+                        && MANUAL_PAYMENT_GATEWAYS_WITH_BANK_NAME.includes(normalizedCandidate)) {
+                            
+                            continue;
                     }
 
                     return resolved;
                 }
             }
 
-            if (normalized === 'wallet') {
-                return MANUAL_PAYMENT_GATEWAY_LABEL_OVERRIDES.wallet;
-            }
+
 
             const genericCandidates = [
-                safeRow.channel_name,
-                safeRow.channel_label,
-                safeRow.gateway_label,
-                safeRow.payment_gateway_name,
-                safeRow.payment_gateway_label,
+                ...manualBankCandidates,
+
                 safeRow.payment_gateway,
                 safeRow.channel,
                 fallback,
@@ -831,8 +836,13 @@
                     continue;
                 }
 
-                if (normalized === 'manual_banks' && normalizeManualPaymentGateway(resolved) === 'manual_banks') {
-                    continue;
+                const normalizedCandidate = normalizeManualPaymentGateway(resolved);
+
+                if (preferManualBankLabel
+                    && normalizedCandidate
+                    && MANUAL_PAYMENT_GATEWAYS_WITH_BANK_NAME.includes(normalizedCandidate)) {
+                        
+                        continue;
                 }
 
                 return resolved;

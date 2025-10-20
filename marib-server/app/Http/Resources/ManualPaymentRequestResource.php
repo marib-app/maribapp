@@ -266,7 +266,7 @@ class ManualPaymentRequestResource extends JsonResource
 
         $candidates = [];
 
-        if ($canonicalGateway === 'manual_banks' && $manualBankName !== null) {
+        if ($manualBankName !== null) {
             $candidates[] = $manualBankName;
         }
 
@@ -301,8 +301,8 @@ class ManualPaymentRequestResource extends JsonResource
 
         return match ($canonicalGateway) {
             'manual_banks' => $manualBankName ?? __('Manual Banks'),
-            'east_yemen_bank' => __('East Yemen Bank Gateway'),
-            'wallet' => __('Wallet'),
+            'east_yemen_bank' => $manualBankName ?? __('East Yemen Bank Gateway'),
+            'wallet' => $manualBankName ?? __('Wallet'),
             'cash' => __('Cash'),
             default => $this->fallbackGatewayLabel($rawGateway),
         };

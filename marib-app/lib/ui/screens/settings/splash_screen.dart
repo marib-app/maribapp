@@ -383,7 +383,6 @@ class SplashScreenState extends State<SplashScreen>
   }
 
   Widget _buildOnline(BuildContext context) {
-    const double footerHeight = 270;
     final double footerHorizontalPadding = ScreenScaler.s(24);
     final double footerVerticalPadding = ScreenScaler.s(18);
     final double footerSpacing = ScreenScaler.s(6);
@@ -407,72 +406,85 @@ class SplashScreenState extends State<SplashScreen>
       ),
       child: Scaffold(
         backgroundColor: context.color.territoryColor,
-        body: Center(
-          child: FittedBox(
-            fit: BoxFit.contain,
-            child: SizedBox(
-              width: 500,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final double maxHeight = constraints.maxHeight.isFinite
+                ? constraints.maxHeight
+                : MediaQuery.of(context).size.height;
+
+            return Center(
+              child: FittedBox(
+                fit: BoxFit.contain,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: 500,
+                    minHeight: maxHeight,
+                    maxHeight: maxHeight,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.max,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      SizedBox(
-                        width: 500,
-                        height: 30,
-                        child: Lottie.asset('assets/lottie/data.json',
-                            fit: BoxFit.cover),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 500,
+                            height: 30,
+                            child: Lottie.asset(
+                              'assets/lottie/data.json',
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          SizedBox(height: ScreenScaler.s(16)),
+                          AnimatedOpacity(
+                            opacity: _showIntroUi ? 1 : 0,
+                            duration: const Duration(milliseconds: 500),
+                            curve: Curves.easeInOut,
+                            child: _IntroContent(
+                              dotsAnimation: _dotsController,
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(height: ScreenScaler.s(16)),
                       AnimatedOpacity(
                         opacity: _showIntroUi ? 1 : 0,
                         duration: const Duration(milliseconds: 500),
                         curve: Curves.easeInOut,
-                        child: _IntroContent(
-                          dotsAnimation: _dotsController,
+                        child: Align(
+                          alignment: Alignment.bottomCenter,
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: footerHorizontalPadding,
+                              vertical: footerVerticalPadding,
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'جميع الحقوق محفوظة 2026 C',
+                                  textAlign: TextAlign.center,
+                                  style: footerStyle,
+                                ),
+                                SizedBox(height: footerSpacing),
+                                Text(
+                                  'مأرب بين يديك للخدمات الألكترونية',
+                                  textAlign: TextAlign.center,
+                                  style: footerStyle.copyWith(
+                                    fontWeight: FontWeight.w300,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  AnimatedOpacity(
-                    opacity: _showIntroUi ? 1 : 0,
-                    duration: const Duration(milliseconds: 500),
-                    curve: Curves.easeInOut,
-                    child: SizedBox(
-                      height: footerHeight,
-                      width: double.infinity,
-                      child: Container(
-                        alignment: Alignment.bottomCenter,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: footerHorizontalPadding,
-                          vertical: footerVerticalPadding,
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'جميع الحقوق محفوظة 2026 C',
-                              textAlign: TextAlign.center,
-                              style: footerStyle,
-                            ),
-                            SizedBox(height: footerSpacing),
-                            Text(
-                              'مأرب بين يديك للخدمات الألكترونية',
-                              textAlign: TextAlign.center,
-                              style: footerStyle.copyWith(
-                                fontWeight: FontWeight.w300,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );

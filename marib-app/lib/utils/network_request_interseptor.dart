@@ -1,176 +1,223 @@
-import 'dart:convert';
 import 'dart:developer';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
-
 class NetworkRequestInterseptor extends Interceptor {
-  static const int _maxPreviewStringLength = 512;
-  static const int _maxPreviewCollectionEntries = 20;
+  static const int _maxPreviewStringLength = 256;
+  static const int _maxPreviewCollectionEntries = 10;
 
   int totalAPICallTimes = 0;
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    options.extra['requestStartTime'] = DateTime.now();
-
     if (kReleaseMode) {
       handler.next(options);
       return;
     }
-    totalAPICallTimes++;
+    options.extra['requestStartTime'] = DateTime.now();
+    options.extra['requestSequence'] = ++totalAPICallTimes;
 
-    final normalizedData = options.data is FormData
-        ? options.data.fields
-        : options.data;
+    final Map<String, dynamic> logEntry = <String, dynamic>{
+      'url': options.uri.toString(),
+      'method': options.method,
+      'sequence': options.extra['requestSequence'],
+    };
 
-    final serializedData = normalizedData is Map
-        ? normalizedData
-        : normalizedData is String
-        ? normalizedData
-        : normalizedData?.toString();
+    if (options.queryParameters.isNotEmpty) {
+      logEntry['query'] = <String, dynamic>{
+        'count': options.queryParameters.length,
+        'keys': options.queryParameters.keys
+            .take(_maxPreviewCollectionEntries)
+            .map((dynamic key) => key.toString())
+            .toList(growable: false),
+      };
+    }
 
-    log(
-        {
-          "URL": options.path,
-          "Parameters": options.method == "POST"
-              ? serializedData
-              : options.queryParameters,
-          "Method": options.method,
-          "_total_api_calls": totalAPICallTimes
-        }.toString(),
-        name: "Request-API");
+    final Map<String, dynamic>? payloadSummary =
+        _summarizePayload(options.data);
+    if (payloadSummary != null) {
+      logEntry['payload'] = payloadSummary;
+    }
+
+    log('$logEntry', name: 'Request-API');
     handler.next(options);
   }
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    if (!kReleaseMode) {
-      final startTime = err.requestOptions.extra['requestStartTime'] as DateTime?;
-      final duration =
-      startTime != null ? DateTime.now().difference(startTime) : null;
-      final response = err.response;
-      final dynamic responseData = response?.data;
-      final bool isBinaryResponse =
-          response?.requestOptions.responseType == ResponseType.bytes ||
-              _isBinaryData(responseData);
-      final int? payloadSize = _calculatePayloadSize(responseData);
-      final String? payloadPreview = isBinaryResponse
-          ? null
-          : _buildPayloadPreview(responseData);
+    if (kReleaseMode) {
+      handler.next(err);
+      return;
+    }
+    final DateTime? startTime =
+        err.requestOptions.extra['requestStartTime'] as DateTime?;
+    final Duration? duration =
+        startTime != null ? DateTime.now().difference(startTime) : null;
+    final Response<dynamic>? response = err.response;
+    final dynamic responseData = response?.data;
+    final bool isBinaryResponse =
+        response?.requestOptions.responseType == ResponseType.bytes ||
+            _isBinaryData(responseData);
 
-      log(
-          {
-            "URL": err.requestOptions.path,
-            "Type": err.type,
-            "Error": err.error,
-            "Message": err.message,
-            if (response?.statusCode != null) "status": response?.statusCode,
-            if (duration != null) "durationMs": duration.inMilliseconds,
-            if (payloadSize != null) "payloadSize": payloadSize,
-            if (isBinaryResponse) "payloadType": "binary",
-            if (payloadPreview != null) "payloadPreview": payloadPreview,
-          }.toString(),
-          name: "API-Error");
+    final Map<String, dynamic> logEntry = <String, dynamic>{
+      'url': err.requestOptions.uri.toString(),
+      'method': err.requestOptions.method,
+      'type': err.type.toString(),
+      'sequence': err.requestOptions.extra['requestSequence'],
+      if (response?.statusCode != null) 'status': response!.statusCode,
+      if (duration != null) 'durationMs': duration.inMilliseconds,
+      if (err.message != null) 'message': err.message,
+    };
+
+    if (isBinaryResponse) {
+      final int? payloadSize = _binaryLength(responseData);
+      logEntry['payload'] = <String, dynamic>{
+        'type': 'binary',
+        if (payloadSize != null) 'size': payloadSize,
+      };
+    } else {
+      final Map<String, dynamic>? payloadSummary =
+          _summarizePayload(responseData);
+      if (payloadSummary != null) {
+        logEntry['payload'] = payloadSummary;
+      }
     }
 
+    log('$logEntry', name: 'API-Error');
     handler.next(err);
   }
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
-    if (!kReleaseMode) {
-      final startTime =
-      response.requestOptions.extra['requestStartTime'] as DateTime?;
-      final duration =
-      startTime != null ? DateTime.now().difference(startTime) : null;
-      final bool isBinaryResponse =
-          response.requestOptions.responseType == ResponseType.bytes ||
-              _isBinaryData(response.data);
-      final int? payloadSize = _calculatePayloadSize(response.data);
-      final String? payloadPreview = isBinaryResponse
-          ? null
-          : _buildPayloadPreview(response.data);
-
-      log(
-          {
-            "URL": response.requestOptions.path,
-            "Method": response.requestOptions.method,
-            "status": response.statusCode,
-            "statusMessage": response.statusMessage,
-            if (duration != null) "durationMs": duration.inMilliseconds,
-            if (payloadSize != null) "payloadSize": payloadSize,
-            if (isBinaryResponse) "payloadType": "binary",
-            if (payloadPreview != null) "payloadPreview": payloadPreview,
-          }.toString(),
-          name: "Response-API");
+    if (kReleaseMode) {
+      handler.next(response);
+      return;
     }
+
+    final DateTime? startTime =
+        response.requestOptions.extra['requestStartTime'] as DateTime?;
+    final Duration? duration =
+        startTime != null ? DateTime.now().difference(startTime) : null;
+    final bool isBinaryResponse =
+        response.requestOptions.responseType == ResponseType.bytes ||
+            _isBinaryData(response.data);
+
+    final Map<String, dynamic> logEntry = <String, dynamic>{
+      'url': response.requestOptions.uri.toString(),
+      'method': response.requestOptions.method,
+      'status': response.statusCode,
+      'sequence': response.requestOptions.extra['requestSequence'],
+      if (response.statusMessage?.isNotEmpty ?? false)
+        'statusMessage': response.statusMessage,
+      if (duration != null) 'durationMs': duration.inMilliseconds,
+    };
+
+    if (isBinaryResponse) {
+      final int? payloadSize = _binaryLength(response.data);
+      logEntry['payload'] = <String, dynamic>{
+        'type': 'binary',
+        if (payloadSize != null) 'size': payloadSize,
+      };
+    } else {
+      final Map<String, dynamic>? payloadSummary =
+          _summarizePayload(response.data);
+      if (payloadSummary != null) {
+        logEntry['payload'] = payloadSummary;
+      }
+    }
+    log('$logEntry', name: 'Response-API');
     handler.next(response);
-  }
-
-
-  int? _calculatePayloadSize(dynamic data) {
-    if (data == null) {
-      return null;
-    }
-    if (data is Uint8List) {
-      return data.length;
-    }
-    if (data is List<int>) {
-      return data.length;
-    }
-    if (data is String) {
-      return utf8.encode(data).length;
-    }
-    if (data is List || data is Map) {
-      return data.length;
-    }
-    if (data is Iterable) {
-      return data.length;
-    }
-    return null;
   }
 
   bool _isBinaryData(dynamic data) {
     return data is Uint8List || data is List<int>;
   }
 
-  String? _buildPayloadPreview(dynamic data) {
+  int? _binaryLength(dynamic data) {
+    if (data is Uint8List) {
+      return data.lengthInBytes;
+    }
+    if (data is List<int>) {
+      return data.length;
+    }
+
+    return null;
+  }
+
+  Map<String, dynamic>? _summarizePayload(dynamic data) {
     if (data == null) {
       return null;
     }
-    if (data is String) {
-      if (data.length <= _maxPreviewStringLength) {
-        return data;
-      }
-      return '${data.substring(0, _maxPreviewStringLength)}…';
+
+    if (data is FormData) {
+      return <String, dynamic>{
+        'type': 'form-data',
+        if (data.fields.isNotEmpty)
+          'fieldKeys': data.fields
+              .take(_maxPreviewCollectionEntries)
+              .map((MapEntry<String, String> entry) => entry.key)
+              .toList(growable: false),
+        if (data.fields.isNotEmpty) 'fieldCount': data.fields.length,
+        if (data.files.isNotEmpty)
+          'fileKeys': data.files
+              .take(_maxPreviewCollectionEntries)
+              .map((MapEntry<String, MultipartFile> entry) => entry.key)
+              .toList(growable: false),
+        if (data.files.isNotEmpty) 'fileCount': data.files.length,
+      };
+    }
+
+    if (_isBinaryData(data)) {
+      final int? size = _binaryLength(data);
+      return <String, dynamic>{
+        'type': 'binary',
+        if (size != null) 'size': size,
+      };
     }
 
     if (data is Map) {
-      if (data.length <= _maxPreviewCollectionEntries) {
-        try {
-          return jsonEncode(data);
-        } catch (_) {
-          return 'Map(${data.length})';
-        }
-      }
-      return 'Map(${data.length})';
+      return <String, dynamic>{
+        'type': 'map',
+        'entries': data.length,
+        if (data.isNotEmpty)
+          'keys': data.keys
+              .take(_maxPreviewCollectionEntries)
+              .map((dynamic key) => key.toString())
+              .toList(growable: false),
+      };
     }
 
     if (data is List) {
-      if (data.length <= _maxPreviewCollectionEntries) {
-        try {
-          return jsonEncode(data);
-        } catch (_) {
-          return 'List(${data.length})';
-        }
-      }
-      return 'List(${data.length})';
+      return <String, dynamic>{
+        'type': 'list',
+        'length': data.length,
+        if (data.isNotEmpty) 'firstType': data.first.runtimeType.toString(),
+      };
+    }
+    if (data is String) {
+      final bool truncated = data.length > _maxPreviewStringLength;
+      final String preview =
+          truncated ? '${data.substring(0, _maxPreviewStringLength)}…' : data;
+
+      return <String, dynamic>{
+        'type': 'string',
+        'length': data.length,
+        if (preview.isNotEmpty) 'preview': preview,
+        if (truncated) 'truncated': true,
+      };
     }
 
-    return data.toString();
-  }
+    if (data is num || data is bool) {
+      return <String, dynamic>{
+        'type': data.runtimeType.toString(),
+        'value': data,
+      };
+    }
 
+    return <String, dynamic>{
+      'type': data.runtimeType.toString(),
+    };
+  }
 }

@@ -106,8 +106,8 @@ class NotificationService {
   static const Duration _participantsCacheTtl = Duration(hours: 6);
 
   static LinkedHashMap<String, _CachedParticipantsEntry>
-  _conversationParticipantsCache =
-  LinkedHashMap<String, _CachedParticipantsEntry>();
+      _conversationParticipantsCache =
+      LinkedHashMap<String, _CachedParticipantsEntry>();
 
   static bool _isLogoutHookRegistered = false;
 
@@ -119,7 +119,6 @@ class NotificationService {
 
   static Stream<String> get walletNotifications =>
       _walletNotificationController.stream;
-
 
   static void _ensureLogoutHookRegistered() {
     if (_isLogoutHookRegistered) {
@@ -143,21 +142,18 @@ class NotificationService {
         _conversationParticipantsCache.length + entriesToInsert;
     int overflow = anticipatedSize - _maxParticipantsCacheEntries;
     if (overflow <= 0 &&
-        _conversationParticipantsCache.length <=
-            _maxParticipantsCacheEntries) {
-
-
+        _conversationParticipantsCache.length <= _maxParticipantsCacheEntries) {
       return;
     }
     if (overflow <= 0) {
-      overflow = _conversationParticipantsCache.length -
-          _maxParticipantsCacheEntries;
+      overflow =
+          _conversationParticipantsCache.length - _maxParticipantsCacheEntries;
       if (overflow <= 0) {
         return;
       }
     }
     final List<String> keysToRemove =
-    List<String>.from(_conversationParticipantsCache.keys);
+        List<String>.from(_conversationParticipantsCache.keys);
     for (final String key in keysToRemove) {
       if (overflow <= 0) {
         break;
@@ -173,7 +169,8 @@ class NotificationService {
     }
     final DateTime now = DateTime.now();
     final List<String> expiredKeys = <String>[];
-    _conversationParticipantsCache.forEach((String key, _CachedParticipantsEntry entry) {
+    _conversationParticipantsCache
+        .forEach((String key, _CachedParticipantsEntry entry) {
       if (entry.isExpired(now, _participantsCacheTtl)) {
         expiredKeys.add(key);
       }
@@ -185,7 +182,6 @@ class NotificationService {
       _conversationParticipantsCache.remove(key);
     }
   }
-
 
   static Future<void> requestPermission() async {
     try {
@@ -646,7 +642,6 @@ class NotificationService {
             senderId: senderIdParsed);
 
         ChatMessageHandler.add(chatMessageModel);
-
 
         totalMessageCount++;
       } else {
@@ -1562,7 +1557,6 @@ class NotificationService {
       accessedAt: DateTime.now(),
     );
     _enforceParticipantsCacheLimit();
-
   }
 
   static void cacheParticipants({
@@ -1606,7 +1600,7 @@ class NotificationService {
     }
     _purgeExpiredParticipantsCacheEntries();
     final _CachedParticipantsEntry? cachedEntry =
-    _conversationParticipantsCache[key];
+        _conversationParticipantsCache[key];
     if (cachedEntry == null) {
       return null;
     }
@@ -1694,16 +1688,14 @@ class NotificationService {
   }
 }
 
-
-
 class _CachedParticipantsEntry {
   _CachedParticipantsEntry({
     required List<ChatParticipant> participants,
     required DateTime accessedAt,
   })  : _participants = participants
-      .map((participant) =>
-      ChatParticipant.fromJson(participant.toJson()))
-      .toList(),
+            .map(
+                (participant) => ChatParticipant.fromJson(participant.toJson()))
+            .toList(),
         lastAccessed = accessedAt;
 
   final List<ChatParticipant> _participants;

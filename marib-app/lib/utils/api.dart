@@ -23,6 +23,7 @@ import 'package:flutter/foundation.dart';
 import 'dart:collection';
 import 'dart:convert';
 import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
+import 'package:marib/settings.dart';
 
 class ApiException implements Exception {
   ApiException(this.errorMessage);
@@ -201,6 +202,11 @@ class _ApiResponseCache {
 }
 
 class Api {
+
+  static bool get networkLoggingEnabled =>
+      AppSettings.enableNetworkLogging && !kReleaseMode;
+
+
   // تهيئة الهيدرز لكل الطلبات
   // - لو المستخدم غير مسجل: نضيف اللغة فقط إن وجدت
   // - لو مسجل: نضيف Bearer <JWT> + اللغة
@@ -769,8 +775,9 @@ class Api {
       dio.options.followRedirects = false;
       dio.options.validateStatus = (_) => true;
 
-      dio.interceptors.add(NetworkRequestInterseptor());
-
+      if (networkLoggingEnabled) {
+        dio.interceptors.add(NetworkRequestInterseptor());
+      }
       FormData formData;
       final bool parameterIsFormData = parameter is FormData;
 
@@ -1024,7 +1031,9 @@ class Api {
       dio.options.followRedirects = false;
       dio.options.validateStatus = (status) => status != null && status < 400;
 
-      dio.interceptors.add(NetworkRequestInterseptor());
+      if (networkLoggingEnabled) {
+        dio.interceptors.add(NetworkRequestInterseptor());
+      }
 
       final response = await dio.delete(
         ((useBaseUrl ?? true) ? Constant.baseUrl : "") + url,
@@ -1091,8 +1100,9 @@ class Api {
       dio.options.followRedirects = false;
       dio.options.validateStatus = (status) => status != null && status < 400;
 
-      dio.interceptors.add(NetworkRequestInterseptor());
-
+      if (networkLoggingEnabled) {
+        dio.interceptors.add(NetworkRequestInterseptor());
+      }
       final Map<String, dynamic>? optionHeaders = options?.headers;
       final Map<String, dynamic> mergedHeaders = <String, dynamic>{
         ...headers(),
@@ -1281,8 +1291,9 @@ class Api {
       dio.options.followRedirects = false;
       dio.options.validateStatus = (status) => status != null && status < 400;
 
-      dio.interceptors.add(NetworkRequestInterseptor());
-
+      if (networkLoggingEnabled) {
+        dio.interceptors.add(NetworkRequestInterseptor());
+      }
       final bool resolvedUseBaseUrl = useBaseUrl ?? true;
       final String requestUrl =
           (resolvedUseBaseUrl ? Constant.baseUrl : "") + url;

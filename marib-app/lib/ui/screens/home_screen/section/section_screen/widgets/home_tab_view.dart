@@ -455,7 +455,6 @@ class _HomeTabViewState extends State<HomeTabView> {
         final bool isAllCategory =
             selectedCategoryId == null || selectedCategoryId == 0;
 
-
         // ✅ استمع للتمرير هنا (بدل بعثرة المنطق داخل عناصر داخلية)
         return NotificationListener<ScrollNotification>(
           onNotification: (n) {
@@ -502,8 +501,6 @@ class _HomeTabViewState extends State<HomeTabView> {
 
               // فاصل صغير
               SliverToBoxAdapter(child: SizedBox(height: gapSmall)),
-
-
 
               // ============= التصنيفات الفرعية (دائمًا ظاهرة) =============
 
@@ -795,8 +792,8 @@ class _HomeTabViewState extends State<HomeTabView> {
                               final brand =
                                   Theme.of(context).colorScheme.primary;
 
-                              final String? specialSlug =
-                              widget.specialRequestSectionSlug
+                              final String? specialSlug = widget
+                                  .specialRequestSectionSlug
                                   ?.trim()
                                   .toLowerCase();
                               final bool shouldShowSpecialRequestCard =
@@ -817,9 +814,9 @@ class _HomeTabViewState extends State<HomeTabView> {
 
                                     leadingBuilder: shouldShowSpecialRequestCard
                                         ? (context) => SpecialRequestCard(
-                                      sectionSlug:
-                                      widget.specialRequestSectionSlug!,
-                                    )
+                                              sectionSlug: widget
+                                                  .specialRequestSectionSlug!,
+                                            )
                                         : null,
 
                                     // في تبويب "الكل": اضغط فرعيّة ⇒ انقل شريط التصنيفات للفئة واضبط الجلب لها

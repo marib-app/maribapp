@@ -387,7 +387,7 @@ class SplashScreenState extends State<SplashScreen>
           child: FittedBox(
             fit: BoxFit.contain,
             child: SizedBox(
-              width: 500, // لوحة التصميم المرجعية (S24 Ultra)
+              width: 500,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

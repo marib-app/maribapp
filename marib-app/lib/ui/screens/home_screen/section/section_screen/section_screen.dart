@@ -465,7 +465,6 @@ class Section_screenState extends State<Section_screen> {
           }
         });
       }
-
     }
   }
 

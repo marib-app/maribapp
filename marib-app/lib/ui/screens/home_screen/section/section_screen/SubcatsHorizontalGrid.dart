@@ -83,7 +83,6 @@ class SubcatsHorizontalGrid extends StatefulWidget {
     required this.onTopCategoryPick,
     required this.onSubcatPick,
     this.leadingBuilder,
-
   });
 
   @override
@@ -120,9 +119,8 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
 
   int _pageOfIndexWithConfig(int index,
       {required bool includeLeading,
-        required int firstPageCapacity,
-        required int slotsPerPage}) {
-
+      required int firstPageCapacity,
+      required int slotsPerPage}) {
     if (index < 0) return 0;
     if (slotsPerPage <= 0) return 0;
     if (!includeLeading) {
@@ -197,13 +195,17 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
   Widget build(BuildContext context) {
     if (widget.subcats.isEmpty) return const SizedBox.shrink();
 
-    final total = widget.subcats.length;
+    final totalSubcats = widget.subcats.length;
+    final hasLeading = widget.leadingBuilder != null && widget.isTopLevel;
+    final displayCount = totalSubcats + (hasLeading ? 1 : 0);
 
     return LayoutBuilder(
       builder: (context, cons) {
         final w = cons.maxWidth;
-        final itemsPerRow = _calculateItemsPerRow(w, total);
-        final maxRows = total <= itemsPerRow ? 1 : 2;
+        final itemsPerRow = _calculateItemsPerRow(w, displayCount);
+        final rowsNeeded =
+            itemsPerRow <= 0 ? 1 : (displayCount / itemsPerRow).ceil();
+        final maxRows = rowsNeeded <= 1 ? 1 : min(2, rowsNeeded);
         final slotsPerPage = itemsPerRow * maxRows;
         final totalSpacing = _spacing * (itemsPerRow - 1);
         final widthForItems =
@@ -217,32 +219,29 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
 
         final gridHeight =
             rowHeight * maxRows + _verticalSpacingBetweenRows * (maxRows - 1);
-        final bool includeLeading =
-            widget.leadingBuilder != null && widget.isTopLevel && slotsPerPage > 1;
+        final bool includeLeading = hasLeading && slotsPerPage > 1;
+        final int desiredFirstPageCategories = min(4, totalSubcats);
         final int firstPageCapacity = includeLeading
-            ? max(1, slotsPerPage - 1)
+            ? min(desiredFirstPageCategories, max(0, slotsPerPage - 1))
             : slotsPerPage;
         final int otherPageCapacity = slotsPerPage;
         final int pages;
         if (slotsPerPage <= 0) {
           pages = 0;
         } else if (!includeLeading) {
-          pages = (total / slotsPerPage).ceil();
+          pages = (totalSubcats / slotsPerPage).ceil();
         } else {
-          final remaining = max(0, total - firstPageCapacity);
-          final additional = remaining == 0
-              ? 0
-              : (remaining / otherPageCapacity).ceil();
+          final remaining = max(0, totalSubcats - firstPageCapacity);
+          final additional =
+              remaining == 0 ? 0 : (remaining / otherPageCapacity).ceil();
           pages = 1 + additional;
         }
-
 
         if (_itemsPerRow != itemsPerRow ||
             _maxRows != maxRows ||
             _slotsPerPage != slotsPerPage ||
             _firstPageCapacity != firstPageCapacity ||
             _includeLeading != includeLeading) {
-
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
             final idx = _indexOf(widget.selectedId);
@@ -285,13 +284,12 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
                   final start = !includeLeading
                       ? pageIndex * otherPageCapacity
                       : isFirstPage
-                      ? 0
-                      : firstPageCapacity +
-                      (pageIndex - 1) * otherPageCapacity;
+                          ? 0
+                          : firstPageCapacity +
+                              (pageIndex - 1) * otherPageCapacity;
 
                   final pageEntries = <_GridEntry?>[];
                   if (includeLeading && isFirstPage) {
-
                     pageEntries.add(
                       _GridEntry.leading(widget.leadingBuilder!),
                     );
@@ -299,11 +297,11 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
                   final capacityForPage = !includeLeading
                       ? otherPageCapacity
                       : isFirstPage
-                      ? firstPageCapacity
-                      : otherPageCapacity;
+                          ? firstPageCapacity
+                          : otherPageCapacity;
                   for (var i = 0; i < capacityForPage; i++) {
                     final absoluteIndex = start + i;
-                    if (absoluteIndex >= total) {
+                    if (absoluteIndex >= totalSubcats) {
                       pageEntries.add(null);
                     } else {
                       pageEntries.add(
@@ -401,9 +399,6 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
   }
 }
 
-
-
-
 class _GridEntry {
   final CategoryModel? category;
   final WidgetBuilder? builder;
@@ -414,8 +409,6 @@ class _GridEntry {
 
   bool get isLeading => builder != null;
 }
-
-
 
 class _SubcatCircle extends StatelessWidget {
   static const Duration _animationDuration = Duration(milliseconds: 200);
@@ -459,10 +452,9 @@ class _SubcatCircle extends StatelessWidget {
           )
         : null;
 
-
-    final innerRadius =
-    (_subcatCardRadius - _innerPadding).clamp(0.0, _subcatCardRadius).toDouble();
-
+    final innerRadius = (_subcatCardRadius - _innerPadding)
+        .clamp(0.0, _subcatCardRadius)
+        .toDouble();
 
     Widget buildFallbackAvatar() => Container(
           color: colorScheme.primaryColor,
@@ -470,7 +462,7 @@ class _SubcatCircle extends StatelessWidget {
           child: Icon(
             Icons.category_rounded,
             color: colorScheme.textLightColor,
-            size: cardExtent  * 0.5,
+            size: cardExtent * 0.5,
           ),
         );
 
@@ -523,7 +515,7 @@ class _SubcatCircle extends StatelessWidget {
 
           // العنوان + خط سفلي متحرك للمختار
           SizedBox(
-            width: cardExtent  + 12,
+            width: cardExtent + 12,
             height: 30,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -534,7 +526,7 @@ class _SubcatCircle extends StatelessWidget {
                   curve: Curves.easeOut,
                   margin: const EdgeInsets.only(top: 4),
                   height: selected ? 3 : 0,
-                  width: selected ? (cardExtent  * 0.5) : 0,
+                  width: selected ? (cardExtent * 0.5) : 0,
                   decoration: BoxDecoration(
                     color: brand,
                     borderRadius: BorderRadius.circular(2),

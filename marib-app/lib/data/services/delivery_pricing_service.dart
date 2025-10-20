@@ -146,16 +146,17 @@ class DeliveryPricingService {
       sendTimeout: _config.timeout,
     );
 
-    bool hasInterceptor = false;
-    for (final Interceptor interceptor in _client.interceptors) {
-      if (interceptor is NetworkRequestInterseptor) {
-        hasInterceptor = true;
-        break;
+    if (Api.networkLoggingEnabled) {
+      bool hasInterceptor = false;
+      for (final Interceptor interceptor in _client.interceptors) {
+        if (interceptor is NetworkRequestInterseptor) {
+          hasInterceptor = true;
+          break;
+        }
       }
-    }
-
-    if (!hasInterceptor) {
-      _client.interceptors.add(NetworkRequestInterseptor());
+      if (!hasInterceptor) {
+        _client.interceptors.add(NetworkRequestInterseptor());
+      }
     }
   }
 

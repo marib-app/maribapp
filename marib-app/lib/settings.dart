@@ -49,6 +49,11 @@ class AppSettings {
   static const int apiDataLoadLimit = 20;
   static const int maxCategoryShowLengthInHomeScreen = 5;
 
+
+  /// Enable verbose network logging in non-production builds.
+  /// Set to `false` for production environments to disable the interceptor entirely.
+  static const bool enableNetworkLogging = true;
+
   static final String baseUrl =
       "${HelperUtils.checkHost(hostUrl)}api/"; //don't change this
 

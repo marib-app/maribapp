@@ -57,7 +57,10 @@ class OrdersRepository {
     final Dio dio = Dio();
     dio.options.followRedirects = false;
     dio.options.validateStatus = (status) => status != null && status < 400;
-    dio.interceptors.add(NetworkRequestInterseptor());
+    if (Api.networkLoggingEnabled) {
+      dio.interceptors.add(NetworkRequestInterseptor());
+    }
+
 
     final String url = '${Api.userOrdersApi}/$id/invoice.pdf';
     final String requestUrl = Constant.baseUrl + url;

@@ -202,10 +202,8 @@ class _ApiResponseCache {
 }
 
 class Api {
-
   static bool get networkLoggingEnabled =>
       AppSettings.enableNetworkLogging && !kReleaseMode;
-
 
   // تهيئة الهيدرز لكل الطلبات
   // - لو المستخدم غير مسجل: نضيف اللغة فقط إن وجدت
@@ -334,52 +332,50 @@ class Api {
   @visibleForTesting
   static Dio Function()? dioFactory;
 
+  static Dio? _sharedClient;
+  static Dio Function()? _activeClientFactory;
+  static _DioBaseOptionsSnapshot? _sharedClientOptionsSnapshot;
 
-
-  static Dio? _sharedDio;
-  static Dio Function()? _activeDioFactory;
-  static _DioBaseOptionsSnapshot? _sharedDioOptionsSnapshot;
-
-  static Dio _obtainDio() {
+  static Dio _client() {
     final Dio Function()? factory = dioFactory;
-    if (_sharedDio != null && identical(factory, _activeDioFactory)) {
-      _ensureNetworkInterceptor(_sharedDio!);
-      return _sharedDio!;
+    if (_sharedClient != null && identical(factory, _activeClientFactory)) {
+      _ensureNetworkInterceptor(_sharedClient!);
+      return _sharedClient!;
     }
 
     final Dio newDio = (factory ?? Dio.new)();
-    _configureSharedDio(newDio);
-    _sharedDio = newDio;
-    _activeDioFactory = factory;
+    _configureSharedClient(newDio);
+    _sharedClient = newDio;
+    _activeClientFactory = factory;
     return newDio;
   }
 
-  static void _configureSharedDio(Dio dio) {
+  static void _configureSharedClient(Dio dio) {
     dio.options.followRedirects = false;
     dio.options.validateStatus = (status) => status != null && status < 400;
-    _sharedDioOptionsSnapshot = _DioBaseOptionsSnapshot.capture(dio.options);
+    _sharedClientOptionsSnapshot = _DioBaseOptionsSnapshot.capture(dio.options);
     _ensureNetworkInterceptor(dio);
   }
 
   static void _ensureNetworkInterceptor(Dio dio) {
     final bool shouldEnableLogging = networkLoggingEnabled;
-    final bool hasInterceptor =
-    dio.interceptors.any((interceptor) => interceptor is NetworkRequestInterseptor);
+    final bool hasInterceptor = dio.interceptors
+        .any((interceptor) => interceptor is NetworkRequestInterseptor);
 
     if (shouldEnableLogging && !hasInterceptor) {
       dio.interceptors.add(NetworkRequestInterseptor());
     } else if (!shouldEnableLogging && hasInterceptor) {
       dio.interceptors.removeWhere(
-            (interceptor) => interceptor is NetworkRequestInterseptor,
+        (interceptor) => interceptor is NetworkRequestInterseptor,
       );
     }
   }
 
-  static void _resetDioOptionsForRequest(
-      Dio dio, {
-        required bool allowAnyStatus,
-      }) {
-    final _DioBaseOptionsSnapshot? snapshot = _sharedDioOptionsSnapshot;
+  static void _resetClientOptionsForRequest(
+    Dio dio, {
+    required bool allowAnyStatus,
+  }) {
+    final _DioBaseOptionsSnapshot? snapshot = _sharedClientOptionsSnapshot;
     if (snapshot != null) {
       snapshot.applyTo(dio.options);
     } else {
@@ -398,10 +394,10 @@ class Api {
 
   @visibleForTesting
   static void resetSharedHttpClient() {
-    _sharedDio?.close();
-    _sharedDio = null;
-    _activeDioFactory = null;
-    _sharedDioOptionsSnapshot = null;
+    _sharedClient?.close();
+    _sharedClient = null;
+    _activeClientFactory = null;
+    _sharedClientOptionsSnapshot = null;
   }
 
   static String? _resolveContentType({
@@ -431,7 +427,6 @@ class Api {
     Object? contentType = _contentTypeNotSpecified,
     bool? followRedirects,
     bool Function(int?)? validateStatus,
-
   }) {
     final Options resolvedBase = base ?? Options(contentType: null);
 
@@ -841,8 +836,8 @@ class Api {
       if (_isSliderEndpoint(url)) {
         await HiveUtils.ensureSliderSessionId();
       }
-      final Dio dio = _obtainDio();
-      _resetDioOptionsForRequest(dio, allowAnyStatus: true);
+      final Dio dio = _client();
+      _resetClientOptionsForRequest(dio, allowAnyStatus: true);
       FormData formData;
       final bool parameterIsFormData = parameter is FormData;
 
@@ -987,7 +982,6 @@ class Api {
         contentType: resolvedContentType,
         followRedirects: false,
         validateStatus: (_) => true,
-
       );
 
       final response = await dio.post(
@@ -1093,8 +1087,8 @@ class Api {
       if (_isSliderEndpoint(url)) {
         await HiveUtils.ensureSliderSessionId();
       }
-      final Dio dio = _obtainDio();
-      _resetDioOptionsForRequest(dio, allowAnyStatus: false);
+      final Dio dio = _client();
+      _resetClientOptionsForRequest(dio, allowAnyStatus: false);
       final Options requestOptions = _buildRequestOptions(
         headers: headers(),
         followRedirects: false,
@@ -1105,7 +1099,6 @@ class Api {
         ((useBaseUrl ?? true) ? Constant.baseUrl : "") + url,
         queryParameters: queryParameters,
         options: requestOptions,
-
       );
 
       if (response.data['error'] == true) {
@@ -1159,8 +1152,8 @@ class Api {
       if (_isSliderEndpoint(url)) {
         await HiveUtils.ensureSliderSessionId();
       }
-      final Dio dio = _obtainDio();
-      _resetDioOptionsForRequest(dio, allowAnyStatus: false);
+      final Dio dio = _client();
+      _resetClientOptionsForRequest(dio, allowAnyStatus: false);
       final Map<String, dynamic>? optionHeaders = options?.headers;
       final Map<String, dynamic> mergedHeaders = <String, dynamic>{
         ...headers(),
@@ -1207,7 +1200,6 @@ class Api {
         contentType: requestContentType,
         followRedirects: false,
         validateStatus: (status) => status != null && status < 400,
-
       );
 
       String? extractMessage(dynamic payload) {
@@ -1346,8 +1338,8 @@ class Api {
         await HiveUtils.ensureSliderSessionId();
       }
 
-      final Dio dio = _obtainDio();
-      _resetDioOptionsForRequest(dio, allowAnyStatus: false);
+      final Dio dio = _client();
+      _resetClientOptionsForRequest(dio, allowAnyStatus: false);
       final bool resolvedUseBaseUrl = useBaseUrl ?? true;
       final String requestUrl =
           (resolvedUseBaseUrl ? Constant.baseUrl : "") + url;
@@ -1371,7 +1363,6 @@ class Api {
         requestUrl,
         queryParameters: queryParameters,
         options: requestOptions,
-
       );
 
       final int statusCode = response.statusCode ?? 0;
@@ -1734,6 +1725,7 @@ class _ManualBankPage {
   final List<BankAccount> items;
   final Map<String, dynamic>? meta;
 }
+
 class _DioBaseOptionsSnapshot {
   _DioBaseOptionsSnapshot({
     required this.headers,
@@ -1777,6 +1769,7 @@ class _DioBaseOptionsSnapshot {
     }
     return Map<String, dynamic>.from(source);
   }
+
   static Map<String, dynamic> _cloneNonNull(Map<String, dynamic> source) {
     if (source.isEmpty) {
       return <String, dynamic>{};

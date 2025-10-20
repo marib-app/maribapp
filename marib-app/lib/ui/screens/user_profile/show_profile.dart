@@ -376,13 +376,16 @@ class UserProfileScreenState extends State<ShowUserProfileScreen>
 
   /// التقاط/اختيار صورة + قصّها ثم الاحتفاظ بها محليًا قبل الرفع
   Future<void> _imgFromGallery(ImageSource imageSource) async {
-    // إن كانت التهيئة مكلفة واستدعيتها هنا كثيرًا—انقلها لـ initState
-    CropImage.init(context);
+
 
     final pickedFile = await ImagePicker().pickImage(source: imageSource);
 
     if (pickedFile != null) {
-      final croppedFile = await CropImage.crop(filePath: pickedFile.path);
+      final croppedFile = await CropImage.crop(
+        context,
+        filePath: pickedFile.path,
+      );
+
       fileUserimg = croppedFile == null ? null : File(croppedFile.path);
     } else {
       fileUserimg = null;

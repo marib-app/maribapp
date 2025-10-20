@@ -825,13 +825,14 @@ class UserProfileScreenState extends State<UserProfileScreen> {
 
 
   _imgFromGallery(ImageSource imageSource) async {
-    CropImage.init(context);
 
     final pickedFile = await ImagePicker().pickImage(source: imageSource);
 
     if (pickedFile != null) {
       CroppedFile? croppedFile;
       croppedFile = await CropImage.crop(
+        context,
+
         filePath: pickedFile.path,
       );
       if (croppedFile == null) {

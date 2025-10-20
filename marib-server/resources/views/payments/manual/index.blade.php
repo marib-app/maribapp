@@ -518,6 +518,7 @@
             manual_payment: 'manual_banks',
             offline: 'manual_banks',
             internal: 'manual_banks',
+            'manual banks': 'manual_banks',
             manual_bank: 'manual_banks',
             'manual-bank': 'manual_banks',
             manualbank: 'manual_banks',
@@ -573,6 +574,13 @@
             cash: 'bg-success'
         };
 
+        const MANUAL_PAYMENT_GATEWAY_LABEL_OVERRIDES = {
+            east_yemen_bank: @json(__('East Yemen Bank Gateway')),
+            manual_banks: @json(__('Manual Banks')),
+            wallet: @json(__('Wallet')),
+            cash: @json(__('Cash')),
+        };
+
 
         const MANUAL_PAYMENT_DEPARTMENT_STYLES = {
             shein: 'bg-info text-dark',
@@ -619,6 +627,18 @@
                 return Number.isFinite(numericValue) ? numericValue.toFixed(2) : '0.00';
             };
         })();
+
+
+
+        function manualPaymentEscapeHtml(value) {
+            if (value === undefined || value === null) {
+                return '';
+            }
+
+            const element = document.createElement('div');
+            element.textContent = String(value);
+            return element.innerHTML;
+        }
 
         let manualPaymentInitialDrawTriggered = false;
         let manualPaymentOriginalErrMode = null;
@@ -730,6 +750,104 @@
             return MANUAL_PAYMENT_GATEWAY_MAP[normalized] ?? normalized;
         }
 
+
+        function resolveManualPaymentGatewayLabel(row, fallback, normalizedGateway) {
+            const safeRow = row && typeof row === 'object' ? row : {};
+
+            const normalized = normalizedGateway
+                ?? normalizeManualPaymentGateway(
+                    typeof safeRow.channel === 'string'
+                        ? safeRow.channel
+                        : (typeof safeRow.payment_gateway === 'string'
+                            ? safeRow.payment_gateway
+                            : (typeof safeRow.payment_method === 'string' ? safeRow.payment_method : '')
+                        )
+                )
+                ?? null;
+
+            const valueOrNull = (candidate) => {
+                if (candidate === undefined || candidate === null) {
+                    return null;
+                }
+
+                if (typeof candidate === 'object') {
+                    return null;
+                }
+
+                const stringValue = typeof candidate === 'string' ? candidate : String(candidate);
+                const trimmed = stringValue.trim();
+
+                if (trimmed === '' || trimmed.toLowerCase() === 'null') {
+                    return null;
+                }
+
+                return trimmed;
+            };
+
+            if (normalized === 'manual_banks') {
+                const manualBankCandidates = [
+                    safeRow.manual_bank_name,
+                    safeRow.channel_name,
+                    safeRow.channel_label,
+                    safeRow.gateway_label,
+                    safeRow.payment_gateway_name,
+                    safeRow.payment_gateway_label,
+                ];
+
+                for (const candidate of manualBankCandidates) {
+                    const resolved = valueOrNull(candidate);
+
+                    if (resolved === null) {
+                        continue;
+                    }
+
+                    if (normalizeManualPaymentGateway(resolved) === 'manual_banks') {
+                        continue;
+                    }
+
+                    return resolved;
+                }
+            }
+
+            if (normalized === 'wallet') {
+                return MANUAL_PAYMENT_GATEWAY_LABEL_OVERRIDES.wallet;
+            }
+
+            const genericCandidates = [
+                safeRow.channel_name,
+                safeRow.channel_label,
+                safeRow.gateway_label,
+                safeRow.payment_gateway_name,
+                safeRow.payment_gateway_label,
+                safeRow.payment_gateway,
+                safeRow.channel,
+                fallback,
+            ];
+
+            for (const candidate of genericCandidates) {
+                const resolved = valueOrNull(candidate);
+
+                if (resolved === null) {
+                    continue;
+                }
+
+                if (normalized === 'manual_banks' && normalizeManualPaymentGateway(resolved) === 'manual_banks') {
+                    continue;
+                }
+
+                return resolved;
+            }
+
+            if (normalized && Object.prototype.hasOwnProperty.call(MANUAL_PAYMENT_GATEWAY_LABEL_OVERRIDES, normalized)) {
+                return MANUAL_PAYMENT_GATEWAY_LABEL_OVERRIDES[normalized];
+            }
+
+            if (fallback !== undefined && fallback !== null && fallback !== '') {
+                return String(fallback);
+            }
+
+            return '—';
+        }
 
 
         function normalizeManualPaymentCategory(value) {
@@ -1454,12 +1572,14 @@
                                 return data ?? row?.channel_label ?? '';
                             }
 
-                            const key = normalizeManualPaymentGateway(row?.channel ?? '') ?? '';
-                            const classes = MANUAL_PAYMENT_GATEWAY_STYLES[key] ?? 'bg-secondary';
-                            const label = (row?.channel_name ?? row?.channel_label ?? data ?? '—').toString();
+                            const normalizedGateway = normalizeManualPaymentGateway(
+                                row?.channel ?? row?.payment_gateway ?? row?.payment_method ?? ''
+                            ) ?? '';
+                            const classes = MANUAL_PAYMENT_GATEWAY_STYLES[normalizedGateway] ?? 'bg-secondary';
+                            const label = resolveManualPaymentGatewayLabel(row ?? {}, data, normalizedGateway);
 
 
-                            return '<span class="badge ' + classes + '">' + label + '</span>';
+                            return '<span class="badge ' + classes + '">' + manualPaymentEscapeHtml(label) + '</span>';
                         }
                     },
 

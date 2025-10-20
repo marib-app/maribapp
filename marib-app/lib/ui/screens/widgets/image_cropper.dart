@@ -6,26 +6,24 @@ import 'package:marib/utils/extensions/extensions.dart';
 
 //This will open image crop SDK
 class CropImage {
-  static BuildContext? _context;
 
-  static void init(BuildContext context) {
-    _context = context;
-  }
+  static Future<CroppedFile?>? crop(
+      BuildContext context, {
+        required String filePath,
+      }) async {
+    final territoryColor = context.color.territoryColor;
 
-  static Future<CroppedFile?>? crop({required String filePath}) async {
-    if (_context == null) {
-      return null;
-    }
 
     CroppedFile? croppedFile = await ImageCropper().cropImage(
       sourcePath: filePath,
       uiSettings: [
         AndroidUiSettings(
+          context: context,
           toolbarTitle: 'Cropper',
-          toolbarColor: _context!.color.territoryColor,
+          toolbarColor: territoryColor,
           toolbarWidgetColor: Colors.white,
           hideBottomControls: false,
-          activeControlsWidgetColor: _context!.color.territoryColor,
+          activeControlsWidgetColor: territoryColor,
           lockAspectRatio: true,
           aspectRatioPresets: [
             CropAspectRatioPreset.square,
@@ -38,7 +36,7 @@ class CropImage {
           ],
         ),
         WebUiSettings(
-          context: _context!,
+          context: context,
         ),
       ],
     );

@@ -2043,16 +2043,28 @@ class ManualPaymentRequestController extends Controller
 
     public function buildUnifiedManualPaymentsBaseQuery(Request $request): QueryBuilder
     {
-        $startInput = $request->get('start_date', $request->get('date_from'));
-        $endInput = $request->get('end_date', $request->get('date_to'));
+        $startDate = $this->normalizeManualPaymentDate($request->get('start_date'), true)
+            ?? $this->normalizeManualPaymentDate($request->get('date_from'), true)
+            ?? $this->normalizeManualPaymentDate($request->get('from'), true);
+        $endDate = $this->normalizeManualPaymentDate($request->get('end_date'), false)
+            ?? $this->normalizeManualPaymentDate($request->get('date_to'), false)
+            ?? $this->normalizeManualPaymentDate($request->get('to'), false);
 
-        $startDate = $this->normalizeManualPaymentDate($startInput, true)
-            ?? now()->subDays(30)->startOfDay();
-        $endDate = $this->normalizeManualPaymentDate($endInput, false)
-            ?? now()->endOfDay();
-
-        if ($startDate->greaterThan($endDate)) {
+        if ($startDate !== null && $endDate !== null && $startDate->greaterThan($endDate)) {
             [$startDate, $endDate] = [$endDate->copy()->startOfDay(), $startDate->copy()->endOfDay()];
+        }
+
+        $shouldApplyDateFilter = $startDate !== null || $endDate !== null;
+        $rangeStart = null;
+        $rangeEnd = null;
+
+        if ($shouldApplyDateFilter) {
+            $rangeStart = $startDate ?? Carbon::create(1970, 1, 1, 0, 0, 0)->startOfDay();
+            $rangeEnd = $endDate ?? Carbon::now()->endOfDay();
+
+            if ($rangeStart->greaterThan($rangeEnd)) {
+                [$rangeStart, $rangeEnd] = [$rangeEnd->copy()->startOfDay(), $rangeStart->copy()->endOfDay()];
+            }
         }
 
         $statusGroups = $this->statusGroupsForFilter($request->input('status'));
@@ -2305,7 +2317,6 @@ class ManualPaymentRequestController extends Controller
                 }
             })
             ->where('pt.payment_gateway', 'manual_bank')
-            ->whereBetween('pt.created_at', [$startDate, $endDate])
 
             ->where(function ($query) {
                 $query->whereNull('pt.manual_payment_request_id')
@@ -2352,7 +2363,6 @@ class ManualPaymentRequestController extends Controller
                     $join->whereIn(DB::raw("LOWER(COALESCE(NULLIF(mpr.payable_type, ''), ''))"), $orderTypeArray);
                 }
             })
-            ->whereBetween('mpr.created_at', [$startDate, $endDate])
             ->selectRaw('mpr.id as id')
             ->selectRaw('pt.id as payment_transaction_id')
             ->selectRaw('mpr.id as manual_payment_request_id')
@@ -2375,6 +2385,13 @@ class ManualPaymentRequestController extends Controller
             ->selectRaw($manualBankNameExpression . ' as manual_bank_name')
             ->selectRaw($walletTransactionExpression . ' as wallet_transaction_id')
             ->selectRaw('pt.created_at as transaction_created_at');
+
+        if ($shouldApplyDateFilter) {
+            $transactions->whereBetween('pt.created_at', [$rangeStart, $rangeEnd]);
+            $requests->whereBetween('mpr.created_at', [$rangeStart, $rangeEnd]);
+        }
+
+
 
         $union = $transactions->unionAll($requests);
 

@@ -1,5 +1,6 @@
 import 'dart:developer';
 import 'dart:typed_data';
+import 'package:marib/settings.dart';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -10,9 +11,12 @@ class NetworkRequestInterseptor extends Interceptor {
 
   int totalAPICallTimes = 0;
 
+  bool get _isLoggingEnabled =>
+      !kReleaseMode && AppSettings.isNetworkLoggingEnabled;
+
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    if (kReleaseMode) {
+    if (!_isLoggingEnabled) {
       handler.next(options);
       return;
     }
@@ -47,7 +51,7 @@ class NetworkRequestInterseptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    if (kReleaseMode) {
+    if (!_isLoggingEnabled) {
       handler.next(err);
       return;
     }
@@ -91,7 +95,7 @@ class NetworkRequestInterseptor extends Interceptor {
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
-    if (kReleaseMode) {
+    if (!_isLoggingEnabled) {
       handler.next(response);
       return;
     }

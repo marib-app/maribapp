@@ -48,8 +48,26 @@ class AppSettings {
   static const int maxCategoryShowLengthInHomeScreen = 5;
 
   /// Enable verbose network logging in non-production builds.
-  /// Set to `false` for production environments to disable the interceptor entirely.
-  static const bool enableNetworkLogging = true;
+  ///
+  /// Keep this `false` by default to avoid dumping large payloads during normal
+  /// development sessions. Developers who need to troubleshoot specific calls
+  /// can either flip this flag locally or use [setNetworkLoggingOverride] at
+  /// runtime when running a debug/profile build.
+  static const bool enableNetworkLogging = false;
+
+  static bool _networkLoggingOverride = false;
+
+  /// Whether network logging should currently be active (ignoring build mode).
+  static bool get isNetworkLoggingEnabled =>
+      enableNetworkLogging || _networkLoggingOverride;
+
+  /// Allows temporarily enabling or disabling verbose network logging at
+  /// runtime for debugging sessions without touching the default setting.
+  static void setNetworkLoggingOverride(bool enabled) {
+    _networkLoggingOverride = enabled;
+  }
+
+
 
   /// Enable the custom performance monitor in debug/profile builds.
   /// Keep this `false` in production unless troubleshooting locally.

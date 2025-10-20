@@ -203,7 +203,20 @@ class _ApiResponseCache {
 
 class Api {
   static bool get networkLoggingEnabled =>
-      AppSettings.enableNetworkLogging && !kReleaseMode;
+      !kReleaseMode && AppSettings.isNetworkLoggingEnabled;
+
+  /// Allows toggling verbose network logging at runtime in debug/profile
+  /// builds. Calling this will immediately refresh the active Dio clients so
+  /// that interceptors are added or removed accordingly.
+  static void setNetworkLoggingOverride(bool enabled) {
+    AppSettings.setNetworkLoggingOverride(enabled);
+    _ensureNetworkInterceptor(_sharedDio);
+    final Dio? custom = _customDio;
+    if (custom != null) {
+      _ensureNetworkInterceptor(custom);
+    }
+  }
+
 
   // تهيئة الهيدرز لكل الطلبات
   // - لو المستخدم غير مسجل: نضيف اللغة فقط إن وجدت

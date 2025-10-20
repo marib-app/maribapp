@@ -8,6 +8,7 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 
 import 'package:marib/data/cubits/request_device/request_device_cubit.dart';
+import 'dart:math' as math;
 
 // مكوّن البطاقة كما هو (نفس القياسات، الألوان، والخطوط)
 
@@ -23,9 +24,10 @@ class SpecialRequestCard extends StatelessWidget {
   Widget build(BuildContext context) {
     const double _subcatCardRadius = 20.0;
     const double _innerPadding = 6.0;
+    const double gridGap = 6.0;
 
     final cardExtent = ScreenScaler.s(58);
-    final spacing = ScreenScaler.s(14);
+    final spacing = math.min(ScreenScaler.s(14), gridGap);
 
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -40,6 +42,7 @@ class SpecialRequestCard extends StatelessWidget {
         onTap: () => _openRequestSheet(context),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 200),
@@ -78,16 +81,18 @@ class SpecialRequestCard extends StatelessWidget {
 
             ),
             SizedBox(height: spacing),
-            SizedBox(
-              width: cardExtent + 12,
-              height: 30,
-              child: Center(
-                child: Text(
-                  'طلب خاص',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: textStyle,
+            Expanded(
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: SizedBox(
+                  width: cardExtent + 12,
+                  child: Text(
+                    'طلب خاص',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: textStyle,
+                  ),
                 ),
               ),
             ),

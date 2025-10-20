@@ -28,6 +28,32 @@ class FrameStatsAccumulator {
 
   double? get p95 => _p95Estimator.estimate;
 
+
+  FrameStatsSummary summarize({
+    required int droppedFrames,
+    bool reset = false,
+  }) {
+    final double totalFrameTimeMs = _sum;
+    final int frameCount = _count;
+    final double? meanFrameMs =
+    frameCount == 0 ? null : totalFrameTimeMs / frameCount;
+    final double? p50 = _p50Estimator.estimate;
+    final double? p95 = _p95Estimator.estimate;
+
+    if (reset) {
+      this.reset();
+    }
+
+    return FrameStatsSummary(
+      frameCount: frameCount,
+      droppedFrames: droppedFrames,
+      totalFrameTimeMs: totalFrameTimeMs,
+      meanFrameMs: meanFrameMs,
+      p50FrameMs: p50,
+      p95FrameMs: p95,
+    );
+  }
+
   void reset() {
     _sum = 0;
     _count = 0;
@@ -38,6 +64,81 @@ class FrameStatsAccumulator {
   @visibleForTesting
   int get debugSampleBufferLength => _p50Estimator.debugSampleBufferLength;
 }
+
+
+
+
+class FrameStatsSummary {
+  const FrameStatsSummary({
+    required this.frameCount,
+    required this.droppedFrames,
+    required this.totalFrameTimeMs,
+    required this.meanFrameMs,
+    required this.p50FrameMs,
+    required this.p95FrameMs,
+  });
+
+  final int frameCount;
+  final int droppedFrames;
+  final double totalFrameTimeMs;
+  final double? meanFrameMs;
+  final double? p50FrameMs;
+  final double? p95FrameMs;
+
+  double get averageFps =>
+      totalFrameTimeMs == 0 ? 0 : (frameCount * 1000) / totalFrameTimeMs;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'count': frameCount,
+    'dropped': droppedFrames,
+    'meanMs': meanFrameMs,
+    'p50Ms': p50FrameMs,
+    'p95Ms': p95FrameMs,
+    'totalTimeMs': totalFrameTimeMs,
+    'averageFps': averageFps,
+  };
+
+  static FrameStatsSummary aggregate(Iterable<FrameStatsSummary> summaries) {
+    int totalFrames = 0;
+    int totalDropped = 0;
+    double totalFrameTimeMs = 0;
+    double weightedP50 = 0;
+    double weightedP95 = 0;
+    double p50Weight = 0;
+    double p95Weight = 0;
+
+    for (final FrameStatsSummary summary in summaries) {
+      totalFrames += summary.frameCount;
+      totalDropped += summary.droppedFrames;
+      totalFrameTimeMs += summary.totalFrameTimeMs;
+
+      if (summary.p50FrameMs != null && summary.frameCount > 0) {
+        weightedP50 += summary.p50FrameMs! * summary.frameCount;
+        p50Weight += summary.frameCount;
+      }
+
+      if (summary.p95FrameMs != null && summary.frameCount > 0) {
+        weightedP95 += summary.p95FrameMs! * summary.frameCount;
+        p95Weight += summary.frameCount;
+      }
+    }
+
+    final double? p50 = p50Weight == 0 ? null : weightedP50 / p50Weight;
+    final double? p95 = p95Weight == 0 ? null : weightedP95 / p95Weight;
+    final double? meanFrameMs =
+    totalFrames == 0 ? null : totalFrameTimeMs / totalFrames;
+
+    return FrameStatsSummary(
+      frameCount: totalFrames,
+      droppedFrames: totalDropped,
+      totalFrameTimeMs: totalFrameTimeMs,
+      meanFrameMs: meanFrameMs,
+      p50FrameMs: p50,
+      p95FrameMs: p95,
+    );
+  }
+}
+
 
 class _P2QuantileEstimator {
   _P2QuantileEstimator(this.percentile);

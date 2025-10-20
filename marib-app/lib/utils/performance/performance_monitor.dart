@@ -201,41 +201,17 @@ class PerformanceMonitor {
 
   Map<String, dynamic> _aggregateSessions(
       List<_RoutePerformanceSnapshot> sessions) {
-    int totalFrames = 0;
-    int droppedFrames = 0;
-    double totalFrameTimeMs = 0;
-
-    double weightedP50 = 0;
-    double weightedP95 = 0;
-    double p50Weight = 0;
-    double p95Weight = 0;
-
-    for (final _RoutePerformanceSnapshot session in sessions) {
-      totalFrames += session.totalFrames;
-      droppedFrames += session.droppedFrames;
-      totalFrameTimeMs += session.totalFrameTimeMs;
-
-      if (session.p50FrameMs != null && session.totalFrames > 0) {
-        weightedP50 += session.p50FrameMs! * session.totalFrames;
-        p50Weight += session.totalFrames;
-      }
-      if (session.p95FrameMs != null && session.totalFrames > 0) {
-        weightedP95 += session.p95FrameMs! * session.totalFrames;
-        p95Weight += session.totalFrames;
-      }
-    }
-
-    final double? p50 = p50Weight == 0 ? null : weightedP50 / p50Weight;
-    final double? p95 = p95Weight == 0 ? null : weightedP95 / p95Weight;
-    final double averageFps =
-        totalFrameTimeMs == 0 ? 0 : (totalFrames * 1000) / totalFrameTimeMs;
+    final FrameStatsSummary aggregated = FrameStatsSummary.aggregate(
+        sessions.map((session) => session.frameMetrics));
 
     return <String, dynamic>{
-      'totalFrames': totalFrames,
-      'droppedFrames': droppedFrames,
-      'averageFps': averageFps,
-      'p50FrameMs': p50,
-      'p95FrameMs': p95,
+      'totalFrames': aggregated.frameCount,
+      'droppedFrames': aggregated.droppedFrames,
+      'averageFps': aggregated.averageFps,
+      'meanFrameMs': aggregated.meanFrameMs,
+      'p50FrameMs': aggregated.p50FrameMs,
+      'p95FrameMs': aggregated.p95FrameMs,
+      'frameMetrics': aggregated.toJson(),
     };
   }
 
@@ -380,24 +356,23 @@ class _RoutePerformanceSession {
   }
 
   _RoutePerformanceSnapshot snapshot({bool finalize = false}) {
-    final double totalFrameTimeMs = _frameStats.sum;
-    final double? p50 = _frameStats.p50;
-    final double? p95 = _frameStats.p95;
+    final int droppedFrameCount = droppedFrames;
+    final FrameStatsSummary frameMetrics = _frameStats.summarize(
+      droppedFrames: droppedFrameCount,
+      reset: finalize,
+    );
 
     final _RoutePerformanceSnapshot snapshot = _RoutePerformanceSnapshot(
       routeName: routeName,
       startedAtUs: startedAtUs,
       wallClockStartedAt: wallClockStartedAt,
-      totalFrames: totalFrames,
-      droppedFrames: droppedFrames,
-      totalFrameTimeMs: totalFrameTimeMs,
-      p50FrameMs: p50,
-      p95FrameMs: p95,
+      frameMetrics: frameMetrics,
       firstFrameUs: _firstFrameUs,
       firstMeaningfulFrameUs: _firstMeaningfulFrameUs,
     );
     if (finalize) {
-      _frameStats.reset();
+      totalFrames = 0;
+      droppedFrames = 0;
     }
 
     return snapshot;
@@ -409,11 +384,7 @@ class _RoutePerformanceSnapshot {
     required this.routeName,
     required this.startedAtUs,
     required this.wallClockStartedAt,
-    required this.totalFrames,
-    required this.droppedFrames,
-    required this.totalFrameTimeMs,
-    required this.p50FrameMs,
-    required this.p95FrameMs,
+    required this.frameMetrics,
     required this.firstFrameUs,
     required this.firstMeaningfulFrameUs,
   });
@@ -421,17 +392,17 @@ class _RoutePerformanceSnapshot {
   final String routeName;
   final int startedAtUs;
   final DateTime wallClockStartedAt;
-  final int totalFrames;
-  final int droppedFrames;
-  final double totalFrameTimeMs;
-  final double? p50FrameMs;
-  final double? p95FrameMs;
+  final FrameStatsSummary frameMetrics;
+
   final int? firstFrameUs;
   final int? firstMeaningfulFrameUs;
 
+  int get totalFrames => frameMetrics.frameCount;
+
+  int get droppedFrames => frameMetrics.droppedFrames;
+
   Map<String, dynamic> toJson() {
-    final double averageFps =
-        totalFrameTimeMs == 0 ? 0 : (totalFrames * 1000) / totalFrameTimeMs;
+    final double averageFps = frameMetrics.averageFps;
 
     return <String, dynamic>{
       'routeName': routeName,
@@ -439,8 +410,10 @@ class _RoutePerformanceSnapshot {
       'frames': totalFrames,
       'droppedFrames': droppedFrames,
       'averageFps': averageFps,
-      'p50FrameMs': p50FrameMs,
-      'p95FrameMs': p95FrameMs,
+      'meanFrameMs': frameMetrics.meanFrameMs,
+      'p50FrameMs': frameMetrics.p50FrameMs,
+      'p95FrameMs': frameMetrics.p95FrameMs,
+      'frameMetrics': frameMetrics.toJson(),
       'ttffMs': PerformanceMonitor.instance
           ._computeDurationMs(startedAtUs, firstFrameUs),
       'fmpMs': PerformanceMonitor.instance

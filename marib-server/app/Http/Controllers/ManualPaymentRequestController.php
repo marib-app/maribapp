@@ -2245,31 +2245,65 @@ class ManualPaymentRequestController extends Controller
         )";
 
 
+        $manualBankAliasCandidates = ManualPaymentRequest::manualBankGatewayAliases();
+        if ($manualBankAliasCandidates === []) {
+            $manualBankAliasCandidates = ['manual_bank', 'manual_banks'];
+        }
 
-        $manualBankNameExpression = "COALESCE(
-            NULLIF(TRIM(manual_bank_lookup.name), ''),
-            NULLIF(TRIM(manual_bank_lookup.beneficiary_name), ''),
-            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.payload.bank.name')),
-            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual.bank.name')),
-            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual.bank.bank_name')),
-            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual.bank.beneficiary_name')),
-            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.bank.name')),
-            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_bank.name')),
-            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_bank.bank_name')),
-            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_bank.beneficiary_name')),
-            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.bank.name')),
-            JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.manual_bank.name')),
-            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.name')),
-            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.bank_name')),
-            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.beneficiary_name')),
-            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual.bank.name')),
-            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual.bank.bank_name')),
-            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual.bank.beneficiary_name')),
-            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.name')),
-            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.bank_name')),
-            JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.beneficiary_name'))
+        $manualBankAliasSqlList = $this->quoteSqlList($manualBankAliasCandidates);
 
-        )";
+        $sanitizeManualBankValue = static function (string $expression) use ($manualBankAliasSqlList): string {
+            return sprintf(
+                "CASE WHEN TRIM(COALESCE(%s, '')) = '' THEN NULL WHEN LOWER(TRIM(COALESCE(%s, ''))) IN (%s) THEN NULL ELSE TRIM(%s) END",
+                $expression,
+                $expression,
+                $manualBankAliasSqlList,
+                $expression
+            );
+        };
+
+
+
+        $manualBankNameParts = [
+            $sanitizeManualBankValue('manual_bank_lookup.name'),
+            $sanitizeManualBankValue('manual_bank_lookup.beneficiary_name'),
+        ];
+
+        foreach ([
+            "$.payload.bank_name",
+            "$.payload.bank.name",
+            "$.manual.bank.name",
+            "$.manual.bank.bank_name",
+            "$.manual.bank.beneficiary_name",
+            "$.bank.name",
+            "$.manual_bank.name",
+            "$.manual_bank.bank_name",
+            "$.manual_bank.beneficiary_name",
+            "$.manual_payment_request.bank.name",
+            "$.manual_payment_request.manual_bank.name",
+        ] as $path) {
+            $manualBankNameParts[] = $sanitizeManualBankValue("JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '{$path}'))");
+        }
+
+        foreach ([
+            "$.payload.bank_name",
+            "$.bank.name",
+            "$.bank.bank_name",
+            "$.bank.beneficiary_name",
+            "$.manual.bank.name",
+            "$.manual.bank.bank_name",
+            "$.manual.bank.beneficiary_name",
+            "$.manual_bank.name",
+            "$.manual_bank.bank_name",
+            "$.manual_bank.beneficiary_name",
+        ] as $path) {
+            $manualBankNameParts[] = $sanitizeManualBankValue("JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '{$path}'))");
+        }
+
+        $manualBankNameExpression = 'COALESCE('
+            . PHP_EOL . '            '
+            . implode(',' . PHP_EOL . '            ', $manualBankNameParts)
+            . PHP_EOL . '        )';
 
         $manualGatewayKeyCandidates = [
             "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.channel')), '')",

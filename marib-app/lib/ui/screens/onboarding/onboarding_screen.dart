@@ -43,7 +43,6 @@ class CardPlanet extends StatelessWidget {
     super.key,
   });
 
-
   LottieComposition? _compositionFor(String? path) {
     if (path == null) return null;
     return compositions[path];
@@ -83,7 +82,6 @@ class CardPlanet extends StatelessWidget {
               );
             }(),
           ),
-
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 50, horizontal: 24),
           child: Column(
@@ -212,7 +210,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
     CardPlanetData(
       title: "موثوق رسميًا",
-      subtitle: "تطبيق مرخص من وزارة الصناعة والتجارة – مأرب\nرقم القيد: 6561 / السجل: 3154",
+      subtitle:
+          "تطبيق مرخص من وزارة الصناعة والتجارة – مأرب\nرقم القيد: 6561 / السجل: 3154",
       image: const AssetImage("assets/image/6.png"),
       backgroundGradientColors: [Colors.black, Colors.blueGrey.shade900],
       titleColor: Colors.cyanAccent,
@@ -231,7 +230,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       if (mounted) setState(() => _showHint = true);
     });
   }
-
 
   Future<void> _preloadAssets() async {
     final Map<String, LottieComposition> loaded = {};
@@ -255,10 +253,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _loadComposition(
-      String? path,
-      Map<String, LottieComposition> target,
-      ) async {
-    if (path == null || _preloadedCompositions.containsKey(path) || target.containsKey(path)) {
+    String? path,
+    Map<String, LottieComposition> target,
+  ) async {
+    if (path == null ||
+        _preloadedCompositions.containsKey(path) ||
+        target.containsKey(path)) {
       return;
     }
 
@@ -275,8 +275,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       }
     }
   }
-
-
 
   @override
   void dispose() {
@@ -309,7 +307,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   );
                 },
               ),
-
               onFinish: () {
                 HiveUtils.setUserIsNotNew();
                 Navigator.of(context)
@@ -378,24 +375,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 builder: (context, index, _) {
                   return index == data.length - 1
                       ? ElevatedButton(
-                    onPressed: () {
-                      HiveUtils.setUserIsNotNew();
-                      Navigator.of(context).pushNamedAndRemoveUntil(
-                          Routes.login, (_) => false);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      elevation: 8,
-                    ),
-                    child: const Text("ابدأ الآن",
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                  )
+                          onPressed: () {
+                            HiveUtils.setUserIsNotNew();
+                            Navigator.of(context).pushNamedAndRemoveUntil(
+                                Routes.login, (_) => false);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 24, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            elevation: 8,
+                          ),
+                          child: const Text("ابدأ الآن",
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                        )
                       : const SizedBox();
                 },
               ),

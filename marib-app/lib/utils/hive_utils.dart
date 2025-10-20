@@ -601,6 +601,7 @@ class HiveUtils {
     }
     await ChatBadgeController.handleUserChanged(incomingId);
     if (incomingId != null && incomingId != previousId) {
+      NotificationService.clearParticipantsCache();
       _runUserChangeHooks();
     }
   }
@@ -615,6 +616,7 @@ class HiveUtils {
     HiveUtils.setUserIsAuthenticated(false);
     await ChatBadgeController.handleUserChanged(null);
     NotificationService.disposeListeners();
+    NotificationService.clearParticipantsCache();
     _runLogoutHooks();
   }
 
@@ -645,6 +647,7 @@ class HiveUtils {
     // 4) نداء الـcallback (لو فيه إجراءات إضافية)
     onLogout.call();
     NotificationService.disposeListeners();
+    NotificationService.clearParticipantsCache();
     _runLogoutHooks();
 
     // 5) إعادة التوجيه (افتراضيًا: إلى صفحة الدخول)

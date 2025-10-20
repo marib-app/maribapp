@@ -130,11 +130,11 @@ class NotificationService {
   }
 
   static void clearParticipantsCache() {
+    _ensureLogoutHookRegistered();
     if (_conversationParticipantsCache.isEmpty) {
       return;
     }
     _conversationParticipantsCache.clear();
-
   }
 
   static void _enforceParticipantsCacheLimit({int entriesToInsert = 0}) {
@@ -158,7 +158,7 @@ class NotificationService {
       if (overflow <= 0) {
         break;
       }
-      _conversationParticipantsCache.remove(key);
+      _enforceParticipantsCacheLimit(entriesToInsert: 1);
       overflow--;
     }
   }
@@ -1586,11 +1586,12 @@ class NotificationService {
       return;
     }
     _purgeExpiredParticipantsCacheEntries();
+    _conversationParticipantsCache.remove(key);
+    _enforceParticipantsCacheLimit(entriesToInsert: 1);
     _conversationParticipantsCache[key] = _CachedParticipantsEntry(
       participants: participants,
       accessedAt: DateTime.now(),
     );
-    _enforceParticipantsCacheLimit();
   }
 
   static List<ChatParticipant>? getCachedParticipants(String conversationId,

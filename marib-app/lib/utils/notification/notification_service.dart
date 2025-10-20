@@ -102,10 +102,10 @@ class NotificationService {
   static Stream<UserPresenceEvent> get userPresenceEvents =>
       _userPresenceEventController.stream;
 
-  static const int _maxParticipantsCacheEntries = 100;
+  static const int _maxParticipantsCacheEntries = 50;
   static const Duration _participantsCacheTtl = Duration(hours: 6);
 
-  static final LinkedHashMap<String, _CachedParticipantsEntry>
+  static LinkedHashMap<String, _CachedParticipantsEntry>
   _conversationParticipantsCache =
   LinkedHashMap<String, _CachedParticipantsEntry>();
 
@@ -126,6 +126,7 @@ class NotificationService {
       return;
     }
     HiveUtils.registerLogoutHook(clearParticipantStatus);
+    HiveUtils.registerUserChangeHook(clearParticipantsCache);
     _isLogoutHookRegistered = true;
   }
 
@@ -133,21 +134,36 @@ class NotificationService {
     if (_conversationParticipantsCache.isEmpty) {
       return;
     }
-    _conversationParticipantsCache.clear();
+    _conversationParticipantsCache =
+        LinkedHashMap<String, _CachedParticipantsEntry>();
   }
 
-  static void _enforceParticipantsCacheLimit() {
-    if (_conversationParticipantsCache.length <=
-        _maxParticipantsCacheEntries) {
+  static void _enforceParticipantsCacheLimit({int entriesToInsert = 0}) {
+    int anticipatedSize =
+        _conversationParticipantsCache.length + entriesToInsert;
+    int overflow = anticipatedSize - _maxParticipantsCacheEntries;
+    if (overflow <= 0 &&
+        _conversationParticipantsCache.length <=
+            _maxParticipantsCacheEntries) {
+
+
       return;
     }
-    final int overflow =
-        _conversationParticipantsCache.length - _maxParticipantsCacheEntries;
-    final List<String> keysToRemove = _conversationParticipantsCache.keys
-        .take(overflow)
-        .toList(growable: false);
+    if (overflow <= 0) {
+      overflow = _conversationParticipantsCache.length -
+          _maxParticipantsCacheEntries;
+      if (overflow <= 0) {
+        return;
+      }
+    }
+    final List<String> keysToRemove =
+    List<String>.from(_conversationParticipantsCache.keys);
     for (final String key in keysToRemove) {
+      if (overflow <= 0) {
+        break;
+      }
       _conversationParticipantsCache.remove(key);
+      overflow--;
     }
   }
 
@@ -1537,6 +1553,10 @@ class NotificationService {
       return;
     }
     _purgeExpiredParticipantsCacheEntries();
+    _enforceParticipantsCacheLimit(entriesToInsert: 1);
+    _conversationParticipantsCache.remove(key);
+    _enforceParticipantsCacheLimit(entriesToInsert: 1);
+    _conversationParticipantsCache.remove(key);
     _conversationParticipantsCache[key] = _CachedParticipantsEntry(
       participants: participants,
       accessedAt: DateTime.now(),

@@ -16,13 +16,9 @@ import 'package:marib/ui/screens/chat/chat_badge_controller.dart';
 import 'dart:convert';
 import 'package:marib/utils/api.dart';
 
-
-
-
 // أداة مساعدة للتعامل مع التخزين المحلي عبر Hive
 // - تُجمّع كل عمليات القراءة/الكتابة على صناديق Hive
 // - تُقدّم دوال عالية المستوى لاستخدام موحّد داخل المشروع
-
 
 class HiveUtils {
   HiveUtils._();
@@ -32,6 +28,7 @@ class HiveUtils {
   static String? _cachedSliderSessionId;
   static final Random _sliderSessionRandom = Random();
   static final List<VoidCallback> _logoutHooks = <VoidCallback>[];
+  static final List<VoidCallback> _userChangeHooks = <VoidCallback>[];
 
   static Box<dynamic> get _userDetailsBox => Hive.box(HiveKeys.userDetailsBox);
   static const Map<String, int> _delegateSectionRootIds = <String, int>{
@@ -39,7 +36,6 @@ class HiveUtils {
     'computer': Constant.computerRootCategoryId,
     'store': Constant.storeRootCategoryId,
   };
-
 
   static void _hydrateUserDetailsCache() {
     final box = _userDetailsBox;
@@ -50,8 +46,7 @@ class HiveUtils {
       final cacheKey = key is String ? key : key.toString();
       map[cacheKey] = box.get(key);
       if (cacheKey == HiveKeys.sliderSessionId) {
-        _cachedSliderSessionId =
-            _normalizeSliderSessionIdValue(map[cacheKey]);
+        _cachedSliderSessionId = _normalizeSliderSessionIdValue(map[cacheKey]);
       }
     }
     _cachedUserDetailsMap = map;
@@ -104,7 +99,6 @@ class HiveUtils {
     _cachedSliderSessionId = null;
   }
 
-
   static void registerLogoutHook(VoidCallback hook) {
     if (_logoutHooks.contains(hook)) {
       return;
@@ -121,7 +115,7 @@ class HiveUtils {
       return;
     }
     final List<VoidCallback> hooksSnapshot =
-    List<VoidCallback>.from(_logoutHooks, growable: false);
+        List<VoidCallback>.from(_logoutHooks, growable: false);
     for (final VoidCallback hook in hooksSnapshot) {
       try {
         hook();
@@ -129,6 +123,36 @@ class HiveUtils {
         if (kDebugMode) {
           debugPrint(
             'HiveUtils.logout hook error: $error\n$stackTrace',
+          );
+        }
+      }
+    }
+  }
+
+  static void registerUserChangeHook(VoidCallback hook) {
+    if (_userChangeHooks.contains(hook)) {
+      return;
+    }
+    _userChangeHooks.add(hook);
+  }
+
+  static void unregisterUserChangeHook(VoidCallback hook) {
+    _userChangeHooks.remove(hook);
+  }
+
+  static void _runUserChangeHooks() {
+    if (_userChangeHooks.isEmpty) {
+      return;
+    }
+    final List<VoidCallback> hooksSnapshot =
+        List<VoidCallback>.from(_userChangeHooks, growable: false);
+    for (final VoidCallback hook in hooksSnapshot) {
+      try {
+        hook();
+      } catch (error, stackTrace) {
+        if (kDebugMode) {
+          debugPrint(
+            'HiveUtils.userChange hook error: $error\n$stackTrace',
           );
         }
       }
@@ -145,8 +169,6 @@ class HiveUtils {
     return trimmed.isEmpty ? null : trimmed;
   }
 
-
-
   // ---------------------------------------------------------------------------
   //                         مفاتيح/مساعدات عامة
   // ---------------------------------------------------------------------------
@@ -154,11 +176,9 @@ class HiveUtils {
   /// قراءة قيمة مفردة (Generic) من صندوق تفاصيل المستخدم
   // مثال: `HiveUtils.getUserDetail<String>(key: 'accountType')`
 
-
   static T? getUserDetail<T>({required String key}) {
     return _userDetailsBox.get(key) as T?;
   }
-
 
   // كتابة قيمة مفردة في صندوق تفاصيل المستخدم
 
@@ -171,7 +191,6 @@ class HiveUtils {
       _applyCacheUpdates({key: value});
     }
   }
-
 
   static String? getSliderSessionId() {
     final String? cached = _cachedSliderSessionId;
@@ -210,15 +229,15 @@ class HiveUtils {
 
   static String _generateSliderSessionId() {
     final String timestamp =
-    DateTime.now().millisecondsSinceEpoch.toRadixString(36);
-    final StringBuffer buffer = StringBuffer('sldr_')..write(timestamp)..write('_');
+        DateTime.now().millisecondsSinceEpoch.toRadixString(36);
+    final StringBuffer buffer = StringBuffer('sldr_')
+      ..write(timestamp)
+      ..write('_');
     for (int i = 0; i < 12; i++) {
       buffer.write(_sliderSessionRandom.nextInt(36).toRadixString(36));
     }
     return buffer.toString();
   }
-
-
 
   /// قسم السلة الحالي (لمنع دمج أقسام مختلفة بين الجلسات)
   static Future<void> setCartSection(String? section) async {
@@ -226,7 +245,6 @@ class HiveUtils {
     if (section == null || section.isEmpty) {
       await box.delete(HiveKeys.cartSection);
       _removeFromCache([HiveKeys.cartSection]);
-
     } else {
       await box.put(HiveKeys.cartSection, section);
       if (_cachedUserDetailsMap != null) {
@@ -242,9 +260,6 @@ class HiveUtils {
     return value.toString();
   }
 
-
-
-
   // إرجاع نوع الحساب كما هو مخزّن (من UserModel أو مباشرة من الـBox)
   // قد يعيد: 'real_estate' | 'individual' | 'business' (أو سلسلة فارغة إن لم يُحدّد)
 
@@ -254,13 +269,7 @@ class HiveUtils {
 
   // نوع الحساب بصيغة lower-case لتسهيل المقارنة
 
-
   static String getAccountTypeLower() => getAccountTypeRaw().toLowerCase();
-
-
-
-
-
 
   static Future<void> cacheDelegateSections({
     required Iterable<String> permitted,
@@ -281,7 +290,8 @@ class HiveUtils {
     final List<String> permittedList = permittedSet.toList(growable: false);
     final List<String> blockedList = blockedSet.toList(growable: false);
 
-    await _userDetailsBox.put(HiveKeys.permittedDelegateSections, permittedList);
+    await _userDetailsBox.put(
+        HiveKeys.permittedDelegateSections, permittedList);
     await _userDetailsBox.put(HiveKeys.blockedDelegateSections, blockedList);
 
     if (_cachedUserDetailsMap != null) {
@@ -301,7 +311,7 @@ class HiveUtils {
 
   static Set<String> getPermittedDelegateSections() {
     final dynamic cached =
-    _cachedUserDetailsMap?[HiveKeys.permittedDelegateSections];
+        _cachedUserDetailsMap?[HiveKeys.permittedDelegateSections];
     if (cached != null) {
       return _normalizeDelegateSectionList(cached);
     }
@@ -311,7 +321,8 @@ class HiveUtils {
   }
 
   static Set<String> getBlockedDelegateSections() {
-    final dynamic cached = _cachedUserDetailsMap?[HiveKeys.blockedDelegateSections];
+    final dynamic cached =
+        _cachedUserDetailsMap?[HiveKeys.blockedDelegateSections];
     if (cached != null) {
       return _normalizeDelegateSectionList(cached);
     }
@@ -334,20 +345,16 @@ class HiveUtils {
       return false;
     }
 
-
     if (permitted.contains(normalized)) {
       return true;
     }
 
     // في حالة عدم وجود أقسام مسموح بها صراحةً نعتبر الوصول متاحًا ما لم يتم حظره
     if (!hasDelegateAssignments) {
-
-
       return true;
     }
 
     return false;
-
   }
 
   static bool isDelegateSectionBlocked(String section) {
@@ -359,7 +366,6 @@ class HiveUtils {
   }
 
   static int? getDelegateRootCategoryId({int? userId, String? section}) {
-
     final int? resolvedUserId = userId ?? _tryReadCurrentUserId();
     if (resolvedUserId == null) {
       _persistDelegateHistory(null);
@@ -371,7 +377,6 @@ class HiveUtils {
       return null;
     }
 
-
     int? rootId;
     if (section != null) {
       final String? normalized = _normalizeDelegateSection(section);
@@ -379,7 +384,8 @@ class HiveUtils {
         rootId = _delegateSectionRootIds[normalized];
       }
     } else {
-      for (final MapEntry<String, int> entry in _delegateSectionRootIds.entries) {
+      for (final MapEntry<String, int> entry
+          in _delegateSectionRootIds.entries) {
         if (permittedSections.contains(entry.key)) {
           rootId = entry.value;
           break;
@@ -392,7 +398,6 @@ class HiveUtils {
   }
 
   static bool wasDelegateBefore() {
-
     if (getPermittedDelegateSections().isNotEmpty) {
       return true;
     }
@@ -402,9 +407,6 @@ class HiveUtils {
 
   static bool isDelegateUser({int? userId}) =>
       getDelegateRootCategoryId(userId: userId) != null;
-
-
-
 
   static void _persistDelegateHistory(int? rootCategoryId) {
     if (rootCategoryId != null) {
@@ -491,24 +493,19 @@ class HiveUtils {
 
     consume(raw);
     return resolved;
-
   }
 
   static int? _tryReadCurrentUserId() {
     try {
       return getUserDetails().id;
     } catch (_) {
-      final dynamic storedId =
-      _userDetailsBox.get('id');
+      final dynamic storedId = _userDetailsBox.get('id');
       if (storedId == null) {
         return null;
       }
       return int.tryParse(storedId.toString());
     }
   }
-
-
-
 
   // ---------------------------------------------------------------------------
   //                             مصادقة/هوية
@@ -525,14 +522,13 @@ class HiveUtils {
     if (_cachedUserDetailsMap != null) {
       _applyCacheUpdates({HiveKeys.jwtToken: token});
     }
-
   }
-
 
   // هل المستخدم موثّق (Authenticated) وبالإضافة لذلك "مُتحقَّق" (مثلاً OTP/توثيق الحساب)
 
   static bool isUserAuthenticated() {
-    final isAuth = Hive.box(HiveKeys.authBox).get(HiveKeys.isAuthenticated) ?? false;
+    final isAuth =
+        Hive.box(HiveKeys.authBox).get(HiveKeys.isAuthenticated) ?? false;
     if (!isAuth) return false;
     if (!isUserVerified()) return false;
     return true;
@@ -553,40 +549,25 @@ class HiveUtils {
     return Hive.box(HiveKeys.authBox).get(HiveKeys.isAuthenticated) ?? false;
   }
 
-
-
-
   /// وضع المستخدم كـمُوثّق
   static void setUserIsAuthenticated(bool value) {
     Hive.box(HiveKeys.authBox).put(HiveKeys.isAuthenticated, value);
   }
-
-
-
 
   /// أول استخدام للتطبيق؟
   static bool isUserFirstTime() {
     return Hive.box(HiveKeys.authBox).get(HiveKeys.isUserFirstTime) ?? true;
   }
 
-
-
-
   /// تخطّى المقدّمة/التسجيل؟
   static bool isUserSkip() {
     return Hive.box(HiveKeys.authBox).get(HiveKeys.isUserSkip) ?? false;
   }
 
-
-
-
   /// تمييز أن المستخدم لم يعد جديدًا (يُنصح استدعاؤها بعد أول تشغيل)
   static Future<void> setUserIsNotNew() {
     return Hive.box(HiveKeys.authBox).put(HiveKeys.isUserFirstTime, false);
   }
-
-
-
 
   /// (للاختبارات فقط) تفعيل حالة "مستخدم جديد"
   @visibleForTesting
@@ -594,9 +575,6 @@ class HiveUtils {
     Hive.box(HiveKeys.authBox).put(HiveKeys.isAuthenticated, false);
     return Hive.box(HiveKeys.authBox).put(HiveKeys.isUserFirstTime, true);
   }
-
-
-
 
   /// جلب معرف المستخدم (قد تكون null إذا لم تُحفظ)
   static String? getUserId() {
@@ -614,13 +592,13 @@ class HiveUtils {
     }
     if (incomingId != null) {
       final bool isFirstTime = previousId == null;
-      final bool isDifferentUser = previousId != null && previousId != incomingId;
+      final bool isDifferentUser =
+          previousId != null && previousId != incomingId;
       if (isFirstTime || isDifferentUser) {
         await _resetDelegateHistory();
       }
     }
     await ChatBadgeController.handleUserChanged(incomingId);
-
   }
 
   /// إعادة تمهيد/تصفير كل الصناديق الأساسية (تسجيل خروج قوي)
@@ -637,10 +615,10 @@ class HiveUtils {
 
   /// تسجيل الخروج + تنظيف + إعادة التوجيه (إن لزم)
   static logoutUser(
-      context, {
-        required VoidCallback onLogout,
-        bool? isRedirect,
-      }) async {
+    context, {
+    required VoidCallback onLogout,
+    bool? isRedirect,
+  }) async {
     Api.clearCache();
     // 1) تسجيل خروج من Firebase
     try {
@@ -666,7 +644,7 @@ class HiveUtils {
     // 5) إعادة التوجيه (افتراضيًا: إلى صفحة الدخول)
     Future.delayed(
       Duration.zero,
-          () {
+      () {
         if (isRedirect ?? true) {
           HelperUtils.killPreviousPages(context, Routes.login, {});
         }
@@ -674,13 +652,9 @@ class HiveUtils {
     );
   }
 
-
   // ---------------------------------------------------------------------------
   //                                 اللغة/الثيم
   // ---------------------------------------------------------------------------
-
-
-
 
   // الثيم الحالي (light/dark) — افتراضي Light
   static AppTheme getCurrentTheme() {
@@ -691,14 +665,11 @@ class HiveUtils {
     return AppTheme.light;
   }
 
-
-
   // تعيين الثيم
   static setCurrentTheme(AppTheme theme) {
     final newTheme = theme == AppTheme.light ? "light" : "dark";
     Hive.box(HiveKeys.themeBox).put(HiveKeys.currentTheme, newTheme);
   }
-
 
   // تخزين اللغة المختارة
   static Future<bool> storeLanguage(dynamic data) async {
@@ -747,8 +718,6 @@ class HiveUtils {
       if (_cachedUserDetailsMap != null) {
         _applyCacheUpdates(updates);
       }
-
-
     } else {
       final updates = {
         HiveKeys.city: city,
@@ -823,10 +792,7 @@ class HiveUtils {
     if (_cachedUserDetailsMap != null) {
       _applyCacheUpdates({HiveKeys.nearbyRadius: radius});
     }
-
   }
-
-
 
   // جلب نصف قطر البحث القريب
   static dynamic getNearbyRadius() {
@@ -835,17 +801,35 @@ class HiveUtils {
 
   // قراءات شائعة (Getters) — تُبقي الاستدعاءات موحّدة
   static dynamic getCityName() => _userDetailsBox.get(HiveKeys.city);
+
   static dynamic getAreaName() => _userDetailsBox.get(HiveKeys.area);
+
   static dynamic getAreaId() => _userDetailsBox.get(HiveKeys.areaId);
+
   static dynamic getStateName() => _userDetailsBox.get(HiveKeys.stateKey);
+
   static dynamic getCountryName() => _userDetailsBox.get(HiveKeys.countryKey);
-  static dynamic getCurrentCityName() => _userDetailsBox.get(HiveKeys.currentLocationCity);
-  static dynamic getCurrentAreaName() => _userDetailsBox.get(HiveKeys.currentLocationArea);
-  static dynamic getCurrentStateName() => _userDetailsBox.get(HiveKeys.currentLocationState);
-  static dynamic getCurrentCountryName() => _userDetailsBox.get(HiveKeys.currentLocationCountry);
-  static dynamic getCurrentLatitude() => _userDetailsBox.get(HiveKeys.currentLocationLatitude);
-  static dynamic getCurrentLongitude() => _userDetailsBox.get(HiveKeys.currentLocationLongitude);
+
+  static dynamic getCurrentCityName() =>
+      _userDetailsBox.get(HiveKeys.currentLocationCity);
+
+  static dynamic getCurrentAreaName() =>
+      _userDetailsBox.get(HiveKeys.currentLocationArea);
+
+  static dynamic getCurrentStateName() =>
+      _userDetailsBox.get(HiveKeys.currentLocationState);
+
+  static dynamic getCurrentCountryName() =>
+      _userDetailsBox.get(HiveKeys.currentLocationCountry);
+
+  static dynamic getCurrentLatitude() =>
+      _userDetailsBox.get(HiveKeys.currentLocationLatitude);
+
+  static dynamic getCurrentLongitude() =>
+      _userDetailsBox.get(HiveKeys.currentLocationLongitude);
+
   static dynamic getLatitude() => _userDetailsBox.get(HiveKeys.latitudeKey);
+
   static dynamic getLongitude() => _userDetailsBox.get(HiveKeys.longitudeKey);
 
   // ---------------------------------------------------------------------------
@@ -859,8 +843,6 @@ class HiveUtils {
       _applyCacheUpdates({"showChooseLocationDialoge": false});
     }
   }
-
-
 
   // هل ينبغي إظهار نافذة اختيار الموقع؟
   // تُعيد true إذا لم تُضبط من قبل (القيمة غير موجودة)
@@ -906,5 +888,3 @@ class HiveUtils {
     return (v ?? '').toString().trim();
   }
 }
-
-

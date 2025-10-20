@@ -85,24 +85,24 @@ class SplashController extends ChangeNotifier {
 
     _settingsSub =
         context.read<FetchSystemSettingsCubit>().stream.listen((state) {
-          if (state is FetchSystemSettingsSuccess) {
-            Constant.isDemoModeOn = context
-                .read<FetchSystemSettingsCubit>()
-                .getSetting(SystemSetting.demoMode);
-            _defaultLanguageFromSettings = _resolveDefaultLanguageCode();
-            _completeDefaultLanguageWaiters();
+      if (state is FetchSystemSettingsSuccess) {
+        Constant.isDemoModeOn = context
+            .read<FetchSystemSettingsCubit>()
+            .getSetting(SystemSetting.demoMode);
+        _defaultLanguageFromSettings = _resolveDefaultLanguageCode();
+        _completeDefaultLanguageWaiters();
 
-            isSettingsLoaded = true;
-            notifyListeners();
-            _tryNavigate();
-          } else if (state is FetchSystemSettingsFailure) {
-            _completeDefaultLanguageWaiters();
+        isSettingsLoaded = true;
+        notifyListeners();
+        _tryNavigate();
+      } else if (state is FetchSystemSettingsFailure) {
+        _completeDefaultLanguageWaiters();
 
-            isSettingsLoaded = true; // استخدم الافتراضي
-            notifyListeners();
-            _tryNavigate();
-          }
-        });
+        isSettingsLoaded = true; // استخدم الافتراضي
+        notifyListeners();
+        _tryNavigate();
+      }
+    });
   }
 
   /// اشتراك حالة الإنترنت
@@ -129,6 +129,7 @@ class SplashController extends ChangeNotifier {
   }
 
   bool _started = false;
+
   void _startProcessesOnce() {
     if (_started) return;
     _started = true;
@@ -142,13 +143,14 @@ class SplashController extends ChangeNotifier {
   Future<void> _getDefaultLanguage() async {
     try {
       final codeFromSettings = await _waitForDefaultLanguageCode();
-      final code =
-      (codeFromSettings != null && codeFromSettings.isNotEmpty)
+      final code = (codeFromSettings != null && codeFromSettings.isNotEmpty)
           ? codeFromSettings
           : "ar";
 
       final stored = HiveUtils.getLanguage();
-      if (stored == null || stored['data'] == null || HiveUtils.isUserFirstTime() == true) {
+      if (stored == null ||
+          stored['data'] == null ||
+          HiveUtils.isUserFirstTime() == true) {
         context.read<FetchLanguageCubit>().getLanguage(code);
       } else {
         isLanguageLoaded = true;
@@ -173,7 +175,6 @@ class SplashController extends ChangeNotifier {
     context.read<FetchSystemSettingsCubit>().fetchSettings(forceRefresh: true);
   }
 
-
   Future<String?> _waitForDefaultLanguageCode() async {
     if (_defaultLanguageFromSettings != null &&
         _defaultLanguageFromSettings!.isNotEmpty) {
@@ -196,8 +197,9 @@ class SplashController extends ChangeNotifier {
 
   String? _resolveDefaultLanguageCode() {
     try {
-      final raw =
-      context.read<FetchSystemSettingsCubit>().getSetting(SystemSetting.defaultLanguage);
+      final raw = context
+          .read<FetchSystemSettingsCubit>()
+          .getSetting(SystemSetting.defaultLanguage);
       if (raw is String) {
         return raw.trim();
       }
@@ -214,7 +216,6 @@ class SplashController extends ChangeNotifier {
       _defaultLanguageCompleter = null;
     }
   }
-
 
   /// مؤقت بسيط لعرض السبلّاش
   void _startTimer() {
@@ -244,12 +245,13 @@ class SplashController extends ChangeNotifier {
     if (!isTimerCompleted || !isSettingsLoaded || !isLanguageLoaded) return;
 
     final maintenance = context
-        .read<FetchSystemSettingsCubit>()
-        .getSetting(SystemSetting.maintenanceMode) ==
+            .read<FetchSystemSettingsCubit>()
+            .getSetting(SystemSetting.maintenanceMode) ==
         "1";
 
     if (maintenance) {
-      _go(() => Navigator.of(context).pushReplacementNamed(Routes.maintenanceMode));
+      _go(() =>
+          Navigator.of(context).pushReplacementNamed(Routes.maintenanceMode));
       return;
     }
 
@@ -324,12 +326,6 @@ class SplashController extends ChangeNotifier {
   }
 }
 
-
-
-
-
-
-
 ///==============================
 /// الواجهة: SplashScreen
 ///==============================
@@ -346,7 +342,6 @@ class SplashScreenState extends State<SplashScreen>
   late final AnimationController _dotsController;
   bool _showIntroUi = false;
   Timer? _introTimer;
-
 
   @override
   void initState() {
@@ -387,8 +382,6 @@ class SplashScreenState extends State<SplashScreen>
     );
   }
 
-
-
   Widget _buildOnline(BuildContext context) {
     // مقدار الرفع عن الوضع الحالي (وحدات لوحة 500px)
     final double lift = 150; // جرّب 60–120 حسب رغبتك
@@ -398,13 +391,13 @@ class SplashScreenState extends State<SplashScreen>
     final double footerSpacing = ScreenScaler.s(6);
     final double footerFontSize = ScreenScaler.fontSize(context, baseSize: 12);
     final Color footerColor =
-    Theme.of(context).colorScheme.onPrimary.withOpacity(0.72);
+        Theme.of(context).colorScheme.onPrimary.withOpacity(0.72);
     final TextStyle footerStyle =
         Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: footerColor,
-          fontSize: footerFontSize,
-          fontWeight: FontWeight.w500,
-        ) ??
+                  color: footerColor,
+                  fontSize: footerFontSize,
+                  fontWeight: FontWeight.w500,
+                ) ??
             TextStyle(
               color: footerColor,
               fontSize: footerFontSize,
@@ -431,8 +424,8 @@ class SplashScreenState extends State<SplashScreen>
                         SizedBox(
                           width: 500,
                           height: 30,
-
-                          child: Lottie.asset('assets/lottie/data.json', fit: BoxFit.cover),
+                          child: Lottie.asset('assets/lottie/data.json',
+                              fit: BoxFit.cover),
                         ),
                         SizedBox(
                           height: 545,
@@ -447,7 +440,6 @@ class SplashScreenState extends State<SplashScreen>
                             ),
                           ),
                         ),
-
                       ],
                     ),
                   ),
@@ -493,8 +485,6 @@ class SplashScreenState extends State<SplashScreen>
       ),
     );
   }
-
-
 }
 
 class _IntroContent extends StatelessWidget {
@@ -506,38 +496,54 @@ class _IntroContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color textColor = Theme.of(context).colorScheme.onPrimary;
 
+    final TextStyle baseStyle =
+        Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: textColor,
+                  fontWeight: FontWeight.w600,
+                ) ??
+            TextStyle(
+              color: textColor,
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+            );
+
+    final Animation<double> fadeAnimation = CurvedAnimation(
+      parent: dotsAnimation,
+      curve: Curves.easeInOut,
+    );
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        AnimatedBuilder(
-          animation: dotsAnimation,
-          builder: (context, _) {
-            final int step = ((dotsAnimation.value * 3).floor() % 3) + 1;
-            final String dots = '.' * step;
-            return AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              transitionBuilder: (child, animation) => FadeTransition(
-                opacity: animation,
-                child: child,
-              ),
-              child: Text(
-                'مرحباً بك$dots',
-                key: ValueKey<int>(step),
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: textColor,
-                  fontWeight: FontWeight.w700,
-                ) ??
-                    TextStyle(
-                      color: textColor,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'مرحباً بك',
+              textAlign: TextAlign.center,
+              style: baseStyle,
+            ),
+            AnimatedBuilder(
+              animation: dotsAnimation,
+              builder: (context, _) {
+                final int step = ((dotsAnimation.value * 3).floor() % 3) + 1;
+                final String dots =
+                    step <= 0 ? '' : ' ${List.filled(step, '.').join(' ')}';
+                return FadeTransition(
+                  opacity: fadeAnimation,
+                  child: Text(
+                    dots,
+                    textAlign: TextAlign.center,
+                    style: baseStyle.copyWith(
+                      fontWeight: FontWeight.w500,
                     ),
-              ),
-            );
-          },
+                  ),
+                );
+              },
+            ),
+          ],
         ),
-
       ],
     );
   }

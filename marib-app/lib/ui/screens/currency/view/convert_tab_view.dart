@@ -237,45 +237,63 @@ class ConvertTabView extends StatelessWidget {
         (state.selectedGovernorateCode ?? '').isNotEmpty;
     final bool canDisplayRates = hasSelectedGovernorate && selectedRate != null;
 
+    final String fallbackMessage = hasSelectedGovernorate
+        ? 'لا تتوفر أسعار محدثة لهذه المحافظة حاليًا.'
+        : 'اختر محافظة لعرض أسعار البيع والشراء.';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'أسعار المحافظة',
-          style: theme.textTheme.titleMedium?.copyWith(
-            color: onBg,
-            fontWeight: FontWeight.w800,
-          ),
+        Directionality(
           textDirection: TextDirection.rtl,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(Icons.location_on_outlined, color: brand),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'أسعار المحافظة',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: onBg,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  key: const Key('convertGovernorateDropdown'),
+                  value: selectedValue,
+                  items: items,
+                  onChanged: enabled
+                      ? (String? value) {
+                          if (value == defaultValue) {
+                            onGovernorateChanged(null);
+                          } else {
+                            onGovernorateChanged(value);
+                          }
+                        }
+                      : null,
+                  decoration: InputDecoration(
+                    border: _border(context),
+                    enabledBorder: _border(context),
+                    focusedBorder: _border(context),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                  ),
+                  icon: Icon(Icons.keyboard_arrow_down_rounded, color: brand),
+                  dropdownColor: theme.scaffoldBackgroundColor,
+                  style: theme.textTheme.bodyLarge?.copyWith(color: onBg),
+                  isDense: true,
+                  menuMaxHeight: 360,
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 10),
-        DropdownButtonFormField<String>(
-          key: const Key('convertGovernorateDropdown'),
-          value: selectedValue,
-          items: items,
-          onChanged: enabled
-              ? (String? value) {
-                  if (value == defaultValue) {
-                    onGovernorateChanged(null);
-                  } else {
-                    onGovernorateChanged(value);
-                  }
-                }
-              : null,
-          decoration: InputDecoration(
-            border: _border(context),
-            enabledBorder: _border(context),
-            focusedBorder: _border(context),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          ),
-          icon: Icon(Icons.keyboard_arrow_down_rounded, color: brand),
-          dropdownColor: theme.scaffoldBackgroundColor,
-          style: theme.textTheme.bodyLarge?.copyWith(color: onBg),
-          isDense: true,
-          menuMaxHeight: 360,
-        ),
-        const SizedBox(height: 12),
         if (canDisplayRates)
           Row(
             children: [
@@ -297,21 +315,13 @@ class ConvertTabView extends StatelessWidget {
             ],
           )
         else
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: onBg.withOpacity(0.12)),
-              color: onBg.withOpacity(_isDark(context) ? 0.04 : 0.03),
+          Text(
+            fallbackMessage,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: onBg.withOpacity(0.6),
+              fontWeight: FontWeight.w600,
             ),
-            child: Text(
-              'اختر المحافظة لعرض أسعار البيع والشراء للعملة المختارة.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: onBg.withOpacity(0.55),
-                fontWeight: FontWeight.w600,
-              ),
-              textDirection: TextDirection.rtl,
-            ),
+            textDirection: TextDirection.rtl,
           ),
       ],
     );

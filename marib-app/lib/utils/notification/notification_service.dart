@@ -4,7 +4,6 @@ import 'dart:async';
 import 'dart:developer';
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/model/chat/chat_message_modal.dart';
-import 'package:marib/ui/screens/chat/chat_audio/widgets/chat_widget.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/notification/awsomeNotification.dart';
@@ -630,24 +629,8 @@ class NotificationService {
             receiverId: receiverIdParsed,
             senderId: senderIdParsed);
 
-        ChatMessageHandler.add(BlocProvider(
-          create: (context) => SendMessageCubit(),
-          child: ChatMessage(
-            key: ValueKey(DateTime.now().toString().toString()),
-            message: chatMessageModel.message,
-            senderId: chatMessageModel.senderId!,
-            createdAt: chatMessageModel.createdAt!,
-            isSentNow: false,
-            updatedAt: chatMessageModel.updatedAt!,
-            audio: chatMessageModel.audio,
-            file: chatMessageModel.file,
-            itemOfferId: chatMessageModel.itemOfferId ?? itemOfferIdInt ?? 0,
-            status: chatMessageModel.status,
-            deliveredAt: chatMessageModel.deliveredAt,
-            readAt: chatMessageModel.readAt,
-            messageType: chatMessageModel.messageType,
-          ),
-        ));
+        ChatMessageHandler.add(chatMessageModel);
+
 
         totalMessageCount++;
       } else {

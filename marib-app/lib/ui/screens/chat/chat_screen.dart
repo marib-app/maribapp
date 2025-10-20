@@ -41,6 +41,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:marib/data/cubits/chat/get_seller_chat_users_cubit.dart';
 import 'dart:async';
 import 'package:marib/utils/chat/chat_sync_controller.dart';
+import 'package:marib/data/model/chat/chat_message_modal.dart';
 
 
 part 'chat_screen_ui.dart';
@@ -143,7 +144,7 @@ class _ChatScreenState extends State<ChatScreen>
   VoidCallback? _participantStatusListener;
 
   late final ChatSyncController _chatSyncController;
-  StreamSubscription<List<Widget>>? _chatMessagesSubscription;
+  StreamSubscription<List<ChatMessageModal>>? _chatMessagesSubscription;
 
   String get _effectiveConversationId {
     final String trimmed = widget.conversationId.trim();
@@ -626,7 +627,7 @@ class _ChatScreenState extends State<ChatScreen>
 
 
 
-  void _handleChatSyncStream(List<Widget> widgets) {
+  void _handleChatSyncStream(List<ChatMessageModal> messages) {
     final String? userIdStr = HiveUtils.getUserId();
     final int? currentUserId = int.tryParse(userIdStr ?? '');
     if (currentUserId == null) {
@@ -636,18 +637,15 @@ class _ChatScreenState extends State<ChatScreen>
     final List<int> deliverIds = <int>[];
     final List<int> readIds = <int>[];
 
-    for (final Widget widget in widgets) {
-      final ChatMessage? message = _unwrapChatWidget(widget);
-      if (message == null) {
-        continue;
-      }
+    for (final ChatMessageModal message in messages) {
 
       final int? messageId = message.id;
       if (messageId == null || messageId <= 0) {
         continue;
       }
 
-      if (message.senderId == currentUserId) {
+      final int? senderId = message.senderId;
+      if (senderId == null || senderId == currentUserId) {
         continue;
       }
 
@@ -675,18 +673,7 @@ class _ChatScreenState extends State<ChatScreen>
     }
   }
 
-  ChatMessage? _unwrapChatWidget(Widget widget) {
-    if (widget is ChatMessage) {
-      return widget;
-    }
-    if (widget is BlocProvider<SendMessageCubit>) {
-      final dynamic child = widget.child;
-      if (child is ChatMessage) {
-        return child;
-      }
-    }
-    return null;
-  }
+
 
   void _updateInputMode() {
     final bool hasText = controller.text.trim().isNotEmpty;

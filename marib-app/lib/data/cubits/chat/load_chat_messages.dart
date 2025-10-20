@@ -12,7 +12,7 @@ class LoadChatMessagesInitial extends LoadChatMessagesState {}
 class LoadChatMessagesInProgress extends LoadChatMessagesState {}
 
 class LoadChatMessagesSuccess extends LoadChatMessagesState {
-  List<ChatMessage> messages;
+  List<ChatMessageModal> messages;
   int currentPage;
   int itemOfferId;
   String conversationId;
@@ -31,7 +31,7 @@ class LoadChatMessagesSuccess extends LoadChatMessagesState {
   });
 
   LoadChatMessagesSuccess copyWith({
-    List<ChatMessage>? messages,
+    List<ChatMessageModal>? messages,
     int? currentPage,
     int? userId,
     int? itemOfferId,
@@ -72,7 +72,8 @@ class LoadChatMessagesCubit extends Cubit<LoadChatMessagesState> {
   Future<void> load({required int itemOfferId, required String conversationId}) async {
     try {
       emit(LoadChatMessagesInProgress());
-      DataOutput<ChatMessage> result = await _chatRepostiory.getMessagesApi(
+      DataOutput<ChatMessageModal> result =
+      await _chatRepostiory.getMessagesApi(
         itemOfferId: itemOfferId,
         conversationId: conversationId,
 
@@ -101,7 +102,9 @@ class LoadChatMessagesCubit extends Cubit<LoadChatMessagesState> {
         }
         emit((state as LoadChatMessagesSuccess).copyWith(isLoadingMore: true));
 
-        DataOutput<ChatMessage> result = await _chatRepostiory.getMessagesApi(
+        DataOutput<ChatMessageModal> result =
+        await _chatRepostiory.getMessagesApi(
+
             page: (state as LoadChatMessagesSuccess).currentPage + 1,
             itemOfferId: (state as LoadChatMessagesSuccess).itemOfferId,
             conversationId: (state as LoadChatMessagesSuccess).conversationId);

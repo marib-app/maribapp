@@ -336,28 +336,28 @@ extension _ChatScreenUi on _ChatScreenState {
                                   return;
                                 }*/
 
-                                    //This is adding Chat widget in stream with BlocProvider , because we will need to do api process to store chat message to server, when it will be added to list it's initState method will be called
-                                    ChatMessageHandler.add(
-                                      BlocProvider(
-                                        create: (context) =>
-                                            SendMessageCubit(),
-                                        child: ChatMessage(
-                                            key: ValueKey(DateTime.now()
-                                                .toString()
-                                                .toString()),
-                                            message: controller.text,
-                                            senderId: int.parse(
-                                                HiveUtils.getUserId()!),
-                                            createdAt:
-                                            DateTime.now().toString(),
-                                            isSentNow: true,
-                                            audio: path,
-                                            messageType: 'audio',
-                                            itemOfferId: widget.itemOfferId,
-                                            file: "",
-                                            updatedAt:
-                                            DateTime.now().toString()),
 
+                                    final DateTime now = DateTime.now();
+
+
+                                    ChatMessageHandler.add(
+                                      ChatMessageModal(
+                                        localId: _generateLocalMessageId(),
+                                        senderId: int.tryParse(
+                                            HiveUtils.getUserId() ?? '') ??
+                                            0,
+                                        receiverId:
+                                        int.tryParse(widget.userId),
+                                        itemOfferId: widget.itemOfferId,
+                                        itemId:
+                                        int.tryParse(widget.itemId),
+                                        message: controller.text,
+                                        audio: path,
+                                        file: '',
+                                        messageType: 'audio',
+                                        createdAt: now.toIso8601String(),
+                                        updatedAt: now.toIso8601String(),
+                                        isSentNow: true,
                                       ),
                                     );
 
@@ -397,34 +397,26 @@ extension _ChatScreenUi on _ChatScreenState {
                                     } else if (controller.text.trim().isNotEmpty) {
                                       messageType = 'text';
                                     }
+                                    final DateTime now = DateTime.now();
 
                                     ChatMessageHandler.add(
-                                      BlocProvider(
-                                        key: ValueKey(DateTime.now()
-                                            .toString()
-                                            .toString()),
-                                        create: (context) =>
-                                            SendMessageCubit(),
-                                        child: ChatMessage(
-                                          key: ValueKey(DateTime.now()
-                                              .toString()
-                                              .toString()),
-                                          message: controller.text,
-                                          senderId: int.parse(
-                                              HiveUtils.getUserId()!),
-                                          createdAt:
-                                          DateTime.now().toString(),
-                                          isSentNow: true,
-                                          updatedAt:
-                                          DateTime.now().toString(),
-                                          audio: "",
-                                          file: messageAttachment != null
-                                              ? messageAttachment?.path
-                                              : "",
-                                          itemOfferId: widget.itemOfferId,
-                                          messageType: messageType,
-
-                                        ),
+                                      ChatMessageModal(
+                                        localId: _generateLocalMessageId(),
+                                        senderId: int.tryParse(
+                                            HiveUtils.getUserId() ?? '') ??
+                                            0,
+                                        receiverId:
+                                        int.tryParse(widget.userId),
+                                        itemOfferId: widget.itemOfferId,
+                                        itemId:
+                                        int.tryParse(widget.itemId),
+                                        message: controller.text,
+                                        audio: '',
+                                        file: messageAttachment?.path ?? '',
+                                        messageType: messageType,
+                                        createdAt: now.toIso8601String(),
+                                        updatedAt: now.toIso8601String(),
+                                        isSentNow: true,
                                       ),
                                     );
                                     totalMessageCount++;
@@ -842,8 +834,8 @@ extension _ChatScreenUi on _ChatScreenState {
                         LoadChatMessagesState>(
                       listener: (context, state) {
                         if (state is LoadChatMessagesSuccess) {
-                          ChatMessageHandler.loadMessages(
-                              state.messages, context);
+                          ChatMessageHandler.loadMessages(state.messages);
+
                           totalMessageCount = state.messages.length;
                           isFetchedFirstTime = true;
                           setState(() {});
@@ -903,79 +895,71 @@ extension _ChatScreenUi on _ChatScreenState {
                             },
                             bloc: context.read<ChatMessageHandlerCubit>(),
                           ),*/
-                            StreamBuilder<List<Widget>>(
+                            StreamBuilder<List<ChatMessageModal>>(
                                 stream: ChatMessageHandler.getChatStream(),
                                 builder: (context,
-                                    AsyncSnapshot<List<Widget>> snapshot) {
-                                  Widget? loadingMoreWidget;
-                                  if (state is LoadChatMessagesSuccess) {
-                                    if (state.isLoadingMore) {
-                                      loadingMoreWidget =
-                                          Text("loading".translate(context));
-                                    }
-                                  }
-
-                                  if (state is LoadChatMessagesSuccess &&
-                                      state.isLoadingMore) {
-                                    loadingMoreWidget =
-                                        Text("loading".translate(context));
-                                  }
+                                    AsyncSnapshot<List<ChatMessageModal>>
+                                    snapshot) {
+                                  final bool isLoadingMore =
+                                      state is LoadChatMessagesSuccess &&
+                                          state.isLoadingMore;
+                                  final Widget? loadingMoreWidget =
+                                  isLoadingMore
+                                      ? Text("loading".translate(context))
+                                      : null;
 
                                   if (snapshot.connectionState ==
-                                  ConnectionState.active ||
-                                  snapshot.connectionState ==
-                                  ConnectionState.done) {
-                                    if ((snapshot.data as List).isEmpty) {
-                                      return offerWidget();
-                                    }
-
-                                    if (snapshot.hasData) {
-                                      return Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          loadingMoreWidget ??
-                                              const SizedBox.shrink(),
-                                          Expanded(
-                                            child: ListView.builder(
-                                              key: ValueKey(
-                                                  'chat_list_${snapshot.data!.length}'),
-                                              reverse: true,
-                                              physics:
-                                              const AlwaysScrollableScrollPhysics(),
-                                              controller: _pageScrollController,
-                                              addAutomaticKeepAlives: true,
-                                              itemCount: snapshot.data!.length,
-                                              padding: const EdgeInsets.only(
-                                                  bottom: 10),
-                                              itemBuilder: (context, index) {
-                                                // final adjustedIndex =   index - 1;
-                                                /* dynamic chat =
-                                              (snapshot.data as List)
-                                                  .elementAt(index); */
-
-                                                dynamic chat =
-                                                snapshot.data![index];
-
-                                                return Column(
-                                                  mainAxisSize:
-                                                  MainAxisSize.min,
-                                                  children: [
-                                                    if (index ==
-                                                        snapshot.data!.length -
-                                                            1)
-                                                      offerWidget(),
-                                                    chat
-                                                  ],
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    }
+                                      ConnectionState.waiting &&
+                                      !snapshot.hasData) {
+                                    return loadingMoreWidget ??
+                                        offerWidget();
                                   }
 
-                                  return offerWidget();
+                                  final List<ChatMessageModal> messages =
+                                      snapshot.data ??
+                                          <ChatMessageModal>[];
+                                  if (messages.isEmpty) {
+                                    return offerWidget();
+                                  }
+
+                        final List<_ChatListEntry> renderItems =
+                        _buildRenderableMessages(
+                        messages, context);
+
+                        return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                        loadingMoreWidget ??
+                        const SizedBox.shrink(),
+                        Expanded(
+                        child: ListView.builder(
+                        key: ValueKey(
+                        'chat_list_${messages.length}_${renderItems.length}'),
+                        reverse: true,
+                        physics:
+                                              const AlwaysScrollableScrollPhysics(),
+                          controller: _pageScrollController,
+                          addAutomaticKeepAlives: true,
+                          itemCount: renderItems.length + 1,
+                          padding:
+                          const EdgeInsets.only(bottom: 10),
+                          itemBuilder: (context, index) {
+                            if (index == renderItems.length) {
+                              return offerWidget();
+                            }
+                            final _ChatListEntry entry =
+                            renderItems[index];
+                            if (entry.isDateSeparator) {
+                              return _buildMessageDateChip(
+                                  context, entry.dateLabel!);
+                            }
+                            return _buildChatMessageWidget(
+                                entry.message!);
+                          },
+                        ),
+                        ),
+                        ],
+                        );
                                 }),
                             if ((state is LoadChatMessagesInProgress))
                               Center(
@@ -1070,4 +1054,122 @@ extension _ChatScreenUi on _ChatScreenState {
       return SizedBox.shrink();
     }
   }
+
+
+  List<_ChatListEntry> _buildRenderableMessages(
+      List<ChatMessageModal> messages, BuildContext context) {
+    final List<_ChatListEntry> items = <_ChatListEntry>[];
+    String? previousDate;
+    for (int index = messages.length - 1; index >= 0; index--) {
+      final ChatMessageModal message = messages[index];
+      final String? label = _formatDateLabel(message.createdAt, context);
+      if (label != null && label != previousDate) {
+        items.insert(0, _ChatListEntry.date(label));
+        previousDate = label;
+      }
+      items.insert(0, _ChatListEntry.message(message));
+    }
+    return items;
+  }
+
+  String? _formatDateLabel(String? createdAt, BuildContext context) {
+    if (createdAt == null || createdAt.isEmpty) {
+      return null;
+    }
+    try {
+      final DateTime parsed = DateTime.parse(createdAt).toLocal();
+      final DateTime now = DateTime.now();
+      final DateTime today = DateTime(now.year, now.month, now.day);
+      final DateTime yesterday = today.subtract(const Duration(days: 1));
+
+      if (!parsed.isBefore(today)) {
+        return "today".translate(context);
+      }
+      if (!parsed.isBefore(yesterday)) {
+        return "yesterday".translate(context);
+      }
+      return parsed.toString().formatDate();
+    } catch (_) {
+      return createdAt;
+    }
+  }
+
+  Widget _buildMessageDateChip(BuildContext context, String formattedDate) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Center(
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(7),
+            color: context.color.territoryColor.withOpacity(0.3),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(5.0),
+            child: Text(formattedDate),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChatMessageWidget(ChatMessageModal modal) {
+    final String? localKey = modal.localId;
+    final Key messageKey;
+    if ((modal.id ?? 0) > 0) {
+      messageKey = ValueKey(modal.id);
+    } else if (localKey != null && localKey.isNotEmpty) {
+      messageKey = ValueKey(localKey);
+    } else {
+      messageKey = ValueKey(modal.hashCode);
+    }
+
+    final ChatMessage chatWidget = ChatMessage(
+      key: messageKey,
+      id: modal.id,
+      senderId: modal.senderId ?? 0,
+      itemOfferId: modal.itemOfferId ?? widget.itemOfferId,
+      message: modal.message ?? '',
+      file: modal.file ?? '',
+      audio: modal.audio ?? '',
+      createdAt: modal.createdAt ?? DateTime.now().toIso8601String(),
+      updatedAt: modal.updatedAt ?? modal.createdAt ?? '',
+      messageType: modal.messageType,
+      isSentNow: modal.isSentNow,
+      status: modal.status,
+      deliveredAt: modal.deliveredAt,
+      readAt: modal.readAt,
+    );
+
+    if (modal.isSentNow) {
+      return BlocProvider(
+        key: ValueKey('provider_${localKey ?? modal.id ?? chatWidget.hashCode}'),
+        create: (_) => SendMessageCubit(),
+        child: chatWidget,
+      );
+    }
+
+    return chatWidget;
+  }
+
+  String _generateLocalMessageId() {
+    final int timestamp = DateTime.now().microsecondsSinceEpoch;
+    final String userId = HiveUtils.getUserId() ?? '0';
+    return 'local_${userId}_$timestamp';
+  }
+}
+
+class _ChatListEntry {
+  final ChatMessageModal? message;
+  final String? dateLabel;
+
+  bool get isDateSeparator => dateLabel != null;
+
+  const _ChatListEntry._({this.message, this.dateLabel});
+
+  factory _ChatListEntry.message(ChatMessageModal message) =>
+      _ChatListEntry._(message: message);
+
+  factory _ChatListEntry.date(String label) =>
+      _ChatListEntry._(dateLabel: label);
+
 }

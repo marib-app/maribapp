@@ -4,6 +4,7 @@ import 'package:marib/data/model/data_output.dart';
 import 'package:marib/ui/screens/chat/chat_audio/widgets/chat_widget.dart';
 import 'package:marib/utils/api.dart';
 import 'package:flutter/material.dart';
+import 'package:marib/data/model/chat/chat_message_modal.dart';
 
 class ChatRepostiory {
   BuildContext? _setContext;
@@ -66,7 +67,7 @@ class ChatRepostiory {
     );
   }
 
-  Future<DataOutput<ChatMessage>> getMessagesApi(
+  Future<DataOutput<ChatMessageModal>> getMessagesApi(
     {required int page,
     required int itemOfferId,
     required String conversationId}) async {
@@ -85,7 +86,7 @@ class ChatRepostiory {
     final List<dynamic> resultList =
         (responseData['data'] as List<dynamic>?) ?? <dynamic>[];
 
-    List<ChatMessage> modelList = resultList.map((result) {
+    List<ChatMessageModal> modelList = resultList.map((result) {
       final Map<String, dynamic> resultMap =
       Map<String, dynamic>.from(result as Map);
 
@@ -93,6 +94,13 @@ class ChatRepostiory {
       final int senderId = senderIdRaw is int
           ? senderIdRaw
           : int.tryParse(senderIdRaw?.toString() ?? '') ?? 0;
+
+      final dynamic receiverIdRaw = resultMap['receiver_id'];
+      final int? receiverId = receiverIdRaw == null
+          ? null
+          : (receiverIdRaw is int
+          ? receiverIdRaw
+          : int.tryParse(receiverIdRaw.toString()));
 
       final String message = resultMap['message']?.toString() ?? '';
       final String file = resultMap['file']?.toString() ?? '';
@@ -109,6 +117,13 @@ class ChatRepostiory {
       final String createdAt = resultMap['created_at']?.toString() ?? '';
       final String updatedAt = resultMap['updated_at']?.toString() ?? createdAt;
 
+      final dynamic itemIdRaw = resultMap['item_id'];
+      final int? itemId = itemIdRaw == null
+          ? null
+          : (itemIdRaw is int
+          ? itemIdRaw
+          : int.tryParse(itemIdRaw.toString()));
+
       final dynamic itemOfferRaw = resultMap['item_offer_id'];
       final int itemOfferId = itemOfferRaw is int
           ? itemOfferRaw
@@ -119,14 +134,16 @@ class ChatRepostiory {
           ? idRaw
           : int.tryParse(idRaw?.toString() ?? '') ?? 0;
 
-      return ChatMessage(
-        key: ValueKey(id),
+      return ChatMessageModal(
+
         id: id,
-        message: message,
         senderId: senderId,
-        createdAt: createdAt,
+        receiverId: receiverId,
+        message: message,
         file: file,
         audio: audio,
+        createdAt: createdAt,
+        itemId: itemId,
         itemOfferId: itemOfferId,
         updatedAt: updatedAt,
         messageType: messageType.isEmpty ? null : messageType,

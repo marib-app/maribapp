@@ -600,6 +600,9 @@ class HiveUtils {
       }
     }
     await ChatBadgeController.handleUserChanged(incomingId);
+    if (incomingId != null && incomingId != previousId) {
+      _runUserChangeHooks();
+    }
   }
 
   /// إعادة تمهيد/تصفير كل الصناديق الأساسية (تسجيل خروج قوي)

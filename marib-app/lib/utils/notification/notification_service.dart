@@ -133,8 +133,8 @@ class NotificationService {
     if (_conversationParticipantsCache.isEmpty) {
       return;
     }
-    _conversationParticipantsCache =
-        LinkedHashMap<String, _CachedParticipantsEntry>();
+    _conversationParticipantsCache.clear();
+
   }
 
   static void _enforceParticipantsCacheLimit({int entriesToInsert = 0}) {
@@ -1557,15 +1557,12 @@ class NotificationService {
       return;
     }
     _purgeExpiredParticipantsCacheEntries();
-    _enforceParticipantsCacheLimit(entriesToInsert: 1);
     _conversationParticipantsCache.remove(key);
-    _enforceParticipantsCacheLimit(entriesToInsert: 1);
     _conversationParticipantsCache.remove(key);
     _conversationParticipantsCache[key] = _CachedParticipantsEntry(
       participants: participants,
       accessedAt: DateTime.now(),
     );
-    _enforceParticipantsCacheLimit();
   }
 
   static void cacheParticipants({

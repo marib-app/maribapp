@@ -272,6 +272,8 @@ class ConvertTabView extends StatelessWidget {
           icon: Icon(Icons.keyboard_arrow_down_rounded, color: brand),
           dropdownColor: theme.scaffoldBackgroundColor,
           style: theme.textTheme.bodyLarge?.copyWith(color: onBg),
+          isDense: true,
+          menuMaxHeight: 360,
         ),
         const SizedBox(height: 12),
         if (canDisplayRates)
@@ -483,20 +485,24 @@ class ConvertTabView extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: DropdownButtonFormField<String>(
-                    key: dropdownKey,
-                    value: normalizedSelected,
-                    isExpanded: true,
-                    alignment: AlignmentDirectional.centerEnd,
-                    items: menuItems,
-                    onChanged: onChanged,
-                    decoration: InputDecoration(
-                      border: _border(context),
-                      enabledBorder: _border(context),
-                      focusedBorder: _border(context),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 12,
+                  child: IntrinsicWidth(
+                    child: DropdownButtonFormField<String>(
+                      key: dropdownKey,
+                      value: normalizedSelected,
+                      isExpanded: true,
+                      isDense: true,
+                      menuMaxHeight: 360,
+                      alignment: AlignmentDirectional.centerEnd,
+                      items: menuItems,
+                      onChanged: onChanged,
+                      decoration: InputDecoration(
+                        border: _border(context),
+                        enabledBorder: _border(context),
+                        focusedBorder: _border(context),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
                       ),
                     ),
                   ),
@@ -624,13 +630,15 @@ class _CurrencyMenuRow extends StatelessWidget {
           _CurrencyAvatar(
             label: label,
             key: iconKey,
+            radius: 12,
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 4),
           Flexible(
             child: Text(
               label,
               textDirection: TextDirection.rtl,
               textAlign: TextAlign.right,
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -644,9 +652,11 @@ class _CurrencyAvatar extends StatelessWidget {
   const _CurrencyAvatar({
     super.key,
     required this.label,
+    this.radius = 14,
   });
 
   final String label;
+  final double radius;
 
   @override
   Widget build(BuildContext context) {
@@ -656,14 +666,19 @@ class _CurrencyAvatar extends StatelessWidget {
     final String initials = label.isEmpty
         ? '—'
         : label.trim().characters.take(2).toString().toUpperCase();
+    final double clampedRadius = radius.clamp(10.0, 14.0);
 
     return CircleAvatar(
-      radius: 14,
+      radius: clampedRadius,
+
       backgroundColor: background,
       foregroundColor: foreground,
       child: Text(
         initials,
-        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
+        style: TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: clampedRadius <= 12 ? 10 : 11,
+        ),
       ),
     );
   }

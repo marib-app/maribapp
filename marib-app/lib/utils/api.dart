@@ -1746,7 +1746,7 @@ class _DioBaseOptionsSnapshot {
   factory _DioBaseOptionsSnapshot.capture(BaseOptions options) {
     return _DioBaseOptionsSnapshot(
       headers: _clone(options.headers),
-      queryParameters: _clone(options.queryParameters),
+      queryParameters: _cloneNonNull(options.queryParameters),
       contentType: options.contentType,
       followRedirects: options.followRedirects,
       validateStatus: options.validateStatus,
@@ -1756,22 +1756,28 @@ class _DioBaseOptionsSnapshot {
   void applyTo(BaseOptions options) {
     options
       ..headers = _clone(headers)
-      ..queryParameters = _clone(queryParameters)
+      ..queryParameters = _cloneNonNull(queryParameters)
       ..contentType = contentType
       ..followRedirects = followRedirects
       ..validateStatus = validateStatus;
   }
 
   final Map<String, dynamic>? headers;
-  final Map<String, dynamic>? queryParameters;
-  final Object? contentType;
+  final Map<String, dynamic> queryParameters;
+  final String? contentType;
   final bool followRedirects;
-  final bool Function(int?)? validateStatus;
+  final bool Function(int?) validateStatus;
 
   static Map<String, dynamic>? _clone(Map<String, dynamic>? source) {
     if (source == null) {
       return null;
     }
+    if (source.isEmpty) {
+      return <String, dynamic>{};
+    }
+    return Map<String, dynamic>.from(source);
+  }
+  static Map<String, dynamic> _cloneNonNull(Map<String, dynamic> source) {
     if (source.isEmpty) {
       return <String, dynamic>{};
     }

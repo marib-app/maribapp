@@ -188,20 +188,52 @@ class PaymentRequestTableQuery
         $transactionGatewayLabelCandidates = [];
 
         if ($supportsPaymentTransactionMeta) {
-            $transactionGatewayLabelCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.payload.bank_name')), '')";
+            foreach ([
+                "$.payload.bank_name",
+                "$.manual_bank.name",
+                "$.manual.bank.name",
+                "$.manual.bank.bank_name",
+                "$.manual.bank.beneficiary_name",
+            ] as $path) {
+                $transactionGatewayLabelCandidates[] = sprintf(
+                    "NULLIF(%s, '')",
+                    $sanitizeManualBankAlias("JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '{$path}'))")
+                );
+            }
+        
         }
 
         if ($supportsManualMeta) {
-            $transactionGatewayLabelCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.payload.bank_name')), '')";
-            $transactionGatewayLabelCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.name')), '')";
+            foreach ([
+                "$.payload.bank_name",
+                "$.manual_bank.name",
+                "$.manual.bank.name",
+                "$.manual.bank.bank_name",
+                "$.manual.bank.beneficiary_name",
+            ] as $path) {
+                $transactionGatewayLabelCandidates[] = sprintf(
+                    "NULLIF(%s, '')",
+                    $sanitizeManualBankAlias("JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '{$path}'))")
+                );
+            }
+
+
         }
 
         if ($supportsManualBankLookupName) {
-            $transactionGatewayLabelCandidates[] = "NULLIF(manual_bank_lookup.name, '')";
+            $transactionGatewayLabelCandidates[] = sprintf(
+                "NULLIF(%s, '')",
+                $sanitizeManualBankAlias('manual_bank_lookup.name')
+            );
+        
         }
 
         if ($supportsManualBankName) {
-            $transactionGatewayLabelCandidates[] = "NULLIF(mpr.bank_name, '')";
+            $transactionGatewayLabelCandidates[] = sprintf(
+                "NULLIF(%s, '')",
+                $sanitizeManualBankAlias('mpr.bank_name')
+            );
+        
         }
 
 
@@ -211,13 +243,43 @@ class PaymentRequestTableQuery
         );
 
 
-        $walletManualBankNameParts = array_values(array_filter([
-            $supportsManualBankLookupName ? 'manual_bank_lookup.name' : null,
-            $supportsManualBankLookupBeneficiaryName ? 'manual_bank_lookup.beneficiary_name' : null,
-            $supportsManualMeta ? "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.name'))" : null,
-            $supportsManualMeta ? "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.name'))" : null,
-            $supportsWalletMeta ? "JSON_UNQUOTE(JSON_EXTRACT(wt.meta, '$.bank.name'))" : null,
-        ], static fn (?string $part): bool => $part !== null));
+        $walletManualBankNameParts = [];
+
+        if ($supportsManualBankLookupName) {
+            $walletManualBankNameParts[] = $sanitizeManualBankAlias('manual_bank_lookup.name');
+        }
+
+        if ($supportsManualBankLookupBeneficiaryName) {
+            $walletManualBankNameParts[] = $sanitizeManualBankAlias('manual_bank_lookup.beneficiary_name');
+        }
+
+        if ($supportsManualMeta) {
+            foreach ([
+                "$.bank.name",
+                "$.manual_bank.name",
+                "$.manual.bank.name",
+                "$.manual.bank.bank_name",
+                "$.manual.bank.beneficiary_name",
+            ] as $path) {
+                $walletManualBankNameParts[] = $sanitizeManualBankAlias(
+                    "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '{$path}'))"
+                );
+            }
+        }
+
+        if ($supportsWalletMeta) {
+            foreach ([
+                "$.bank.name",
+                "$.manual_bank.name",
+                "$.manual.bank.name",
+                "$.manual.bank.bank_name",
+                "$.manual.bank.beneficiary_name",
+            ] as $path) {
+                $walletManualBankNameParts[] = $sanitizeManualBankAlias(
+                    "JSON_UNQUOTE(JSON_EXTRACT(wt.meta, '{$path}'))"
+                );
+            }
+        }
 
 
 
@@ -228,20 +290,51 @@ class PaymentRequestTableQuery
         $walletGatewayLabelCandidates = [];
 
         if ($supportsWalletMeta) {
-            $walletGatewayLabelCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(wt.meta, '$.payload.bank_name')), '')";
+            foreach ([
+                "$.payload.bank_name",
+                "$.manual_bank.name",
+                "$.manual.bank.name",
+                "$.manual.bank.bank_name",
+                "$.manual.bank.beneficiary_name",
+            ] as $path) {
+                $walletGatewayLabelCandidates[] = sprintf(
+                    "NULLIF(%s, '')",
+                    $sanitizeManualBankAlias("JSON_UNQUOTE(JSON_EXTRACT(wt.meta, '{$path}'))")
+                );
+            }
+        
         }
 
         if ($supportsManualMeta) {
-            $walletGatewayLabelCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.payload.bank_name')), '')";
-            $walletGatewayLabelCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.name')), '')";
+            foreach ([
+                "$.payload.bank_name",
+                "$.manual_bank.name",
+                "$.manual.bank.name",
+                "$.manual.bank.bank_name",
+                "$.manual.bank.beneficiary_name",
+            ] as $path) {
+                $walletGatewayLabelCandidates[] = sprintf(
+                    "NULLIF(%s, '')",
+                    $sanitizeManualBankAlias("JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '{$path}'))")
+                );
+            }
+
         }
 
         if ($supportsManualBankLookupName) {
-            $walletGatewayLabelCandidates[] = "NULLIF(manual_bank_lookup.name, '')";
+            $walletGatewayLabelCandidates[] = sprintf(
+                "NULLIF(%s, '')",
+                $sanitizeManualBankAlias('manual_bank_lookup.name')
+            );
+        
         }
 
         if ($supportsManualBankName) {
-            $walletGatewayLabelCandidates[] = "NULLIF(mpr.bank_name, '')";
+            $walletGatewayLabelCandidates[] = sprintf(
+                "NULLIF(%s, '')",
+                $sanitizeManualBankAlias('mpr.bank_name')
+            );
+        
         }
 
 
@@ -251,12 +344,29 @@ class PaymentRequestTableQuery
         );
 
 
-        $manualRequestManualBankNameParts = array_values(array_filter([
-            $supportsManualBankLookupName ? 'manual_bank_lookup.name' : null,
-            $supportsManualBankLookupBeneficiaryName ? 'manual_bank_lookup.beneficiary_name' : null,
-            $supportsManualMeta ? "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.bank.name'))" : null,
-            $supportsManualMeta ? "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.name'))" : null,
-        ], static fn (?string $part): bool => $part !== null));
+        $manualRequestManualBankNameParts = [];
+
+        if ($supportsManualBankLookupName) {
+            $manualRequestManualBankNameParts[] = $sanitizeManualBankAlias('manual_bank_lookup.name');
+        }
+
+        if ($supportsManualBankLookupBeneficiaryName) {
+            $manualRequestManualBankNameParts[] = $sanitizeManualBankAlias('manual_bank_lookup.beneficiary_name');
+        }
+
+        if ($supportsManualMeta) {
+            foreach ([
+                "$.bank.name",
+                "$.manual_bank.name",
+                "$.manual.bank.name",
+                "$.manual.bank.bank_name",
+                "$.manual.bank.beneficiary_name",
+            ] as $path) {
+                $manualRequestManualBankNameParts[] = $sanitizeManualBankAlias(
+                    "JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '{$path}'))"
+                );
+            }
+        }
 
 
 
@@ -355,16 +465,35 @@ class PaymentRequestTableQuery
         $manualRequestGatewayLabelCandidates = [];
 
         if ($supportsManualMeta) {
-            $manualRequestGatewayLabelCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.payload.bank_name')), '')";
-            $manualRequestGatewayLabelCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.name')), '')";
+            foreach ([
+                "$.payload.bank_name",
+                "$.manual_bank.name",
+                "$.manual.bank.name",
+                "$.manual.bank.bank_name",
+                "$.manual.bank.beneficiary_name",
+            ] as $path) {
+                $manualRequestGatewayLabelCandidates[] = sprintf(
+                    "NULLIF(%s, '')",
+                    $sanitizeManualBankAlias("JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '{$path}'))")
+                );
+            }
+
         }
 
         if ($supportsManualBankLookupName) {
-            $manualRequestGatewayLabelCandidates[] = "NULLIF(manual_bank_lookup.name, '')";
+            $manualRequestGatewayLabelCandidates[] = sprintf(
+                "NULLIF(%s, '')",
+                $sanitizeManualBankAlias('manual_bank_lookup.name')
+            );
+        
         }
 
         if ($supportsManualBankName) {
-            $manualRequestGatewayLabelCandidates[] = "NULLIF(mpr.bank_name, '')";
+            $manualRequestGatewayLabelCandidates[] = sprintf(
+                "NULLIF(%s, '')",
+                $sanitizeManualBankAlias('mpr.bank_name')
+            );
+        
         }
         
         $manualRequestGatewayLabelSelect = self::gatewayLabelCaseExpression(

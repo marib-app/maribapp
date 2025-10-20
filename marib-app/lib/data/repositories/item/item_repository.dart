@@ -108,13 +108,14 @@ class ItemRepository {
     String? state,
     String? city,
     int? areaId,
-    int perPage = Constant.loadLimit,
+    int? perPage,
   }) async {
+    final int effectivePerPage = perPage ?? Constant.loadLimit;
     final Map<String, dynamic> parameters = {
       Api.categoryId: categoryId,
       Api.page: page,
       'view': 'summary',
-      Api.perPageQuery: perPage,
+      Api.perPageQuery: effectivePerPage,
     };
 
     if (filter != null) {

@@ -451,6 +451,11 @@ class _HomeTabViewState extends State<HomeTabView> {
         final bool shouldShowSliderShimmer =
             widget.enableAdSlider && widget.showShimmer;
 
+        // ✅ البطاقة الخاصة لا تظهر إلا في تبويب "الكل"
+        final bool isAllCategory =
+            selectedCategoryId == null || selectedCategoryId == 0;
+
+
         // ✅ استمع للتمرير هنا (بدل بعثرة المنطق داخل عناصر داخلية)
         return NotificationListener<ScrollNotification>(
           onNotification: (n) {
@@ -498,7 +503,7 @@ class _HomeTabViewState extends State<HomeTabView> {
               // فاصل صغير
               SliverToBoxAdapter(child: SizedBox(height: gapSmall)),
 
-              if (widget.specialRequestSectionSlug != null) ...[
+              if (widget.specialRequestSectionSlug != null && isAllCategory) ...[
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),

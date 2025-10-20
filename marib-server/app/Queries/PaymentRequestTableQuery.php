@@ -448,11 +448,11 @@ class PaymentRequestTableQuery
         $manualGatewayFallback = "'manual_bank'";
 
         if ($supportsManualMeta) {
-            $manualGatewayKeyCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.channel')), '')";
-            $manualGatewayKeyCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.payment_gateway')), '')";
-            $manualGatewayKeyCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.gateway')), '')";
-            $manualGatewayKeyCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.payment_method')), '')";
-            $manualGatewayKeyCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.method')), '')";
+            $manualGatewayKeyCandidates[] = "NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.channel'))), '')";
+            $manualGatewayKeyCandidates[] = "NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.payment_gateway'))), '')";
+            $manualGatewayKeyCandidates[] = "NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.gateway'))), '')";
+            $manualGatewayKeyCandidates[] = "NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.payment_method'))), '')";
+            $manualGatewayKeyCandidates[] = "NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.method'))), '')";
             $manualGatewayKeyCandidates[] = "CASE WHEN JSON_EXTRACT(mpr.meta, '$.wallet.transaction_id') IS NOT NULL THEN 'wallet' END";
         }
 
@@ -853,7 +853,7 @@ class PaymentRequestTableQuery
 
     private static function gatewayExpression(string $alias): string
     {
-        return "LOWER(COALESCE(NULLIF({$alias}.payment_gateway, ''), CASE WHEN {$alias}.manual_payment_request_id IS NOT NULL THEN 'manual_bank' ELSE NULL END))";
+        return "LOWER(COALESCE(NULLIF(TRIM({$alias}.payment_gateway), ''), CASE WHEN {$alias}.manual_payment_request_id IS NOT NULL THEN 'manual_bank' ELSE NULL END))";
     }
 
     private static function channelExpression(string $alias): string

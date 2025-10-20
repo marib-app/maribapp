@@ -2263,15 +2263,24 @@ class ManualPaymentRequestController extends Controller
         };
 
 
+        $supportsPaymentGatewayName = Schema::hasTable('payment_transactions')
+            && Schema::hasColumn('payment_transactions', 'payment_gateway_name');
 
         $manualBankNameParts = [
             $sanitizeManualBankValue('manual_bank_lookup.name'),
             $sanitizeManualBankValue('manual_bank_lookup.beneficiary_name'),
-            $sanitizeManualBankValue('pt.payment_gateway_name'),
+        ];
+
+        if ($supportsPaymentGatewayName) {
+            $manualBankNameParts[] = $sanitizeManualBankValue('pt.payment_gateway_name');
+        }
+
+        $manualBankNameParts = array_merge($manualBankNameParts, [
+            
             $sanitizeManualBankValue('mpr.bank_name'),
             $sanitizeManualBankValue("JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.bank_name'))"),
             $sanitizeManualBankValue("JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_payment_request.bank_name'))"),
-        ];
+        ]);
 
         foreach ([
             "$.payload.bank_name",

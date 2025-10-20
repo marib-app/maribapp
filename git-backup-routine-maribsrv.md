@@ -36,37 +36,40 @@ php artisan cache:clear; php artisan config:clear ;  php artisan route:clear
 // نسخه احتياطية مرقمه 
 
 
-# 1) حضّر التاريخ وحدد البادئة
-$ts = Get-Date -Format 'yyyy-MM-dd HH:mm'
+# === Marib backup tag: backup_maribsrv_N ===
+cd C:\Users\abo-hassn\Desktop\maribservices\maribsrv
+
+# 1) وقت فعلي + بادئة التاج
+$ts     = Get-Date -Format 'yyyy-MM-dd HH:mm'
 $prefix = 'backup_maribsrv_'
 
-# 2) اجلب أحدث التاجز من GitHub واحسب الرقم التالي
+# 2) اجلب التاجز من الريموت وحسب الرقم التالي
 git fetch --tags
-$last = (git tag -l "$prefix*" |
+$existing = git tag -l "$prefix*" |
   ForEach-Object { $_ -replace '^backup_maribsrv_','' } |
   Where-Object { $_ -match '^\d+$' } |
-  Sort-Object {[int]$_} -Descending |
-  Select-Object -First 1)
-$next = if ($last) { [int]$last + 1 } else { 1 }
+  ForEach-Object { [int]$_ }
+$next = if ($existing) { ($existing | Sort-Object -Descending | Select-Object -First 1) + 1 } else { 1 }
 $tag  = "$prefix$next"
 
-# 3) خزّن لقطة الكود (مع دعم عدم وجود تغييرات)
+# 3) جهّز الكوميت (حتى لو ما في تغييرات)
 git add -A
-git diff --cached --quiet
-if ($LASTEXITCODE -eq 0) {
+$staged = git diff --cached --name-only
+if ([string]::IsNullOrWhiteSpace($staged)) {
   git commit --allow-empty -m "checkpoint: $ts"
 } else {
   git commit -m "checkpoint: $ts"
 }
 
-# 4) أنشئ التاج وادفعه + ادفع main
+# 4) أنشئ التاج وادفعه مع main
 git tag -a $tag -m "Backup $tag @ $ts"
 git push origin HEAD:main
 git push origin $tag
 
-# 5) اعرض النتيجة
-git tag -l "$prefix*"
+# 5) عرض النتيجة
+git tag -l "$prefix*" --sort=version:refname
 Write-Host "Created tag: $tag at $ts"
+
 
 
 الناتج سيكون:

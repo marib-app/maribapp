@@ -5,8 +5,12 @@ import 'dart:ui' show FramePhase, FrameTiming;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:marib/settings.dart';
+import 'package:path_provider/path_provider.dart';
+
+import 'frame_stats_accumulator.dart';
+
+
 
 class PerformanceMonitor {
   PerformanceMonitor._();
@@ -155,6 +159,8 @@ class PerformanceMonitor {
     final encoder = const JsonEncoder.withIndent('  ');
     await file.writeAsString(encoder.convert(payload));
     debugPrint('Performance metrics written to: ${file.path}');
+    _completedSessions.clear();
+
   }
 
   Map<String, dynamic> _groupSessionsByRoute(
@@ -237,13 +243,20 @@ class PerformanceMonitor {
       final _RoutePerformanceSnapshot snapshot =
           _currentSession!.snapshot(finalize: true);
       _completedSessions.add(snapshot);
-      if (_completedSessions.length > _maxCompletedSessions) {
-        _completedSessions.removeRange(
-            0, _completedSessions.length - _maxCompletedSessions);
-      }
+      _enforceCompletedSessionLimit();
+
       _currentSession = null;
       _scheduleReportWrite();
     }
+  }
+
+
+  void _enforceCompletedSessionLimit() {
+    if (_completedSessions.length <= _maxCompletedSessions) {
+      return;
+    }
+    _completedSessions.removeRange(
+        0, _completedSessions.length - _maxCompletedSessions);
   }
 
   Duration get _reportWriteInterval {
@@ -298,27 +311,7 @@ class PerformanceMonitor {
     return (endUs - startUs) / 1000.0;
   }
 
-  static double? _percentile(List<double> values, double percentile,
-      {bool valuesAreSorted = false}) {
-    if (values.isEmpty) {
-      return null;
-    }
-    final List<double> sorted;
-    if (valuesAreSorted) {
-      sorted = values;
-    } else {
-      sorted = List<double>.from(values)..sort();
-    }
 
-    final double index = percentile * (sorted.length - 1);
-    final int lowerIndex = index.floor();
-    final int upperIndex = index.ceil();
-    if (lowerIndex == upperIndex) {
-      return sorted[lowerIndex];
-    }
-    final double weight = index - lowerIndex;
-    return sorted[lowerIndex] * (1 - weight) + sorted[upperIndex] * weight;
-  }
 
   static int countDroppedFrames(Duration frameDuration) {
     if (frameDuration <= _frameBudget) {
@@ -339,10 +332,8 @@ class _RoutePerformanceSession {
   final String routeName;
   final int startedAtUs;
   final DateTime wallClockStartedAt;
-  final List<double> _frameDurationsMs = <double>[];
+  final FrameStatsAccumulator _frameStats = FrameStatsAccumulator();
 
-  double _totalFrameTimeMs = 0;
-  bool _durationsSorted = false;
 
   int totalFrames = 0;
   int droppedFrames = 0;
@@ -356,30 +347,17 @@ class _RoutePerformanceSession {
   }) {
     totalFrames += 1;
     final double frameDurationMs = timing.totalSpan.inMicroseconds / 1000.0;
-    _frameDurationsMs.add(frameDurationMs);
-    _totalFrameTimeMs += frameDurationMs;
-    _durationsSorted = false;
+    _frameStats.addSample(frameDurationMs);
+
     droppedFrames += PerformanceMonitor.countDroppedFrames(timing.totalSpan);
     _firstFrameUs ??= buildStartUs;
     _firstMeaningfulFrameUs ??= rasterFinishUs;
   }
 
   _RoutePerformanceSnapshot snapshot({bool finalize = false}) {
-    if (_frameDurationsMs.isNotEmpty && !_durationsSorted) {
-      _frameDurationsMs.sort();
-      _durationsSorted = true;
-    }
-
-    final double? p50 = PerformanceMonitor._percentile(
-      _frameDurationsMs,
-      0.50,
-      valuesAreSorted: true,
-    );
-    final double? p95 = PerformanceMonitor._percentile(
-      _frameDurationsMs,
-      0.95,
-      valuesAreSorted: true,
-    );
+    final double totalFrameTimeMs = _frameStats.sum;
+    final double? p50 = _frameStats.p50;
+    final double? p95 = _frameStats.p95;
 
     final _RoutePerformanceSnapshot snapshot = _RoutePerformanceSnapshot(
       routeName: routeName,
@@ -387,16 +365,14 @@ class _RoutePerformanceSession {
       wallClockStartedAt: wallClockStartedAt,
       totalFrames: totalFrames,
       droppedFrames: droppedFrames,
-      totalFrameTimeMs: _totalFrameTimeMs,
+      totalFrameTimeMs: totalFrameTimeMs,
       p50FrameMs: p50,
       p95FrameMs: p95,
       firstFrameUs: _firstFrameUs,
       firstMeaningfulFrameUs: _firstMeaningfulFrameUs,
     );
     if (finalize) {
-      _frameDurationsMs.clear();
-      _durationsSorted = false;
-      _totalFrameTimeMs = 0;
+      _frameStats.reset();
     }
 
     return snapshot;

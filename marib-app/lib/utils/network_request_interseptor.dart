@@ -21,7 +21,6 @@ class NetworkRequestInterseptor extends Interceptor {
       return;
     }
 
-
     if (!_isLoggingEnabled) {
       handler.next(options);
       return;
@@ -61,7 +60,6 @@ class NetworkRequestInterseptor extends Interceptor {
       handler.next(err);
       return;
     }
-
 
     if (!_isLoggingEnabled) {
       handler.next(err);
@@ -111,7 +109,6 @@ class NetworkRequestInterseptor extends Interceptor {
       handler.next(response);
       return;
     }
-
 
     if (!_isLoggingEnabled) {
       handler.next(response);

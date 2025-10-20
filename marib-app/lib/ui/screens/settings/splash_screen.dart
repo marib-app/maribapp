@@ -390,18 +390,18 @@ class SplashScreenState extends State<SplashScreen>
     final double footerVerticalPadding = ScreenScaler.s(18);
     final double footerSpacing = ScreenScaler.s(6);
     final double footerFontSize = ScreenScaler.fontSize(context, baseSize: 12);
-    final Color footerColor =
-        Theme.of(context).colorScheme.onPrimary.withOpacity(0.72);
+    final Color footerColor = Colors.black.withOpacity(0.72);
+
     final TextStyle footerStyle =
         Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: footerColor,
                   fontSize: footerFontSize,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w300,
                 ) ??
             TextStyle(
               color: footerColor,
               fontSize: footerFontSize,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w300,
             );
     return AnnotatedRegion(
       value: SystemUiOverlayStyle(
@@ -460,16 +460,16 @@ class SplashScreenState extends State<SplashScreen>
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'محافظة مأرب - التحول الرقمي',
+                              'جميع الحقوق محفوظة 2026 C',
                               textAlign: TextAlign.center,
                               style: footerStyle,
                             ),
                             SizedBox(height: footerSpacing),
                             Text(
-                              'تطبيق ${AppSettings.applicationName} للخدمات الإلكترونية',
+                              'مأرب بين يديك للخدمات الألكترونية',
                               textAlign: TextAlign.center,
                               style: footerStyle.copyWith(
-                                fontWeight: FontWeight.w400,
+                                fontWeight: FontWeight.w300,
                               ),
                             ),
                           ],

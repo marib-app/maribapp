@@ -51,14 +51,9 @@ class SpecialRequestCard extends StatelessWidget {
               width: cardExtent,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(_subcatCardRadius),
-                gradient: LinearGradient(
-                  colors: [
-                    colorScheme.territoryColor,
-                    colorScheme.borderColor.withOpacity(0.6),
-                  ],
-                ),
+                color: context.color.surface,
                 border: Border.all(
-                  color: colorScheme.borderColor.withOpacity(0.6),
+                  color: colorScheme.borderColor.withOpacity(0.5),
                   width: 1.2,
                 ),
               ),
@@ -75,7 +70,7 @@ class SpecialRequestCard extends StatelessWidget {
                 child: Icon(
                   Icons.assignment_add,
                   size: cardExtent * 0.5,
-                  color: context.color.textLightColor,
+                  color: context.color.textLightColor.withOpacity(0.7),
                 ),
               ),
             ),

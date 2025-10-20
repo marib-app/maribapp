@@ -3,9 +3,10 @@ import 'dart:async';
 import 'package:marib/data/model/chat/chated_user_model.dart';
 import 'package:marib/data/model/chat/chat_message_modal.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 
 class ChatMessageHandler {
-  static List<ChatMessageModal> messages = <ChatMessageModal>[];
+  static final List<ChatMessageModal> _remoteMessages = <ChatMessageModal>[];
   static final List<ChatMessageModal> _localMessages = <ChatMessageModal>[];
   static final StreamController<List<ChatMessageModal>> _chatMessageStream =
       StreamController<List<ChatMessageModal>>.broadcast();
@@ -13,14 +14,23 @@ class ChatMessageHandler {
   static final ValueNotifier<ParticipantStatus?> participantStatusNotifier =
       ValueNotifier<ParticipantStatus?>(null);
 
+
+  static List<ChatMessageModal> get currentMessages =>
+      List<ChatMessageModal>.unmodifiable(<ChatMessageModal>[
+        ..._localMessages,
+        ..._remoteMessages,
+      ]);
+
+
+
   static void add(ChatMessageModal chat) {
     if (chat.id != null && chat.id! > 0 && chat.isSentNow == false) {
       final int existingIndex =
-          messages.indexWhere((element) => element.id == chat.id);
+      _remoteMessages.indexWhere((element) => element.id == chat.id);
       if (existingIndex != -1) {
-        messages[existingIndex] = chat;
+        _remoteMessages[existingIndex] = chat;
       } else {
-        messages.insert(0, chat);
+        _remoteMessages.insert(0, chat);
       }
     } else {
       final String? identifier = chat.localId;
@@ -41,14 +51,16 @@ class ChatMessageHandler {
   }
 
   static void loadMessages(List<ChatMessageModal> chats) {
-    messages = List<ChatMessageModal>.from(chats);
+    _remoteMessages
+      ..clear()
+      ..addAll(chats);
     _removeDeliveredLocalDuplicates();
     _emit();
   }
 
   static void flushMessages() {
-    messages = <ChatMessageModal>[];
-    _localMessages.clear();
+    _remoteMessages.clear();
+
     _emit();
   }
 
@@ -86,7 +98,7 @@ class ChatMessageHandler {
       updated = true;
     }
 
-    updateIn(messages);
+    updateIn(_remoteMessages);
     updateIn(_localMessages);
 
     if (updated) {
@@ -99,12 +111,12 @@ class ChatMessageHandler {
   }
 
   static void removeMessage(int id) {
-    final int initialRemoteLength = messages.length;
-    messages.removeWhere((element) => element.id == id);
+    final int initialRemoteLength = _remoteMessages.length;
+    _remoteMessages.removeWhere((element) => element.id == id);
     final int initialLocalLength = _localMessages.length;
     _localMessages.removeWhere((element) => element.id == id);
 
-    if (initialRemoteLength != messages.length ||
+    if (initialRemoteLength != _remoteMessages.length ||
         initialLocalLength != _localMessages.length) {
       _emit();
     }
@@ -119,11 +131,15 @@ class ChatMessageHandler {
     final ChatMessageModal updated =
         _localMessages.removeAt(index).copyWith(id: id, isSentNow: false);
 
-    final int remoteIndex = messages.indexWhere((element) => element.id == id);
+    final int remoteIndex =
+    _remoteMessages.indexWhere((element) => element.id == id);
+
     if (remoteIndex != -1) {
-      messages[remoteIndex] = updated;
+      _remoteMessages[remoteIndex] = updated;
+
     } else {
-      messages.insert(0, updated);
+      _remoteMessages.insert(0, updated);
+
     }
     _emit();
   }
@@ -132,7 +148,8 @@ class ChatMessageHandler {
     if (_localMessages.isEmpty) {
       return;
     }
-    final Set<int> remoteIds = messages
+    final Set<int> remoteIds = _remoteMessages
+
         .where((element) => (element.id ?? 0) > 0)
         .map((element) => element.id!)
         .toSet();
@@ -153,10 +170,7 @@ class ChatMessageHandler {
       return;
     }
 
-    final List<ChatMessageModal> combined = <ChatMessageModal>[
-      ..._localMessages,
-      ...messages,
-    ];
-    _chatMessageStream.sink.add(List<ChatMessageModal>.unmodifiable(combined));
+    _chatMessageStream.sink.add(currentMessages);
+
   }
 }

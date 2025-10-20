@@ -10,7 +10,7 @@
 @endphp
 
 @section('title')
-    {{ __('Manual Payment Review') }}
+    {{ __('Payment Request Review') }}
 @endsection
 
 @section('page-title')
@@ -24,7 +24,7 @@
                 <nav aria-label="breadcrumb" class="breadcrumb-header float-end float-lg-end">
                     <ol class="breadcrumb mb-0">
                         <li class="breadcrumb-item">
-                            <a href="{{ route('manual-payments.index') }}" class="btn btn-outline-primary">
+                            <a href="{{ route('payment-requests.index') }}" class="btn btn-outline-primary">
                                 <i class="bi bi-arrow-left"></i> {{ __('Back to Requests') }}
                             </a>
                         </li>
@@ -43,7 +43,7 @@
         <div class="card shadow-sm">
             <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-start gap-3">
                 <div>
-                    <h5 class="card-title mb-1">{{ $request->reference ?? __('Manual Payment Request #:id', ['id' => $request->id]) }}</h5>
+                    <h5 class="card-title mb-1">{{ $request->reference ?? __('Payment Request #:id', ['id' => $request->id]) }}</h5>
                     <div class="text-muted small">
                         {{ __('Submitted :date', ['date' => $request->created_at?->format('Y-m-d H:i') ?? __('N/A')]) }}
                         @if($request->user)
@@ -83,7 +83,7 @@
                     <small class="text-muted">{{ __('Send a push message without changing the request status.') }}</small>
                 </div>
                 <div class="card-body">
-                    <form id="manual-payment-notification-form" action="{{ route('manual-payments.notify', $request) }}" method="post" class="d-grid gap-3">
+                    <form id="manual-payment-notification-form" action="{{ route('payment-requests.notify', $request) }}" method="post" class="d-grid gap-3">
                         @csrf
                         <div>
                             <label for="manual-payment-message" class="form-label fw-semibold">{{ __('Message to requester') }}</label>

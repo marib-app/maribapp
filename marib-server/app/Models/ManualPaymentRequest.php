@@ -505,7 +505,7 @@ class ManualPaymentRequest extends Model
 
     protected function getAdminNotificationLink(): ?string
     {
-        return url(sprintf('/manual-payments/%d/review', $this->getKey()));
+        return url(sprintf('/payment-requests/%d/review', $this->getKey()));
     }
 
     protected function getAdminNotificationMeta(): array

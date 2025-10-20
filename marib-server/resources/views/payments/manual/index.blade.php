@@ -10,7 +10,7 @@
 
 
 @section('title')
-    {{ __('Manual Payment Requests') }}
+    {{ __('Payment Requests') }}
 @endsection
 
 @section('page-title')
@@ -23,7 +23,7 @@
                 <nav aria-label="breadcrumb" class="breadcrumb-header">
                     <ol class="breadcrumb">
                         <li class="breadcrumb-item"><a href="{{ route('home') }}">{{ __('Dashboard') }}</a></li>
-                        <li class="breadcrumb-item active" aria-current="page">{{ __('Manual Payment Requests') }}</li>
+                        <li class="breadcrumb-item active" aria-current="page">{{ __('Payment Requests') }}</li>
                     </ol>
                 </nav>
             </div>
@@ -418,7 +418,7 @@
                             <input type="text" id="manual-payment-transaction-search" class="form-control" placeholder="{{ __('Search by Transaction ID') }}">
                         </div>
 
-                        <table class="table table-borderless table-striped" id="manual-payments-table" style="width:100%">
+                        <table class="table table-borderless table-striped" id="payment-requests-table" style="width:100%">
 
                             <thead>
                             <tr>
@@ -1335,7 +1335,7 @@
         }
 
         $(function () {
-            const $table = $('#manual-payments-table');
+            const $table = $('#payment-requests-table');
 
 
             if (!$table.length) {
@@ -1376,7 +1376,7 @@
                 },
 
                 ajax: {
-                    url: '{{ route('manual-payments.table') }}',
+                    url: '{{ route('payment-requests.table') }}',
                     data: function (params) {
                         applyManualPaymentFiltersToParams(params);
 

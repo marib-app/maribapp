@@ -24,10 +24,12 @@ void initApp() async {
   ///Note: this file's code is very necessary and sensitive if you change it, this might affect whole app , So change it carefully.
   ///This must be used do not remove this line
   WidgetsFlutterBinding.ensureInitialized();
-  PerformanceMonitor.instance.initialize();
-  WidgetsBinding.instance.addTimingsCallback(
-    PerformanceMonitor.instance.handleFrameTimings,
-  );
+  if (!kReleaseMode) {
+    PerformanceMonitor.instance.initialize();
+    WidgetsBinding.instance.addTimingsCallback(
+      PerformanceMonitor.instance.handleFrameTimings,
+    );
+  }
   final HydratedStorage storage = await HydratedStorage.build(
     storageDirectory: kIsWeb
         ? HydratedStorage.webStorageDirectory

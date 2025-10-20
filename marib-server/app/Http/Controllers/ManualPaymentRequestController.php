@@ -1341,8 +1341,8 @@ class ManualPaymentRequestController extends Controller
 
         $buttons .= BootstrapTableService::button(
             'fa fa-eye',
-            route('manual-payments.review', $manualPaymentRequest),
-            ['btn-primary', 'view-manual-payment'],
+            route('payment-requests.review', $manualPaymentRequest),
+            ['btn-primary', 'view-payment-request'],
             [
                 'target' => '_blank',
                 'rel' => 'noopener noreferrer',
@@ -1583,7 +1583,7 @@ class ManualPaymentRequestController extends Controller
 
         if (
             empty($row->manual_payment_request_id)
-            || ! Route::has('manual-payments.review')
+            || ! Route::has('payment-requests.review')
         ) {
             return '';
 
@@ -1591,8 +1591,8 @@ class ManualPaymentRequestController extends Controller
 
         return BootstrapTableService::button(
             'fa fa-eye',
-            route('manual-payments.review', ['manualPaymentRequest' => $row->manual_payment_request_id]),
-            ['btn-primary', 'view-manual-payment'],
+            route('payment-requests.review', ['manualPaymentRequest' => $row->manual_payment_request_id]),
+            ['btn-primary', 'view-payment-request'],
             [
                 'target' => '_blank',
                 'rel' => 'noopener noreferrer',
@@ -1999,7 +1999,7 @@ class ManualPaymentRequestController extends Controller
             'amount' => number_format($manualPaymentRequest->amount, 2) . ($manualPaymentRequest->currency ? ' ' . $manualPaymentRequest->currency : ''),
         ]);
 
-        $deepLink = route('manual-payments.deep-link', $transaction);
+        $deepLink = route('payment-requests.deep-link', $transaction);
 
 
         $data = [

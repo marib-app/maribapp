@@ -214,7 +214,7 @@
                         <div class="col-lg-4 col-md-6">
                             <div class="border rounded p-3 h-100">
                                 <h6 class="mb-3">{{ __('Initiate Voucher') }}</h6>
-                                <form action="{{ route('manual-payments.east-yemen.request', $request) }}" method="post" class="manual-payment-action">
+                                <form action="{{ route('payment-requests.east-yemen.request', $request) }}" method="post" class="manual-payment-action">
                                     @csrf
                                     <div class="mb-3">
                                         <label for="east-yemen-customer-identifier" class="form-label">{{ __('Customer Identifier') }}</label>
@@ -231,7 +231,7 @@
                         <div class="col-lg-4 col-md-6">
                             <div class="border rounded p-3 h-100">
                                 <h6 class="mb-3">{{ __('Confirm Voucher') }}</h6>
-                                <form action="{{ route('manual-payments.east-yemen.confirm', $request) }}" method="post" class="manual-payment-action">
+                                <form action="{{ route('payment-requests.east-yemen.confirm', $request) }}" method="post" class="manual-payment-action">
                                     @csrf
                                     <div class="mb-3">
                                         <label for="east-yemen-confirm-voucher" class="form-label">{{ __('Voucher Number') }}</label>
@@ -248,7 +248,7 @@
                         <div class="col-lg-4 col-md-12">
                             <div class="border rounded p-3 h-100">
                                 <h6 class="mb-3">{{ __('Check Voucher Status') }}</h6>
-                                <form action="{{ route('manual-payments.east-yemen.check', $request) }}" method="post" class="manual-payment-action">
+                                <form action="{{ route('payment-requests.east-yemen.check', $request) }}" method="post" class="manual-payment-action">
                                     @csrf
                                     <div class="mb-3">
                                         <label for="east-yemen-check-voucher" class="form-label">{{ __('Voucher Number') }}</label>
@@ -281,7 +281,7 @@
                 <small class="fw-light">{{ __('Choose the final status, add notes, and optionally alert the requester.') }}</small>
             </div>
             <div class="card-body">
-                <form action="{{ route('manual-payments.decision', $request) }}" method="post" class="manual-payment-action" data-reload-on-success="true" enctype="multipart/form-data">
+                <form action="{{ route('payment-requests.decision', $request) }}" method="post" class="manual-payment-action" data-reload-on-success="true" enctype="multipart/form-data">
                     @csrf
                     <div class="mb-3">
                         <label class="form-label fw-semibold">{{ __('Decision') }}</label>
@@ -361,7 +361,7 @@
 
     @include('payments.manual.partials.status-timeline', [
         'timelineData' => $timelineData ?? [],
-        'timelineEndpoint' => route('manual-payments.timeline', $request),
+        'timelineEndpoint' => route('payment-requests.timeline', $request),
     ])
 
     

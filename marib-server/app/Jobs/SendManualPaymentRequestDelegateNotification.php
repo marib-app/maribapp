@@ -156,12 +156,12 @@ class SendManualPaymentRequestDelegateNotification implements ShouldQueue
 
     private function resolveManualPaymentReviewUrl(ManualPaymentRequest $manualPaymentRequest): ?string
     {
-        if (! Route::has('manual-payments.review')) {
+        if (! Route::has('payment-requests.review')) {
             return null;
         }
 
         try {
-            return route('manual-payments.review', $manualPaymentRequest);
+            return route('payment-requests.review', $manualPaymentRequest);
         } catch (\Throwable) {
             return null;
         }

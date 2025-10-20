@@ -768,11 +768,11 @@ class OrderReportController extends Controller
 
         return BootstrapTableService::button(
             'fa fa-eye',
-            route('reports.manual-payments.show', $manualPaymentRequest),
-            ['btn-primary', 'view-manual-payment'],
+            route('reports.payment-requests.show', $manualPaymentRequest),
+            ['btn-primary', 'view-payment-request'],
             [
                 'data-bs-toggle' => 'modal',
-                'data-bs-target' => '#manualPaymentModal',
+                'data-bs-target' => '#paymentRequestModal',
             ]
         );
     }

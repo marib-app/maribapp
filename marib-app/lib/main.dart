@@ -13,6 +13,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter/foundation.dart';
 
 import 'package:marib/data/cubits/system/language_cubit.dart';
 import 'dart:async';
@@ -96,7 +97,10 @@ class _AppState extends State<App> {
           // App will start from here splash screen is first screen,
           navigatorKey: Constant.navigatorKey,
           //This navigator key is used for Navigate users through notification
-          navigatorObservers: [PerformanceRouteObserver()],
+          navigatorObservers: [
+            if (!kReleaseMode) PerformanceRouteObserver(),
+          ],
+
           title: Constant.appName,
           debugShowCheckedModeBanner: false,
           onGenerateRoute: Routes.onGenerateRouted,

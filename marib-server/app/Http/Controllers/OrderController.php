@@ -833,7 +833,7 @@ class OrderController extends Controller
             ) {
                 DB::rollBack();
 
-                $reviewUrl = route('manual-payments.review', $pendingManualPaymentRequest->getKey());
+                $reviewUrl = route('payment-requests.review', $pendingManualPaymentRequest->getKey());
                 $message = sprintf(
                     'لا يمكن تعديل حالة الطلب لوجود طلب دفع يدوي #%d قيد المراجعة. يرجى إتمام المراجعة عبر %s.',
                     $pendingManualPaymentRequest->getKey(),

@@ -189,14 +189,14 @@
         <div class="alert alert-warning alert-dismissible fade show" role="alert" data-testid="order-manual-payment-alert">
             <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
                 <div>
-                    <strong>طلب دفع يدوي قيد المراجعة.</strong>
-                    <p class="mb-0">هناك طلب دفع يدوي رقم #{{ $pendingManualPaymentRequest->id }} مرتبط بهذا الطلب بمبلغ
+                    <strong>طلب دفع قيد المراجعة.</strong>
+                    <p class="mb-0">هناك طلب دفع رقم #{{ $pendingManualPaymentRequest->id }} مرتبط بهذا الطلب بمبلغ
                         {{ number_format((float) $pendingManualPaymentRequest->amount, 2) }}
                         {{ $pendingManualPaymentRequest->currency ?? 'ريال' }}. لا يمكن تعديل حالة الدفع أو حالة الطلب حتى يتم اعتماد أو رفض هذا الطلب.</p>
                     
                 </div>
-                <a href="{{ route('manual-payments.review', $pendingManualPaymentRequest->id) }}" class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer">
-                    <i class="fa fa-external-link-alt me-1"></i> فتح طلب الدفع اليدوي
+                <a href="{{ route('payment-requests.review', $pendingManualPaymentRequest->id) }}" class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer">
+                    <i class="fa fa-external-link-alt me-1"></i> فتح طلب الدفع
                 </a>
             </div>
             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
@@ -418,7 +418,7 @@
                             ? ($manualPaymentStatusBadgeClasses[$manualPaymentStatus] ?? 'bg-secondary')
                             : null;
                         $manualPaymentReviewUrl = $latestManualPaymentRequest
-                            ? route('manual-payments.review', $latestManualPaymentRequest->id)
+                            ? route('payment-requests.review', $latestManualPaymentRequest->id)
                             : null;
 
 
@@ -524,7 +524,7 @@
 
                                         @if($latestManualPaymentRequest)
                                             <span class="d-block small text-muted mt-1">
-                                                آخر طلب دفع يدوي رقم #{{ $latestManualPaymentRequest->id }}:
+                                                آخر طلب دفع رقم #{{ $latestManualPaymentRequest->id }}:
                                                 {{ $manualPaymentStatusLabel ?? $paymentStatusLabel }}
                                                 @if($manualPaymentReviewUrl)
                                                     — <a href="{{ $manualPaymentReviewUrl }}" target="_blank" rel="noopener noreferrer">عرض الطلب</a>
@@ -1252,7 +1252,7 @@
                             <div class="form-control-plaintext border rounded bg-light px-3 py-2">
                                 {{ $paymentStatusLabel ?? '—' }}
                             </div>
-                            <small class="text-muted d-block mt-2">يتم تحديث حالة الدفع حصراً من خلال واجهة طلبات الدفع اليدوية.</small>
+                            <small class="text-muted d-block mt-2">يتم تحديث حالة الدفع حصراً من خلال واجهة طلبات الدفع.</small>
                                 
                         </div>
                         <div class="form-group">
@@ -1280,7 +1280,7 @@
                             <div class="form-control-plaintext border rounded bg-light px-3 py-2">
                                 {{ $paymentStatusLabel ?? '—' }}
                             </div>
-                            <small class="text-muted d-block mt-2">يتم تحديث حالة الدفع حصراً من خلال واجهة طلبات الدفع اليدوية.</small>
+                            <small class="text-muted d-block mt-2">يتم تحديث حالة الدفع حصراً من خلال واجهة طلبات الدفع.</small>
                         </div>
                         @if($orderStatusLockMessage)
                             <div class="alert alert-info mb-0">

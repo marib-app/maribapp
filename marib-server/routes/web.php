@@ -213,8 +213,8 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
 
 
     Route::group([
-        'prefix' => 'manual-payments',
-        'as' => 'manual-payments.',
+        'prefix' => 'payment-requests',
+        'as' => 'payment-requests.',
         'middleware' => ['permission:manual-payments-list|manual-payments-review']
     ], static function () {
         Route::get('/', [ManualPaymentRequestController::class, 'index'])->name('index');
@@ -1006,13 +1006,13 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
         Route::get('/', [OrderReportController::class, 'index'])->name('index');
         Route::get('/sales', [OrderReportController::class, 'sales'])->name('sales');
         Route::get('/customers', [OrderReportController::class, 'customers'])->name('customers');
-        Route::get('/manual-payments', [OrderReportController::class, 'manualPayments'])->name('manual-payments');
+        Route::get('/payment-requests', [OrderReportController::class, 'manualPayments'])->name('payment-requests');
         Route::get('/statuses', [OrderReportController::class, 'statuses'])->name('statuses');
 
 
                 Route::group([
-            'prefix' => 'manual-payments',
-            'as' => 'manual-payments.',
+            'prefix' => 'payment-requests',
+            'as' => 'payment-requests.',
             'middleware' => ['permission:reports-orders'],
         ], function () {
             Route::get('/list', [OrderReportController::class, 'manualPaymentsList'])->name('list');
@@ -1037,7 +1037,7 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
 /* ------------------------------- روابط عامة أخرى ------------------------------- */
 
 Route::get('/product-details/{slug}', [SettingController::class, 'webPageURL'])->name('deep-link');
-Route::get('manual-payments/open/{paymentTransaction}', [ManualPaymentRequestController::class, 'deepLink'])->name('manual-payments.deep-link');
+Route::get('payment-requests/open/{paymentTransaction}', [ManualPaymentRequestController::class, 'deepLink'])->name('payment-requests.deep-link');
 
 
 /* ----------------------- أدوات صيانة (للاستخدام بحذر) ----------------------- */

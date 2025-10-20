@@ -1,14 +1,14 @@
 @extends('layouts.app')
 
-@section('title', 'تقرير المدفوعات اليدوية')
+@section('title', 'تقرير طلبات الدفع')
 
 @section('content')
 <section class="section">
-    <div class="dashboard_title mb-3">لوحة المدفوعات اليدوية</div>
+    <div class="dashboard_title mb-3">لوحة طلبات الدفع</div>
 
     <div class="card mb-4">
         <div class="card-body">
-            <form action="{{ route('reports.manual-payments') }}" method="GET" class="row g-3 align-items-end">
+            <form action="{{ route('reports.payment-requests') }}" method="GET" class="row g-3 align-items-end">
                 <div class="col-md-3">
                     <label for="start_date" class="form-label">من تاريخ</label>
                     <input type="date" name="start_date" id="start_date" value="{{ $filters['start_date'] }}" class="form-control">
@@ -33,7 +33,7 @@
                         <i class="fas fa-filter me-1"></i>
                         تطبيق الفلاتر
                     </button>
-                    <a href="{{ route('reports.manual-payments') }}" class="btn btn-outline-secondary" title="إعادة التعيين">
+                    <a href="{{ route('reports.payment-requests') }}" class="btn btn-outline-secondary" title="إعادة التعيين">
                         <i class="fas fa-sync-alt"></i>
                     </a>
                 </div>
@@ -41,7 +41,7 @@
         </div>
         <div class="card-footer bg-light">
             <div class="d-flex flex-wrap gap-2">
-                <form action="{{ route('reports.manual-payments') }}" method="GET">
+                <form action="{{ route('reports.payment-requests') }}" method="GET">
                     <input type="hidden" name="start_date" value="{{ $filters['start_date'] }}">
                     <input type="hidden" name="end_date" value="{{ $filters['end_date'] }}">
                     <input type="hidden" name="status" value="{{ $filters['status'] }}">
@@ -51,7 +51,7 @@
                         تصدير CSV
                     </button>
                 </form>
-                <form action="{{ route('reports.manual-payments') }}" method="GET">
+                <form action="{{ route('reports.payment-requests') }}" method="GET">
                     <input type="hidden" name="start_date" value="{{ $filters['start_date'] }}">
                     <input type="hidden" name="end_date" value="{{ $filters['end_date'] }}">
                     <input type="hidden" name="status" value="{{ $filters['status'] }}">
@@ -68,7 +68,7 @@
     <div class="row mb-4 g-3">
         <div class="col-md-4 col-sm-6">
             <div class="summary-card bg-primary text-white">
-                <div class="summary-label">إجمالي الطلبات اليدوية</div>
+                <div class="summary-label">إجمالي طلبات الدفع</div>
                 <div class="summary-value">{{ number_format($totals['count']) }}</div>
                 <div class="summary-sub">ضمن الفترة المحددة</div>
             </div>
@@ -147,7 +147,7 @@
                     <h5 class="mb-0">توزيع الحالات</h5>
                 </div>
                 <div class="card-body">
-                    <canvas id="manualPaymentStatusChart" style="min-height: 280px; height: 280px; max-height: 320px;"></canvas>
+                    <canvas id="paymentRequestStatusChart" style="min-height: 280px; height: 280px; max-height: 320px;"></canvas>
                 </div>
             </div>
         </div>
@@ -157,7 +157,7 @@
                     <h5 class="mb-0">العائد اليومي</h5>
                 </div>
                 <div class="card-body">
-                    <canvas id="manualPaymentRevenueChart" style="min-height: 280px; height: 280px; max-height: 320px;"></canvas>
+                    <canvas id="paymentRequestRevenueChart" style="min-height: 280px; height: 280px; max-height: 320px;"></canvas>
                 </div>
             </div>
         </div>
@@ -165,16 +165,16 @@
 
     <div class="card">
         <div class="card-header border-0 pb-0">
-            <h5 class="mb-0">سجل المدفوعات اليدوية</h5>
+            <h5 class="mb-0">سجل طلبات الدفع</h5>
         </div>
         <div class="card-body">
             <div class="table-responsive">
 
 
                 <table class="table table-striped mb-0"
-                       id="manual-payments-table"
+                       id="payment-requests-table"
                        data-toggle="table"
-                       data-url="{{ route('reports.manual-payments.list') }}"
+                       data-url="{{ route('reports.payment-requests.list') }}"
                        data-side-pagination="server"
                        data-pagination="true"
                        data-page-list="[10, 20, 50, 100]"
@@ -184,9 +184,9 @@
                        data-show-refresh="true"
                        data-show-columns="true"
                        data-show-export="true"
-                       data-export-options='{"fileName": "manual-payment-requests-report","ignoreColumn": ["operate"]}'
+                       data-export-options='{"fileName": "payment-requests-report","ignoreColumn": ["operate"]}'
                        data-export-types='["csv","excel","pdf"]'
-                       data-query-params="manualPaymentsReportQueryParams"
+                       data-query-params="paymentRequestsReportQueryParams"
                        data-escape="false">
 
                     <thead class="bg-light">
@@ -207,7 +207,7 @@
             </div>
         </div>
         <div class="card-footer d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <div class="text-muted" id="manual-payments-total">
+            <div class="text-muted" id="payment-requests-total">
                 إجمالي السجلات: {{ number_format($totals['count']) }}
             </div>
             <div class="text-muted small">
@@ -216,18 +216,18 @@
         </div>
     </div>
 
-    <div class="modal fade" id="manualPaymentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="paymentRequestModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">تفاصيل طلب الدفع اليدوي</h5>
+                    <h5 class="modal-title">تفاصيل طلب الدفع</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
                 </div>
                 <div class="modal-body p-0">
-                    <div class="text-center p-5" id="manual-payment-modal-loader">
+                    <div class="text-center p-5" id="payment-request-modal-loader">
                         <i class="fa fa-spinner fa-spin fa-2x"></i>
                     </div>
-                    <div id="manual-payment-modal-body"></div>
+                    <div id="payment-request-modal-body"></div>
                 </div>
             </div>
         </div>
@@ -276,7 +276,7 @@
 @endphp
 <script>
 
-        window.manualPaymentsReportQueryParams = function (params) {
+        window.paymentRequestsReportQueryParams = function (params) {
         const startDate = document.getElementById('start_date');
         const endDate = document.getElementById('end_date');
         const status = document.getElementById('status');
@@ -291,7 +291,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         const chartColors = ['#0d6efd', '#20c997', '#ffc107', '#dc3545', '#6610f2', '#fd7e14'];
 
-        const statusCtx = document.getElementById('manualPaymentStatusChart');
+        const statusCtx = document.getElementById('paymentRequestStatusChart');
         if (statusCtx) {
             new Chart(statusCtx.getContext('2d'), {
                 type: 'doughnut',
@@ -320,7 +320,7 @@
             });
         }
 
-        const revenueCtx = document.getElementById('manualPaymentRevenueChart');
+        const revenueCtx = document.getElementById('paymentRequestRevenueChart');
         if (revenueCtx) {
             new Chart(revenueCtx.getContext('2d'), {
                 type: 'line',

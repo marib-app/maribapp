@@ -128,13 +128,13 @@
         <div class="alert alert-warning" role="alert">
             <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
                 <div>
-                    <strong>يوجد طلب دفع يدوي قيد المراجعة.</strong>
+                    <strong>يوجد طلب دفع قيد المراجعة.</strong>
                     <p class="mb-0">لا يمكن تعديل حالة الدفع أو حالة الطلب حتى يتم البت في الطلب رقم #{{ $pendingManualPaymentRequest->id }} بمبلغ
                         {{ number_format((float) $pendingManualPaymentRequest->amount, 2) }}
                         {{ $pendingManualPaymentRequest->currency ?? 'ريال' }}.</p>
                 </div>
-                <a href="{{ route('manual-payments.review', $pendingManualPaymentRequest->id) }}" class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer">
-                    <i class="fa fa-external-link-alt me-1"></i> عرض طلب الدفع اليدوي
+                <a href="{{ route('payment-requests.review', $pendingManualPaymentRequest->id) }}" class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer">
+                    <i class="fa fa-external-link-alt me-1"></i> عرض طلب الدفع
                 </a>
             </div>
         </div>
@@ -165,7 +165,7 @@
                 ? ($manualPaymentStatusBadgeClasses[$manualPaymentStatus] ?? 'bg-secondary')
                 : null;
             $manualPaymentReviewUrl = $latestManualPaymentRequest
-                ? route('manual-payments.review', $latestManualPaymentRequest->id)
+                ? route('payment-requests.review', $latestManualPaymentRequest->id)
                 : null;
             $paymentStatusLabel = $manualPaymentStatusLabelValue
                 ?? ($paymentStatusOptions[$order->payment_status] ?? ($order->payment_status ?: 'غير محدد'));
@@ -251,10 +251,10 @@
                                 @endif
                             
                             </div>
-                            <small class="text-muted d-block mt-2">يتم تحديث حالة الدفع حصراً من خلال واجهة طلبات الدفع اليدوية.</small>
+                            <small class="text-muted d-block mt-2">يتم تحديث حالة الدفع حصراً من خلال واجهة طلبات الدفع.</small>
                             @if($latestManualPaymentRequest)
                                 <small class="text-muted d-block">
-                                    آخر طلب دفع يدوي رقم #{{ $latestManualPaymentRequest->id }}:
+                                    آخر طلب دفع رقم #{{ $latestManualPaymentRequest->id }}:
                                     {{ $manualPaymentStatusLabelValue ?? ($paymentStatusLabel ?? 'غير محدد') }}
                                     @if($manualPaymentReviewUrl)
                                         — <a href="{{ $manualPaymentReviewUrl }}" target="_blank" rel="noopener noreferrer">عرض الطلب</a>

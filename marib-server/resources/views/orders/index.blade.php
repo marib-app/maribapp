@@ -405,7 +405,7 @@
                                                 $manualPaymentLocked = $manualPaymentStatus !== null
                                                     && in_array($manualPaymentStatus, ManualPaymentRequest::OPEN_STATUSES, true);
                                                 $manualPaymentReviewUrl = $latestManualPaymentRequest
-                                                    ? route('manual-payments.review', $latestManualPaymentRequest->id)
+                                                    ? route('payment-requests.review', $latestManualPaymentRequest->id)
                                                     : null;
 
                                                 $paymentStatusValue = $order->payment_status ?: null;
@@ -465,7 +465,7 @@
 
                                             @if($manualPaymentLocked && $latestManualPaymentRequest)
                                                 <div class="small text-muted mt-1">
-                                                    يوجد طلب دفع يدوي رقم #{{ $latestManualPaymentRequest->id }} قيد المراجعة
+                                                    يوجد طلب دفع رقم #{{ $latestManualPaymentRequest->id }} قيد المراجعة
                                                     @if($manualPaymentReviewUrl)
                                                         — <a href="{{ $manualPaymentReviewUrl }}" target="_blank" rel="noopener noreferrer">عرض الطلب</a>
                                                     @endif
@@ -475,7 +475,7 @@
                                                 </div>
                                             @elseif($latestManualPaymentRequest && $manualPaymentStatusLabel)
                                                 <div class="small text-muted mt-1">
-                                                    آخر طلب دفع يدوي رقم #{{ $latestManualPaymentRequest->id }}: {{ $manualPaymentStatusLabel }}
+                                                    آخر طلب دفع رقم #{{ $latestManualPaymentRequest->id }}: {{ $manualPaymentStatusLabel }}
                                                     @if($manualPaymentReviewUrl)
                                                         — <a href="{{ $manualPaymentReviewUrl }}" target="_blank" rel="noopener noreferrer">عرض الطلب</a>
                                                     @endif

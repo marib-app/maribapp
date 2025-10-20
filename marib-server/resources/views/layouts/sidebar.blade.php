@@ -136,7 +136,7 @@
 
           @canany(['manual-payments-list','manual-payments-review'])
             <li class="sidebar-item">
-              <a href="{{ route('manual-payments.index') }}" class="sidebar-link">
+              <a href="{{ route('payment-requests.index') }}" class="sidebar-link">
                 <i class="bi bi-wallet2"></i>
                 <span class="menu-item">{{ __(' طلبات الدفع ') }}</span>
               </a>
@@ -354,9 +354,9 @@
           @endcanany
                     @can('reports-orders')
             <li class="sidebar-item sidebar-submenus">
-              <a href="{{ route('reports.manual-payments') }}" class="sidebar-link">
+              <a href="{{ route('reports.payment-requests') }}" class="sidebar-link">
                 <i class="bi bi-graph-up"></i>
-                <span class="menu-item">{{ __('Manual Payment Analytics') }}</span>
+                <span class="menu-item">{{ __('Payment Request Analytics') }}</span>
               </a>
             </li>
           @endcan

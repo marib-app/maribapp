@@ -67,7 +67,7 @@ class Handler extends ExceptionHandler
 
             if ($exception->manualPaymentRequestId !== null) {
                 $payload['manual_payment_request_id'] = $exception->manualPaymentRequestId;
-                $payload['manual_payment_review_url'] = route('manual-payments.review', $exception->manualPaymentRequestId);
+                $payload['manual_payment_review_url'] = route('payment-requests.review', $exception->manualPaymentRequestId);
             }
 
             if ($request->expectsJson()) {

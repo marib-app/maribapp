@@ -8,6 +8,9 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/data/model/wallet/manual_payment_requests_summary.dart';
+import 'package:marib/app/routes.dart';
+import 'package:marib/utils/helper_utils.dart';
+
 
 class ManualPaymentRequestsSheet extends StatefulWidget {
   const ManualPaymentRequestsSheet({super.key});
@@ -350,15 +353,18 @@ class _ManualPaymentTile extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => _handleTap(context),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
                     payment.manualReference ??
                         payment.transactionIdentifier ??
                         '#${payment.manualPaymentId ?? ''}',
@@ -405,23 +411,242 @@ class _ManualPaymentTile extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
-            if (payment.receiptUrl?.isNotEmpty == true)
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Text(
-                  payment.receiptUrl!,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: context.color.primaryColor),
+    if (payment.receiptUrl?.isNotEmpty == true)
+    Padding(
+    padding: const EdgeInsets.only(top: 8.0),
+    child: Text(
+    payment.receiptUrl!,
+    style: Theme.of(context)
+        .textTheme
+        .bodySmall
+        ?.copyWith(color: context.color.primaryColor),
+    ),
                 ),
-              ),
-          ],
+              ],
+            ),
         ),
       ),
     );
   }
+
+
+
+
+
+
+  void _handleTap(BuildContext context) {
+    final destination = _ManualPaymentDestination.resolve(payment);
+
+    switch (destination.type) {
+      case _ManualPaymentDestinationType.order:
+        final String? orderId = destination.orderId;
+        if (orderId == null || orderId.isEmpty) {
+          HelperUtils.showSnackBarMessage(
+            context,
+            'تعذّر تحديد الطلب المرتبط بعملية الدفع هذه.',
+          );
+          return;
+        }
+
+        Navigator.of(context).pushNamed(
+          Routes.orderSteps,
+          arguments: {
+            'order_id': orderId,
+            if (destination.manualPaymentRequestId != null)
+              'manual_payment_request_id': destination.manualPaymentRequestId,
+          },
+        );
+        return;
+
+      case _ManualPaymentDestinationType.package:
+        final int? packageId = destination.packageId;
+        if (packageId == null) {
+          HelperUtils.showSnackBarMessage(
+            context,
+            'تعذّر تحديد الباقة المرتبطة بعملية الدفع.',
+          );
+          return;
+        }
+
+        Navigator.of(context).pushNamed(
+          Routes.subscriptionPackageListRoute,
+          arguments: {
+            'package_id': packageId,
+            if (destination.packageType != null)
+              'package_type': destination.packageType,
+            if (destination.manualPaymentRequestId != null)
+              'manual_payment_request_id': destination.manualPaymentRequestId,
+            'source': 'manual_payment',
+          },
+        );
+        return;
+
+      case _ManualPaymentDestinationType.wallet:
+        Navigator.of(context).pushNamed(
+          Routes.wallet,
+          arguments: {
+            if (destination.manualPaymentRequestId != null)
+              'manual_payment_request_id': destination.manualPaymentRequestId,
+          },
+        );
+        return;
+
+      case _ManualPaymentDestinationType.unknown:
+        if (payment.receiptUrl?.isNotEmpty == true) {
+          HelperUtils.showSnackBarMessage(
+            context,
+            'لا توجد وجهة مرتبطة. تحقق من الإيصال أو التفاصيل المرفقة.',
+          );
+        }
+        return;
+    }
+  }
 }
+
+class _ManualPaymentDestination {
+  const _ManualPaymentDestination._({
+    required this.type,
+    this.orderId,
+    this.packageId,
+    this.packageType,
+    this.manualPaymentRequestId,
+  });
+
+  final _ManualPaymentDestinationType type;
+  final String? orderId;
+  final int? packageId;
+  final String? packageType;
+  final String? manualPaymentRequestId;
+
+  static _ManualPaymentDestination resolve(ManualPayment payment) {
+    final manualPaymentRequestId = _stringFirst([
+      payment.manualPaymentId,
+      payment.manualPaymentData?['id'],
+      payment.metadata?['manual_payment_request_id'],
+      payment.metadata?['manualPaymentRequestId'],
+      payment.context?['manual_payment_request_id'],
+    ]);
+
+    final alias = _detectAlias(payment);
+
+    switch (alias) {
+      case _ManualPaymentDestinationType.order:
+        final orderId = _stringFirst([
+          payment.payableId?.toString(),
+          payment.payable?['id']?.toString(),
+          payment.metadata?['order_id']?.toString(),
+          payment.metadata?['order']?['id']?.toString(),
+          payment.context?['order_id']?.toString(),
+        ]);
+
+        return _ManualPaymentDestination._(
+          type: _ManualPaymentDestinationType.order,
+          orderId: orderId,
+          manualPaymentRequestId: manualPaymentRequestId,
+        );
+
+      case _ManualPaymentDestinationType.package:
+        final packageId = _intFirst([
+          payment.payableId,
+          payment.payable?['id'],
+          payment.metadata?['package_id'],
+          payment.metadata?['manual']?['package_id'],
+          payment.metadata?['package']?['id'],
+          payment.context?['package_id'],
+        ]);
+
+        final packageType = _stringFirst([
+          payment.metadata?['purpose']?.toString(),
+          payment.metadata?['manual']?['purpose']?.toString(),
+          payment.context?['package_type']?.toString(),
+        ]);
+
+        return _ManualPaymentDestination._(
+          type: _ManualPaymentDestinationType.package,
+          packageId: packageId,
+          packageType: packageType,
+          manualPaymentRequestId: manualPaymentRequestId,
+        );
+
+      case _ManualPaymentDestinationType.wallet:
+        return _ManualPaymentDestination._(
+          type: _ManualPaymentDestinationType.wallet,
+          manualPaymentRequestId: manualPaymentRequestId,
+        );
+
+      case _ManualPaymentDestinationType.unknown:
+      default:
+        return _ManualPaymentDestination._(
+          type: _ManualPaymentDestinationType.unknown,
+          manualPaymentRequestId: manualPaymentRequestId,
+        );
+    }
+  }
+
+  static _ManualPaymentDestinationType _detectAlias(ManualPayment payment) {
+    final candidates = <String?>[
+      payment.payableType,
+      payment.payable?['type']?.toString(),
+      payment.metadata?['purpose']?.toString(),
+      payment.metadata?['manual']?['purpose']?.toString(),
+      payment.context?['purpose']?.toString(),
+    ];
+
+    for (final candidate in candidates) {
+      final normalized = candidate?.toLowerCase().trim();
+      if (normalized == null || normalized.isEmpty) {
+        continue;
+      }
+
+      if (normalized.contains('order') || normalized.contains('cart')) {
+        return _ManualPaymentDestinationType.order;
+      }
+
+      if (normalized.contains('package') ||
+          normalized.contains('listing') ||
+          normalized.contains('featured')) {
+        return _ManualPaymentDestinationType.package;
+      }
+
+      if (normalized.contains('wallet') || normalized.contains('topup')) {
+        return _ManualPaymentDestinationType.wallet;
+      }
+    }
+
+    return _ManualPaymentDestinationType.unknown;
+  }
+
+  static String? _stringFirst(Iterable<dynamic> candidates) {
+    for (final candidate in candidates) {
+      if (candidate == null) continue;
+      final value = candidate.toString().trim();
+      if (value.isNotEmpty && value.toLowerCase() != 'null') {
+        return value;
+      }
+    }
+    return null;
+  }
+
+  static int? _intFirst(Iterable<dynamic> candidates) {
+    for (final candidate in candidates) {
+      if (candidate == null) continue;
+      if (candidate is int) {
+        return candidate;
+      }
+      if (candidate is num) {
+        return candidate.toInt();
+      }
+      final parsed = int.tryParse(candidate.toString());
+      if (parsed != null) {
+        return parsed;
+      }
+    }
+    return null;
+  }
+}
+
+
+enum _ManualPaymentDestinationType { order, package, wallet, unknown }
 
 class _ErrorView extends StatelessWidget {
   const _ErrorView({required this.message, required this.onRetry});

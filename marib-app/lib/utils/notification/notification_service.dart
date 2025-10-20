@@ -202,6 +202,66 @@ class NotificationService {
     return null;
   }
 
+
+  static String? _firstNonEmptyValue(Iterable<dynamic> candidates) {
+    for (final candidate in candidates) {
+      final normalized = _normalizeNotificationValue(candidate);
+      if (normalized != null) {
+        return normalized;
+      }
+    }
+    return null;
+  }
+
+  static String? _detectPayableAlias(Map<String, dynamic> data) {
+    final alias = _firstNonEmptyValue([
+      data['payable_type_alias'],
+      data['payableTypeAlias'],
+      data['payable_type'],
+      data['payableType'],
+      data['purpose'],
+      data['transaction_type'],
+      data['transactionType'],
+    ]);
+
+    if (alias == null) {
+      return null;
+    }
+
+    final normalized = alias.toLowerCase();
+
+    if (normalized.contains('order') || normalized.contains('cart')) {
+      return 'order';
+    }
+
+    if (normalized.contains('package') ||
+        normalized.contains('listing') ||
+        normalized.contains('featured')) {
+      return 'package';
+    }
+
+    if (normalized.contains('service')) {
+      return 'service';
+    }
+
+    if (normalized.contains('wifi')) {
+      return 'wifi_plan';
+    }
+
+    if (normalized.contains('wallet') ||
+        normalized.contains('topup') ||
+        normalized.contains('top-up')) {
+      return 'wallet';
+    }
+
+    if (normalized.contains('item') || normalized.contains('advertisement')) {
+      return 'item';
+    }
+
+    return normalized;
+  }
+
+
   static String? extractCurrency(Map<String, dynamic> source) {
     const List<String> keys = <String>[
       'currency',
@@ -837,17 +897,113 @@ class NotificationService {
               });*/
         });
       } else if (message.data['type'] == "payment") {
-        if (HiveUtils.isUserAuthenticated()) {
-          Future.delayed(Duration.zero, () {
-            Navigator.pushNamed(Constant.navigatorKey.currentContext!,
-                Routes.subscriptionPackageListRoute);
-          });
-        } else {
+        if (!HiveUtils.isUserAuthenticated()) {
+
           Future.delayed(Duration.zero, () {
             HelperUtils.goToNextPage(Routes.notificationPage,
                 Constant.navigatorKey.currentContext!, false);
           });
+          return;
+
         }
+
+
+        final Map<String, dynamic> paymentData =
+        Map<String, dynamic>.from(message.data);
+
+        final String? manualPaymentId = _firstNonEmptyValue([
+          paymentData['manual_payment_request_id'],
+          paymentData['manualPaymentRequestId'],
+        ]);
+
+        final String? alias = _detectPayableAlias(paymentData);
+
+        Future<void> navigateTo(String route, Map<String, dynamic>? args) async {
+          Future.delayed(Duration.zero, () {
+            Navigator.pushNamed(
+              Constant.navigatorKey.currentContext!,
+              route,
+              arguments: args,
+            );
+          });
+        }
+
+        switch (alias) {
+          case 'order':
+            final String? orderId = _firstNonEmptyValue([
+              paymentData['order_id'],
+              paymentData['orderId'],
+              paymentData['payable_id'],
+              paymentData['payableId'],
+            ]);
+
+            if (orderId != null && orderId.isNotEmpty) {
+              navigateTo(Routes.orderSteps, {
+                'order_id': orderId,
+                if (manualPaymentId != null)
+                  'manual_payment_request_id': manualPaymentId,
+              });
+              return;
+            }
+            break;
+
+          case 'package':
+            final String? packageIdStr = _firstNonEmptyValue([
+              paymentData['package_id'],
+              paymentData['packageId'],
+              paymentData['payable_id'],
+              paymentData['payableId'],
+            ]);
+
+            final int? packageId = _tryParseInt(packageIdStr);
+            final String? packageType = _firstNonEmptyValue([
+              paymentData['package_type'],
+              paymentData['packageType'],
+              paymentData['purpose'],
+            ]);
+
+            navigateTo(Routes.subscriptionPackageListRoute, {
+              if (packageId != null) 'package_id': packageId,
+              if (packageType != null) 'package_type': packageType,
+              if (manualPaymentId != null)
+                'manual_payment_request_id': manualPaymentId,
+              'source': 'payment_notification',
+            });
+            return;
+
+          case 'wallet':
+          case 'wallet_top_up':
+            navigateTo(Routes.wallet, {
+              if (manualPaymentId != null)
+                'manual_payment_request_id': manualPaymentId,
+            });
+            return;
+
+          case 'service':
+          case 'wifi_plan':
+            final String? serviceId = _firstNonEmptyValue([
+              paymentData['service_id'],
+              paymentData['serviceId'],
+              paymentData['payable_id'],
+              paymentData['payableId'],
+            ]);
+
+            if (serviceId != null && serviceId.isNotEmpty) {
+              navigateTo(Routes.otherServices, {
+                'service_id': serviceId,
+                if (manualPaymentId != null)
+                  'manual_payment_request_id': manualPaymentId,
+              });
+              return;
+            }
+            break;
+        }
+
+        Future.delayed(Duration.zero, () {
+          HelperUtils.goToNextPage(Routes.notificationPage,
+              Constant.navigatorKey.currentContext!, false);
+        });
+
       } else {
         Future.delayed(Duration.zero, () {
           HelperUtils.goToNextPage(Routes.notificationPage,

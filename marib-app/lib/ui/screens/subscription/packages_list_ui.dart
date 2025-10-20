@@ -3,7 +3,7 @@ part of 'packages_list.dart';
 enum _PackageType { listing, featured }
 
 extension _SubscriptionPackageListScreenStateUi
-on _SubscriptionPackageListScreenState {
+    on _SubscriptionPackageListScreenState {
   Widget buildSubscriptionPackageListScreen(BuildContext context) {
     return Scaffold(
       backgroundColor: context.color.backgroundColor,
@@ -35,7 +35,7 @@ on _SubscriptionPackageListScreenState {
               indicatorWeight: 3,
               labelColor: context.color.territoryColor,
               unselectedLabelColor:
-              context.color.textDefaultColor.withOpacity(0.5),
+                  context.color.textDefaultColor.withOpacity(0.5),
               labelStyle: const TextStyle(fontSize: 16),
               labelPadding: const EdgeInsets.symmetric(horizontal: 16),
               indicatorSize: TabBarIndicatorSize.tab,
@@ -112,7 +112,8 @@ on _SubscriptionPackageListScreenState {
         listener: (context, state) {
           if (state is FetchAdsListingSubscriptionPackagesSuccess) {
             final list = state.subscriptionPackages;
-            if (_selectedListing.value == null && list.isNotEmpty) {
+            final bool focused = applyListingFocus(list);
+            if (!focused && _selectedListing.value == null && list.isNotEmpty) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 final safeIndex = _listingIndex.clamp(0, list.length - 1);
                 _selectedListing.value = list[safeIndex];
@@ -207,7 +208,10 @@ on _SubscriptionPackageListScreenState {
         listener: (context, state) {
           if (state is FetchFeaturedSubscriptionPackagesSuccess) {
             final list = state.subscriptionPackages;
-            if (_selectedFeatured.value == null && list.isNotEmpty) {
+            final bool focused = applyFeaturedFocus(list);
+            if (!focused &&
+                _selectedFeatured.value == null &&
+                list.isNotEmpty) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 final safeIndex = _featuredIndex.clamp(0, list.length - 1);
                 _selectedFeatured.value = list[safeIndex];
@@ -295,7 +299,8 @@ class _CtaSwitcher extends StatelessWidget {
   final ValueNotifier<SubscriptionPackageModel?> selectedFeatured;
   final int listingIndex;
   final int featuredIndex;
-  final String Function(SubscriptionPackageModel?, bool isFeatured) labelBuilder;
+  final String Function(SubscriptionPackageModel?, bool isFeatured)
+      labelBuilder;
   final void Function(SubscriptionPackageModel?, _PackageType) onPickGateway;
 
   const _CtaSwitcher({

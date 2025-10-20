@@ -19,11 +19,11 @@ class FetchHomeScreenSuccess extends FetchHomeScreenState {
   final String? rootIdentifier;
 
   FetchHomeScreenSuccess(
-      this.sections, {
-        this.interfaceType,
-        this.slug,
-        this.rootIdentifier,
-      });
+    this.sections, {
+    this.interfaceType,
+    this.slug,
+    this.rootIdentifier,
+  });
 }
 
 class FetchHomeScreenFail extends FetchHomeScreenState {
@@ -41,16 +41,13 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
     HomeRepository? homeRepository,
   })  : _homeRepository = homeRepository ?? HomeRepository(),
         _enablePersistence = enablePersistence,
-
         _defaultInterfaceType = _cleanInterfaceType(defaultInterfaceType),
         _defaultSlug = _cleanSlug(defaultSlug),
         _defaultRootIdentifier = _cleanRootIdentifier(defaultRootIdentifier),
         _currentInterfaceType = _cleanInterfaceType(defaultInterfaceType),
         _currentSlug = _cleanSlug(defaultSlug),
         _currentRootIdentifier = _cleanRootIdentifier(defaultRootIdentifier),
-
-      super(FetchHomeScreenInitial());
-
+        super(FetchHomeScreenInitial());
 
   final HomeRepository _homeRepository;
   final String? _defaultSlug;
@@ -61,8 +58,6 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
   String? _currentSlug;
   String? _currentRootIdentifier;
 
-
-
   static String? _cleanInterfaceType(String? value) {
     final String? normalized = SliderInterfaceMapper.normalize(value);
     if (normalized != null && normalized.isNotEmpty) {
@@ -72,7 +67,6 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
     final trimmed = value.trim();
     return trimmed.isEmpty ? null : trimmed;
   }
-
 
   static String? _cleanSlug(String? value) {
     if (value == null) return null;
@@ -86,11 +80,9 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
     return trimmed.isEmpty ? null : trimmed;
   }
 
-
   static String _sanitizeStorageSegment(String value) {
     final String trimmed = value.trim().toLowerCase();
-    final String collapsedWhitespace =
-    trimmed.replaceAll(RegExp(r'\s+'), '-');
+    final String collapsedWhitespace = trimmed.replaceAll(RegExp(r'\s+'), '-');
     final String sanitized = collapsedWhitespace
         .replaceAll(RegExp(r'[^a-z0-9\-_]+'), '-')
         .replaceAll(RegExp(r'-{2,}'), '-')
@@ -107,15 +99,14 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
 
     final List<String> segments = <String>['fetch-home-screen'];
     final String interfaceSegment =
-    _sanitizeStorageSegment(_defaultInterfaceType ?? 'default');
+        _sanitizeStorageSegment(_defaultInterfaceType ?? 'default');
     segments.add(interfaceSegment);
 
     if (_defaultSlug != null && _defaultSlug!.isNotEmpty) {
       segments.add(_sanitizeStorageSegment('slug-${_defaultSlug!}'));
     }
 
-    if (_defaultRootIdentifier != null &&
-        _defaultRootIdentifier!.isNotEmpty) {
+    if (_defaultRootIdentifier != null && _defaultRootIdentifier!.isNotEmpty) {
       segments.add(
         _sanitizeStorageSegment('root-${_defaultRootIdentifier!}'),
       );
@@ -124,9 +115,11 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
     return segments.join('__');
   }
 
+  String? get currentInterfaceType =>
+      _currentInterfaceType ?? _defaultInterfaceType;
 
-  String? get currentInterfaceType => _currentInterfaceType ?? _defaultInterfaceType;
   String? get currentSlug => _currentSlug ?? _defaultSlug;
+
   String? get currentRootIdentifier =>
       _currentRootIdentifier ?? _defaultRootIdentifier;
 
@@ -134,19 +127,15 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
     required String interfaceType,
     String? slug,
     String? rootIdentifier,
-
   }) async {
     await fetch(
       interfaceType: interfaceType,
       slug: slug,
       rootIdentifier: rootIdentifier,
     );
-
   }
 
   Future<void> fetch({
-
-
     String? country,
     String? state,
     String? city,
@@ -154,10 +143,7 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
     String? interfaceType,
     String? slug,
     String? rootIdentifier,
-
   }) async {
-
-
     try {
       emit(FetchHomeScreenInProgress());
 
@@ -176,8 +162,8 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
       _currentSlug = resolvedSlug;
       _currentRootIdentifier = resolvedRootIdentifier;
 
-      final List<HomeScreenSection> homeScreenDataList = await _homeRepository.fetchHome(
-
+      final List<HomeScreenSection> homeScreenDataList =
+          await _homeRepository.fetchHome(
         interfaceType: resolvedInterfaceType,
         country: country,
         state: state,
@@ -185,10 +171,7 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
         areaId: areaId,
         slug: resolvedSlug,
         rootIdentifier: resolvedRootIdentifier,
-
       );
-
-
 
       emit(
         FetchHomeScreenSuccess(
@@ -196,7 +179,6 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
           interfaceType: resolvedInterfaceType,
           slug: resolvedSlug,
           rootIdentifier: resolvedRootIdentifier,
-
         ),
       );
     } catch (e) {
@@ -223,8 +205,8 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
           if (item is Map<String, dynamic>) {
             sections.add(HomeScreenSection.fromJson(item));
           } else if (item is Map) {
-            sections
-                .add(HomeScreenSection.fromJson(Map<String, dynamic>.from(item as Map)));
+            sections.add(HomeScreenSection.fromJson(
+                Map<String, dynamic>.from(item as Map)));
           }
         }
       }
@@ -232,9 +214,7 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
       final String? interfaceType =
           _cleanInterfaceType(json['interfaceType'] as String?) ??
               _defaultInterfaceType;
-      final String? slug =
-          _cleanSlug(json['slug'] as String?) ?? _defaultSlug;
-
+      final String? slug = _cleanSlug(json['slug'] as String?) ?? _defaultSlug;
 
       final String? rootIdentifier =
           _cleanRootIdentifier(json['rootIdentifier'] as String?) ??
@@ -268,7 +248,9 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
       'interfaceType': state.interfaceType,
       'slug': state.slug,
       'rootIdentifier': state.rootIdentifier,
-      'sections': state.sections.map((HomeScreenSection section) => section.toJson()).toList(),
+      'sections': state.sections
+          .map((HomeScreenSection section) => section.toJson())
+          .toList(),
     };
   }
 }

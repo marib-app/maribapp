@@ -783,17 +783,176 @@ class PaymentFulfillmentService
             }
         
         }
+        $notificationData = $this->buildNotificationDataPayload($transaction, $normalizedType);
 
         return [
             'title' => $title,
             'body' => $body,
             'type' => 'payment',
-            'data' => [
-                'transaction_id' => $transaction->id,
-            ],
+            'data' => $notificationData,
+
         ];
     }
 
+
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function buildNotificationDataPayload(PaymentTransaction $transaction, string $normalizedType): array
+    {
+        $data = [
+            'transaction_id' => $transaction->id,
+        ];
+
+        $rawPayableType = $transaction->payable_type ?: $normalizedType;
+
+        if (is_string($rawPayableType) && $rawPayableType !== '') {
+            $data['payable_type'] = $rawPayableType;
+        }
+
+        if ($transaction->payable_id !== null) {
+            $data['payable_id'] = $transaction->payable_id;
+        }
+
+        if ($transaction->manual_payment_request_id !== null) {
+            $data['manual_payment_request_id'] = $transaction->manual_payment_request_id;
+        }
+
+        $purpose = data_get($transaction->meta, 'purpose');
+        if (is_string($purpose) && trim($purpose) !== '') {
+            $data['purpose'] = trim($purpose);
+        }
+
+        $alias = $this->resolvePayableAlias($rawPayableType, $transaction, $normalizedType, $purpose);
+        if ($alias !== null) {
+            $data['payable_type_alias'] = $alias;
+        }
+
+        if ($alias === 'order') {
+            $order = $transaction->relationLoaded('order')
+                ? $transaction->getRelation('order')
+                : $transaction->order()->withTrashed()->first();
+
+            if ($order instanceof Order) {
+                $data['order_id'] = $order->getKey();
+                $orderNumber = $order->order_number ?: $order->getKey();
+                if (! empty($orderNumber)) {
+                    $data['order_number'] = (string) $orderNumber;
+                }
+            } elseif ($transaction->order_id !== null) {
+                $data['order_id'] = $transaction->order_id;
+            }
+        } elseif ($alias === 'package') {
+            $packageId = $transaction->payable_id;
+            if ($packageId !== null) {
+                $data['package_id'] = $packageId;
+            }
+
+            $purchasedId = data_get($transaction->meta, 'manual.user_purchased_package_id')
+                ?? data_get($transaction->meta, 'user_purchased_package_id')
+                ?? data_get($transaction->meta, 'package.user_purchased_package_id');
+
+            if ($purchasedId !== null && $purchasedId !== '') {
+                $data['user_purchased_package_id'] = $purchasedId;
+            }
+        } elseif ($alias === 'wallet_top_up') {
+            $walletAccountId = data_get($transaction->meta, 'wallet.wallet_account_id')
+                ?? data_get($transaction->meta, 'wallet.account_id');
+            if ($walletAccountId !== null && $walletAccountId !== '') {
+                $data['wallet_account_id'] = $walletAccountId;
+            }
+        }
+
+        return array_filter(
+            $data,
+            static function ($value) {
+                if ($value === null) {
+                    return false;
+                }
+
+                if (is_string($value)) {
+                    return trim($value) !== '';
+                }
+
+                return true;
+            }
+        );
+    }
+
+    protected function resolvePayableAlias(
+        ?string $rawPayableType,
+        PaymentTransaction $transaction,
+        ?string $normalizedType = null,
+        ?string $purpose = null
+    ): ?string {
+        $candidates = array_filter([
+            $purpose,
+            data_get($transaction->meta, 'manual.purpose'),
+            data_get($transaction->meta, 'metadata.purpose'),
+            $rawPayableType,
+            $normalizedType,
+        ], static fn ($candidate) => is_string($candidate) && trim((string) $candidate) !== '');
+
+        foreach ($candidates as $candidate) {
+            $alias = $this->normalizeAliasCandidate($candidate);
+
+            if ($alias === null) {
+                continue;
+            }
+
+            if ($alias === 'order' || ManualPaymentRequest::isOrderPayableType($candidate)) {
+                return 'order';
+            }
+
+            if (str_contains($alias, 'package') || str_contains($alias, 'listing') || str_contains($alias, 'featured')) {
+                return 'package';
+            }
+
+            if (str_contains($alias, 'service')) {
+                return 'service';
+            }
+
+            if (str_contains($alias, 'wifi')) {
+                return 'wifi_plan';
+            }
+
+            if (str_contains($alias, 'wallet') || str_contains($alias, 'topup') || str_contains($alias, 'top-up')) {
+                return 'wallet_top_up';
+            }
+
+            if (str_contains($alias, 'item') || str_contains($alias, 'advertisement')) {
+                return 'item';
+            }
+        }
+
+        if (ManualPaymentRequest::isOrderPayableType((string) $rawPayableType)) {
+            return 'order';
+        }
+
+        if ($normalizedType !== null && ManualPaymentRequest::isOrderPayableType((string) $normalizedType)) {
+            return 'order';
+        }
+
+        return null;
+    }
+
+    protected function normalizeAliasCandidate(?string $candidate): ?string
+    {
+        if (! is_string($candidate)) {
+            return null;
+        }
+
+        $normalized = strtolower(trim($candidate));
+        if ($normalized === '') {
+            return null;
+        }
+
+        $normalized = str_replace(['\\', '/', '-', '_'], ' ', $normalized);
+        $normalized = preg_replace('/\s+/', ' ', $normalized) ?: $normalized;
+
+        return trim($normalized);
+    }
 
     private function resolveOrderCurrency(Order $order): string
     {

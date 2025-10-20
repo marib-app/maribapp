@@ -21,6 +21,7 @@ import 'widgets/items_body_box.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
 import 'package:marib/utils/featured_section_utils.dart';
 import 'package:marib/utils/logger.dart';
+import 'package:marib/app/routes.dart';
 
 class Section_screen extends StatefulWidget {
   final String categoryId; // معرف الفئة الحالية

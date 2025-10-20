@@ -91,6 +91,7 @@ class Section_screenState extends State<Section_screen> {
 
   // ✅ إظهار shimmer
   bool showShimmer = true;
+  int _sliderRefreshToken = 0;
 
   // ✅ فرز وفلاتر
   String? sortBy;
@@ -455,7 +456,16 @@ class Section_screenState extends State<Section_screen> {
       // Constant.itemFilter = null;
       // searchbody = {};
     } finally {
-      if (mounted) setState(() => showShimmer = false);
+      if (mounted) {
+        setState(() {
+          final bool wasShimmering = showShimmer;
+          showShimmer = false;
+          if (wasShimmering) {
+            _sliderRefreshToken++;
+          }
+        });
+      }
+
     }
   }
 
@@ -513,7 +523,11 @@ class Section_screenState extends State<Section_screen> {
             }
 
             setState(() {
+              final bool wasShimmering = showShimmer;
               showShimmer = false;
+              if (wasShimmering) {
+                _sliderRefreshToken++;
+              }
               _showSlider = true; // أظهر التصنيفات
               _showAdSlider =
                   _hasAdSlider; // أظهر السلايدر الإعلاني (يبدأ الجلب الآن)
@@ -527,7 +541,11 @@ class Section_screenState extends State<Section_screen> {
           if (state is FetchItemSummaryFailure) {
             debugPrint('[Realestate] state=Failure');
             setState(() {
+              final bool wasShimmering = showShimmer;
               showShimmer = false;
+              if (wasShimmering) {
+                _sliderRefreshToken++;
+              }
               _showSlider = false;
               _showAdSlider = false;
             });
@@ -695,6 +713,7 @@ class Section_screenState extends State<Section_screen> {
 
                                     selectedCategoryId: selectedCategoryId,
                                     showShimmer: showShimmer,
+                                    sliderRefreshToken: _sliderRefreshToken,
                                     searchController: searchController,
                                     specialRequestSectionSlug:
                                         _requestSectionSlug,

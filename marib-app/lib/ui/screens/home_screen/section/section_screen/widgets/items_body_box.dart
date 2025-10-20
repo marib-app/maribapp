@@ -31,6 +31,7 @@ class ItemsBodyBox extends StatefulWidget {
   final double bottomContentPadding;
   final bool showCartAction;
   final VoidCallback? onCartTap;
+  final int sliderRefreshToken;
 
   // جديد: لا تبني شريط التصنيفات/السلايدر إلا إذا true
   final bool enableTopBar;
@@ -60,6 +61,7 @@ class ItemsBodyBox extends StatefulWidget {
     this.filter, // ← جديد
     this.enableSubcats = true, // ← جديد (بحالته الافتراضية)
     this.onLoadMore,
+    required this.sliderRefreshToken,
     this.specialRequestSectionSlug,
     this.onScrollDirectionChanged,
     this.bottomContentPadding = 0.0,
@@ -264,6 +266,7 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
                   viewModeListenable: _viewMode,
                   bottomPadding: widget.bottomContentPadding,
                   showShimmer: widget.showShimmer,
+                  sliderRefreshToken: widget.sliderRefreshToken,
 
                   // موجودة عندك مسبقًا:
                   currentSortBy: widget.sortBy,

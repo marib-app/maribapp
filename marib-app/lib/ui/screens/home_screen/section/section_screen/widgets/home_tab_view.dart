@@ -43,6 +43,7 @@ class HomeTabView extends StatefulWidget {
   final ValueListenable<ViewMode> viewModeListenable;
   final double bottomPadding;
   final bool showShimmer;
+  final int sliderRefreshToken;
 
   final String? specialRequestSectionSlug;
 
@@ -71,6 +72,7 @@ class HomeTabView extends StatefulWidget {
     this.enableAdSlider = false, // افتراضي: مخفي
     this.adInterfaceType,
     // NEW 👇
+    required this.sliderRefreshToken,
     required this.showShimmer,
     this.currentSortBy, // ← جديد
     this.currentFilter, // ← جديد
@@ -444,7 +446,10 @@ class _HomeTabViewState extends State<HomeTabView> {
             (resolvedInterfaceType == null || resolvedInterfaceType.isEmpty)
                 ? 'homepage'
                 : resolvedInterfaceType;
-        final bool showAdSlider = widget.enableAdSlider;
+        final bool shouldShowSlider =
+            widget.enableAdSlider && !widget.showShimmer;
+        final bool shouldShowSliderShimmer =
+            widget.enableAdSlider && widget.showShimmer;
 
         // ✅ استمع للتمرير هنا (بدل بعثرة المنطق داخل عناصر داخلية)
         return NotificationListener<ScrollNotification>(
@@ -461,28 +466,33 @@ class _HomeTabViewState extends State<HomeTabView> {
               // ============= السلايدر =============
 
               SliverToBoxAdapter(
-                child: showAdSlider
-                    ? Padding(
-                        padding:
-                            EdgeInsets.symmetric(horizontal: kAdSliderHPad),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(kAdSliderRadius),
-                          child: SizedBox(
-                            height: _adSliderTotalHeight(context),
-                            // صورة + دوتس (نفس الإجمالي)
-                            width: double.infinity,
-                            child: RepaintBoundary(
-                              child: SliderWidget(
-                                key: ValueKey('slider_$sliderInterfaceType'),
-                                interfaceType: sliderInterfaceType,
-                              ),
-                            ),
-                          ),
-                        ),
-                      )
-                    : (widget.enableAdSlider
+                child: !widget.enableAdSlider
+                    ? const SizedBox.shrink()
+                    : shouldShowSliderShimmer
                         ? _buildAdSliderShimmer()
-                        : const SizedBox.shrink()),
+                        : shouldShowSlider
+                            ? Padding(
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: kAdSliderHPad),
+                                child: ClipRRect(
+                                  borderRadius:
+                                      BorderRadius.circular(kAdSliderRadius),
+                                  child: SizedBox(
+                                    height: _adSliderTotalHeight(context),
+                                    // صورة + دوتس (نفس الإجمالي)
+                                    width: double.infinity,
+                                    child: RepaintBoundary(
+                                      child: SliderWidget(
+                                        key: ValueKey(
+                                          'slider_${sliderInterfaceType}_${widget.sliderRefreshToken}',
+                                        ),
+                                        interfaceType: sliderInterfaceType,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : const SizedBox.shrink(),
               ),
 
               // فاصل صغير

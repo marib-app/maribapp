@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart' show NumberFormat;
 import 'package:marib/data/model/currency_rate.dart';
+import 'package:flutter/foundation.dart';
 
 import '../state/state.dart';
 
@@ -618,13 +619,14 @@ class _CurrencyMenuRow extends StatelessWidget {
     return Directionality(
       textDirection: TextDirection.ltr,
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           _CurrencyAvatar(
             label: label,
             key: iconKey,
           ),
-          const SizedBox(width: 8),
-          Expanded(
+          const SizedBox(width: 6),
+          Flexible(
             child: Text(
               label,
               textDirection: TextDirection.rtl,
@@ -656,13 +658,18 @@ class _CurrencyAvatar extends StatelessWidget {
         : label.trim().characters.take(2).toString().toUpperCase();
 
     return CircleAvatar(
-      radius: 16,
+      radius: 14,
       backgroundColor: background,
       foregroundColor: foreground,
       child: Text(
         initials,
-        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
       ),
     );
   }
+}
+
+@visibleForTesting
+Widget buildCurrencyMenuRowForTesting(String label, {Key? iconKey}) {
+  return _CurrencyMenuRow(label: label, iconKey: iconKey);
 }

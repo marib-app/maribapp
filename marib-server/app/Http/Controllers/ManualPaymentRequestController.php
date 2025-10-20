@@ -2307,15 +2307,15 @@ class ManualPaymentRequestController extends Controller
             . PHP_EOL . '        )';
 
         $manualGatewayKeyCandidates = [
-            "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.channel')), '')",
-            "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.payment_gateway')), '')",
-            "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.gateway')), '')",
-            "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.payment_method')), '')",
-            "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.method')), '')",
+            "NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.channel'))), '')",
+            "NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.payment_gateway'))), '')",
+            "NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.gateway'))), '')",
+            "NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.payment_method'))), '')",
+            "NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.method'))), '')",
             "CASE WHEN JSON_EXTRACT(mpr.meta, '$.wallet.transaction_id') IS NOT NULL THEN 'wallet' END",
             "CASE WHEN LOWER(COALESCE(NULLIF(mpr.payable_type, ''), '')) LIKE '%wallet%' THEN 'wallet' END",
         ];
-        $manualGatewayKeyExpression = 'LOWER(COALESCE(' . implode(', ', array_merge($manualGatewayKeyCandidates, ["'manual_bank'"])) . '))';
+        $manualGatewayKeyExpression = 'LOWER(COALESCE(' . implode(', ', array_merge($manualGatewayKeyCandidates, ["TRIM('manual_bank')"])) . '))';
         
         
         $manualGatewayAliases = ManualPaymentRequest::manualBankGatewayAliases();

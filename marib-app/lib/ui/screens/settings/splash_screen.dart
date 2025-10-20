@@ -537,16 +537,7 @@ class _IntroContent extends StatelessWidget {
             );
           },
         ),
-        const SizedBox(height: 24),
-        SizedBox(
-          height: 48,
-          width: 48,
-          child: CircularProgressIndicator(
-            strokeWidth: 4,
-            valueColor: AlwaysStoppedAnimation<Color>(textColor),
-            backgroundColor: textColor.withOpacity(0.2),
-          ),
-        ),
+
       ],
     );
   }

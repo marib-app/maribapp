@@ -65,13 +65,23 @@ class CardPlanet extends StatelessWidget {
         if (data.backgroundAnimationPath != null)
           Opacity(
             opacity: 0.2,
-            child: Lottie.asset(
-              data.backgroundAnimationPath!,
-              fit: BoxFit.cover,
-              composition: _compositionFor(data.backgroundAnimationPath),
-              animate: isActive,
-              repeat: isActive,
-            ),
+            child: () {
+              final cached = _compositionFor(data.backgroundAnimationPath);
+              if (cached != null) {
+                return Lottie(
+                  composition: cached,
+                  fit: BoxFit.cover,
+                  animate: isActive,
+                  repeat: isActive,
+                );
+              }
+              return Lottie.asset(
+                data.backgroundAnimationPath!,
+                fit: BoxFit.cover,
+                animate: isActive,
+                repeat: isActive,
+              );
+            }(),
           ),
 
         Padding(
@@ -83,16 +93,27 @@ class CardPlanet extends StatelessWidget {
               if (data.animationPath != null)
                 Flexible(
                   flex: 20,
-                  child: Lottie.asset(
-                    data.animationPath!,
-                    height: MediaQuery.of(context).size.height * 0.45,
-                    fit: BoxFit.contain,
-                    composition: _compositionFor(data.animationPath),
-                    // قم بإيقاف التشغيل الافتراضي إذا تريد تحكم خاص
-                    animate: isActive,
-                    repeat: isActive,
-                    ),
-                  ),
+                  child: () {
+                    final cached = _compositionFor(data.animationPath);
+                    if (cached != null) {
+                      return Lottie(
+                        composition: cached,
+                        height: MediaQuery.of(context).size.height * 0.45,
+                        fit: BoxFit.contain,
+                        animate: isActive,
+                        repeat: isActive,
+                      );
+                    }
+                    return Lottie.asset(
+                      data.animationPath!,
+                      height: MediaQuery.of(context).size.height * 0.45,
+                      fit: BoxFit.contain,
+                      // قم بإيقاف التشغيل الافتراضي إذا تريد تحكم خاص
+                      animate: isActive,
+                      repeat: isActive,
+                    );
+                  }(),
+                ),
               if (data.image != null)
                 Flexible(flex: 20, child: Image(image: data.image!)),
               const Spacer(flex: 2),
@@ -242,9 +263,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
 
     try {
-      final asset = AssetLottie(path);
-      final byteData = await asset.loadBytes(rootBundle);
-      final composition = await LottieComposition.fromByteData(byteData);
+      final composition = await AssetLottie(
+        path,
+        bundle: rootBundle,
+      ).load();
       target[path] = composition;
     } catch (error, stackTrace) {
       if (kDebugMode) {

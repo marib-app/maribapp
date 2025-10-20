@@ -73,7 +73,7 @@ class _CachedApiResponse {
 
 class _ApiResponseCache {
   static const Duration _defaultEntryTtl = Duration(minutes: 5);
-  static const int _defaultMaxEntries = 128;
+  static const int _defaultMaxEntries = 50;
 
   static Duration _entryTtl = _defaultEntryTtl;
   static int _maxEntries = _defaultMaxEntries;

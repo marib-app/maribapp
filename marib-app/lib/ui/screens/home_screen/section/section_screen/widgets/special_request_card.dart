@@ -7,12 +7,7 @@ import 'package:marib/utils/screen_scaler.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 
-
 import 'package:marib/data/cubits/request_device/request_device_cubit.dart';
-
-
-
-
 
 // مكوّن البطاقة كما هو (نفس القياسات، الألوان، والخطوط)
 
@@ -142,7 +137,8 @@ class SpecialRequestCard extends StatelessWidget {
                             width: 60,
                             margin: const EdgeInsets.only(top: 12, bottom: 16),
                             decoration: BoxDecoration(
-                              color: context.color.textColorDark.withOpacity(0.2),
+                              color:
+                                  context.color.textColorDark.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(3),
                             ),
                           ),
@@ -170,7 +166,8 @@ class SpecialRequestCard extends StatelessWidget {
                                       style: TextStyle(
                                         fontSize: context.font.normal,
                                         height: 1.6,
-                                        color: context.color.textDefaultColor.withOpacity(0.8),
+                                        color: context.color.textDefaultColor
+                                            .withOpacity(0.8),
                                       ),
                                     ),
                                     const SizedBox(height: 20),
@@ -181,7 +178,9 @@ class SpecialRequestCard extends StatelessWidget {
                                       icon: Icons.title,
                                       rootContext: context,
                                       validator: (val) =>
-                                      val == null || val.isEmpty ? "مطلوب" : null,
+                                          val == null || val.isEmpty
+                                              ? "مطلوب"
+                                              : null,
                                     ),
                                     const SizedBox(height: 14),
 
@@ -192,7 +191,9 @@ class SpecialRequestCard extends StatelessWidget {
                                       rootContext: context,
                                       maxLines: 3,
                                       validator: (val) =>
-                                      val == null || val.isEmpty ? "مطلوب" : null,
+                                          val == null || val.isEmpty
+                                              ? "مطلوب"
+                                              : null,
                                     ),
                                     const SizedBox(height: 14),
 
@@ -212,7 +213,9 @@ class SpecialRequestCard extends StatelessWidget {
                                       rootContext: context,
                                       keyboardType: TextInputType.phone,
                                       validator: (val) =>
-                                      val == null || val.isEmpty ? "أدخل رقمك" : null,
+                                          val == null || val.isEmpty
+                                              ? "أدخل رقمك"
+                                              : null,
                                     ),
                                     const SizedBox(height: 14),
 
@@ -230,93 +233,105 @@ class SpecialRequestCard extends StatelessWidget {
                                       onTap: isSubmitting
                                           ? null
                                           : () async {
-                                        final picker = ImagePicker();
-                                        final file = await picker.pickImage(
-                                          source: ImageSource.gallery,
-                                        );
-                                        if (file != null) {
-                                          setState(() {
-                                            isUploading = true;
-                                            uploadSuccess = false;
-                                          });
-                                          // محاكاة رفع الصورة (2 ثواني) - للواجهة فقط
-                                          await Future.delayed(
-                                              const Duration(seconds: 2));
-                                          setState(() {
-                                            pickedFile = file;
-                                            isUploading = false;
-                                            uploadSuccess = true;
-                                          });
-                                        }
-                                      },
+                                              final picker = ImagePicker();
+                                              final file =
+                                                  await picker.pickImage(
+                                                source: ImageSource.gallery,
+                                              );
+                                              if (file != null) {
+                                                setState(() {
+                                                  isUploading = true;
+                                                  uploadSuccess = false;
+                                                });
+                                                // محاكاة رفع الصورة (2 ثواني) - للواجهة فقط
+                                                await Future.delayed(
+                                                    const Duration(seconds: 2));
+                                                setState(() {
+                                                  pickedFile = file;
+                                                  isUploading = false;
+                                                  uploadSuccess = true;
+                                                });
+                                              }
+                                            },
                                       child: Container(
                                         height: 150,
                                         width: double.infinity,
                                         decoration: BoxDecoration(
                                           border: Border.all(
-                                            color: context.color.textColorDark.withOpacity(0.2),
+                                            color: context.color.textColorDark
+                                                .withOpacity(0.2),
                                           ),
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
                                           color: context.color.secondaryColor,
                                         ),
                                         child: Center(
                                           child: isUploading
                                               ? Column(
-                                            mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                            children: const [
-                                              CircularProgressIndicator(),
-                                              SizedBox(height: 10),
-                                              Text("جاري رفع الصورة..."),
-                                            ],
-                                          )
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: const [
+                                                    CircularProgressIndicator(),
+                                                    SizedBox(height: 10),
+                                                    Text("جاري رفع الصورة..."),
+                                                  ],
+                                                )
                                               : uploadSuccess
-                                              ? Column(
-                                            mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                            children: const [
-                                              Icon(Icons.check_circle,
-                                                  color: Colors.green,
-                                                  size: 40),
-                                              SizedBox(height: 8),
-                                              Text("تم رفع الصورة بنجاح"),
-                                            ],
-                                          )
-                                              : pickedFile == null
-                                              ? Column(
-                                            mainAxisAlignment:
-                                            MainAxisAlignment
-                                                .center,
-                                            children: [
-                                              Icon(
-                                                Icons.add_a_photo_outlined,
-                                                size: 35,
-                                                color: context
-                                                    .color
-                                                    .textDefaultColor
-                                                    .withOpacity(0.7),
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                "اضغط لإضافة صورة",
-                                                style: TextStyle(
-                                                  color: context
-                                                      .color
-                                                      .textDefaultColor
-                                                      .withOpacity(0.7),
-                                                ),
-                                              ),
-                                            ],
-                                          )
-                                              : ClipRRect(
-                                            borderRadius:
-                                            BorderRadius.circular(12),
-                                            child: Image.file(
-                                              File(pickedFile!.path),
-                                              fit: BoxFit.cover,
-                                              width: double.infinity,
-                                            ),
-                                          ),
+                                                  ? Column(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .center,
+                                                      children: const [
+                                                        Icon(Icons.check_circle,
+                                                            color: Colors.green,
+                                                            size: 40),
+                                                        SizedBox(height: 8),
+                                                        Text(
+                                                            "تم رفع الصورة بنجاح"),
+                                                      ],
+                                                    )
+                                                  : pickedFile == null
+                                                      ? Column(
+                                                          mainAxisAlignment:
+                                                              MainAxisAlignment
+                                                                  .center,
+                                                          children: [
+                                                            Icon(
+                                                              Icons
+                                                                  .add_a_photo_outlined,
+                                                              size: 35,
+                                                              color: context
+                                                                  .color
+                                                                  .textDefaultColor
+                                                                  .withOpacity(
+                                                                      0.7),
+                                                            ),
+                                                            const SizedBox(
+                                                                height: 8),
+                                                            Text(
+                                                              "اضغط لإضافة صورة",
+                                                              style: TextStyle(
+                                                                color: context
+                                                                    .color
+                                                                    .textDefaultColor
+                                                                    .withOpacity(
+                                                                        0.7),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        )
+                                                      : ClipRRect(
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(12),
+                                                          child: Image.file(
+                                                            File(pickedFile!
+                                                                .path),
+                                                            fit: BoxFit.cover,
+                                                            width:
+                                                                double.infinity,
+                                                          ),
+                                                        ),
                                         ),
                                       ),
                                     ),
@@ -334,7 +349,8 @@ class SpecialRequestCard extends StatelessWidget {
                               color: context.color.secondaryColor,
                               border: Border(
                                 top: BorderSide(
-                                  color: context.color.textColorDark.withOpacity(0.1),
+                                  color: context.color.textColorDark
+                                      .withOpacity(0.1),
                                 ),
                               ),
                             ),
@@ -347,12 +363,15 @@ class SpecialRequestCard extends StatelessWidget {
                                         color: context.color.territoryColor,
                                         width: 1.5,
                                       ),
-                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 14),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(10),
                                       ),
                                     ),
-                                    onPressed: isSubmitting ? null : () => Navigator.pop(outerContext),
+                                    onPressed: isSubmitting
+                                        ? null
+                                        : () => Navigator.pop(outerContext),
                                     child: Text(
                                       "إلغاء",
                                       style: TextStyle(
@@ -366,9 +385,12 @@ class SpecialRequestCard extends StatelessWidget {
                                 Expanded(
                                   child: ElevatedButton.icon(
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: context.color.territoryColor,
-                                      foregroundColor: context.color.secondaryColor,
-                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      backgroundColor:
+                                          context.color.territoryColor,
+                                      foregroundColor:
+                                          context.color.secondaryColor,
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 14),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(10),
                                       ),
@@ -377,25 +399,35 @@ class SpecialRequestCard extends StatelessWidget {
                                     onPressed: isSubmitting
                                         ? null
                                         : () {
-                                      if (formKey.currentState?.validate() ?? false) {
-                                        ctx.read<RequestDeviceCubit>().requestDevice(
-                                          phone: phoneController.text.trim(),
-                                          subject: composeSubject(),
-                                          message: composeMessage(),
-                                          section: _resolveSectionForRequest(),
-                                        );
-                                      }
-                                    },
+                                            if (formKey.currentState
+                                                    ?.validate() ??
+                                                false) {
+                                              ctx
+                                                  .read<RequestDeviceCubit>()
+                                                  .requestDevice(
+                                                    phone: phoneController.text
+                                                        .trim(),
+                                                    subject: composeSubject(),
+                                                    message: composeMessage(),
+                                                    section:
+                                                        _resolveSectionForRequest(),
+                                                  );
+                                            }
+                                          },
                                     icon: isSubmitting
                                         ? const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(strokeWidth: 2.2),
-                                    )
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                                strokeWidth: 2.2),
+                                          )
                                         : const Icon(Icons.send),
                                     label: Text(
-                                      isSubmitting ? "جاري الإرسال..." : "إرسال الطلب",
-                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                      isSubmitting
+                                          ? "جاري الإرسال..."
+                                          : "إرسال الطلب",
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold),
                                     ),
                                   ),
                                 ),
@@ -467,5 +499,4 @@ class SpecialRequestCard extends StatelessWidget {
         return 'computer';
     }
   }
-
 }

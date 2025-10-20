@@ -1,5 +1,5 @@
-
 import 'package:marib/data/model/personalized/personalized_settings.dart';
+
 // import 'package:marib/firebase_options.dart';
 import 'package:marib/main.dart';
 import 'package:marib/ui/screens/widgets/errors/something_went_wrong.dart';
@@ -17,10 +17,8 @@ import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:marib/utils/performance/performance_monitor.dart';
 import 'package:path_provider/path_provider.dart';
 
-
 PersonalizedInterestSettings personalizedInterestSettings =
     PersonalizedInterestSettings.empty();
-
 
 void initApp() async {
   ///Note: this file's code is very necessary and sensitive if you change it, this might affect whole app , So change it carefully.
@@ -65,8 +63,6 @@ void initApp() async {
   GoogleMobileAds.instance.nativeAdFactoryRegistry
       .registerFactory('listTile', factoryExample);*/
 
-
-
   await Hive.initFlutter();
   await Hive.openBox(HiveKeys.userDetailsBox);
   await Hive.openBox(HiveKeys.authBox);
@@ -86,7 +82,3 @@ void initApp() async {
     },
   );
 }
-
-
-
-

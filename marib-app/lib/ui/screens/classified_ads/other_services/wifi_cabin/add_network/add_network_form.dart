@@ -27,8 +27,6 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
   @protected
   void handleCompletion(Map<String, dynamic> result);
 
-
-
   @override
   void dispose() {
     _nameController.dispose();
@@ -51,13 +49,13 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
       padding: effectivePadding,
       children: [
         if (showIntroTitle) ...[
-    Text(
-    'أضف شبكتك',
-    style: TextStyle(
-    color: color.textDefaultColor,
-    fontSize: 18,
-    fontWeight: FontWeight.bold,
-    ),
+          Text(
+            'أضف شبكتك',
+            style: TextStyle(
+              color: color.textDefaultColor,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 16),
         ],
@@ -69,7 +67,6 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
           ),
         ),
         const SizedBox(height: 16),
-
         WifiFilePickerTile(
           title: 'شعار الشبكة',
           placeholder: 'ارفع صورة الشعار',
@@ -86,7 +83,6 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
           onTap: () => _pickImage(isLogo: false),
         ),
         const SizedBox(height: 16),
-
         TextField(
           controller: _contactController,
           enabled: !_isSubmitting,
@@ -96,7 +92,8 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
           ],
           decoration: const InputDecoration(
             labelText: 'وسيلة التواصل',
-            hintText: 'أدخل رقمًا واتساب للتواصل ( خاص بالادارة لن يراه المستخدمين )',
+            hintText:
+                'أدخل رقمًا واتساب للتواصل ( خاص بالادارة لن يراه المستخدمين )',
           ),
         ),
         const SizedBox(height: 16),
@@ -115,9 +112,7 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
   Widget buildSubmitButton({
     EdgeInsetsGeometry padding = const EdgeInsets.all(16),
   }) {
-
     final palette = context.color;
-
 
     return Padding(
       padding: padding,
@@ -139,10 +134,9 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
           ).merge(
             ButtonStyle(
               overlayColor:
-              WidgetStatePropertyAll(Colors.white.withOpacity(.08)),
+                  WidgetStatePropertyAll(Colors.white.withOpacity(.08)),
             ),
           ),
-
           child: _isSubmitting
               ? const SizedBox(
                   width: 22,
@@ -176,12 +170,10 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
       return;
     }
 
-
     final MultipartFile? logoMultipart = _prepareMultipart(_logoFile!);
     final MultipartFile? loginMultipart =
         _prepareMultipart(_loginScreenshotFile!);
     if (logoMultipart == null || loginMultipart == null) {
-
       return;
     }
 
@@ -196,7 +188,6 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
       );
 
       final Map<String, dynamic> payload = _extractNetworkPayload(response);
-
 
       final Map<String, dynamic> result = <String, dynamic>{
         'name': payload['name'] ?? name,
@@ -214,10 +205,7 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
         'id': payload['id'] ?? response['id'],
         'networkId': payload['id'] ?? response['network_id'] ?? response['id'],
         'network': payload,
-
       }..removeWhere((key, value) => value == null);
-
-
 
       if (!mounted) {
         return;
@@ -306,8 +294,6 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
     return null;
   }
 
-
-
   void _showError(String message) {
     HelperUtils.showSnackBarMessage(
       context,
@@ -315,7 +301,6 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
       type: MessageType.error,
     );
   }
-
 
   @visibleForTesting
   void debugSetFiles({
@@ -327,8 +312,6 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
   }
 
   @visibleForTesting
-
-
   String? _stringify(dynamic value) {
     if (value == null) return null;
     final String text = value.toString().trim();
@@ -347,9 +330,9 @@ abstract class WifiAddNetworkFormState<T extends StatefulWidget>
   Map<String, dynamic> _extractNetworkPayload(dynamic response) {
     final dynamic rawData = response is Map<String, dynamic>
         ? response['data'] ??
-        response['network'] ??
-        response['request'] ??
-        response['payload']
+            response['network'] ??
+            response['request'] ??
+            response['payload']
         : null;
     if (rawData is Map<String, dynamic>) {
       return Map<String, dynamic>.from(rawData);
@@ -437,11 +420,9 @@ void debugUpdateAddNetworkFormState(
   State state, {
   PlatformFile? logo,
   PlatformFile? login,
-
 }) {
   if (state is WifiAddNetworkFormState) {
     state.debugSetFiles(logo: logo, login: login);
-
   }
 }
 

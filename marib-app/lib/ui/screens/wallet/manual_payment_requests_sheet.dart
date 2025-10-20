@@ -11,7 +11,6 @@ import 'package:marib/data/model/wallet/manual_payment_requests_summary.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/utils/helper_utils.dart';
 
-
 class ManualPaymentRequestsSheet extends StatefulWidget {
   const ManualPaymentRequestsSheet({super.key});
 
@@ -353,86 +352,81 @@ class _ManualPaymentTile extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () => _handleTap(context),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                    payment.manualReference ??
-                        payment.transactionIdentifier ??
-                        '#${payment.manualPaymentId ?? ''}',
-                    style: Theme.of(context).textTheme.titleMedium,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => _handleTap(context),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      payment.manualReference ??
+                          payment.transactionIdentifier ??
+                          '#${payment.manualPaymentId ?? ''}',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      payment.paymentStatus.capitalize(),
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: statusColor),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${payment.amount.toStringAsFixed(2)} ${payment.currency.toUpperCase()}',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'بوابة الدفع: ${payment.gatewayLabel}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'تاريخ الإنشاء: ${dateFormat.format(payment.createdAt.toLocal())}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              if (payment.statusMessage?.isNotEmpty == true)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text(
+                    payment.statusMessage!,
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+              if (payment.receiptUrl?.isNotEmpty == true)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
                   child: Text(
-                    payment.paymentStatus.capitalize(),
+                    payment.receiptUrl!,
                     style: Theme.of(context)
                         .textTheme
                         .bodySmall
-                        ?.copyWith(color: statusColor),
+                        ?.copyWith(color: context.color.primaryColor),
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${payment.amount.toStringAsFixed(2)} ${payment.currency.toUpperCase()}',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'بوابة الدفع: ${payment.gatewayLabel}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'تاريخ الإنشاء: ${dateFormat.format(payment.createdAt.toLocal())}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            if (payment.statusMessage?.isNotEmpty == true)
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Text(
-                  payment.statusMessage!,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ),
-    if (payment.receiptUrl?.isNotEmpty == true)
-    Padding(
-    padding: const EdgeInsets.only(top: 8.0),
-    child: Text(
-    payment.receiptUrl!,
-    style: Theme.of(context)
-        .textTheme
-        .bodySmall
-        ?.copyWith(color: context.color.primaryColor),
-    ),
-                ),
-              ],
-            ),
+            ],
+          ),
         ),
       ),
     );
   }
-
-
-
-
-
 
   void _handleTap(BuildContext context) {
     final destination = _ManualPaymentDestination.resolve(payment);
@@ -644,7 +638,6 @@ class _ManualPaymentDestination {
     return null;
   }
 }
-
 
 enum _ManualPaymentDestinationType { order, package, wallet, unknown }
 

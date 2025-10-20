@@ -1,4 +1,3 @@
-
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -15,20 +14,13 @@ import 'package:marib/utils/extensions/extensions.dart';
 
 import 'home_tab_view.dart';
 
-
-
 import 'slider_widget.dart';
 import 'smart_search_app_bar.dart';
 import 'package:marib/data/model/item_filter_model.dart'; // ← مهم
 
-
-
-
 ///==============================================================================
 ///                                   ItemsBodyBox
 ///==============================================================================
-
-
 
 class ItemsBodyBox extends StatefulWidget {
   final String categoryId;
@@ -39,11 +31,12 @@ class ItemsBodyBox extends StatefulWidget {
   final double bottomContentPadding;
   final bool showCartAction;
   final VoidCallback? onCartTap;
+
   // جديد: لا تبني شريط التصنيفات/السلايدر إلا إذا true
   final bool enableTopBar;
   final String? specialRequestSectionSlug;
 
-  final bool enableAdSlider;     // ← جديد
+  final bool enableAdSlider; // ← جديد
   final String? adInterfaceType; // ← جديد
 
   final bool enableSubcats;
@@ -51,8 +44,6 @@ class ItemsBodyBox extends StatefulWidget {
   final ItemFilterModel? filter;
   final ValueChanged<bool>? onLoadMore;
   final ValueChanged<bool>? onScrollDirectionChanged;
-
-
 
   const ItemsBodyBox({
     required this.categoryId,
@@ -65,14 +56,13 @@ class ItemsBodyBox extends StatefulWidget {
     this.enableTopBar = false, // ← افتراضي: مخفي
     this.enableAdSlider = false,
     this.adInterfaceType,
-    this.sortBy,                   // ← جديد
-    this.filter,                   // ← جديد
-    this.enableSubcats = true,     // ← جديد (بحالته الافتراضية)
+    this.sortBy, // ← جديد
+    this.filter, // ← جديد
+    this.enableSubcats = true, // ← جديد (بحالته الافتراضية)
     this.onLoadMore,
     this.specialRequestSectionSlug,
     this.onScrollDirectionChanged,
     this.bottomContentPadding = 0.0,
-
     super.key,
   });
 
@@ -81,23 +71,17 @@ class ItemsBodyBox extends StatefulWidget {
 }
 
 class _ItemsBodyBoxState extends State<ItemsBodyBox> {
-
-
-
   // ✅ نحسب الـ categoryId مرة واحدة
   late final int _catId = int.tryParse(widget.categoryId) ?? 0;
 
   // ✅ وضع العرض (grid/list) مع ValueNotifier لتقليل setState
-  final ValueNotifier<ViewMode> _viewMode = ValueNotifier<ViewMode>(ViewMode.grid);
+  final ValueNotifier<ViewMode> _viewMode =
+      ValueNotifier<ViewMode>(ViewMode.grid);
 
   // ✅ بحث آمن: debounce + token لمنع سباقات النتائج
   Timer? _debounce;
   int _searchToken = 0;
   String _lastExecutedQuery = "";
-
-
-
-
 
   @override
   void initState() {
@@ -137,33 +121,27 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
     } else {
       final int? selectedCategoryId = widget.selectedCategoryId.value;
       effectiveCategoryId =
-      (selectedCategoryId == null || selectedCategoryId <= 0)
-          ? _catId
-          : selectedCategoryId;
-
+          (selectedCategoryId == null || selectedCategoryId <= 0)
+              ? _catId
+              : selectedCategoryId;
     }
 
     final ItemFilterModel? sourceFilter =
-    (currentState is FetchItemSummarySuccess &&
-        currentState.filter != null)
-        ? currentState.filter
-        : widget.filter;
+        (currentState is FetchItemSummarySuccess && currentState.filter != null)
+            ? currentState.filter
+            : widget.filter;
 
     final ItemFilterModel? normalizedFilter = sourceFilter?.copyWith(
       categoryId: effectiveCategoryId.toString(),
     );
 
     fetchCubit
-
-
         .fetchSummaries(
       categoryId: effectiveCategoryId,
       search: q,
       sortBy: widget.sortBy,
       filter: normalizedFilter,
     )
-
-
         .whenComplete(() {
       if (!mounted || myToken != _searchToken) return;
     });
@@ -171,10 +149,8 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
 
   @override
   Widget build(BuildContext context) {
-
-
     final bool isLoading = context.select<FetchItemSummaryCubit, bool>(
-          (c) => c.state is FetchItemSummaryLoading,
+      (c) => c.state is FetchItemSummaryLoading,
     );
     final bool showTopPlaceholder = widget.showShimmer || !widget.enableTopBar;
 
@@ -192,9 +168,10 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
             builder: (context, mode, _) {
               final String? sanitizedCategoryName = widget.categoryName?.trim();
               final String effectiveAppBarTitle =
-              (sanitizedCategoryName != null && sanitizedCategoryName.isNotEmpty)
-                  ? sanitizedCategoryName
-                  : "realestate";
+                  (sanitizedCategoryName != null &&
+                          sanitizedCategoryName.isNotEmpty)
+                      ? sanitizedCategoryName
+                      : "realestate";
               return SmartSearchAppBar(
                 appBarTitle: effectiveAppBarTitle,
                 searchController: widget.searchController,
@@ -208,7 +185,8 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
                 },
                 viewMode: mode,
                 onCycleViewMode: () {
-                  _viewMode.value = (mode == ViewMode.grid) ? ViewMode.list : ViewMode.grid;
+                  _viewMode.value =
+                      (mode == ViewMode.grid) ? ViewMode.list : ViewMode.grid;
                 },
                 isLoading: isLoading,
                 showCartAction: widget.showCartAction,
@@ -217,7 +195,6 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
             },
           ),
         ),
-
 
         // ===== الجسم: شريط التصنيفات + المحتوى =====
 
@@ -243,31 +220,26 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
                             onCategorySelected: (id) {
                               final int rawId = id ?? 0;
                               final int effectiveId =
-                              rawId <= 0 ? _catId : rawId;
+                                  rawId <= 0 ? _catId : rawId;
                               if (widget.selectedCategoryId.value != rawId) {
                                 widget.selectedCategoryId.value = rawId;
-
-
                               }
-                              final query =
-                              widget.searchController.text.trim();
-                              final ItemFilterModel? baseFilter =
-                                  widget.filter;
+                              final query = widget.searchController.text.trim();
+                              final ItemFilterModel? baseFilter = widget.filter;
                               final ItemFilterModel? nextFilter =
-                              baseFilter == null
-                                  ? null
-                                  : baseFilter.copyWith(
-                                categoryId:
-                                effectiveId.toString(),
-                              );
+                                  baseFilter == null
+                                      ? null
+                                      : baseFilter.copyWith(
+                                          categoryId: effectiveId.toString(),
+                                        );
                               context
                                   .read<FetchItemSummaryCubit>()
                                   .fetchSummaries(
-                                categoryId: effectiveId,
-                                search: query,
-                                sortBy: widget.sortBy,
-                                filter: nextFilter,
-                              );
+                                    categoryId: effectiveId,
+                                    search: query,
+                                    sortBy: widget.sortBy,
+                                    filter: nextFilter,
+                                  );
                               _lastExecutedQuery = query;
                             },
                           ),
@@ -275,7 +247,7 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
                       },
                     )
                   else if (showTopPlaceholder)
-                    _buildTopBarShimmerExact(),  // ← شيمر مطابق تمامًا للهيكل
+                    _buildTopBarShimmerExact(), // ← شيمر مطابق تمامًا للهيكل
 
                   const SizedBox(height: 6), // ← نفس الفاصل في الحالتين
                 ],
@@ -300,21 +272,19 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
                   onScrollDirectionChanged: widget.onScrollDirectionChanged,
 
                   // ✨ المهم: مرر مفاتيح السلايدر الإعلاني
-                  enableAdSlider: widget.enableAdSlider,          // ← أضِف هذا
-                  adInterfaceType: widget.adInterfaceType,        // ← وأيضًا هذا
+                  enableAdSlider: widget.enableAdSlider,
+                  // ← أضِف هذا
+                  adInterfaceType: widget.adInterfaceType,
+                  // ← وأيضًا هذا
                   onLoadMore: widget.onLoadMore,
-
                 ),
               ),
             ),
-
           ],
         ),
-
       ),
     );
   }
-
 
   Widget _buildTopBarShimmerExact() {
     final theme = Theme.of(context);

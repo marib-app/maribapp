@@ -7,14 +7,14 @@ class CurrencyRatesState {
     required this.showWatchlistOnly,
     required Map<int, int> selectedHistoryRanges,
     required Map<int, String> currencyNotificationRegions,
-
     required this.defaultHistoryRangeDays,
   })  : rates = List<dynamic>.unmodifiable(rates),
         displayRates = List<dynamic>.unmodifiable(displayRates),
         watchlist = Set<int>.unmodifiable(watchlist),
-        selectedHistoryRanges = Map<int, int>.unmodifiable(selectedHistoryRanges),
+        selectedHistoryRanges =
+            Map<int, int>.unmodifiable(selectedHistoryRanges),
         currencyNotificationRegions =
-        Map<int, String>.unmodifiable(currencyNotificationRegions);
+            Map<int, String>.unmodifiable(currencyNotificationRegions);
 
   final List<dynamic> rates;
   final List<dynamic> displayRates;

@@ -42,8 +42,6 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:permission_handler/permission_handler.dart';
 
-
-
 class CurrencyScreen extends StatelessWidget {
   const CurrencyScreen({super.key});
 
@@ -64,7 +62,6 @@ class CurrencyScreen extends StatelessWidget {
           UserPreferenceRepository(),
           MetalRepository(),
         )..initialize(),
-
         child: const _CurrencyScreenLogic(),
       ),
     );
@@ -78,19 +75,17 @@ class _CurrencyScreenLogic extends StatefulWidget {
   State<_CurrencyScreenLogic> createState() => _CurrencyScreenLogicState();
 }
 
-
 @visibleForTesting
 class CurrencyScreenLogicTestHarness extends _CurrencyScreenLogic {
   const CurrencyScreenLogicTestHarness({super.key});
 }
 
-
 class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
     with TickerProviderStateMixin {
   late final TabController _tabController;
   final TextEditingController _amountController = TextEditingController();
-  final GlobalKey _shareBoundaryKey = GlobalKey(
-      debugLabel: 'currencyShareBoundary');
+  final GlobalKey _shareBoundaryKey =
+      GlobalKey(debugLabel: 'currencyShareBoundary');
 
   String _fromCurrency = '';
   String _toCurrency = '';
@@ -99,7 +94,6 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
   final Map<int, int> _selectedHistoryRanges = <int, int>{};
   int _defaultHistoryRange = 1;
   bool _isSharingRates = false;
-
 
   @override
   void initState() {
@@ -121,7 +115,8 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
     setState(() {
       _fromCurrency = value;
       if (_toCurrency == value && rates.length > 1) {
-        _toCurrency = _firstOtherCurrency(rates: rates, not: value) ?? _toCurrency;
+        _toCurrency =
+            _firstOtherCurrency(rates: rates, not: value) ?? _toCurrency;
       }
       _hasCalculated = false;
     });
@@ -168,13 +163,13 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
 
   Future<void> _onShareRates(CurrencyViewState viewState) async {
     final List<CurrencyRate> currencyRates =
-    viewState.displayRates.whereType<CurrencyRate>().toList(
-      growable: false,
-    );
+        viewState.displayRates.whereType<CurrencyRate>().toList(
+              growable: false,
+            );
     final List<MetalRate> inlineMetalRates =
-    viewState.displayRates.whereType<MetalRate>().toList(
-      growable: false,
-    );
+        viewState.displayRates.whereType<MetalRate>().toList(
+              growable: false,
+            );
 
     final List<MetalRate> goldRates = viewState.displayGoldRates;
     final List<MetalRate> silverRates = viewState.displaySilverRates;
@@ -187,7 +182,6 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
         goldRates.isEmpty &&
         silverRates.isEmpty &&
         otherMetalRates.isEmpty) {
-
       return;
     }
 
@@ -198,10 +192,9 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
     final NumberFormat priceFormat = NumberFormat('#,##0.000');
     final StringBuffer buffer = StringBuffer();
 
-
-
     if (currencyRates.isNotEmpty) {
-      final String applied = viewState.appliedGovernorateName ?? 'المتوسط الافتراضي';
+      final String applied =
+          viewState.appliedGovernorateName ?? 'المتوسط الافتراضي';
       final String? requested = viewState.requestedGovernorateName;
       final String locationLine = (requested != null && requested != applied)
           ? 'المحافظة: $applied (بديل عن $requested)'
@@ -218,10 +211,9 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
         final String buy = priceFormat.format(rate.buyPrice);
         final String? rawSource = rate.quoteSource;
         final String sourceLabel =
-        (rawSource != null && rawSource.trim().isNotEmpty)
-            ? rawSource.trim()
-            : 'غير متاح';
-
+            (rawSource != null && rawSource.trim().isNotEmpty)
+                ? rawSource.trim()
+                : 'غير متاح';
 
         buffer.writeln('💱 $name');
         buffer.writeln('بيع: $sell');
@@ -237,40 +229,37 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
       buffer.writeln('🟡 أسعار الذهب:');
       for (final MetalRate rate in goldRates) {
         final String sourceLabel =
-        rate.source != null && rate.source!.trim().isNotEmpty
-            ? rate.source!.trim()
-            : 'غير متاح';
+            rate.source != null && rate.source!.trim().isNotEmpty
+                ? rate.source!.trim()
+                : 'غير متاح';
         buffer.writeln('• ${rate.displayName}');
         buffer.writeln(
             'بيع: ${priceFormat.format(rate.sellPrice)} | شراء: ${priceFormat.format(rate.buyPrice)}');
         buffer.writeln('المصدر: $sourceLabel\n');
       }
-
     }
 
     if (silverRates.isNotEmpty) {
       buffer.writeln('⚪ أسعار الفضة:');
       for (final MetalRate rate in silverRates) {
         final String sourceLabel =
-        rate.source != null && rate.source!.trim().isNotEmpty
-            ? rate.source!.trim()
-            : 'غير متاح';
+            rate.source != null && rate.source!.trim().isNotEmpty
+                ? rate.source!.trim()
+                : 'غير متاح';
         buffer.writeln('• ${rate.displayName}');
         buffer.writeln(
             'بيع: ${priceFormat.format(rate.sellPrice)} | شراء: ${priceFormat.format(rate.buyPrice)}');
         buffer.writeln('المصدر: $sourceLabel\n');
-
       }
-
     }
 
     if (otherMetalRates.isNotEmpty) {
       buffer.writeln('⚙️ أسعار المعادن الأخرى:');
       for (final MetalRate rate in otherMetalRates) {
         final String sourceLabel =
-        rate.source != null && rate.source!.trim().isNotEmpty
-            ? rate.source!.trim()
-            : 'غير متاح';
+            rate.source != null && rate.source!.trim().isNotEmpty
+                ? rate.source!.trim()
+                : 'غير متاح';
         buffer.writeln('• ${rate.displayName}');
         buffer.writeln(
             'بيع: ${priceFormat.format(rate.sellPrice)} | شراء: ${priceFormat.format(rate.buyPrice)}');
@@ -284,7 +273,8 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
       buffer.writeln('');
     }
 
-    buffer.writeln('🔗 حمل تطبيق "مارب بين يديك" الآن للاستفادة من المزيد من الخدمات المميزة!');
+    buffer.writeln(
+        '🔗 حمل تطبيق "مارب بين يديك" الآن للاستفادة من المزيد من الخدمات المميزة!');
 
     final String shareText = buffer.toString().trim();
 
@@ -331,8 +321,8 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
         await Future<void>.delayed(const Duration(milliseconds: 50));
         await WidgetsBinding.instance.endOfFrame;
 
-        final RenderRepaintBoundary? boundary =
-        _shareBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+        final RenderRepaintBoundary? boundary = _shareBoundaryKey.currentContext
+            ?.findRenderObject() as RenderRepaintBoundary?;
 
         if (boundary == null) {
           debugPrint('Currency share boundary not found, sharing text only.');
@@ -341,12 +331,14 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
         }
 
         final double pixelRatio =
-        MediaQuery.of(context).devicePixelRatio.clamp(2.0, 4.0).toDouble();
+            MediaQuery.of(context).devicePixelRatio.clamp(2.0, 4.0).toDouble();
         final ui.Image image = await boundary.toImage(pixelRatio: pixelRatio);
-        final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+        final ByteData? byteData =
+            await image.toByteData(format: ui.ImageByteFormat.png);
 
         if (byteData == null) {
-          debugPrint('Currency share capture failed (no byteData), sharing text only.');
+          debugPrint(
+              'Currency share capture failed (no byteData), sharing text only.');
           await Share.share(shareText);
           return;
         }
@@ -370,13 +362,13 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
     }
   }
 
-
   Future<bool> _ensureSharePermission() async {
     if (!Platform.isAndroid && !Platform.isIOS) {
       return true;
     }
 
-    final Permission permission = Platform.isIOS ? Permission.photos : Permission.storage;
+    final Permission permission =
+        Platform.isIOS ? Permission.photos : Permission.storage;
     final PermissionStatus currentStatus = await permission.status;
 
     if (currentStatus.isGranted || currentStatus.isLimited) {
@@ -385,11 +377,7 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
 
     final PermissionStatus requestedStatus = await permission.request();
     return requestedStatus.isGranted || requestedStatus.isLimited;
-
   }
-
-
-
 
   void _onToggleWatchlistFilter(bool enabled) {
     context.read<CurrencyCubit>().toggleWatchlistFilter(enabled);
@@ -415,7 +403,6 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
     context.read<CurrencyCubit>().changeNotificationFrequency(value);
   }
 
-
   void _onNotificationRegionChanged(int currencyId, String? governorateCode) {
     context
         .read<CurrencyCubit>()
@@ -440,7 +427,6 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
     });
   }
 
-
   // ————— أدوات مساعدة داخلية —————
 
   String? _firstOtherCurrency({
@@ -451,7 +437,9 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
       final name = (r as dynamic).currencyName?.toString();
       if (name != null && name != not) return name;
     }
-    return rates.isNotEmpty ? (rates.first as dynamic).currencyName?.toString() : null;
+    return rates.isNotEmpty
+        ? (rates.first as dynamic).currencyName?.toString()
+        : null;
   }
 
   void _ensureInitialSelection(List<dynamic> rates) {
@@ -465,12 +453,6 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
       _toCurrency = rates.length > 1 ? _name(rates[1]) : _name(rates.first);
     }
   }
-
-
-
-
-
-
 
   void _onGovernorateChanged(String? code) {
     context.read<CurrencyCubit>().changeGovernorate(code);
@@ -491,10 +473,8 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
               lastUpdatedAt: null,
               watchlist: const <int>{},
               showWatchlistOnly: false,
-              selectedHistoryRanges:
-              Map<int, int>.from(_selectedHistoryRanges),
+              selectedHistoryRanges: Map<int, int>.from(_selectedHistoryRanges),
               currencyNotificationRegions: const <int, String>{},
-
               defaultHistoryRangeDays: _defaultHistoryRange,
             ),
             gold: GoldRatesState(
@@ -508,7 +488,6 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
               watchlist: const <int>{},
             ),
             metalsLastUpdatedAt: null,
-
             governorates: const [],
             selectedGovernorateCode: null,
             appliedGovernorateCode: null,
@@ -516,7 +495,6 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
             requestedGovernorateCode: null,
             requestedGovernorateName: null,
             usedFallback: false,
-
             amountText: _amountController.text,
             fromCurrency: _fromCurrency,
             toCurrency: _toCurrency,
@@ -524,10 +502,8 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
             hasCalculated: _hasCalculated,
             notificationFrequency: 'daily',
             notificationOptions: const <PreferenceOption>[],
-
             assetFilter: AssetFilterType.all,
             changeFilter: RateChangeFilter.all,
-
           );
         } else if (state is CurrencyError) {
           viewState = CurrencyViewState(
@@ -539,10 +515,8 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
               lastUpdatedAt: null,
               watchlist: const <int>{},
               showWatchlistOnly: false,
-              selectedHistoryRanges:
-              Map<int, int>.from(_selectedHistoryRanges),
+              selectedHistoryRanges: Map<int, int>.from(_selectedHistoryRanges),
               currencyNotificationRegions: const <int, String>{},
-
               defaultHistoryRangeDays: _defaultHistoryRange,
             ),
             gold: GoldRatesState(
@@ -576,19 +550,16 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
         } else if (state is CurrencySuccess) {
           final rates = state.currencyRates;
           final goldRates = state.metalRates
-
               .where((rate) => rate.isGold)
               .toList(growable: false);
           final silverRates = state.metalRates
               .where((rate) => rate.isSilver)
               .toList(growable: false);
 
-
           final Iterable<CurrencyRate> visibleCurrencies =
-          state.visibleCurrencyRates.whereType<CurrencyRate>();
+              state.visibleCurrencyRates.whereType<CurrencyRate>();
           final Iterable<MetalRate> visibleMetals =
-          state.visibleMetalRates.whereType<MetalRate>();
-
+              state.visibleMetalRates.whereType<MetalRate>();
 
           final List<dynamic> combinedDisplayRates;
           switch (state.assetFilter) {
@@ -625,13 +596,13 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
 
           final governorateOptions = state.governorates
               .map((gov) => {
-            'code': gov.code,
-            'name': gov.name,
-          })
+                    'code': gov.code,
+                    'name': gov.name,
+                  })
               .toList();
 
-          String? requestedCode =
-              state.requestedGovernorateCode ?? state.requestedGovernorate?.code;
+          String? requestedCode = state.requestedGovernorateCode ??
+              state.requestedGovernorate?.code;
           String? requestedName = state.requestedGovernorate?.name;
           if (requestedName == null && requestedCode != null) {
             try {
@@ -653,20 +624,15 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
 
           final selectedCode = requestedCode ?? appliedCode;
 
-
           final currencyState = CurrencyRatesState(
-
             rates: rates,
-
             displayRates: combinedDisplayRates,
             lastUpdatedAt: updatedAt,
             watchlist: state.preferences.currencyWatchlist,
             showWatchlistOnly: state.showWatchlistOnly,
-            selectedHistoryRanges:
-            Map<int, int>.from(_selectedHistoryRanges),
-            currencyNotificationRegions:
-            Map<int, String>.from(state.preferences.currencyNotificationRegions),
-
+            selectedHistoryRanges: Map<int, int>.from(_selectedHistoryRanges),
+            currencyNotificationRegions: Map<int, String>.from(
+                state.preferences.currencyNotificationRegions),
             defaultHistoryRangeDays: _defaultHistoryRange,
           );
 
@@ -688,10 +654,8 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
             gold: goldState,
             silver: silverState,
             metalsLastUpdatedAt: state.metalsLastUpdatedAt,
-
             governorates: governorateOptions,
             selectedGovernorateCode: selectedCode,
-
             appliedGovernorateCode: appliedCode,
             appliedGovernorateName: appliedName,
             requestedGovernorateCode: requestedCode,
@@ -717,10 +681,8 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
               lastUpdatedAt: null,
               watchlist: const <int>{},
               showWatchlistOnly: false,
-              selectedHistoryRanges:
-              Map<int, int>.from(_selectedHistoryRanges),
+              selectedHistoryRanges: Map<int, int>.from(_selectedHistoryRanges),
               currencyNotificationRegions: const <int, String>{},
-
               defaultHistoryRangeDays: _defaultHistoryRange,
             ),
             gold: GoldRatesState(

@@ -20,7 +20,8 @@ class RatesShareCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
-    final Color backgroundColor = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final Color backgroundColor =
+        isDark ? const Color(0xFF0F172A) : Colors.white;
     final Color textColor = isDark ? Colors.white : const Color(0xFF111827);
     final Color accentColor = theme.colorScheme.secondary;
 
@@ -84,21 +85,23 @@ class _RatesShareContent extends StatelessWidget {
       color: textColor,
     );
     final TextStyle sectionStyle = theme.textTheme.titleMedium?.copyWith(
-      fontWeight: FontWeight.w700,
-      color: accentColor,
-    ) ?? TextStyle(
-      fontWeight: FontWeight.w700,
-      fontSize: 18,
-      color: accentColor,
-    );
+          fontWeight: FontWeight.w700,
+          color: accentColor,
+        ) ??
+        TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: 18,
+          color: accentColor,
+        );
     final TextStyle bodyStyle = theme.textTheme.bodyMedium?.copyWith(
-      height: 1.4,
-      color: textColor,
-    ) ?? TextStyle(
-      height: 1.4,
-      color: textColor,
-      fontSize: 14,
-    );
+          height: 1.4,
+          color: textColor,
+        ) ??
+        TextStyle(
+          height: 1.4,
+          color: textColor,
+          fontSize: 14,
+        );
 
     final NumberFormat numberFormat = NumberFormat('#,##0.000');
 
@@ -122,18 +125,17 @@ class _RatesShareContent extends StatelessWidget {
     final List<CurrencyRate> currencyRates = viewState.displayRates
         .whereType<CurrencyRate>()
         .toList(growable: false);
-    final List<MetalRate> inlineMetalRates = viewState.displayRates
-        .whereType<MetalRate>()
-        .toList(growable: false);
+    final List<MetalRate> inlineMetalRates =
+        viewState.displayRates.whereType<MetalRate>().toList(growable: false);
 
     if (currencyRates.isNotEmpty) {
-
       sections
         ..add(Text('العملات', style: sectionStyle))
         ..add(const SizedBox(height: 8));
 
       for (final CurrencyRate rate in currencyRates) {
-        final String name = _readString(() => rate.currencyName) ?? 'عملة غير معروفة';
+        final String name =
+            _readString(() => rate.currencyName) ?? 'عملة غير معروفة';
         final String buy = _formatPrice(rate.buyPrice, numberFormat);
         final String sell = _formatPrice(rate.sellPrice, numberFormat);
         final String source = _normalizeSource(rate.quoteSource);
@@ -151,9 +153,9 @@ class _RatesShareContent extends StatelessWidget {
     }
 
     List<MetalRate> _mergeMetalRates(
-        List<MetalRate> existing,
-        Iterable<MetalRate> additional,
-        ) {
+      List<MetalRate> existing,
+      Iterable<MetalRate> additional,
+    ) {
       final Map<int, MetalRate> merged = <int, MetalRate>{};
       for (final MetalRate rate in existing) {
         merged[rate.id] = rate;
@@ -177,7 +179,7 @@ class _RatesShareContent extends StatelessWidget {
         sections.add(_ShareRateRow(
           title: rate.displayName,
           subtitle:
-          '${_metalGovernorateLabel(rate)} — شراء: ${_formatPrice(rate.buyPrice, numberFormat)} | بيع: ${_formatPrice(rate.sellPrice, numberFormat)}',
+              '${_metalGovernorateLabel(rate)} — شراء: ${_formatPrice(rate.buyPrice, numberFormat)} | بيع: ${_formatPrice(rate.sellPrice, numberFormat)}',
           source: 'المصدر: ${_normalizeSource(rate.source)}',
           textColor: textColor,
           bodyStyle: bodyStyle,
@@ -186,7 +188,6 @@ class _RatesShareContent extends StatelessWidget {
 
       addDivider();
     }
-
 
     final List<MetalRate> goldRates = _mergeMetalRates(
       viewState.displayGoldRates,
@@ -203,7 +204,6 @@ class _RatesShareContent extends StatelessWidget {
     addMetalSection('أسعار الذهب', goldRates);
     addMetalSection('أسعار الفضة', silverRates);
     addMetalSection('أسعار المعادن الأخرى', otherMetalRates);
-
 
     final DateTime? currencyUpdatedAt = viewState.lastUpdatedAt;
     if (currencyUpdatedAt != null) {
@@ -247,7 +247,6 @@ class _RatesShareContent extends StatelessWidget {
     return null;
   }
 
-
   String _normalizeSource(String? raw) {
     if (raw == null || raw.trim().isEmpty) {
       return 'غير متاح';
@@ -255,15 +254,13 @@ class _RatesShareContent extends StatelessWidget {
     return raw.trim();
   }
 
-
-
-
   String _metalGovernorateLabel(MetalRate rate) {
     final String? name = rate.quoteGovernorateName ??
         viewState.appliedGovernorateName ??
         viewState.requestedGovernorateName;
 
-    final String base = (name == null || name.isEmpty) ? 'المتوسط الوطني' : name;
+    final String base =
+        (name == null || name.isEmpty) ? 'المتوسط الوطني' : name;
 
     if (rate.quoteUsedFallback || rate.quoteIsDefault) {
       return '$base (افتراضي)';
@@ -271,8 +268,6 @@ class _RatesShareContent extends StatelessWidget {
 
     return base;
   }
-
-
 
   String _formatPrice(dynamic value, NumberFormat numberFormat) {
     if (value is num) {

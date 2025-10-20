@@ -15,12 +15,9 @@ class RatesTabView extends StatelessWidget {
     required this.onShareRates,
     required this.brand,
     required this.onToggleMetalWatchlist,
-
     required this.onToggleCurrencyWatchlist,
     required this.onSelectHistoryRange,
     required this.onNotificationRegionChanged,
-
-
   });
 
   final CurrencyViewState state;
@@ -30,14 +27,9 @@ class RatesTabView extends StatelessWidget {
   final void Function(int? currencyId, int days) onSelectHistoryRange;
   final void Function(int) onToggleMetalWatchlist;
   final void Function(int currencyId, String? regionCode)
-  onNotificationRegionChanged;
+      onNotificationRegionChanged;
 
-
-
-  bool _isDark(BuildContext c) =>
-      Theme
-          .of(c)
-          .brightness == Brightness.dark;
+  bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
 
   String? _resolveQuoteSource() {
     String? _extract(List<dynamic> rates) {
@@ -71,8 +63,6 @@ class RatesTabView extends StatelessWidget {
     return _extract(state.displayRates) ?? _extract(state.rates);
   }
 
-
-
   // ---------- Header (بسيط بدون إطارات ثقيلة) ----------
   Widget _header(BuildContext context) {
     final theme = Theme.of(context);
@@ -80,11 +70,11 @@ class RatesTabView extends StatelessWidget {
     final bool isStale = state.isDisplayRatesStale;
 
     final hasTime = state.lastUpdatedAt != null;
-    final dateStr = hasTime ? DateFormat('yyyy-MM-dd').format(
-        state.lastUpdatedAt!) : 'غير متاح';
-    final timeStr = hasTime
-        ? DateFormat('HH:mm').format(state.lastUpdatedAt!)
-        : '--:--';
+    final dateStr = hasTime
+        ? DateFormat('yyyy-MM-dd').format(state.lastUpdatedAt!)
+        : 'غير متاح';
+    final timeStr =
+        hasTime ? DateFormat('HH:mm').format(state.lastUpdatedAt!) : '--:--';
     final quoteSource = _resolveQuoteSource();
     final sourceLabel = quoteSource ?? 'غير متاح';
     return Padding(
@@ -104,12 +94,10 @@ class RatesTabView extends StatelessWidget {
                   ),
                 ),
               ),
-
               if (isStale) ...[
                 _StaleBadge(dark: _isDark(context)),
                 const SizedBox(width: 6),
               ],
-
               IconButton(
                 onPressed: onShareRates,
                 icon: const Icon(Icons.share_outlined),
@@ -146,7 +134,7 @@ class RatesTabView extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             'الأسعار المعروضة: '
-                '${state.appliedGovernorateName ?? 'المتوسط الافتراضي'}',
+            '${state.appliedGovernorateName ?? 'المتوسط الافتراضي'}',
             style: theme.textTheme.labelMedium?.copyWith(
               color: onBg.withOpacity(0.75),
               fontWeight: FontWeight.w600,
@@ -160,9 +148,7 @@ class RatesTabView extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
-                'تم استخدام أسعار ${state
-                    .appliedGovernorateName} بدلًا من ${state
-                    .requestedGovernorateName}.',
+                'تم استخدام أسعار ${state.appliedGovernorateName} بدلًا من ${state.requestedGovernorateName}.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: brand,
                   fontWeight: FontWeight.w600,
@@ -175,29 +161,22 @@ class RatesTabView extends StatelessWidget {
     );
   }
 
-
-
   // ---------- صفّ العملة (نظيف مع عرض بيع/شراء احترافي) ----------
   Widget _row(
-      BuildContext context, {
-
-
-        required String name,
-        required String sell,
-        required String buy,
-        String? iconUrl,
-        String? iconAlt,
-        required bool isWatchlisted,
-        required VoidCallback onToggleWatchlist,
-        CurrencyHistoryBundle? history,
-
-
-        required int selectedRangeDays,
-        required ValueChanged<int> onHistoryRangeSelected,
-        int? currencyId,
-        ValueChanged<String?>? onNotificationRegionChanged,
-
-      }) {
+    BuildContext context, {
+    required String name,
+    required String sell,
+    required String buy,
+    String? iconUrl,
+    String? iconAlt,
+    required bool isWatchlisted,
+    required VoidCallback onToggleWatchlist,
+    CurrencyHistoryBundle? history,
+    required int selectedRangeDays,
+    required ValueChanged<int> onHistoryRangeSelected,
+    int? currencyId,
+    ValueChanged<String?>? onNotificationRegionChanged,
+  }) {
     final theme = Theme.of(context);
     final onBg = _isDark(context) ? Colors.white : Colors.black;
     final divider = _isDark(context) ? Colors.white12 : Colors.black12;
@@ -209,9 +188,9 @@ class RatesTabView extends StatelessWidget {
     }
 
     final TextStyle nameStyle = theme.textTheme.titleSmall?.copyWith(
-      color: onBg,
-      fontWeight: FontWeight.w800,
-    ) ??
+          color: onBg,
+          fontWeight: FontWeight.w800,
+        ) ??
         TextStyle(color: onBg, fontWeight: FontWeight.w800, fontSize: 15.5);
 
     Widget fallbackIcon() {
@@ -259,7 +238,7 @@ class RatesTabView extends StatelessWidget {
                     valueColor: AlwaysStoppedAnimation<Color>(brand),
                     value: progress.expectedTotalBytes != null
                         ? progress.cumulativeBytesLoaded /
-                        (progress.expectedTotalBytes ?? 1)
+                            (progress.expectedTotalBytes ?? 1)
                         : null,
                   ),
                 ),
@@ -279,9 +258,9 @@ class RatesTabView extends StatelessWidget {
           Text(
             label,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: onBg.withOpacity(0.6),
-              fontWeight: FontWeight.w700,
-            ) ??
+                  color: onBg.withOpacity(0.6),
+                  fontWeight: FontWeight.w700,
+                ) ??
                 TextStyle(
                   color: onBg.withOpacity(0.6),
                   fontWeight: FontWeight.w700,
@@ -295,10 +274,10 @@ class RatesTabView extends StatelessWidget {
               Text(
                 _fmt(value),
                 style: theme.textTheme.titleSmall?.copyWith(
-                  color: accent,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.2,
-                ) ??
+                      color: accent,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.2,
+                    ) ??
                     TextStyle(
                       color: accent,
                       fontWeight: FontWeight.w900,
@@ -312,16 +291,14 @@ class RatesTabView extends StatelessWidget {
       );
     }
 
-
     final NumberFormat changeFormatter = NumberFormat('+#0.##;-#0.##;0', 'en');
     final NumberFormat highLowFormatter = NumberFormat('#,##0.###', 'en');
 
     final Set<int> availableRanges = history?.ranges.keys
-        .map((dynamic key) => key is int
-        ? key
-        : int.tryParse(key.toString()))
-        .whereType<int>()
-        .toSet() ??
+            .map((dynamic key) =>
+                key is int ? key : int.tryParse(key.toString()))
+            .whereType<int>()
+            .toSet() ??
         <int>{};
 
     int effectiveRangeDays = selectedRangeDays;
@@ -342,16 +319,15 @@ class RatesTabView extends StatelessWidget {
         }
       }
       effectiveRangeDays = resolvedFallback ?? availableRanges.first;
-
     }
 
     final CurrencyHistoryRange? selectedRange =
-    history?.range(effectiveRangeDays);
+        history?.range(effectiveRangeDays);
     final CurrencyHistorySummary? summary = selectedRange?.summary;
     final List<double> sparklineValues = selectedRange?.points
-        .map((CurrencyHistoryPoint point) => point.sellPrice)
-        .where((double value) => value.isFinite)
-        .toList(growable: false) ??
+            .map((CurrencyHistoryPoint point) => point.sellPrice)
+            .where((double value) => value.isFinite)
+            .toList(growable: false) ??
         <double>[];
 
     final bool hasSparkline = sparklineValues.length >= 2;
@@ -362,18 +338,18 @@ class RatesTabView extends StatelessWidget {
     final Color trendColor = summary == null
         ? neutralColor
         : summary.isNegativeTrend
-        ? negativeColor
-        : summary.isPositiveTrend
-        ? positiveColor
-        : neutralColor;
+            ? negativeColor
+            : summary.isPositiveTrend
+                ? positiveColor
+                : neutralColor;
 
     final IconData trendIcon = summary == null
         ? Icons.trending_flat
         : summary.isNegativeTrend
-        ? Icons.arrow_downward_rounded
-        : summary.isPositiveTrend
-        ? Icons.arrow_upward_rounded
-        : Icons.trending_flat;
+            ? Icons.arrow_downward_rounded
+            : summary.isPositiveTrend
+                ? Icons.arrow_upward_rounded
+                : Icons.trending_flat;
 
     final String changeText = summary?.changeSellPercent != null
         ? '${changeFormatter.format(summary!.changeSellPercent)}%'
@@ -386,13 +362,11 @@ class RatesTabView extends StatelessWidget {
         ? highLowFormatter.format(summary!.lowSell)
         : null;
 
-
     const String notificationDefaultValue = '_default_';
     final Map<int, String> notificationRegions =
         state.currency.currencyNotificationRegions;
-    final String? storedNotification = currencyId == null
-        ? null
-        : notificationRegions[currencyId];
+    final String? storedNotification =
+        currencyId == null ? null : notificationRegions[currencyId];
     String notificationSelection = notificationDefaultValue;
     if (storedNotification != null && storedNotification.trim().isNotEmpty) {
       notificationSelection = storedNotification.trim();
@@ -406,8 +380,7 @@ class RatesTabView extends StatelessWidget {
         return null;
       }
 
-      final List<DropdownMenuItem<String>> items =
-      <DropdownMenuItem<String>>[
+      final List<DropdownMenuItem<String>> items = <DropdownMenuItem<String>>[
         const DropdownMenuItem<String>(
           value: notificationDefaultValue,
           child: Text(
@@ -427,8 +400,7 @@ class RatesTabView extends StatelessWidget {
           continue;
         }
         final String? rawName = gov['name'];
-        final String name =
-        (rawName != null && rawName.trim().isNotEmpty)
+        final String name = (rawName != null && rawName.trim().isNotEmpty)
             ? rawName.trim()
             : trimmedCode;
         items.add(
@@ -467,9 +439,9 @@ class RatesTabView extends StatelessWidget {
             Text(
               'تنبيهات المحافظة',
               style: theme.textTheme.labelSmall?.copyWith(
-                color: onBg.withOpacity(0.6),
-                fontWeight: FontWeight.w700,
-              ) ??
+                    color: onBg.withOpacity(0.6),
+                    fontWeight: FontWeight.w700,
+                  ) ??
                   TextStyle(
                     color: onBg.withOpacity(0.6),
                     fontSize: 11,
@@ -498,7 +470,7 @@ class RatesTabView extends StatelessWidget {
                       return;
                     }
                     final String? normalized =
-                    value == notificationDefaultValue ? null : value;
+                        value == notificationDefaultValue ? null : value;
                     onNotificationRegionChanged(normalized);
                   },
                   items: items,
@@ -509,7 +481,6 @@ class RatesTabView extends StatelessWidget {
         ),
       );
     }
-
 
     Widget buildRangeSelector() {
       return _HistoryRangeChips(
@@ -522,7 +493,6 @@ class RatesTabView extends StatelessWidget {
       );
     }
 
-
     final Widget star = IconButton(
       onPressed: onToggleWatchlist,
       icon: Icon(
@@ -532,10 +502,10 @@ class RatesTabView extends StatelessWidget {
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints.tightFor(width: 40, height: 40),
       splashRadius: 20,
-      tooltip:
-      isWatchlisted ? 'إزالة من قائمة المراقبة' : 'إضافة إلى قائمة المراقبة',
+      tooltip: isWatchlisted
+          ? 'إزالة من قائمة المراقبة'
+          : 'إضافة إلى قائمة المراقبة',
     );
-
 
     return Material(
       color: Colors.transparent,
@@ -553,7 +523,7 @@ class RatesTabView extends StatelessWidget {
               final bool narrow = cons.maxWidth < 360;
 
               final Widget? notificationSelector =
-              buildNotificationSelector(cons.maxWidth);
+                  buildNotificationSelector(cons.maxWidth);
 
               final Widget leading = Row(
                 mainAxisSize: MainAxisSize.min,
@@ -577,26 +547,26 @@ class RatesTabView extends StatelessWidget {
 
               final Widget priceContent = narrow
                   ? Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  sellBlock,
-                  const SizedBox(height: 6),
-                  buyBlock,
-                ],
-              )
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        sellBlock,
+                        const SizedBox(height: 6),
+                        buyBlock,
+                      ],
+                    )
                   : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  sellBlock,
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 10),
-                    width: 1,
-                    height: 22,
-                    color: onBg.withOpacity(0.12),
-                  ),
-                  buyBlock,
-                ],
-              );
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        sellBlock,
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 10),
+                          width: 1,
+                          height: 22,
+                          color: onBg.withOpacity(0.12),
+                        ),
+                        buyBlock,
+                      ],
+                    );
 
               Widget buildHistorySection(double availableWidth) {
                 final List<Widget> historyChildren = <Widget>[
@@ -645,18 +615,16 @@ class RatesTabView extends StatelessWidget {
                       child: Text(
                         'لا يوجد سجل',
                         style: theme.textTheme.labelSmall?.copyWith(
-                          color: onBg.withOpacity(0.5),
-                          fontWeight: FontWeight.w600,
-                        ) ??
+                              color: onBg.withOpacity(0.5),
+                              fontWeight: FontWeight.w600,
+                            ) ??
                             TextStyle(
                               color: onBg.withOpacity(0.5),
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
                       ),
-
                     ),
-
                   );
                 }
 
@@ -664,7 +632,7 @@ class RatesTabView extends StatelessWidget {
                 historyChildren.add(
                   Container(
                     padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: trendColor.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(12),
@@ -677,9 +645,9 @@ class RatesTabView extends StatelessWidget {
                         Text(
                           changeText,
                           style: theme.textTheme.labelSmall?.copyWith(
-                            color: trendColor,
-                            fontWeight: FontWeight.w700,
-                          ) ??
+                                color: trendColor,
+                                fontWeight: FontWeight.w700,
+                              ) ??
                               TextStyle(
                                 color: trendColor,
                                 fontWeight: FontWeight.w700,
@@ -697,9 +665,9 @@ class RatesTabView extends StatelessWidget {
                     Text(
                       'أعلى: $highText | أدنى: $lowText',
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: onBg.withOpacity(0.6),
-                        fontWeight: FontWeight.w600,
-                      ) ??
+                            color: onBg.withOpacity(0.6),
+                            fontWeight: FontWeight.w600,
+                          ) ??
                           TextStyle(
                             color: onBg.withOpacity(0.6),
                             fontSize: 11,
@@ -729,12 +697,10 @@ class RatesTabView extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     priceContent,
-
                     if (notificationSelector != null) ...[
                       const SizedBox(height: 12),
                       notificationSelector,
                     ],
-
                     const SizedBox(height: 12),
                     buildHistorySection(cons.maxWidth),
                   ],
@@ -742,7 +708,6 @@ class RatesTabView extends StatelessWidget {
               }
 
               return Row(
-
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(
@@ -766,7 +731,6 @@ class RatesTabView extends StatelessWidget {
                               buildHistorySection(160),
                             ],
                           ),
-
                         ),
                       ],
                     ),
@@ -781,14 +745,12 @@ class RatesTabView extends StatelessWidget {
     );
   }
 
-
-
   Widget _metalRow(
-      BuildContext context, {
-        required MetalRate rate,
-        required bool isWatchlisted,
-        required VoidCallback onToggleWatchlist,
-      }) {
+    BuildContext context, {
+    required MetalRate rate,
+    required bool isWatchlisted,
+    required VoidCallback onToggleWatchlist,
+  }) {
     final theme = Theme.of(context);
     final onBg = _isDark(context) ? Colors.white : Colors.black;
     final divider = _isDark(context) ? Colors.white12 : Colors.black12;
@@ -810,8 +772,9 @@ class RatesTabView extends StatelessWidget {
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints.tightFor(width: 40, height: 40),
       splashRadius: 20,
-      tooltip:
-      isWatchlisted ? 'إزالة من قائمة المراقبة' : 'إضافة إلى قائمة المراقبة',
+      tooltip: isWatchlisted
+          ? 'إزالة من قائمة المراقبة'
+          : 'إضافة إلى قائمة المراقبة',
     );
 
     return Material(
@@ -907,9 +870,6 @@ class RatesTabView extends StatelessWidget {
     );
   }
 
-
-
-
   // ---------- بطاقة الملاحظة (احتفظنا بها كما أعجبتك) ----------
   Widget _noteCard(BuildContext context) {
     final theme = Theme.of(context);
@@ -987,7 +947,6 @@ class RatesTabView extends StatelessWidget {
     if (rates.isEmpty) {
       final onBg = _isDark(context) ? Colors.white : Colors.black;
       return ListView(
-
         children: [
           _header(context),
           Padding(
@@ -997,15 +956,10 @@ class RatesTabView extends StatelessWidget {
                 state.showWatchlistOnly
                     ? 'قائمة المراقبة فارغة حاليًا'
                     : 'لا توجد بيانات حالياً',
-
-                style: Theme
-                    .of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(
-                  color: onBg,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: onBg,
+                      fontWeight: FontWeight.w700,
+                    ),
               ),
             ),
           ),
@@ -1015,13 +969,11 @@ class RatesTabView extends StatelessWidget {
     }
 
     return ListView.builder(
-
       itemCount: rates.length + 2, // + header + note
       itemBuilder: (ctx, i) {
         if (i == 0) return _header(context);
         if (i == rates.length + 1) return _noteCard(context);
         final dynamic r = rates[i - 1];
-
 
         if (r is CurrencyRate) {
           final bool isWatchlisted = state.currencyWatchlist.contains(r.id);
@@ -1070,12 +1022,10 @@ class RatesTabView extends StatelessWidget {
           selectedRangeDays: state.historyRangeForCurrency(currencyId),
           onHistoryRangeSelected: (int days) =>
               onSelectHistoryRange(currencyId, days),
-
           currencyId: currencyId,
           onNotificationRegionChanged: currencyId == null
               ? null
-              : (String? code) =>
-              onNotificationRegionChanged(currencyId, code),
+              : (String? code) => onNotificationRegionChanged(currencyId, code),
         );
       },
     );
@@ -1093,12 +1043,12 @@ class _StaleBadge extends StatelessWidget {
     final Color background = dark
         ? Colors.orange.shade900.withOpacity(0.55)
         : Colors.orange.shade100;
-    final Color foreground = dark
-        ? Colors.orange.shade200
-        : Colors.orange.shade800;
+    final Color foreground =
+        dark ? Colors.orange.shade200 : Colors.orange.shade800;
 
     return Tooltip(
-      message: 'تم رصد أن البيانات المعروضة قديمة، وسيتم تحديثها عند توفر مصادر أحدث.',
+      message:
+          'تم رصد أن البيانات المعروضة قديمة، وسيتم تحديثها عند توفر مصادر أحدث.',
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
@@ -1117,9 +1067,9 @@ class _StaleBadge extends StatelessWidget {
             Text(
               'قديم',
               style: theme.textTheme.labelSmall?.copyWith(
-                color: foreground,
-                fontWeight: FontWeight.w700,
-              ) ??
+                    color: foreground,
+                    fontWeight: FontWeight.w700,
+                  ) ??
                   TextStyle(
                     color: foreground,
                     fontWeight: FontWeight.w700,
@@ -1162,24 +1112,23 @@ class _HistoryRangeChips extends StatelessWidget {
           final bool enabled = availableRanges.contains(days);
           final bool selected = enabled && effectiveRangeDays == days;
           final String label = days == 1 ? 'آخر يوم' : 'آخر $days أيام';
-          final Color labelColor = selected
-              ? Colors.white
-              : onBg.withOpacity(enabled ? 0.85 : 0.35);
+          final Color labelColor =
+              selected ? Colors.white : onBg.withOpacity(enabled ? 0.85 : 0.35);
 
           return ChoiceChip(
             label: Text(label),
             selected: selected,
             onSelected: enabled
                 ? (bool value) {
-              if (value) {
-                onHistoryRangeSelected(days);
-              }
-            }
+                    if (value) {
+                      onHistoryRangeSelected(days);
+                    }
+                  }
                 : null,
             labelStyle: textTheme.labelSmall?.copyWith(
-              color: labelColor,
-              fontWeight: FontWeight.w700,
-            ) ??
+                  color: labelColor,
+                  fontWeight: FontWeight.w700,
+                ) ??
                 TextStyle(
                   color: labelColor,
                   fontWeight: FontWeight.w700,
@@ -1202,9 +1151,6 @@ class _HistoryRangeChips extends StatelessWidget {
   }
 }
 
-
-
-
 class _MiniTrendChart extends StatelessWidget {
   const _MiniTrendChart({required this.values, required this.color});
 
@@ -1218,10 +1164,7 @@ class _MiniTrendChart extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: Theme
-                .of(context)
-                .dividerColor
-                .withOpacity(0.12),
+            color: Theme.of(context).dividerColor.withOpacity(0.12),
           ),
         ),
       );
@@ -1231,9 +1174,7 @@ class _MiniTrendChart extends StatelessWidget {
       painter: _MiniTrendChartPainter(
         values: values,
         color: color,
-        background: Theme
-            .of(context)
-            .canvasColor,
+        background: Theme.of(context).canvasColor,
       ),
     );
   }
@@ -1256,17 +1197,12 @@ class _MiniTrendChartPainter extends CustomPainter {
       return;
     }
 
-    final double minValue = values.reduce((double a, double b) =>
-    a < b
-        ? a
-        : b);
-    final double maxValue = values.reduce((double a, double b) =>
-    a > b
-        ? a
-        : b);
-    final double range = (maxValue - minValue).abs() < 0.0001
-        ? 1
-        : (maxValue - minValue);
+    final double minValue =
+        values.reduce((double a, double b) => a < b ? a : b);
+    final double maxValue =
+        values.reduce((double a, double b) => a > b ? a : b);
+    final double range =
+        (maxValue - minValue).abs() < 0.0001 ? 1 : (maxValue - minValue);
 
     final Path path = Path();
     for (int i = 0; i < values.length; i++) {
@@ -1289,7 +1225,8 @@ class _MiniTrendChartPainter extends CustomPainter {
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
 
     final Path areaPath = Path.from(path)
-      ..lineTo(size.width, size.height)..lineTo(0, size.height)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
       ..close();
 
     canvas.drawPath(areaPath, fillPaint);
@@ -1309,9 +1246,6 @@ class _MiniTrendChartPainter extends CustomPainter {
         oldDelegate.color != color;
   }
 }
-
-
-
 
 // ===================================================================
 // تبويب 2: التحويل — تخطيط رأسي + زر تبادل في المنتصف (بدوال داخلية)

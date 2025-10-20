@@ -11,23 +11,19 @@ import 'package:marib/utils/extensions/extensions.dart';
 
 import 'dart:ui' as ui show TextDirection;
 
-
 import 'dart:ui';
-
 
 import 'package:flutter/widgets.dart';
 
-
-
-
-
 // الواجهة الجديدة
-
 
 // ⚠️ الملف المنطقي (مثلاً يُعرّف ViewMode) بنفس مكانه القديم:
 import 'package:marib/ui/screens/item/items_list.dart';
-enum ViewMode { list, grid, }
 
+enum ViewMode {
+  list,
+  grid,
+}
 
 /// =============================================================
 /// AppBar ذكي + اقتراحات بحث متحركة.
@@ -111,7 +107,8 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
   void _onTextChanged() {
     _showClear.value = widget.searchController.text.isNotEmpty;
 
-    final shouldPause = _focusNode.hasFocus || widget.searchController.text.isNotEmpty;
+    final shouldPause =
+        _focusNode.hasFocus || widget.searchController.text.isNotEmpty;
     if (shouldPause) {
       _hintTimer?.cancel();
     } else {
@@ -134,8 +131,6 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
     });
   }
 
-
-
   String _nextLabel(ViewMode m) {
     switch (m) {
       case ViewMode.list:
@@ -144,7 +139,6 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
         return 'الوضع التالي: شبكة (عمودان)';
     }
   }
-
 
   Widget _viewModeIcon(ViewMode m, Color color) {
     switch (m) {
@@ -157,7 +151,8 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
 
   @override
   Widget build(BuildContext context) {
-    final showHintOverlay = !_focusNode.hasFocus && widget.searchController.text.isEmpty;
+    final showHintOverlay =
+        !_focusNode.hasFocus && widget.searchController.text.isEmpty;
 
     return AppBar(
       toolbarHeight: widget.toolbarH,
@@ -170,79 +165,80 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
         tooltip: 'رجوع',
       ),
       titleSpacing: 0,
-        title: LayoutBuilder(
-            builder: (context, constraints) {
-              double maxWidth = constraints.maxWidth;
-              if (widget.showCartAction && maxWidth.isFinite) {
-                maxWidth = maxWidth - 56;
-                if (maxWidth < 0) {
-                  maxWidth = 0;
-                }
-              }
+      title: LayoutBuilder(
+        builder: (context, constraints) {
+          double maxWidth = constraints.maxWidth;
+          if (widget.showCartAction && maxWidth.isFinite) {
+            maxWidth = maxWidth - 56;
+            if (maxWidth < 0) {
+              maxWidth = 0;
+            }
+          }
 
-              return ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: maxWidth),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  curve: Curves.easeOut,
-                  height: 50,
-                  margin: EdgeInsets.symmetric(
-                    vertical: 6,
-                    horizontal: widget.showCartAction ? 4 : 0,
-                  ),
-                  decoration: BoxDecoration(
-                    color: context.color.primaryColor,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: _focusNode.hasFocus
-                          ? context.color.borderColor.darken(20)
-                          : context.color.borderColor.darken(35),
-                      width: _focusNode.hasFocus ? 1.2 : 1,
-                    ),
-                    boxShadow: _focusNode.hasFocus
-                        ? [
-                      BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      )
-                    ]
-                        : null,
-                  ),
-                  child: Row(
+          return ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxWidth),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+              height: 50,
+              margin: EdgeInsets.symmetric(
+                vertical: 6,
+                horizontal: widget.showCartAction ? 4 : 0,
+              ),
+              decoration: BoxDecoration(
+                color: context.color.primaryColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _focusNode.hasFocus
+                      ? context.color.borderColor.darken(20)
+                      : context.color.borderColor.darken(35),
+                  width: _focusNode.hasFocus ? 1.2 : 1,
+                ),
+                boxShadow: _focusNode.hasFocus
+                    ? [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        )
+                      ]
+                    : null,
+              ),
+              child: Row(
                 children: [
-                      const SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Stack(
                       alignment: AlignmentDirectional.centerStart,
                       children: [
-                      TextField(
-                      controller: widget.searchController,
-                      focusNode: _focusNode,
-                      textInputAction: TextInputAction.search,
-                      textAlign: TextAlign.start,
-                      textDirection: TextDirection.rtl,
-                      onTap: widget.onSearchTap,
-                      onEditingComplete: widget.onSearchEditingComplete,
-                      onChanged: widget.onSearchChanged,
-                      textAlignVertical: TextAlignVertical.center,
-                      style: TextStyle(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white
-                            : Colors.black87,
-                      ),
-                      cursorColor: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white
-                          : Colors.black87,
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsetsDirectional.only(
-                          start: 12,
-                          end: 12,
-                          top: 12,
-                          bottom: 12,
-
+                        TextField(
+                          controller: widget.searchController,
+                          focusNode: _focusNode,
+                          textInputAction: TextInputAction.search,
+                          textAlign: TextAlign.start,
+                          textDirection: TextDirection.rtl,
+                          onTap: widget.onSearchTap,
+                          onEditingComplete: widget.onSearchEditingComplete,
+                          onChanged: widget.onSearchChanged,
+                          textAlignVertical: TextAlignVertical.center,
+                          style: TextStyle(
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : Colors.black87,
+                          ),
+                          cursorColor:
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white
+                                  : Colors.black87,
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: EdgeInsetsDirectional.only(
+                              start: 12,
+                              end: 12,
+                              top: 12,
+                              bottom: 12,
                             ),
                           ),
                         ),
@@ -251,7 +247,8 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
                             child: IgnorePointer(
                               ignoring: true,
                               child: Padding(
-                                padding: const EdgeInsetsDirectional.symmetric(horizontal: 12),
+                                padding: const EdgeInsetsDirectional.symmetric(
+                                    horizontal: 12),
                                 child: AnimatedSwitcher(
                                   duration: const Duration(milliseconds: 320),
                                   child: _MarqueeHint(
@@ -261,7 +258,8 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
                                       color: context.color.textLightColor,
                                       fontSize: 12.5,
                                     ),
-                                    maxWidth: MediaQuery.of(context).size.width - 80,
+                                    maxWidth:
+                                        MediaQuery.of(context).size.width - 80,
                                     speedPxPerSecond: widget.marqueeSpeedPxPerS,
                                     isActive: showHintOverlay,
                                   ),
@@ -294,8 +292,8 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
                 ],
               ),
             ),
-              );
-            },
+          );
+        },
       ),
       actions: [
         if (widget.showCartAction) ...[
@@ -320,10 +318,12 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
             },
             icon: AnimatedSwitcher(
               duration: const Duration(milliseconds: 180),
-              transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+              transitionBuilder: (child, anim) =>
+                  ScaleTransition(scale: anim, child: child),
               child: KeyedSubtree(
                 key: ValueKey<ViewMode>(widget.viewMode),
-                child: _viewModeIcon(widget.viewMode, context.color.territoryColor),
+                child: _viewModeIcon(
+                    widget.viewMode, context.color.territoryColor),
               ),
             ),
           ),
@@ -345,17 +345,6 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
 
 // تحريك النص الطويل داخل طبقة الاقتراح
 class _MarqueeHint extends StatefulWidget {
@@ -381,7 +370,6 @@ class _MarqueeHint extends StatefulWidget {
     this.autoBounceOnTight = true,
     this.tightThresholdPx = 36,
     this.isActive = true,
-
   });
 
   @override
@@ -395,7 +383,7 @@ class _MarqueeHintState extends State<_MarqueeHint>
 
   double _overflowPx = 0;
   double _iconW = 18;
-  double _gapW  = 8;
+  double _gapW = 8;
 
   bool _useBounce = false;
 
@@ -412,11 +400,14 @@ class _MarqueeHintState extends State<_MarqueeHint>
 
   void _setup() {
     if (widget.maxWidth <= 220) {
-      _iconW = 16; _gapW = 6;
+      _iconW = 16;
+      _gapW = 6;
     } else if (widget.maxWidth <= 300) {
-      _iconW = 18; _gapW = 8;
+      _iconW = 18;
+      _gapW = 8;
     } else {
-      _iconW = 20; _gapW = 10;
+      _iconW = 20;
+      _gapW = 10;
     }
 
     final tp = TextPainter(
@@ -425,7 +416,8 @@ class _MarqueeHintState extends State<_MarqueeHint>
       textDirection: ui.TextDirection.rtl,
     )..layout(maxWidth: double.infinity);
 
-    final availableTextW = (widget.maxWidth - _iconW - _gapW).clamp(0, double.infinity);
+    final availableTextW =
+        (widget.maxWidth - _iconW - _gapW).clamp(0, double.infinity);
     _overflowPx = (tp.size.width - availableTextW).clamp(0, double.infinity);
 
     _useBounce = widget.bounce ||
@@ -439,8 +431,8 @@ class _MarqueeHintState extends State<_MarqueeHint>
     }
     final spacer = (_iconW + _gapW).clamp(12, 28);
     final totalTravel = _overflowPx + spacer;
-    final seconds = (totalTravel / widget.speedPxPerSecond)
-        .clamp(_minDurSec, _maxDurSec);
+    final seconds =
+        (totalTravel / widget.speedPxPerSecond).clamp(_minDurSec, _maxDurSec);
     _ctrl.duration = Duration(milliseconds: (seconds * 1000).round());
     _useBounce ? _ctrl.repeat(reverse: true) : _ctrl.repeat();
     if (mounted) setState(() {});
@@ -456,7 +448,6 @@ class _MarqueeHintState extends State<_MarqueeHint>
         oldWidget.tightThresholdPx != widget.tightThresholdPx ||
         oldWidget.autoBounceOnTight != widget.autoBounceOnTight ||
         oldWidget.isActive != widget.isActive) {
-
       _setup();
     }
   }
@@ -525,7 +516,7 @@ class _MarqueeHintState extends State<_MarqueeHint>
               shaderCallback: (Rect r) {
                 final double width = r.width <= 1 ? 1.0 : r.width;
                 final double f = 10.0.clamp(0, width / 4).toDouble();
-                final double leftStop  = (f / width).clamp(0.0, 0.49);
+                final double leftStop = (f / width).clamp(0.0, 0.49);
                 final double rightStop = (1 - (f / width)).clamp(0.51, 1.0);
 
                 return LinearGradient(
@@ -552,41 +543,38 @@ class _MarqueeHintState extends State<_MarqueeHint>
                         return scrollingText(dx);
                       } else {
                         final dx = (_anim.value * totalTravel) % totalTravel;
-                      final bool needSecond = totalTravel > 40;
-                      if (!needSecond) {
-                        return scrollingText(dx);
-                      }
-                      return Stack(
-                        children: [
-                          scrollingText(dx),
-                          Transform.translate(
-                            offset: Offset(-(dx - totalTravel), 0),
-                            child: Text(
-                              widget.text,
-                              maxLines: 1,
-                              overflow: TextOverflow.visible,
-                              softWrap: false,
-                              style: textStyle,
-                              textDirection: ui.TextDirection.rtl,
+                        final bool needSecond = totalTravel > 40;
+                        if (!needSecond) {
+                          return scrollingText(dx);
+                        }
+                        return Stack(
+                          children: [
+                            scrollingText(dx),
+                            Transform.translate(
+                              offset: Offset(-(dx - totalTravel), 0),
+                              child: Text(
+                                widget.text,
+                                maxLines: 1,
+                                overflow: TextOverflow.visible,
+                                softWrap: false,
+                                style: textStyle,
+                                textDirection: ui.TextDirection.rtl,
+                              ),
                             ),
-                          ),
-
-                        ],
-                      );
-                    }
-                  },
+                          ],
+                        );
+                      }
+                    },
+                  ),
                 ),
               ),
             ),
-          ),
           ),
         ],
       ),
     );
   }
 }
-
-
 
 /// =============================================================
 /// اقتراحات بحث مبنية على عنوان القسم (عقارات مأرب كمثال).
@@ -595,27 +583,18 @@ class _MarqueeHintState extends State<_MarqueeHint>
 class HintsResult {
   final List<String> hints;
   final IconData icon;
+
   const HintsResult(this.hints, this.icon);
 }
 
 class RealEstateSearchHints {
   static HintsResult forTitle(String appBarTitle) {
-
-
     final String normalized = _normalize(appBarTitle);
     return _hintMap[normalized] ?? _defaultHints;
   }
 
-
-
-
-
-
   static String _normalize(String value) {
-    return value
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z]'), '')
-        .trim();
+    return value.toLowerCase().replaceAll(RegExp(r'[^a-z]'), '').trim();
   }
 
   static const HintsResult _defaultHints = HintsResult(
@@ -624,8 +603,10 @@ class RealEstateSearchHints {
   );
 
   static final Map<String, HintsResult> _hintMap = {
-    'realestate': HintsResult(_buildMaribRealEstateHints(), Icons.home_work_outlined),
-    'realestateservices': HintsResult(_buildMaribRealEstateHints(), Icons.home_work_outlined),
+    'realestate':
+        HintsResult(_buildMaribRealEstateHints(), Icons.home_work_outlined),
+    'realestateservices':
+        HintsResult(_buildMaribRealEstateHints(), Icons.home_work_outlined),
     'jobs': const HintsResult(
       ['وظائف بدوام كامل', 'فرص عمل عن بعد', 'فرص للطلاب وحديثي التخرج'],
       Icons.work_outline,
@@ -635,7 +616,11 @@ class RealEstateSearchHints {
       Icons.work_outline,
     ),
     'localservices': const HintsResult(
-      ['فني كهرباء قريب منك', 'تنظيف المنازل والمكاتب', 'صيانة مكيفات في منطقتك'],
+      [
+        'فني كهرباء قريب منك',
+        'تنظيف المنازل والمكاتب',
+        'صيانة مكيفات في منطقتك'
+      ],
       Icons.design_services_outlined,
     ),
     'medicalservices': const HintsResult(
@@ -684,30 +669,72 @@ class RealEstateSearchHints {
     ),
   };
 
-
   static List<String> _buildMaribRealEstateHints() {
     final Set<String> out = {};
 
     const areas = [
-      'المجمع','الروضة','الفاو','مفرق السد','الصحن','الميل','الشبواني','المطار',
-      'مجمع الخير','البقايل','الجفينة','شارع الأربعين','الوادي','الشركة','حي الشركة',
-      'الصيانة','شارع الجامعة','بن عبود','سوق الغنم','ميلانو','المواصلات',
-      'داخل المجمع','أطراف المجمع'
+      'المجمع',
+      'الروضة',
+      'الفاو',
+      'مفرق السد',
+      'الصحن',
+      'الميل',
+      'الشبواني',
+      'المطار',
+      'مجمع الخير',
+      'البقايل',
+      'الجفينة',
+      'شارع الأربعين',
+      'الوادي',
+      'الشركة',
+      'حي الشركة',
+      'الصيانة',
+      'شارع الجامعة',
+      'بن عبود',
+      'سوق الغنم',
+      'ميلانو',
+      'المواصلات',
+      'داخل المجمع',
+      'أطراف المجمع'
     ];
-    const landmarks = ['ميلانو','الجامعة','مجمع الخير','سوق الغنم','شارع الأربعين','المطار','مفرق السد'];
-    const types = ['شقة','بيت','فيلا','هنجر تخزين','محل','أرض'];
-    const actions = ['للإيجار','للبيع'];
-    const payments = ['بدون مقدم','بمقدم','تقسيط','كاش'];
-    const aptExtras = ['مفروشة','مدخل مستقل','دور أرضي','جديدة','قريبة من الخدمات'];
-    const houseExtras = ['حوش','دورين','مدخلين','ملحق','مع سطح','واجهة شارع'];
-    const villaExtras = ['مودرن','حديقة','مسبح','مساحة كبيرة','تشطيب فاخر'];
-    const sizes = ['غرفتين','3 غرف','4 غرف'];
+    const landmarks = [
+      'ميلانو',
+      'الجامعة',
+      'مجمع الخير',
+      'سوق الغنم',
+      'شارع الأربعين',
+      'المطار',
+      'مفرق السد'
+    ];
+    const types = ['شقة', 'بيت', 'فيلا', 'هنجر تخزين', 'محل', 'أرض'];
+    const actions = ['للإيجار', 'للبيع'];
+    const payments = ['بدون مقدم', 'بمقدم', 'تقسيط', 'كاش'];
+    const aptExtras = [
+      'مفروشة',
+      'مدخل مستقل',
+      'دور أرضي',
+      'جديدة',
+      'قريبة من الخدمات'
+    ];
+    const houseExtras = [
+      'حوش',
+      'دورين',
+      'مدخلين',
+      'ملحق',
+      'مع سطح',
+      'واجهة شارع'
+    ];
+    const villaExtras = ['مودرن', 'حديقة', 'مسبح', 'مساحة كبيرة', 'تشطيب فاخر'];
+    const sizes = ['غرفتين', '3 غرف', '4 غرف'];
 
-    String _p(String kind, String action, {String? area, String? extra, String? pay, String? near}) {
+    String _p(String kind, String action,
+        {String? area, String? extra, String? pay, String? near}) {
       final b = StringBuffer(kind);
       if (action.isNotEmpty) b.write(' $action');
       if (area?.isNotEmpty == true) b.write(' في $area');
-      if (near?.isNotEmpty == true) b.write(' ${near!.startsWith("خلف") || near.startsWith("قرب") ? near : "قرب $near"}');
+      if (near?.isNotEmpty == true)
+        b.write(
+            ' ${near!.startsWith("خلف") || near.startsWith("قرب") ? near : "قرب $near"}');
       if (extra?.isNotEmpty == true) b.write(' $extra');
       if (pay?.isNotEmpty == true) b.write(' $pay');
       return b.toString().trim();

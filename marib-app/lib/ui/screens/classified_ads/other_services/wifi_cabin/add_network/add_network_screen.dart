@@ -28,16 +28,12 @@ class WifiAddNetworkScreenState
 
   @override
   Widget build(BuildContext context) {
-
     final theme = Theme.of(context);
-
 
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
-
       body: SafeArea(
         bottom: false,
-
         child: Column(
           children: [
             _buildPageHeader(theme),
@@ -62,7 +58,6 @@ class WifiAddNetworkScreenState
       ),
     );
   }
-
 
   Widget _buildPageHeader(ThemeData theme) {
     final color = context.color;
@@ -118,5 +113,4 @@ class WifiAddNetworkScreenState
       ),
     );
   }
-
 }

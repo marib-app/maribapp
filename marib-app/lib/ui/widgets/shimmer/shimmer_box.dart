@@ -25,8 +25,7 @@ class ShimmerBox extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final Color resolvedBase =
-        baseColor ?? colorScheme.shimmerBaseColor;
+    final Color resolvedBase = baseColor ?? colorScheme.shimmerBaseColor;
     final Color resolvedHighlight =
         highlightColor ?? colorScheme.shimmerHighlightColor;
 

@@ -4,11 +4,9 @@ class ServiceRequestModel {
   final int id;
   final String status;
 
-
   const ServiceRequestModel({
     required this.id,
     required this.status,
-
   });
 
   factory ServiceRequestModel.fromJson(Map<String, dynamic> json) {
@@ -21,11 +19,8 @@ class ServiceRequestModel {
         final parsed = int.tryParse(value);
         if (parsed != null) return parsed;
       }
-      return DateTime
-          .now()
-          .millisecondsSinceEpoch;
+      return DateTime.now().millisecondsSinceEpoch;
     }
-
 
     String? parseString(dynamic value) {
       if (value == null) return null;
@@ -34,22 +29,20 @@ class ServiceRequestModel {
     }
 
     String status = parseString(
-      map['status'] ??
-          map['state'] ??
-          map['request_status'] ??
-          map['current_status'],
-    )?.toLowerCase() ??
+          map['status'] ??
+              map['state'] ??
+              map['request_status'] ??
+              map['current_status'],
+        )?.toLowerCase() ??
         'review';
 
     final id = parseId(
       map['id'] ?? map['request_id'] ?? map['service_request_id'],
     );
 
-
     return ServiceRequestModel(
       id: id,
       status: status,
-
     );
   }
 }

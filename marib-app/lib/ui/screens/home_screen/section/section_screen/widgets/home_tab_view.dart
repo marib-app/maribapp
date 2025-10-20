@@ -30,11 +30,6 @@ import 'package:marib/utils/slider_interface_mapper.dart';
 import 'special_request_card.dart';
 import 'package:flutter/rendering.dart';
 
-
-
-
-
-
 //==============================================================================
 ///                                   HomeTabView
 //==============================================================================
@@ -1009,11 +1004,9 @@ class _HomeTabViewState extends State<HomeTabView> {
           slivers.add(_buildLoadingMoreIndicatorSliver(context));
         }
 
-
         if (!context.read<FetchItemSummaryCubit>().hasMoreData()) {
           slivers.add(_buildEndOfResultsSliver(context));
         }
-
 
         if (showLoadingMoreError) {
           slivers.add(_buildLoadingMoreErrorSliver(context));
@@ -1156,8 +1149,6 @@ class _HomeTabViewState extends State<HomeTabView> {
     return slivers;
   }
 
-
-
   Widget _buildEndOfResultsSliver(BuildContext context) {
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
     final TextTheme textTheme = Theme.of(context).textTheme;
@@ -1180,7 +1171,6 @@ class _HomeTabViewState extends State<HomeTabView> {
       ),
     );
   }
-
 
   Widget _buildLoadingMoreErrorSliver(BuildContext context) {
     return SliverToBoxAdapter(

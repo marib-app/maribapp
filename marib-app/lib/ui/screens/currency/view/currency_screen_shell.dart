@@ -21,7 +21,6 @@ import 'gold_tab_view.dart';
 import 'rates_tab_view.dart';
 import 'silver_tab_view.dart';
 
-
 class CurrencyScreenUI extends StatelessWidget {
   const CurrencyScreenUI({
     super.key,
@@ -37,7 +36,6 @@ class CurrencyScreenUI extends StatelessWidget {
     required this.onShareRates,
     required this.amountInputFormatters,
     required this.systemUiOverlayStyle,
-
     required this.onToggleWatchlistFilter,
     required this.onToggleCurrencyWatchlist,
     required this.onToggleMetalWatchlist,
@@ -46,7 +44,6 @@ class CurrencyScreenUI extends StatelessWidget {
     required this.onAssetFilterChanged,
     required this.onDirectionFilterChanged,
     required this.onNotificationRegionChanged,
-
   });
 
   final CurrencyViewState state;
@@ -66,16 +63,13 @@ class CurrencyScreenUI extends StatelessWidget {
   final void Function(String?) onGovernorateChanged;
   final void Function(int? currencyId, int days) onSelectHistoryRange;
   final void Function(int currencyId, String? regionCode)
-  onNotificationRegionChanged;
+      onNotificationRegionChanged;
   final void Function(AssetFilterType) onAssetFilterChanged;
   final void Function(RateChangeFilter) onDirectionFilterChanged;
   final List<TextInputFormatter> amountInputFormatters;
   final SystemUiOverlayStyle systemUiOverlayStyle;
 
-  bool _isDark(BuildContext c) =>
-      Theme
-          .of(c)
-          .brightness == Brightness.dark;
+  bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
 
   @override
   Widget build(BuildContext context) {
@@ -108,9 +102,8 @@ class CurrencyScreenUI extends StatelessWidget {
     );
   }
 
-
-  Widget _buildGovernorateSelector(BuildContext context, Color brand, Color bg,
-      Color onBg) {
+  Widget _buildGovernorateSelector(
+      BuildContext context, Color brand, Color bg, Color onBg) {
     final theme = Theme.of(context);
     final border = _isDark(context) ? Colors.white12 : Colors.black12;
     const defaultValue = '_default_';
@@ -143,7 +136,7 @@ class CurrencyScreenUI extends StatelessWidget {
 
     final selected = state.selectedGovernorateCode;
     final dropdownValue =
-    (selected == null || selected.isEmpty) ? defaultValue : selected;
+        (selected == null || selected.isEmpty) ? defaultValue : selected;
     final enabled =
         state.status == CurrencyPageStatus.ready && items.length > 1;
 
@@ -184,12 +177,12 @@ class CurrencyScreenUI extends StatelessWidget {
               style: theme.textTheme.bodyLarge?.copyWith(color: onBg),
               onChanged: enabled
                   ? (value) {
-                if (value == defaultValue) {
-                  onGovernorateChanged(null);
-                } else {
-                  onGovernorateChanged(value);
-                }
-              }
+                      if (value == defaultValue) {
+                        onGovernorateChanged(null);
+                      } else {
+                        onGovernorateChanged(value);
+                      }
+                    }
                   : null,
               items: items,
             ),
@@ -223,8 +216,8 @@ class CurrencyScreenUI extends StatelessWidget {
     );
   }
 
-  Widget _buildPreferencesBar(BuildContext context, Color brand, Color bg,
-      Color onBg) {
+  Widget _buildPreferencesBar(
+      BuildContext context, Color brand, Color bg, Color onBg) {
     final theme = Theme.of(context);
     final border = _isDark(context) ? Colors.white12 : Colors.black12;
     final options = state.notificationOptions;
@@ -286,7 +279,6 @@ class CurrencyScreenUI extends StatelessWidget {
               ),
             ],
           ),
-
           const SizedBox(height: 12),
           Text(
             'نوع الأصل',
@@ -365,7 +357,6 @@ class CurrencyScreenUI extends StatelessWidget {
               },
             ),
           ),
-
           if (options.isNotEmpty) ...[
             const SizedBox(height: 12),
             Text(
@@ -399,15 +390,14 @@ class CurrencyScreenUI extends StatelessWidget {
               iconEnabledColor: brand,
               items: options
                   .map(
-                    (PreferenceOption option) =>
-                    DropdownMenuItem<String>(
+                    (PreferenceOption option) => DropdownMenuItem<String>(
                       value: option.value,
                       child: Text(
                         option.label,
                         textDirection: TextDirection.rtl,
                       ),
                     ),
-              )
+                  )
                   .toList(growable: false),
               onChanged: (String? value) {
                 if (value != null && value.isNotEmpty) {
@@ -422,8 +412,8 @@ class CurrencyScreenUI extends StatelessWidget {
   }
 
   // ——— تبويبات موحدة الخط ———
-  Widget _buildSegmentedTabs(BuildContext context, Color brand, Color bg,
-      Color onBg) {
+  Widget _buildSegmentedTabs(
+      BuildContext context, Color brand, Color bg, Color onBg) {
     final theme = Theme.of(context);
     final isDark = _isDark(context);
     final border = isDark ? Colors.white12 : Colors.black12;
@@ -470,7 +460,6 @@ class CurrencyScreenUI extends StatelessWidget {
       case CurrencyPageStatus.ready:
         return TabBarView(
           controller: tabController,
-
           children: [
             RatesTabView(
               state: state,
@@ -512,17 +501,18 @@ class CurrencyScreenUI extends StatelessWidget {
   Widget _buildLoadingShimmer(BuildContext context) {
     final isDark = _isDark(context);
     // ألوان خفيفة جدًا
-    final base = isDark ? Colors.white.withOpacity(0.08) : Colors.black
-        .withOpacity(0.06);
-    final highlight = isDark ? Colors.white.withOpacity(0.16) : Colors.black
-        .withOpacity(0.12);
+    final base = isDark
+        ? Colors.white.withOpacity(0.08)
+        : Colors.black.withOpacity(0.06);
+    final highlight = isDark
+        ? Colors.white.withOpacity(0.16)
+        : Colors.black.withOpacity(0.12);
 
     return Shimmer.fromColors(
       baseColor: base,
       highlightColor: highlight,
       period: const Duration(milliseconds: 1200),
       child: CustomScrollView(
-
         slivers: [
           // شريط علوي شبيه بالترويسة
           SliverToBoxAdapter(
@@ -534,43 +524,40 @@ class CurrencyScreenUI extends StatelessWidget {
           // عناصر قائمة (٦ صفوف)
           SliverList.separated(
             itemCount: 6,
-            itemBuilder: (ctx, i) =>
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 10),
-                  child: Row(
-                    children: [
-                      const _SkeletonCircle(size: 28),
-                      const SizedBox(width: 10),
-                      // اسم العملة (سطر طويل قليلًا)
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+            itemBuilder: (ctx, i) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  const _SkeletonCircle(size: 28),
+                  const SizedBox(width: 10),
+                  // اسم العملة (سطر طويل قليلًا)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const _SkeletonLine(
+                            widthFactor: 0.45, height: 12, radius: 6),
+                        const SizedBox(height: 10),
+                        // شارتا سعر صغيرتان يمينًا
+                        Row(
                           children: [
-                            const _SkeletonLine(
-                                widthFactor: 0.45, height: 12, radius: 6),
-                            const SizedBox(height: 10),
-                            // شارتا سعر صغيرتان يمينًا
-                            Row(
-                              children: [
-                                const _SkeletonPill(
-                                    width: 70, height: 22, radius: 999),
-                                const SizedBox(width: 8),
-                                const _SkeletonPill(
-                                    width: 70, height: 22, radius: 999),
-                              ],
-                            ),
+                            const _SkeletonPill(
+                                width: 70, height: 22, radius: 999),
+                            const SizedBox(width: 8),
+                            const _SkeletonPill(
+                                width: 70, height: 22, radius: 999),
                           ],
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-            separatorBuilder: (_, __) =>
-                Divider(
-                  height: 1,
-                  color: isDark ? Colors.white12 : Colors.black12,
-                ),
+                ],
+              ),
+            ),
+            separatorBuilder: (_, __) => Divider(
+              height: 1,
+              color: isDark ? Colors.white12 : Colors.black12,
+            ),
           ),
           // سطر ملاحظة سفلي
           SliverToBoxAdapter(
@@ -622,7 +609,8 @@ class _SkeletonCircle extends StatelessWidget {
 }
 
 class _SkeletonLine extends StatelessWidget {
-  const _SkeletonLine({this.widthFactor = 1, this.height = 10, this.radius = 6});
+  const _SkeletonLine(
+      {this.widthFactor = 1, this.height = 10, this.radius = 6});
 
   final double widthFactor;
   final double height;
@@ -644,7 +632,8 @@ class _SkeletonLine extends StatelessWidget {
 }
 
 class _SkeletonPill extends StatelessWidget {
-  const _SkeletonPill({required this.width, required this.height, this.radius = 999});
+  const _SkeletonPill(
+      {required this.width, required this.height, this.radius = 999});
 
   final double width;
   final double height;
@@ -662,4 +651,3 @@ class _SkeletonPill extends StatelessWidget {
     );
   }
 }
-

@@ -466,18 +466,14 @@ class Section_screenState extends State<Section_screen> {
       statusBarColor: context.color.secondaryColor,
     );
 
-
     final bool showCartAction = {
       Constant.sheinRootCategoryId,
       Constant.computerRootCategoryId,
       Constant.storeRootCategoryId,
     }.contains(_catId);
 
-    final VoidCallback? onCartTap = showCartAction
-        ? () => Navigator.pushNamed(context, Routes.cart)
-        : null;
-
-
+    final VoidCallback? onCartTap =
+        showCartAction ? () => Navigator.pushNamed(context, Routes.cart) : null;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: overlay,
@@ -543,7 +539,7 @@ class Section_screenState extends State<Section_screen> {
             valueListenable: _showBottomBar,
             builder: (context, show, _) {
               final double bottomContentPadding =
-              show ? _calculateBottomBarHeight(context) : 0.0;
+                  show ? _calculateBottomBarHeight(context) : 0.0;
 
               final Widget animatedBottomBar = AnimatedSwitcher(
                 duration: _bottomBarAnimationDuration,
@@ -696,7 +692,6 @@ class Section_screenState extends State<Section_screen> {
 
                                     showCartAction: showCartAction,
                                     onCartTap: onCartTap,
-
 
                                     selectedCategoryId: selectedCategoryId,
                                     showShimmer: showShimmer,

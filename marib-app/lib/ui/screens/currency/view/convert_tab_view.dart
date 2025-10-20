@@ -670,7 +670,6 @@ class _CurrencyAvatar extends StatelessWidget {
 
     return CircleAvatar(
       radius: clampedRadius,
-
       backgroundColor: background,
       foregroundColor: foreground,
       child: Text(

@@ -2,8 +2,8 @@
 
 import 'package:marib/data/repositories/chat_repository.dart';
 import 'package:marib/data/model/data_output.dart';
-import 'package:marib/ui/screens/chat/chat_audio/widgets/chat_widget.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:marib/data/model/chat/chat_message_modal.dart';
 
 class LoadChatMessagesState {}
 

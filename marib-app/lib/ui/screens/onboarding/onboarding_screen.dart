@@ -200,11 +200,15 @@ class OnboardingScreen extends StatefulWidget {
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends State<OnboardingScreen>
+    with SingleTickerProviderStateMixin {
   final ValueNotifier<int> currentIndex = ValueNotifier<int>(0);
   bool _showHint = false;
   Timer? _hintTimer;
   final Map<String, LottieComposition> _preloadedCompositions = {};
+  late final AnimationController _hintAnimationController;
+  late final Animation<double> _hintFadeAnimation;
+  late final Animation<Offset> _hintSlideAnimation;
 
   final data = [
     CardPlanetData(
@@ -265,13 +269,43 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   void initState() {
     super.initState();
+    _hintAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1300),
+    );
+    final animationCurve = CurvedAnimation(
+      parent: _hintAnimationController,
+      curve: Curves.easeInOut,
+    );
+    _hintFadeAnimation =
+        Tween<double>(begin: 0.6, end: 1).animate(animationCurve);
+    _hintSlideAnimation =
+        Tween<Offset>(begin: Offset.zero, end: const Offset(0, -0.05))
+            .animate(animationCurve);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       unawaited(_preloadAssets());
     });
     _hintTimer = Timer(const Duration(seconds: 3), () {
-      if (mounted) setState(() => _showHint = true);
+      if (!mounted) return;
+      setState(() => _showHint = true);
+      _syncHintAnimation();
     });
+  }
+
+  void _syncHintAnimation() {
+    final shouldAnimate = _showHint && currentIndex.value != data.length - 1;
+    if (shouldAnimate) {
+      if (!_hintAnimationController.isAnimating) {
+        _hintAnimationController.repeat(reverse: true);
+      }
+    } else {
+      if (_hintAnimationController.isAnimating ||
+          _hintAnimationController.value != 0.0) {
+        _hintAnimationController.stop();
+        _hintAnimationController.reset();
+      }
+    }
   }
 
   Future<void> _preloadAssets() async {

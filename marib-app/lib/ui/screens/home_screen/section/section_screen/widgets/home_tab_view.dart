@@ -503,17 +503,7 @@ class _HomeTabViewState extends State<HomeTabView> {
               // فاصل صغير
               SliverToBoxAdapter(child: SizedBox(height: gapSmall)),
 
-              if (widget.specialRequestSectionSlug != null && isAllCategory) ...[
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: SpecialRequestCard(
-                      sectionSlug: widget.specialRequestSectionSlug!,
-                    ),
-                  ),
-                ),
-                SliverToBoxAdapter(child: SizedBox(height: gapSmall)),
-              ],
+
 
               // ============= التصنيفات الفرعية (دائمًا ظاهرة) =============
 
@@ -805,6 +795,15 @@ class _HomeTabViewState extends State<HomeTabView> {
                               final brand =
                                   Theme.of(context).colorScheme.primary;
 
+                              final String? specialSlug =
+                              widget.specialRequestSectionSlug
+                                  ?.trim()
+                                  .toLowerCase();
+                              final bool shouldShowSpecialRequestCard =
+                                  isAllCategory &&
+                                      (specialSlug == 'shein' ||
+                                          specialSlug == 'computer');
+
                               return Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -815,6 +814,13 @@ class _HomeTabViewState extends State<HomeTabView> {
                                     brand: brand,
                                     isTopLevel: isTopLevel,
                                     onTap: (_) {},
+
+                                    leadingBuilder: shouldShowSpecialRequestCard
+                                        ? (context) => SpecialRequestCard(
+                                      sectionSlug:
+                                      widget.specialRequestSectionSlug!,
+                                    )
+                                        : null,
 
                                     // في تبويب "الكل": اضغط فرعيّة ⇒ انقل شريط التصنيفات للفئة واضبط الجلب لها
                                     onTopCategoryPick: (c) {

@@ -71,6 +71,7 @@ class SubcatsHorizontalGrid extends StatefulWidget {
 
   final void Function(CategoryModel c) onTopCategoryPick;
   final void Function(CategoryModel c) onSubcatPick;
+  final WidgetBuilder? leadingBuilder;
 
   const SubcatsHorizontalGrid({
     super.key,
@@ -81,6 +82,8 @@ class SubcatsHorizontalGrid extends StatefulWidget {
     required this.isTopLevel,
     required this.onTopCategoryPick,
     required this.onSubcatPick,
+    this.leadingBuilder,
+
   });
 
   @override
@@ -173,14 +176,13 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
     if (widget.subcats.isEmpty) return const SizedBox.shrink();
 
     final total = widget.subcats.length;
-    final pages = (total / _itemsPerPage).ceil();
 
     return LayoutBuilder(
       builder: (context, cons) {
         final w = cons.maxWidth;
         final itemsPerRow = _calculateItemsPerRow(w, total);
         final maxRows = total <= itemsPerRow ? 1 : 2;
-        final itemsPerPage = itemsPerRow * maxRows;
+        final slotsPerPage = itemsPerRow * maxRows;
         final totalSpacing = _spacing * (itemsPerRow - 1);
         final widthForItems =
             (w - (_hPad * 2) - totalSpacing).clamp(0.0, 4000.0);
@@ -193,22 +195,31 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
 
         final gridHeight =
             rowHeight * maxRows + _verticalSpacingBetweenRows * (maxRows - 1);
-        final pages = (total / itemsPerPage).ceil();
+        final bool includeLeading =
+            widget.leadingBuilder != null && widget.isTopLevel && slotsPerPage > 1;
+        final int categoriesPerPage = includeLeading
+            ? max(1, slotsPerPage - 1)
+            : slotsPerPage;
+        final pages = categoriesPerPage <= 0
+            ? 0
+            : (total / categoriesPerPage).ceil();
+
 
         if (_itemsPerRow != itemsPerRow ||
             _maxRows != maxRows ||
-            _itemsPerPage != itemsPerPage) {
+            _itemsPerPage != categoriesPerPage) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
             final idx = _indexOf(widget.selectedId);
-            final targetPage = _pageOfIndex(idx, itemsPerPage: itemsPerPage);
+            final targetPage =
+            _pageOfIndex(idx, itemsPerPage: categoriesPerPage);
             final safePages = pages == 0 ? 1 : pages;
             final clamped = targetPage.clamp(0, safePages - 1);
             final shouldJump = _current != clamped;
             setState(() {
               _itemsPerRow = itemsPerRow;
               _maxRows = maxRows;
-              _itemsPerPage = itemsPerPage;
+              _itemsPerPage = categoriesPerPage;
               _current = clamped;
             });
             if (shouldJump && _pageController.hasClients) {
@@ -227,15 +238,26 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
                 itemCount: pages,
                 onPageChanged: (i) => setState(() => _current = i),
                 itemBuilder: (ctx, pageIndex) {
-                  final start = pageIndex * itemsPerPage;
-                  final padded = List<CategoryModel?>.generate(
-                    itemsPerPage,
-                    (i) {
-                      final absoluteIndex = start + i;
-                      if (absoluteIndex >= total) return null;
-                      return widget.subcats[absoluteIndex];
-                    },
-                  );
+                  final start = pageIndex * categoriesPerPage;
+                  final pageEntries = <_GridEntry?>[];
+                  if (includeLeading) {
+                    pageEntries.add(
+                      _GridEntry.leading(widget.leadingBuilder!),
+                    );
+                  }
+                  for (var i = 0; i < categoriesPerPage; i++) {
+                    final absoluteIndex = start + i;
+                    if (absoluteIndex >= total) {
+                      pageEntries.add(null);
+                    } else {
+                      pageEntries.add(
+                        _GridEntry.category(widget.subcats[absoluteIndex]),
+                      );
+                    }
+                  }
+                  while (pageEntries.length < slotsPerPage) {
+                    pageEntries.add(null);
+                  }
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: _hPad),
                     child: Column(
@@ -243,8 +265,10 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: List.generate(maxRows, (rowIndex) {
                         final rowStart = rowIndex * itemsPerRow;
-                        final rowItems =
-                            padded.skip(rowStart).take(itemsPerRow).toList();
+                        final rowItems = pageEntries
+                            .skip(rowStart)
+                            .take(itemsPerRow)
+                            .toList();
                         return Padding(
                           padding: EdgeInsets.only(
                               top: rowIndex == 0
@@ -253,13 +277,27 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: List.generate(itemsPerRow, (colIndex) {
-                              final item = rowItems.length > colIndex
+                              final entry = rowItems.length > colIndex
                                   ? rowItems[colIndex]
                                   : null;
-                              if (item == null) {
+                              if (entry == null) {
                                 return SizedBox(
                                     width: itemWidth, height: rowHeight);
                               }
+                              if (entry.isLeading) {
+                                return SizedBox(
+                                  width: itemWidth,
+                                  height: rowHeight,
+                                  child: Align(
+                                    alignment: Alignment.topCenter,
+                                    child: SizedBox(
+                                      width: itemWidth,
+                                      child: entry.builder!(context),
+                                    ),
+                                  ),
+                                );
+                              }
+                              final item = entry.category!;
                               final sel = item.id == widget.selectedId;
                               return SizedBox(
                                 width: itemWidth,
@@ -306,6 +344,22 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
     );
   }
 }
+
+
+
+
+class _GridEntry {
+  final CategoryModel? category;
+  final WidgetBuilder? builder;
+
+  const _GridEntry.category(this.category) : builder = null;
+
+  const _GridEntry.leading(this.builder) : category = null;
+
+  bool get isLeading => builder != null;
+}
+
+
 
 class _SubcatCircle extends StatelessWidget {
   static const Duration _animationDuration = Duration(milliseconds: 200);

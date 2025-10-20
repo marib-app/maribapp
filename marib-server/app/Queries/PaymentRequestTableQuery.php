@@ -803,13 +803,14 @@ class PaymentRequestTableQuery
     private static function gatewayLabelCaseExpression(string $gatewayExpression, array $labelCandidates): string
     {
         $candidates = self::prepareCoalesceCandidates($labelCandidates);
-        $candidates[] = "'تحويل بنكي'";
+        $fallback = "CASE WHEN {$gatewayExpression} = 'wallet' THEN 'المحفظة' ELSE 'تحويل بنكي' END";
 
-        $coalesce = count($candidates) > 1
-            ? 'COALESCE(' . implode(', ', $candidates) . ')'
-            : ($candidates[0] ?? "'تحويل بنكي'");
+        if ($candidates === []) {
+            return $fallback;
+        }
 
-        return "CASE WHEN {$gatewayExpression} = 'wallet' THEN 'المحفظة' ELSE {$coalesce} END";
+
+        return 'COALESCE(' . implode(', ', array_merge($candidates, [$fallback])) . ')';
     }
 
     private static function prepareCoalesceCandidates(array $expressions): array

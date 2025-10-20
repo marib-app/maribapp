@@ -1120,7 +1120,7 @@ class _ServiceAddMoreDetailsScreenState
     final attachmentPayload = _collectAttachmentFiles();
     setState(() => _submitting = true);
     try {
-      final request = await _requestRepository.createRequest(
+      await _requestRepository.createRequest(
         serviceId: _serviceId!,
         serviceUid: _serviceUid,
         customFields:
@@ -1129,17 +1129,7 @@ class _ServiceAddMoreDetailsScreenState
         attachmentPayload.isEmpty ? null : attachmentPayload,
       );
 
-      final pendingRequest = <String, dynamic>{
-        ...request.raw,
-        ...request.toBannerData(),
-        if (_serviceUid != null) 'service_uid': _serviceUid,
 
-        if (request.customFields != null)
-          'custom_fields': request.customFields,
-        if (normalizedCustomFields.isNotEmpty && request.customFields == null)
-          'custom_fields': normalizedCustomFields,
-        if (attachmentPayload.isNotEmpty) 'attachments': attachmentPayload,
-      };
 
       if (!mounted) return;
       _clearStores();
@@ -1149,7 +1139,7 @@ class _ServiceAddMoreDetailsScreenState
         'تم ارسال طلبك بنجاح',
       );
       if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop(pendingRequest);
+        Navigator.of(context).pop();
       }
     } catch (e) {
       if (!mounted) return;

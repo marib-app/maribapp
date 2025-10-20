@@ -59,8 +59,10 @@ class CurrencyController extends Controller
     {
         $governorates = Governorate::orderBy('name')->get();
 
-        return view('currency.create', compact('governorates'));
-
+        return view('currency.create', [
+            'governorates' => $governorates,
+            'governorateStoreUrl' => route('governorates.store'),
+        ]);
 
     }
 

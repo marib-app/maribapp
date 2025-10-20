@@ -48,6 +48,8 @@ class SmartSearchAppBar extends StatefulWidget implements PreferredSizeWidget {
   final VoidCallback onCycleViewMode;
 
   final bool isLoading;
+  final bool showCartAction;
+  final VoidCallback? onCartTap;
 
   const SmartSearchAppBar({
     super.key,
@@ -63,6 +65,8 @@ class SmartSearchAppBar extends StatefulWidget implements PreferredSizeWidget {
     required this.viewMode,
     required this.onCycleViewMode,
     this.isLoading = false,
+    required this.showCartAction,
+    this.onCartTap,
   });
 
   @override
@@ -166,108 +170,145 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
         tooltip: 'رجوع',
       ),
       titleSpacing: 0,
-      title: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-        height: 50,
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        decoration: BoxDecoration(
-          color: context.color.primaryColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: _focusNode.hasFocus
-                ? context.color.borderColor.darken(20)
-                : context.color.borderColor.darken(35),
-            width: _focusNode.hasFocus ? 1.2 : 1,
-          ),
-          boxShadow: _focusNode.hasFocus
-              ? [BoxShadow(color: Colors.black12, blurRadius: 8, offset: const Offset(0, 2))]
-              : null,
-        ),
-        child: Row(
-          children: [
-            const SizedBox(width: 12),
+        title: LayoutBuilder(
+            builder: (context, constraints) {
+              double maxWidth = constraints.maxWidth;
+              if (widget.showCartAction && maxWidth.isFinite) {
+                maxWidth = maxWidth - 56;
+                if (maxWidth < 0) {
+                  maxWidth = 0;
+                }
+              }
 
-            Expanded(
-              child: Stack(
-                alignment: AlignmentDirectional.centerStart,
+              return ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxWidth),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
+                  height: 50,
+                  margin: EdgeInsets.symmetric(
+                    vertical: 6,
+                    horizontal: widget.showCartAction ? 4 : 0,
+                  ),
+                  decoration: BoxDecoration(
+                    color: context.color.primaryColor,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _focusNode.hasFocus
+                          ? context.color.borderColor.darken(20)
+                          : context.color.borderColor.darken(35),
+                      width: _focusNode.hasFocus ? 1.2 : 1,
+                    ),
+                    boxShadow: _focusNode.hasFocus
+                        ? [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      )
+                    ]
+                        : null,
+                  ),
+                  child: Row(
                 children: [
-                  TextField(
-                    controller: widget.searchController,
-                    focusNode: _focusNode,
-                    textInputAction: TextInputAction.search,
-                    textAlign: TextAlign.start,
-                    textDirection: TextDirection.rtl,
-                    onTap: widget.onSearchTap,
-                    onEditingComplete: widget.onSearchEditingComplete,
-                    onChanged: widget.onSearchChanged,
-                    textAlignVertical: TextAlignVertical.center,
-                    style: TextStyle(
+                      const SizedBox(width: 12),
+                  Expanded(
+                    child: Stack(
+                      alignment: AlignmentDirectional.centerStart,
+                      children: [
+                      TextField(
+                      controller: widget.searchController,
+                      focusNode: _focusNode,
+                      textInputAction: TextInputAction.search,
+                      textAlign: TextAlign.start,
+                      textDirection: TextDirection.rtl,
+                      onTap: widget.onSearchTap,
+                      onEditingComplete: widget.onSearchEditingComplete,
+                      onChanged: widget.onSearchChanged,
+                      textAlignVertical: TextAlignVertical.center,
+                      style: TextStyle(
                         color: Theme.of(context).brightness == Brightness.dark
                             ? Colors.white
-                            : Colors.black87),
-                    cursorColor: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white
-                        : Colors.black87,
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsetsDirectional.only(
-                        start: 12,
-                        end: 12,
-                        top: 12,
-                        bottom: 12,
+                            : Colors.black87,
                       ),
-
-                    ),
-                  ),
-
-                  // تلميح Overlay بدون منع الكتابة
-                  if (showHintOverlay)
-                    Positioned.fill(
-                      child: IgnorePointer(
-                        ignoring: true,
-                        child: Padding(
-                          padding: const EdgeInsetsDirectional.symmetric(horizontal: 12),
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 320),
-                            child: _MarqueeHint(
-                              text: _hints[_hintIndex],
-                              icon: _hintIcon,
-                              style: TextStyle(
-                                  color: context.color.textLightColor, fontSize: 12.5),
-                              maxWidth: MediaQuery.of(context).size.width - 80,
-                              speedPxPerSecond: widget.marqueeSpeedPxPerS,
-                              isActive: showHintOverlay,
+                      cursorColor: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black87,
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsetsDirectional.only(
+                          start: 12,
+                          end: 12,
+                          top: 12,
+                          bottom: 12,
 
                             ),
                           ),
                         ),
-                      ),
+                        if (showHintOverlay)
+                          Positioned.fill(
+                            child: IgnorePointer(
+                              ignoring: true,
+                              child: Padding(
+                                padding: const EdgeInsetsDirectional.symmetric(horizontal: 12),
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 320),
+                                  child: _MarqueeHint(
+                                    text: _hints[_hintIndex],
+                                    icon: _hintIcon,
+                                    style: TextStyle(
+                                      color: context.color.textLightColor,
+                                      fontSize: 12.5,
+                                    ),
+                                    maxWidth: MediaQuery.of(context).size.width - 80,
+                                    speedPxPerSecond: widget.marqueeSpeedPxPerS,
+                                    isActive: showHintOverlay,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
+                  ),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: _showClear,
+                    builder: (_, show, __) {
+                      if (!show) return const SizedBox(width: 8);
+                      return IconButton(
+                        tooltip: 'مسح',
+                        icon: Icon(
+                          Icons.close_rounded,
+                          color: context.color.textDefaultColor,
+                        ),
+                        onPressed: () {
+                          widget.searchController.clear();
+                          _showClear.value = false;
+                          widget.onClearSearch();
+                          _startHintsRotation(interval: widget.hintInterval);
+                        },
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
-            ValueListenableBuilder<bool>(
-              valueListenable: _showClear,
-              builder: (_, show, __) {
-                if (!show) return const SizedBox(width: 8);
-                return IconButton(
-                  tooltip: 'مسح',
-                  icon: Icon(Icons.close_rounded, color: context.color.textDefaultColor),
-                  onPressed: () {
-                    widget.searchController.clear();
-                    _showClear.value = false;
-                    widget.onClearSearch();
-                    _startHintsRotation(interval: widget.hintInterval);
-                  },
-                );
-              },
-            ),
-          ],
-        ),
+              );
+            },
       ),
       actions: [
+        if (widget.showCartAction) ...[
+          IconButton(
+            tooltip: 'السلة',
+            onPressed: widget.onCartTap,
+            icon: Icon(
+              Icons.shopping_cart_outlined,
+              color: context.color.territoryColor,
+            ),
+          ),
+          const SizedBox(width: 4),
+        ],
         Semantics(
           button: true,
           label: _nextLabel(widget.viewMode),

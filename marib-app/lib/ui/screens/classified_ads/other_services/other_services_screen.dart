@@ -171,7 +171,7 @@ class _OtherServicesScreenState extends State<OtherServicesScreen> {
     if (width >= 1200) return 5;
     if (width >= 900) return 4;
     if (width >= 600) return 3;
-    if (width >= 420) return 2;
+    if (width >= 360) return 3;
     return 1;
   }
 
@@ -179,7 +179,8 @@ class _OtherServicesScreenState extends State<OtherServicesScreen> {
     if (width >= 900) return 1.1;
     if (width >= 600) return 1.0;
     if (width >= 420) return 0.95;
-    return 0.9;
+    if (width >= 360) return 0.82;
+    return 0.78;
   }
 }
 

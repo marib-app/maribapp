@@ -465,6 +465,19 @@ class Section_screenState extends State<Section_screen> {
       statusBarColor: context.color.secondaryColor,
     );
 
+
+    final bool showCartAction = {
+      Constant.sheinRootCategoryId,
+      Constant.computerRootCategoryId,
+      Constant.storeRootCategoryId,
+    }.contains(_catId);
+
+    final VoidCallback? onCartTap = showCartAction
+        ? () => Navigator.pushNamed(context, Routes.cart)
+        : null;
+
+
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: overlay,
       child: BlocListener<FetchItemSummaryCubit, FetchItemSummaryState>(
@@ -679,6 +692,10 @@ class Section_screenState extends State<Section_screen> {
                                     categoryId: widget.categoryId,
                                     categoryName: widget.categoryName,
                                     bottomContentPadding: bottomContentPadding,
+
+                                    showCartAction: showCartAction,
+                                    onCartTap: onCartTap,
+
 
                                     selectedCategoryId: selectedCategoryId,
                                     showShimmer: showShimmer,

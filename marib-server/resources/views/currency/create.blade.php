@@ -63,9 +63,19 @@
                             </div>
 
                             <div class="col-12">
-                                <div class="d-flex align-items-center justify-content-between">
-                                    <label class="form-label mb-1">{{ __('Governorate price sets') }}</label>
-                                    <span class="badge bg-light text-dark">{{ __('Inline editable') }}</span>
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                    <label class="form-label mb-1 mb-md-0">{{ __('Governorate price sets') }}</label>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge bg-light text-dark">{{ __('Inline editable') }}</span>
+                                        @can('governorate-create')
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-primary"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#governorateQuickCreateModal">
+                                                {{ __('Add governorate') }}
+                                            </button>
+                                        @endcan
+                                    </div>
                                 </div>
                             </div>
 
@@ -92,6 +102,13 @@
         </div>
     </section>
 @endsection
+
+@can('governorate-create')
+    @isset($governorateStoreUrl)
+        @include('governorates.partials.quick-create-modal', ['storeUrl' => $governorateStoreUrl])
+    @endisset
+@endcan
+
 
 @push('scripts')
     <script src="{{ asset('js/currency.js') }}"></script>

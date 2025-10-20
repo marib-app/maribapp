@@ -2,6 +2,7 @@ import 'package:marib/data/model/home/home_screen_section.dart';
 import 'package:marib/data/repositories/home/home_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
+import 'package:hydrated_bloc/hydrated_bloc.dart';
 
 abstract class FetchHomeScreenState {}
 
@@ -31,7 +32,7 @@ class FetchHomeScreenFail extends FetchHomeScreenState {
   FetchHomeScreenFail(this.error);
 }
 
-class FetchHomeScreenCubit extends Cubit<FetchHomeScreenState> {
+class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
   FetchHomeScreenCubit({String? defaultInterfaceType, HomeRepository? homeRepository})
       : _homeRepository = homeRepository ?? HomeRepository(),
         _defaultInterfaceType = _cleanInterfaceType(defaultInterfaceType),
@@ -149,13 +150,58 @@ class FetchHomeScreenCubit extends Cubit<FetchHomeScreenState> {
 
   @override
   FetchHomeScreenState? fromJson(Map<String, dynamic> json) {
-    // TODO: implement fromJson
-    return null;
+    try {
+      final String? type = json['type'] as String?;
+      if (type != 'success') {
+        return null;
+      }
+
+      final List<dynamic>? sectionsJson = json['sections'] as List<dynamic>?;
+      final List<HomeScreenSection> sections = <HomeScreenSection>[];
+      if (sectionsJson != null) {
+        for (final dynamic item in sectionsJson) {
+          if (item is Map<String, dynamic>) {
+            sections.add(HomeScreenSection.fromJson(item));
+          } else if (item is Map) {
+            sections
+                .add(HomeScreenSection.fromJson(Map<String, dynamic>.from(item as Map)));
+          }
+        }
+      }
+
+      final String? interfaceType =
+      _cleanInterfaceType(json['interfaceType'] as String?);
+      final String? slug = _cleanSlug(json['slug'] as String?);
+      final String? rootIdentifier =
+      _cleanRootIdentifier(json['rootIdentifier'] as String?);
+
+      _currentInterfaceType = interfaceType ?? _defaultInterfaceType;
+      _currentSlug = slug;
+      _currentRootIdentifier = rootIdentifier;
+
+      return FetchHomeScreenSuccess(
+        sections,
+        interfaceType: interfaceType,
+        slug: slug,
+        rootIdentifier: rootIdentifier,
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
   Map<String, dynamic>? toJson(FetchHomeScreenState state) {
-    // TODO: implement toJson
-    return null;
+    if (state is! FetchHomeScreenSuccess) {
+      return null;
+    }
+
+    return <String, dynamic>{
+      'type': 'success',
+      'interfaceType': state.interfaceType,
+      'slug': state.slug,
+      'rootIdentifier': state.rootIdentifier,
+      'sections': state.sections.map((HomeScreenSection section) => section.toJson()).toList(),
+    };
   }
 }

@@ -37,7 +37,8 @@ class ItemsBodyBox extends StatefulWidget {
   final TextEditingController searchController;
   final String? categoryName;
   final double bottomContentPadding;
-
+  final bool showCartAction;
+  final VoidCallback? onCartTap;
   // جديد: لا تبني شريط التصنيفات/السلايدر إلا إذا true
   final bool enableTopBar;
   final String? specialRequestSectionSlug;
@@ -59,6 +60,8 @@ class ItemsBodyBox extends StatefulWidget {
     required this.showShimmer,
     required this.searchController,
     this.categoryName,
+    required this.showCartAction,
+    this.onCartTap,
     this.enableTopBar = false, // ← افتراضي: مخفي
     this.enableAdSlider = false,
     this.adInterfaceType,
@@ -208,6 +211,8 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
                   _viewMode.value = (mode == ViewMode.grid) ? ViewMode.list : ViewMode.grid;
                 },
                 isLoading: isLoading,
+                showCartAction: widget.showCartAction,
+                onCartTap: widget.onCartTap,
               );
             },
           ),

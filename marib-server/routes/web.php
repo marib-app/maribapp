@@ -38,6 +38,8 @@ use App\Http\Controllers\TipController;
 use App\Http\Controllers\UserVerificationController;
 use App\Http\Controllers\WebhookController;
 use App\Http\Controllers\CurrencyController;
+use App\Http\Controllers\GovernorateController;
+
 use App\Http\Controllers\ChallengeController;
 use App\Http\Controllers\ReferralController;
 use App\Http\Controllers\ServiceController;
@@ -368,6 +370,30 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
 
 
     /* ------------------------------- العملة Currency ------------------------------ */
+
+
+    Route::group(['middleware' => ['permission:governorate-list|governorate-create|governorate-edit|governorate-delete']], static function () {
+        Route::get('/governorates', [GovernorateController::class, 'index'])
+            ->name('governorates.index');
+        Route::get('/governorates/create', [GovernorateController::class, 'create'])
+            ->middleware('permission:governorate-create')
+            ->name('governorates.create');
+        Route::post('/governorates', [GovernorateController::class, 'store'])
+            ->middleware('permission:governorate-create')
+            ->name('governorates.store');
+        Route::get('/governorates/{governorate}/edit', [GovernorateController::class, 'edit'])
+            ->middleware('permission:governorate-edit')
+            ->name('governorates.edit');
+        Route::put('/governorates/{governorate}', [GovernorateController::class, 'update'])
+            ->middleware('permission:governorate-edit')
+            ->name('governorates.update');
+        Route::delete('/governorates/{governorate}', [GovernorateController::class, 'destroy'])
+            ->middleware('permission:governorate-delete')
+            ->name('governorates.destroy');
+    });
+
+
+
     Route::group(['middleware' => ['permission:currency-rate-list|currency-rate-create|currency-rate-edit|currency-rate-delete|currency-rate-import']], static function () {
 
         Route::get('/currency', [CurrencyController::class, 'index'])->name('currency.index');

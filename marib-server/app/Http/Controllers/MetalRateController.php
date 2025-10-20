@@ -48,6 +48,7 @@ class MetalRateController extends Controller
             'metalRates' => $metalRates,
             'governorates' => Governorate::query()->orderBy('name')->get(),
             'defaultGovernorateId' => $this->metalRateQuoteService->resolveDefaultGovernorateId(),
+            'governorateStoreUrl' => route('governorates.store'),
 
         ]);
     }

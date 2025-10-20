@@ -38,6 +38,7 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/notification/chat_message_handler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:convert';
+import 'dart:collection';
 
 enum UserPresenceEventType { userTyping, userPresenceUpdated }
 
@@ -102,8 +103,14 @@ class NotificationService {
   static Stream<UserPresenceEvent> get userPresenceEvents =>
       _userPresenceEventController.stream;
 
-  static final Map<String, List<ChatParticipant>>
-      _conversationParticipantsCache = <String, List<ChatParticipant>>{};
+  static const int _maxParticipantsCacheEntries = 100;
+  static const Duration _participantsCacheTtl = Duration(hours: 6);
+
+  static final LinkedHashMap<String, _CachedParticipantsEntry>
+  _conversationParticipantsCache =
+  LinkedHashMap<String, _CachedParticipantsEntry>();
+
+  static bool _isLogoutHookRegistered = false;
 
   static late StreamSubscription<RemoteMessage> foregroundStream;
   static late StreamSubscription<RemoteMessage> onMessageOpen;
@@ -113,6 +120,57 @@ class NotificationService {
 
   static Stream<String> get walletNotifications =>
       _walletNotificationController.stream;
+
+
+  static void _ensureLogoutHookRegistered() {
+    if (_isLogoutHookRegistered) {
+      return;
+    }
+    HiveUtils.registerLogoutHook(clearParticipantStatus);
+    _isLogoutHookRegistered = true;
+  }
+
+  static void clearParticipantsCache() {
+    if (_conversationParticipantsCache.isEmpty) {
+      return;
+    }
+    _conversationParticipantsCache.clear();
+  }
+
+  static void _enforceParticipantsCacheLimit() {
+    if (_conversationParticipantsCache.length <=
+        _maxParticipantsCacheEntries) {
+      return;
+    }
+    final int overflow =
+        _conversationParticipantsCache.length - _maxParticipantsCacheEntries;
+    final List<String> keysToRemove = _conversationParticipantsCache.keys
+        .take(overflow)
+        .toList(growable: false);
+    for (final String key in keysToRemove) {
+      _conversationParticipantsCache.remove(key);
+    }
+  }
+
+  static void _purgeExpiredParticipantsCacheEntries() {
+    if (_conversationParticipantsCache.isEmpty) {
+      return;
+    }
+    final DateTime now = DateTime.now();
+    final List<String> expiredKeys = <String>[];
+    _conversationParticipantsCache.forEach((String key, _CachedParticipantsEntry entry) {
+      if (entry.isExpired(now, _participantsCacheTtl)) {
+        expiredKeys.add(key);
+      }
+    });
+    if (expiredKeys.isEmpty) {
+      return;
+    }
+    for (final String key in expiredKeys) {
+      _conversationParticipantsCache.remove(key);
+    }
+  }
+
 
   static Future<void> requestPermission() async {
     try {
@@ -633,6 +691,7 @@ class NotificationService {
   }
 
   static Future<void> init(BuildContext context) async {
+    _ensureLogoutHookRegistered();
     requestPermission();
     await _ensureInitialTokenSynced();
     await registerListeners(context);
@@ -1459,6 +1518,7 @@ class NotificationService {
   }
 
   static void clearParticipantStatus() {
+    _ensureLogoutHookRegistered();
     participantStatusNotifier.value = null;
     if (!_participantStatusController.isClosed) {
       _participantStatusController.add(null);
@@ -1466,9 +1526,11 @@ class NotificationService {
 
     userPresenceEventNotifier.value = null;
     ChatMessageHandler.clearParticipantStatus();
+    clearParticipantsCache();
   }
 
   static void _cacheParticipantsFromData(Map<String, dynamic> data) {
+    _ensureLogoutHookRegistered();
     final List<ChatParticipant>? participants =
         buildParticipantsFromNotification(data: data);
     if (participants == null || participants.isEmpty) {
@@ -1491,7 +1553,13 @@ class NotificationService {
     if (key.isEmpty) {
       return;
     }
-    _conversationParticipantsCache[key] = participants;
+    _purgeExpiredParticipantsCacheEntries();
+    _conversationParticipantsCache[key] = _CachedParticipantsEntry(
+      participants: participants,
+      accessedAt: DateTime.now(),
+    );
+    _enforceParticipantsCacheLimit();
+
   }
 
   static void cacheParticipants({
@@ -1501,6 +1569,7 @@ class NotificationService {
     String? senderId,
     String? itemId,
   }) {
+    _ensureLogoutHookRegistered();
     if (participants.isEmpty) {
       return;
     }
@@ -1513,9 +1582,12 @@ class NotificationService {
     if (key.isEmpty) {
       return;
     }
-    _conversationParticipantsCache[key] = participants
-        .map((participant) => ChatParticipant.fromJson(participant.toJson()))
-        .toList();
+    _purgeExpiredParticipantsCacheEntries();
+    _conversationParticipantsCache[key] = _CachedParticipantsEntry(
+      participants: participants,
+      accessedAt: DateTime.now(),
+    );
+    _enforceParticipantsCacheLimit();
   }
 
   static List<ChatParticipant>? getCachedParticipants(String conversationId,
@@ -1529,13 +1601,21 @@ class NotificationService {
     if (key.isEmpty) {
       return null;
     }
-    final List<ChatParticipant>? cached = _conversationParticipantsCache[key];
-    if (cached == null) {
+    _purgeExpiredParticipantsCacheEntries();
+    final _CachedParticipantsEntry? cachedEntry =
+    _conversationParticipantsCache[key];
+    if (cachedEntry == null) {
       return null;
     }
-    return cached
-        .map((participant) => ChatParticipant.fromJson(participant.toJson()))
-        .toList();
+    final DateTime now = DateTime.now();
+    if (cachedEntry.isExpired(now, _participantsCacheTtl)) {
+      _conversationParticipantsCache.remove(key);
+      return null;
+    }
+    cachedEntry.touch(now);
+    _conversationParticipantsCache.remove(key);
+    _conversationParticipantsCache[key] = cachedEntry;
+    return cachedEntry.cloneParticipants();
   }
 
   static List<ChatParticipant>? buildParticipantsFromNotification(
@@ -1608,5 +1688,35 @@ class NotificationService {
       return '';
     }
     return 's:${resolvedSenderId ?? ''}#item:${resolvedItemId ?? ''}';
+  }
+}
+
+
+
+class _CachedParticipantsEntry {
+  _CachedParticipantsEntry({
+    required List<ChatParticipant> participants,
+    required DateTime accessedAt,
+  })  : _participants = participants
+      .map((participant) =>
+      ChatParticipant.fromJson(participant.toJson()))
+      .toList(),
+        lastAccessed = accessedAt;
+
+  final List<ChatParticipant> _participants;
+  DateTime lastAccessed;
+
+  bool isExpired(DateTime now, Duration ttl) {
+    return now.difference(lastAccessed) > ttl;
+  }
+
+  void touch(DateTime now) {
+    lastAccessed = now;
+  }
+
+  List<ChatParticipant> cloneParticipants() {
+    return _participants
+        .map((participant) => ChatParticipant.fromJson(participant.toJson()))
+        .toList();
   }
 }

@@ -30,6 +30,7 @@ class HiveUtils {
   static Map<String, dynamic>? _cachedUserDetailsMap;
   static String? _cachedSliderSessionId;
   static final Random _sliderSessionRandom = Random();
+  static final List<VoidCallback> _logoutHooks = <VoidCallback>[];
 
   static Box<dynamic> get _userDetailsBox => Hive.box(HiveKeys.userDetailsBox);
   static const Map<String, int> _delegateSectionRootIds = <String, int>{
@@ -100,6 +101,37 @@ class HiveUtils {
     _cachedUserDetails = null;
     _cachedUserDetailsMap = null;
     _cachedSliderSessionId = null;
+  }
+
+
+  static void registerLogoutHook(VoidCallback hook) {
+    if (_logoutHooks.contains(hook)) {
+      return;
+    }
+    _logoutHooks.add(hook);
+  }
+
+  static void unregisterLogoutHook(VoidCallback hook) {
+    _logoutHooks.remove(hook);
+  }
+
+  static void _runLogoutHooks() {
+    if (_logoutHooks.isEmpty) {
+      return;
+    }
+    final List<VoidCallback> hooksSnapshot =
+    List<VoidCallback>.from(_logoutHooks, growable: false);
+    for (final VoidCallback hook in hooksSnapshot) {
+      try {
+        hook();
+      } catch (error, stackTrace) {
+        if (kDebugMode) {
+          debugPrint(
+            'HiveUtils.logout hook error: $error\n$stackTrace',
+          );
+        }
+      }
+    }
   }
 
   static String? _normalizeSliderSessionIdValue(dynamic value) {
@@ -598,6 +630,7 @@ class HiveUtils {
     await Hive.box(HiveKeys.historyBox).clear();
     HiveUtils.setUserIsAuthenticated(false);
     await ChatBadgeController.handleUserChanged(null);
+    _runLogoutHooks();
   }
 
   /// تسجيل الخروج + تنظيف + إعادة التوجيه (إن لزم)
@@ -625,6 +658,7 @@ class HiveUtils {
 
     // 4) نداء الـcallback (لو فيه إجراءات إضافية)
     onLogout.call();
+    _runLogoutHooks();
 
     // 5) إعادة التوجيه (افتراضيًا: إلى صفحة الدخول)
     Future.delayed(

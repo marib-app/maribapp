@@ -2288,6 +2288,7 @@ class ManualPaymentRequestController extends Controller
         foreach ([
             "$.payload.bank_name",
             "$.bank.name",
+            "$.payload.bank.name",
             "$.bank.bank_name",
             "$.bank.beneficiary_name",
             "$.manual.bank.name",

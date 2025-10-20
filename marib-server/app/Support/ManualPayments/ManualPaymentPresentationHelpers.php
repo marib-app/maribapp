@@ -225,6 +225,7 @@ trait ManualPaymentPresentationHelpers
             data_get($row, 'meta.bank.bank_name'),
             data_get($row, 'meta.bank.beneficiary_name'),
             data_get($row, 'meta.payload.bank_name'),
+            data_get($row, 'meta.payload.bank.name'),
             data_get($row, 'manualBank.name'),
             data_get($row, 'manualBank.beneficiary_name'),
         ];

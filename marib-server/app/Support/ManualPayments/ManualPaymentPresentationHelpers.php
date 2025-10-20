@@ -241,7 +241,8 @@ trait ManualPaymentPresentationHelpers
                 continue;
             }
 
-            if (in_array(strtolower($trimmed), $manualBankAliases, true)) {
+            if (in_array(Str::lower($trimmed), $genericGatewayAliases, true)) {
+
                 continue;
             }
 
@@ -293,7 +294,7 @@ trait ManualPaymentPresentationHelpers
                         continue;
                     }
 
-                    if (in_array(strtolower($trimmedLookupCandidate), $manualBankAliases, true)) {
+                    if (in_array(Str::lower($trimmedLookupCandidate), $genericGatewayAliases, true)) {
                         continue;
                     }
 
@@ -334,7 +335,7 @@ trait ManualPaymentPresentationHelpers
                         continue;
                     }
 
-                    if (in_array(strtolower($trimmedLookupCandidate), $manualBankAliases, true)) {
+                    if (in_array(Str::lower($trimmedLookupCandidate), $genericGatewayAliases, true)) {
                         continue;
                     }
 
@@ -407,7 +408,33 @@ trait ManualPaymentPresentationHelpers
             return;
         }
 
-        $manualBankAliases = ManualPaymentRequest::manualBankGatewayAliases();
+        $genericGatewayAliases = array_merge(
+            ManualPaymentRequest::manualBankGatewayAliases(),
+            ManualPaymentRequest::walletGatewayAliases(),
+            [
+                'المحفظة',
+                'تحويل بنكي',
+            ]
+        );
+
+        $genericGatewayAliases = array_values(array_unique(array_filter(array_map(
+            static function ($alias) {
+                if (! is_string($alias)) {
+                    return null;
+                }
+
+                $trimmed = trim($alias);
+
+                if ($trimmed === '') {
+                    return null;
+                }
+
+                return Str::lower($trimmed);
+            },
+            $genericGatewayAliases
+        ))));
+
+
 
         $candidateIds = $rows
             ->map(static function (object $row) use ($manualBankAliases) {

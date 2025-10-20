@@ -91,52 +91,96 @@ class CardPlanet extends StatelessWidget {
               if (data.animationPath != null)
                 Flexible(
                   flex: 20,
-                  child: () {
-                    final cached = _compositionFor(data.animationPath);
-                    if (cached != null) {
-                      return Lottie(
-                        composition: cached,
-                        height: MediaQuery.of(context).size.height * 0.45,
-                        fit: BoxFit.contain,
-                        animate: isActive,
-                        repeat: isActive,
-                      );
-                    }
-                    return Lottie.asset(
-                      data.animationPath!,
-                      height: MediaQuery.of(context).size.height * 0.45,
-                      fit: BoxFit.contain,
-                      // قم بإيقاف التشغيل الافتراضي إذا تريد تحكم خاص
-                      animate: isActive,
-                      repeat: isActive,
-                    );
-                  }(),
+                  child: AnimatedSlide(
+                    duration: const Duration(milliseconds: 350),
+                    curve: const Interval(0, 1, curve: Curves.easeOut),
+                    offset: isActive ? Offset.zero : const Offset(0, 0.08),
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 350),
+                      curve: Curves.easeOut,
+                      opacity: isActive ? 1 : 0,
+                      child: () {
+                        final cached = _compositionFor(data.animationPath);
+                        if (cached != null) {
+                          return Lottie(
+                            composition: cached,
+                            height: MediaQuery.of(context).size.height * 0.45,
+                            fit: BoxFit.contain,
+                            animate: isActive,
+                            repeat: isActive,
+                          );
+                        }
+                        return Lottie.asset(
+                          data.animationPath!,
+                          height: MediaQuery.of(context).size.height * 0.45,
+                          fit: BoxFit.contain,
+                          // قم بإيقاف التشغيل الافتراضي إذا تريد تحكم خاص
+                          animate: isActive,
+                          repeat: isActive,
+                        );
+                      }(),
+                    ),
+                  ),
                 ),
               if (data.image != null)
-                Flexible(flex: 20, child: Image(image: data.image!)),
+                Flexible(
+                  flex: 20,
+                  child: AnimatedSlide(
+                    duration: const Duration(milliseconds: 350),
+                    curve: const Interval(0, 1, curve: Curves.easeOut),
+                    offset: isActive ? Offset.zero : const Offset(0, 0.08),
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 350),
+                      curve: Curves.easeOut,
+                      opacity: isActive ? 1 : 0,
+                      child: Image(image: data.image!),
+                    ),
+                  ),
+                ),
+
               const Spacer(flex: 2),
               Directionality(
                 textDirection: TextDirection.rtl,
                 child: Column(
                   children: [
-                    Text(
-                      data.title,
-                      style: GoogleFonts.tajawal(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: data.titleColor,
+                    AnimatedSlide(
+                      duration: const Duration(milliseconds: 300),
+                      curve: const Interval(0, 1, curve: Curves.easeOut),
+                      offset: isActive ? Offset.zero : const Offset(0, 0.12),
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOut,
+                        opacity: isActive ? 1 : 0,
+                        child: Text(
+                          data.title,
+                          style: GoogleFonts.tajawal(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: data.titleColor,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 12),
-                    Text(
-                      data.subtitle,
-                      style: GoogleFonts.tajawal(
-                        fontSize: 16,
-                        height: 1.6,
-                        color: data.subtitleColor,
+                    AnimatedSlide(
+                      duration: const Duration(milliseconds: 350),
+                      curve: const Interval(0.25, 1, curve: Curves.easeOut),
+                      offset: isActive ? Offset.zero : const Offset(0, 0.12),
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 350),
+                        curve: const Interval(0.25, 1, curve: Curves.easeOut),
+                        opacity: isActive ? 1 : 0,
+                        child: Text(
+                          data.subtitle,
+                          style: GoogleFonts.tajawal(
+                            fontSize: 16,
+                            height: 1.6,
+                            color: data.subtitleColor,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),

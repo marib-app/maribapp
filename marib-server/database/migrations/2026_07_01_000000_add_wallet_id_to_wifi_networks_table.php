@@ -13,10 +13,17 @@ return new class extends Migration
             return;
         }
 
-        Schema::table('wifi_networks', function (Blueprint $table) {
-            $column = $table->foreignId('wallet_id')->nullable()->after('notes');
+        $placeAfterNotes = Schema::hasColumn('wifi_networks', 'notes');
+        $walletAccountsTableExists = Schema::hasTable('wallet_accounts');
 
-            if (Schema::hasTable('wallet_accounts')) {
+        Schema::table('wifi_networks', function (Blueprint $table) use ($placeAfterNotes, $walletAccountsTableExists) {
+            $column = $table->foreignId('wallet_id')->nullable();
+
+            if ($placeAfterNotes) {
+                $column->after('notes');
+            }
+
+            if ($walletAccountsTableExists) {
                 $column->constrained('wallet_accounts')->nullOnDelete();
             }
         });

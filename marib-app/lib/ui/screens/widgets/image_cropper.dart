@@ -19,7 +19,6 @@ class CropImage {
       sourcePath: filePath,
       uiSettings: [
         AndroidUiSettings(
-          context: context,
           toolbarTitle: 'Cropper',
           toolbarColor: territoryColor,
           toolbarWidgetColor: Colors.white,

@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:image_cropper/image_cropper.dart';
 
 import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/ui/theme/theme.dart';
 
 //This will open image crop SDK
 class CropImage {
 
-  static Future<CroppedFile?>? crop(
+  static Future<CroppedFile?> crop(
       BuildContext context, {
         required String filePath,
       }) async {
@@ -18,6 +19,7 @@ class CropImage {
       sourcePath: filePath,
       uiSettings: [
         AndroidUiSettings(
+          context: context,
           toolbarTitle: 'Cropper',
           toolbarColor: territoryColor,
           toolbarWidgetColor: Colors.white,

@@ -392,8 +392,24 @@ class SplashScreenState extends State<SplashScreen>
   Widget _buildOnline(BuildContext context) {
     // مقدار الرفع عن الوضع الحالي (وحدات لوحة 500px)
     final double lift = 150; // جرّب 60–120 حسب رغبتك
-    final double paddingBottom = 270 + lift;
-
+    const double footerHeight = 270;
+    final double footerHorizontalPadding = ScreenScaler.s(24);
+    final double footerVerticalPadding = ScreenScaler.s(18);
+    final double footerSpacing = ScreenScaler.s(6);
+    final double footerFontSize = ScreenScaler.fontSize(context, baseSize: 12);
+    final Color footerColor =
+    Theme.of(context).colorScheme.onPrimary.withOpacity(0.72);
+    final TextStyle footerStyle =
+        Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: footerColor,
+          fontSize: footerFontSize,
+          fontWeight: FontWeight.w500,
+        ) ??
+            TextStyle(
+              color: footerColor,
+              fontSize: footerFontSize,
+              fontWeight: FontWeight.w500,
+            );
     return AnnotatedRegion(
       value: SystemUiOverlayStyle(
         statusBarColor: context.color.territoryColor,
@@ -409,7 +425,7 @@ class SplashScreenState extends State<SplashScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Padding(
-                    padding: EdgeInsets.only(bottom: paddingBottom),
+                    padding: EdgeInsets.only(bottom: lift),
                     child: Column(
                       children: [
                         SizedBox(
@@ -433,6 +449,40 @@ class SplashScreenState extends State<SplashScreen>
                         ),
 
                       ],
+                    ),
+                  ),
+                  AnimatedOpacity(
+                    opacity: _showIntroUi ? 1 : 0,
+                    duration: const Duration(milliseconds: 500),
+                    curve: Curves.easeInOut,
+                    child: SizedBox(
+                      height: footerHeight,
+                      width: double.infinity,
+                      child: Container(
+                        alignment: Alignment.bottomCenter,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: footerHorizontalPadding,
+                          vertical: footerVerticalPadding,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'محافظة مأرب - التحول الرقمي',
+                              textAlign: TextAlign.center,
+                              style: footerStyle,
+                            ),
+                            SizedBox(height: footerSpacing),
+                            Text(
+                              'تطبيق ${AppSettings.applicationName} للخدمات الإلكترونية',
+                              textAlign: TextAlign.center,
+                              style: footerStyle.copyWith(
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ],

@@ -72,7 +72,7 @@ class FetchItemSummaryFailure extends FetchItemSummaryState {
 }
 
 class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
-  static int get defaultPerPage => Constant.loadLimit;
+  static int get defaultPerPage => Constant.sectionItemsPageSize;
 
   FetchItemSummaryCubit({ItemRepository? itemRepository})
       : _itemRepository = itemRepository ?? ItemRepository(),
@@ -90,7 +90,7 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
     final String? normalizedSearch = _sanitizeQuery(search);
     final String? normalizedSort = _sanitizeQuery(sortBy);
     final ItemFilterModel? clonedFilter = _cloneFilter(filter);
-    final int effectivePerPage = perPage ?? Constant.loadLimit;
+    final int effectivePerPage = perPage ?? Constant.sectionItemsPageSize;
 
     if (_shouldResetState(
       categoryId,

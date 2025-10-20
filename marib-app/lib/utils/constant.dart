@@ -63,6 +63,7 @@ class Constant {
 
   //
   static int loadLimit = AppSettings.apiDataLoadLimit;
+  static const int sectionItemsPageSize = AppSettings.sectionItemsPageSize;
 
   static const String defaultCountryCode = AppSettings.defaultCountryCode;
 

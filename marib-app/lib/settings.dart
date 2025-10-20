@@ -44,6 +44,7 @@ class AppSettings {
   ///API Setting
 
   static const int apiDataLoadLimit = 20;
+  static const int sectionItemsPageSize = 6;
   static const int maxCategoryShowLengthInHomeScreen = 5;
 
   /// Enable verbose network logging in non-production builds.

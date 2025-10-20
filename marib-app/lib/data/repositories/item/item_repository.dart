@@ -110,7 +110,7 @@ class ItemRepository {
     int? areaId,
     int? perPage,
   }) async {
-    final int effectivePerPage = perPage ?? Constant.loadLimit;
+    final int effectivePerPage = perPage ?? Constant.sectionItemsPageSize;
     final Map<String, dynamic> parameters = {
       Api.categoryId: categoryId,
       Api.page: page,

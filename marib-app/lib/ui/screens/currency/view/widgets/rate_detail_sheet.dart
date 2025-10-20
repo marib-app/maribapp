@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'dart:ui' as ui;
 
 import 'package:marib/data/model/currency_history.dart';
 
@@ -140,7 +141,8 @@ class _RateDetailSheetState extends State<RateDetailSheet> {
             spacing: 16,
             runSpacing: 12,
             alignment: WrapAlignment.end,
-            textDirection: TextDirection.rtl,
+            textDirection: ui.TextDirection.rtl,
+
             children: [
               _HistoryStat(
                 label: 'التغير',
@@ -218,7 +220,8 @@ class _RateDetailSheetState extends State<RateDetailSheet> {
                           color: onBackground,
                           fontWeight: FontWeight.w800,
                         ),
-                        textDirection: TextDirection.rtl,
+                        textDirection: ui.TextDirection.rtl,
+
                       ),
                       if (widget.subtitle != null) ...[
                         const SizedBox(height: 4),
@@ -228,7 +231,8 @@ class _RateDetailSheetState extends State<RateDetailSheet> {
                             color: onBackground.withOpacity(0.65),
                             fontWeight: FontWeight.w600,
                           ),
-                          textDirection: TextDirection.rtl,
+                          textDirection: ui.TextDirection.rtl,
+
                         ),
                       ],
                       if (widget.changeIndicator != null) ...[
@@ -248,7 +252,8 @@ class _RateDetailSheetState extends State<RateDetailSheet> {
                 border: Border.all(color: onBackground.withOpacity(0.08)),
               ),
               child: Directionality(
-                textDirection: TextDirection.rtl,
+                textDirection: ui.TextDirection.rtl,
+
                 child: Row(
                   children: [
                     Expanded(

@@ -66,14 +66,14 @@ class FetchItemSummarySuccess extends FetchItemSummaryState {
 }
 
 class FetchItemSummaryFailure extends FetchItemSummaryState {
-  static const int defaultPerPage = 6;
-
   final String errorMessage;
 
   FetchItemSummaryFailure(this.errorMessage);
 }
 
 class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
+  static int get defaultPerPage => Constant.loadLimit;
+
   FetchItemSummaryCubit({ItemRepository? itemRepository})
       : _itemRepository = itemRepository ?? ItemRepository(),
         super(FetchItemSummaryInitial());
@@ -85,18 +85,19 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
     String? search,
     String? sortBy,
     ItemFilterModel? filter,
-    int perPage = Constant.loadLimit,
+    int? perPage,
   }) async {
     final String? normalizedSearch = _sanitizeQuery(search);
     final String? normalizedSort = _sanitizeQuery(sortBy);
     final ItemFilterModel? clonedFilter = _cloneFilter(filter);
+    final int effectivePerPage = perPage ?? Constant.loadLimit;
 
     if (_shouldResetState(
       categoryId,
       normalizedSearch,
       normalizedSort,
       clonedFilter,
-      perPage,
+      effectivePerPage,
     )) {
       emit(FetchItemSummaryInitial());
     }
@@ -111,7 +112,7 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
         search: normalizedSearch,
         sortBy: normalizedSort,
         filter: clonedFilter,
-        perPage: perPage,
+        perPage: effectivePerPage,
       );
 
       emit(
@@ -123,7 +124,7 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
           search: normalizedSearch,
           sortBy: normalizedSort,
           filter: clonedFilter,
-          perPage: perPage,
+          perPage: effectivePerPage,
         ),
       );
     } catch (e) {

@@ -625,8 +625,7 @@ class RatesTabView extends StatelessWidget {
             textDirection: TextDirection.rtl,
             child: Row(
               children: [
-                leading,
-                const SizedBox(width: 12),
+
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -663,6 +662,8 @@ class RatesTabView extends StatelessWidget {
                     ],
                   ),
                 ),
+                const SizedBox(width: 12),
+                leading,
                 const SizedBox(width: 12),
                 changeIndicator,
                 const SizedBox(width: 6),

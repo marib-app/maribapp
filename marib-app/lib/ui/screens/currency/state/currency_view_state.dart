@@ -25,13 +25,12 @@ class CurrencyViewState {
     required this.toCurrency,
     required this.convertedAmount,
     required this.hasCalculated,
-    required this.assetFilter,
     required this.changeFilter,
     required this.notificationFrequency,
     required List<PreferenceOption> notificationOptions,
   })  : governorates = _wrapGovernorates(governorates),
         notificationOptions =
-        List<PreferenceOption>.unmodifiable(notificationOptions);
+            List<PreferenceOption>.unmodifiable(notificationOptions);
 
   final CurrencyPageStatus status;
   final String? errorMessage;
@@ -45,7 +44,6 @@ class CurrencyViewState {
   final String? requestedGovernorateCode;
   final String? requestedGovernorateName;
   final bool usedFallback;
-  final AssetFilterType assetFilter;
   final RateChangeFilter changeFilter;
   final String amountText;
   final String fromCurrency;
@@ -57,21 +55,35 @@ class CurrencyViewState {
   final List<PreferenceOption> notificationOptions;
 
   List<dynamic> get rates => currency.rates;
+
   List<dynamic> get displayRates => currency.displayRates;
+
   DateTime? get lastUpdatedAt => currency.lastUpdatedAt;
+
   Set<int> get currencyWatchlist => currency.watchlist;
+
   bool get showWatchlistOnly => currency.showWatchlistOnly;
+
   Map<int, int> get selectedHistoryRanges => currency.selectedHistoryRanges;
+
   int get defaultHistoryRangeDays => currency.defaultHistoryRangeDays;
+
   bool get isDisplayRatesStale => currency.isDisplayRatesStale;
 
   List<MetalRate> get goldRates => metals.goldRates;
+
   List<MetalRate> get silverRates => metals.silverRates;
+
   List<MetalRate> get otherMetalRates => metals.otherRates;
+
   List<MetalRate> get displayGoldRates => metals.displayGoldRates;
+
   List<MetalRate> get displaySilverRates => metals.displaySilverRates;
+
   List<MetalRate> get displayOtherMetalRates => metals.displayOtherRates;
+
   List<MetalRate> get displayMetals => metals.displayRates;
+
   Set<int> get metalWatchlist => metals.watchlist;
 
   int historyRangeForCurrency(int? currencyId) =>
@@ -97,7 +109,6 @@ class CurrencyViewState {
     bool? hasCalculated,
     String? notificationFrequency,
     List<PreferenceOption>? notificationOptions,
-    AssetFilterType? assetFilter,
     RateChangeFilter? changeFilter,
   }) {
     return CurrencyViewState(
@@ -108,15 +119,15 @@ class CurrencyViewState {
       metalsLastUpdatedAt: metalsLastUpdatedAt ?? this.metalsLastUpdatedAt,
       governorates: governorates ?? this.governorates,
       selectedGovernorateCode:
-      selectedGovernorateCode ?? this.selectedGovernorateCode,
+          selectedGovernorateCode ?? this.selectedGovernorateCode,
       appliedGovernorateCode:
-      appliedGovernorateCode ?? this.appliedGovernorateCode,
+          appliedGovernorateCode ?? this.appliedGovernorateCode,
       appliedGovernorateName:
-      appliedGovernorateName ?? this.appliedGovernorateName,
+          appliedGovernorateName ?? this.appliedGovernorateName,
       requestedGovernorateCode:
-      requestedGovernorateCode ?? this.requestedGovernorateCode,
+          requestedGovernorateCode ?? this.requestedGovernorateCode,
       requestedGovernorateName:
-      requestedGovernorateName ?? this.requestedGovernorateName,
+          requestedGovernorateName ?? this.requestedGovernorateName,
       usedFallback: usedFallback ?? this.usedFallback,
       amountText: amountText ?? this.amountText,
       fromCurrency: fromCurrency ?? this.fromCurrency,
@@ -124,22 +135,18 @@ class CurrencyViewState {
       convertedAmount: convertedAmount ?? this.convertedAmount,
       hasCalculated: hasCalculated ?? this.hasCalculated,
       notificationFrequency:
-      notificationFrequency ?? this.notificationFrequency,
-      notificationOptions:
-      notificationOptions ?? this.notificationOptions,
-
-      assetFilter: assetFilter ?? this.assetFilter,
+          notificationFrequency ?? this.notificationFrequency,
+      notificationOptions: notificationOptions ?? this.notificationOptions,
       changeFilter: changeFilter ?? this.changeFilter,
-
     );
   }
 
   static List<Map<String, String?>> _wrapGovernorates(
-      List<Map<String, String?>> source,
-      ) {
+    List<Map<String, String?>> source,
+  ) {
     return List<Map<String, String?>>.unmodifiable(
       source.map(
-            (entry) => Map<String, String?>.unmodifiable(entry),
+        (entry) => Map<String, String?>.unmodifiable(entry),
       ),
     );
   }

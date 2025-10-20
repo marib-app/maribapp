@@ -33,15 +33,12 @@ class CurrencyCubit extends Cubit<CurrencyState> {
   UserPreferences _preferences = const UserPreferences();
   List<PreferenceOption> _notificationOptions = const <PreferenceOption>[];
   bool _showWatchlistOnly = false;
-  AssetFilterType _assetFilter = AssetFilterType.all;
   RateChangeFilter _changeFilter = RateChangeFilter.all;
 
   Future<void> initialize() async {
     _preferences = await _preferenceRepository.loadLocalPreferences();
     _showWatchlistOnly = await _preferenceRepository.loadWatchlistFilter();
-    _assetFilter = AssetFilterTypeStorage.fromStorage(
-      await _preferenceRepository.loadAssetFilter(),
-    );
+
     _changeFilter = RateChangeFilterStorage.fromStorage(
       await _preferenceRepository.loadChangeFilter(),
     );
@@ -157,7 +154,6 @@ class CurrencyCubit extends Cubit<CurrencyState> {
         preferences: _preferences,
         notificationOptions: _notificationOptions,
         showWatchlistOnly: _showWatchlistOnly,
-        assetFilter: _assetFilter,
         changeFilter: _changeFilter,
       ));
     } catch (error) {
@@ -166,9 +162,7 @@ class CurrencyCubit extends Cubit<CurrencyState> {
   }
 
   List<CurrencyRate> _filterCurrencyRates(List<CurrencyRate> rates) {
-    if (_assetFilter == AssetFilterType.metals) {
-      return const <CurrencyRate>[];
-    }
+
     Iterable<CurrencyRate> filtered = rates;
 
     if (_changeFilter != RateChangeFilter.all) {
@@ -216,14 +210,7 @@ class CurrencyCubit extends Cubit<CurrencyState> {
     _refreshSuccessState();
   }
 
-  Future<void> changeAssetFilter(AssetFilterType filter) async {
-    if (_assetFilter == filter) {
-      return;
-    }
-    _assetFilter = filter;
-    await _preferenceRepository.saveAssetFilter(filter.storageValue);
-    _refreshSuccessState();
-  }
+
 
   Future<void> changeChangeDirectionFilter(RateChangeFilter filter) async {
     if (_changeFilter == filter) {
@@ -359,7 +346,6 @@ class CurrencyCubit extends Cubit<CurrencyState> {
       preferences: _preferences,
       notificationOptions: _notificationOptions,
       showWatchlistOnly: _showWatchlistOnly,
-      assetFilter: _assetFilter,
       changeFilter: _changeFilter,
     ));
   }

@@ -413,9 +413,7 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
     context.read<CurrencyCubit>().toggleMetalWatchlist(metalId);
   }
 
-  void _onAssetFilterChanged(AssetFilterType filter) {
-    context.read<CurrencyCubit>().changeAssetFilter(filter);
-  }
+
 
   void _onDirectionFilterChanged(RateChangeFilter filter) {
     context.read<CurrencyCubit>().changeChangeDirectionFilter(filter);
@@ -523,7 +521,6 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
             hasCalculated: _hasCalculated,
             notificationFrequency: 'daily',
             notificationOptions: const <PreferenceOption>[],
-            assetFilter: AssetFilterType.all,
             changeFilter: RateChangeFilter.all,
           );
         } else if (state is CurrencyError) {
@@ -564,7 +561,6 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
             hasCalculated: _hasCalculated,
             notificationFrequency: 'daily',
             notificationOptions: const <PreferenceOption>[],
-            assetFilter: AssetFilterType.all,
             changeFilter: RateChangeFilter.all,
           );
         } else if (state is CurrencySuccess) {
@@ -583,21 +579,10 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
           final Iterable<MetalRate> visibleMetals =
               state.visibleMetalRates.whereType<MetalRate>();
 
-          final List<dynamic> combinedDisplayRates;
-          switch (state.assetFilter) {
-            case AssetFilterType.all:
-              combinedDisplayRates = <dynamic>[
-                ...visibleCurrencies,
-                ...visibleMetals,
-              ];
-              break;
-            case AssetFilterType.currencies:
-              combinedDisplayRates = List<dynamic>.of(visibleCurrencies);
-              break;
-            case AssetFilterType.metals:
-              combinedDisplayRates = List<dynamic>.of(visibleMetals);
-              break;
-          }
+          final List<dynamic> combinedDisplayRates = <dynamic>[
+            ...visibleCurrencies,
+            ...visibleMetals,
+          ];
 
           final displayGoldRates = state.visibleMetalRates
               .where((rate) => rate.isGold)
@@ -686,7 +671,6 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
             usedFallback: state.usedFallback,
             notificationFrequency: state.preferences.notificationFrequency,
             notificationOptions: state.notificationOptions,
-            assetFilter: state.assetFilter,
             changeFilter: state.changeFilter,
             amountText: _amountController.text,
             fromCurrency: _fromCurrency,
@@ -732,7 +716,6 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
             hasCalculated: _hasCalculated,
             notificationFrequency: 'daily',
             notificationOptions: const <PreferenceOption>[],
-            assetFilter: AssetFilterType.all,
             changeFilter: RateChangeFilter.all,
           );
         }
@@ -756,7 +739,6 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
           onNotificationFrequencyChanged: _onNotificationFrequencyChanged,
           onSelectHistoryRange: _onHistoryRangeSelected,
           onNotificationRegionChanged: _onNotificationRegionChanged,
-          onAssetFilterChanged: _onAssetFilterChanged,
           onDirectionFilterChanged: _onDirectionFilterChanged,
 
           // 🔧 لا تستخدم const هنا

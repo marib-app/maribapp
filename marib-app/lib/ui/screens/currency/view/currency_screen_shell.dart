@@ -39,7 +39,6 @@ class CurrencyScreenUI extends StatelessWidget {
     required this.onToggleMetalWatchlist,
     required this.onNotificationFrequencyChanged,
     required this.onSelectHistoryRange,
-    required this.onAssetFilterChanged,
     required this.onDirectionFilterChanged,
     required this.onNotificationRegionChanged,
   });
@@ -62,7 +61,6 @@ class CurrencyScreenUI extends StatelessWidget {
   final void Function(int? currencyId, int days) onSelectHistoryRange;
   final void Function(int currencyId, String? regionCode)
       onNotificationRegionChanged;
-  final void Function(AssetFilterType) onAssetFilterChanged;
   final void Function(RateChangeFilter) onDirectionFilterChanged;
   final List<TextInputFormatter> amountInputFormatters;
   final SystemUiOverlayStyle systemUiOverlayStyle;
@@ -326,26 +324,7 @@ class CurrencyScreenUI extends StatelessWidget {
               icon: Icons.trending_down,
             ),
             const SizedBox(width: 12),
-            label('نوع الأصل'),
-            buildChoiceChip(
-              text: 'الكل',
-              selected: state.assetFilter == AssetFilterType.all,
-              onTap: () => onAssetFilterChanged(AssetFilterType.all),
-              icon: Icons.all_inbox_outlined,
-            ),
-            buildChoiceChip(
-              text: 'عملات',
-              selected: state.assetFilter == AssetFilterType.currencies,
-              onTap: () => onAssetFilterChanged(AssetFilterType.currencies),
-              icon: Icons.payments_outlined,
-            ),
-            buildChoiceChip(
-              text: 'معادن',
-              selected: state.assetFilter == AssetFilterType.metals,
-              onTap: () => onAssetFilterChanged(AssetFilterType.metals),
-              icon: Icons.auto_awesome_outlined,
-            ),
-            const SizedBox(width: 12),
+
             watchlistChip,
           ],
         ),

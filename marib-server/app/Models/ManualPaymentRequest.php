@@ -218,7 +218,41 @@ class ManualPaymentRequest extends Model
         return array_values(array_unique(array_filter($normalized)));
     }
 
+    /**
+     * Canonical aliases representing the wallet gateway values.
+     *
+     * @return array<int, string>
+     */
+    public static function walletGatewayAliases(): array
+    {
+        $aliases = array_merge(
+            [
+                'wallet',
+            ],
+            self::GATEWAY_ALIASES['wallet'] ?? []
+        );
 
+        $normalized = array_map(
+            static function ($alias) {
+                if (! is_string($alias)) {
+                    return null;
+                }
+
+                $trimmed = trim($alias);
+
+                if ($trimmed === '') {
+                    return null;
+                }
+
+                return strtolower($trimmed);
+            },
+            $aliases
+        );
+
+        return array_values(array_unique(array_filter($normalized)));
+    }
+
+    
      /**
      * @var array<int, string>
      */

@@ -97,6 +97,7 @@ class HomeScreenState extends State<HomeScreen>
     // ✅ إزالة المستمع لتفادي تسريب الذاكرة
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    NotificationService.disposeListeners();
     super.dispose();
   }
 

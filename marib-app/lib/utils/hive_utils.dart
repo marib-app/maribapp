@@ -15,6 +15,7 @@ import 'dart:async';
 import 'package:marib/ui/screens/chat/chat_badge_controller.dart';
 import 'dart:convert';
 import 'package:marib/utils/api.dart';
+import 'package:marib/utils/notification/notification_service.dart';
 
 // أداة مساعدة للتعامل مع التخزين المحلي عبر Hive
 // - تُجمّع كل عمليات القراءة/الكتابة على صناديق Hive
@@ -610,6 +611,7 @@ class HiveUtils {
     await Hive.box(HiveKeys.historyBox).clear();
     HiveUtils.setUserIsAuthenticated(false);
     await ChatBadgeController.handleUserChanged(null);
+    NotificationService.disposeListeners();
     _runLogoutHooks();
   }
 
@@ -639,6 +641,7 @@ class HiveUtils {
 
     // 4) نداء الـcallback (لو فيه إجراءات إضافية)
     onLogout.call();
+    NotificationService.disposeListeners();
     _runLogoutHooks();
 
     // 5) إعادة التوجيه (افتراضيًا: إلى صفحة الدخول)

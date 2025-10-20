@@ -2287,7 +2287,12 @@ class ManualPaymentRequestController extends Controller
         $manualGatewayAliases[] = 'manual_bank';
         $manualGatewayAliases[] = 'manual_banks';
         $eastGatewayAliases = ['east', 'east_yemen_bank', 'east-yemen-bank', 'eastyemenbank'];
-        $walletGatewayAliases = ['wallet', 'wallet_gateway', 'wallet_top_up', 'wallet-top-up', 'walletpayment', 'wallet_payment'];
+        // Keep wallet aliases in sync with ManualPaymentRequest::GATEWAY_ALIASES['wallet'].
+        $walletGatewayAliases = ManualPaymentRequest::walletGatewayAliases();
+        if ($walletGatewayAliases === []) {
+            $walletGatewayAliases = ['wallet'];
+        }
+        
         $cashGatewayAliases = ['cash', 'cod', 'cash_on_delivery', 'cashcollection', 'cash_collect'];
         $transactionGatewayColumn = "LOWER(NULLIF(TRIM(pt.payment_gateway), ''))";
         $channelExpression = sprintf(

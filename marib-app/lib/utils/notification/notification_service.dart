@@ -111,8 +111,8 @@ class NotificationService {
 
   static bool _isLogoutHookRegistered = false;
 
-  static late StreamSubscription<RemoteMessage> foregroundStream;
-  static late StreamSubscription<RemoteMessage> onMessageOpen;
+  static StreamSubscription<RemoteMessage>? foregroundStream;
+  static StreamSubscription<RemoteMessage>? onMessageOpen;
   static StreamSubscription<String>? _tokenRefreshSubscription;
   static final StreamController<String> _walletNotificationController =
       StreamController<String>.broadcast();
@@ -689,7 +689,7 @@ class NotificationService {
     requestPermission();
     await _ensureInitialTokenSynced();
     await registerListeners(context);
-    _registerTokenRefreshListener();
+    await _registerTokenRefreshListener();
   }
 
   @pragma('vm:entry-point')
@@ -698,7 +698,10 @@ class NotificationService {
     await handleNotification(message);
   }
 
-  static forgroundNotificationHandler(BuildContext context) async {
+  static Future<void> forgroundNotificationHandler(
+      BuildContext context) async {
+    await foregroundStream?.cancel();
+
     foregroundStream =
         FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       print("foreground notification***${message.toString()}");
@@ -706,20 +709,20 @@ class NotificationService {
     });
   }
 
-  static terminatedStateNotificationHandler(BuildContext context) {
-    FirebaseMessaging.instance.getInitialMessage().then(
-      (RemoteMessage? message) {
-        if (message == null) {
-          return;
-        }
-        if (message.notification == null) {
-          handleNotification(message, context);
-        }
-      },
-    );
+  static Future<void> terminatedStateNotificationHandler(
+      BuildContext context) async {
+    final RemoteMessage? message =
+    await FirebaseMessaging.instance.getInitialMessage();
+    if (message == null) {
+      return;
+    }
+    if (message.notification == null) {
+      await handleNotification(message, context);
+    }
   }
 
-  static void onTapNotificationHandler(context) {
+  static Future<void> onTapNotificationHandler(context) async {
+    await onMessageOpen?.cancel();
     onMessageOpen = FirebaseMessaging.onMessageOpenedApp
         .listen((RemoteMessage message) async {
       print("message.data on tap***${message.data.toString()}");
@@ -1061,21 +1064,28 @@ class NotificationService {
   }
 
   static Future<void> registerListeners(context) async {
+    await foregroundStream?.cancel();
+    foregroundStream = null;
+    await onMessageOpen?.cancel();
+    onMessageOpen = null;
     FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
         alert: true, badge: true, sound: true);
     await forgroundNotificationHandler(context);
     await terminatedStateNotificationHandler(context);
-    onTapNotificationHandler(context);
+    await onTapNotificationHandler(context);
   }
 
   static void disposeListeners() {
-    onMessageOpen.cancel();
-    foregroundStream.cancel();
+    onMessageOpen?.cancel();
+    onMessageOpen = null;
+    foregroundStream?.cancel();
+    foregroundStream = null;
     _tokenRefreshSubscription?.cancel();
+    _tokenRefreshSubscription = null;
   }
 
-  static void _registerTokenRefreshListener() {
-    _tokenRefreshSubscription?.cancel();
+  static Future<void> _registerTokenRefreshListener() async {
+    await _tokenRefreshSubscription?.cancel();
     _tokenRefreshSubscription =
         FirebaseMessaging.instance.onTokenRefresh.listen((String token) async {
       await _handleTokenRefresh(token);

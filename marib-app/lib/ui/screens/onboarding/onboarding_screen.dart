@@ -281,6 +281,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   void dispose() {
     _hintTimer?.cancel();
+    currentIndex.dispose();
     super.dispose();
   }
 

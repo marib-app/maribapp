@@ -35,7 +35,10 @@ void initApp() async {
   final bool attachPerformanceMonitor =
       perfLoggingRequested && allowPerfLoggingInBuild;
 
-  if (attachPerformanceMonitor) {
+  if (attachPerformanceMonitor &&
+      (!kReleaseMode ||
+          PerformanceMonitor.instance.isEnvironmentCollectionEnabled)) {
+
     PerformanceMonitor.instance.initialize();
     binding.addTimingsCallback(
       PerformanceMonitor.instance.handleFrameTimings,

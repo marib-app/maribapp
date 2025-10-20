@@ -20,7 +20,6 @@ class Constant {
   static String iOSAppId = '';
   static const String shareappText = AppSettings.shareAppText;
 
-
   static const double defaultPadding = 16.0;
 
   //backend url
@@ -112,8 +111,6 @@ class Constant {
   static const int publicRootCategoryId = 6;
   static const int storeRootCategoryId = 6;
 
-
-
   static List<PostedSinceItem> postedSince = [
     PostedSinceItem(status: "All Time", value: "all-time"),
     PostedSinceItem(status: "Today", value: "today"),
@@ -167,7 +164,6 @@ class Constant {
     SystemSetting.usageGuide: "usage_guide",
     SystemSetting.socialLinks: "social_links",
     SystemSetting.geoDisabledCategories: "geo_disabled_categories",
-
   };
 
   ///This is limit of minimum chat messages load count , make sure you set it grater than 25;

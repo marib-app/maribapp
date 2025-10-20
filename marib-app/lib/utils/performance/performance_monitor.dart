@@ -24,6 +24,10 @@ class PerformanceMonitor {
 
   bool get isEnvironmentCollectionEnabled => _envCollectionEnabled;
 
+  bool _collectionOverrideEnabled = false;
+
+  bool get isCollectionOverrideEnabled => _collectionOverrideEnabled;
+
   static const int _maxCompletedSessions = 10;
 
   final List<_RoutePerformanceSnapshot> _completedSessions =
@@ -47,6 +51,11 @@ class PerformanceMonitor {
     if (_envCollectionEnabled) {
       return true;
     }
+
+    if (_collectionOverrideEnabled) {
+      return true;
+    }
+
     if (kReleaseMode) {
       return false;
     }
@@ -54,6 +63,38 @@ class PerformanceMonitor {
       return AppSettings.isPerformanceLoggingEnabled;
     }
     return false;
+  }
+
+  bool get _isSchedulingAllowed {
+    if (_collectionOverrideEnabled) {
+      return true;
+    }
+    if (_envCollectionEnabled) {
+      return true;
+    }
+    if (!kReleaseMode && AppSettings.isPerformanceLoggingEnabled) {
+      return true;
+    }
+    return false;
+  }
+
+  void setManualCollectionEnabled(bool enabled) {
+    if (enabled && kReleaseMode && !_envCollectionEnabled) {
+      debugPrint(
+        'PerformanceMonitor: manual collection cannot be enabled in release builds.',
+      );
+      return;
+    }
+    if (_collectionOverrideEnabled == enabled) {
+      return;
+    }
+    _collectionOverrideEnabled = enabled;
+    AppSettings.setPerformanceLoggingOverride(enabled);
+    if (enabled) {
+      initialize();
+    } else {
+      _updateEnabledState(false);
+    }
   }
 
   void initialize() {
@@ -274,7 +315,7 @@ class PerformanceMonitor {
   }
 
   void _scheduleReportWrite() {
-    if (!_enabled || !shouldCollectMetrics) {
+    if (!_enabled || !shouldCollectMetrics || !_isSchedulingAllowed) {
       _pendingWrite?.cancel();
       _pendingWrite = null;
       return;

@@ -58,7 +58,6 @@ class AppSettings {
     defaultValue: false,
   );
 
-
   static bool _networkLoggingOverride = false;
 
   /// Whether network logging should currently be active (ignoring build mode).
@@ -70,8 +69,6 @@ class AppSettings {
   static void setNetworkLoggingOverride(bool enabled) {
     _networkLoggingOverride = enabled;
   }
-
-
 
   /// Enable the custom performance monitor in debug/profile builds.
   /// Keep this `false` in production unless troubleshooting locally.
@@ -96,7 +93,6 @@ class AppSettings {
   static void setPerformanceLoggingOverride(bool enabled) {
     _performanceLoggingOverride = enabled;
   }
-
 
   static final String baseUrl =
       "${HelperUtils.checkHost(hostUrl)}api/"; //don't change this

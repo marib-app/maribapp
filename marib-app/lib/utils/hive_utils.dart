@@ -604,7 +604,7 @@ class HiveUtils {
 
   /// إعادة تمهيد/تصفير كل الصناديق الأساسية (تسجيل خروج قوي)
   static void clear() async {
-    Api.clearCache();
+    Api.handleAccountChange();
     await _userDetailsBox.clear();
     _invalidateUserDetailsCache();
 
@@ -621,7 +621,7 @@ class HiveUtils {
     required VoidCallback onLogout,
     bool? isRedirect,
   }) async {
-    Api.clearCache();
+    Api.handleAccountChange();
     // 1) تسجيل خروج من Firebase
     try {
       await FirebaseAuth.instance.signOut();

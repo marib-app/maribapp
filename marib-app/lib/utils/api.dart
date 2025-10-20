@@ -54,17 +54,20 @@ class _CachedApiResponse {
     required this.payload,
     this.eTag,
     required this.storedAt,
+    this.customTtl,
   });
 
   final Map<String, dynamic> payload;
   final String? eTag;
   final DateTime storedAt;
+  final Duration? customTtl;
 
-  bool isExpired(Duration ttl, DateTime now) {
-    if (ttl <= Duration.zero) {
+  bool isExpired(Duration defaultTtl, DateTime now) {
+    final Duration effectiveTtl = customTtl ?? defaultTtl;
+    if (effectiveTtl <= Duration.zero) {
       return false;
     }
-    return now.difference(storedAt) >= ttl;
+    return now.difference(storedAt) >= effectiveTtl;
   }
 }
 
@@ -84,15 +87,12 @@ class _ApiResponseCache {
       return;
     }
 
-    final Duration ttl = _entryTtl;
-    if (ttl <= Duration.zero) {
-      return;
-    }
+
 
     final DateTime now = _clock();
     final List<String> expiredKeys = <String>[];
     _cache.forEach((String key, _CachedApiResponse value) {
-      if (value.isExpired(ttl, now)) {
+      if (value.isExpired(_entryTtl, now)) {
         expiredKeys.add(key);
       }
     });
@@ -187,8 +187,9 @@ class _ApiResponseCache {
     String url,
     Map<String, dynamic>? queryParameters,
     Map<String, dynamic> payload,
-    String? eTag,
-  ) {
+      String? eTag, {
+        Duration? ttl,
+      }) {
     _purgeExpiredEntries();
     final key = _buildKey(url, queryParameters);
     _cache.remove(key);
@@ -196,6 +197,7 @@ class _ApiResponseCache {
       payload: Map<String, dynamic>.from(payload),
       eTag: eTag,
       storedAt: _clock(),
+      customTtl: ttl,
     );
     _enforceSizeLimit();
   }
@@ -210,6 +212,12 @@ class Api {
   // - لو مسجل: نضيف Bearer <JWT> + اللغة
 
   static void clearCache() {
+    _ApiResponseCache.clear();
+  }
+
+
+  /// Clears cached API responses when authentication context changes.
+  static void handleAccountChange() {
     _ApiResponseCache.clear();
   }
 
@@ -237,8 +245,17 @@ class Api {
     Map<String, dynamic>? queryParameters,
     required Map<String, dynamic> payload,
     String? eTag,
+    Duration? ttl,
+
   }) {
-    _ApiResponseCache.store(url, queryParameters, payload, eTag);
+    _ApiResponseCache.store(
+      url,
+      queryParameters,
+      payload,
+      eTag,
+      ttl: ttl,
+    );
+
   }
 
   @visibleForTesting

@@ -75,7 +75,7 @@ class SpecialRequestCard extends StatelessWidget {
                 child: Icon(
                   Icons.assignment_add,
                   size: cardExtent * 0.5,
-                  color: context.color.territoryColor,
+                  color: context.color.textLightColor,
                 ),
               ),
             ),
@@ -400,7 +400,7 @@ class SpecialRequestCard extends StatelessWidget {
                                   child: OutlinedButton(
                                     style: OutlinedButton.styleFrom(
                                       side: BorderSide(
-                                        color: context.color.territoryColor,
+                                        color: context.color.textLightColor,
                                         width: 1.5,
                                       ),
                                       padding: const EdgeInsets.symmetric(
@@ -415,7 +415,7 @@ class SpecialRequestCard extends StatelessWidget {
                                     child: Text(
                                       "إلغاء",
                                       style: TextStyle(
-                                        color: context.color.territoryColor,
+                                        color: context.color.textLightColor,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),

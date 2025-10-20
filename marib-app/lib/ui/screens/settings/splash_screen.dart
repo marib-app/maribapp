@@ -399,14 +399,8 @@ class SplashScreenState extends State<SplashScreen>
                           width: 500, height: 30,
                           child: Lottie.asset('assets/lottie/data.json', fit: BoxFit.cover),
                         ),
-                        SizedBox(
-                          width: 500, height: 75,
-                          child: Lottie.asset('assets/lottie/2.json', fit: BoxFit.cover),
-                        ),
-                        SizedBox(
-                          width: 500, height: 470,
-                          child: Lottie.asset('assets/lottie/3.json', fit: BoxFit.cover),
-                        ),
+                        const SizedBox(height: 545),
+
                       ],
                     ),
                   ),

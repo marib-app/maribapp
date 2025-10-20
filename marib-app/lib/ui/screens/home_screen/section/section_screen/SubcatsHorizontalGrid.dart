@@ -1,60 +1,13 @@
+import 'dart:async';
 import 'dart:math' show min, max;
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:marquee/marquee.dart';
 import 'package:marib/data/model/category_model.dart';
-import 'package:shimmer/shimmer.dart';
-import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
-import 'dart:async';
-import 'package:marib/ui/screens/home_screen/section/section_screen/widgets/home_tab_view.dart';
-import 'package:marib/data/cubits/item/fetch_item_summary_cubit.dart';
+import 'package:marib/ui/theme/extensions/shimmer_colors.dart';
 import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/utils/constant.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/ui_utils.dart';
-import 'package:marib/ui/screens/settings/main_activity.dart';
-import 'package:flutter/services.dart';
-import 'package:marib/data/cubits/slider_cubit.dart';
-import 'dart:async';
-import 'dart:math';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:marib/app/routes.dart';
-import 'package:marib/data/cubits/home/fetch_home_screen_cubit.dart';
-import 'package:marib/data/model/item/item_model.dart';
-import 'package:marib/utils/responsiveSize.dart';
-import 'package:marib/utils/sliver_grid_delegate_with_fixed_cross_axis_count_and_fixed_height.dart';
-import 'package:marib/ui/screens/widgets/errors/no_data_found.dart';
-import 'package:marib/ui/screens/native_ads_screen.dart';
-import 'package:flutter/foundation.dart'; // لـ ValueListenable / ValueNotifier
 import 'package:marquee/marquee.dart';
-import 'package:marib/app/routes.dart';
-import 'package:marib/data/cubits/category/fetch_category_cubit.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:marib/data/model/category_model.dart';
-import 'package:marquee/marquee.dart';
-import 'package:marib/utils/screen_scaler.dart';
-import 'dart:math'; // للعمليات الرياضية مثل min
-import 'package:shimmer/shimmer.dart'; // تأثير التوهج أثناء تحميل الصور
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shimmer/shimmer.dart';
 
-// Widgets
-
-import 'package:marib/ui/screens/sliders/slider_widget.dart';
-
-//import 'package:marib/ui/screens/home/section/Items_List/item/sections_adapter.dart';
-import 'package:marib/ui/screens/item/cards/horizontal_card.dart';
-import 'package:marib/ui/screens/native_ads_screen.dart';
-import 'package:marib/ui/screens/widgets/errors/no_data_found.dart';
-import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
-import 'package:marib/utils/sliver_grid_delegate_with_fixed_cross_axis_count_and_fixed_height.dart';
-
-import 'package:marib/data/model/item_filter_model.dart'; // ← مهم
-
-import 'package:marib/utils/screen_scaler.dart';
 
 const double _subcatCardRadius = 20.0;
 

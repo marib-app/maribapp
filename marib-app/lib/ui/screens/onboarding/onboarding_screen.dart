@@ -14,7 +14,7 @@ class CardPlanetData {
   final List<Color> backgroundGradientColors;
   final Color titleColor;
   final Color subtitleColor;
-  final Widget? background;
+  final String? backgroundAnimationPath;
   final String? animationPath;
 
   CardPlanetData({
@@ -24,7 +24,7 @@ class CardPlanetData {
     required this.backgroundGradientColors,
     required this.titleColor,
     required this.subtitleColor,
-    this.background,
+    this.backgroundAnimationPath,
     this.animationPath,
   });
 }
@@ -32,8 +32,14 @@ class CardPlanetData {
 class CardPlanet extends StatelessWidget {
   final CardPlanetData data;
   final LottieComposition? composition;
+  final bool isActive;
 
-  const CardPlanet({required this.data, super.key, this.composition});
+  const CardPlanet({
+    required this.data,
+    required this.isActive,
+    super.key,
+    this.composition,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -48,8 +54,17 @@ class CardPlanet extends StatelessWidget {
             ),
           ),
         ),
-        if (data.background != null)
-          Opacity(opacity: 0.2, child: data.background!),
+        if (data.backgroundAnimationPath != null)
+          Opacity(
+            opacity: 0.2,
+            child: Lottie.asset(
+              data.backgroundAnimationPath!,
+              fit: BoxFit.cover,
+              animate: isActive,
+              repeat: isActive,
+            ),
+          ),
+
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 50, horizontal: 24),
           child: Column(
@@ -64,8 +79,8 @@ class CardPlanet extends StatelessWidget {
                     height: MediaQuery.of(context).size.height * 0.45,
                     fit: BoxFit.contain,
                     // قم بإيقاف التشغيل الافتراضي إذا تريد تحكم خاص
-                    animate: true,
-                  ),
+                    animate: isActive,
+                    repeat: isActive,                  ),
                 ),
               if (data.image != null)
                 Flexible(flex: 20, child: Image(image: data.image!)),
@@ -133,7 +148,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       titleColor: Colors.white,
       subtitleColor: Colors.white,
       animationPath: 'assets/lottie/a_1.json',
-      background: LottieBuilder.asset("assets/lottie/bg-2.json"),
+      backgroundAnimationPath: 'assets/lottie/bg-2.json',
     ),
     CardPlanetData(
       title: "كل العقارات بخطوة!",
@@ -142,7 +157,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       titleColor: Colors.yellow,
       subtitleColor: Colors.white,
       animationPath: 'assets/lottie/a_2.json',
-      background: LottieBuilder.asset("assets/lottie/bg-1.json"),
+      backgroundAnimationPath: 'assets/lottie/bg-1.json',
     ),
     CardPlanetData(
       title: "خلّي متجرك يلمع",
@@ -151,7 +166,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       titleColor: Colors.amber,
       subtitleColor: Colors.white,
       animationPath: 'assets/lottie/a_3.json',
-      background: LottieBuilder.asset("assets/lottie/bg-2.json"),
+      backgroundAnimationPath: 'assets/lottie/bg-2.json',
     ),
     CardPlanetData(
       title: "بع، اشترِي، وأعلن!",
@@ -160,7 +175,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       titleColor: Colors.lightBlueAccent,
       subtitleColor: Colors.white,
       animationPath: 'assets/lottie/a_4.json',
-      background: LottieBuilder.asset("assets/lottie/bg-1.json"),
+      backgroundAnimationPath: 'assets/lottie/bg-1.json',
     ),
     CardPlanetData(
       title: "موثوق رسميًا",
@@ -200,7 +215,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               onChange: (i) => currentIndex.value = i,
               itemCount: data.length,
               colors: data.map((e) => e.backgroundGradientColors.last).toList(),
-              itemBuilder: (index) => CardPlanet(data: data[index]),
+              itemBuilder: (index) => ValueListenableBuilder<int>(
+                valueListenable: currentIndex,
+                builder: (context, activeIndex, _) {
+                  return CardPlanet(
+                    data: data[index],
+                    isActive: index == activeIndex,
+                  );
+                },
+              ),
+
               onFinish: () {
                 HiveUtils.setUserIsNotNew();
                 Navigator.of(context)

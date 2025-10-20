@@ -143,6 +143,7 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
       search: q,
       sortBy: widget.sortBy,
       filter: normalizedFilter,
+      perPage: FetchItemSummaryCubit.defaultPerPage,
     )
         .whenComplete(() {
       if (!mounted || myToken != _searchToken) return;
@@ -241,6 +242,8 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
                                     search: query,
                                     sortBy: widget.sortBy,
                                     filter: nextFilter,
+                                    perPage:
+                                        FetchItemSummaryCubit.defaultPerPage,
                                   );
                               _lastExecutedQuery = query;
                             },

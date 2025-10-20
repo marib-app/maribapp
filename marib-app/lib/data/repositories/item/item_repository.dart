@@ -8,6 +8,7 @@ import 'package:marib/data/model/item/item_model.dart';
 import 'package:path/path.dart' as path;
 import 'package:meta/meta.dart';
 import 'package:marib/utils/logger.dart';
+import 'package:marib/utils/constant.dart';
 
 /// ---------------------------------------------------------------------------
 /// ItemRepository
@@ -16,22 +17,20 @@ import 'package:marib/utils/logger.dart';
 /// ---------------------------------------------------------------------------
 
 class ItemRepository {
-
   ItemRepository({
     Future<Map<String, dynamic>> Function({
+      required String url,
+      Map<String, dynamic>? queryParameters,
+      bool? useBaseUrl,
+      bool enableEtagCache,
+    })? getRequest,
+  }) : _getRequest = getRequest ?? Api.get;
+
+  final Future<Map<String, dynamic>> Function({
     required String url,
     Map<String, dynamic>? queryParameters,
     bool? useBaseUrl,
     bool enableEtagCache,
-    })?
-    getRequest,
-  }) : _getRequest = getRequest ?? Api.get;
-
-  final Future<Map<String, dynamic>> Function({
-  required String url,
-  Map<String, dynamic>? queryParameters,
-  bool? useBaseUrl,
-  bool enableEtagCache,
   }) _getRequest;
 
   /// -------------------------------------------------------------------------
@@ -43,10 +42,10 @@ class ItemRepository {
   /// يعيد: ItemModel الخاص بالإعلان الذي تم إنشاؤه
   /// -------------------------------------------------------------------------
   Future<ItemModel> createItem(
-      Map<String, dynamic> itemDetails,
-      File mainImage,
-      List<File>? otherImages,
-      ) async {
+    Map<String, dynamic> itemDetails,
+    File mainImage,
+    List<File>? otherImages,
+  ) async {
     try {
       final Map<String, dynamic> parameters = {};
       parameters.addAll(itemDetails);
@@ -59,7 +58,8 @@ class ItemRepository {
 
       // تجهيز صور المعرض (إن وُجدت)
       if (otherImages != null && otherImages.isNotEmpty) {
-        final List<Future<MultipartFile>> futures = otherImages.map((imageFile) {
+        final List<Future<MultipartFile>> futures =
+            otherImages.map((imageFile) {
           return MultipartFile.fromFile(
             imageFile.path,
             filename: path.basename(imageFile.path),
@@ -98,8 +98,6 @@ class ItemRepository {
   // يعيد: DataOutput<ItemModel> يحتوي total + modelList
   // -------------------------------------------------------------------------
 
-
-
   Future<DataOutput<ItemSummary>> fetchItemSummariesFromCatId({
     required int categoryId,
     required int page,
@@ -110,11 +108,13 @@ class ItemRepository {
     String? state,
     String? city,
     int? areaId,
+    int perPage = Constant.loadLimit,
   }) async {
     final Map<String, dynamic> parameters = {
       Api.categoryId: categoryId,
       Api.page: page,
       'view': 'summary',
+      Api.perPageQuery: perPage,
     };
 
     if (filter != null) {
@@ -150,7 +150,7 @@ class ItemRepository {
     );
 
     final Iterable<dynamic> rawItems =
-    ItemRepository._extractItemsOrData(response);
+        ItemRepository._extractItemsOrData(response);
 
     final List<ItemSummary> items = ItemRepository._mapJsonListToModels(
       rawItems,
@@ -158,7 +158,6 @@ class ItemRepository {
       ItemRepository._itemSummaryExpectedFields,
       'fetchItemSummariesFromCatId',
     );
-
 
     final int total = ItemRepository.resolveTotalCount(
       response,
@@ -170,17 +169,6 @@ class ItemRepository {
       modelList: items,
     );
   }
-
-
-
-
-
-
-
-
-
-
-
 
   Future<DataOutput<ItemModel>> fetchMyFeaturedItems({int? page}) async {
     try {
@@ -195,10 +183,10 @@ class ItemRepository {
       );
 
       final Iterable<Map<String, dynamic>> itemMaps =
-      ItemRepository._resolveItemsFromResponse(response);
+          ItemRepository._resolveItemsFromResponse(response);
 
       final List<ItemModel> itemList =
-      itemMaps.map(ItemModel.fromJson).toList();
+          itemMaps.map(ItemModel.fromJson).toList();
 
       final int total = ItemRepository.resolveTotalCount(
         response,
@@ -240,10 +228,10 @@ class ItemRepository {
       );
 
       final Iterable<Map<String, dynamic>> itemMaps =
-      ItemRepository._resolveItemsFromResponse(response);
+          ItemRepository._resolveItemsFromResponse(response);
 
       final List<ItemModel> itemList =
-      itemMaps.map(ItemModel.fromJson).toList();
+          itemMaps.map(ItemModel.fromJson).toList();
 
       final int total = ItemRepository.resolveTotalCount(
         response,
@@ -271,23 +259,21 @@ class ItemRepository {
     };
 
     final Map<String, dynamic> response = await _getRequest(
-
       url: Api.getItemApi,
       queryParameters: parameters,
       enableEtagCache: false,
     );
 
     final Iterable<Map<String, dynamic>> itemMaps =
-    ItemRepository._extractItemMaps(response);
+        ItemRepository._extractItemMaps(response);
 
     final List<ItemModel> modelList =
-    itemMaps.map(ItemModel.fromJson).toList(growable: false);
+        itemMaps.map(ItemModel.fromJson).toList(growable: false);
 
     final int total =
-    ItemRepository.resolveTotalCount(response, modelList.length);
+        ItemRepository.resolveTotalCount(response, modelList.length);
 
     return DataOutput(total: total, modelList: modelList);
-
   }
 
   /// -------------------------------------------------------------------------
@@ -302,27 +288,21 @@ class ItemRepository {
     };
 
     final Map<String, dynamic> response = await _getRequest(
-
       url: Api.getItemApi,
       queryParameters: parameters,
       enableEtagCache: false,
     );
 
-
     final Iterable<Map<String, dynamic>> itemMaps =
-    ItemRepository._extractItemMaps(response);
+        ItemRepository._extractItemMaps(response);
 
     final List<ItemModel> modelList =
-    itemMaps.map(ItemModel.fromJson).toList(growable: false);
-
+        itemMaps.map(ItemModel.fromJson).toList(growable: false);
 
     final int total =
-    ItemRepository.resolveTotalCount(response, modelList.length);
+        ItemRepository.resolveTotalCount(response, modelList.length);
 
     return DataOutput(total: total, modelList: modelList);
-
-
-
   }
 
   /// -------------------------------------------------------------------------
@@ -396,8 +376,8 @@ class ItemRepository {
   static const List<String> _itemSummaryExpectedFields = <String>['id', 'name'];
 
   static Iterable<dynamic> _extractItemsOrData(
-      Map<String, dynamic> response,
-      ) {
+    Map<String, dynamic> response,
+  ) {
     final dynamic itemsSection = response['items'];
     if (itemsSection != null) {
       final Iterable<dynamic> extracted = _extractIterable(itemsSection);
@@ -414,7 +394,6 @@ class ItemRepository {
       }
     }
 
-
     final dynamic resultsSection = response['results'];
     if (resultsSection != null) {
       final Iterable<dynamic> extracted = _extractIterable(resultsSection);
@@ -427,11 +406,11 @@ class ItemRepository {
   }
 
   static List<T> _mapJsonListToModels<T>(
-      Iterable<dynamic> rawItems,
-      T Function(Map<String, dynamic>) factory,
-      List<String> expectedFields,
-      String context,
-      ) {
+    Iterable<dynamic> rawItems,
+    T Function(Map<String, dynamic>) factory,
+    List<String> expectedFields,
+    String context,
+  ) {
     final List<T> models = <T>[];
     for (final dynamic rawItem in rawItems) {
       if (rawItem is! Map<String, dynamic>) {
@@ -443,7 +422,7 @@ class ItemRepository {
       }
 
       final Iterable<String> missingFields = expectedFields.where(
-            (String key) => !rawItem.containsKey(key),
+        (String key) => !rawItem.containsKey(key),
       );
 
       if (missingFields.isNotEmpty) {
@@ -459,11 +438,10 @@ class ItemRepository {
     return models;
   }
 
-
   @visibleForTesting
   static Iterable<Map<String, dynamic>> resolvePaginatedMapList(
-      Map<String, dynamic> response,
-      ) {
+    Map<String, dynamic> response,
+  ) {
     final Iterable<dynamic> dataItems = _extractIterable(response['data']);
     if (dataItems.isNotEmpty || _isExplicitCollection(response['data'])) {
       return dataItems.whereType<Map<String, dynamic>>();
@@ -483,16 +461,16 @@ class ItemRepository {
   }
 
   static Iterable<Map<String, dynamic>> _resolveItemsFromResponse(
-      Map<String, dynamic> response,
-      ) {
+    Map<String, dynamic> response,
+  ) {
     final Iterable<Map<String, dynamic>> dataItems =
-    _extractItemMapsFromSection(response['data']);
+        _extractItemMapsFromSection(response['data']);
     if (dataItems.isNotEmpty) {
       return dataItems;
     }
 
     final Iterable<Map<String, dynamic>> fallback =
-    ItemRepository.resolvePaginatedMapList(response);
+        ItemRepository.resolvePaginatedMapList(response);
     if (fallback.isNotEmpty) {
       return fallback;
     }
@@ -500,25 +478,24 @@ class ItemRepository {
     return const Iterable<Map<String, dynamic>>.empty();
   }
 
-
   @visibleForTesting
   static Iterable<Map<String, dynamic>> _extractItemMaps(
-      Map<String, dynamic> response,
-      ) {
+    Map<String, dynamic> response,
+  ) {
     final Iterable<Map<String, dynamic>> fromItems =
-    _extractItemMapsFromSection(response['items']);
+        _extractItemMapsFromSection(response['items']);
     if (fromItems.isNotEmpty) {
       return fromItems;
     }
 
     final Iterable<Map<String, dynamic>> fromData =
-    _extractItemMapsFromSection(response['data']);
+        _extractItemMapsFromSection(response['data']);
     if (fromData.isNotEmpty) {
       return fromData;
     }
 
     final Iterable<Map<String, dynamic>> fromResults =
-    _extractItemMapsFromSection(response['results']);
+        _extractItemMapsFromSection(response['results']);
     if (fromResults.isNotEmpty) {
       return fromResults;
     }
@@ -527,8 +504,8 @@ class ItemRepository {
   }
 
   static Iterable<Map<String, dynamic>> _extractItemMapsFromSection(
-      dynamic section,
-      ) {
+    dynamic section,
+  ) {
     if (section == null) {
       return const Iterable<Map<String, dynamic>>.empty();
     }
@@ -538,7 +515,12 @@ class ItemRepository {
     }
 
     if (section is Map<String, dynamic>) {
-      for (final String key in const <String>{'items', 'data', 'results', 'item'}) {
+      for (final String key in const <String>{
+        'items',
+        'data',
+        'results',
+        'item'
+      }) {
         if (!section.containsKey(key)) {
           continue;
         }
@@ -562,12 +544,11 @@ class ItemRepository {
     return const Iterable<Map<String, dynamic>>.empty();
   }
 
-
   @visibleForTesting
   static int resolveTotalCount(
-      Map<String, dynamic> response,
-      int fallbackCount,
-      ) {
+    Map<String, dynamic> response,
+    int fallbackCount,
+  ) {
     final int? totalFromData = _parseTotal(response['data']);
     if (totalFromData != null) {
       return totalFromData;
@@ -677,8 +658,6 @@ class ItemRepository {
     return null;
   }
 
-
-
   /// -------------------------------------------------------------------------
   /// fetchMyItemFromItemId
   /// جلب إعلان مِلكي بالمعرّف حتى لو كان Pending/Rejection
@@ -725,8 +704,6 @@ class ItemRepository {
     return DataOutput(total: total, modelList: modelList);
   }
 
-
-
   /*  النسخة السابقة (مرجعية) احتفظت بها عندك بالتعليق لو احتجت ترجع
   Future<DataOutput<ItemModel>> fetchItemFromCatId(...) async { ... }
   */
@@ -742,16 +719,18 @@ class ItemRepository {
     required String sortBy,
     required int page,
   }) async {
-    final Map<String, dynamic> parameters = {Api.sortBy: sortBy, Api.page: page};
+    final Map<String, dynamic> parameters = {
+      Api.sortBy: sortBy,
+      Api.page: page
+    };
 
     final Map<String, dynamic> response =
-    await Api.get(url: Api.getItemApi, queryParameters: parameters);
+        await Api.get(url: Api.getItemApi, queryParameters: parameters);
 
     final Iterable<Map<String, dynamic>> itemMaps =
-    ItemRepository._resolveItemsFromResponse(response);
+        ItemRepository._resolveItemsFromResponse(response);
 
-    final List<ItemModel> items =
-    itemMaps.map(ItemModel.fromJson).toList();
+    final List<ItemModel> items = itemMaps.map(ItemModel.fromJson).toList();
 
     final int total = ItemRepository.resolveTotalCount(
       response,
@@ -773,10 +752,10 @@ class ItemRepository {
   /// يعيد: ItemModel بعد التعديل
   /// -------------------------------------------------------------------------
   Future<ItemModel> editItem(
-      Map<String, dynamic> itemDetails,
-      File? mainImage,
-      List<File>? otherImages,
-      ) async {
+    Map<String, dynamic> itemDetails,
+    File? mainImage,
+    List<File>? otherImages,
+  ) async {
     final Map<String, dynamic> parameters = {};
     parameters.addAll(itemDetails);
 
@@ -861,10 +840,10 @@ class ItemRepository {
   /// يعيد: DataOutput<ItemModel>
   /// -------------------------------------------------------------------------
   Future<DataOutput<ItemModel>> searchItem(
-      String query,
-      ItemFilterModel? filter, {
-        required int page,
-      }) async {
+    String query,
+    ItemFilterModel? filter, {
+    required int page,
+  }) async {
     final Map<String, dynamic> parameters = {
       Api.search: query,
       Api.page: page,
@@ -886,13 +865,12 @@ class ItemRepository {
     }
 
     final Map<String, dynamic> response =
-    await Api.get(url: Api.getItemApi, queryParameters: parameters);
+        await Api.get(url: Api.getItemApi, queryParameters: parameters);
 
     final Iterable<Map<String, dynamic>> itemMaps =
-    ItemRepository._resolveItemsFromResponse(response);
+        ItemRepository._resolveItemsFromResponse(response);
 
-    final List<ItemModel> items =
-    itemMaps.map(ItemModel.fromJson).toList();
+    final List<ItemModel> items = itemMaps.map(ItemModel.fromJson).toList();
 
     final int total = ItemRepository.resolveTotalCount(
       response,
@@ -910,8 +888,8 @@ class ItemRepository {
   /// أداة مساعدة لتحويل قائمة Files إلى MultipartFiles (للرفع)
   /// -------------------------------------------------------------------------
   Future<List<MultipartFile>> _fileToMultipartFileList(
-      List<File> files,
-      ) async {
+    List<File> files,
+  ) async {
     final List<MultipartFile> multipartFileList = [];
     for (final File file in files) {
       multipartFileList.add(await MultipartFile.fromFile(file.path));

@@ -1878,6 +1878,7 @@ class ApiController extends Controller {
         $validator = Validator::make($request->all(), [
             'limit'          => 'nullable|integer',
             'offset'         => 'nullable|integer',
+            'per_page'       => 'nullable|integer',
             'id'             => 'nullable',
             'custom_fields'  => 'nullable',
             'category_id'    => 'nullable',
@@ -2164,6 +2165,8 @@ class ApiController extends Controller {
                 //  Other users should only get approved items
                 $sql->where('status', 'approved')->getNonExpiredItems();
             }
+            
+            $perPage = $this->resolvePerPage($request, 15, 60);
             if (!empty($request->id)) {
                 /*
                  * Collection does not support first OR find method's result as of now. It's a part of R&D
@@ -2174,7 +2177,8 @@ class ApiController extends Controller {
                     ResponseService::errorResponse("No item Found");
                 }
             } else {
-                $result = $sql->paginate();
+                $result = $sql->paginate($perPage);
+
 
             }
 

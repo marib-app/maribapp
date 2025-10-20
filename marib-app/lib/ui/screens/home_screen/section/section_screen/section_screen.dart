@@ -276,6 +276,7 @@ class Section_screenState extends State<Section_screen> {
           search: query,
           sortBy: sortBy,
           filter: effectiveFilter,
+          perPage: FetchItemSummaryCubit.defaultPerPage,
         );
   }
 
@@ -445,6 +446,7 @@ class Section_screenState extends State<Section_screen> {
             search: searchController.text,
             sortBy: sortBy,
             filter: effectiveFilter,
+            perPage: FetchItemSummaryCubit.defaultPerPage,
           );
 
       // إعادة تحميل أقسام الإعلانات المميزة عند السحب للتحديث
@@ -639,6 +641,8 @@ class Section_screenState extends State<Section_screen> {
                                       search: searchController.text,
                                       filter: effectiveFilter,
                                       sortBy: sortBy,
+                                      perPage:
+                                          FetchItemSummaryCubit.defaultPerPage,
                                     );
                               },
                               onSortChanged: (newSort) {
@@ -659,6 +663,8 @@ class Section_screenState extends State<Section_screen> {
                                       search: searchController.text,
                                       filter: effectiveFilter,
                                       sortBy: sortBy,
+                                      perPage:
+                                          FetchItemSummaryCubit.defaultPerPage,
                                     );
                               },
                               showMapButton: showMap,

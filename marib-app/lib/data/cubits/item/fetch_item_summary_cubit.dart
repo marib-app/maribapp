@@ -5,6 +5,7 @@ import 'package:marib/data/model/data_output.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/data/model/item_filter_model.dart';
 import 'package:marib/data/repositories/item/item_repository.dart';
+import 'package:marib/utils/constant.dart';
 
 abstract class FetchItemSummaryState {}
 
@@ -22,6 +23,7 @@ class FetchItemSummarySuccess extends FetchItemSummaryState {
   final String? search;
   final String? sortBy;
   final ItemFilterModel? filter;
+  final int perPage;
 
   FetchItemSummarySuccess({
     required this.items,
@@ -33,6 +35,7 @@ class FetchItemSummarySuccess extends FetchItemSummaryState {
     this.search,
     this.sortBy,
     this.filter,
+    required this.perPage,
   });
 
   FetchItemSummarySuccess copyWith({
@@ -45,6 +48,7 @@ class FetchItemSummarySuccess extends FetchItemSummaryState {
     String? search,
     String? sortBy,
     ItemFilterModel? filter,
+    int? perPage,
   }) {
     return FetchItemSummarySuccess(
       items: items ?? this.items,
@@ -56,11 +60,14 @@ class FetchItemSummarySuccess extends FetchItemSummaryState {
       search: search ?? this.search,
       sortBy: sortBy ?? this.sortBy,
       filter: filter ?? this.filter,
+      perPage: perPage ?? this.perPage,
     );
   }
 }
 
 class FetchItemSummaryFailure extends FetchItemSummaryState {
+  static const int defaultPerPage = 6;
+
   final String errorMessage;
 
   FetchItemSummaryFailure(this.errorMessage);
@@ -73,18 +80,24 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
 
   final ItemRepository _itemRepository;
 
-
   Future<void> fetchSummaries({
     required int categoryId,
     String? search,
     String? sortBy,
     ItemFilterModel? filter,
+    int perPage = Constant.loadLimit,
   }) async {
     final String? normalizedSearch = _sanitizeQuery(search);
     final String? normalizedSort = _sanitizeQuery(sortBy);
     final ItemFilterModel? clonedFilter = _cloneFilter(filter);
 
-    if (_shouldResetState(categoryId, normalizedSearch, normalizedSort, clonedFilter)) {
+    if (_shouldResetState(
+      categoryId,
+      normalizedSearch,
+      normalizedSort,
+      clonedFilter,
+      perPage,
+    )) {
       emit(FetchItemSummaryInitial());
     }
 
@@ -92,12 +105,13 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
 
     try {
       final DataOutput<ItemSummary> result =
-      await _itemRepository.fetchItemSummariesFromCatId(
+          await _itemRepository.fetchItemSummariesFromCatId(
         categoryId: categoryId,
         page: 1,
         search: normalizedSearch,
         sortBy: normalizedSort,
         filter: clonedFilter,
+        perPage: perPage,
       );
 
       emit(
@@ -109,6 +123,7 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
           search: normalizedSearch,
           sortBy: normalizedSort,
           filter: clonedFilter,
+          perPage: perPage,
         ),
       );
     } catch (e) {
@@ -126,16 +141,17 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
 
     try {
       final DataOutput<ItemSummary> result =
-      await _itemRepository.fetchItemSummariesFromCatId(
+          await _itemRepository.fetchItemSummariesFromCatId(
         categoryId: currentState.categoryId,
         page: currentState.page + 1,
         search: currentState.search,
         sortBy: currentState.sortBy,
         filter: currentState.filter,
+        perPage: currentState.perPage,
       );
 
       final List<ItemSummary> updatedItems =
-      List<ItemSummary>.from(currentState.items)..addAll(result.modelList);
+          List<ItemSummary>.from(currentState.items)..addAll(result.modelList);
 
       emit(
         currentState.copyWith(
@@ -165,6 +181,7 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
       search: currentState.search,
       sortBy: currentState.sortBy,
       filter: currentState.filter,
+      perPage: currentState.perPage,
     );
   }
 
@@ -181,11 +198,12 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
   }
 
   bool _shouldResetState(
-      int categoryId,
-      String? search,
-      String? sortBy,
-      ItemFilterModel? filter,
-      ) {
+    int categoryId,
+    String? search,
+    String? sortBy,
+    ItemFilterModel? filter,
+    int perPage,
+  ) {
     final currentState = state;
     if (currentState is! FetchItemSummarySuccess) {
       return false;
@@ -195,8 +213,13 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
     final bool searchChanged = (currentState.search ?? '') != (search ?? '');
     final bool sortChanged = (currentState.sortBy ?? '') != (sortBy ?? '');
     final bool filterChanged = !_filtersEqual(currentState.filter, filter);
+    final bool perPageChanged = currentState.perPage != perPage;
 
-    return categoryChanged || searchChanged || sortChanged || filterChanged;
+    return categoryChanged ||
+        searchChanged ||
+        sortChanged ||
+        filterChanged ||
+        perPageChanged;
   }
 
   bool _filtersEqual(ItemFilterModel? a, ItemFilterModel? b) {

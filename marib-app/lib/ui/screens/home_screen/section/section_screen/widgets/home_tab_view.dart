@@ -162,6 +162,7 @@ class _HomeTabViewState extends State<HomeTabView> {
       search: query,
       sortBy: resolvedSortBy,
       filter: effectiveFilter,
+      perPage: FetchItemSummaryCubit.defaultPerPage,
     );
   }
 
@@ -952,7 +953,6 @@ class _HomeTabViewState extends State<HomeTabView> {
     }
 
     if (state is FetchItemSummarySuccess) {
-
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || _isLoadingMore) {
           return;
@@ -989,6 +989,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                             search: widget.searchController.text.trim(),
                             sortBy: widget.sortBy,
                             filter: widget.filter,
+                            perPage: FetchItemSummaryCubit.defaultPerPage,
                           ),
                 ),
               ),

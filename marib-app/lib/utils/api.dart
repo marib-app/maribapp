@@ -76,7 +76,7 @@ class _ApiResponseCache {
   static DateTime Function() _clock = DateTime.now;
 
   static final LinkedHashMap<String, _CachedApiResponse> _cache =
-  LinkedHashMap<String, _CachedApiResponse>();
+      LinkedHashMap<String, _CachedApiResponse>();
 
   static void _purgeExpiredEntries() {
     if (_cache.isEmpty) {
@@ -142,6 +142,7 @@ class _ApiResponseCache {
     _clock = DateTime.now;
     clear();
   }
+
   static String _buildKey(
     String url,
     Map<String, dynamic>? queryParameters,
@@ -162,7 +163,6 @@ class _ApiResponseCache {
     String url,
     Map<String, dynamic>? queryParameters,
   ) {
-
     _purgeExpiredEntries();
 
     final key = _buildKey(url, queryParameters);
@@ -183,11 +183,11 @@ class _ApiResponseCache {
   }
 
   static void store(
-      String url,
-      Map<String, dynamic>? queryParameters,
-      Map<String, dynamic> payload,
-      String? eTag,
-      ) {
+    String url,
+    Map<String, dynamic>? queryParameters,
+    Map<String, dynamic> payload,
+    String? eTag,
+  ) {
     _purgeExpiredEntries();
     final key = _buildKey(url, queryParameters);
     _cache.remove(key);
@@ -204,8 +204,6 @@ class Api {
   // تهيئة الهيدرز لكل الطلبات
   // - لو المستخدم غير مسجل: نضيف اللغة فقط إن وجدت
   // - لو مسجل: نضيف Bearer <JWT> + اللغة
-
-
 
   static void clearCache() {
     _ApiResponseCache.clear();
@@ -241,18 +239,17 @@ class Api {
 
   @visibleForTesting
   static Map<String, dynamic>? debugGetCachedPayload(
-      String url, [
-        Map<String, dynamic>? queryParameters,
-      ]) {
+    String url, [
+    Map<String, dynamic>? queryParameters,
+  ]) {
     final _CachedApiResponse? cached =
-    _ApiResponseCache.get(url, queryParameters);
+        _ApiResponseCache.get(url, queryParameters);
     if (cached == null) {
       return null;
     }
 
     return Map<String, dynamic>.from(cached.payload);
   }
-
 
   static Map<String, dynamic> headers() {
     final Map<String, dynamic> headers = {

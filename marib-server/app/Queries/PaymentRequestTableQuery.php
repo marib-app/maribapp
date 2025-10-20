@@ -72,6 +72,8 @@ class PaymentRequestTableQuery
 
         $supportsManualBankId = Schema::hasTable('manual_payment_requests')
             && Schema::hasColumn('manual_payment_requests', 'manual_bank_id');
+        $supportsManualBankName = Schema::hasTable('manual_payment_requests')
+            && Schema::hasColumn('manual_payment_requests', 'bank_name');
 
         $supportsManualMeta = Schema::hasTable('manual_payment_requests')
             && Schema::hasColumn('manual_payment_requests', 'meta');
@@ -198,7 +200,10 @@ class PaymentRequestTableQuery
             $transactionGatewayLabelCandidates[] = "NULLIF(manual_bank_lookup.name, '')";
         }
 
-        $transactionGatewayLabelCandidates[] = "NULLIF(mpr.bank_name, '')";
+        if ($supportsManualBankName) {
+            $transactionGatewayLabelCandidates[] = "NULLIF(mpr.bank_name, '')";
+        }
+
 
         $paymentGatewayLabelSelect = self::gatewayLabelCaseExpression(
             self::gatewayExpression('pt'),
@@ -235,7 +240,10 @@ class PaymentRequestTableQuery
             $walletGatewayLabelCandidates[] = "NULLIF(manual_bank_lookup.name, '')";
         }
 
-        $walletGatewayLabelCandidates[] = "NULLIF(mpr.bank_name, '')";
+        if ($supportsManualBankName) {
+            $walletGatewayLabelCandidates[] = "NULLIF(mpr.bank_name, '')";
+        }
+
 
         $walletGatewayLabelSelect = self::gatewayLabelCaseExpression(
             "'wallet'",
@@ -355,8 +363,10 @@ class PaymentRequestTableQuery
             $manualRequestGatewayLabelCandidates[] = "NULLIF(manual_bank_lookup.name, '')";
         }
 
-        $manualRequestGatewayLabelCandidates[] = "NULLIF(mpr.bank_name, '')";
-
+        if ($supportsManualBankName) {
+            $manualRequestGatewayLabelCandidates[] = "NULLIF(mpr.bank_name, '')";
+        }
+        
         $manualRequestGatewayLabelSelect = self::gatewayLabelCaseExpression(
             $manualGatewayKeyExpression,
             $manualRequestGatewayLabelCandidates

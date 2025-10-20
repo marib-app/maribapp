@@ -257,23 +257,7 @@ class PaymentRequestTableQuery
 
             ? 'NULL'
             : 'COALESCE(' . implode(', ', $manualRequestManualBankNameParts) . ')';
-        $manualRequestGatewayLabelCandidates = [];
 
-        if ($supportsManualMeta) {
-            $manualRequestGatewayLabelCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.payload.bank_name')), '')";
-            $manualRequestGatewayLabelCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.name')), '')";
-        }
-
-        if ($supportsManualBankLookupName) {
-            $manualRequestGatewayLabelCandidates[] = "NULLIF(manual_bank_lookup.name, '')";
-        }
-
-        $manualRequestGatewayLabelCandidates[] = "NULLIF(mpr.bank_name, '')";
-
-        $manualRequestGatewayLabelSelect = self::gatewayLabelCaseExpression(
-            $manualGatewayKeyExpression,
-            $manualRequestGatewayLabelCandidates
-        );
 
         $channelExpression = self::channelExpression('pt');
 
@@ -358,6 +342,26 @@ class PaymentRequestTableQuery
             $manualGatewayKeyExpression,
             'mpr.payable_type'
         );
+
+
+        $manualRequestGatewayLabelCandidates = [];
+
+        if ($supportsManualMeta) {
+            $manualRequestGatewayLabelCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.payload.bank_name')), '')";
+            $manualRequestGatewayLabelCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.name')), '')";
+        }
+
+        if ($supportsManualBankLookupName) {
+            $manualRequestGatewayLabelCandidates[] = "NULLIF(manual_bank_lookup.name, '')";
+        }
+
+        $manualRequestGatewayLabelCandidates[] = "NULLIF(mpr.bank_name, '')";
+
+        $manualRequestGatewayLabelSelect = self::gatewayLabelCaseExpression(
+            $manualGatewayKeyExpression,
+            $manualRequestGatewayLabelCandidates
+        );
+
 
         $manualRequestGatewayNameSelect = 'CASE'
             . ($manualRequestGatewayCustomNameSelect !== 'NULL'

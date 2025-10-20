@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' show DateFormat, NumberFormat;
-import 'package:flutter/foundation.dart' show listEquals;
+import 'widgets/rate_detail_sheet.dart';
 import 'package:marib/data/model/metal_rate.dart';
 
 import 'package:marib/data/model/currency_history.dart';
@@ -28,6 +28,7 @@ class RatesTabView extends StatelessWidget {
   final void Function(int) onToggleMetalWatchlist;
   final void Function(int currencyId, String? regionCode)
       onNotificationRegionChanged;
+  static const String _defaultGovernorateLabel = 'المتوسط الوطني';
 
   bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
 
@@ -161,25 +162,13 @@ class RatesTabView extends StatelessWidget {
     );
   }
 
-  // ---------- صفّ العملة (نظيف مع عرض بيع/شراء احترافي) ----------
-  Widget _row(
-    BuildContext context, {
-    required String name,
-    required String sell,
-    required String buy,
-    String? iconUrl,
-    String? iconAlt,
-    required bool isWatchlisted,
-    required VoidCallback onToggleWatchlist,
-    CurrencyHistoryBundle? history,
-    required int selectedRangeDays,
-    required ValueChanged<int> onHistoryRangeSelected,
-    int? currencyId,
-    ValueChanged<String?>? onNotificationRegionChanged,
-  }) {
-    final theme = Theme.of(context);
-    final onBg = _isDark(context) ? Colors.white : Colors.black;
-    final divider = _isDark(context) ? Colors.white12 : Colors.black12;
+  int? _resolveEffectiveHistoryRange(Set<int> availableRanges, int preferred) {
+    if (availableRanges.isEmpty) {
+      return null;
+    }
+    if (availableRanges.contains(preferred)) {
+      return preferred;
+    }
 
     // تنسيق الرقم إن أمكن
     String _fmt(String v) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' show DateFormat, NumberFormat;
 
 import 'package:marib/data/model/metal_rate.dart';
+import 'widgets/rate_detail_sheet.dart';
 
 import '../state/state.dart';
 
@@ -268,74 +269,42 @@ class _MetalsTabViewState extends State<MetalsTabView> {
     MetalRate rate,
     bool isWatchlisted,
   ) {
-    final TextStyle nameStyle =
-        Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: _onBackground,
-                  fontWeight: FontWeight.w800,
-                ) ??
-            TextStyle(
-                color: _onBackground,
-                fontWeight: FontWeight.w800,
-                fontSize: 15.5);
+    final ThemeData theme = Theme.of(context);
+    final String sellValue = _formatPrice(rate.sellPrice);
+    final String buyValue = _formatPrice(rate.buyPrice);
 
-    final TextStyle labelStyle =
-        Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: _onBackground.withOpacity(0.6),
-                  fontWeight: FontWeight.w700,
-                ) ??
-            TextStyle(
-                color: _onBackground.withOpacity(0.6),
-                fontWeight: FontWeight.w700);
-
-    Widget chip(String label, Color color) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: color.withOpacity(0.5)),
-        ),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.2,
-                  ) ??
-              TextStyle(color: color, fontWeight: FontWeight.w900),
-        ),
-      );
-    }
-
-    Widget buildIcon() {
+    Widget buildIcon({double size = 48}) {
       final Color outline = _onBackground.withOpacity(0.25);
       final bool showFallback = rate.quoteUsedFallback || rate.quoteIsDefault;
       return Stack(
         clipBehavior: Clip.none,
         children: [
           Container(
-            width: 52,
-            height: 52,
+            width: size,
+            height: size,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(color: outline),
             ),
-            child: Icon(section.icon, color: section.iconColor, size: 26),
+            child:
+                Icon(section.icon, color: section.iconColor, size: size * 0.5),
           ),
           if (showFallback)
             Positioned(
               bottom: -2,
               right: -2,
               child: Container(
-                width: 24,
-                height: 24,
+                width: size * 0.38,
+                height: size * 0.38,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: section.accent,
                   border: Border.all(
-                      color: Theme.of(context).scaffoldBackgroundColor,
-                      width: 2),
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    width: size * 0.08,
+                  ),
                 ),
                 child: const Icon(
                   Icons.warning_amber_rounded,
@@ -348,78 +317,278 @@ class _MetalsTabViewState extends State<MetalsTabView> {
       );
     }
 
-    final Widget star = IconButton(
-      onPressed: () => widget.onToggleMetalWatchlist(rate.id),
-      icon: Icon(
-        isWatchlisted ? Icons.star_rounded : Icons.star_outline_rounded,
-        color: isWatchlisted ? Colors.amber : _onBackground.withOpacity(0.35),
-      ),
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
-      splashRadius: 20,
-      tooltip: isWatchlisted
-          ? 'إزالة من قائمة المراقبة'
-          : 'إضافة إلى قائمة المراقبة',
-    );
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      child: Row(
+    Widget priceColumn(String label, String value, Color color) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          buildIcon(),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  rate.displayName,
-                  style: nameStyle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textDirection: TextDirection.rtl,
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+                  color: _onBackground.withOpacity(0.6),
+                  fontWeight: FontWeight.w700,
+                ) ??
+                TextStyle(
+                  color: _onBackground.withOpacity(0.6),
+                  fontWeight: FontWeight.w700,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  _governorateLabel(rate),
-                  style: labelStyle.copyWith(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textDirection: TextDirection.rtl,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  rate.karatLabel,
-                  style: labelStyle.copyWith(fontWeight: FontWeight.w600),
-                  textDirection: TextDirection.rtl,
-                ),
-              ],
-            ),
           ),
-          star,
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text('بيع', style: labelStyle),
-              const SizedBox(height: 4),
-              chip(_formatPrice(rate.sellPrice), Colors.orangeAccent),
-            ],
-          ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text('شراء', style: labelStyle),
-              const SizedBox(height: 4),
-              chip(_formatPrice(rate.buyPrice), Colors.blueAccent),
-            ],
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: theme.textTheme.titleSmall?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w800,
+                ) ??
+                TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15.5,
+                ),
           ),
         ],
+      );
+    }
+
+    final Widget changeIndicator = _buildChangeIndicatorWidget(
+      icon: Icons.trending_flat,
+      color: _onBackground.withOpacity(0.6),
+      text: '--',
+      compact: true,
+    );
+    final Widget detailChangeIndicator = _buildChangeIndicatorWidget(
+      icon: Icons.trending_flat,
+      color: _onBackground.withOpacity(0.6),
+      text: '--',
+    );
+
+    void handleTap() {
+      _showMetalDetails(
+        rate: rate,
+        sellValue: sellValue,
+        buyValue: buyValue,
+        isWatchlisted: isWatchlisted,
+        leading: buildIcon(size: 60),
+        changeIndicator: detailChangeIndicator,
+      );
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: handleTap,
+        splashColor: widget.brand.withOpacity(0.06),
+        highlightColor: widget.brand.withOpacity(0.03),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Row(
+            children: [
+              buildIcon(size: 46),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      rate.displayName,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                            color: _onBackground,
+                            fontWeight: FontWeight.w800,
+                          ) ??
+                          TextStyle(
+                            color: _onBackground,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15.5,
+                          ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textDirection: TextDirection.rtl,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      rate.karatLabel,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                            color: _onBackground.withOpacity(0.6),
+                            fontWeight: FontWeight.w600,
+                          ) ??
+                          TextStyle(
+                            color: _onBackground.withOpacity(0.6),
+                            fontWeight: FontWeight.w600,
+                          ),
+                      textDirection: TextDirection.rtl,
+                    ),
+                    const SizedBox(height: 8),
+                    Directionality(
+                      textDirection: TextDirection.rtl,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          priceColumn('سعر البيع', sellValue, widget.brand),
+                          const SizedBox(width: 16),
+                          priceColumn(
+                            'سعر الشراء',
+                            buyValue,
+                            _onBackground.withOpacity(0.85),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              changeIndicator,
+              const SizedBox(width: 6),
+              Icon(
+                Icons.chevron_left_rounded,
+                color: _onBackground.withOpacity(0.4),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChangeIndicatorWidget({
+    required IconData icon,
+    required Color color,
+    required String text,
+    bool compact = false,
+  }) {
+    final TextStyle baseStyle = (compact
+            ? Theme.of(context).textTheme.labelLarge
+            : Theme.of(context).textTheme.titleMedium) ??
+        TextStyle(
+          color: color,
+          fontWeight: FontWeight.w800,
+          fontSize: compact ? 14 : 16,
+        );
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: compact ? 18 : 22, color: color),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: baseStyle.copyWith(
+              color: color,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showMetalDetails({
+    required MetalRate rate,
+    required String sellValue,
+    required String buyValue,
+    required bool isWatchlisted,
+    required Widget leading,
+    required Widget changeIndicator,
+  }) {
+    final List<Widget> infoSections = _buildMetalDetailSections(rate);
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (BuildContext ctx) {
+        return RateDetailSheet(
+          title: rate.displayName,
+          subtitle: rate.karatLabel,
+          leading: leading,
+          sellLabel: 'سعر البيع',
+          sellValue: sellValue,
+          buyLabel: 'سعر الشراء',
+          buyValue: buyValue,
+          brand: widget.brand,
+          isWatchlisted: isWatchlisted,
+          onToggleWatchlist: () => widget.onToggleMetalWatchlist(rate.id),
+          onShare: widget.onShareRates,
+          history: null,
+          initialHistoryRange: null,
+          onHistoryRangeSelected: null,
+          notificationSelector: null,
+          changeIndicator: changeIndicator,
+          additionalSections: infoSections,
+        );
+      },
+    );
+  }
+
+  List<Widget> _buildMetalDetailSections(MetalRate rate) {
+    final List<Widget> cards = <Widget>[
+      _buildInfoCard('المحافظة المعروضة', _governorateLabel(rate)),
+    ];
+
+    if (rate.source != null && rate.source!.trim().isNotEmpty) {
+      cards.add(
+        _buildInfoCard('المصدر', rate.source!.trim()),
+      );
+    }
+
+    if (rate.quotedAt != null) {
+      cards.add(
+        _buildInfoCard(
+          'آخر تحديث',
+          DateFormat('yyyy-MM-dd HH:mm').format(rate.quotedAt!),
+        ),
+      );
+    }
+
+    if (cards.isEmpty) {
+      return const <Widget>[];
+    }
+
+    return <Widget>[
+      Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        alignment: WrapAlignment.end,
+        children: cards,
+      ),
+    ];
+  }
+
+  Widget _buildInfoCard(String label, String value) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _onBackground.withOpacity(0.08)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: _onBackground.withOpacity(0.7),
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: _onBackground,
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+          ],
+        ),
       ),
     );
   }

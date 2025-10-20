@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:concentric_transition/page_view.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
 import 'package:marib/app/routes.dart';
@@ -31,15 +33,21 @@ class CardPlanetData {
 
 class CardPlanet extends StatelessWidget {
   final CardPlanetData data;
-  final LottieComposition? composition;
+  final Map<String, LottieComposition> compositions;
   final bool isActive;
 
   const CardPlanet({
     required this.data,
     required this.isActive,
+    required this.compositions,
     super.key,
-    this.composition,
   });
+
+
+  LottieComposition? _compositionFor(String? path) {
+    if (path == null) return null;
+    return compositions[path];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +68,7 @@ class CardPlanet extends StatelessWidget {
             child: Lottie.asset(
               data.backgroundAnimationPath!,
               fit: BoxFit.cover,
+              composition: _compositionFor(data.backgroundAnimationPath),
               animate: isActive,
               repeat: isActive,
             ),
@@ -78,10 +87,12 @@ class CardPlanet extends StatelessWidget {
                     data.animationPath!,
                     height: MediaQuery.of(context).size.height * 0.45,
                     fit: BoxFit.contain,
+                    composition: _compositionFor(data.animationPath),
                     // قم بإيقاف التشغيل الافتراضي إذا تريد تحكم خاص
                     animate: isActive,
-                    repeat: isActive,                  ),
-                ),
+                    repeat: isActive,
+                    ),
+                  ),
               if (data.image != null)
                 Flexible(flex: 20, child: Image(image: data.image!)),
               const Spacer(flex: 2),
@@ -131,6 +142,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final ValueNotifier<int> currentIndex = ValueNotifier<int>(0);
   bool _showHint = false;
   Timer? _hintTimer;
+  final Map<String, LottieComposition> _preloadedCompositions = {};
 
   final data = [
     CardPlanetData(
@@ -190,10 +202,59 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(_preloadAssets());
+    });
     _hintTimer = Timer(const Duration(seconds: 3), () {
       if (mounted) setState(() => _showHint = true);
     });
   }
+
+
+  Future<void> _preloadAssets() async {
+    final Map<String, LottieComposition> loaded = {};
+
+    for (final card in data) {
+      if (!mounted) return;
+
+      final image = card.image;
+      if (image != null) {
+        await precacheImage(image, context);
+      }
+
+      await _loadComposition(card.animationPath, loaded);
+      await _loadComposition(card.backgroundAnimationPath, loaded);
+    }
+
+    if (!mounted || loaded.isEmpty) return;
+    setState(() {
+      _preloadedCompositions.addAll(loaded);
+    });
+  }
+
+  Future<void> _loadComposition(
+      String? path,
+      Map<String, LottieComposition> target,
+      ) async {
+    if (path == null || _preloadedCompositions.containsKey(path) || target.containsKey(path)) {
+      return;
+    }
+
+    try {
+      final asset = AssetLottie(path);
+      final byteData = await asset.loadBytes(rootBundle);
+      final composition = await LottieComposition.fromByteData(byteData);
+      target[path] = composition;
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('Failed to preload Lottie asset $path: $error');
+        debugPrint('$stackTrace');
+      }
+    }
+  }
+
+
 
   @override
   void dispose() {
@@ -221,6 +282,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   return CardPlanet(
                     data: data[index],
                     isActive: index == activeIndex,
+                    compositions: _preloadedCompositions,
                   );
                 },
               ),

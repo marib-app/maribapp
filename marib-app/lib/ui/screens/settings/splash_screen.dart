@@ -383,8 +383,6 @@ class SplashScreenState extends State<SplashScreen>
   }
 
   Widget _buildOnline(BuildContext context) {
-    // مقدار الرفع عن الوضع الحالي (وحدات لوحة 500px)
-    final double lift = 150; // جرّب 60–120 حسب رغبتك
     const double footerHeight = 270;
     final double footerHorizontalPadding = ScreenScaler.s(24);
     final double footerVerticalPadding = ScreenScaler.s(18);
@@ -417,31 +415,25 @@ class SplashScreenState extends State<SplashScreen>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Padding(
-                    padding: EdgeInsets.only(bottom: lift),
-                    child: Column(
-                      children: [
-                        SizedBox(
-                          width: 500,
-                          height: 30,
-                          child: Lottie.asset('assets/lottie/data.json',
-                              fit: BoxFit.cover),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 500,
+                        height: 30,
+                        child: Lottie.asset('assets/lottie/data.json',
+                            fit: BoxFit.cover),
+                      ),
+                      SizedBox(height: ScreenScaler.s(16)),
+                      AnimatedOpacity(
+                        opacity: _showIntroUi ? 1 : 0,
+                        duration: const Duration(milliseconds: 500),
+                        curve: Curves.easeInOut,
+                        child: _IntroContent(
+                          dotsAnimation: _dotsController,
                         ),
-                        Padding(
-                          padding: EdgeInsets.only(
-                            top: ScreenScaler.s(16),
-                          ),
-                          child: AnimatedOpacity(
-                            opacity: _showIntroUi ? 1 : 0,
-                            duration: const Duration(milliseconds: 500),
-                            curve: Curves.easeInOut,
-                            child: _IntroContent(
-                              dotsAnimation: _dotsController,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                   AnimatedOpacity(
                     opacity: _showIntroUi ? 1 : 0,

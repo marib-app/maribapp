@@ -21,13 +21,6 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:flutter/foundation.dart';
 import 'add_network/plan_configuration_screen.dart';
 
-
-
-
-
-
-
-
 class WifiCabinScreen extends StatefulWidget {
   const WifiCabinScreen({super.key});
 
@@ -99,34 +92,54 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
             showBackButton: true,
             title: 'wifiCabin'.translate(context),
           ),
-          body: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Column(
-              children: [
-                WifiSearchHeaderBar(
-                  controller: _searchController,
-                  focusNode: _searchFocusNode,
-                  isLoading: state.status == WifiCabinLoadStatus.loading &&
-                      !state.hasData,
-                  onChanged: (value) => _controller.updateQuery(value),
-                  onSubmitted: (value) =>
-                      _controller.updateQuery(value, immediate: true),
-                  onClear: _controller.clearQuery,
-                  onRefresh: () => _controller.refreshNetworks(force: true),
+          body: CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate.fixed([
+                    WifiSearchHeaderBar(
+                      controller: _searchController,
+                      focusNode: _searchFocusNode,
+                      isLoading: state.status == WifiCabinLoadStatus.loading &&
+                          !state.hasData,
+                      onChanged: (value) => _controller.updateQuery(value),
+                      onSubmitted: (value) =>
+                          _controller.updateQuery(value, immediate: true),
+                      onClear: _controller.clearQuery,
+                      onRefresh: () => _controller.refreshNetworks(force: true),
+                    ),
+                    const SizedBox(height: 12),
+                    WifiServiceOverview(),
+                    const SizedBox(height: 16),
+                  ]),
                 ),
-                const SizedBox(height: 12),
-                WifiServiceOverview(),
-                const SizedBox(height: 16),
-                Expanded(
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                sliver: SliverFillRemaining(
+                  hasScrollBody: false,
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 220),
                     switchInCurve: Curves.easeOut,
                     switchOutCurve: Curves.easeIn,
-                    child: _buildBodyForState(context, state),
+                    layoutBuilder: (currentChild, previousChildren) {
+                      return Stack(
+                        alignment: Alignment.topCenter,
+                        children: <Widget>[
+                          ...previousChildren,
+                          if (currentChild != null) currentChild,
+                        ],
+                      );
+                    },
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: _buildBodyForState(context, state),
+                    ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
           bottomNavigationBar: SafeArea(
             minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -202,6 +215,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
 
     return GridView.builder(
       key: const ValueKey('loading_shimmer'),
+      shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
@@ -471,13 +485,13 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
     final String? networkMessage = payload['message'] as String? ??
         _buildNetworkSubmissionMessage(networkName, networkStatus);
     final int? networkId =
-    _parsePositiveInt(payload['networkId'] ?? payload['id']);
+        _parsePositiveInt(payload['networkId'] ?? payload['id']);
     final Map<String, dynamic>? networkData =
-    payload['network'] is Map<String, dynamic>
-        ? Map<String, dynamic>.from(
-      payload['network'] as Map<String, dynamic>,
-    )
-        : null;
+        payload['network'] is Map<String, dynamic>
+            ? Map<String, dynamic>.from(
+                payload['network'] as Map<String, dynamic>,
+              )
+            : null;
 
     String? combinedMessage = networkMessage;
 
@@ -509,9 +523,8 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
 
   Future<void> _openPlansSheet(
       BuildContext context, WifiNetwork network) async {
-    final WifiPlansSheetResult? result = await showModalBottomSheet<
-        WifiPlansSheetResult?>(
-
+    final WifiPlansSheetResult? result =
+        await showModalBottomSheet<WifiPlansSheetResult?>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -521,7 +534,6 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
         onRegisterPurchase: _registerPurchase,
         onRefreshPurchases: _fetchPurchases,
         onShowCodes: _showCodesDialog,
-
         allowPlanCreation: shouldAllowPlanCreationForNetwork(network),
       ),
     );
@@ -563,11 +575,9 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
         networkName: networkName,
         defaultCurrency: (defaultCurrency ?? 'YER').toUpperCase(),
         repository: _repository,
-
       ),
     );
   }
-
 
   Map<String, dynamic> _normalizeNetworkSubmission(dynamic result) {
     if (result is Map<String, dynamic>) {
@@ -892,13 +902,9 @@ int? _tryParseInt(dynamic value) {
     return value;
   }
 
-
-
   if (value is num) {
     return value.toInt();
   }
-
-
 
   if (value is String) {
     return int.tryParse(value.trim());
@@ -952,6 +958,4 @@ String? _normalizeText(dynamic value) {
   }
 
   return _normalizeText(value.toString());
-
-
 }

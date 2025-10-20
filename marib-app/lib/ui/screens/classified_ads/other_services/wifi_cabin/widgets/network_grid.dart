@@ -43,6 +43,8 @@ class WifiNetworksGrid extends StatelessWidget {
         crossAxisSpacing: 12,
         childAspectRatio: 0.9,
       ),
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       itemCount: networks.length,
       itemBuilder: (context, index) {
         final WifiNetwork network = networks[index];

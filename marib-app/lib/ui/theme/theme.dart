@@ -26,7 +26,7 @@ Color widgetsBorderColorLight = const Color(0xffEEEEEE).withOpacity(0.6);
 Color senderChatColor = const Color.fromARGB(255, 233, 233, 233).darken(22);
 
 ///Dark Theme Colors
-Color primaryColorDark = const Color(0xFF0E0E10);
+const Color primaryColorDark = Color(0xFF0E0E10);
 Color secondaryColorDark = const Color(0xFF1E1E20);
 const Color cardColorLight = secondaryColor_;
 Color cardColorDark = secondaryColorDark.brighten(6);

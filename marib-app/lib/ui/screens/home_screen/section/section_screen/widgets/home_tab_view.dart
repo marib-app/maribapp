@@ -101,6 +101,7 @@ class _HomeTabViewState extends State<HomeTabView> {
 
   // ✅ قفل تحميل المزيد + تباطؤ بسيط لتجنّب سيل الاستدعاءات
   bool _isLoadingMore = false;
+  bool _loadingIndicatorPulseForward = true;
 
   @override
   void initState() {
@@ -1053,7 +1054,6 @@ class _HomeTabViewState extends State<HomeTabView> {
         }
 
         if (!hasMoreData) {
-
           slivers.add(_buildEndOfResultsSliver(context));
         }
 
@@ -1115,8 +1115,8 @@ class _HomeTabViewState extends State<HomeTabView> {
     BuildContext context,
     List<_HomeTabEntry> entries,
     List<ItemSummary> items,
-      FetchItemSummarySuccess state,
-      bool hasMoreData,
+    FetchItemSummarySuccess state,
+    bool hasMoreData,
     bool showLoadingMoreError,
   ) {
     final bool hasLoadingMoreEntry = entries.isNotEmpty &&
@@ -1256,32 +1256,72 @@ class _HomeTabViewState extends State<HomeTabView> {
   }
 
   Widget _buildLoadingMoreStatusSliver(
-      BuildContext context,
-      FetchItemSummarySuccess state,
-      ) {
-    const double indicatorHeight = 32;
+    BuildContext context,
+    FetchItemSummarySuccess state,
+  ) {
+    const double indicatorExtent = 52;
+    const double verticalPadding = 26;
 
+    if (!state.isLoadingMore) {
+      _loadingIndicatorPulseForward = true;
+    }
 
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: verticalPadding),
         child: Center(
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 250),
             child: state.isLoadingMore
-                ? SizedBox(
-              key: const ValueKey('loading_more_indicator'),
-              height: indicatorHeight,
-              width: indicatorHeight,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.6,
-                color: context.color.territoryColor,
-              ),
-            )
+                ? TweenAnimationBuilder<double>(
+                    key: const ValueKey('loading_more_indicator'),
+                    tween: Tween<double>(
+                      begin: _loadingIndicatorPulseForward ? 0.45 : 1.0,
+                      end: _loadingIndicatorPulseForward ? 1.0 : 0.45,
+                    ),
+                    duration: const Duration(milliseconds: 900),
+                    curve: Curves.easeInOut,
+                    onEnd: () {
+                      if (!mounted || !state.isLoadingMore) {
+                        return;
+                      }
+                      setState(() {
+                        _loadingIndicatorPulseForward =
+                            !_loadingIndicatorPulseForward;
+                      });
+                    },
+                    builder: (context, opacity, child) {
+                      return Opacity(opacity: opacity, child: child);
+                    },
+                    child: Container(
+                      height: indicatorExtent,
+                      width: indicatorExtent,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceVariant
+                            .withOpacity(0.35),
+                        borderRadius:
+                            BorderRadius.circular(indicatorExtent / 2),
+                      ),
+                      alignment: Alignment.center,
+                      child: SizedBox(
+                        height: indicatorExtent - 20,
+                        width: indicatorExtent - 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            context.color.territoryColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
                 : const SizedBox(
-              key: ValueKey('loading_more_spacer'),
-              height: indicatorHeight,
-            ),
+                    key: ValueKey('loading_more_spacer'),
+                    height: indicatorExtent,
+                    width: indicatorExtent,
+                  ),
           ),
         ),
       ),

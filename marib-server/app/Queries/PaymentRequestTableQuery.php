@@ -165,6 +165,8 @@ class PaymentRequestTableQuery
                 $sanitizeManualBankAlias,
                 [
                     "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_bank.name'))",
+                    "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_bank.bank_name'))",
+                    "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_bank.beneficiary_name'))",
                     "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual.bank.name'))",
                     "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.bank.name'))",
                     "JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.bank_name'))",
@@ -257,6 +259,8 @@ class PaymentRequestTableQuery
             foreach ([
                 "$.bank.name",
                 "$.manual_bank.name",
+                "$.manual_bank.bank_name",
+                "$.manual_bank.beneficiary_name",
                 "$.manual.bank.name",
                 "$.manual.bank.bank_name",
                 "$.manual.bank.beneficiary_name",
@@ -293,6 +297,8 @@ class PaymentRequestTableQuery
             foreach ([
                 "$.payload.bank_name",
                 "$.manual_bank.name",
+                "$.manual_bank.bank_name",
+                "$.manual_bank.beneficiary_name",
                 "$.manual.bank.name",
                 "$.manual.bank.bank_name",
                 "$.manual.bank.beneficiary_name",
@@ -309,6 +315,8 @@ class PaymentRequestTableQuery
             foreach ([
                 "$.payload.bank_name",
                 "$.manual_bank.name",
+                "$.manual_bank.bank_name",
+                "$.manual_bank.beneficiary_name",
                 "$.manual.bank.name",
                 "$.manual.bank.bank_name",
                 "$.manual.bank.beneficiary_name",
@@ -358,6 +366,8 @@ class PaymentRequestTableQuery
             foreach ([
                 "$.bank.name",
                 "$.manual_bank.name",
+                "$.manual_bank.bank_name",
+                "$.manual_bank.beneficiary_name",
                 "$.manual.bank.name",
                 "$.manual.bank.bank_name",
                 "$.manual.bank.beneficiary_name",
@@ -468,6 +478,8 @@ class PaymentRequestTableQuery
             foreach ([
                 "$.payload.bank_name",
                 "$.manual_bank.name",
+                "$.manual_bank.bank_name",
+                "$.manual_bank.beneficiary_name",
                 "$.manual.bank.name",
                 "$.manual.bank.bank_name",
                 "$.manual.bank.beneficiary_name",

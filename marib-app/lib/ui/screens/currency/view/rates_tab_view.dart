@@ -170,22 +170,35 @@ class RatesTabView extends StatelessWidget {
       return preferred;
     }
 
-    // تنسيق الرقم إن أمكن
-    String _fmt(String v) {
-      final double? d = double.tryParse(v.replaceAll(',', ''));
-      return d == null ? v : NumberFormat('#,##0.####').format(d);
+    final List<int> candidates = <int>[
+      preferred,
+      state.defaultHistoryRangeDays,
+      1,
+      3,
+      7,
+    ];
+
+    for (final int candidate in candidates) {
+      if (availableRanges.contains(candidate)) {
+        return candidate;
+      }
     }
 
-    final TextStyle nameStyle = theme.textTheme.titleSmall?.copyWith(
-          color: onBg,
-          fontWeight: FontWeight.w800,
-        ) ??
-        TextStyle(color: onBg, fontWeight: FontWeight.w800, fontSize: 15.5);
+    return availableRanges.first;
+  }
 
-    Widget fallbackIcon() {
+  Widget _buildCurrencyIcon({
+    required String name,
+    String? iconUrl,
+    String? iconAlt,
+    required Color onBg,
+    double size = 40,
+    double iconSize = 18,
+  }) {
+    Widget fallback() {
       return Container(
-        width: 32,
-        height: 32,
+        width: size,
+        height: size,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
@@ -193,143 +206,312 @@ class RatesTabView extends StatelessWidget {
         ),
         child: Icon(
           Icons.account_balance_wallet_outlined,
-          size: 17,
+          size: iconSize,
           color: brand,
         ),
       );
     }
 
-    Widget leadingIcon;
+    if (iconUrl == null || iconUrl.isEmpty) {
+      return fallback();
+    }
 
-    if (iconUrl != null && iconUrl.isNotEmpty) {
-      leadingIcon = Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: onBg.withOpacity(0.20)),
-        ),
-        clipBehavior: Clip.hardEdge,
-        child: Semantics(
-          label: iconAlt?.isNotEmpty == true ? iconAlt : 'أيقونة $name',
-          child: Image.network(
-            iconUrl,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => fallbackIcon(),
-            loadingBuilder: (ctx, child, progress) {
-              if (progress == null) return child;
-              return Center(
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: onBg.withOpacity(0.20)),
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: Semantics(
+        label: iconAlt?.isNotEmpty == true ? iconAlt : 'أيقونة $name',
+        child: Image.network(
+          iconUrl,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => fallback(),
+          loadingBuilder: (BuildContext ctx, Widget child,
+              ImageChunkEvent? progress) {
+            if (progress == null) {
+              return child;
+            }
+            return Center(
                 child: SizedBox(
-                  width: 18,
-                  height: 18,
+                  width: iconSize,
+                  height: iconSize,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
                     valueColor: AlwaysStoppedAnimation<Color>(brand),
                     value: progress.expectedTotalBytes != null
                         ? progress.cumulativeBytesLoaded /
-                            (progress.expectedTotalBytes ?? 1)
+                        (progress.expectedTotalBytes ?? 1)
                         : null,
-                  ),
                 ),
-              );
-            },
+                ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChangeIndicatorWidget(
+      BuildContext context, {
+        required IconData icon,
+        required Color color,
+        required String text,
+        bool compact = false,
+      }) {
+    final TextStyle baseStyle = (compact
+        ? Theme.of(context).textTheme.labelLarge
+        : Theme.of(context).textTheme.titleMedium) ??
+        TextStyle(
+          color: color,
+          fontWeight: FontWeight.w800,
+          fontSize: compact ? 14 : 16,
+        );
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: compact ? 18 : 22, color: color),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: baseStyle.copyWith(
+              color: color,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget? _buildNotificationSelector({
+    required Color onBg,
+    required TextTheme textTheme,
+    required int? currencyId,
+    required ValueChanged<String?>? onNotificationRegionChanged,
+  }) {
+    if (currencyId == null || onNotificationRegionChanged == null) {
+      return null;
+    }
+    if (state.governorates.isEmpty) {
+      return null;
+    }
+
+    const String notificationDefaultValue = '_default_';
+    final Map<int, String> notificationRegions =
+        state.currency.currencyNotificationRegions;
+    final String? storedNotification = notificationRegions[currencyId];
+    String selection = notificationDefaultValue;
+    if (storedNotification != null && storedNotification.trim().isNotEmpty) {
+      selection = storedNotification.trim();
+    }
+
+    final List<DropdownMenuItem<String>> items = <DropdownMenuItem<String>>[
+      const DropdownMenuItem<String>(
+        value: notificationDefaultValue,
+        child: Text(
+          'المتوسط الافتراضي الوطني',
+          textDirection: TextDirection.rtl,
+        ),
+      ),
+    ];
+    final Set<String> addedValues = <String>{notificationDefaultValue};
+
+    for (final Map<String, String?> governorate in state.governorates) {
+      final String? code = governorate['code'];
+      if (code == null) {
+        continue;
+      }
+      final String trimmedCode = code.trim();
+      if (trimmedCode.isEmpty) {
+        continue;
+      }
+      if (!addedValues.add(trimmedCode)) {
+        continue;
+      }
+
+      final String? rawName = governorate['name'];
+      final String name =
+      (rawName != null && rawName.trim().isNotEmpty)
+          ? rawName.trim()
+          : trimmedCode;
+      items.add(
+        DropdownMenuItem<String>(
+          value: trimmedCode,
+          child: Text(
+            name,
+            textDirection: TextDirection.rtl,
           ),
         ),
       );
-    } else {
-      leadingIcon = fallbackIcon();
+
     }
 
-    Widget priceStat(String label, String value, Color accent) {
-      return Column(
+    if (!addedValues.contains(selection)) {
+      addedValues.add(selection);
+      items.add(
+        DropdownMenuItem<String>(
+          value: selection,
+          child: Text(
+            selection,
+            textDirection: TextDirection.rtl,
+          ),
+        ),
+      );
+    }
+
+    final Color borderColor = onBg.withOpacity(0.12);
+    final Color iconColor = onBg.withOpacity(0.7);
+
+    return Directionality(
+        textDirection: TextDirection.rtl,
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Text(
-            label,
-            style: theme.textTheme.labelSmall?.copyWith(
+            'تنبيهات المحافظة',
+            style: textTheme.labelSmall?.copyWith(
                   color: onBg.withOpacity(0.6),
                   fontWeight: FontWeight.w700,
                 ) ??
                 TextStyle(
                   color: onBg.withOpacity(0.6),
+                  fontSize: 11,
                   fontWeight: FontWeight.w700,
                 ),
           ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(width: 2, height: 18, color: accent.withOpacity(0.9)),
-              const SizedBox(width: 6),
-              Text(
-                _fmt(value),
-                style: theme.textTheme.titleSmall?.copyWith(
-                      color: accent,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.2,
-                    ) ??
-                    TextStyle(
-                      color: accent,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.2,
-                      fontSize: 15.5,
-                    ),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: borderColor),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              key: ValueKey<String>('notification-region-$currencyId'),
+              value: selection,
+              isExpanded: true,
+              icon: Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: iconColor,
               ),
-            ],
+              onChanged: (String? value) {
+                if (value == null) {
+                  return;
+                }
+                final String? normalized =
+                value == notificationDefaultValue ? null : value;
+                onNotificationRegionChanged(normalized);
+              },
+              items: items,
+              ),
+          ),
           ),
         ],
-      );
+        ),
+    );
+  }
+
+  Widget _buildInfoCard(
+      BuildContext context,
+      String label,
+      String value,
+      Color onBg,
+      ) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: onBg.withOpacity(0.08)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: onBg.withOpacity(0.7),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: onBg,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---------- صفّ العملة (نظيف مع عرض بيع/شراء احترافي) ----------
+  Widget _row(
+      BuildContext context, {
+        required String name,
+        required String sell,
+        required String buy,
+        String? iconUrl,
+        String? iconAlt,
+        required bool isWatchlisted,
+        required VoidCallback onToggleWatchlist,
+        CurrencyHistoryBundle? history,
+        required int selectedRangeDays,
+        required ValueChanged<int> onHistoryRangeSelected,
+        int? currencyId,
+        ValueChanged<String?>? onNotificationRegionChanged,
+      }) {
+    final ThemeData theme = Theme.of(context);
+    final bool dark = _isDark(context);
+    final Color onBg = dark ? Colors.white : Colors.black;
+    final Color divider = dark ? Colors.white12 : Colors.black12;
+
+    final NumberFormat valueFormatter = NumberFormat('#,##0.####', 'en');
+    String formatValue(String value) {
+      final double? parsed = double.tryParse(value.replaceAll(',', ''));
+      return parsed == null ? value : valueFormatter.format(parsed);
     }
 
-    final NumberFormat changeFormatter = NumberFormat('+#0.##;-#0.##;0', 'en');
-    final NumberFormat highLowFormatter = NumberFormat('#,##0.###', 'en');
 
     final Set<int> availableRanges = history?.ranges.keys
-            .map((dynamic key) =>
-                key is int ? key : int.tryParse(key.toString()))
+        .map((dynamic key) => key is int ? key : int.tryParse(key.toString()))
+
             .whereType<int>()
             .toSet() ??
         <int>{};
 
-    int effectiveRangeDays = selectedRangeDays;
-    if (!availableRanges.contains(effectiveRangeDays) &&
-        availableRanges.isNotEmpty) {
-      final List<int> fallbackOrder = <int>{
-        state.defaultHistoryRangeDays,
-        1,
-        3,
-        7,
-      }.toList();
+    final int? effectiveRange =
+    _resolveEffectiveHistoryRange(availableRanges, selectedRangeDays);
+    final CurrencyHistorySummary? summary = effectiveRange != null
+        ? history?.range(effectiveRange)?.summary
+        : null;
 
-      int? resolvedFallback;
-      for (final int candidate in fallbackOrder) {
-        if (availableRanges.contains(candidate)) {
-          resolvedFallback = candidate;
-          break;
-        }
-      }
-      effectiveRangeDays = resolvedFallback ?? availableRanges.first;
-    }
+    final NumberFormat changeFormatter = NumberFormat('+#0.##;-#0.##;0', 'en');
+    final String changeText = summary?.changeSellPercent != null
+        ? '${changeFormatter.format(summary!.changeSellPercent)}%'
+        : '--';
 
-    final CurrencyHistoryRange? selectedRange =
-        history?.range(effectiveRangeDays);
-    final CurrencyHistorySummary? summary = selectedRange?.summary;
-    final List<double> sparklineValues = selectedRange?.points
-            .map((CurrencyHistoryPoint point) => point.sellPrice)
-            .where((double value) => value.isFinite)
-            .toList(growable: false) ??
-        <double>[];
 
-    final bool hasSparkline = sparklineValues.length >= 2;
-    final bool hasHistoryData = history != null && availableRanges.isNotEmpty;
-    final Color positiveColor = Colors.green;
-    final Color negativeColor = Colors.redAccent;
     final Color neutralColor = onBg.withOpacity(0.6);
     final Color trendColor = summary == null
         ? neutralColor
         : summary.isNegativeTrend
-            ? negativeColor
+        ? Colors.redAccent
             : summary.isPositiveTrend
-                ? positiveColor
+        ? Colors.green
                 : neutralColor;
 
     final IconData trendIcon = summary == null
@@ -340,399 +522,215 @@ class RatesTabView extends StatelessWidget {
                 ? Icons.arrow_upward_rounded
                 : Icons.trending_flat;
 
-    final String changeText = summary?.changeSellPercent != null
-        ? '${changeFormatter.format(summary!.changeSellPercent)}%'
-        : '--';
-
-    final String? highText = summary?.highSell != null
-        ? highLowFormatter.format(summary!.highSell)
-        : null;
-    final String? lowText = summary?.lowSell != null
-        ? highLowFormatter.format(summary!.lowSell)
-        : null;
-
-    const String notificationDefaultValue = '_default_';
-    final Map<int, String> notificationRegions =
-        state.currency.currencyNotificationRegions;
-    final String? storedNotification =
-        currencyId == null ? null : notificationRegions[currencyId];
-    String notificationSelection = notificationDefaultValue;
-    if (storedNotification != null && storedNotification.trim().isNotEmpty) {
-      notificationSelection = storedNotification.trim();
-    }
-
-    Widget? buildNotificationSelector(double availableWidth) {
-      if (currencyId == null || onNotificationRegionChanged == null) {
-        return null;
-      }
-      if (state.governorates.isEmpty) {
-        return null;
-      }
-
-      final List<DropdownMenuItem<String>> items = <DropdownMenuItem<String>>[
-        const DropdownMenuItem<String>(
-          value: notificationDefaultValue,
-          child: Text(
-            'المتوسط الافتراضي الوطني',
-            textDirection: TextDirection.rtl,
-          ),
-        ),
-      ];
-      final Set<String> addedValues = <String>{notificationDefaultValue};
-
-      for (final Map<String, String?> gov in state.governorates) {
-        final String? code = gov['code'];
-        if (code == null) continue;
-        final String trimmedCode = code.trim();
-        if (trimmedCode.isEmpty) continue;
-        if (!addedValues.add(trimmedCode)) {
-          continue;
-        }
-        final String? rawName = gov['name'];
-        final String name = (rawName != null && rawName.trim().isNotEmpty)
-            ? rawName.trim()
-            : trimmedCode;
-        items.add(
-          DropdownMenuItem<String>(
-            value: trimmedCode,
-            child: Text(
-              name,
-              textDirection: TextDirection.rtl,
-            ),
-          ),
-        );
-      }
-
-      if (!addedValues.contains(notificationSelection)) {
-        addedValues.add(notificationSelection);
-        items.add(
-          DropdownMenuItem<String>(
-            value: notificationSelection,
-            child: Text(
-              notificationSelection,
-              textDirection: TextDirection.rtl,
-            ),
-          ),
-        );
-      }
-
-      final Color borderColor = onBg.withOpacity(0.12);
-      final Color iconColor = onBg.withOpacity(0.7);
-
-      return SizedBox(
-        width: availableWidth,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'تنبيهات المحافظة',
-              style: theme.textTheme.labelSmall?.copyWith(
-                    color: onBg.withOpacity(0.6),
-                    fontWeight: FontWeight.w700,
-                  ) ??
-                  TextStyle(
-                    color: onBg.withOpacity(0.6),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-              textDirection: TextDirection.rtl,
-            ),
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: borderColor),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  key: ValueKey<String>('notification-region-$currencyId'),
-                  value: notificationSelection,
-                  isExpanded: true,
-                  icon: Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    color: iconColor,
-                  ),
-                  onChanged: (String? value) {
-                    if (value == null) {
-                      return;
-                    }
-                    final String? normalized =
-                        value == notificationDefaultValue ? null : value;
-                    onNotificationRegionChanged(normalized);
-                  },
-                  items: items,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    Widget buildRangeSelector() {
-      return _HistoryRangeChips(
-        availableRanges: availableRanges,
-        effectiveRangeDays: effectiveRangeDays,
-        brand: brand,
-        onBg: onBg,
-        onHistoryRangeSelected: onHistoryRangeSelected,
-        textTheme: theme.textTheme,
-      );
-    }
-
-    final Widget star = IconButton(
-      onPressed: onToggleWatchlist,
-      icon: Icon(
-        isWatchlisted ? Icons.star_rounded : Icons.star_outline_rounded,
-        color: isWatchlisted ? Colors.amber : onBg.withOpacity(0.35),
-      ),
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
-      splashRadius: 20,
-      tooltip: isWatchlisted
-          ? 'إزالة من قائمة المراقبة'
-          : 'إضافة إلى قائمة المراقبة',
+    final Widget changeIndicator = _buildChangeIndicatorWidget(
+      context,
+      icon: trendIcon,
+      color: trendColor,
+      text: changeText,
+      compact: true,
     );
+
+    final Widget detailChangeIndicator = _buildChangeIndicatorWidget(
+      context,
+      icon: trendIcon,
+      color: trendColor,
+      text: changeText,
+    );
+
+    final Widget leading = _buildCurrencyIcon(
+      name: name,
+      iconUrl: iconUrl,
+      iconAlt: iconAlt,
+      onBg: onBg,
+    );
+
+    final Widget detailLeading = _buildCurrencyIcon(
+      name: name,
+      iconUrl: iconUrl,
+      iconAlt: iconAlt,
+      onBg: onBg,
+      size: 56,
+      iconSize: 24,
+    );
+
+    final Widget? notificationSelector = _buildNotificationSelector(
+      onBg: onBg,
+      textTheme: theme.textTheme,
+      currencyId: currencyId,
+      onNotificationRegionChanged: onNotificationRegionChanged,
+    );
+
+    final String detailSubtitle = state.appliedGovernorateName ??
+        state.requestedGovernorateName ??
+        'المتوسط الافتراضي الوطني';
+
+    void handleTap() {
+      _showCurrencyDetails(
+        context: context,
+        name: name,
+        subtitle: 'حسب $detailSubtitle',
+        sell: formatValue(sell),
+        buy: formatValue(buy),
+        isWatchlisted: isWatchlisted,
+        onToggleWatchlist: onToggleWatchlist,
+        history: history,
+        initialRange: effectiveRange,
+        onHistoryRangeSelected: onHistoryRangeSelected,
+        leading: detailLeading,
+        changeIndicator: detailChangeIndicator,
+        notificationSelector: notificationSelector,
+      );
+    }
+
+    Widget priceColumn(String label, String value, Color color) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: onBg.withOpacity(0.6),
+              fontWeight: FontWeight.w700,
+            ) ??
+                TextStyle(
+                  color: onBg.withOpacity(0.6),
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w800,
+            ) ??
+                TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15.5,
+                ),
+          ),
+        ],
+      );
+    }
+
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {},
+        onTap: handleTap,
         splashColor: brand.withOpacity(0.06),
         highlightColor: brand.withOpacity(0.03),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: divider, width: 1)),
           ),
-          child: LayoutBuilder(
-            builder: (BuildContext ctx, BoxConstraints cons) {
-              final bool narrow = cons.maxWidth < 360;
-
-              final Widget? notificationSelector =
-                  buildNotificationSelector(cons.maxWidth);
-
-              final Widget leading = Row(
-                mainAxisSize: MainAxisSize.min,
+            child: Row(
                 children: [
-                  leadingIcon,
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      name,
-                      style: nameStyle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textDirection: TextDirection.rtl,
-                    ),
-                  ),
-                ],
-              );
-
-              final Widget sellBlock = priceStat('بيع', sell, Colors.redAccent);
-              final Widget buyBlock = priceStat('شراء', buy, Colors.green);
-
-              final Widget priceContent = narrow
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        sellBlock,
-                        const SizedBox(height: 6),
-                        buyBlock,
-                      ],
-                    )
-                  : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        sellBlock,
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 10),
-                          width: 1,
-                          height: 22,
-                          color: onBg.withOpacity(0.12),
-                        ),
-                        buyBlock,
-                      ],
-                    );
-
-              Widget buildHistorySection(double availableWidth) {
-                final List<Widget> historyChildren = <Widget>[
-                  buildRangeSelector(),
-                  const SizedBox(height: 8),
-                ];
-
-                if (hasSparkline) {
-                  historyChildren.add(
-                    SizedBox(
-                      width: availableWidth,
-                      height: 40,
-                      child: _MiniTrendChart(
-                        values: sparklineValues,
-                        color: trendColor,
-                      ),
-                    ),
-                  );
-                } else if (hasHistoryData) {
-                  historyChildren.add(
-                    Container(
-                      width: availableWidth,
-                      height: 40,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: onBg.withOpacity(0.12)),
-                      ),
-                      child: Icon(
-                        Icons.trending_flat,
-                        color: trendColor,
-                        size: 18,
-                      ),
-                    ),
-                  );
-                } else {
-                  historyChildren.add(
-                    Container(
-                      width: availableWidth,
-                      height: 40,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: onBg.withOpacity(0.12)),
-                      ),
-                      child: Text(
-                        'لا يوجد سجل',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                              color: onBg.withOpacity(0.5),
-                              fontWeight: FontWeight.w600,
-                            ) ??
-                            TextStyle(
-                              color: onBg.withOpacity(0.5),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                    ),
-                  );
-                }
-
-                historyChildren.add(const SizedBox(height: 6));
-                historyChildren.add(
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: trendColor.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(trendIcon, size: 14, color: trendColor),
-                        const SizedBox(width: 4),
-                        Text(
-                          changeText,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                                color: trendColor,
-                                fontWeight: FontWeight.w700,
-                              ) ??
-                              TextStyle(
-                                color: trendColor,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-
-                if (highText != null && lowText != null) {
-                  historyChildren.addAll([
-                    const SizedBox(height: 4),
+                leading,
+                const SizedBox(width: 12),
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
                     Text(
-                      'أعلى: $highText | أدنى: $lowText',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                            color: onBg.withOpacity(0.6),
-                            fontWeight: FontWeight.w600,
+                      name,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: onBg,
+                        fontWeight: FontWeight.w800,
                           ) ??
                           TextStyle(
-                            color: onBg.withOpacity(0.6),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
+                            color: onBg,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15.5,
                           ),
                       textDirection: TextDirection.rtl,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ]);
-                }
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: historyChildren,
-                );
-              }
-
-              if (narrow) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(child: leading),
-                        star,
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    priceContent,
-                    if (notificationSelector != null) ...[
-                      const SizedBox(height: 12),
-                      notificationSelector,
-                    ],
-                    const SizedBox(height: 12),
-                    buildHistorySection(cons.maxWidth),
-                  ],
-                );
-              }
-
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(child: leading),
-                        const SizedBox(width: 12),
-                        priceContent,
-                        const SizedBox(width: 16),
-                        SizedBox(
-                          width: 160,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (notificationSelector != null) ...[
-                                notificationSelector,
-                                const SizedBox(height: 12),
-                              ],
-                              buildHistorySection(160),
-                            ],
+                          const SizedBox(height: 6),
+                          Directionality(
+                            textDirection: TextDirection.rtl,
+                            child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                priceColumn('سعر البيع', formatValue(sell), brand),
+                            const SizedBox(width: 16),
+                            priceColumn(
+                              'سعر الشراء',
+                              formatValue(buy),
+                              onBg.withOpacity(0.85),
                           ),
-                        ),
-                      ],
+                                ],
+                            ),
                     ),
+                        ],
+                    ),
+                ),
+                  const SizedBox(width: 12),
+                  changeIndicator,
+                  const SizedBox(width: 6),
+                  Icon(
+                    Icons.chevron_left_rounded,
+                    color: onBg.withOpacity(0.4),
                   ),
-                  star,
                 ],
-              );
-            },
           ),
         ),
       ),
     );
   }
+
+
+
+  void _showCurrencyDetails({
+    required BuildContext context,
+    required String name,
+    String? subtitle,
+    required String sell,
+    required String buy,
+    required bool isWatchlisted,
+    required VoidCallback onToggleWatchlist,
+    CurrencyHistoryBundle? history,
+    int? initialRange,
+    ValueChanged<int>? onHistoryRangeSelected,
+    required Widget leading,
+    required Widget changeIndicator,
+    Widget? notificationSelector,
+  }) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (BuildContext ctx) {
+        return RateDetailSheet(
+          title: name,
+          subtitle: subtitle,
+          leading: leading,
+          sellLabel: 'سعر البيع',
+          sellValue: sell,
+          buyLabel: 'سعر الشراء',
+          buyValue: buy,
+          brand: brand,
+          isWatchlisted: isWatchlisted,
+          onToggleWatchlist: onToggleWatchlist,
+          onShare: onShareRates,
+          history: history,
+          initialHistoryRange: initialRange,
+          onHistoryRangeSelected: onHistoryRangeSelected,
+          notificationSelector: notificationSelector,
+          changeIndicator: changeIndicator,
+        );
+      },
+    );
+  }
+
 
   Widget _metalRow(
     BuildContext context, {
@@ -740,9 +738,10 @@ class RatesTabView extends StatelessWidget {
     required bool isWatchlisted,
     required VoidCallback onToggleWatchlist,
   }) {
-    final theme = Theme.of(context);
-    final onBg = _isDark(context) ? Colors.white : Colors.black;
-    final divider = _isDark(context) ? Colors.white12 : Colors.black12;
+    final ThemeData theme = Theme.of(context);
+    final bool dark = _isDark(context);
+    final Color onBg = dark ? Colors.white : Colors.black;
+    final Color divider = dark ? Colors.white12 : Colors.black12;
     final NumberFormat formatter = NumberFormat('#,##0.###', 'en');
 
     String format(double? value) {
@@ -752,24 +751,92 @@ class RatesTabView extends StatelessWidget {
       return formatter.format(value);
     }
 
-    final Widget star = IconButton(
-      onPressed: onToggleWatchlist,
-      icon: Icon(
-        isWatchlisted ? Icons.star_rounded : Icons.star_outline_rounded,
-        color: isWatchlisted ? Colors.amber : onBg.withOpacity(0.35),
-      ),
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
-      splashRadius: 20,
-      tooltip: isWatchlisted
-          ? 'إزالة من قائمة المراقبة'
-          : 'إضافة إلى قائمة المراقبة',
+    final String sellValue = format(rate.sellPrice);
+    final String buyValue = format(rate.buyPrice);
+
+    final Widget leading = _buildMetalIcon(
+      rate: rate,
+      onBg: onBg,
     );
+    final Widget detailLeading = _buildMetalIcon(
+      rate: rate,
+      onBg: onBg,
+      size: 56,
+    );
+
+    final Widget changeIndicator = _buildChangeIndicatorWidget(
+      context,
+      icon: Icons.trending_flat,
+      color: onBg.withOpacity(0.6),
+      text: '--',
+      compact: true,
+    );
+
+
+
+    final Widget detailChangeIndicator = _buildChangeIndicatorWidget(
+      context,
+      icon: Icons.trending_flat,
+      color: onBg.withOpacity(0.6),
+      text: '--',
+    );
+
+    final List<Widget> infoSections =
+    _buildMetalInfoSections(context, rate, onBg);
+
+    void handleTap() {
+      _showMetalDetails(
+        context: context,
+        rate: rate,
+        sell: sellValue,
+        buy: buyValue,
+        isWatchlisted: isWatchlisted,
+        onToggleWatchlist: onToggleWatchlist,
+        leading: detailLeading,
+        changeIndicator: detailChangeIndicator,
+        infoSections: infoSections,
+      );
+    }
+
+    Widget priceColumn(String label, String value, Color color) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: onBg.withOpacity(0.6),
+              fontWeight: FontWeight.w700,
+            ) ??
+                TextStyle(
+                  color: onBg.withOpacity(0.6),
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w800,
+            ) ??
+                TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15.5,
+                ),
+          ),
+        ],
+      );
+    }
+
+
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {},
+        onTap: handleTap,
         splashColor: brand.withOpacity(0.06),
         highlightColor: brand.withOpacity(0.03),
         child: Container(
@@ -779,85 +846,220 @@ class RatesTabView extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(
-                rate.isGold ? Icons.workspace_premium : Icons.auto_awesome,
-                color: brand,
-                size: 28,
-              ),
+              leading,
+
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       rate.displayName,
                       style: theme.textTheme.titleSmall?.copyWith(
                         color: onBg,
                         fontWeight: FontWeight.w800,
-                      ),
+                      ) ??
+                          TextStyle(
+                            color: onBg,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15.5,
+                          ),
                       textDirection: TextDirection.rtl,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    const SizedBox(height: 4),
+
                     Text(
                       rate.karatLabel,
                       style: theme.textTheme.labelMedium?.copyWith(
                         color: onBg.withOpacity(0.6),
                         fontWeight: FontWeight.w600,
-                      ),
+                      ) ??
+                          TextStyle(
+                            color: onBg.withOpacity(0.6),
+                            fontWeight: FontWeight.w600,
+                          ),
                       textDirection: TextDirection.rtl,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Directionality(
+                      textDirection: TextDirection.rtl,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          priceColumn('سعر البيع', sellValue, brand),
+                          const SizedBox(width: 16),
+                          priceColumn(
+                            'سعر الشراء',
+                            buyValue,
+                            onBg.withOpacity(0.85),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'سعر البيع',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: onBg.withOpacity(0.6),
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  Text(
-                    format(rate.sellPrice),
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      color: brand,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'سعر الشراء',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: onBg.withOpacity(0.6),
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  Text(
-                    format(rate.buyPrice),
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      color: onBg.withOpacity(0.85),
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
+
               const SizedBox(width: 12),
-              star,
+              changeIndicator,
+              const SizedBox(width: 6),
+              Icon(
+                Icons.chevron_left_rounded,
+                color: onBg.withOpacity(0.4),
+              ),
             ],
           ),
         ),
       ),
     );
   }
+
+
+
+
+  void _showMetalDetails({
+    required BuildContext context,
+    required MetalRate rate,
+    required String sell,
+    required String buy,
+    required bool isWatchlisted,
+    required VoidCallback onToggleWatchlist,
+    required Widget leading,
+    required Widget changeIndicator,
+    required List<Widget> infoSections,
+  }) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (BuildContext ctx) {
+        return RateDetailSheet(
+          title: rate.displayName,
+          subtitle: rate.karatLabel,
+          leading: leading,
+          sellLabel: 'سعر البيع',
+          sellValue: sell,
+          buyLabel: 'سعر الشراء',
+          buyValue: buy,
+          brand: brand,
+          isWatchlisted: isWatchlisted,
+          onToggleWatchlist: onToggleWatchlist,
+          onShare: onShareRates,
+          history: null,
+          initialHistoryRange: null,
+          onHistoryRangeSelected: null,
+          notificationSelector: null,
+          changeIndicator: changeIndicator,
+          additionalSections: infoSections,
+        );
+      },
+    );
+  }
+
+  Widget _buildMetalIcon({
+    required MetalRate rate,
+    required Color onBg,
+    double size = 44,
+  }) {
+    final bool isGold = rate.isGold;
+    final bool isSilver = rate.isSilver;
+    final Color accent = isGold
+        ? Colors.amber[700] ?? Colors.amber
+        : isSilver
+        ? Colors.blueGrey[300] ?? Colors.blueGrey
+        : brand;
+    final IconData icon = isGold
+        ? Icons.workspace_premium_outlined
+        : isSilver
+        ? Icons.diamond_outlined
+        : Icons.inventory_2_outlined;
+
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: onBg.withOpacity(0.20)),
+      ),
+      child: Icon(
+        icon,
+        color: accent,
+        size: size * 0.55,
+      ),
+    );
+  }
+
+  List<Widget> _buildMetalInfoSections(
+      BuildContext context,
+      MetalRate rate,
+      Color onBg,
+      ) {
+    final List<Widget> cards = <Widget>[
+      _buildInfoCard(
+        context,
+        'المحافظة المعروضة',
+        _metalGovernorateLabel(rate),
+        onBg,
+      ),
+    ];
+
+    if (rate.source != null && rate.source!.trim().isNotEmpty) {
+      cards.add(
+        _buildInfoCard(
+          context,
+          'المصدر',
+          rate.source!.trim(),
+          onBg,
+        ),
+      );
+    }
+
+    if (rate.quotedAt != null) {
+      cards.add(
+        _buildInfoCard(
+          context,
+          'آخر تحديث',
+          DateFormat('yyyy-MM-dd HH:mm').format(rate.quotedAt!),
+          onBg,
+        ),
+      );
+    }
+
+    if (cards.isEmpty) {
+      return const <Widget>[];
+    }
+
+    return <Widget>[
+      Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        alignment: WrapAlignment.end,
+        children: cards,
+      ),
+    ];
+  }
+
+  String _metalGovernorateLabel(MetalRate rate) {
+    final String? name = rate.quoteGovernorateName ??
+        state.appliedGovernorateName ??
+        state.requestedGovernorateName;
+    final String base =
+    (name == null || name.isEmpty) ? _defaultGovernorateLabel : name;
+    if (rate.quoteUsedFallback || rate.quoteIsDefault) {
+      return '$base (افتراضي)';
+    }
+    return base;
+  }
+
 
   // ---------- بطاقة الملاحظة (احتفظنا بها كما أعجبتك) ----------
   Widget _noteCard(BuildContext context) {
@@ -1071,171 +1273,3 @@ class _StaleBadge extends StatelessWidget {
     );
   }
 }
-
-class _HistoryRangeChips extends StatelessWidget {
-  const _HistoryRangeChips({
-    required this.availableRanges,
-    required this.effectiveRangeDays,
-    required this.onHistoryRangeSelected,
-    required this.brand,
-    required this.onBg,
-    required this.textTheme,
-  });
-
-  final Set<int> availableRanges;
-  final int effectiveRangeDays;
-  final ValueChanged<int> onHistoryRangeSelected;
-  final Color brand;
-  final Color onBg;
-  final TextTheme textTheme;
-
-  @override
-  Widget build(BuildContext context) {
-    const List<int> options = <int>[1, 3, 7];
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Wrap(
-        spacing: 6,
-        runSpacing: 6,
-        children: options.map((int days) {
-          final bool enabled = availableRanges.contains(days);
-          final bool selected = enabled && effectiveRangeDays == days;
-          final String label = days == 1 ? 'آخر يوم' : 'آخر $days أيام';
-          final Color labelColor =
-              selected ? Colors.white : onBg.withOpacity(enabled ? 0.85 : 0.35);
-
-          return ChoiceChip(
-            label: Text(label),
-            selected: selected,
-            onSelected: enabled
-                ? (bool value) {
-                    if (value) {
-                      onHistoryRangeSelected(days);
-                    }
-                  }
-                : null,
-            labelStyle: textTheme.labelSmall?.copyWith(
-                  color: labelColor,
-                  fontWeight: FontWeight.w700,
-                ) ??
-                TextStyle(
-                  color: labelColor,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12,
-                ),
-            selectedColor: brand,
-            backgroundColor: onBg.withOpacity(0.05),
-            disabledColor: onBg.withOpacity(0.06),
-            shape: StadiumBorder(
-              side: BorderSide(
-                color: selected ? brand : onBg.withOpacity(0.12),
-              ),
-            ),
-            visualDensity: VisualDensity.compact,
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          );
-        }).toList(),
-      ),
-    );
-  }
-}
-
-class _MiniTrendChart extends StatelessWidget {
-  const _MiniTrendChart({required this.values, required this.color});
-
-  final List<double> values;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    if (values.length < 2) {
-      return Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: Theme.of(context).dividerColor.withOpacity(0.12),
-          ),
-        ),
-      );
-    }
-
-    return CustomPaint(
-      painter: _MiniTrendChartPainter(
-        values: values,
-        color: color,
-        background: Theme.of(context).canvasColor,
-      ),
-    );
-  }
-}
-
-class _MiniTrendChartPainter extends CustomPainter {
-  _MiniTrendChartPainter({
-    required this.values,
-    required this.color,
-    required this.background,
-  });
-
-  final List<double> values;
-  final Color color;
-  final Color background;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (values.length < 2) {
-      return;
-    }
-
-    final double minValue =
-        values.reduce((double a, double b) => a < b ? a : b);
-    final double maxValue =
-        values.reduce((double a, double b) => a > b ? a : b);
-    final double range =
-        (maxValue - minValue).abs() < 0.0001 ? 1 : (maxValue - minValue);
-
-    final Path path = Path();
-    for (int i = 0; i < values.length; i++) {
-      final double x = (i / (values.length - 1)) * size.width;
-      final double normalized = (values[i] - minValue) / range;
-      final double y = size.height - (normalized * size.height);
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-
-    final Paint fillPaint = Paint()
-      ..style = PaintingStyle.fill
-      ..shader = LinearGradient(
-        colors: [color.withOpacity(0.18), color.withOpacity(0.05)],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-
-    final Path areaPath = Path.from(path)
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
-      ..close();
-
-    canvas.drawPath(areaPath, fillPaint);
-
-    final Paint linePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..strokeCap = StrokeCap.round
-      ..color = color;
-
-    canvas.drawPath(path, linePaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _MiniTrendChartPainter oldDelegate) {
-    return !listEquals(oldDelegate.values, values) ||
-        oldDelegate.color != color;
-  }
-}
-
-// ===================================================================
-// تبويب 2: التحويل — تخطيط رأسي + زر تبادل في المنتصف (بدوال داخلية)
-// ===================================================================

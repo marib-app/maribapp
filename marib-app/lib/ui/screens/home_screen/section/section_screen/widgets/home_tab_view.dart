@@ -208,15 +208,15 @@ class _HomeTabViewState extends State<HomeTabView> {
   // =========================
   // تحميل لانهائي بهدوء
   // =========================
-  bool _isNearBottom(ScrollNotification n) {
-    final AxisDirection axisDirection = n.metrics.axisDirection;
+  bool _shouldTriggerLoadMore(ScrollMetrics metrics) {
+    final AxisDirection axisDirection = metrics.axisDirection;
     if (axisDirection == AxisDirection.left ||
         axisDirection == AxisDirection.right) {
       return false;
     }
 
     // استخدم extentAfter لضمان التحميل حتى في القوائم القصيرة
-    return n.metrics.extentAfter <= 200;
+    return metrics.extentAfter <= 200;
   }
 
   Future<void> _maybeLoadMore() async {
@@ -459,8 +459,12 @@ class _HomeTabViewState extends State<HomeTabView> {
         // ✅ استمع للتمرير هنا (بدل بعثرة المنطق داخل عناصر داخلية)
         return NotificationListener<ScrollNotification>(
           onNotification: (n) {
-            if (n is ScrollUpdateNotification && _isNearBottom(n)) {
-              _maybeLoadMore();
+            if (n is ScrollUpdateNotification ||
+                n is ScrollEndNotification ||
+                n is OverscrollNotification) {
+              if (_shouldTriggerLoadMore(n.metrics)) {
+                _maybeLoadMore();
+              }
             }
             return false;
           },

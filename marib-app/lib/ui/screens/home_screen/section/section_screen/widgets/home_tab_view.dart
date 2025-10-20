@@ -952,6 +952,29 @@ class _HomeTabViewState extends State<HomeTabView> {
     }
 
     if (state is FetchItemSummarySuccess) {
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _isLoadingMore) {
+          return;
+        }
+        final fetchCubit = context.read<FetchItemSummaryCubit>();
+        final FetchItemSummaryState currentState = fetchCubit.state;
+        if (currentState is! FetchItemSummarySuccess ||
+            currentState.isLoadingMore) {
+          return;
+        }
+        if (!controller.hasClients) {
+          return;
+        }
+        if (controller.position.maxScrollExtent > 0) {
+          return;
+        }
+        if (!fetchCubit.hasMoreData()) {
+          return;
+        }
+        _maybeLoadMore();
+      });
+
       final bool showLoadingMoreError = state.loadingMoreError;
       if (state.items.isEmpty) {
         return <Widget>[

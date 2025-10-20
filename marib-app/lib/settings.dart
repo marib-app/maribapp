@@ -71,7 +71,10 @@ class AppSettings {
 
   /// Enable the custom performance monitor in debug/profile builds.
   /// Keep this `false` in production unless troubleshooting locally.
-  static const bool enablePerfLogging = false;
+  static const bool enablePerfLogging = bool.fromEnvironment(
+    'MARIB_ENABLE_PERF_LOGGING',
+    defaultValue: false,
+  );
 
   static bool _performanceLoggingOverride = false;
 

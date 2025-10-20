@@ -22,6 +22,8 @@ class PerformanceMonitor {
     defaultValue: false,
   );
 
+  bool get isEnvironmentCollectionEnabled => _envCollectionEnabled;
+
   static const int _maxCompletedSessions = 10;
 
   final List<_RoutePerformanceSnapshot> _completedSessions =
@@ -35,8 +37,11 @@ class PerformanceMonitor {
   int? _firstMeaningfulPaintUs;
   String? _currentRouteName;
   bool _initialized = false;
+  bool _enabled = false;
 
   Timer? _pendingWrite;
+
+  bool get isEnabled => _enabled;
 
   bool get shouldCollectMetrics {
     if (_envCollectionEnabled) {
@@ -52,7 +57,9 @@ class PerformanceMonitor {
   }
 
   void initialize() {
-    if (!shouldCollectMetrics) {
+    final bool enable = shouldCollectMetrics;
+    _updateEnabledState(enable);
+    if (!enable) {
       return;
     }
     if (_initialized) {
@@ -72,8 +79,10 @@ class PerformanceMonitor {
 
   void handleFrameTimings(List<FrameTiming> timings) {
     if (!shouldCollectMetrics) {
+      _updateEnabledState(false);
       return;
     }
+    _updateEnabledState(true);
     if (!_initialized) {
       initialize();
     }
@@ -109,15 +118,19 @@ class PerformanceMonitor {
 
   void onRoutePushed(Route<dynamic> route, Route<dynamic>? previousRoute) {
     if (!shouldCollectMetrics) {
+      _updateEnabledState(false);
       return;
     }
+    _updateEnabledState(true);
     _switchRoute(route.settings.name ?? route.runtimeType.toString());
   }
 
   void onRouteReplaced(Route<dynamic>? newRoute, Route<dynamic>? oldRoute) {
     if (!shouldCollectMetrics) {
+      _updateEnabledState(false);
       return;
     }
+    _updateEnabledState(true);
     if (newRoute != null) {
       _switchRoute(newRoute.settings.name ?? newRoute.runtimeType.toString());
     }
@@ -125,8 +138,10 @@ class PerformanceMonitor {
 
   void onRoutePopped(Route<dynamic> route, Route<dynamic>? previousRoute) {
     if (!shouldCollectMetrics) {
+      _updateEnabledState(false);
       return;
     }
+    _updateEnabledState(true);
     if (previousRoute != null) {
       _switchRoute(
           previousRoute.settings.name ?? previousRoute.runtimeType.toString());
@@ -138,8 +153,10 @@ class PerformanceMonitor {
 
   Future<void> saveReport() async {
     if (!shouldCollectMetrics) {
+      _updateEnabledState(false);
       return;
     }
+    _updateEnabledState(true);
     final file = await _resolveLogFile();
     final List<_RoutePerformanceSnapshot> sessions =
         <_RoutePerformanceSnapshot>[
@@ -265,8 +282,23 @@ class PerformanceMonitor {
     return const Duration(seconds: 1);
   }
 
+  void _updateEnabledState(bool enabled) {
+    if (_enabled == enabled) {
+      if (!enabled) {
+        _pendingWrite?.cancel();
+        _pendingWrite = null;
+      }
+      return;
+    }
+    _enabled = enabled;
+    if (!enabled) {
+      _pendingWrite?.cancel();
+      _pendingWrite = null;
+    }
+  }
+
   void _scheduleReportWrite() {
-    if (!shouldCollectMetrics) {
+    if (!_enabled || !shouldCollectMetrics) {
       _pendingWrite?.cancel();
       _pendingWrite = null;
       return;

@@ -24,12 +24,19 @@ void initApp() async {
   ///Note: this file's code is very necessary and sensitive if you change it, this might affect whole app , So change it carefully.
   ///This must be used do not remove this line
   WidgetsFlutterBinding.ensureInitialized();
+  final WidgetsBinding binding = WidgetsBinding.instance;
+
+  final bool perfLoggingRequested =
+      AppSettings.isPerformanceLoggingEnabled ||
+          PerformanceMonitor.instance.isEnvironmentCollectionEnabled;
+  final bool allowPerfLoggingInBuild =
+      !kReleaseMode || PerformanceMonitor.instance.isEnvironmentCollectionEnabled;
+
   final bool attachPerformanceMonitor =
-      PerformanceMonitor.instance.shouldCollectMetrics;
+      perfLoggingRequested && allowPerfLoggingInBuild;
 
   if (attachPerformanceMonitor) {
     PerformanceMonitor.instance.initialize();
-    final WidgetsBinding binding = WidgetsBinding.instance;
     binding.addTimingsCallback(
       PerformanceMonitor.instance.handleFrameTimings,
     );

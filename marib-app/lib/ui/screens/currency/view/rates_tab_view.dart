@@ -230,24 +230,24 @@ class RatesTabView extends StatelessWidget {
           iconUrl,
           fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => fallback(),
-          loadingBuilder: (BuildContext ctx, Widget child,
-              ImageChunkEvent? progress) {
+          loadingBuilder:
+              (BuildContext ctx, Widget child, ImageChunkEvent? progress) {
             if (progress == null) {
               return child;
             }
             return Center(
-                child: SizedBox(
-                  width: iconSize,
-                  height: iconSize,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(brand),
-                    value: progress.expectedTotalBytes != null
-                        ? progress.cumulativeBytesLoaded /
-                        (progress.expectedTotalBytes ?? 1)
-                        : null,
+              child: SizedBox(
+                width: iconSize,
+                height: iconSize,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(brand),
+                  value: progress.expectedTotalBytes != null
+                      ? progress.cumulativeBytesLoaded /
+                          (progress.expectedTotalBytes ?? 1)
+                      : null,
                 ),
-                ),
+              ),
             );
           },
         ),
@@ -256,15 +256,15 @@ class RatesTabView extends StatelessWidget {
   }
 
   Widget _buildChangeIndicatorWidget(
-      BuildContext context, {
-        required IconData icon,
-        required Color color,
-        required String text,
-        bool compact = false,
-      }) {
+    BuildContext context, {
+    required IconData icon,
+    required Color color,
+    required String text,
+    bool compact = false,
+  }) {
     final TextStyle baseStyle = (compact
-        ? Theme.of(context).textTheme.labelLarge
-        : Theme.of(context).textTheme.titleMedium) ??
+            ? Theme.of(context).textTheme.labelLarge
+            : Theme.of(context).textTheme.titleMedium) ??
         TextStyle(
           color: color,
           fontWeight: FontWeight.w800,
@@ -337,8 +337,7 @@ class RatesTabView extends StatelessWidget {
       }
 
       final String? rawName = governorate['name'];
-      final String name =
-      (rawName != null && rawName.trim().isNotEmpty)
+      final String name = (rawName != null && rawName.trim().isNotEmpty)
           ? rawName.trim()
           : trimmedCode;
       items.add(
@@ -350,7 +349,6 @@ class RatesTabView extends StatelessWidget {
           ),
         ),
       );
-
     }
 
     if (!addedValues.contains(selection)) {
@@ -370,8 +368,8 @@ class RatesTabView extends StatelessWidget {
     final Color iconColor = onBg.withOpacity(0.7);
 
     return Directionality(
-        textDirection: TextDirection.rtl,
-        child: Column(
+      textDirection: TextDirection.rtl,
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Text(
@@ -386,45 +384,45 @@ class RatesTabView extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
           ),
-        const SizedBox(height: 6),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: borderColor),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              key: ValueKey<String>('notification-region-$currencyId'),
-              value: selection,
-              isExpanded: true,
-              icon: Icon(
-                Icons.keyboard_arrow_down_rounded,
-                color: iconColor,
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: borderColor),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                key: ValueKey<String>('notification-region-$currencyId'),
+                value: selection,
+                isExpanded: true,
+                icon: Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: iconColor,
+                ),
+                onChanged: (String? value) {
+                  if (value == null) {
+                    return;
+                  }
+                  final String? normalized =
+                      value == notificationDefaultValue ? null : value;
+                  onNotificationRegionChanged(normalized);
+                },
+                items: items,
               ),
-              onChanged: (String? value) {
-                if (value == null) {
-                  return;
-                }
-                final String? normalized =
-                value == notificationDefaultValue ? null : value;
-                onNotificationRegionChanged(normalized);
-              },
-              items: items,
-              ),
-          ),
+            ),
           ),
         ],
-        ),
+      ),
     );
   }
 
   Widget _buildInfoCard(
-      BuildContext context,
-      String label,
-      String value,
-      Color onBg,
-      ) {
+    BuildContext context,
+    String label,
+    String value,
+    Color onBg,
+  ) {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Container(
@@ -440,17 +438,17 @@ class RatesTabView extends StatelessWidget {
             Text(
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: onBg.withOpacity(0.7),
-                fontWeight: FontWeight.w600,
-              ),
+                    color: onBg.withOpacity(0.7),
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
             const SizedBox(height: 4),
             Text(
               value,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: onBg,
-                fontWeight: FontWeight.w800,
-              ),
+                    color: onBg,
+                    fontWeight: FontWeight.w800,
+                  ),
             ),
           ],
         ),
@@ -460,20 +458,20 @@ class RatesTabView extends StatelessWidget {
 
   // ---------- صفّ العملة (نظيف مع عرض بيع/شراء احترافي) ----------
   Widget _row(
-      BuildContext context, {
-        required String name,
-        required String sell,
-        required String buy,
-        String? iconUrl,
-        String? iconAlt,
-        required bool isWatchlisted,
-        required VoidCallback onToggleWatchlist,
-        CurrencyHistoryBundle? history,
-        required int selectedRangeDays,
-        required ValueChanged<int> onHistoryRangeSelected,
-        int? currencyId,
-        ValueChanged<String?>? onNotificationRegionChanged,
-      }) {
+    BuildContext context, {
+    required String name,
+    required String sell,
+    required String buy,
+    String? iconUrl,
+    String? iconAlt,
+    required bool isWatchlisted,
+    required VoidCallback onToggleWatchlist,
+    CurrencyHistoryBundle? history,
+    required int selectedRangeDays,
+    required ValueChanged<int> onHistoryRangeSelected,
+    int? currencyId,
+    ValueChanged<String?>? onNotificationRegionChanged,
+  }) {
     final ThemeData theme = Theme.of(context);
     final bool dark = _isDark(context);
     final Color onBg = dark ? Colors.white : Colors.black;
@@ -485,33 +483,30 @@ class RatesTabView extends StatelessWidget {
       return parsed == null ? value : valueFormatter.format(parsed);
     }
 
-
     final Set<int> availableRanges = history?.ranges.keys
-        .map((dynamic key) => key is int ? key : int.tryParse(key.toString()))
-
+            .map((dynamic key) =>
+                key is int ? key : int.tryParse(key.toString()))
             .whereType<int>()
             .toSet() ??
         <int>{};
 
     final int? effectiveRange =
-    _resolveEffectiveHistoryRange(availableRanges, selectedRangeDays);
-    final CurrencyHistorySummary? summary = effectiveRange != null
-        ? history?.range(effectiveRange)?.summary
-        : null;
+        _resolveEffectiveHistoryRange(availableRanges, selectedRangeDays);
+    final CurrencyHistorySummary? summary =
+        effectiveRange != null ? history?.range(effectiveRange)?.summary : null;
 
     final NumberFormat changeFormatter = NumberFormat('+#0.##;-#0.##;0', 'en');
     final String changeText = summary?.changeSellPercent != null
         ? '${changeFormatter.format(summary!.changeSellPercent)}%'
         : '--';
 
-
     final Color neutralColor = onBg.withOpacity(0.6);
     final Color trendColor = summary == null
         ? neutralColor
         : summary.isNegativeTrend
-        ? Colors.redAccent
+            ? Colors.redAccent
             : summary.isPositiveTrend
-        ? Colors.green
+                ? Colors.green
                 : neutralColor;
 
     final IconData trendIcon = summary == null
@@ -590,9 +585,9 @@ class RatesTabView extends StatelessWidget {
           Text(
             label,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: onBg.withOpacity(0.6),
-              fontWeight: FontWeight.w700,
-            ) ??
+                  color: onBg.withOpacity(0.6),
+                  fontWeight: FontWeight.w700,
+                ) ??
                 TextStyle(
                   color: onBg.withOpacity(0.6),
                   fontWeight: FontWeight.w700,
@@ -602,9 +597,9 @@ class RatesTabView extends StatelessWidget {
           Text(
             value,
             style: theme.textTheme.titleSmall?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w800,
-            ) ??
+                  color: color,
+                  fontWeight: FontWeight.w800,
+                ) ??
                 TextStyle(
                   color: color,
                   fontWeight: FontWeight.w800,
@@ -614,7 +609,6 @@ class RatesTabView extends StatelessWidget {
         ],
       );
     }
-
 
     return Material(
       color: Colors.transparent,
@@ -627,64 +621,62 @@ class RatesTabView extends StatelessWidget {
           decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: divider, width: 1)),
           ),
+          child: Directionality(
+            textDirection: TextDirection.rtl,
             child: Row(
-                children: [
+              children: [
                 leading,
                 const SizedBox(width: 12),
                 Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                    Text(
-                      name,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: onBg,
-                        fontWeight: FontWeight.w800,
-                          ) ??
-                          TextStyle(
-                            color: onBg,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15.5,
-                          ),
-                      textDirection: TextDirection.rtl,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                          const SizedBox(height: 6),
-                          Directionality(
-                            textDirection: TextDirection.rtl,
-                            child: Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                priceColumn('سعر البيع', formatValue(sell), brand),
-                            const SizedBox(width: 16),
-                            priceColumn(
-                              'سعر الشراء',
-                              formatValue(buy),
-                              onBg.withOpacity(0.85),
-                          ),
-                                ],
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        name,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                              color: onBg,
+                              fontWeight: FontWeight.w800,
+                            ) ??
+                            TextStyle(
+                              color: onBg,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15.5,
                             ),
-                    ),
+                        textDirection: TextDirection.rtl,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          priceColumn('سعر البيع', formatValue(sell), brand),
+                          const SizedBox(width: 16),
+                          priceColumn(
+                            'سعر الشراء',
+                            formatValue(buy),
+                            onBg.withOpacity(0.85),
+                          ),
                         ],
-                    ),
-                ),
-                  const SizedBox(width: 12),
-                  changeIndicator,
-                  const SizedBox(width: 6),
-                  Icon(
-                    Icons.chevron_left_rounded,
-                    color: onBg.withOpacity(0.4),
+                      ),
+                    ],
                   ),
-                ],
+                ),
+                const SizedBox(width: 12),
+                changeIndicator,
+                const SizedBox(width: 6),
+                Icon(
+                  Icons.chevron_left_rounded,
+                  color: onBg.withOpacity(0.4),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
-
-
 
   void _showCurrencyDetails({
     required BuildContext context,
@@ -731,7 +723,6 @@ class RatesTabView extends StatelessWidget {
     );
   }
 
-
   Widget _metalRow(
     BuildContext context, {
     required MetalRate rate,
@@ -772,8 +763,6 @@ class RatesTabView extends StatelessWidget {
       compact: true,
     );
 
-
-
     final Widget detailChangeIndicator = _buildChangeIndicatorWidget(
       context,
       icon: Icons.trending_flat,
@@ -782,7 +771,7 @@ class RatesTabView extends StatelessWidget {
     );
 
     final List<Widget> infoSections =
-    _buildMetalInfoSections(context, rate, onBg);
+        _buildMetalInfoSections(context, rate, onBg);
 
     void handleTap() {
       _showMetalDetails(
@@ -806,9 +795,9 @@ class RatesTabView extends StatelessWidget {
           Text(
             label,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: onBg.withOpacity(0.6),
-              fontWeight: FontWeight.w700,
-            ) ??
+                  color: onBg.withOpacity(0.6),
+                  fontWeight: FontWeight.w700,
+                ) ??
                 TextStyle(
                   color: onBg.withOpacity(0.6),
                   fontWeight: FontWeight.w700,
@@ -818,9 +807,9 @@ class RatesTabView extends StatelessWidget {
           Text(
             value,
             style: theme.textTheme.titleSmall?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w800,
-            ) ??
+                  color: color,
+                  fontWeight: FontWeight.w800,
+                ) ??
                 TextStyle(
                   color: color,
                   fontWeight: FontWeight.w800,
@@ -830,8 +819,6 @@ class RatesTabView extends StatelessWidget {
         ],
       );
     }
-
-
 
     return Material(
       color: Colors.transparent,
@@ -847,7 +834,6 @@ class RatesTabView extends StatelessWidget {
           child: Row(
             children: [
               leading,
-
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -857,9 +843,9 @@ class RatesTabView extends StatelessWidget {
                     Text(
                       rate.displayName,
                       style: theme.textTheme.titleSmall?.copyWith(
-                        color: onBg,
-                        fontWeight: FontWeight.w800,
-                      ) ??
+                            color: onBg,
+                            fontWeight: FontWeight.w800,
+                          ) ??
                           TextStyle(
                             color: onBg,
                             fontWeight: FontWeight.w800,
@@ -870,13 +856,12 @@ class RatesTabView extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-
                     Text(
                       rate.karatLabel,
                       style: theme.textTheme.labelMedium?.copyWith(
-                        color: onBg.withOpacity(0.6),
-                        fontWeight: FontWeight.w600,
-                      ) ??
+                            color: onBg.withOpacity(0.6),
+                            fontWeight: FontWeight.w600,
+                          ) ??
                           TextStyle(
                             color: onBg.withOpacity(0.6),
                             fontWeight: FontWeight.w600,
@@ -904,7 +889,6 @@ class RatesTabView extends StatelessWidget {
                   ],
                 ),
               ),
-
               const SizedBox(width: 12),
               changeIndicator,
               const SizedBox(width: 6),
@@ -918,9 +902,6 @@ class RatesTabView extends StatelessWidget {
       ),
     );
   }
-
-
-
 
   void _showMetalDetails({
     required BuildContext context,
@@ -974,13 +955,13 @@ class RatesTabView extends StatelessWidget {
     final Color accent = isGold
         ? Colors.amber[700] ?? Colors.amber
         : isSilver
-        ? Colors.blueGrey[300] ?? Colors.blueGrey
-        : brand;
+            ? Colors.blueGrey[300] ?? Colors.blueGrey
+            : brand;
     final IconData icon = isGold
         ? Icons.workspace_premium_outlined
         : isSilver
-        ? Icons.diamond_outlined
-        : Icons.inventory_2_outlined;
+            ? Icons.diamond_outlined
+            : Icons.inventory_2_outlined;
 
     return Container(
       width: size,
@@ -999,10 +980,10 @@ class RatesTabView extends StatelessWidget {
   }
 
   List<Widget> _buildMetalInfoSections(
-      BuildContext context,
-      MetalRate rate,
-      Color onBg,
-      ) {
+    BuildContext context,
+    MetalRate rate,
+    Color onBg,
+  ) {
     final List<Widget> cards = <Widget>[
       _buildInfoCard(
         context,
@@ -1053,13 +1034,12 @@ class RatesTabView extends StatelessWidget {
         state.appliedGovernorateName ??
         state.requestedGovernorateName;
     final String base =
-    (name == null || name.isEmpty) ? _defaultGovernorateLabel : name;
+        (name == null || name.isEmpty) ? _defaultGovernorateLabel : name;
     if (rate.quoteUsedFallback || rate.quoteIsDefault) {
       return '$base (افتراضي)';
     }
     return base;
   }
-
 
   // ---------- بطاقة الملاحظة (احتفظنا بها كما أعجبتك) ----------
   Widget _noteCard(BuildContext context) {

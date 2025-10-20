@@ -427,22 +427,16 @@ class SplashScreenState extends State<SplashScreen>
                           child: Lottie.asset('assets/lottie/data.json',
                               fit: BoxFit.cover),
                         ),
-                        SizedBox(
-                          height: 545,
-                          child: Align(
-                            alignment: Alignment.topCenter,
-                            child: Padding(
-                              padding: EdgeInsets.only(
-                                top: ScreenScaler.s(16),
-                              ),
-                              child: AnimatedOpacity(
-                                opacity: _showIntroUi ? 1 : 0,
-                                duration: const Duration(milliseconds: 500),
-                                curve: Curves.easeInOut,
-                                child: _IntroContent(
-                                  dotsAnimation: _dotsController,
-                                ),
-                              ),
+                        Padding(
+                          padding: EdgeInsets.only(
+                            top: ScreenScaler.s(16),
+                          ),
+                          child: AnimatedOpacity(
+                            opacity: _showIntroUi ? 1 : 0,
+                            duration: const Duration(milliseconds: 500),
+                            curve: Curves.easeInOut,
+                            child: _IntroContent(
+                              dotsAnimation: _dotsController,
                             ),
                           ),
                         ),

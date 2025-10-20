@@ -55,6 +55,24 @@ class AppSettings {
   /// Keep this `false` in production unless troubleshooting locally.
   static const bool enablePerfLogging = false;
 
+  static bool _performanceLoggingOverride = false;
+
+  /// Returns whether performance logging has been enabled explicitly.
+  ///
+  /// This combines the compile-time flag with the runtime override to make
+  /// it easy to toggle metrics collection for diagnostics when needed.
+  static bool get isPerformanceLoggingEnabled =>
+      enablePerfLogging || _performanceLoggingOverride;
+
+  /// Allows manual enabling of the performance monitor at runtime.
+  ///
+  /// This is useful for local diagnostics without flipping the default flag
+  /// for all developers.
+  static void setPerformanceLoggingOverride(bool enabled) {
+    _performanceLoggingOverride = enabled;
+  }
+
+
   static final String baseUrl =
       "${HelperUtils.checkHost(hostUrl)}api/"; //don't change this
 

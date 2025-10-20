@@ -25,8 +25,8 @@ void initApp() async {
   ///This must be used do not remove this line
   WidgetsFlutterBinding.ensureInitialized();
   final bool attachPerformanceMonitor =
-      (!kReleaseMode && AppSettings.enablePerfLogging) ||
-          (kReleaseMode && PerformanceMonitor.instance.shouldCollectMetrics);
+      PerformanceMonitor.instance.shouldCollectMetrics;
+
   if (attachPerformanceMonitor) {
     PerformanceMonitor.instance.initialize();
     final WidgetsBinding binding = WidgetsBinding.instance;

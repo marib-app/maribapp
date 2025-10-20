@@ -44,7 +44,7 @@ class PerformanceMonitor {
       return false;
     }
     if (kDebugMode || kProfileMode) {
-      return AppSettings.enablePerfLogging;
+      return AppSettings.isPerformanceLoggingEnabled;
     }
     return false;
   }
@@ -250,7 +250,7 @@ class PerformanceMonitor {
     if (_envCollectionEnabled && kReleaseMode) {
       return const Duration(seconds: 10);
     }
-    if (!kReleaseMode && AppSettings.enablePerfLogging) {
+    if (!kReleaseMode && AppSettings.isPerformanceLoggingEnabled) {
       return const Duration(seconds: 5);
     }
     return const Duration(seconds: 1);
@@ -258,6 +258,8 @@ class PerformanceMonitor {
 
   void _scheduleReportWrite() {
     if (!shouldCollectMetrics) {
+      _pendingWrite?.cancel();
+      _pendingWrite = null;
       return;
     }
     _pendingWrite ??= Timer(_reportWriteInterval, () {

@@ -98,7 +98,7 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -171,12 +171,34 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
               growable: false,
             );
 
-    final List<MetalRate> goldRates = viewState.displayGoldRates;
-    final List<MetalRate> silverRates = viewState.displaySilverRates;
+    List<MetalRate> _mergeMetalRates(
+      List<MetalRate> base,
+      Iterable<MetalRate> fallback,
+    ) {
+      final Map<int, MetalRate> merged = <int, MetalRate>{};
+      for (final MetalRate rate in base) {
+        merged[rate.id] = rate;
+      }
+      for (final MetalRate rate in fallback) {
+        merged.putIfAbsent(rate.id, () => rate);
+      }
+      return merged.values.toList(growable: false);
+    }
 
-    final List<MetalRate> otherMetalRates = inlineMetalRates
-        .where((MetalRate rate) => !rate.isGold && !rate.isSilver)
-        .toList(growable: false);
+    final List<MetalRate> goldRates = _mergeMetalRates(
+      viewState.displayGoldRates,
+      inlineMetalRates.where((MetalRate rate) => rate.isGold),
+    );
+    final List<MetalRate> silverRates = _mergeMetalRates(
+      viewState.displaySilverRates,
+      inlineMetalRates.where((MetalRate rate) => rate.isSilver),
+    );
+    final List<MetalRate> otherMetalRates = _mergeMetalRates(
+      viewState.displayOtherMetalRates,
+      inlineMetalRates.where(
+        (MetalRate rate) => !rate.isGold && !rate.isSilver,
+      ),
+    );
 
     if (currencyRates.isEmpty &&
         goldRates.isEmpty &&
@@ -477,14 +499,13 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
               currencyNotificationRegions: const <int, String>{},
               defaultHistoryRangeDays: _defaultHistoryRange,
             ),
-            gold: GoldRatesState(
-              rates: const [],
-              displayRates: const [],
-              watchlist: const <int>{},
-            ),
-            silver: SilverRatesState(
-              rates: const [],
-              displayRates: const [],
+            metals: MetalsRatesState(
+              goldRates: const [],
+              displayGoldRates: const [],
+              silverRates: const [],
+              displaySilverRates: const [],
+              otherRates: const [],
+              displayOtherRates: const [],
               watchlist: const <int>{},
             ),
             metalsLastUpdatedAt: null,
@@ -519,14 +540,13 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
               currencyNotificationRegions: const <int, String>{},
               defaultHistoryRangeDays: _defaultHistoryRange,
             ),
-            gold: GoldRatesState(
-              rates: const [],
-              displayRates: const [],
-              watchlist: const <int>{},
-            ),
-            silver: SilverRatesState(
-              rates: const [],
-              displayRates: const [],
+            metals: MetalsRatesState(
+              goldRates: const [],
+              displayGoldRates: const [],
+              silverRates: const [],
+              displaySilverRates: const [],
+              otherRates: const [],
+              displayOtherRates: const [],
               watchlist: const <int>{},
             ),
             metalsLastUpdatedAt: null,
@@ -555,7 +575,9 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
           final silverRates = state.metalRates
               .where((rate) => rate.isSilver)
               .toList(growable: false);
-
+          final otherRates = state.metalRates
+              .where((rate) => !rate.isGold && !rate.isSilver)
+              .toList(growable: false);
           final Iterable<CurrencyRate> visibleCurrencies =
               state.visibleCurrencyRates.whereType<CurrencyRate>();
           final Iterable<MetalRate> visibleMetals =
@@ -582,6 +604,9 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
               .toList(growable: false);
           final displaySilverRates = state.visibleMetalRates
               .where((rate) => rate.isSilver)
+              .toList(growable: false);
+          final displayOtherRates = state.visibleMetalRates
+              .where((rate) => !rate.isGold && !rate.isSilver)
               .toList(growable: false);
           _ensureInitialSelection(rates);
 
@@ -637,22 +662,20 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
           );
 
           final Set<int> metalWatchlist = state.preferences.metalWatchlist;
-          final goldState = GoldRatesState(
-            rates: goldRates,
-            displayRates: displayGoldRates,
-            watchlist: metalWatchlist,
-          );
-          final silverState = SilverRatesState(
-            rates: silverRates,
-            displayRates: displaySilverRates,
+          final metalsState = MetalsRatesState(
+            goldRates: goldRates,
+            displayGoldRates: displayGoldRates,
+            silverRates: silverRates,
+            displaySilverRates: displaySilverRates,
+            otherRates: otherRates,
+            displayOtherRates: displayOtherRates,
             watchlist: metalWatchlist,
           );
 
           viewState = CurrencyViewState(
             status: CurrencyPageStatus.ready,
             currency: currencyState,
-            gold: goldState,
-            silver: silverState,
+            metals: metalsState,
             metalsLastUpdatedAt: state.metalsLastUpdatedAt,
             governorates: governorateOptions,
             selectedGovernorateCode: selectedCode,
@@ -685,14 +708,13 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
               currencyNotificationRegions: const <int, String>{},
               defaultHistoryRangeDays: _defaultHistoryRange,
             ),
-            gold: GoldRatesState(
-              rates: const [],
-              displayRates: const [],
-              watchlist: const <int>{},
-            ),
-            silver: SilverRatesState(
-              rates: const [],
-              displayRates: const [],
+            metals: MetalsRatesState(
+              goldRates: const [],
+              displayGoldRates: const [],
+              silverRates: const [],
+              displaySilverRates: const [],
+              otherRates: const [],
+              displayOtherRates: const [],
               watchlist: const <int>{},
             ),
             metalsLastUpdatedAt: null,

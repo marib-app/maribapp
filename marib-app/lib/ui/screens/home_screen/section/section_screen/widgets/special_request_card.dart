@@ -78,7 +78,6 @@ class SpecialRequestCard extends StatelessWidget {
                   color: context.color.territoryColor,
                 ),
               ),
-
             ),
             SizedBox(height: spacing),
             Expanded(

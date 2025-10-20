@@ -11,8 +11,7 @@ class CurrencyViewState {
     required this.status,
     this.errorMessage,
     required this.currency,
-    required this.gold,
-    required this.silver,
+    required this.metals,
     required this.metalsLastUpdatedAt,
     required List<Map<String, String?>> governorates,
     required this.selectedGovernorateCode,
@@ -37,8 +36,7 @@ class CurrencyViewState {
   final CurrencyPageStatus status;
   final String? errorMessage;
   final CurrencyRatesState currency;
-  final GoldRatesState gold;
-  final SilverRatesState silver;
+  final MetalsRatesState metals;
   final DateTime? metalsLastUpdatedAt;
   final List<Map<String, String?>> governorates;
   final String? selectedGovernorateCode;
@@ -67,11 +65,14 @@ class CurrencyViewState {
   int get defaultHistoryRangeDays => currency.defaultHistoryRangeDays;
   bool get isDisplayRatesStale => currency.isDisplayRatesStale;
 
-  List<MetalRate> get goldRates => gold.rates;
-  List<MetalRate> get displayGoldRates => gold.displayRates;
-  List<MetalRate> get silverRates => silver.rates;
-  List<MetalRate> get displaySilverRates => silver.displayRates;
-  Set<int> get metalWatchlist => gold.watchlist;
+  List<MetalRate> get goldRates => metals.goldRates;
+  List<MetalRate> get silverRates => metals.silverRates;
+  List<MetalRate> get otherMetalRates => metals.otherRates;
+  List<MetalRate> get displayGoldRates => metals.displayGoldRates;
+  List<MetalRate> get displaySilverRates => metals.displaySilverRates;
+  List<MetalRate> get displayOtherMetalRates => metals.displayOtherRates;
+  List<MetalRate> get displayMetals => metals.displayRates;
+  Set<int> get metalWatchlist => metals.watchlist;
 
   int historyRangeForCurrency(int? currencyId) =>
       currency.historyRangeForCurrency(currencyId);
@@ -80,8 +81,7 @@ class CurrencyViewState {
     CurrencyPageStatus? status,
     String? errorMessage,
     CurrencyRatesState? currency,
-    GoldRatesState? gold,
-    SilverRatesState? silver,
+    MetalsRatesState? metals,
     DateTime? metalsLastUpdatedAt,
     List<Map<String, String?>>? governorates,
     String? selectedGovernorateCode,
@@ -104,8 +104,7 @@ class CurrencyViewState {
       status: status ?? this.status,
       errorMessage: errorMessage ?? this.errorMessage,
       currency: currency ?? this.currency,
-      gold: gold ?? this.gold,
-      silver: silver ?? this.silver,
+      metals: metals ?? this.metals,
       metalsLastUpdatedAt: metalsLastUpdatedAt ?? this.metalsLastUpdatedAt,
       governorates: governorates ?? this.governorates,
       selectedGovernorateCode:

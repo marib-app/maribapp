@@ -197,9 +197,11 @@ class _RatesShareContent extends StatelessWidget {
       viewState.displaySilverRates,
       inlineMetalRates.where((MetalRate rate) => rate.isSilver),
     );
-    final List<MetalRate> otherMetalRates = inlineMetalRates
-        .where((MetalRate rate) => !rate.isGold && !rate.isSilver)
-        .toList(growable: false);
+    final List<MetalRate> otherMetalRates = _mergeMetalRates(
+      viewState.displayOtherMetalRates,
+      inlineMetalRates
+          .where((MetalRate rate) => !rate.isGold && !rate.isSilver),
+    );
 
     addMetalSection('أسعار الذهب', goldRates);
     addMetalSection('أسعار الفضة', silverRates);

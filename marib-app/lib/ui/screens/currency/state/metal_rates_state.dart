@@ -1,33 +1,41 @@
 import 'package:marib/data/model/metal_rate.dart';
 
-abstract class MetalRatesState {
-  MetalRatesState({
-    required List<MetalRate> rates,
-    required List<MetalRate> displayRates,
+class MetalsRatesState {
+  MetalsRatesState({
+    required List<MetalRate> goldRates,
+    required List<MetalRate> displayGoldRates,
+    required List<MetalRate> silverRates,
+    required List<MetalRate> displaySilverRates,
+    required List<MetalRate> otherRates,
+    required List<MetalRate> displayOtherRates,
     required Set<int> watchlist,
-  })  : rates = List<MetalRate>.unmodifiable(rates),
-        displayRates = List<MetalRate>.unmodifiable(displayRates),
+  })  : goldRates = List<MetalRate>.unmodifiable(goldRates),
+        displayGoldRates = List<MetalRate>.unmodifiable(displayGoldRates),
+        silverRates = List<MetalRate>.unmodifiable(silverRates),
+        displaySilverRates = List<MetalRate>.unmodifiable(displaySilverRates),
+        otherRates = List<MetalRate>.unmodifiable(otherRates),
+        displayOtherRates = List<MetalRate>.unmodifiable(displayOtherRates),
         watchlist = Set<int>.unmodifiable(watchlist);
 
-  final List<MetalRate> rates;
-  final List<MetalRate> displayRates;
+  final List<MetalRate> goldRates;
+  final List<MetalRate> displayGoldRates;
+  final List<MetalRate> silverRates;
+  final List<MetalRate> displaySilverRates;
+  final List<MetalRate> otherRates;
+  final List<MetalRate> displayOtherRates;
   final Set<int> watchlist;
 
-  bool get hasRates => displayRates.isNotEmpty;
-}
+  List<MetalRate> get allRates => <MetalRate>[
+        ...goldRates,
+        ...silverRates,
+        ...otherRates,
+      ];
 
-class GoldRatesState extends MetalRatesState {
-  GoldRatesState({
-    required List<MetalRate> rates,
-    required List<MetalRate> displayRates,
-    required Set<int> watchlist,
-  }) : super(rates: rates, displayRates: displayRates, watchlist: watchlist);
-}
+  List<MetalRate> get displayRates => <MetalRate>[
+        ...displayGoldRates,
+        ...displaySilverRates,
+        ...displayOtherRates,
+      ];
 
-class SilverRatesState extends MetalRatesState {
-  SilverRatesState({
-    required List<MetalRate> rates,
-    required List<MetalRate> displayRates,
-    required Set<int> watchlist,
-  }) : super(rates: rates, displayRates: displayRates, watchlist: watchlist);
+  bool get hasAnyRates => displayRates.isNotEmpty;
 }

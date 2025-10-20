@@ -14,12 +14,10 @@ import 'package:marib/data/model/preference_option.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart'; // context.color
 import 'package:marib/utils/ui_utils.dart';
-
+import 'metals_tab_view.dart';
 import '../state/state.dart';
 import 'convert_tab_view.dart';
-import 'gold_tab_view.dart';
 import 'rates_tab_view.dart';
-import 'silver_tab_view.dart';
 
 class CurrencyScreenUI extends StatelessWidget {
   const CurrencyScreenUI({
@@ -434,8 +432,7 @@ class CurrencyScreenUI extends StatelessWidget {
         tabs: const [
           Tab(text: 'الأسعار'),
           Tab(text: 'التحويل'),
-          Tab(text: 'الذهب'),
-          Tab(text: 'الفضة'),
+          Tab(text: 'الذهب والفضة'),
         ],
         indicator: UnderlineTabIndicator(
           borderSide: BorderSide(color: brand, width: 3),
@@ -481,13 +478,8 @@ class CurrencyScreenUI extends StatelessWidget {
               amountInputFormatters: amountInputFormatters,
               brand: brand,
             ),
-            GoldTabView(
-              state: state,
+            MetalsTabView(
               onShareRates: onShareRates,
-              brand: brand,
-              onToggleMetalWatchlist: onToggleMetalWatchlist,
-            ),
-            SilverTabView(
               state: state,
               brand: brand,
               onToggleMetalWatchlist: onToggleMetalWatchlist,

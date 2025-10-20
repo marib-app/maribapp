@@ -980,6 +980,8 @@ class _HomeTabViewState extends State<HomeTabView> {
       });
 
       final bool showLoadingMoreError = state.loadingMoreError;
+      final fetchCubit = context.read<FetchItemSummaryCubit>();
+      final bool hasMoreData = fetchCubit.hasMoreData();
       if (state.items.isEmpty) {
         return <Widget>[
           SliverToBoxAdapter(
@@ -1046,11 +1048,12 @@ class _HomeTabViewState extends State<HomeTabView> {
             ),
           ),
         ];
-        if (hasLoadingMoreEntry && !showLoadingMoreError) {
-          slivers.add(_buildLoadingMoreIndicatorSliver(context));
+        if (hasMoreData && !showLoadingMoreError) {
+          slivers.add(_buildLoadingMoreStatusSliver(context, state));
         }
 
-        if (!context.read<FetchItemSummaryCubit>().hasMoreData()) {
+        if (!hasMoreData) {
+
           slivers.add(_buildEndOfResultsSliver(context));
         }
 
@@ -1062,7 +1065,14 @@ class _HomeTabViewState extends State<HomeTabView> {
       }
 
       final List<Widget> gridSlivers = _buildGridModeSlivers(
-          context, entries, state.items, showLoadingMoreError);
+        context,
+        entries,
+        state.items,
+        state,
+        hasMoreData,
+        showLoadingMoreError,
+      );
+
       if (showLoadingMoreError) {
         gridSlivers.add(_buildLoadingMoreErrorSliver(context));
       }
@@ -1105,6 +1115,8 @@ class _HomeTabViewState extends State<HomeTabView> {
     BuildContext context,
     List<_HomeTabEntry> entries,
     List<ItemSummary> items,
+      FetchItemSummarySuccess state,
+      bool hasMoreData,
     bool showLoadingMoreError,
   ) {
     final bool hasLoadingMoreEntry = entries.isNotEmpty &&
@@ -1184,11 +1196,11 @@ class _HomeTabViewState extends State<HomeTabView> {
         // تم تحريك المؤشر داخل الحلقة الداخلية.
       }
     }
-    if (hasLoadingMoreEntry && !showLoadingMoreError) {
-      slivers.add(_buildLoadingMoreIndicatorSliver(context));
+    if (hasMoreData && !showLoadingMoreError) {
+      slivers.add(_buildLoadingMoreStatusSliver(context, state));
     }
 
-    if (!context.read<FetchItemSummaryCubit>().hasMoreData()) {
+    if (!hasMoreData) {
       slivers.add(_buildEndOfResultsSliver(context));
     }
 
@@ -1243,17 +1255,32 @@ class _HomeTabViewState extends State<HomeTabView> {
     );
   }
 
-  Widget _buildLoadingMoreIndicatorSliver(BuildContext context) {
+  Widget _buildLoadingMoreStatusSliver(
+      BuildContext context,
+      FetchItemSummarySuccess state,
+      ) {
+    const double indicatorHeight = 32;
+
+
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 16),
         child: Center(
-          child: SizedBox(
-            height: 32,
-            width: 32,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.6,
-              color: context.color.territoryColor,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            child: state.isLoadingMore
+                ? SizedBox(
+              key: const ValueKey('loading_more_indicator'),
+              height: indicatorHeight,
+              width: indicatorHeight,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.6,
+                color: context.color.territoryColor,
+              ),
+            )
+                : const SizedBox(
+              key: ValueKey('loading_more_spacer'),
+              height: indicatorHeight,
             ),
           ),
         ),

@@ -604,15 +604,12 @@ class Section_screenState extends State<Section_screen> {
                         minimum: const EdgeInsets.only(bottom: 12),
                         child: ValueListenableBuilder<int?>(
                           valueListenable: selectedCategoryId,
-                          builder: (context, selectedId, _) {
-                            final int effectiveCategoryId =
-                                selectedId ?? _catId;
+                          builder: (context, _, __) {
                             final bool showMap = !{
                               Constant.computerRootCategoryId,
                               Constant.sheinRootCategoryId,
                               Constant.storeRootCategoryId,
-                            }.contains(effectiveCategoryId);
-
+                            }.contains(_catId);
                             return FilterSortBar(
                               categoryIds: widget.categoryIds,
                               categoryId: widget.categoryId,

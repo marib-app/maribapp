@@ -11,23 +11,71 @@ class IsolateDataLoader<T> {
   Future<T> load() async {
     final ReceivePort receivePort = ReceivePort("Receive");
     final isolate = await Isolate.spawn(
-        _isolateEntryPoint, receivePort.sendPort,
-        debugName: "DataLoaderIsolate");
+      _isolateEntryPoint,
+      receivePort.sendPort,
+      debugName: "DataLoaderIsolate",
+    );
 
     final completer = Completer<T>();
+    StreamSubscription<dynamic>? subscription;
+    var cleanedUp = false;
 
-    receivePort.listen((message) {
-      if (message is SendPort) {
-        message.send(_loadingFunction);
-      } else if (message is T) {
-        completer.complete(message);
-        receivePort.close();
-        isolate.kill();
-      } else      completer.completeError(message);
+    Future<void> cleanup() async {
+      if (cleanedUp) {
+        return;
+      }
+      cleanedUp = true;
+
+
       receivePort.close();
-      isolate.kill();
-    
-    });
+      isolate.kill(priority: Isolate.immediate);
+      final currentSubscription = subscription;
+      if (currentSubscription != null) {
+        await currentSubscription.cancel();
+      }
+    }
+
+    subscription = receivePort.listen(
+          (message) async {
+        if (message is SendPort) {
+          // Handshake: transfer the deferred loading function to the isolate.
+          // Cleanup must wait until a real payload (result or error) arrives;
+          // otherwise we'd terminate the isolate immediately and never see it.
+          message.send(_loadingFunction);
+        } else if (message is T) {
+          if (!completer.isCompleted) {
+            completer.complete(message);
+          }
+          await cleanup();
+        } else {
+          if (!completer.isCompleted) {
+            if (message is List &&
+                message.length == 2 &&
+                message[1] is StackTrace) {
+              completer.completeError(message[0], message[1] as StackTrace);
+            } else if (message is List &&
+                message.length == 2 &&
+                message[1] is String) {
+              completer.completeError(
+                message[0],
+                StackTrace.fromString(message[1] as String),
+              );
+            } else {
+              completer.completeError(message);
+            }
+          }
+          await cleanup();
+        }
+      },
+      onDone: () {
+        if (!completer.isCompleted) {
+          completer.completeError(
+            StateError('Isolate closed before delivering a result.'),
+          );
+        }
+        unawaited(cleanup());
+      },
+    );
 
     return completer.future;
   }
@@ -43,9 +91,8 @@ class IsolateDataLoader<T> {
 
         var result = await loadingFunction();
         sendPort.send(result);
-      } catch (error) {
-
-        sendPort.send(error);
+      } catch (error, stackTrace) {
+        sendPort.send([error, stackTrace]);
       }
     });
   }

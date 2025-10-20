@@ -21,39 +21,75 @@ class SpecialRequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final iconSize = ScreenScaler.s(58);
-    final fontSize = ScreenScaler.s(10);
+    const double _subcatCardRadius = 20.0;
+    const double _innerPadding = 6.0;
+
+    final cardExtent = ScreenScaler.s(58);
     final spacing = ScreenScaler.s(14);
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final iconBackground = isDark ? Colors.grey.shade900 : Colors.grey[200];
-    final textColor = Theme.of(context).textTheme.bodyMedium?.color;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textStyle = theme.textTheme.labelMedium?.copyWith(
+      color: colorScheme.textDefaultColor,
+    );
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(_subcatCardRadius),
         onTap: () => _openRequestSheet(context),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            Container(
-              height: iconSize,
-              width: iconSize,
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              height: cardExtent,
+              width: cardExtent,
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: iconBackground,
+                borderRadius: BorderRadius.circular(_subcatCardRadius),
+                gradient: LinearGradient(
+                  colors: [
+                    colorScheme.territoryColor,
+                    colorScheme.borderColor.withOpacity(0.6),
+                  ],
+                ),
+                border: Border.all(
+                  color: colorScheme.borderColor.withOpacity(0.6),
+                  width: 1.2,
+                ),
               ),
-              child: Icon(Icons.shopping_bag_outlined,
-                  size: iconSize * 0.6, color: textColor),
+              padding: const EdgeInsets.all(_innerPadding),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: context.color.surface,
+                  borderRadius: BorderRadius.circular(
+                    (_subcatCardRadius - _innerPadding)
+                        .clamp(0.0, _subcatCardRadius)
+                        .toDouble(),
+                  ),
+                ),
+                child: Icon(
+                  Icons.assignment_add,
+                  size: cardExtent * 0.5,
+                  color: context.color.territoryColor,
+                ),
+              ),
+
             ),
             SizedBox(height: spacing),
-            Text(
-              'طلب خاص',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: fontSize, color: textColor),
+            SizedBox(
+              width: cardExtent + 12,
+              height: 30,
+              child: Center(
+                child: Text(
+                  'طلب خاص',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: textStyle,
+                ),
+              ),
             ),
           ],
         ),

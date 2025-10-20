@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+
+import 'package:characters/characters.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart' show NumberFormat;
@@ -18,6 +21,8 @@ class ConvertTabView extends StatelessWidget {
     required this.amountInputFormatters,
     required this.brand,
     required this.onGovernorateChanged,
+    this.onShowAdvancedDetails,
+
   });
 
   final CurrencyViewState state;
@@ -30,6 +35,7 @@ class ConvertTabView extends StatelessWidget {
   final List<TextInputFormatter> amountInputFormatters;
   final Color brand;
   final void Function(String?) onGovernorateChanged;
+  final VoidCallback? onShowAdvancedDetails;
 
   bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
 
@@ -61,10 +67,16 @@ class ConvertTabView extends StatelessWidget {
     );
   }
 
-  Widget _swapButton(BuildContext context) {
-    return Center(
-      child: InkResponse(
-        onTap: () {
+  Widget _swapButton(bool isDarkContext) {
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: isDarkContext ? 0 : 1,
+      shape: const CircleBorder(),
+      child: IconButton(
+        key: const Key('swapCurrenciesAction'),
+        tooltip: 'تبديل العملات',
+        icon: Icon(Icons.swap_horiz_rounded, color: brand),
+        onPressed: () {
           if (state.toCurrency.isNotEmpty && state.fromCurrency.isNotEmpty) {
             final oldFrom = state.fromCurrency;
             final oldTo = state.toCurrency;
@@ -72,47 +84,6 @@ class ConvertTabView extends StatelessWidget {
             onChangeTo(oldFrom);
           }
         },
-        radius: 28,
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: brand.withOpacity(0.45)),
-          ),
-          child: Icon(Icons.swap_vert, color: brand),
-        ),
-      ),
-    );
-  }
-
-  Widget _resultStrip(BuildContext context, String value) {
-    final onBg = _isDark(context) ? Colors.white : Colors.black;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: brand.withOpacity(0.35)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              "المبلغ المحول",
-              style: TextStyle(
-                color: onBg.withOpacity(0.75),
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              color: onBg,
-              fontWeight: FontWeight.w900,
-              fontSize: 18,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -120,8 +91,10 @@ class ConvertTabView extends StatelessWidget {
   Widget _primaryBtn(BuildContext context,
       {required String label,
       required IconData icon,
-      required VoidCallback onPressed}) {
+        required VoidCallback onPressed,
+        Key? key}) {
     return FilledButton.icon(
+      key: key,
       onPressed: onPressed,
       icon: Icon(icon),
       label: Text(label),
@@ -138,9 +111,11 @@ class ConvertTabView extends StatelessWidget {
   Widget _ghostBtn(BuildContext context,
       {required String label,
       required IconData icon,
-      required VoidCallback onPressed}) {
+        required VoidCallback onPressed,
+        Key? key}) {
     final onBg = _isDark(context) ? Colors.white : Colors.black;
     return OutlinedButton.icon(
+      key: key,
       onPressed: onPressed,
       icon: Icon(icon, color: onBg),
       label: Text(label),
@@ -344,112 +319,321 @@ class ConvertTabView extends StatelessWidget {
   Widget build(BuildContext context) {
     final edge = const EdgeInsets.fromLTRB(12, 8, 12, 18);
 
-    String _name(d) => (d as dynamic).currencyName?.toString() ?? '';
-    final all = state.rates;
-    final fromItems = all.map<DropdownMenuItem<String>>((r) {
-      final v = _name(r);
-      return DropdownMenuItem(value: v, child: Text(v));
-    }).toList(growable: false);
-    final toItems = all
+    final bool isDarkContext = _isDark(context);
+
+    String _name(dynamic d) => (d as dynamic).currencyName?.toString() ?? '';
+    final List<dynamic> all = state.rates;
+    final List<String> fromOptions = all.map(_name).toList(growable: false);
+    final List<String> toOptions = all
         .where((r) => _name(r) != state.fromCurrency)
-        .map<DropdownMenuItem<String>>((r) {
-      final v = _name(r);
-      return DropdownMenuItem(value: v, child: Text(v));
-    }).toList(growable: false);
+        .map(_name)
+        .toList(growable: false);
 
-    return SingleChildScrollView(
-      padding: edge,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _governorateSection(context),
-          const SizedBox(height: 16),
-          // من
-          _labeledBox(
-            context,
-            'من',
-            DropdownButtonFormField<String>(
-              value: state.fromCurrency.isEmpty ? null : state.fromCurrency,
-              items: fromItems,
-              onChanged: (v) => v != null ? onChangeFrom(v) : null,
-              decoration: InputDecoration(
-                border: _border(context),
-                enabledBorder: _border(context),
-                focusedBorder: _border(context),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+    return SafeArea(
+        child: LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final double bottomInset = MediaQuery.of(context).viewInsets.bottom;
+              final EdgeInsets scrollPadding = edge.copyWith(
+                bottom: edge.bottom + bottomInset,
+              );
+
+              return SingleChildScrollView(
+                padding: scrollPadding,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minWidth: constraints.maxWidth.isFinite
+                        ? constraints.maxWidth
+                        : 0,
+                    minHeight: constraints.maxHeight.isFinite
+                        ? math.max(0.0, constraints.maxHeight - bottomInset)
+                        : 0.0,
+              ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _governorateSection(context),
+                      const SizedBox(height: 16),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: _currencyPickerCard(
+                              context,
+                              label: 'من',
+                              selectedValue: state.fromCurrency,
+                              options: fromOptions,
+                              iconPrefix: 'fromCurrencyIcon',
+                              dropdownKey:
+                              const Key('fromCurrencyDropdownField'),
+                              onChanged: (String? value) {
+                                if (value != null) {
+                                  onChangeFrom(value);
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          _swapButton(isDarkContext),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _currencyPickerCard(
+                              context,
+                              label: 'إلى',
+                              selectedValue: state.toCurrency,
+                              options: toOptions,
+                              iconPrefix: 'toCurrencyIcon',
+                              dropdownKey: const Key('toCurrencyDropdownField'),
+                              onChanged: (String? value) {
+                                if (value != null) {
+                                  onChangeTo(value);
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      _labeledBox(
+                        context,
+                        'المبلغ',
+                        TextField(
+                          controller: amountController,
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          inputFormatters: amountInputFormatters,
+                          onChanged: onAmountChanged,
+                          decoration: InputDecoration(
+                            hintText: "ادخل المبلغ",
+                            border: _border(context),
+                            enabledBorder: _border(context),
+                            focusedBorder: _border(context),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 14),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      _conversionResultCard(context),
+                    ],
               ),
             ),
-          ),
-          const SizedBox(height: 10),
+              );
+            },
+        ),
+    );
+  }
 
-          // تبادل
-          _swapButton(context),
-          const SizedBox(height: 10),
+  Widget _currencyPickerCard(
+      BuildContext context, {
+        required String label,
+        required String selectedValue,
+        required List<String> options,
+        required String iconPrefix,
+        required Key dropdownKey,
+        required ValueChanged<String?> onChanged,
+      }) {
+    final bool isDark = _isDark(context);
+    final Color cardColor = isDark ? Colors.white10 : Colors.white;
+    final Color shadowColor = isDark ? Colors.transparent : Colors.black12;
+    final TextStyle labelStyle = Theme.of(context)
+        .textTheme
+        .titleSmall
+        ?.copyWith(fontWeight: FontWeight.w700) ??
+        const TextStyle(fontWeight: FontWeight.w700);
 
-          // إلى
-          _labeledBox(
-            context,
-            'إلى',
-            DropdownButtonFormField<String>(
-              value: state.toCurrency.isEmpty ? null : state.toCurrency,
-              items: toItems,
-              onChanged: (v) => v != null ? onChangeTo(v) : null,
-              decoration: InputDecoration(
-                border: _border(context),
-                enabledBorder: _border(context),
-                focusedBorder: _border(context),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              ),
+    final List<DropdownMenuItem<String>> menuItems = options
+        .map(
+          (String currency) => DropdownMenuItem<String>(
+        value: currency,
+        child: _CurrencyMenuRow(
+          label: currency,
+          iconKey: ValueKey('${iconPrefix}_menu_$currency'),
             ),
           ),
-          const SizedBox(height: 12),
+    )
+        .toList(growable: false);
 
-          // المبلغ
-          _labeledBox(
-            context,
-            'المبلغ',
-            TextField(
-              controller: amountController,
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              inputFormatters: amountInputFormatters,
-              onChanged: onAmountChanged,
-              decoration: InputDecoration(
-                hintText: "ادخل المبلغ",
-                border: _border(context),
-                enabledBorder: _border(context),
-                focusedBorder: _border(context),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-              ),
+    String? normalizedSelected =
+    (selectedValue.isEmpty || !options.contains(selectedValue))
+        ? null
+        : selectedValue;
+
+    final String avatarLabel = normalizedSelected ??
+        (options.isNotEmpty ? options.first : label);
+
+    return Card(
+      color: cardColor,
+      shadowColor: shadowColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: isDark ? 0 : 2,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              label,
+              style: labelStyle,
+              textDirection: TextDirection.rtl,
             ),
-          ),
-          const SizedBox(height: 12),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _CurrencyAvatar(
+                  key: ValueKey('${iconPrefix}_selected'),
+                  label: avatarLabel,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    key: dropdownKey,
+                    value: normalizedSelected,
+                    isExpanded: true,
+                    alignment: AlignmentDirectional.centerEnd,
+                    items: menuItems,
+                    onChanged: onChanged,
+                    decoration: InputDecoration(
+                      border: _border(context),
+                      enabledBorder: _border(context),
+                      focusedBorder: _border(context),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-          // النتيجة
-          _resultStrip(
-            context,
-            state.hasCalculated
-                ? "${NumberFormat('#,##0.##').format(state.convertedAmount)} ${state.toCurrency}"
-                : "---",
-          ),
-          const SizedBox(height: 12),
+  Widget _conversionResultCard(BuildContext context) {
+    final bool isDark = _isDark(context);
+    final Color onBg = isDark ? Colors.white : Colors.black;
+    final String convertedValue = state.hasCalculated
+        ? "${NumberFormat('#,##0.##').format(state.convertedAmount)} ${state.toCurrency}"
+        : "---";
 
-          // الأزرار
-          Row(
+    return Card(
+        key: const Key('conversionResultCard'),
+        color: isDark ? Colors.white10 : Colors.white,
+        elevation: isDark ? 0 : 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: _primaryBtn(context,
-                    label: "تحويل", icon: Icons.check, onPressed: onConvert),
+              Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: brand.withOpacity(0.1),
+                    foregroundColor: brand,
+                    child: const Icon(Icons.currency_exchange),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'المبلغ المحول',
+                      style: TextStyle(
+                        color: onBg.withOpacity(0.75),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                      textDirection: TextDirection.rtl,
+                      textAlign: TextAlign.right,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _ghostBtn(context,
-                    label: "تصفير", icon: Icons.refresh, onPressed: onReset),
+              const SizedBox(height: 14),
+              Text(
+                convertedValue,
+                key: const Key('convertedValueText'),
+                style: TextStyle(
+                  color: onBg,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 22,
+              ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  key: const Key('advancedDetailsButton'),
+                  onPressed: onShowAdvancedDetails,
+                  icon: const Icon(Icons.open_in_new_rounded),
+                  label: const Text('التفاصيل المتقدمة'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: brand,
+                  ),
+              ),
+              ),
+              const SizedBox(height: 12),
+              const Divider(),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _primaryBtn(
+                      context,
+                      label: 'تحويل',
+                      icon: Icons.check,
+                      onPressed: onConvert,
+                      key: const Key('convertAction'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _ghostBtn(
+                      context,
+                      label: 'تصفير',
+                      icon: Icons.refresh,
+                      onPressed: onReset,
+                      key: const Key('resetAction'),
+                    ),
+                  ),
+                ],
               ),
             ],
+          ),
+        ),
+    );
+  }
+}
+
+class _CurrencyMenuRow extends StatelessWidget {
+  const _CurrencyMenuRow({
+    required this.label,
+    this.iconKey,
+  });
+
+  final String label;
+  final Key? iconKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Row(
+        children: [
+          _CurrencyAvatar(
+            label: label,
+            key: iconKey,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              textDirection: TextDirection.rtl,
+              textAlign: TextAlign.right,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),
@@ -457,6 +641,31 @@ class ConvertTabView extends StatelessWidget {
   }
 }
 
-// ===================================================================
-// تبويب 3: الذهب — نفس منطق الأسعار مع فلترة (ذهب/عيار/Gold)
-// ===================================================================
+class _CurrencyAvatar extends StatelessWidget {
+  const _CurrencyAvatar({
+    super.key,
+    required this.label,
+  });
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final Color background = theme.colorScheme.primary.withOpacity(0.12);
+    final Color foreground = theme.colorScheme.primary;
+    final String initials = label.isEmpty
+        ? '—'
+        : label.trim().characters.take(2).toString().toUpperCase();
+
+    return CircleAvatar(
+      radius: 16,
+      backgroundColor: background,
+      foregroundColor: foreground,
+      child: Text(
+        initials,
+        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+      ),
+    );
+  }
+}

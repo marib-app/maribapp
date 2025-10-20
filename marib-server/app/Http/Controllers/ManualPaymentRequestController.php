@@ -2297,8 +2297,20 @@ class ManualPaymentRequestController extends Controller
         );
 
         $payableTypeExpression = "COALESCE(NULLIF(mpr.payable_type, ''), NULLIF(pt.payable_type, ''))";
+        $normalizedPayableTypeExpression = "LOWER(COALESCE(NULLIF(mpr.payable_type, ''), NULLIF(pt.payable_type, '')))";
         $payableIdExpression = 'COALESCE(pt.payable_id, mpr.payable_id)';
-        $departmentExpression = "COALESCE(NULLIF(mpr.department, ''), NULLIF(o.department, ''))";
+        $departmentFallback = "(بدون قسم)";
+        $departmentExpression = sprintf(
+            "COALESCE(NULLIF(TRIM(o.department), ''), NULLIF(TRIM(mpr.department), ''), '%s')",
+            str_replace("'", "''", $departmentFallback)
+        );
+
+        $normalizedTransactionGatewayExpression = "LOWER(TRIM(COALESCE(pt.payment_gateway, '')))";
+        $manualGatewayAliasesForFilter = ManualPaymentRequest::manualBankGatewayAliases();
+        if ($manualGatewayAliasesForFilter === []) {
+            $manualGatewayAliasesForFilter = ['manual_bank', 'manual_banks'];
+        }
+
 
         $transactions = DB::table('payment_transactions as pt')
             ->leftJoin('manual_payment_requests as mpr', function ($join) {
@@ -2310,17 +2322,24 @@ class ManualPaymentRequestController extends Controller
             })
 
             ->leftJoin('users', 'users.id', '=', 'pt.user_id')
-            ->leftJoin('orders as o', function ($join) use ($orderTypeArray) {
-                $join->on('o.id', '=', 'pt.payable_id');
+            ->leftJoin('orders as o', function ($join) use (
+                $orderTypeArray,
+                $payableIdExpression,
+                $normalizedPayableTypeExpression
+            ) {
+                $join->on('o.id', '=', DB::raw($payableIdExpression));
+
+
                 if ($orderTypeArray !== []) {
-                    $join->whereIn(DB::raw("LOWER(COALESCE(NULLIF(pt.payable_type, ''), ''))"), $orderTypeArray);
+                    $join->whereIn(DB::raw($normalizedPayableTypeExpression), $orderTypeArray);
                 }
             })
-            ->where('pt.payment_gateway', 'manual_bank')
-
-            ->where(function ($query) {
-                $query->whereNull('pt.manual_payment_request_id')
-                    ->whereNull('mpr.id');
+            ->where(function ($query) use (
+                $manualGatewayAliasesForFilter,
+                $normalizedTransactionGatewayExpression
+            ) {
+                $query->whereNotNull('pt.manual_payment_request_id')
+                    ->orWhereIn(DB::raw($normalizedTransactionGatewayExpression), $manualGatewayAliasesForFilter);
             })
 
             ->selectRaw('COALESCE(mpr.id, pt.id) as id')
@@ -2330,9 +2349,9 @@ class ManualPaymentRequestController extends Controller
             ->selectRaw('pt.user_id as user_id')
             ->selectRaw('users.name as user_name')
             ->selectRaw('users.mobile as user_mobile')
-            ->selectRaw('pt.amount as amount')
-            ->selectRaw("COALESCE(NULLIF(pt.currency, ''), '') as currency")
-            ->selectRaw('pt.created_at as created_at')
+            ->selectRaw('COALESCE(pt.amount, mpr.amount) as amount')
+            ->selectRaw("COALESCE(NULLIF(pt.currency, ''), NULLIF(mpr.currency, ''), '') as currency")
+            ->selectRaw('COALESCE(pt.created_at, mpr.created_at) as created_at')
             ->selectRaw($statusExpression . ' as status')
             ->selectRaw($statusGroupExpression . ' as status_group')
             ->selectRaw("'transaction' as source")
@@ -2370,9 +2389,9 @@ class ManualPaymentRequestController extends Controller
             ->selectRaw('mpr.user_id as user_id')
             ->selectRaw('users.name as user_name')
             ->selectRaw('users.mobile as user_mobile')
-            ->selectRaw('COALESCE(mpr.amount, pt.amount, 0) as amount')
-            ->selectRaw("COALESCE(NULLIF(mpr.currency, ''), NULLIF(pt.currency, ''), '') as currency")
-            ->selectRaw('mpr.created_at as created_at')
+            ->selectRaw('COALESCE(pt.amount, mpr.amount) as amount')
+            ->selectRaw("COALESCE(NULLIF(pt.currency, ''), NULLIF(mpr.currency, ''), '') as currency")
+            ->selectRaw('COALESCE(pt.created_at, mpr.created_at) as created_at')
             ->selectRaw($statusExpression . ' as status')
             ->selectRaw($statusGroupExpression . ' as status_group')
             ->selectRaw("'request' as source")
@@ -2384,11 +2403,27 @@ class ManualPaymentRequestController extends Controller
             ->selectRaw($manualBankIdExpression . ' as manual_bank_id')
             ->selectRaw($manualBankNameExpression . ' as manual_bank_name')
             ->selectRaw($walletTransactionExpression . ' as wallet_transaction_id')
-            ->selectRaw('pt.created_at as transaction_created_at');
+            ->selectRaw('pt.created_at as transaction_created_at')
+            ->whereNotExists(function ($query) {
+                $query->selectRaw('1')
+                    ->from('payment_transactions as pt_exists')
+                    ->whereColumn('pt_exists.manual_payment_request_id', 'mpr.id');
+            })
+            ->whereNotExists(function ($query) {
+                $query->selectRaw('1')
+                    ->from('wallet_transactions as wt')
+                    ->whereColumn('wt.manual_payment_request_id', 'mpr.id')
+                    ->whereNull('wt.payment_transaction_id')
+                    ->whereRaw("wt.type = 'credit'")
+                    ->whereRaw(
+                        "JSON_UNQUOTE(JSON_EXTRACT(wt.meta, '$.\\\"reason\\\"')) IN ('wallet_top_up','wallet-top-up','wallet_topup','admin_manual_credit')"
+                    );
+            });
+
 
         if ($shouldApplyDateFilter) {
-            $transactions->whereBetween('pt.created_at', [$rangeStart, $rangeEnd]);
-            $requests->whereBetween('mpr.created_at', [$rangeStart, $rangeEnd]);
+            $transactions->whereBetween(DB::raw('COALESCE(pt.created_at, mpr.created_at)'), [$rangeStart, $rangeEnd]);
+            $requests->whereBetween(DB::raw('COALESCE(pt.created_at, mpr.created_at)'), [$rangeStart, $rangeEnd]);
         }
 
 

@@ -1,4 +1,7 @@
 <?php
+
+
+
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\Api\DeliveryPriceCalculatorController;
 use App\Http\Controllers\Api\MetalRateController as PublicMetalRateController;
@@ -25,6 +28,7 @@ use App\Http\Controllers\ItemPurchaseManagementController;
 use App\Http\Controllers\WifiCodeRevealController;
 use App\Http\Controllers\Api\UserPreferenceController;
 
+Route::get('diag', fn() => response('ok', 200));
 
 
 /*
@@ -67,7 +71,6 @@ Route::prefix('wifi-cabin')
         Route::get('networks/{network}/stock', [WifiCabinApiController::class, 'networkStock']);
         Route::get('networks/{network}/alerts', [WifiCabinApiController::class, 'networkAlerts']);
     });
-
 
 
 /* Authenticated Routes */

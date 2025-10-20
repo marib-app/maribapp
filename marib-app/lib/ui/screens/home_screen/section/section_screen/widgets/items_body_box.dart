@@ -273,6 +273,7 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
                   currentFilter: widget.filter,
                   enableSubcats: widget.enableSubcats,
                   onScrollDirectionChanged: widget.onScrollDirectionChanged,
+                  specialRequestSectionSlug: widget.specialRequestSectionSlug,
 
                   // ✨ المهم: مرر مفاتيح السلايدر الإعلاني
                   enableAdSlider: widget.enableAdSlider,

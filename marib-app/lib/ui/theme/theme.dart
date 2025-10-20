@@ -21,8 +21,8 @@ const Color territoryColor_ = Color.fromARGB(255, 235, 89, 36);
 const Color forthColor_ = Color.fromRGBO(250, 110, 83, 1);
 const Color _backgroundColor = primaryColor_; //here you can change if you need
 const Color textDarkColor = Color(0xFF000000);
-Color widgetsBorderColorLight = neutralStrokeLight;
 Color widgetsBorderColorLight = const Color(0xffEEEEEE).withOpacity(0.6);
+Color lightTextColor = textDarkColor.withOpacity(0.6);
 Color senderChatColor = const Color.fromARGB(255, 233, 233, 233).darken(22);
 
 ///Dark Theme Colors

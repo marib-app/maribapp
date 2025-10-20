@@ -12,6 +12,7 @@ import 'package:marib/utils/extensions/extensions.dart';
 import 'dart:ui' as ui show TextDirection;
 
 import 'dart:ui';
+import 'package:flutter/rendering.dart';
 
 import 'package:flutter/widgets.dart';
 
@@ -75,6 +76,9 @@ class SmartSearchAppBar extends StatefulWidget implements PreferredSizeWidget {
 class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
   final FocusNode _focusNode = FocusNode();
   late final ValueNotifier<bool> _showClear;
+  final GlobalKey _cartActionKey =
+      GlobalKey(debugLabel: 'smartSearchCartAction');
+  double _cartActionWidth = 0;
 
   late final List<String> _hints;
   late final IconData _hintIcon;
@@ -93,6 +97,7 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
     widget.searchController.addListener(_onTextChanged);
 
     _startHintsRotation(interval: widget.hintInterval);
+    _scheduleCartWidthUpdate();
   }
 
   @override
@@ -120,6 +125,20 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
     setState(() {});
   }
 
+  @override
+  void didUpdateWidget(covariant SmartSearchAppBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.showCartAction != widget.showCartAction) {
+      if (widget.showCartAction) {
+        _scheduleCartWidthUpdate();
+      } else if (_cartActionWidth != 0) {
+        setState(() {
+          _cartActionWidth = 0;
+        });
+      }
+    }
+  }
+
   void _startHintsRotation({Duration interval = const Duration(seconds: 3)}) {
     if (_hints.isEmpty) return;
     _hintTimer?.cancel();
@@ -128,6 +147,23 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
       final idle = !_focusNode.hasFocus && widget.searchController.text.isEmpty;
       if (!idle) return;
       setState(() => _hintIndex = (_hintIndex + 1) % _hints.length);
+    });
+  }
+
+  void _scheduleCartWidthUpdate() {
+    if (!widget.showCartAction) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final context = _cartActionKey.currentContext;
+      if (context == null) return;
+      final renderObject = context.findRenderObject();
+      if (renderObject is! RenderBox || !renderObject.hasSize) return;
+      final width = renderObject.size.width;
+      if ((_cartActionWidth - width).abs() > 0.5) {
+        setState(() {
+          _cartActionWidth = width;
+        });
+      }
     });
   }
 
@@ -153,6 +189,7 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
   Widget build(BuildContext context) {
     final showHintOverlay =
         !_focusNode.hasFocus && widget.searchController.text.isEmpty;
+    _scheduleCartWidthUpdate();
 
     return AppBar(
       toolbarHeight: widget.toolbarH,
@@ -169,7 +206,9 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
         builder: (context, constraints) {
           double maxWidth = constraints.maxWidth;
           if (widget.showCartAction && maxWidth.isFinite) {
-            maxWidth = maxWidth - 56;
+            final widthToSubtract = _cartActionWidth;
+            maxWidth = maxWidth - widthToSubtract;
+
             if (maxWidth < 0) {
               maxWidth = 0;
             }
@@ -181,9 +220,9 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOut,
               height: 50,
-              margin: EdgeInsets.symmetric(
+              margin: const EdgeInsets.symmetric(
                 vertical: 6,
-                horizontal: widget.showCartAction ? 4 : 0,
+                horizontal: 0,
               ),
               decoration: BoxDecoration(
                 color: context.color.primaryColor,
@@ -296,39 +335,48 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
         },
       ),
       actions: [
-        if (widget.showCartAction) ...[
-          IconButton(
-            tooltip: 'السلة',
-            onPressed: widget.onCartTap,
-            icon: Icon(
-              Icons.shopping_cart_outlined,
-              color: context.color.territoryColor,
-            ),
-          ),
-          const SizedBox(width: 4),
-        ],
-        Semantics(
-          button: true,
-          label: _nextLabel(widget.viewMode),
-          child: IconButton(
-            tooltip: _nextLabel(widget.viewMode),
-            onPressed: () {
-              HapticFeedback.selectionClick();
-              widget.onCycleViewMode();
-            },
-            icon: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 180),
-              transitionBuilder: (child, anim) =>
-                  ScaleTransition(scale: anim, child: child),
-              child: KeyedSubtree(
-                key: ValueKey<ViewMode>(widget.viewMode),
-                child: _viewModeIcon(
-                    widget.viewMode, context.color.territoryColor),
+        Padding(
+          padding: const EdgeInsetsDirectional.only(end: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (widget.showCartAction)
+                IconButton(
+                  key: _cartActionKey,
+                  tooltip: 'السلة',
+                  onPressed: widget.onCartTap,
+                  padding: const EdgeInsets.all(10),
+                  constraints:
+                      const BoxConstraints(minHeight: 48, minWidth: 48),
+                  icon: Icon(
+                    Icons.shopping_cart_outlined,
+                    color: context.color.territoryColor,
+                  ),
+                ),
+              Semantics(
+                button: true,
+                label: _nextLabel(widget.viewMode),
+                child: IconButton(
+                  tooltip: _nextLabel(widget.viewMode),
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    widget.onCycleViewMode();
+                  },
+                  icon: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 180),
+                    transitionBuilder: (child, anim) =>
+                        ScaleTransition(scale: anim, child: child),
+                    child: KeyedSubtree(
+                      key: ValueKey<ViewMode>(widget.viewMode),
+                      child: _viewModeIcon(
+                          widget.viewMode, context.color.territoryColor),
+                    ),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ),
-        const SizedBox(width: 4),
       ],
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(2),

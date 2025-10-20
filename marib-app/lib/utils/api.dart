@@ -52,15 +52,96 @@ class _CachedApiResponse {
   const _CachedApiResponse({
     required this.payload,
     this.eTag,
+    required this.storedAt,
   });
 
   final Map<String, dynamic> payload;
   final String? eTag;
+  final DateTime storedAt;
+
+  bool isExpired(Duration ttl, DateTime now) {
+    if (ttl <= Duration.zero) {
+      return false;
+    }
+    return now.difference(storedAt) >= ttl;
+  }
 }
 
 class _ApiResponseCache {
-  static final Map<String, _CachedApiResponse> _cache = {};
+  static const Duration _defaultEntryTtl = Duration(minutes: 5);
+  static const int _defaultMaxEntries = 128;
 
+  static Duration _entryTtl = _defaultEntryTtl;
+  static int _maxEntries = _defaultMaxEntries;
+  static DateTime Function() _clock = DateTime.now;
+
+  static final LinkedHashMap<String, _CachedApiResponse> _cache =
+  LinkedHashMap<String, _CachedApiResponse>();
+
+  static void _purgeExpiredEntries() {
+    if (_cache.isEmpty) {
+      return;
+    }
+
+    final Duration ttl = _entryTtl;
+    if (ttl <= Duration.zero) {
+      return;
+    }
+
+    final DateTime now = _clock();
+    final List<String> expiredKeys = <String>[];
+    _cache.forEach((String key, _CachedApiResponse value) {
+      if (value.isExpired(ttl, now)) {
+        expiredKeys.add(key);
+      }
+    });
+
+    for (final String key in expiredKeys) {
+      _cache.remove(key);
+    }
+  }
+
+  static void _enforceSizeLimit() {
+    if (_maxEntries <= 0) {
+      _cache.clear();
+      return;
+    }
+
+    while (_cache.length > _maxEntries) {
+      final String oldestKey = _cache.keys.first;
+      _cache.remove(oldestKey);
+    }
+  }
+
+  static void clear() {
+    _cache.clear();
+  }
+
+  static void configure({
+    Duration? entryTtl,
+    int? maxEntries,
+    DateTime Function()? clock,
+  }) {
+    if (entryTtl != null) {
+      _entryTtl = entryTtl;
+    }
+    if (maxEntries != null) {
+      _maxEntries = maxEntries;
+    }
+    if (clock != null) {
+      _clock = clock;
+    }
+
+    _purgeExpiredEntries();
+    _enforceSizeLimit();
+  }
+
+  static void resetConfiguration() {
+    _entryTtl = _defaultEntryTtl;
+    _maxEntries = _defaultMaxEntries;
+    _clock = DateTime.now;
+    clear();
+  }
   static String _buildKey(
     String url,
     Map<String, dynamic>? queryParameters,
@@ -81,21 +162,41 @@ class _ApiResponseCache {
     String url,
     Map<String, dynamic>? queryParameters,
   ) {
+
+    _purgeExpiredEntries();
+
     final key = _buildKey(url, queryParameters);
-    return _cache[key];
+    final _CachedApiResponse? cached = _cache[key];
+    if (cached == null) {
+      return null;
+    }
+
+    if (cached.isExpired(_entryTtl, _clock())) {
+      _cache.remove(key);
+      return null;
+    }
+
+    // Refresh LRU order by moving the entry to the end.
+    _cache.remove(key);
+    _cache[key] = cached;
+    return cached;
   }
 
   static void store(
-    String url,
-    Map<String, dynamic>? queryParameters,
-    Map<String, dynamic> payload,
-    String? eTag,
-  ) {
+      String url,
+      Map<String, dynamic>? queryParameters,
+      Map<String, dynamic> payload,
+      String? eTag,
+      ) {
+    _purgeExpiredEntries();
     final key = _buildKey(url, queryParameters);
+    _cache.remove(key);
     _cache[key] = _CachedApiResponse(
       payload: Map<String, dynamic>.from(payload),
       eTag: eTag,
+      storedAt: _clock(),
     );
+    _enforceSizeLimit();
   }
 }
 
@@ -103,6 +204,55 @@ class Api {
   // تهيئة الهيدرز لكل الطلبات
   // - لو المستخدم غير مسجل: نضيف اللغة فقط إن وجدت
   // - لو مسجل: نضيف Bearer <JWT> + اللغة
+
+
+
+  static void clearCache() {
+    _ApiResponseCache.clear();
+  }
+
+  @visibleForTesting
+  static void configureCache({
+    Duration? entryTtl,
+    int? maxEntries,
+    DateTime Function()? clock,
+  }) {
+    _ApiResponseCache.configure(
+      entryTtl: entryTtl,
+      maxEntries: maxEntries,
+      clock: clock,
+    );
+  }
+
+  @visibleForTesting
+  static void resetCacheConfiguration() {
+    _ApiResponseCache.resetConfiguration();
+  }
+
+  @visibleForTesting
+  static void debugStoreCacheEntry({
+    required String url,
+    Map<String, dynamic>? queryParameters,
+    required Map<String, dynamic> payload,
+    String? eTag,
+  }) {
+    _ApiResponseCache.store(url, queryParameters, payload, eTag);
+  }
+
+  @visibleForTesting
+  static Map<String, dynamic>? debugGetCachedPayload(
+      String url, [
+        Map<String, dynamic>? queryParameters,
+      ]) {
+    final _CachedApiResponse? cached =
+    _ApiResponseCache.get(url, queryParameters);
+    if (cached == null) {
+      return null;
+    }
+
+    return Map<String, dynamic>.from(cached.payload);
+  }
+
 
   static Map<String, dynamic> headers() {
     final Map<String, dynamic> headers = {
@@ -835,6 +985,8 @@ class Api {
         "userIsDeactivated".translate(Constant.navigatorKey.currentContext!),
         messageDuration: 3);
     Future.delayed(const Duration(seconds: 2), () {
+      clearCache();
+
       HiveUtils.clear();
       Constant.favoriteItemList.clear();
       Constant.navigatorKey.currentContext!.read<UserDetailsCubit>().clear();

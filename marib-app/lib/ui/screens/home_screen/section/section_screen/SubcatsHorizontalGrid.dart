@@ -186,10 +186,10 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
             (w - (_hPad * 2) - totalSpacing).clamp(0.0, 4000.0);
         final itemWidth = (widthForItems / itemsPerRow).clamp(70.0, 120.0);
 
-        final circleSize = (itemWidth * 0.82).clamp(48.0, 64.0);
+        final cardExtent = (itemWidth * 0.82).clamp(48.0, 64.0);
         const titleHeight = 30.0;
         const gap = 6.0;
-        final rowHeight = circleSize + gap + titleHeight;
+        final rowHeight = cardExtent + gap + titleHeight;
 
         final gridHeight =
             rowHeight * maxRows + _verticalSpacingBetweenRows * (maxRows - 1);
@@ -268,7 +268,7 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
                                   label: item.name ?? '',
                                   brand: widget.brand,
                                   selected: sel,
-                                  circleSize: circleSize,
+                                  cardExtent: cardExtent,
                                   imageUrl: item.url,
                                   useImage: (item.url ?? '').isNotEmpty,
                                   onTap: () {
@@ -309,7 +309,7 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
 
 class _SubcatCircle extends StatelessWidget {
   static const Duration _animationDuration = Duration(milliseconds: 200);
-  static const double _innerPadding = 4;
+  static const double _innerPadding = 6;
 
   final String label;
   final bool selected;
@@ -318,14 +318,14 @@ class _SubcatCircle extends StatelessWidget {
 
   final String? imageUrl;
   final bool useImage;
-  final double circleSize;
+  final double cardExtent;
 
   const _SubcatCircle({
     required this.label,
     required this.selected,
     required this.onTap,
     required this.brand,
-    required this.circleSize,
+    required this.cardExtent,
     this.imageUrl,
     this.useImage = false,
   });
@@ -349,17 +349,23 @@ class _SubcatCircle extends StatelessWidget {
           )
         : null;
 
+
+    final innerRadius =
+    (_subcatCardRadius - _innerPadding).clamp(0.0, _subcatCardRadius).toDouble();
+
+
     Widget buildFallbackAvatar() => Container(
           color: colorScheme.primaryColor,
           alignment: Alignment.center,
           child: Icon(
             Icons.category_rounded,
             color: colorScheme.textLightColor,
-            size: circleSize * 0.5,
+            size: cardExtent  * 0.5,
           ),
         );
 
-    final Widget avatar = ClipOval(
+    final Widget avatar = ClipRRect(
+      borderRadius: BorderRadius.circular(innerRadius),
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -383,7 +389,7 @@ class _SubcatCircle extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(circleSize),
+      borderRadius: BorderRadius.circular(_subcatCardRadius),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -391,10 +397,10 @@ class _SubcatCircle extends StatelessWidget {
           AnimatedContainer(
             duration: _animationDuration,
             curve: Curves.easeOut,
-            width: circleSize,
-            height: circleSize,
+            width: cardExtent,
+            height: cardExtent,
             decoration: BoxDecoration(
-              shape: BoxShape.circle,
+              borderRadius: BorderRadius.circular(_subcatCardRadius),
               gradient: gradient,
               color: selected ? null : colorScheme.surface,
               border: Border.all(color: borderColor, width: 1.4),
@@ -407,7 +413,7 @@ class _SubcatCircle extends StatelessWidget {
 
           // العنوان + خط سفلي متحرك للمختار
           SizedBox(
-            width: circleSize + 12,
+            width: cardExtent  + 12,
             height: 30,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -418,7 +424,7 @@ class _SubcatCircle extends StatelessWidget {
                   curve: Curves.easeOut,
                   margin: const EdgeInsets.only(top: 4),
                   height: selected ? 3 : 0,
-                  width: selected ? (circleSize * 0.5) : 0,
+                  width: selected ? (cardExtent  * 0.5) : 0,
                   decoration: BoxDecoration(
                     color: brand,
                     borderRadius: BorderRadius.circular(2),

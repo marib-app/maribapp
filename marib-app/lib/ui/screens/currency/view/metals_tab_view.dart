@@ -91,9 +91,9 @@ class _MetalsTabViewState extends State<MetalsTabView> {
                 Text(
                   'أسعار المعادن الثمينة — $updatedLabel',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: _onBackground.withOpacity(0.85),
-                    fontWeight: FontWeight.w700,
-                  ),
+                        color: _onBackground.withOpacity(0.85),
+                        fontWeight: FontWeight.w700,
+                      ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   textDirection: TextDirection.rtl,
@@ -102,9 +102,9 @@ class _MetalsTabViewState extends State<MetalsTabView> {
                 Text(
                   'المصدر: $source',
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: _onBackground.withOpacity(0.6),
-                    fontWeight: FontWeight.w600,
-                  ),
+                        color: _onBackground.withOpacity(0.6),
+                        fontWeight: FontWeight.w600,
+                      ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   textDirection: TextDirection.rtl,
@@ -113,9 +113,9 @@ class _MetalsTabViewState extends State<MetalsTabView> {
                 Text(
                   'المحافظة المعروضة: ${_headerGovernorateLabel()}',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: _onBackground.withOpacity(0.6),
-                    fontWeight: FontWeight.w500,
-                  ),
+                        color: _onBackground.withOpacity(0.6),
+                        fontWeight: FontWeight.w500,
+                      ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textDirection: TextDirection.rtl,
@@ -144,11 +144,12 @@ class _MetalsTabViewState extends State<MetalsTabView> {
     final bool hasOther = sections
         .firstWhere(
           (section) => section.filter == _MetalsFilter.other,
-      orElse: () => const _MetalSection.empty(),
-    )
+          orElse: () => const _MetalSection.empty(),
+        )
         .exists;
     if (hasOther) {
-      options.add(const _FilterOption(filter: _MetalsFilter.other, label: 'أخرى'));
+      options
+          .add(const _FilterOption(filter: _MetalsFilter.other, label: 'أخرى'));
     } else if (_selectedFilter == _MetalsFilter.other) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _selectedFilter == _MetalsFilter.other) {
@@ -167,24 +168,24 @@ class _MetalsTabViewState extends State<MetalsTabView> {
         children: options
             .map(
               (option) => ChoiceChip(
-            label: Text(option.label),
-            selected: _selectedFilter == option.filter,
-            onSelected: (_) {
-              setState(() {
-                _selectedFilter = option.filter;
-              });
-            },
-            selectedColor: widget.brand.withOpacity(0.12),
-            labelStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: _selectedFilter == option.filter
-                  ? widget.brand
-                  : _onBackground.withOpacity(0.75),
-              fontWeight: FontWeight.w700,
-            ),
-            backgroundColor: Colors.transparent,
-            side: BorderSide(color: _borderColor),
-          ),
-        )
+                label: Text(option.label),
+                selected: _selectedFilter == option.filter,
+                onSelected: (_) {
+                  setState(() {
+                    _selectedFilter = option.filter;
+                  });
+                },
+                selectedColor: widget.brand.withOpacity(0.12),
+                labelStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: _selectedFilter == option.filter
+                          ? widget.brand
+                          : _onBackground.withOpacity(0.75),
+                      fontWeight: FontWeight.w700,
+                    ),
+                backgroundColor: Colors.transparent,
+                side: BorderSide(color: _borderColor),
+              ),
+            )
             .toList(growable: false),
       ),
     );
@@ -230,9 +231,9 @@ class _MetalsTabViewState extends State<MetalsTabView> {
                 child: Text(
                   section.title,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: _onBackground,
-                    fontWeight: FontWeight.w800,
-                  ),
+                        color: _onBackground,
+                        fontWeight: FontWeight.w800,
+                      ),
                   textDirection: TextDirection.rtl,
                 ),
               ),
@@ -240,9 +241,9 @@ class _MetalsTabViewState extends State<MetalsTabView> {
                 Text(
                   section.subtitle!,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: _onBackground.withOpacity(0.6),
-                    fontWeight: FontWeight.w600,
-                  ),
+                        color: _onBackground.withOpacity(0.6),
+                        fontWeight: FontWeight.w600,
+                      ),
                   textDirection: TextDirection.rtl,
                 ),
             ],
@@ -254,7 +255,7 @@ class _MetalsTabViewState extends State<MetalsTabView> {
         itemBuilder: (BuildContext _, int index) {
           final MetalRate rate = section.rates[index];
           final bool isWatchlisted =
-          widget.state.metalWatchlist.contains(rate.id);
+              widget.state.metalWatchlist.contains(rate.id);
           return _buildRateRow(section, rate, isWatchlisted);
         },
         separatorBuilder: (_, __) => Divider(height: 1, color: divider),
@@ -263,21 +264,28 @@ class _MetalsTabViewState extends State<MetalsTabView> {
   }
 
   Widget _buildRateRow(
-      _MetalSection section,
-      MetalRate rate,
-      bool isWatchlisted,
-      ) {
-    final TextStyle nameStyle = Theme.of(context).textTheme.titleSmall?.copyWith(
-      color: _onBackground,
-      fontWeight: FontWeight.w800,
-    ) ??
-        TextStyle(color: _onBackground, fontWeight: FontWeight.w800, fontSize: 15.5);
+    _MetalSection section,
+    MetalRate rate,
+    bool isWatchlisted,
+  ) {
+    final TextStyle nameStyle =
+        Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: _onBackground,
+                  fontWeight: FontWeight.w800,
+                ) ??
+            TextStyle(
+                color: _onBackground,
+                fontWeight: FontWeight.w800,
+                fontSize: 15.5);
 
-    final TextStyle labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
-      color: _onBackground.withOpacity(0.6),
-      fontWeight: FontWeight.w700,
-    ) ??
-        TextStyle(color: _onBackground.withOpacity(0.6), fontWeight: FontWeight.w700);
+    final TextStyle labelStyle =
+        Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: _onBackground.withOpacity(0.6),
+                  fontWeight: FontWeight.w700,
+                ) ??
+            TextStyle(
+                color: _onBackground.withOpacity(0.6),
+                fontWeight: FontWeight.w700);
 
     Widget chip(String label, Color color) {
       return Container(
@@ -289,10 +297,10 @@ class _MetalsTabViewState extends State<MetalsTabView> {
         child: Text(
           label,
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: color,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0.2,
-          ) ??
+                    color: color,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.2,
+                  ) ??
               TextStyle(color: color, fontWeight: FontWeight.w900),
         ),
       );
@@ -325,7 +333,9 @@ class _MetalsTabViewState extends State<MetalsTabView> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: section.accent,
-                  border: Border.all(color: Theme.of(context).scaffoldBackgroundColor, width: 2),
+                  border: Border.all(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      width: 2),
                 ),
                 child: const Icon(
                   Icons.warning_amber_rounded,
@@ -426,9 +436,9 @@ class _MetalsTabViewState extends State<MetalsTabView> {
                 ? 'لا توجد عناصر مراقبة في المعادن حالياً'
                 : 'لا توجد بيانات متاحة حالياً للمعادن',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: _onBackground,
-              fontWeight: FontWeight.w700,
-            ),
+                  color: _onBackground,
+                  fontWeight: FontWeight.w700,
+                ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -480,9 +490,9 @@ class _MetalsTabViewState extends State<MetalsTabView> {
           Text(
             message,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: _onBackground,
-              fontWeight: FontWeight.w700,
-            ),
+                  color: _onBackground,
+                  fontWeight: FontWeight.w700,
+                ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -537,16 +547,16 @@ class _MetalsTabViewState extends State<MetalsTabView> {
 
     final Iterable<MetalRate> visibleRates = sections
         .where((section) =>
-    _selectedFilter == _MetalsFilter.all ||
-        section.filter == _selectedFilter)
+            _selectedFilter == _MetalsFilter.all ||
+            section.filter == _selectedFilter)
         .expand((section) => section.rates);
 
     return pick(visibleRates) ?? pick(widget.state.metals.allRates);
   }
 
   String _headerGovernorateLabel() {
-    final String? applied =
-        widget.state.appliedGovernorateName ?? widget.state.requestedGovernorateName;
+    final String? applied = widget.state.appliedGovernorateName ??
+        widget.state.requestedGovernorateName;
     if (applied != null && applied.isNotEmpty) {
       return widget.state.usedFallback ? '$applied (افتراضي)' : applied;
     }
@@ -558,7 +568,7 @@ class _MetalsTabViewState extends State<MetalsTabView> {
         widget.state.appliedGovernorateName ??
         widget.state.requestedGovernorateName;
     final String base =
-    (name == null || name.isEmpty) ? _defaultGovernorateLabel : name;
+        (name == null || name.isEmpty) ? _defaultGovernorateLabel : name;
     if (rate.quoteUsedFallback || rate.quoteIsDefault) {
       return '$base (افتراضي)';
     }

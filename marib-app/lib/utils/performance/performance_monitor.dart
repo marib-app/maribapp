@@ -20,8 +20,10 @@ class PerformanceMonitor {
     defaultValue: false,
   );
 
-  final List<_RoutePerformanceSession> _completedSessions =
-      <_RoutePerformanceSession>[];
+  static const int _maxCompletedSessions = 10;
+
+  final List<_RoutePerformanceSnapshot> _completedSessions =
+      <_RoutePerformanceSnapshot>[];
   _RoutePerformanceSession? _currentSession;
   Stopwatch? _monotonicClock;
   int? _engineTimestampOffsetUs;
@@ -137,7 +139,8 @@ class PerformanceMonitor {
       return;
     }
     final file = await _resolveLogFile();
-    final List<_RoutePerformanceSession> sessions = <_RoutePerformanceSession>[
+    final List<_RoutePerformanceSnapshot> sessions =
+        <_RoutePerformanceSnapshot>[
       ..._completedSessions,
       if (_currentSession != null) _currentSession!.snapshot(),
     ];
@@ -155,18 +158,19 @@ class PerformanceMonitor {
   }
 
   Map<String, dynamic> _groupSessionsByRoute(
-    List<_RoutePerformanceSession> sessions,
+    List<_RoutePerformanceSnapshot> sessions,
   ) {
-    final Map<String, List<_RoutePerformanceSession>> grouped =
-        <String, List<_RoutePerformanceSession>>{};
-    for (final _RoutePerformanceSession session in sessions) {
+    final Map<String, List<_RoutePerformanceSnapshot>> grouped =
+        <String, List<_RoutePerformanceSnapshot>>{};
+    for (final _RoutePerformanceSnapshot session in sessions) {
       grouped.putIfAbsent(
-          session.routeName, () => <_RoutePerformanceSession>[]);
+          session.routeName, () => <_RoutePerformanceSnapshot>[]);
       grouped[session.routeName]!.add(session);
     }
 
     final Map<String, dynamic> summary = <String, dynamic>{};
-    grouped.forEach((String routeName, List<_RoutePerformanceSession> records) {
+    grouped
+        .forEach((String routeName, List<_RoutePerformanceSnapshot> records) {
       summary[routeName] = <String, dynamic>{
         'sessions': records.map((e) => e.toJson()).toList(),
         'aggregated': _aggregateSessions(records),
@@ -176,24 +180,33 @@ class PerformanceMonitor {
   }
 
   Map<String, dynamic> _aggregateSessions(
-      List<_RoutePerformanceSession> sessions) {
-    final List<double> frameTimes = <double>[];
+      List<_RoutePerformanceSnapshot> sessions) {
     int totalFrames = 0;
     int droppedFrames = 0;
     double totalFrameTimeMs = 0;
 
-    for (final _RoutePerformanceSession session in sessions) {
-      frameTimes.addAll(session.frameDurationsMs);
+    double weightedP50 = 0;
+    double weightedP95 = 0;
+    double p50Weight = 0;
+    double p95Weight = 0;
+
+    for (final _RoutePerformanceSnapshot session in sessions) {
       totalFrames += session.totalFrames;
       droppedFrames += session.droppedFrames;
-      totalFrameTimeMs += session.frameDurationsMs.fold<double>(
-        0,
-        (double a, double b) => a + b,
-      );
+      totalFrameTimeMs += session.totalFrameTimeMs;
+
+      if (session.p50FrameMs != null && session.totalFrames > 0) {
+        weightedP50 += session.p50FrameMs! * session.totalFrames;
+        p50Weight += session.totalFrames;
+      }
+      if (session.p95FrameMs != null && session.totalFrames > 0) {
+        weightedP95 += session.p95FrameMs! * session.totalFrames;
+        p95Weight += session.totalFrames;
+      }
     }
 
-    final double? p50 = _percentile(frameTimes, 0.50);
-    final double? p95 = _percentile(frameTimes, 0.95);
+    final double? p50 = p50Weight == 0 ? null : weightedP50 / p50Weight;
+    final double? p95 = p95Weight == 0 ? null : weightedP95 / p95Weight;
     final double averageFps =
         totalFrameTimeMs == 0 ? 0 : (totalFrames * 1000) / totalFrameTimeMs;
 
@@ -221,7 +234,13 @@ class PerformanceMonitor {
 
   void _endCurrentSession() {
     if (_currentSession != null) {
-      _completedSessions.add(_currentSession!.snapshot());
+      final _RoutePerformanceSnapshot snapshot =
+          _currentSession!.snapshot(finalize: true);
+      _completedSessions.add(snapshot);
+      if (_completedSessions.length > _maxCompletedSessions) {
+        _completedSessions.removeRange(
+            0, _completedSessions.length - _maxCompletedSessions);
+      }
       _currentSession = null;
       _scheduleReportWrite();
     }
@@ -277,11 +296,18 @@ class PerformanceMonitor {
     return (endUs - startUs) / 1000.0;
   }
 
-  static double? _percentile(List<double> values, double percentile) {
+  static double? _percentile(List<double> values, double percentile,
+      {bool valuesAreSorted = false}) {
     if (values.isEmpty) {
       return null;
     }
-    final List<double> sorted = List<double>.from(values)..sort();
+    final List<double> sorted;
+    if (valuesAreSorted) {
+      sorted = values;
+    } else {
+      sorted = List<double>.from(values)..sort();
+    }
+
     final double index = percentile * (sorted.length - 1);
     final int lowerIndex = index.floor();
     final int upperIndex = index.ceil();
@@ -310,8 +336,11 @@ class _RoutePerformanceSession {
 
   final String routeName;
   final int startedAtUs;
-  final List<double> frameDurationsMs = <double>[];
   final DateTime wallClockStartedAt;
+  final List<double> _frameDurationsMs = <double>[];
+
+  double _totalFrameTimeMs = 0;
+  bool _durationsSorted = false;
 
   int totalFrames = 0;
   int droppedFrames = 0;
@@ -324,42 +353,95 @@ class _RoutePerformanceSession {
     required int rasterFinishUs,
   }) {
     totalFrames += 1;
-    frameDurationsMs.add(timing.totalSpan.inMicroseconds / 1000.0);
+    final double frameDurationMs = timing.totalSpan.inMicroseconds / 1000.0;
+    _frameDurationsMs.add(frameDurationMs);
+    _totalFrameTimeMs += frameDurationMs;
+    _durationsSorted = false;
     droppedFrames += PerformanceMonitor.countDroppedFrames(timing.totalSpan);
     _firstFrameUs ??= buildStartUs;
     _firstMeaningfulFrameUs ??= rasterFinishUs;
   }
 
-  _RoutePerformanceSession snapshot() {
-    final _RoutePerformanceSession copy = _RoutePerformanceSession(
+  _RoutePerformanceSnapshot snapshot({bool finalize = false}) {
+    if (_frameDurationsMs.isNotEmpty && !_durationsSorted) {
+      _frameDurationsMs.sort();
+      _durationsSorted = true;
+    }
+
+    final double? p50 = PerformanceMonitor._percentile(
+      _frameDurationsMs,
+      0.50,
+      valuesAreSorted: true,
+    );
+    final double? p95 = PerformanceMonitor._percentile(
+      _frameDurationsMs,
+      0.95,
+      valuesAreSorted: true,
+    );
+
+    final _RoutePerformanceSnapshot snapshot = _RoutePerformanceSnapshot(
       routeName: routeName,
       startedAtUs: startedAtUs,
       wallClockStartedAt: wallClockStartedAt,
+      totalFrames: totalFrames,
+      droppedFrames: droppedFrames,
+      totalFrameTimeMs: _totalFrameTimeMs,
+      p50FrameMs: p50,
+      p95FrameMs: p95,
+      firstFrameUs: _firstFrameUs,
+      firstMeaningfulFrameUs: _firstMeaningfulFrameUs,
     );
-    copy.frameDurationsMs.addAll(frameDurationsMs);
-    copy.totalFrames = totalFrames;
-    copy.droppedFrames = droppedFrames;
-    copy._firstFrameUs = _firstFrameUs;
-    copy._firstMeaningfulFrameUs = _firstMeaningfulFrameUs;
-    return copy;
+    if (finalize) {
+      _frameDurationsMs.clear();
+      _durationsSorted = false;
+      _totalFrameTimeMs = 0;
+    }
+
+    return snapshot;
   }
+}
+
+class _RoutePerformanceSnapshot {
+  const _RoutePerformanceSnapshot({
+    required this.routeName,
+    required this.startedAtUs,
+    required this.wallClockStartedAt,
+    required this.totalFrames,
+    required this.droppedFrames,
+    required this.totalFrameTimeMs,
+    required this.p50FrameMs,
+    required this.p95FrameMs,
+    required this.firstFrameUs,
+    required this.firstMeaningfulFrameUs,
+  });
+
+  final String routeName;
+  final int startedAtUs;
+  final DateTime wallClockStartedAt;
+  final int totalFrames;
+  final int droppedFrames;
+  final double totalFrameTimeMs;
+  final double? p50FrameMs;
+  final double? p95FrameMs;
+  final int? firstFrameUs;
+  final int? firstMeaningfulFrameUs;
 
   Map<String, dynamic> toJson() {
+    final double averageFps =
+        totalFrameTimeMs == 0 ? 0 : (totalFrames * 1000) / totalFrameTimeMs;
+
     return <String, dynamic>{
       'routeName': routeName,
       'startedAt': wallClockStartedAt.toIso8601String(),
       'frames': totalFrames,
       'droppedFrames': droppedFrames,
-      'averageFps': frameDurationsMs.isEmpty
-          ? 0
-          : (totalFrames * 1000) /
-              frameDurationsMs.fold<double>(0, (double a, double b) => a + b),
-      'p50FrameMs': PerformanceMonitor._percentile(frameDurationsMs, 0.50),
-      'p95FrameMs': PerformanceMonitor._percentile(frameDurationsMs, 0.95),
+      'averageFps': averageFps,
+      'p50FrameMs': p50FrameMs,
+      'p95FrameMs': p95FrameMs,
       'ttffMs': PerformanceMonitor.instance
-          ._computeDurationMs(startedAtUs, _firstFrameUs),
+          ._computeDurationMs(startedAtUs, firstFrameUs),
       'fmpMs': PerformanceMonitor.instance
-          ._computeDurationMs(startedAtUs, _firstMeaningfulFrameUs),
+          ._computeDurationMs(startedAtUs, firstMeaningfulFrameUs),
     };
   }
 }

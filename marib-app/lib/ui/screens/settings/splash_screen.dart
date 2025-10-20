@@ -429,13 +429,19 @@ class SplashScreenState extends State<SplashScreen>
                         ),
                         SizedBox(
                           height: 545,
-                          child: Center(
-                            child: AnimatedOpacity(
-                              opacity: _showIntroUi ? 1 : 0,
-                              duration: const Duration(milliseconds: 500),
-                              curve: Curves.easeInOut,
-                              child: _IntroContent(
-                                dotsAnimation: _dotsController,
+                          child: Align(
+                            alignment: Alignment.topCenter,
+                            child: Padding(
+                              padding: EdgeInsets.only(
+                                top: ScreenScaler.s(16),
+                              ),
+                              child: AnimatedOpacity(
+                                opacity: _showIntroUi ? 1 : 0,
+                                duration: const Duration(milliseconds: 500),
+                                curve: Curves.easeInOut,
+                                child: _IntroContent(
+                                  dotsAnimation: _dotsController,
+                                ),
                               ),
                             ),
                           ),

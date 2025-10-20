@@ -355,6 +355,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   @override
   void dispose() {
+    _hintAnimationController.dispose();
     _hintTimer?.cancel();
     currentIndex.dispose();
     super.dispose();
@@ -373,7 +374,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             children: [
               ConcentricPageView(
                 reverse: true,
-                onChange: (i) => currentIndex.value = i,
+                onChange: (i) {
+                  currentIndex.value = i;
+                  _syncHintAnimation();
+                },
                 itemCount: data.length,
                 colors:
                     data.map((e) => e.backgroundGradientColors.last).toList(),
@@ -388,6 +392,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   },
                 ),
                 onFinish: () {
+                  if (_showHint) {
+                    setState(() => _showHint = false);
+                  }
+                  _syncHintAnimation();
                   HiveUtils.setUserIsNotNew();
                   Navigator.of(context)
                       .pushNamedAndRemoveUntil(Routes.login, (_) => false);
@@ -423,7 +431,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               ValueListenableBuilder<int>(
                 valueListenable: currentIndex,
                 builder: (context, index, _) {
-                  if (!_showHint || index == data.length - 1) {
+                  final shouldShowHint = _showHint && index != data.length - 1;
+                  if (!shouldShowHint) {
                     return const SizedBox.shrink();
                   }
                   return Positioned(
@@ -432,17 +441,23 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     right: 0,
                     child: IgnorePointer(
                       ignoring: true,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Icon(Icons.swipe_right, color: Colors.white70),
-                          SizedBox(height: 6),
-                          Text(
-                            "اسحب لليمين للمتابعة",
-                            style:
-                                TextStyle(color: Colors.white70, fontSize: 14),
+                      child: FadeTransition(
+                        opacity: _hintFadeAnimation,
+                        child: SlideTransition(
+                          position: _hintSlideAnimation,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(Icons.swipe_right, color: Colors.white70),
+                              SizedBox(height: 6),
+                              Text(
+                                "اسحب لليمين للمتابعة",
+                                style: TextStyle(
+                                    color: Colors.white70, fontSize: 14),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   );

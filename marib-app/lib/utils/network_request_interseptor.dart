@@ -16,6 +16,12 @@ class NetworkRequestInterseptor extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    if (kReleaseMode) {
+      handler.next(options);
+      return;
+    }
+
+
     if (!_isLoggingEnabled) {
       handler.next(options);
       return;
@@ -51,6 +57,12 @@ class NetworkRequestInterseptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
+    if (kReleaseMode) {
+      handler.next(err);
+      return;
+    }
+
+
     if (!_isLoggingEnabled) {
       handler.next(err);
       return;
@@ -95,6 +107,12 @@ class NetworkRequestInterseptor extends Interceptor {
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
+    if (kReleaseMode) {
+      handler.next(response);
+      return;
+    }
+
+
     if (!_isLoggingEnabled) {
       handler.next(response);
       return;

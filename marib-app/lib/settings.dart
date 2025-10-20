@@ -53,7 +53,11 @@ class AppSettings {
   /// development sessions. Developers who need to troubleshoot specific calls
   /// can either flip this flag locally or use [setNetworkLoggingOverride] at
   /// runtime when running a debug/profile build.
-  static const bool enableNetworkLogging = false;
+  static const bool enableNetworkLogging = bool.fromEnvironment(
+    'MARIB_ENABLE_NETWORK_LOGGING',
+    defaultValue: false,
+  );
+
 
   static bool _networkLoggingOverride = false;
 

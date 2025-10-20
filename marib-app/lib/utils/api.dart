@@ -217,7 +217,6 @@ class Api {
     }
   }
 
-
   // تهيئة الهيدرز لكل الطلبات
   // - لو المستخدم غير مسجل: نضيف اللغة فقط إن وجدت
   // - لو مسجل: نضيف Bearer <JWT> + اللغة
@@ -354,17 +353,40 @@ class Api {
 
   static const Object _contentTypeNotSpecified = Object();
 
+  static Dio Function()? _dioFactory;
+
   @visibleForTesting
-  static Dio Function()? dioFactory;
+  static Dio Function()? get dioFactory => _dioFactory;
+
+  @visibleForTesting
+  static set dioFactory(Dio Function()? factory) {
+    if (identical(_dioFactory, factory)) {
+      return;
+    }
+
+    _dioFactory = factory;
+
+    _customDio?.close(force: true);
+    _customDio = null;
+    _customDioOptionsSnapshot = null;
+    _activeClientFactory = null;
+
+    if (factory != null) {
+      final Dio newDio = factory();
+      _configureCustomDio(newDio);
+      _customDio = newDio;
+      _activeClientFactory = factory;
+    }
+  }
 
   static late _DioBaseOptionsSnapshot _sharedDioOptionsSnapshot;
-  static Dio _sharedDio = _createSharedDio();
+  static Dio _sharedDio = _createSharedClient();
   static Dio? _customDio;
   static _DioBaseOptionsSnapshot? _customDioOptionsSnapshot;
 
   static Dio Function()? _activeClientFactory;
 
-  static Dio _createSharedDio() {
+  static Dio _createSharedClient() {
     final Dio dio = Dio();
     dio.options
       ..headers = <String, dynamic>{}
@@ -455,7 +477,7 @@ class Api {
   @visibleForTesting
   static void resetSharedHttpClient() {
     _sharedDio.close(force: true);
-    _sharedDio = _createSharedDio();
+    _sharedDio = _createSharedClient();
     _customDio?.close(force: true);
     _customDio = null;
     _customDioOptionsSnapshot = null;

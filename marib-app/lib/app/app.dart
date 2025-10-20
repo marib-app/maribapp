@@ -13,6 +13,10 @@ import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platf
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:marib/utils/performance/performance_monitor.dart';
+import 'package:hydrated_bloc/hydrated_bloc.dart';
+import 'package:marib/utils/performance/performance_monitor.dart';
+import 'package:path_provider/path_provider.dart';
+
 
 PersonalizedInterestSettings personalizedInterestSettings =
     PersonalizedInterestSettings.empty();
@@ -26,6 +30,12 @@ void initApp() async {
   WidgetsBinding.instance.addTimingsCallback(
     PerformanceMonitor.instance.handleFrameTimings,
   );
+  final HydratedStorage storage = await HydratedStorage.build(
+    storageDirectory: kIsWeb
+        ? HydratedStorage.webStorageDirectory
+        : await getTemporaryDirectory(),
+  );
+  HydratedBloc.storage = storage;
   final GoogleMapsFlutterPlatform mapsImplementation =
       GoogleMapsFlutterPlatform.instance;
   if (mapsImplementation is GoogleMapsFlutterAndroid) {
@@ -47,7 +57,7 @@ void initApp() async {
   //   await Firebase.initializeApp();
   // }
 
-   await Firebase.initializeApp();
+  await Firebase.initializeApp();
 
   MobileAds.instance.initialize();
 

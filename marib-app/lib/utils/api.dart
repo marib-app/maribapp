@@ -87,8 +87,6 @@ class _ApiResponseCache {
       return;
     }
 
-
-
     final DateTime now = _clock();
     final List<String> expiredKeys = <String>[];
     _cache.forEach((String key, _CachedApiResponse value) {
@@ -187,9 +185,9 @@ class _ApiResponseCache {
     String url,
     Map<String, dynamic>? queryParameters,
     Map<String, dynamic> payload,
-      String? eTag, {
-        Duration? ttl,
-      }) {
+    String? eTag, {
+    Duration? ttl,
+  }) {
     _purgeExpiredEntries();
     final key = _buildKey(url, queryParameters);
     _cache.remove(key);
@@ -214,7 +212,6 @@ class Api {
   static void clearCache() {
     _ApiResponseCache.clear();
   }
-
 
   /// Clears cached API responses when authentication context changes.
   static void handleAccountChange() {
@@ -246,7 +243,6 @@ class Api {
     required Map<String, dynamic> payload,
     String? eTag,
     Duration? ttl,
-
   }) {
     _ApiResponseCache.store(
       url,
@@ -255,7 +251,6 @@ class Api {
       eTag,
       ttl: ttl,
     );
-
   }
 
   @visibleForTesting
@@ -349,29 +344,58 @@ class Api {
   @visibleForTesting
   static Dio Function()? dioFactory;
 
-  static Dio? _sharedClient;
+  static late _DioBaseOptionsSnapshot _sharedDioOptionsSnapshot;
+  static Dio _sharedDio = _createSharedDio();
+  static Dio? _customDio;
+  static _DioBaseOptionsSnapshot? _customDioOptionsSnapshot;
+
   static Dio Function()? _activeClientFactory;
-  static _DioBaseOptionsSnapshot? _sharedClientOptionsSnapshot;
 
-  static Dio _client() {
-    final Dio Function()? factory = dioFactory;
-    if (_sharedClient != null && identical(factory, _activeClientFactory)) {
-      _ensureNetworkInterceptor(_sharedClient!);
-      return _sharedClient!;
-    }
-
-    final Dio newDio = (factory ?? Dio.new)();
-    _configureSharedClient(newDio);
-    _sharedClient = newDio;
-    _activeClientFactory = factory;
-    return newDio;
+  static Dio _createSharedDio() {
+    final Dio dio = Dio();
+    dio.options
+      ..headers = <String, dynamic>{}
+      ..queryParameters = <String, dynamic>{}
+      ..contentType = null
+      ..followRedirects = false
+      ..validateStatus = (status) => status != null && status < 400;
+    _sharedDioOptionsSnapshot = _DioBaseOptionsSnapshot.capture(dio.options);
+    _ensureNetworkInterceptor(dio);
+    return dio;
   }
 
-  static void _configureSharedClient(Dio dio) {
+  static void _configureCustomDio(Dio dio) {
     dio.options.followRedirects = false;
     dio.options.validateStatus = (status) => status != null && status < 400;
-    _sharedClientOptionsSnapshot = _DioBaseOptionsSnapshot.capture(dio.options);
+    _customDioOptionsSnapshot = _DioBaseOptionsSnapshot.capture(dio.options);
     _ensureNetworkInterceptor(dio);
+  }
+
+  static Dio _dioForRequest({required bool allowAnyStatus}) {
+    final Dio Function()? factory = dioFactory;
+    if (factory != null) {
+      if (_customDio == null || !identical(factory, _activeClientFactory)) {
+        _customDio?.close(force: true);
+        final Dio newDio = factory();
+        _configureCustomDio(newDio);
+        _customDio = newDio;
+        _activeClientFactory = factory;
+      }
+      final Dio dio = _customDio!;
+      _resetDioOptionsForRequest(dio, allowAnyStatus: allowAnyStatus);
+      return dio;
+    }
+
+    if (_activeClientFactory != null) {
+      _customDio?.close(force: true);
+      _customDio = null;
+      _customDioOptionsSnapshot = null;
+      _activeClientFactory = null;
+    }
+
+    final Dio dio = _sharedDio;
+    _resetDioOptionsForRequest(dio, allowAnyStatus: allowAnyStatus);
+    return dio;
   }
 
   static void _ensureNetworkInterceptor(Dio dio) {
@@ -388,11 +412,13 @@ class Api {
     }
   }
 
-  static void _resetClientOptionsForRequest(
+  static void _resetDioOptionsForRequest(
     Dio dio, {
     required bool allowAnyStatus,
   }) {
-    final _DioBaseOptionsSnapshot? snapshot = _sharedClientOptionsSnapshot;
+    final bool isShared = identical(dio, _sharedDio);
+    final _DioBaseOptionsSnapshot? snapshot =
+        isShared ? _sharedDioOptionsSnapshot : _customDioOptionsSnapshot;
     if (snapshot != null) {
       snapshot.applyTo(dio.options);
     } else {
@@ -404,17 +430,23 @@ class Api {
         ..validateStatus = (status) => status != null && status < 400;
     }
 
+    dio.options.headers ??= <String, dynamic>{};
+    dio.options.queryParameters ??= <String, dynamic>{};
+
     if (allowAnyStatus) {
       dio.options.validateStatus = (_) => true;
     }
+    _ensureNetworkInterceptor(dio);
   }
 
   @visibleForTesting
   static void resetSharedHttpClient() {
-    _sharedClient?.close();
-    _sharedClient = null;
+    _sharedDio.close(force: true);
+    _sharedDio = _createSharedDio();
+    _customDio?.close(force: true);
+    _customDio = null;
+    _customDioOptionsSnapshot = null;
     _activeClientFactory = null;
-    _sharedClientOptionsSnapshot = null;
   }
 
   static String? _resolveContentType({
@@ -853,8 +885,8 @@ class Api {
       if (_isSliderEndpoint(url)) {
         await HiveUtils.ensureSliderSessionId();
       }
-      final Dio dio = _client();
-      _resetClientOptionsForRequest(dio, allowAnyStatus: true);
+      final Dio dio = _dioForRequest(allowAnyStatus: true);
+
       FormData formData;
       final bool parameterIsFormData = parameter is FormData;
 
@@ -1104,8 +1136,8 @@ class Api {
       if (_isSliderEndpoint(url)) {
         await HiveUtils.ensureSliderSessionId();
       }
-      final Dio dio = _client();
-      _resetClientOptionsForRequest(dio, allowAnyStatus: false);
+      final Dio dio = _dioForRequest(allowAnyStatus: false);
+
       final Options requestOptions = _buildRequestOptions(
         headers: headers(),
         followRedirects: false,
@@ -1169,8 +1201,8 @@ class Api {
       if (_isSliderEndpoint(url)) {
         await HiveUtils.ensureSliderSessionId();
       }
-      final Dio dio = _client();
-      _resetClientOptionsForRequest(dio, allowAnyStatus: false);
+      final Dio dio = _dioForRequest(allowAnyStatus: false);
+
       final Map<String, dynamic>? optionHeaders = options?.headers;
       final Map<String, dynamic> mergedHeaders = <String, dynamic>{
         ...headers(),
@@ -1354,9 +1386,8 @@ class Api {
       if (_isSliderEndpoint(url)) {
         await HiveUtils.ensureSliderSessionId();
       }
+      final Dio dio = _dioForRequest(allowAnyStatus: false);
 
-      final Dio dio = _client();
-      _resetClientOptionsForRequest(dio, allowAnyStatus: false);
       final bool resolvedUseBaseUrl = useBaseUrl ?? true;
       final String requestUrl =
           (resolvedUseBaseUrl ? Constant.baseUrl : "") + url;

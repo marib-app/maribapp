@@ -14,6 +14,10 @@ class PerformanceMonitor {
 
   static const _frameBudget = Duration(microseconds: 16667);
   static const _startupRouteName = '__startup__';
+  static const bool _envCollectionEnabled = bool.fromEnvironment(
+    'MARIB_ENABLE_PERFORMANCE_MONITOR',
+    defaultValue: false,
+  );
 
   final List<_RoutePerformanceSession> _completedSessions = <_RoutePerformanceSession>[];
   _RoutePerformanceSession? _currentSession;
@@ -27,8 +31,13 @@ class PerformanceMonitor {
   bool _initialized = false;
 
   Timer? _pendingWrite;
+  bool get shouldCollectMetrics =>
+      kDebugMode || kProfileMode || _envCollectionEnabled;
 
   void initialize() {
+    if (!shouldCollectMetrics) {
+      return;
+    }
     if (_initialized) {
       return;
     }
@@ -45,6 +54,9 @@ class PerformanceMonitor {
   }
 
   void handleFrameTimings(List<FrameTiming> timings) {
+    if (!shouldCollectMetrics) {
+      return;
+    }
     if (!_initialized) {
       initialize();
     }
@@ -80,16 +92,25 @@ class PerformanceMonitor {
   }
 
   void onRoutePushed(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (!shouldCollectMetrics) {
+      return;
+    }
     _switchRoute(route.settings.name ?? route.runtimeType.toString());
   }
 
   void onRouteReplaced(Route<dynamic>? newRoute, Route<dynamic>? oldRoute) {
+    if (!shouldCollectMetrics) {
+      return;
+    }
     if (newRoute != null) {
       _switchRoute(newRoute.settings.name ?? newRoute.runtimeType.toString());
     }
   }
 
   void onRoutePopped(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (!shouldCollectMetrics) {
+      return;
+    }
     if (previousRoute != null) {
       _switchRoute(previousRoute.settings.name ??
           previousRoute.runtimeType.toString());
@@ -100,6 +121,9 @@ class PerformanceMonitor {
   }
 
   Future<void> saveReport() async {
+    if (!shouldCollectMetrics) {
+      return;
+    }
     final file = await _resolveLogFile();
     final List<_RoutePerformanceSession> sessions = <_RoutePerformanceSession>[
       ..._completedSessions,
@@ -190,6 +214,9 @@ class PerformanceMonitor {
   }
 
   void _scheduleReportWrite() {
+    if (!shouldCollectMetrics) {
+      return;
+    }
     _pendingWrite ??= Timer(const Duration(seconds: 1), () {
       _pendingWrite = null;
       unawaited(saveReport());

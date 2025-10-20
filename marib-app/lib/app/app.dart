@@ -14,7 +14,6 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:marib/utils/performance/performance_monitor.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
-import 'package:marib/utils/performance/performance_monitor.dart';
 import 'package:path_provider/path_provider.dart';
 
 PersonalizedInterestSettings personalizedInterestSettings =
@@ -24,9 +23,10 @@ void initApp() async {
   ///Note: this file's code is very necessary and sensitive if you change it, this might affect whole app , So change it carefully.
   ///This must be used do not remove this line
   WidgetsFlutterBinding.ensureInitialized();
-  if (!kReleaseMode) {
+  if (PerformanceMonitor.instance.shouldCollectMetrics) {
     PerformanceMonitor.instance.initialize();
-    WidgetsBinding.instance.addTimingsCallback(
+    final WidgetsBinding binding = WidgetsBinding.instance;
+    binding.addTimingsCallback(
       PerformanceMonitor.instance.handleFrameTimings,
     );
   }

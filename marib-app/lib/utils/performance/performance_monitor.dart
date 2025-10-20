@@ -199,11 +199,7 @@ class PerformanceMonitor {
     }
     _updateEnabledState(true);
     final file = await _resolveLogFile();
-    final List<_RoutePerformanceSnapshot> sessions =
-        <_RoutePerformanceSnapshot>[
-      ..._completedSessions,
-      if (_currentSession != null) _currentSession!.snapshot(),
-    ];
+    final List<_RoutePerformanceSnapshot> sessions = _buildSessionsForReport();
 
     final Map<String, dynamic> payload = <String, dynamic>{
       'generatedAt': DateTime.now().toIso8601String(),
@@ -216,6 +212,18 @@ class PerformanceMonitor {
     await file.writeAsString(encoder.convert(payload));
     debugPrint('Performance metrics written to: ${file.path}');
     _completedSessions.clear();
+  }
+
+  List<_RoutePerformanceSnapshot> _buildSessionsForReport() {
+    final List<_RoutePerformanceSnapshot> sessions =
+        List<_RoutePerformanceSnapshot>.from(_completedSessions);
+    if (_currentSession != null) {
+      sessions.add(_currentSession!.snapshot());
+    }
+    if (sessions.length > _maxCompletedSessions) {
+      sessions.removeRange(0, sessions.length - _maxCompletedSessions);
+    }
+    return sessions;
   }
 
   Map<String, dynamic> _groupSessionsByRoute(
@@ -438,22 +446,10 @@ class _RoutePerformanceSnapshot {
   final int? firstFrameUs;
   final int? firstMeaningfulFrameUs;
 
-  int get totalFrames => frameMetrics.frameCount;
-
-  int get droppedFrames => frameMetrics.droppedFrames;
-
   Map<String, dynamic> toJson() {
-    final double averageFps = frameMetrics.averageFps;
-
     return <String, dynamic>{
       'routeName': routeName,
       'startedAt': wallClockStartedAt.toIso8601String(),
-      'frames': totalFrames,
-      'droppedFrames': droppedFrames,
-      'averageFps': averageFps,
-      'meanFrameMs': frameMetrics.meanFrameMs,
-      'p50FrameMs': frameMetrics.p50FrameMs,
-      'p95FrameMs': frameMetrics.p95FrameMs,
       'frameMetrics': frameMetrics.toJson(),
       'ttffMs': PerformanceMonitor.instance
           ._computeDurationMs(startedAtUs, firstFrameUs),

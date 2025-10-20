@@ -91,10 +91,14 @@ class FrameStatsSummary {
   Map<String, dynamic> toJson() => <String, dynamic>{
     'count': frameCount,
     'dropped': droppedFrames,
-    'meanMs': meanFrameMs,
-    'p50Ms': p50FrameMs,
-    'p95Ms': p95FrameMs,
+    'sumFrameMs': totalFrameTimeMs,
     'totalTimeMs': totalFrameTimeMs,
+    'meanFrameMs': meanFrameMs,
+    'meanMs': meanFrameMs,
+    'p50FrameMs': p50FrameMs,
+    'p50Ms': p50FrameMs,
+    'p95FrameMs': p95FrameMs,
+    'p95Ms': p95FrameMs,
     'averageFps': averageFps,
   };
 

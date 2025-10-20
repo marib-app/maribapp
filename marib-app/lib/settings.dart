@@ -11,13 +11,11 @@ import 'package:marib/utils/payment/east_yemen_bank_config.dart';
 
 enum PaymentGatewayType { wallet, manualBank, eastYemenBank }
 
-
 class PaymentGateway {
   const PaymentGateway({
     required this.id,
     required this.name,
     required this.type,
-
     this.enabled = true,
     this.metadata = const <String, dynamic>{},
   });
@@ -41,18 +39,20 @@ class AppSettings {
 
   //  "https://maribsrv.com"; //don't add / at end but https:// is required
 
+  static const String hostUrl = "http://192.168.1.247:8000";
 
- static const String hostUrl = "http://192.168.1.247:8000";
   ///API Setting
-
 
   static const int apiDataLoadLimit = 20;
   static const int maxCategoryShowLengthInHomeScreen = 5;
 
-
   /// Enable verbose network logging in non-production builds.
   /// Set to `false` for production environments to disable the interceptor entirely.
   static const bool enableNetworkLogging = true;
+
+  /// Enable the custom performance monitor in debug/profile builds.
+  /// Keep this `false` in production unless troubleshooting locally.
+  static const bool enablePerfLogging = false;
 
   static final String baseUrl =
       "${HelperUtils.checkHost(hostUrl)}api/"; //don't change this
@@ -67,7 +67,6 @@ it will call API in background without showing the process and when data availab
 
   ///Set type here
   static const DeepLinkType deepLinkingType = DeepLinkType.native;
-
 
   static const String shareNavigationWebUrl = "maribsrv.com";
 
@@ -84,9 +83,6 @@ it will call API in background without showing the process and when data availab
   ///Firebase authentication OTP timer.
   static const int otpResendSecond = 60 * 2;
   static const int otpTimeOutSecond = 60 * 2;
-
-
-
 
   ///This code will show on login screen [Note: don't add  + symbol]
   static const String defaultCountryCode = "967";
@@ -149,7 +145,6 @@ it will call API in background without showing the process and when data availab
       ),
     ];
 
-
     if (eastYemenBank != null) {
       configured.add(
         PaymentGateway(
@@ -181,7 +176,9 @@ it will call API in background without showing the process and when data availab
   }
 
   static List<PaymentGateway> getEnabledPaymentGateways() {
-    return paymentGateways.where((gateway) => gateway.isEnabled).toList(growable: false);
+    return paymentGateways
+        .where((gateway) => gateway.isEnabled)
+        .toList(growable: false);
   }
 }
 

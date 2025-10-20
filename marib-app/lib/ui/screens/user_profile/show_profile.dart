@@ -376,8 +376,6 @@ class UserProfileScreenState extends State<ShowUserProfileScreen>
 
   /// التقاط/اختيار صورة + قصّها ثم الاحتفاظ بها محليًا قبل الرفع
   Future<void> _imgFromGallery(ImageSource imageSource) async {
-
-
     final pickedFile = await ImagePicker().pickImage(source: imageSource);
 
     if (pickedFile != null) {

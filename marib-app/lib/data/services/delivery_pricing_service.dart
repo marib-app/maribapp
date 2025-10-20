@@ -12,7 +12,8 @@ import 'package:marib/utils/network_request_interseptor.dart';
 /// Exception thrown when delivery pricing requests fail.
 @immutable
 class DeliveryPricingException implements Exception {
-  const DeliveryPricingException(this.message, {this.statusCode, this.payload, this.cause});
+  const DeliveryPricingException(this.message,
+      {this.statusCode, this.payload, this.cause});
 
   final String message;
   final int? statusCode;
@@ -28,10 +29,10 @@ enum DeliveryPackageSize { small, medium, large }
 
 extension DeliveryPackageSizeLabel on DeliveryPackageSize {
   String get label => switch (this) {
-    DeliveryPackageSize.small => 'small',
-    DeliveryPackageSize.medium => 'medium',
-    DeliveryPackageSize.large => 'large',
-  };
+        DeliveryPackageSize.small => 'small',
+        DeliveryPackageSize.medium => 'medium',
+        DeliveryPackageSize.large => 'large',
+      };
 }
 
 /// Runtime configuration resolved from `--dart-define` entries.
@@ -48,8 +49,9 @@ class DeliveryPricingConfig {
 
   factory DeliveryPricingConfig.fromEnvironment() {
     final String envBase =
-    const String.fromEnvironment('DELIVERY_PRICING_BASE_URL').trim();
-    final String baseCandidate = envBase.isNotEmpty ? envBase : _fallbackBaseUrl();
+        const String.fromEnvironment('DELIVERY_PRICING_BASE_URL').trim();
+    final String baseCandidate =
+        envBase.isNotEmpty ? envBase : _fallbackBaseUrl();
 
     final String policyEndpoint = const String.fromEnvironment(
       'DELIVERY_PRICING_LIST_ENDPOINT',
@@ -62,11 +64,11 @@ class DeliveryPricingConfig {
     ).trim();
 
     final int timeoutSeconds = int.tryParse(
-      const String.fromEnvironment(
-        'DELIVERY_PRICING_TIMEOUT',
-        defaultValue: '10',
-      ),
-    ) ??
+          const String.fromEnvironment(
+            'DELIVERY_PRICING_TIMEOUT',
+            defaultValue: '10',
+          ),
+        ) ??
         10;
 
     double parseWeight(String rawValue, double fallback) {
@@ -76,16 +78,16 @@ class DeliveryPricingConfig {
     }
 
     final String smallWeightRaw =
-    const String.fromEnvironment('DELIVERY_PRICING_SMALL_WEIGHT');
+        const String.fromEnvironment('DELIVERY_PRICING_SMALL_WEIGHT');
     final String mediumWeightRaw =
-    const String.fromEnvironment('DELIVERY_PRICING_MEDIUM_WEIGHT');
+        const String.fromEnvironment('DELIVERY_PRICING_MEDIUM_WEIGHT');
     final String largeWeightRaw =
-    const String.fromEnvironment('DELIVERY_PRICING_LARGE_WEIGHT');
+        const String.fromEnvironment('DELIVERY_PRICING_LARGE_WEIGHT');
 
     return DeliveryPricingConfig._(
       baseUrl: baseCandidate,
       policyEndpoint:
-      policyEndpoint.isEmpty ? '/api/delivery-prices' : policyEndpoint,
+          policyEndpoint.isEmpty ? '/api/delivery-prices' : policyEndpoint,
       calculateEndpoint: calculateEndpoint.isEmpty
           ? '/api/delivery-prices/calculate'
           : calculateEndpoint,
@@ -127,10 +129,10 @@ class DeliveryPricingConfig {
   final double largeWeight;
 
   double weightForSize(DeliveryPackageSize size) => switch (size) {
-    DeliveryPackageSize.small => smallWeight,
-    DeliveryPackageSize.medium => mediumWeight,
-    DeliveryPackageSize.large => largeWeight,
-  };
+        DeliveryPackageSize.small => smallWeight,
+        DeliveryPackageSize.medium => mediumWeight,
+        DeliveryPackageSize.large => largeWeight,
+      };
 }
 
 /// Low-level client responsible for interacting with the delivery pricing API.
@@ -168,7 +170,9 @@ class DeliveryPricingService {
     final String? departmentCode = normalizeDeliveryDepartment(department);
     final Uri uri = _resolveUri(
       _config.policyEndpoint,
-      departmentCode != null ? <String, dynamic>{'department': departmentCode} : null,
+      departmentCode != null
+          ? <String, dynamic>{'department': departmentCode}
+          : null,
     );
 
     try {
@@ -293,11 +297,11 @@ class DeliveryPricingService {
   Uri _resolveUri(String endpoint, [Map<String, dynamic>? query]) {
     final String trimmedEndpoint = endpoint.trim();
     final Uri uri = trimmedEndpoint.startsWith('http://') ||
-        trimmedEndpoint.startsWith('https://')
+            trimmedEndpoint.startsWith('https://')
         ? Uri.parse(trimmedEndpoint)
         : _baseUri.resolve(trimmedEndpoint.startsWith('/')
-        ? trimmedEndpoint.substring(1)
-        : trimmedEndpoint);
+            ? trimmedEndpoint.substring(1)
+            : trimmedEndpoint);
 
     if (query == null || query.isEmpty) {
       return uri;
@@ -343,7 +347,8 @@ class DeliveryPricingService {
 
   static String? _extractMessage(Map<String, dynamic>? payload) {
     if (payload == null) return null;
-    final dynamic message = payload['message'] ?? payload['error'] ?? payload['msg'];
+    final dynamic message =
+        payload['message'] ?? payload['error'] ?? payload['msg'];
     return message?.toString();
   }
 }
@@ -406,7 +411,7 @@ class DeliveryPricingResult {
 
     final Map<String, dynamic>? policyMap = _mapify(data['policy']);
     final Map<String, dynamic>? tierMap =
-    _mapify(data['weight_tier'] ?? data['tier']);
+        _mapify(data['weight_tier'] ?? data['tier']);
     final Map<String, dynamic>? ruleMap = _mapify(data['rule']);
 
     final num? total = _asNum(_firstValue(data, const [
@@ -434,10 +439,10 @@ class DeliveryPricingResult {
     ]));
 
     final bool isFree = _asBool(_firstValue(data, const [
-      ['is_free'],
-      ['free_shipping'],
-      ['is_free_shipping'],
-    ])) ??
+          ['is_free'],
+          ['free_shipping'],
+          ['is_free_shipping'],
+        ])) ??
         (total != null && total == 0);
 
     final String? mode = _asString(data['mode']);
@@ -499,9 +504,9 @@ class DeliveryPricingResult {
   }
 
   static dynamic _firstValue(
-      Map<String, dynamic> map,
-      List<List<String>> paths,
-      ) {
+    Map<String, dynamic> map,
+    List<List<String>> paths,
+  ) {
     for (final List<String> path in paths) {
       dynamic current = map;
       var success = true;

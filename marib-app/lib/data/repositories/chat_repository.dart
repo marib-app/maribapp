@@ -11,8 +11,7 @@ class ChatRepostiory {
 
   String? _normalizeField(String? value) {
     final String? trimmed = value?.trim();
-    if (trimmed == null || trimmed.isEmpty ||
-        trimmed.toLowerCase() == 'null') {
+    if (trimmed == null || trimmed.isEmpty || trimmed.toLowerCase() == 'null') {
       return null;
     }
     return trimmed;
@@ -31,14 +30,10 @@ class ChatRepostiory {
       queryParameters: {"type": "buyer", "page": page},
     );
 
+    final _ParsedPaginatedMap parsed = _parsePaginatedMap(response['data']);
 
-    final _ParsedPaginatedMap parsed =
-    _parsePaginatedMap(response['data']);
-
-    final List<ChatedUser> modelList = parsed.items
-        .map(ChatedUser.fromJson)
-        .toList();
-
+    final List<ChatedUser> modelList =
+        parsed.items.map(ChatedUser.fromJson).toList();
 
     return DataOutput(
       total: parsed.total,
@@ -53,12 +48,10 @@ class ChatRepostiory {
       queryParameters: {"page": page, "type": "seller"},
     );
 
-    final _ParsedPaginatedMap parsed =
-    _parsePaginatedMap(response['data']);
+    final _ParsedPaginatedMap parsed = _parsePaginatedMap(response['data']);
 
-    final List<ChatedUser> modelList = parsed.items
-        .map(ChatedUser.fromJson)
-        .toList();
+    final List<ChatedUser> modelList =
+        parsed.items.map(ChatedUser.fromJson).toList();
 
     return DataOutput(
       total: parsed.total,
@@ -68,9 +61,9 @@ class ChatRepostiory {
   }
 
   Future<DataOutput<ChatMessageModal>> getMessagesApi(
-    {required int page,
-    required int itemOfferId,
-    required String conversationId}) async {
+      {required int page,
+      required int itemOfferId,
+      required String conversationId}) async {
     Map<String, dynamic> response = await Api.get(
       url: Api.chatMessagesApi,
       queryParameters: {
@@ -88,7 +81,7 @@ class ChatRepostiory {
 
     List<ChatMessageModal> modelList = resultList.map((result) {
       final Map<String, dynamic> resultMap =
-      Map<String, dynamic>.from(result as Map);
+          Map<String, dynamic>.from(result as Map);
 
       final dynamic senderIdRaw = resultMap['sender_id'];
       final int senderId = senderIdRaw is int
@@ -99,20 +92,17 @@ class ChatRepostiory {
       final int? receiverId = receiverIdRaw == null
           ? null
           : (receiverIdRaw is int
-          ? receiverIdRaw
-          : int.tryParse(receiverIdRaw.toString()));
+              ? receiverIdRaw
+              : int.tryParse(receiverIdRaw.toString()));
 
       final String message = resultMap['message']?.toString() ?? '';
       final String file = resultMap['file']?.toString() ?? '';
       final String audio = resultMap['audio']?.toString() ?? '';
       final String messageType = resultMap['message_type']?.toString() ?? '';
-      final String? status =
-      _normalizeField(resultMap['status']?.toString());
+      final String? status = _normalizeField(resultMap['status']?.toString());
       final String? deliveredAt =
-      _normalizeField(resultMap['delivered_at']?.toString());
-      final String? readAt =
-      _normalizeField(resultMap['read_at']?.toString());
-
+          _normalizeField(resultMap['delivered_at']?.toString());
+      final String? readAt = _normalizeField(resultMap['read_at']?.toString());
 
       final String createdAt = resultMap['created_at']?.toString() ?? '';
       final String updatedAt = resultMap['updated_at']?.toString() ?? createdAt;
@@ -120,9 +110,7 @@ class ChatRepostiory {
       final dynamic itemIdRaw = resultMap['item_id'];
       final int? itemId = itemIdRaw == null
           ? null
-          : (itemIdRaw is int
-          ? itemIdRaw
-          : int.tryParse(itemIdRaw.toString()));
+          : (itemIdRaw is int ? itemIdRaw : int.tryParse(itemIdRaw.toString()));
 
       final dynamic itemOfferRaw = resultMap['item_offer_id'];
       final int itemOfferId = itemOfferRaw is int
@@ -130,12 +118,10 @@ class ChatRepostiory {
           : int.tryParse(itemOfferRaw?.toString() ?? '') ?? 0;
 
       final dynamic idRaw = resultMap['id'];
-      final int id = idRaw is int
-          ? idRaw
-          : int.tryParse(idRaw?.toString() ?? '') ?? 0;
+      final int id =
+          idRaw is int ? idRaw : int.tryParse(idRaw?.toString() ?? '') ?? 0;
 
       return ChatMessageModal(
-
         id: id,
         senderId: senderId,
         receiverId: receiverId,
@@ -159,7 +145,6 @@ class ChatRepostiory {
         : int.tryParse(totalRaw?.toString() ?? '') ?? modelList.length;
 
     return DataOutput(total: total, modelList: modelList);
-
   }
 
   Future<Map<String, dynamic>> sendMessageApi(
@@ -225,7 +210,6 @@ class ChatRepostiory {
     return DataOutput(modelList: modelList, total: modelList.length);
   }
 
-
   Future<ChatedUser?> fetchConversationDetails({
     required String conversationId,
     int? itemOfferId,
@@ -275,7 +259,6 @@ class ChatRepostiory {
     return data;
   }
 
-
   Future<void> markMessagesDelivered({
     required String conversationId,
     required Iterable<int> messageIds,
@@ -286,10 +269,8 @@ class ChatRepostiory {
       return;
     }
 
-    final List<int> sanitizedIds = messageIds
-        .where((id) => id > 0)
-        .toSet()
-        .toList(growable: false);
+    final List<int> sanitizedIds =
+        messageIds.where((id) => id > 0).toSet().toList(growable: false);
 
     if (sanitizedIds.isEmpty) {
       return;
@@ -317,10 +298,8 @@ class ChatRepostiory {
       return;
     }
 
-    final List<int> sanitizedIds = messageIds
-        .where((id) => id > 0)
-        .toSet()
-        .toList(growable: false);
+    final List<int> sanitizedIds =
+        messageIds.where((id) => id > 0).toSet().toList(growable: false);
 
     if (sanitizedIds.isEmpty) {
       return;
@@ -407,10 +386,10 @@ class ChatRepostiory {
       final Map<String, dynamic>? meta = payload['meta'] is Map<String, dynamic>
           ? payload['meta'] as Map<String, dynamic>
           : null;
-      final Map<String, dynamic>? pagination = payload['pagination']
-      is Map<String, dynamic>
-          ? payload['pagination'] as Map<String, dynamic>
-          : null;
+      final Map<String, dynamic>? pagination =
+          payload['pagination'] is Map<String, dynamic>
+              ? payload['pagination'] as Map<String, dynamic>
+              : null;
 
       total = _parseInt(payload['total']) ??
           _parseInt(meta?['total']) ??
@@ -458,9 +437,8 @@ class _ParsedPaginatedMap {
   final int? page;
 
   const _ParsedPaginatedMap({
-  required this.items,
-  required this.total,
-  this.page,
-
+    required this.items,
+    required this.total,
+    this.page,
   });
 }

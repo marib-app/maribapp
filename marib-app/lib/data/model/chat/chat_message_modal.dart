@@ -17,7 +17,6 @@ class ChatMessageModal {
   String? localId;
   bool isSentNow;
 
-
   ChatMessageModal({
     this.id,
     this.senderId,
@@ -54,7 +53,6 @@ class ChatMessageModal {
         readAt = json['read_at'],
         localId = json['local_id'],
         isSentNow = json['is_sent_now'] == true;
-
 
   ChatMessageModal copyWith({
     int? id,

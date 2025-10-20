@@ -6,6 +6,7 @@ import 'dart:ui' show FramePhase, FrameTiming;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:marib/settings.dart';
 
 class PerformanceMonitor {
   PerformanceMonitor._();
@@ -19,7 +20,8 @@ class PerformanceMonitor {
     defaultValue: false,
   );
 
-  final List<_RoutePerformanceSession> _completedSessions = <_RoutePerformanceSession>[];
+  final List<_RoutePerformanceSession> _completedSessions =
+      <_RoutePerformanceSession>[];
   _RoutePerformanceSession? _currentSession;
   Stopwatch? _monotonicClock;
   int? _engineTimestampOffsetUs;
@@ -31,8 +33,19 @@ class PerformanceMonitor {
   bool _initialized = false;
 
   Timer? _pendingWrite;
-  bool get shouldCollectMetrics =>
-      kDebugMode || kProfileMode || _envCollectionEnabled;
+
+  bool get shouldCollectMetrics {
+    if (_envCollectionEnabled) {
+      return true;
+    }
+    if (kReleaseMode) {
+      return false;
+    }
+    if (kDebugMode || kProfileMode) {
+      return AppSettings.enablePerfLogging;
+    }
+    return false;
+  }
 
   void initialize() {
     if (!shouldCollectMetrics) {
@@ -70,7 +83,7 @@ class PerformanceMonitor {
 
     for (final FrameTiming timing in timings) {
       final int buildStartEngineUs =
-      timing.timestampInMicroseconds(FramePhase.buildStart);
+          timing.timestampInMicroseconds(FramePhase.buildStart);
       final int rasterFinishEngineUs =
           timing.timestampInMicroseconds(FramePhase.rasterFinish);
 
@@ -85,7 +98,6 @@ class PerformanceMonitor {
         buildStartUs: buildStartUs,
         rasterFinishUs: rasterFinishUs,
       );
-
     }
 
     _scheduleReportWrite();
@@ -112,8 +124,8 @@ class PerformanceMonitor {
       return;
     }
     if (previousRoute != null) {
-      _switchRoute(previousRoute.settings.name ??
-          previousRoute.runtimeType.toString());
+      _switchRoute(
+          previousRoute.settings.name ?? previousRoute.runtimeType.toString());
     } else {
       _endCurrentSession();
       _currentRouteName = null;
@@ -143,11 +155,13 @@ class PerformanceMonitor {
   }
 
   Map<String, dynamic> _groupSessionsByRoute(
-      List<_RoutePerformanceSession> sessions,
-      ) {
-    final Map<String, List<_RoutePerformanceSession>> grouped = <String, List<_RoutePerformanceSession>>{};
+    List<_RoutePerformanceSession> sessions,
+  ) {
+    final Map<String, List<_RoutePerformanceSession>> grouped =
+        <String, List<_RoutePerformanceSession>>{};
     for (final _RoutePerformanceSession session in sessions) {
-      grouped.putIfAbsent(session.routeName, () => <_RoutePerformanceSession>[]);
+      grouped.putIfAbsent(
+          session.routeName, () => <_RoutePerformanceSession>[]);
       grouped[session.routeName]!.add(session);
     }
 
@@ -161,7 +175,8 @@ class PerformanceMonitor {
     return summary;
   }
 
-  Map<String, dynamic> _aggregateSessions(List<_RoutePerformanceSession> sessions) {
+  Map<String, dynamic> _aggregateSessions(
+      List<_RoutePerformanceSession> sessions) {
     final List<double> frameTimes = <double>[];
     int totalFrames = 0;
     int droppedFrames = 0;
@@ -173,15 +188,14 @@ class PerformanceMonitor {
       droppedFrames += session.droppedFrames;
       totalFrameTimeMs += session.frameDurationsMs.fold<double>(
         0,
-            (double a, double b) => a + b,
+        (double a, double b) => a + b,
       );
     }
 
     final double? p50 = _percentile(frameTimes, 0.50);
     final double? p95 = _percentile(frameTimes, 0.95);
-    final double averageFps = totalFrameTimeMs == 0
-        ? 0
-        : (totalFrames * 1000) / totalFrameTimeMs;
+    final double averageFps =
+        totalFrameTimeMs == 0 ? 0 : (totalFrames * 1000) / totalFrameTimeMs;
 
     return <String, dynamic>{
       'totalFrames': totalFrames,
@@ -213,11 +227,21 @@ class PerformanceMonitor {
     }
   }
 
+  Duration get _reportWriteInterval {
+    if (_envCollectionEnabled && kReleaseMode) {
+      return const Duration(seconds: 10);
+    }
+    if (!kReleaseMode && AppSettings.enablePerfLogging) {
+      return const Duration(seconds: 5);
+    }
+    return const Duration(seconds: 1);
+  }
+
   void _scheduleReportWrite() {
     if (!shouldCollectMetrics) {
       return;
     }
-    _pendingWrite ??= Timer(const Duration(seconds: 1), () {
+    _pendingWrite ??= Timer(_reportWriteInterval, () {
       _pendingWrite = null;
       unawaited(saveReport());
     });
@@ -232,6 +256,7 @@ class PerformanceMonitor {
     _engineTimestampOffsetUs ??= _elapsedUs() - engineTimestampUs;
     return engineTimestampUs + _engineTimestampOffsetUs!;
   }
+
   Future<File> _resolveLogFile() async {
     final Directory dir = await getApplicationSupportDirectory();
     final Directory logDir = Directory('${dir.path}/performance');
@@ -271,12 +296,10 @@ class PerformanceMonitor {
     if (frameDuration <= _frameBudget) {
       return 0;
     }
-    return (frameDuration.inMicroseconds / _frameBudget.inMicroseconds).ceil() - 1;
+    return (frameDuration.inMicroseconds / _frameBudget.inMicroseconds).ceil() -
+        1;
   }
 }
-
-
-
 
 class _RoutePerformanceSession {
   _RoutePerformanceSession({
@@ -325,13 +348,12 @@ class _RoutePerformanceSession {
     return <String, dynamic>{
       'routeName': routeName,
       'startedAt': wallClockStartedAt.toIso8601String(),
-
       'frames': totalFrames,
       'droppedFrames': droppedFrames,
       'averageFps': frameDurationsMs.isEmpty
           ? 0
           : (totalFrames * 1000) /
-          frameDurationsMs.fold<double>(0, (double a, double b) => a + b),
+              frameDurationsMs.fold<double>(0, (double a, double b) => a + b),
       'p50FrameMs': PerformanceMonitor._percentile(frameDurationsMs, 0.50),
       'p95FrameMs': PerformanceMonitor._percentile(frameDurationsMs, 0.95),
       'ttffMs': PerformanceMonitor.instance

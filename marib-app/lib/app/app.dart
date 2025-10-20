@@ -1,4 +1,5 @@
 import 'package:marib/data/model/personalized/personalized_settings.dart';
+import 'package:marib/settings.dart';
 
 // import 'package:marib/firebase_options.dart';
 import 'package:marib/main.dart';
@@ -23,7 +24,10 @@ void initApp() async {
   ///Note: this file's code is very necessary and sensitive if you change it, this might affect whole app , So change it carefully.
   ///This must be used do not remove this line
   WidgetsFlutterBinding.ensureInitialized();
-  if (PerformanceMonitor.instance.shouldCollectMetrics) {
+  final bool attachPerformanceMonitor =
+      (!kReleaseMode && AppSettings.enablePerfLogging) ||
+          (kReleaseMode && PerformanceMonitor.instance.shouldCollectMetrics);
+  if (attachPerformanceMonitor) {
     PerformanceMonitor.instance.initialize();
     final WidgetsBinding binding = WidgetsBinding.instance;
     binding.addTimingsCallback(

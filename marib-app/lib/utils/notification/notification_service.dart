@@ -698,8 +698,7 @@ class NotificationService {
     await handleNotification(message);
   }
 
-  static Future<void> forgroundNotificationHandler(
-      BuildContext context) async {
+  static Future<void> forgroundNotificationHandler(BuildContext context) async {
     await foregroundStream?.cancel();
 
     foregroundStream =
@@ -712,7 +711,7 @@ class NotificationService {
   static Future<void> terminatedStateNotificationHandler(
       BuildContext context) async {
     final RemoteMessage? message =
-    await FirebaseMessaging.instance.getInitialMessage();
+        await FirebaseMessaging.instance.getInitialMessage();
     if (message == null) {
       return;
     }

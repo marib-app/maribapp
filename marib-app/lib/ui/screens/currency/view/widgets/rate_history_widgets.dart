@@ -39,15 +39,15 @@ class HistoryRangeSelector extends StatelessWidget {
             selected: selected,
             onSelected: enabled
                 ? (bool value) {
-              if (value) {
-                onSelectRange(days);
-              }
-            }
+                    if (value) {
+                      onSelectRange(days);
+                    }
+                  }
                 : null,
             labelStyle: textTheme.labelSmall?.copyWith(
-              color: labelColor,
-              fontWeight: FontWeight.w700,
-            ) ??
+                  color: labelColor,
+                  fontWeight: FontWeight.w700,
+                ) ??
                 TextStyle(
                   color: labelColor,
                   fontWeight: FontWeight.w700,
@@ -120,11 +120,12 @@ class _MiniTrendChartPainter extends CustomPainter {
       return;
     }
 
-    final double minValue = values.reduce((double a, double b) => a < b ? a : b);
-    final double maxValue = values.reduce((double a, double b) => a > b ? a : b);
-    final double range = (maxValue - minValue).abs() < 0.0001
-        ? 1
-        : maxValue - minValue;
+    final double minValue =
+        values.reduce((double a, double b) => a < b ? a : b);
+    final double maxValue =
+        values.reduce((double a, double b) => a > b ? a : b);
+    final double range =
+        (maxValue - minValue).abs() < 0.0001 ? 1 : maxValue - minValue;
 
     final Paint backgroundPaint = Paint()
       ..color = background

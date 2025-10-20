@@ -8,7 +8,6 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marquee/marquee.dart';
 import 'package:shimmer/shimmer.dart';
 
-
 const double _subcatCardRadius = 20.0;
 
 const double _verticalSpacingBetweenRows = 12.0;
@@ -173,15 +172,13 @@ class SubcatsHorizontalGridState extends State<SubcatsHorizontalGrid> {
         final gridHeight =
             rowHeight * maxRows + _verticalSpacingBetweenRows * (maxRows - 1);
         final bool includeLeading = hasLeading && slotsPerPage > 1;
-        final int availableSlotsForCategories = includeLeading
-            ? max(0, slotsPerPage - 1)
-            : slotsPerPage;
+        final int availableSlotsForCategories =
+            includeLeading ? max(0, slotsPerPage - 1) : slotsPerPage;
         final int desiredFirstPageCategories =
-        min(totalSubcats, availableSlotsForCategories);
+            min(totalSubcats, availableSlotsForCategories);
 
-        final int firstPageCapacity = includeLeading
-            ? desiredFirstPageCategories
-            : slotsPerPage;
+        final int firstPageCapacity =
+            includeLeading ? desiredFirstPageCategories : slotsPerPage;
         final int otherPageCapacity = slotsPerPage;
         final int pages;
         if (slotsPerPage <= 0) {

@@ -1,27 +1,22 @@
 import 'dart:async';
 
-
-
-
 import 'package:marib/data/model/chat/chated_user_model.dart';
 import 'package:marib/data/model/chat/chat_message_modal.dart';
 import 'package:flutter/foundation.dart';
-
-
 
 class ChatMessageHandler {
   static List<ChatMessageModal> messages = <ChatMessageModal>[];
   static final List<ChatMessageModal> _localMessages = <ChatMessageModal>[];
   static final StreamController<List<ChatMessageModal>> _chatMessageStream =
-  StreamController<List<ChatMessageModal>>.broadcast();
+      StreamController<List<ChatMessageModal>>.broadcast();
 
   static final ValueNotifier<ParticipantStatus?> participantStatusNotifier =
-  ValueNotifier<ParticipantStatus?>(null);
+      ValueNotifier<ParticipantStatus?>(null);
 
   static void add(ChatMessageModal chat) {
     if (chat.id != null && chat.id! > 0 && chat.isSentNow == false) {
       final int existingIndex =
-      messages.indexWhere((element) => element.id == chat.id);
+          messages.indexWhere((element) => element.id == chat.id);
       if (existingIndex != -1) {
         messages[existingIndex] = chat;
       } else {
@@ -65,11 +60,9 @@ class ChatMessageHandler {
     participantStatusNotifier.value = null;
   }
 
-
   static Stream<List<ChatMessageModal>> getChatStream() {
     return _chatMessageStream.stream;
   }
-
 
   static void updateMessageStatus({
     required int messageId,
@@ -101,7 +94,6 @@ class ChatMessageHandler {
     }
   }
 
-
   static void attachListener(void Function(List<ChatMessageModal>)? onData) {
     _chatMessageStream.stream.listen(onData);
   }
@@ -120,12 +112,12 @@ class ChatMessageHandler {
 
   static void updateMessageId(String identifier, int id) {
     final int index =
-    _localMessages.indexWhere((element) => element.localId == identifier);
+        _localMessages.indexWhere((element) => element.localId == identifier);
     if (index == -1) {
       return;
     }
     final ChatMessageModal updated =
-    _localMessages.removeAt(index).copyWith(id: id, isSentNow: false);
+        _localMessages.removeAt(index).copyWith(id: id, isSentNow: false);
 
     final int remoteIndex = messages.indexWhere((element) => element.id == id);
     if (remoteIndex != -1) {

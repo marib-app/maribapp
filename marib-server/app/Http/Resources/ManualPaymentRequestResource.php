@@ -217,6 +217,7 @@ class ManualPaymentRequestResource extends JsonResource
             data_get($meta, 'manual_bank.name'),
             data_get($meta, 'manual_bank.bank_name'),
             data_get($meta, 'manual_bank.beneficiary_name'),
+            data_get($meta, 'payload.bank_name'),
             data_get($transactionMeta, 'manual.bank.name'),
             data_get($transactionMeta, 'manual.bank.bank_name'),
             data_get($transactionMeta, 'manual.bank.beneficiary_name'),
@@ -229,6 +230,7 @@ class ManualPaymentRequestResource extends JsonResource
             data_get($transactionMeta, 'bank.name'),
             data_get($transactionMeta, 'bank.bank_name'),
             data_get($transactionMeta, 'bank.beneficiary_name'),
+            data_get($transactionMeta, 'payload.bank_name'),
             data_get($manualBank, 'name'),
             data_get($manualBank, 'bank_name'),
             data_get($manualBank, 'beneficiary_name'),
@@ -279,12 +281,14 @@ class ManualPaymentRequestResource extends JsonResource
             data_get($meta, 'gateway_name'),
             data_get($meta, 'manual.gateway_display_name'),
             data_get($meta, 'manual.gateway_name'),
+            data_get($meta, 'payload.bank_name'),
             data_get($transactionMeta, 'gateway_display_name'),
             data_get($transactionMeta, 'payment_gateway_label'),
             data_get($transactionMeta, 'payment_gateway_name'),
             data_get($transactionMeta, 'gateway_name'),
             data_get($transactionMeta, 'manual.gateway_display_name'),
             data_get($transactionMeta, 'manual.gateway_name'),
+            data_get($transactionMeta, 'payload.bank_name'),
         ]);
 
         foreach ($candidates as $candidate) {

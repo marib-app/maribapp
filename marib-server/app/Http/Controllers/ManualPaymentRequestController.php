@@ -286,13 +286,14 @@ class ManualPaymentRequestController extends Controller
             'user_mobile',
             'amount',
             'currency',
-            'category',
+            'gateway_label',
             'status',
             'channel',
             'created_at',
             'department',
             'manual_bank_name',
             'source',
+            'category',
         ];
 
 
@@ -307,7 +308,8 @@ class ManualPaymentRequestController extends Controller
             'amount_formatted' => 'amount',
             'amount' => 'amount',
             'currency' => 'currency',
-            'payment_gateway_label' => 'channel',
+            'payment_gateway_label' => 'gateway_label',
+            'gateway_label' => 'gateway_label',
             'payment_gateway_name' => 'channel',
             'payment_gateway' => 'channel',
             'channel_label' => 'channel',
@@ -468,6 +470,18 @@ class ManualPaymentRequestController extends Controller
                 $channel = 'manual_banks';
             }
             $manualBankName = $this->resolveManualBankName($row);
+            $gatewayLabelValue = data_get($row, 'gateway_label');
+
+            if (is_string($gatewayLabelValue)) {
+                $gatewayLabelValue = trim($gatewayLabelValue);
+
+                if ($gatewayLabelValue === '') {
+                    $gatewayLabelValue = null;
+                }
+            } else {
+                $gatewayLabelValue = null;
+            }
+
 
             $createdAt = $row->created_at ? Carbon::parse($row->created_at) : null;
 
@@ -484,11 +498,15 @@ class ManualPaymentRequestController extends Controller
                 'currency' => $row->currency ?? '',
                 'manual_payment_request_id' => $row->manual_payment_request_id,
                 'channel' => $channel ?? $row->channel,
-                'channel_label' => $this->paymentRequestChannelLabel(
-                    $channel ?? $row->channel,
-                    $manualBankName
-                ),
-                'channel_name' => $manualBankName
+                'channel_label' => $gatewayLabelValue
+                    ?? $this->paymentRequestChannelLabel(
+                        $channel ?? $row->channel,
+                        $manualBankName
+                    ),
+                'channel_name' => $gatewayLabelValue
+                    ?? $manualBankName
+
+
                     ?? $this->paymentRequestGatewayName($row),
 
 
@@ -1615,11 +1633,13 @@ class ManualPaymentRequestController extends Controller
 
 
         if ($normalizedChannel === 'manual_banks' || $normalizedChannel === null) {
+            $propertyNames[] = 'gateway_label';
             $propertyNames[] = 'manual_bank_name';
             $propertyNames[] = 'bank_name';
             $propertyNames[] = 'gateway_name';
             $propertyNames[] = 'gateway_display_name';
         } else {
+            $propertyNames[] = 'gateway_label';
             $propertyNames[] = 'gateway_name';
             $propertyNames[] = 'gateway_display_name';
 
@@ -1709,7 +1729,8 @@ class ManualPaymentRequestController extends Controller
             'amount_formatted' => 'amount',
             'amount' => 'amount',
             'currency' => 'currency',
-            'payment_gateway_label' => 'channel',
+            'payment_gateway_label' => 'gateway_label',
+            'gateway_label' => 'gateway_label',
             'payment_gateway_name' => 'channel',
             'payment_gateway' => 'channel',
             'channel_label' => 'channel',

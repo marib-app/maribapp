@@ -740,13 +740,87 @@ class ManualPaymentRequestService
             'meta' => $this->filterArrayRecursive($transactionMeta),
         ])->saveQuietly();
 
+        $transaction->refresh();
         $manualPaymentRequest->setRelation('paymentTransaction', $transaction);
+
+        $this->syncTransactionManualBankPayload($transaction, $manualPaymentRequest);
 
         return $manualPaymentRequest;
     }
 
 
+    public function syncTransactionManualBankPayload(
+        PaymentTransaction $transaction,
+        ManualPaymentRequest $manualPaymentRequest
+    ): void {
+        $meta = $transaction->meta;
 
+        if (! is_array($meta)) {
+            $meta = [];
+        }
+
+        $manualPaymentRequest->loadMissing('manualBank');
+
+        $manualBank = $manualPaymentRequest->manualBank;
+        $manualBankId = $manualBank?->getKey() ?? $manualPaymentRequest->manual_bank_id;
+
+        if (is_string($manualBankId)) {
+            $manualBankId = trim($manualBankId);
+        }
+
+        if ($manualBankId !== null && $manualBankId !== '') {
+            $manualBankId = (int) $manualBankId;
+
+            if ($manualBankId <= 0) {
+                $manualBankId = null;
+            }
+        } else {
+            $manualBankId = null;
+        }
+
+        $bankNameCandidates = [
+            $manualPaymentRequest->bank_name,
+            $manualPaymentRequest->bank_account_name,
+            $manualBank?->name,
+            $manualBank?->beneficiary_name,
+            data_get($meta, 'manual.bank.name'),
+            data_get($meta, 'manual_bank.name'),
+            data_get($meta, 'bank.name'),
+        ];
+
+        $bankName = null;
+
+        foreach ($bankNameCandidates as $candidate) {
+            if (! is_string($candidate)) {
+                continue;
+            }
+
+            $trimmed = trim($candidate);
+
+            if ($trimmed === '') {
+                continue;
+            }
+
+            $bankName = $trimmed;
+            break;
+        }
+
+        if ($manualBankId !== null) {
+            data_set($meta, 'payload.manual_bank_id', $manualBankId);
+        }
+
+        if ($bankName !== null) {
+            data_set($meta, 'payload.bank_name', $bankName);
+        }
+
+        $filteredMeta = $this->filterArrayRecursive($meta);
+
+        if ($filteredMeta !== $transaction->meta) {
+            $transaction->forceFill([
+                'meta' => $filteredMeta,
+            ])->saveQuietly();
+        }
+    }
 
 
     private function determineDepartmentForOrderPayable(

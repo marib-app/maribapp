@@ -55,10 +55,6 @@ class PaymentTransaction extends Model
                 return;
             }
 
-            if ($transaction->manual_payment_request_id !== null) {
-                return;
-            }
-
             if ($transaction->user_id === null) {
                 return;
             }
@@ -67,9 +63,23 @@ class PaymentTransaction extends Model
                 /** @var ManualPaymentRequestService $service */
                 $service = App::make(ManualPaymentRequestService::class);
 
-                $service->ensureManualPaymentRequestForTransaction($transaction);
+                $manualRequest = $transaction->manualPaymentRequest;
+
+                if (! $manualRequest instanceof ManualPaymentRequest && $transaction->manual_payment_request_id) {
+                    $manualRequest = ManualPaymentRequest::query()->find($transaction->manual_payment_request_id);
+                }
+
+                if (! $manualRequest instanceof ManualPaymentRequest) {
+                    $manualRequest = $service->ensureManualPaymentRequestForTransaction($transaction);
+                }
+
+                if ($manualRequest instanceof ManualPaymentRequest) {
+                    $service->syncTransactionManualBankPayload($transaction->fresh(), $manualRequest->fresh());
+                }
+            
+            
             } catch (\Throwable $exception) {
-                Log::error('Failed to ensure manual payment request for manual bank transaction.', [
+                Log::error('Failed to ensure manual payment request or sync bank metadata for manual bank transaction.', [
                     'payment_transaction_id' => $transaction->getKey(),
                     'exception' => $exception,
                 ]);

@@ -183,6 +183,28 @@ class PaymentRequestTableQuery
             ? 'NULL'
             : 'COALESCE(' . implode(', ', $paymentManualBankNameParts) . ')';
 
+        $transactionGatewayLabelCandidates = [];
+
+        if ($supportsPaymentTransactionMeta) {
+            $transactionGatewayLabelCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.payload.bank_name')), '')";
+        }
+
+        if ($supportsManualMeta) {
+            $transactionGatewayLabelCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.payload.bank_name')), '')";
+            $transactionGatewayLabelCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.name')), '')";
+        }
+
+        if ($supportsManualBankLookupName) {
+            $transactionGatewayLabelCandidates[] = "NULLIF(manual_bank_lookup.name, '')";
+        }
+
+        $transactionGatewayLabelCandidates[] = "NULLIF(mpr.bank_name, '')";
+
+        $paymentGatewayLabelSelect = self::gatewayLabelCaseExpression(
+            self::gatewayExpression('pt'),
+            $transactionGatewayLabelCandidates
+        );
+
 
         $walletManualBankNameParts = array_values(array_filter([
             $supportsManualBankLookupName ? 'manual_bank_lookup.name' : null,
@@ -197,6 +219,28 @@ class PaymentRequestTableQuery
         $walletManualBankNameSelect = $walletManualBankNameParts === []
             ? 'NULL'
             : 'COALESCE(' . implode(', ', $walletManualBankNameParts) . ')';
+
+        $walletGatewayLabelCandidates = [];
+
+        if ($supportsWalletMeta) {
+            $walletGatewayLabelCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(wt.meta, '$.payload.bank_name')), '')";
+        }
+
+        if ($supportsManualMeta) {
+            $walletGatewayLabelCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.payload.bank_name')), '')";
+            $walletGatewayLabelCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.name')), '')";
+        }
+
+        if ($supportsManualBankLookupName) {
+            $walletGatewayLabelCandidates[] = "NULLIF(manual_bank_lookup.name, '')";
+        }
+
+        $walletGatewayLabelCandidates[] = "NULLIF(mpr.bank_name, '')";
+
+        $walletGatewayLabelSelect = self::gatewayLabelCaseExpression(
+            "'wallet'",
+            $walletGatewayLabelCandidates
+        );
 
 
         $manualRequestManualBankNameParts = array_values(array_filter([
@@ -213,6 +257,23 @@ class PaymentRequestTableQuery
 
             ? 'NULL'
             : 'COALESCE(' . implode(', ', $manualRequestManualBankNameParts) . ')';
+        $manualRequestGatewayLabelCandidates = [];
+
+        if ($supportsManualMeta) {
+            $manualRequestGatewayLabelCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.payload.bank_name')), '')";
+            $manualRequestGatewayLabelCandidates[] = "NULLIF(JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_bank.name')), '')";
+        }
+
+        if ($supportsManualBankLookupName) {
+            $manualRequestGatewayLabelCandidates[] = "NULLIF(manual_bank_lookup.name, '')";
+        }
+
+        $manualRequestGatewayLabelCandidates[] = "NULLIF(mpr.bank_name, '')";
+
+        $manualRequestGatewayLabelSelect = self::gatewayLabelCaseExpression(
+            $manualGatewayKeyExpression,
+            $manualRequestGatewayLabelCandidates
+        );
 
         $channelExpression = self::channelExpression('pt');
 
@@ -385,6 +446,7 @@ class PaymentRequestTableQuery
             ->selectRaw(self::gatewayExpression('pt') . ' as gateway_key')
             ->selectRaw(self::channelExpression('pt') . ' as channel')
             ->selectRaw($gatewayNameSelect . ' as gateway_name')
+            ->selectRaw($paymentGatewayLabelSelect . ' as gateway_label')
             ->selectRaw(self::categoryExpression('pt') . ' as category')
             ->selectRaw(
                 self::statusExpression(
@@ -476,6 +538,7 @@ class PaymentRequestTableQuery
             ->selectRaw("'wallet' as gateway_key")
             ->selectRaw("'wallet' as channel")
             ->selectRaw($walletGatewayNameSelect . ' as gateway_name')
+            ->selectRaw($walletGatewayLabelSelect . ' as gateway_label')
             ->selectRaw("'top_ups' as category")
             ->selectRaw(
                 self::statusExpression(
@@ -555,6 +618,7 @@ class PaymentRequestTableQuery
             ->selectRaw($manualGatewayKeyExpression . ' as gateway_key')
             ->selectRaw($manualRequestChannelExpression . ' as channel')
             ->selectRaw($manualRequestGatewayNameSelect . ' as gateway_name')
+            ->selectRaw($manualRequestGatewayLabelSelect . ' as gateway_label')            
             ->selectRaw(self::categoryExpression('mpr') . ' as category')
             ->selectRaw(
                 self::statusExpression(
@@ -720,6 +784,31 @@ class PaymentRequestTableQuery
             WHEN {$source} IN {$pendingValues} THEN 'pending'
             ELSE 'pending'
         END";
+    }
+
+    private static function gatewayLabelCaseExpression(string $gatewayExpression, array $labelCandidates): string
+    {
+        $candidates = self::prepareCoalesceCandidates($labelCandidates);
+        $candidates[] = "'تحويل بنكي'";
+
+        $coalesce = count($candidates) > 1
+            ? 'COALESCE(' . implode(', ', $candidates) . ')'
+            : ($candidates[0] ?? "'تحويل بنكي'");
+
+        return "CASE WHEN {$gatewayExpression} = 'wallet' THEN 'المحفظة' ELSE {$coalesce} END";
+    }
+
+    private static function prepareCoalesceCandidates(array $expressions): array
+    {
+        return array_values(array_filter($expressions, static function ($expression): bool {
+            if (! is_string($expression)) {
+                return false;
+            }
+
+            $trimmed = trim($expression);
+
+            return $trimmed !== '' && strtoupper($trimmed) !== 'NULL';
+        }));
     }
 
     private static function sqlList(array $values): string

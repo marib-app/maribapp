@@ -35,11 +35,9 @@ class AppSettings {
   static const String andoidPackageName = 'com.marib.app';
   static const String shareAppText = "Share this App";
 
-// static const String hostUrl =
+ // static const String hostUrl =  "https://maribsrv.com";
 
-  //  "https://maribsrv.com"; //don't add / at end but https:// is required
-
-  static const String hostUrl = "http://192.168.1.247:8000";
+ static const String hostUrl = "http://192.168.1.247:8000";
 
   ///API Setting
 

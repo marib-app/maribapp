@@ -12,12 +12,26 @@ $serviceCategoryMap = [
 ];
 
 $featureSectionRoots = [
+    'homepage'    => null,
     'public'      => null,
+    'request_ad'  => null,
     'real_estate' => 'real_estate_services',
-    'shein'       => null,
+    'tourism'     => 'tourism_services',
+    'merchants'   => 'e_store',
+    'shein'       => 'shein_products',
     'computer'    => 'computer_section',
 ];
 
+
+$serviceSectionRoots = [
+    'services_all' => array_values($serviceCategoryMap),
+];
+
+foreach ($serviceCategoryMap as $serviceKey => $categoryId) {
+    $serviceSectionRoots[$serviceKey] = $categoryId;
+}
+
+$featureSectionRoots = array_merge($featureSectionRoots, $serviceSectionRoots);
 
 return [
     'cache_ttl_seconds' => (int) env('FEATURE_SECTION_CACHE_TTL_SECONDS', 300),
@@ -37,6 +51,18 @@ return [
         'itemsListRealEstate'  => 'real_estate',
         'itemslistrealestate'  => 'real_estate',
 
+        'tourism_services'     => 'tourism',
+        'tourismservices'      => 'tourism',
+        'itemsListTourism'     => 'tourism',
+        'itemslisttourism'     => 'tourism',
+
+        'e_store'              => 'merchants',
+        'estore'               => 'merchants',
+        'itemsListEStore'      => 'merchants',
+        'itemslistestore'      => 'merchants',
+        'itemsListMerchants'   => 'merchants',
+        'itemslistmerchants'   => 'merchants',
+
 
         'shein_products'       => 'shein',
         'sheinproducts'        => 'shein',
@@ -52,9 +78,16 @@ return [
         'publicads'            => 'public',
         'itemsListPublic'      => 'public',
         'itemslistpublic'      => 'public',
-        'homepage'             => 'public',
-        'home_page'            => 'public',
+        'home_page'            => 'homepage',
+        'homepage_section'     => 'homepage',
+        'itemsListHomepage'    => 'homepage',
+        'itemslisthomepage'    => 'homepage',
 
+        'request_ads'          => 'request_ad',
+        'requestads'           => 'request_ad',
+        'requestAd'            => 'request_ad',
+        'itemsListRequestAd'   => 'request_ad',
+        'itemslistrequestad'   => 'request_ad',
 
 
     ],

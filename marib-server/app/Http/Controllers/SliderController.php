@@ -189,6 +189,7 @@ class SliderController extends Controller {
             'shein'                   => __('منتجات شي إن'),
             'computer'                => __('قسم الكمبيوتر'),
             'public'                  => __('إعلانات الجمهور'),
+            'request_ad'              => __('طلب إعلان'),
             'services_all'            => __('كل الخدمات'),
             'services_local'          => __('خدمات محلية'),
             'services_medical'        => __('خدمات طبية'),

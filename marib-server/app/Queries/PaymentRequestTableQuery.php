@@ -75,9 +75,8 @@ class PaymentRequestTableQuery
             && Schema::hasColumn('manual_payment_requests', 'manual_bank_id');
 
         try {
-            $manualPaymentSchema = Schema::connection(
-                ManualPaymentRequest::query()->getConnection()->getName()
-            );
+            $manualPaymentConnection = ManualPaymentRequest::query()->getConnection();
+            $manualPaymentSchema = Schema::connection($manualPaymentConnection->getName());
 
             $supportsManualBankName = $manualPaymentSchema->hasTable('manual_payment_requests')
                 && $manualPaymentSchema->hasColumn('manual_payment_requests', 'bank_name');
@@ -85,7 +84,7 @@ class PaymentRequestTableQuery
             $supportsManualBankName = false;
         }
 
-        
+
 
         $supportsManualMeta = Schema::hasTable('manual_payment_requests')
             && Schema::hasColumn('manual_payment_requests', 'meta');

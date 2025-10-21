@@ -2313,6 +2313,18 @@ class ManualPaymentRequestController extends Controller
             );
         };
 
+        try {
+            $manualPaymentConnection = ManualPaymentRequest::query()->getConnection();
+            $manualPaymentSchema = Schema::connection($manualPaymentConnection->getName());
+
+            $supportsManualBankName = $manualPaymentSchema->hasTable('manual_payment_requests')
+                && $manualPaymentSchema->hasColumn('manual_payment_requests', 'bank_name');
+        } catch (Throwable $exception) {
+            $supportsManualBankName = false;
+        }
+
+
+
 
         $supportsPaymentGatewayName = Schema::hasTable('payment_transactions')
             && Schema::hasColumn('payment_transactions', 'payment_gateway_name');
@@ -2326,9 +2338,13 @@ class ManualPaymentRequestController extends Controller
             $manualBankNameParts[] = $sanitizeManualBankValue('pt.payment_gateway_name');
         }
 
+        if ($supportsManualBankName) {
+            $manualBankNameParts[] = $sanitizeManualBankValue('mpr.bank_name');
+        }
+
+
         $manualBankNameParts = array_merge($manualBankNameParts, [
             
-            $sanitizeManualBankValue('mpr.bank_name'),
             $sanitizeManualBankValue("JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.bank_name'))"),
             $sanitizeManualBankValue("JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_payment_request.bank_name'))"),
         ]);

@@ -12,6 +12,7 @@ import 'dart:async';
 import 'package:marib/ui/screens/widgets/lazy_network_image.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
+import 'package:flutter/foundation.dart';
 
 class SliderWidget extends StatefulWidget {
   final String interfaceType;
@@ -25,7 +26,6 @@ class SliderWidget extends StatefulWidget {
     this.onLoaded,
     this.onError,
     this.padding = kSliderHorizontalPadding,
-
   });
 
   @override
@@ -36,6 +36,7 @@ class _SliderWidgetState extends State<SliderWidget> {
   bool _hasRequestedCurrentInterface = false;
   List<HomeSlider>? _cachedSliderList;
   String? _cachedFallbackImage;
+  bool _hasReportedError = false;
 
   @override
   void initState() {
@@ -73,6 +74,7 @@ class _SliderWidgetState extends State<SliderWidget> {
     return BlocConsumer<SliderCubit, SliderState>(
       listener: (context, state) {
         if (state is SliderFetchSuccess) {
+          _hasReportedError = false;
           _cacheSliderList(state.sliderlist);
           if (state.sliderlist.isNotEmpty) {
             widget.onLoaded?.call();
@@ -80,6 +82,10 @@ class _SliderWidgetState extends State<SliderWidget> {
         }
 
         if (state is SliderFallbackState) {
+          if (state is SliderFetchInProgress) {
+            _hasReportedError = false;
+          }
+
           _cacheFallbackImage(state);
           if (_isFallbackImageAvailable(state)) {
             widget.onLoaded?.call();
@@ -121,10 +127,16 @@ class _SliderWidgetState extends State<SliderWidget> {
           );
         }
         if (state is SliderFetchFailure) {
+          _notifySliderError();
           final Widget? cached = _buildFromCache();
           if (cached != null) {
             return cached;
           }
+          if (_cachedFallbackImage != null &&
+              _cachedFallbackImage!.isNotEmpty) {
+            return _buildFallbackImage(context, _cachedFallbackImage!);
+          }
+          return _wrapWithPadding(const SliderShimmer());
         }
         return const SizedBox.shrink();
       },
@@ -140,6 +152,15 @@ class _SliderWidgetState extends State<SliderWidget> {
       padding: widget.padding,
       child: child,
     );
+  }
+
+  void _notifySliderError() {
+    if (_hasReportedError) return;
+    _hasReportedError = true;
+    debugPrint(
+      'SliderWidget: Failed to fetch slider for interface "${widget.interfaceType}". Displaying fallback.',
+    );
+    widget.onError?.call();
   }
 
   void _cacheSliderList(List<HomeSlider> sliders) {

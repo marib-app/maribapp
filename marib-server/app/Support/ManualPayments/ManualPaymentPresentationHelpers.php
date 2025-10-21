@@ -207,28 +207,32 @@ trait ManualPaymentPresentationHelpers
 
     protected function resolveManualBankName(mixed $row): ?string
     {
-        $genericGatewayAliases = array_unique(array_filter(array_map(
-            static function ($alias) {
-                if (! is_string($alias)) {
-                    return null;
-                }
+        $genericGatewayAliasSet = [];
 
-                $trimmedAlias = trim($alias);
 
-                if ($trimmedAlias === '') {
-                    return null;
-                }
+        foreach (array_merge(
+            (array) ManualPaymentRequest::manualBankGatewayAliases(),
+            (array) ManualPaymentRequest::walletGatewayAliases(),
+            ['المحفظة', 'تحويل بنكي']
+        ) as $alias) {
+            if (! is_string($alias)) {
+                continue;
+            }
 
-                return Str::lower($trimmedAlias);
-            },
-            array_merge(
-                ManualPaymentRequest::manualBankGatewayAliases(),
-                ManualPaymentRequest::walletGatewayAliases(),
-                ['المحفظة', 'تحويل بنكي']
-            )
-        )));
 
-        
+             $trimmedAlias = trim($alias);
+
+
+            if ($trimmedAlias === '') {
+                continue;
+            }
+
+            $genericGatewayAliasSet[Str::lower($trimmedAlias)] = true;
+        }
+
+        $genericGatewayAliases = array_keys($genericGatewayAliasSet);
+
+
         $candidates = [
             data_get($row, 'manual_bank_name'),
             data_get($row, 'bank_name'),
@@ -428,43 +432,30 @@ trait ManualPaymentPresentationHelpers
             return;
         }
 
-        $normalizeAlias = static function ($alias) {
+        $manualBankAliasSet = [];
+
+        foreach (array_merge(
+            (array) ManualPaymentRequest::manualBankGatewayAliases(),
+            (array) ManualPaymentRequest::walletGatewayAliases(),
+            ['المحفظة', 'تحويل بنكي']
+        ) as $alias) {
+            
+            
             if (! is_string($alias)) {
-                return null;
+                continue;
+
             }
 
-            $trimmed = trim($alias);
+            $trimmedAlias = trim($alias);
 
+            if ($trimmedAlias === '') {
+                continue;
+            }
 
-            return $trimmed === '' ? null : $trimmed;
-        };
+            $manualBankAliasSet[Str::lower($trimmedAlias)] = true;
+        }
 
-
-        $manualBankAliases = ManualPaymentRequest::manualBankGatewayAliases();
-
-        $manualBankAliases = array_map(
-            [Str::class, 'lower'],
-            array_filter(array_map($normalizeAlias, $manualBankAliases))
-        );
-
-        $additionalManualBankAliases = array_map(
-            [Str::class, 'lower'],
-            array_filter(array_map(
-                $normalizeAlias,
-                array_merge(
-                    ManualPaymentRequest::walletGatewayAliases(),
-                    [
-                        'المحفظة',
-                        'تحويل بنكي',
-                    ]
-                )
-            ))
-        );
-
-        $manualBankAliases = array_values(array_unique(array_merge(
-            $manualBankAliases,
-            $additionalManualBankAliases
-        )));
+        $manualBankAliases = array_keys($manualBankAliasSet);
 
 
 

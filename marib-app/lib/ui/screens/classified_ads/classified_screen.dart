@@ -274,7 +274,6 @@ class _ClassifiedScreenState extends State<ClassifiedScreen> {
               return Column(
                 children: [
                   SliderWidget(interfaceType: widget.interfaceType),
-                  const SizedBox(height: 12),
 
 
                   Expanded(

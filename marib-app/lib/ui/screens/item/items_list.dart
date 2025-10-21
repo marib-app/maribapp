@@ -606,11 +606,10 @@ class ItemsListState extends State<ItemsList> {
     final sections = <CatalogSection>[
       CatalogBoxSection(
         key: const ValueKey('items_slider_section'),
-        child: SliderWidget(interfaceType: widget.interfaceType),
-      ),
-      const CatalogBoxSection(
-        key: ValueKey('items_slider_spacing'),
-        child: SizedBox(height: 5),
+        child: SliderWidget(
+          interfaceType: widget.interfaceType,
+          margin: const EdgeInsets.only(bottom: 5),
+        ),
       ),
       _buildSearchHeaderSection(context),
     ];

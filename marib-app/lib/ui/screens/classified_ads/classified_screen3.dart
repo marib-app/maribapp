@@ -275,6 +275,7 @@ class _ClassifiedScreen3State extends State<ClassifiedScreen3> {
                         ),
                         child: SliderWidget(
                           interfaceType: widget.interfaceType,
+                          margin: EdgeInsets.zero,
                         ),
                       )
                           : const SizedBox.shrink(),

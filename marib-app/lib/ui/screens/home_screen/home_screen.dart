@@ -199,7 +199,6 @@ class HomeScreenState extends State<HomeScreen>
             RepaintBoundary(
               child: SliderWidget(interfaceType: "homepage"),
             ),
-            const SizedBox(height: 12),
             RepaintBoundary(child: AnimatedSearchBar()),
             const SizedBox(height: 12),
             RepaintBoundary(child: CategoryWidgetOffline()),

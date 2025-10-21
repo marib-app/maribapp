@@ -2340,14 +2340,15 @@ class ManualPaymentRequestController extends Controller
 
         if ($supportsManualBankName) {
             $manualBankNameParts[] = $sanitizeManualBankValue('mpr.bank_name');
+
+            $manualBankNameParts = array_merge($manualBankNameParts, [
+                $sanitizeManualBankValue("JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.bank_name'))"),
+                $sanitizeManualBankValue("JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_payment_request.bank_name'))"),
+            ]);
+
         }
 
 
-        $manualBankNameParts = array_merge($manualBankNameParts, [
-            
-            $sanitizeManualBankValue("JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.manual_payment_request.bank_name'))"),
-            $sanitizeManualBankValue("JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '$.manual_payment_request.bank_name'))"),
-        ]);
 
         foreach ([
             "$.payload.bank_name",

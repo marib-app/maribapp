@@ -964,8 +964,8 @@ class PaymentRequestTableQuery
         $eastYemenCase = "CASE WHEN {$gatewayExpression} IN {$eastAliases} THEN 'بنك الشرق' END";
 
         $fallback = "CASE"
-            . " WHEN {$gatewayExpression} = 'wallet' THEN NULL"
-            . " WHEN {$gatewayExpression} IN {$eastAliases} THEN NULL"
+            . " WHEN {$gatewayExpression} = 'wallet' THEN 'المحفظة'"
+            . " WHEN {$gatewayExpression} IN {$eastAliases} THEN 'بنك الشرق'"
             . " ELSE 'تحويل بنكي'"
             . ' END';
         $coalesceParts = array_merge([

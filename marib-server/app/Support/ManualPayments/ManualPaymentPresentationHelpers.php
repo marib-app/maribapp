@@ -408,31 +408,44 @@ trait ManualPaymentPresentationHelpers
             return;
         }
 
-        $manualBankAliases = array_merge(
-            ManualPaymentRequest::manualBankGatewayAliases(),
-            ManualPaymentRequest::walletGatewayAliases(),
-            [
-                'المحفظة',
-                'تحويل بنكي',
-            ]
+        $normalizeAlias = static function ($alias) {
+            if (! is_string($alias)) {
+                return null;
+            }
+
+            $trimmed = trim($alias);
+
+
+            return $trimmed === '' ? null : $trimmed;
+        };
+
+
+        $manualBankAliases = ManualPaymentRequest::manualBankGatewayAliases();
+
+        $manualBankAliases = array_map(
+            [Str::class, 'lower'],
+            array_filter(array_map($normalizeAlias, $manualBankAliases))
         );
 
-        $manualBankAliases = array_values(array_unique(array_filter(array_map(
-            static function ($alias) {
-                if (! is_string($alias)) {
-                    return null;
-                }
+        $additionalManualBankAliases = array_map(
+            [Str::class, 'lower'],
+            array_filter(array_map(
+                $normalizeAlias,
+                array_merge(
+                    ManualPaymentRequest::walletGatewayAliases(),
+                    [
+                        'المحفظة',
+                        'تحويل بنكي',
+                    ]
+                )
+            ))
+        );
 
-                $trimmed = trim($alias);
+        $manualBankAliases = array_values(array_unique(array_merge(
+            $manualBankAliases,
+            $additionalManualBankAliases
+        )));
 
-                if ($trimmed === '') {
-                    return null;
-                }
-
-                return Str::lower($trimmed);
-            },
-            $manualBankAliases
-        ))));
 
 
 

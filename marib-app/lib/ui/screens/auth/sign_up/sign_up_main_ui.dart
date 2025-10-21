@@ -28,6 +28,7 @@ import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:flutter/services.dart';
+import '../widgets/auth_status_bar.dart';
 
 
 
@@ -119,11 +120,13 @@ class SignUpCallbacks {
 class SignUpMainUI extends StatelessWidget {
   final SignUpVM vm;
   final SignUpCallbacks callbacks;
+  final Color statusBarBase;
 
   const SignUpMainUI({
     super.key,
     required this.vm,
     required this.callbacks,
+    required this.statusBarBase,
   });
 
   @override
@@ -145,6 +148,12 @@ class SignUpMainUI extends StatelessWidget {
         child: CustomScrollView(
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           slivers: [
+            SliverToBoxAdapter(
+              child: LoginStatusBar.topSpacer(
+                context,
+                baseColor: statusBarBase,
+              ),
+            ),
             _HeaderAppBar(vm: vm), // ✅
             SliverToBoxAdapter(
               child: Padding(

@@ -41,24 +41,13 @@ import 'widgets/business_section.dart';
 import 'dart:async'; // للـ Timer
 import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
 import 'package:marib/utils/notification/notification_service.dart';
-
-
-
-
-
+import '../widgets/auth_status_bar.dart';
 
 class SignupScreen extends StatefulWidget {
   final String? selectedAccountType;
   final String? phoneNumber;
   final String? countryCode;
   final bool? fromSocialLogin;
-
-
-
-
-
-
-
 
   const SignupScreen({
     super.key,
@@ -95,19 +84,20 @@ class _SignupScreenState extends CloudState<SignupScreen> {
   final TextEditingController _officeNameController = TextEditingController();
   final TextEditingController _officePhoneController = TextEditingController();
   final TextEditingController _officeWhatsappController =
-  TextEditingController();
+      TextEditingController();
   final TextEditingController _officeLocationController =
-  TextEditingController();
+      TextEditingController();
 
   // حقول التجاري (نوع 3)
   final TextEditingController _businessNameController = TextEditingController();
-  final TextEditingController _businessPhoneController = TextEditingController();
+  final TextEditingController _businessPhoneController =
+      TextEditingController();
   final TextEditingController _businessWhatsappController =
-  TextEditingController();
+      TextEditingController();
   final TextEditingController _businessLocationController =
-  TextEditingController();
+      TextEditingController();
   final TextEditingController _commercialRegisterController =
-  TextEditingController();
+      TextEditingController();
 
   // قوائم للحساب التجاري
   List<int> selectedBusinessCategories = [];
@@ -135,8 +125,6 @@ class _SignupScreenState extends CloudState<SignupScreen> {
   TimeOfDay? _openingTime;
   TimeOfDay? _closingTime;
 
-
-
   bool _officeLogoUploading = false;
   double? _officeLogoProgress;
   bool _officeLogoPreviewHint = false;
@@ -145,15 +133,11 @@ class _SignupScreenState extends CloudState<SignupScreen> {
   double? _businessLogoProgress;
   bool _businessLogoPreviewHint = false;
 
-
   bool isCommercialUploading = false;
   double? commercialUploadProgress;
   bool showCommercialPreviewHint = false;
 
-
-
   bool isUploading = false;
-
 
   // أوقات العمل (افتراضي: جميع الأيام غير متاحة)
   Map<String, dynamic> _workingHours = {
@@ -165,9 +149,6 @@ class _SignupScreenState extends CloudState<SignupScreen> {
     "thu": {"enabled": false, "from": null, "to": null},
     "fri": {"enabled": false, "from": null, "to": null},
   };
-
-
-
 
   // وسائل الدفع
   final Map<String, String> paymentMethods = const {
@@ -273,15 +254,20 @@ class _SignupScreenState extends CloudState<SignupScreen> {
     }
   }
 
-
   // اختيار ملف السجل التجاري
-
-
 
 // لو بتستخدم kIsWeb:
 
   static const _maxFileSizeBytes = 10 * 1024 * 1024; // 10MB
-  static const _allowedExt = ['pdf','doc','docx','jpg','jpeg','png','webp'];
+  static const _allowedExt = [
+    'pdf',
+    'doc',
+    'docx',
+    'jpg',
+    'jpeg',
+    'png',
+    'webp'
+  ];
 
   Future<void> _pickFile() async {
     try {
@@ -332,7 +318,8 @@ class _SignupScreenState extends CloudState<SignupScreen> {
         // _webFileBytes = picked.bytes!;
         // _webFileName  = picked.name;
         setState(() {
-          _commercialRegisterFile = null; // لا نملك File على الويب، احتفظ بالاسم فقط إن شئت
+          _commercialRegisterFile =
+              null; // لا نملك File على الويب، احتفظ بالاسم فقط إن شئت
         });
       } else {
         final path = picked.path;
@@ -368,21 +355,12 @@ class _SignupScreenState extends CloudState<SignupScreen> {
     }
   }
 
-
-
-
-
   void _removePickedFile() {
     setState(() {
       _commercialRegisterFile = null;
       // _webFileBytes = null; _webFileName = null; // للويب إن وجِد
     });
   }
-
-
-
-
-
 
   // اختيار الوقت
   Future<void> _selectTime(BuildContext context, bool isOpeningTime) async {
@@ -422,15 +400,6 @@ class _SignupScreenState extends CloudState<SignupScreen> {
       });
     }
   }
-
-
-
-
-
-
-
-
-
 
   // الموقع الحالي
   Future<void> _getCurrentLocation() async {
@@ -485,7 +454,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
           if (placemarks.isNotEmpty) {
             final placemark = placemarks.first;
             _officeSelectedAddress =
-            "${placemark.street}, ${placemark.locality}, ${placemark.country}";
+                "${placemark.street}, ${placemark.locality}, ${placemark.country}";
             _officeLocationController.text = _officeSelectedAddress ?? "";
           }
         } else if (widget.selectedAccountType == "3") {
@@ -495,7 +464,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
           if (placemarks.isNotEmpty) {
             final placemark = placemarks.first;
             _businessSelectedAddress =
-            "${placemark.street}, ${placemark.locality}, ${placemark.country}";
+                "${placemark.street}, ${placemark.locality}, ${placemark.country}";
             _businessLocationController.text = _businessSelectedAddress ?? "";
           }
         } else {
@@ -505,7 +474,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
           if (placemarks.isNotEmpty) {
             final placemark = placemarks.first;
             _selectedAddress =
-            "${placemark.street}, ${placemark.locality}, ${placemark.country}";
+                "${placemark.street}, ${placemark.locality}, ${placemark.country}";
           }
         }
         _isLocationLoading = false;
@@ -566,255 +535,283 @@ class _SignupScreenState extends CloudState<SignupScreen> {
     super.dispose();
   }
 
-
-
   @override
   Widget build(BuildContext context) {
+    final statusBarBase = LoginStatusBar.resolveBaseColor(
+      context,
+      override: context.color.territoryColor,
+    );
+
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
-    return Scaffold(
-      // الخلفية العامة
-      backgroundColor: context.color.backgroundColor,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: LoginStatusBar.overlayFor(
+        context,
+        baseColor: statusBarBase,
+      ),
+      child: Scaffold(
+        // الخلفية العامة
+        backgroundColor: context.color.backgroundColor,
 
-      // الجسم: خلفية متدرجة + محتوى داخل SafeArea (top: true) حتى لا نرسم تحت شريط الحالة
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            colors: [
-              context.color.territoryColor,
-              context.color.territoryColor,
-            ],
+        // الجسم: خلفية متدرجة + محتوى داخل SafeArea (top: false) مع حجز المساحة يدويًا
+        body: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              colors: [
+                context.color.territoryColor,
+                context.color.territoryColor,
+              ],
+            ),
           ),
-        ),
-        child: SafeArea( // <-- هنا الأهم
-          top: true,      // احجز مساحة شريط الحالة بالأعلى (يبقى ثابت ومرئي)
-          bottom: false,  // خليه يرسم حتى آخر الشاشة (نضبط الـ inset بالسفل عند الكيبورد يدويًا)
-          child: CustomScrollView(
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            slivers: [
-              // ===== الهيدر: شعار + عبارة ترحيبية =====
-              SliverAppBar(
-                pinned: true,
-                floating: false,
-                expandedHeight: 160,
-                elevation: 0,
-                backgroundColor: Colors.transparent,
-                automaticallyImplyLeading: false,
-                flexibleSpace: FlexibleSpaceBar(
-                  background: Container(
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.only(top: 20),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          context.color.territoryColor,
-                          context.color.territoryColor.withOpacity(0.92),
-                        ],
-                      ),
-                      borderRadius: const BorderRadius.only(
-                        bottomLeft: Radius.circular(28),
-                        bottomRight: Radius.circular(28),
-                      ),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SvgPicture.asset(
-                          'assets/svg/Logo.svg',
-                          height: 84,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(height: 6),
-                        Text("readytoserve".translate(context))
-                            .size(context.font.large)
-                            .color(Colors.white.withOpacity(0.95)),
-                      ],
-                    ),
+          child: SafeArea(
+            top: false,
+            bottom: false,
+            // خليه يرسم حتى آخر الشاشة (نضبط الـ inset بالسفل عند الكيبورد يدويًا)
+            child: CustomScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              slivers: [
+                SliverToBoxAdapter(
+                  child: LoginStatusBar.topSpacer(
+                    context,
+                    baseColor: statusBarBase,
                   ),
                 ),
-              ),
-
-              // ===== المحتوى (جسم النموذج) =====
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(6, 8, 6, 16 + bottomInset),
-                  child: Form(
-                    key: _formKey,
-                    child: Container(
+                // ===== الهيدر: شعار + عبارة ترحيبية =====
+                SliverAppBar(
+                  pinned: true,
+                  floating: false,
+                  expandedHeight: 160,
+                  elevation: 0,
+                  backgroundColor: Colors.transparent,
+                  automaticallyImplyLeading: false,
+                  flexibleSpace: FlexibleSpaceBar(
+                    background: Container(
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.only(top: 20),
                       decoration: BoxDecoration(
-                        color: context.color.primaryColor,
-                        borderRadius: BorderRadius.circular(28),
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            context.color.territoryColor,
+                            context.color.territoryColor.withOpacity(0.92),
+                          ],
+                        ),
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(28),
+                          bottomRight: Radius.circular(28),
+                        ),
                       ),
-                      padding: const EdgeInsets.all(18.0),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(_getTitle())
-                              .size(context.font.extraLarge)
-                              .color(context.color.textDefaultColor),
-                          const SizedBox(height: 24),
-
-                          if (widget.fromSocialLogin == true &&
-                              widget.selectedAccountType == null) ...[
-                            AccountTypeSelector(
-                              value: currentSelectedAccountType,
-                              onChanged: (v) => setState(() => currentSelectedAccountType = v),
-                              onContinue: () {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => SignupScreen(
-                                      selectedAccountType: currentSelectedAccountType,
-                                      phoneNumber: widget.phoneNumber,
-                                      countryCode: widget.countryCode,
-                                      fromSocialLogin: false,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 24),
-                          ],
-
-                          // العقاري
-                          if (widget.selectedAccountType == "2") ...[
-                            RealEstateSection(
-                              logo: _officeLogoImage,
-                              onPickLogo: () => _pickImage('office_logo'),
-                              officeName: _officeNameController,
-                              officePhone: _officePhoneController,
-                              officeWhatsapp: _officeWhatsappController,
-                              officeLocation: _officeLocationController,
-                              prefixText: "${flagEmoji ?? "🇾🇪"} ${countryCode ?? "+967"}",
-                              onPickCountry: _showCountryPicker,
-                              isLocationLoading: _isLocationLoading,
-                              onGetLocation: _getLocationCallback(),
-
-                              // ⬇️ مهم لعرض اللودر/التلميح
-                              isLogoUploading: _officeLogoUploading,
-                              logoUploadProgress: _officeLogoProgress,
-                              showLogoPreviewHint: _officeLogoPreviewHint,
-                            )
-                          ],
-
-
-
-                          // التجاري
-                          if (widget.selectedAccountType == "3") ...[
-                            BlocBuilder<FetchCategoryCubit, FetchCategoryState>(
-                              builder: (context, catState) {
-                                List<CategoryModel> cats = [];
-                                if (catState is FetchCategorySuccess) {
-                                  final CategoryModel category6 = catState.categories.firstWhere(
-                                        (c) => c.id == 6,
-                                    orElse: () => CategoryModel(),
-                                  );
-                                  cats = category6.children ?? [];
-                                }
-                                return BusinessSection(
-
-                                  logo: _businessLogoImage,
-                                  onPickLogo: () => _pickImage('business_logo'),
-                                  commercialFile: _commercialRegisterFile,
-                                  onPickFile: _pickFile,
-                                  isUploading: isUploading,
-                                  name: _businessNameController,
-                                  phone: _businessPhoneController,
-                                  whatsapp: _businessWhatsappController,
-                                  location: _businessLocationController,
-                                  prefixText: "${flagEmoji ?? "🇾🇪"} ${countryCode ?? "+967"}",
-                                  onPickCountry: _showCountryPicker,
-                                  isLocationLoading: _isLocationLoading,
-                                  onGetLocation: _getLocationCallback(),
-                                  categories: cats,
-                                  selectedCategoryIds: selectedBusinessCategories,
-                                  onToggleCategory: (id) {
-                                    setState(() {
-                                      if (selectedBusinessCategories.contains(id)) {
-                                        selectedBusinessCategories.remove(id);
-                                      } else {
-                                        selectedBusinessCategories.add(id);
-                                      }
-                                    });
-                                  },
-                                  openingTime: _openingTime,
-                                  closingTime: _closingTime,
-                                  onPickOpening: () => _selectTime(context, true),
-                                  onPickClosing: () => _selectTime(context, false),
-                                  paymentMethods: paymentMethods,
-                                  selectedPaymentMethods: selectedPaymentMethods,
-                                  paymentControllers: paymentAccountControllers,
-                                  onTogglePayment: (key, isSelected) {
-                                    setState(() {
-                                      if (isSelected) {
-                                        if (!selectedPaymentMethods.contains(key)) {
-                                          selectedPaymentMethods.add(key);
-                                          paymentAccountControllers[key] = TextEditingController();
-                                        }
-                                      } else {
-                                        selectedPaymentMethods.remove(key);
-                                        paymentAccountControllers[key]?.dispose();
-                                        paymentAccountControllers.remove(key);
-                                      }
-                                    });
-                                  },
-                                  getAccountHint: _getAccountHint,
-
-                                  // ⬇️ مهم: أوقات الدوام (الجديد)
-                                  workingHours: _workingHours,
-                                  onChangedWorkingHours: (updated) {
-                                    setState(() {
-                                      _workingHours = updated; // خزّنها أو أرسلها للكيوبيت/الباك-إند
-                                    });
-                                  },
-
-                                  // اختياري: عرض/تحميل الشعار
-                                  isLogoUploading: _businessLogoUploading,
-                                  logoUploadProgress: _businessLogoProgress,
-                                  showLogoPreviewHint: _businessLogoPreviewHint,
-                                );
-
-
-                              },
-                            ),
-                          ],
-
-                          // الأفراد
-                          if (widget.selectedAccountType == "1" ||
-                              widget.selectedAccountType == "individual") ...[
-                            EmailOnlySection(emailController: _emailController),
-                          ],
-
-                          const SizedBox(height: 20),
-                          UiUtils.buildButton(
-                            context,
-                            onPressed: _submitForm,
-                            buttonTitle: "completeRegistration".translate(context),
-                            radius: 10,
-                            height: 46,
+                          SvgPicture.asset(
+                            'assets/svg/Logo.svg',
+                            height: 84,
+                            color: Colors.white,
                           ),
-                          const SizedBox(height: 20),
-
+                          const SizedBox(height: 6),
+                          Text("readytoserve".translate(context))
+                              .size(context.font.large)
+                              .color(Colors.white.withOpacity(0.95)),
                         ],
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
+
+                // ===== المحتوى (جسم النموذج) =====
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(6, 8, 6, 16 + bottomInset),
+                    child: Form(
+                      key: _formKey,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: context.color.primaryColor,
+                          borderRadius: BorderRadius.circular(28),
+                        ),
+                        padding: const EdgeInsets.all(18.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(_getTitle())
+                                .size(context.font.extraLarge)
+                                .color(context.color.textDefaultColor),
+                            const SizedBox(height: 24),
+
+                            if (widget.fromSocialLogin == true &&
+                                widget.selectedAccountType == null) ...[
+                              AccountTypeSelector(
+                                value: currentSelectedAccountType,
+                                onChanged: (v) => setState(
+                                    () => currentSelectedAccountType = v),
+                                onContinue: () {
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => SignupScreen(
+                                        selectedAccountType:
+                                            currentSelectedAccountType,
+                                        phoneNumber: widget.phoneNumber,
+                                        countryCode: widget.countryCode,
+                                        fromSocialLogin: false,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 24),
+                            ],
+
+                            // العقاري
+                            if (widget.selectedAccountType == "2") ...[
+                              RealEstateSection(
+                                logo: _officeLogoImage,
+                                onPickLogo: () => _pickImage('office_logo'),
+                                officeName: _officeNameController,
+                                officePhone: _officePhoneController,
+                                officeWhatsapp: _officeWhatsappController,
+                                officeLocation: _officeLocationController,
+                                prefixText:
+                                    "${flagEmoji ?? "🇾🇪"} ${countryCode ?? "+967"}",
+                                onPickCountry: _showCountryPicker,
+                                isLocationLoading: _isLocationLoading,
+                                onGetLocation: _getLocationCallback(),
+
+                                // ⬇️ مهم لعرض اللودر/التلميح
+                                isLogoUploading: _officeLogoUploading,
+                                logoUploadProgress: _officeLogoProgress,
+                                showLogoPreviewHint: _officeLogoPreviewHint,
+                              )
+                            ],
+
+                            // التجاري
+                            if (widget.selectedAccountType == "3") ...[
+                              BlocBuilder<FetchCategoryCubit,
+                                  FetchCategoryState>(
+                                builder: (context, catState) {
+                                  List<CategoryModel> cats = [];
+                                  if (catState is FetchCategorySuccess) {
+                                    final CategoryModel category6 =
+                                        catState.categories.firstWhere(
+                                      (c) => c.id == 6,
+                                      orElse: () => CategoryModel(),
+                                    );
+                                    cats = category6.children ?? [];
+                                  }
+                                  return BusinessSection(
+                                    logo: _businessLogoImage,
+                                    onPickLogo: () =>
+                                        _pickImage('business_logo'),
+                                    commercialFile: _commercialRegisterFile,
+                                    onPickFile: _pickFile,
+                                    isUploading: isUploading,
+                                    name: _businessNameController,
+                                    phone: _businessPhoneController,
+                                    whatsapp: _businessWhatsappController,
+                                    location: _businessLocationController,
+                                    prefixText:
+                                        "${flagEmoji ?? "🇾🇪"} ${countryCode ?? "+967"}",
+                                    onPickCountry: _showCountryPicker,
+                                    isLocationLoading: _isLocationLoading,
+                                    onGetLocation: _getLocationCallback(),
+                                    categories: cats,
+                                    selectedCategoryIds:
+                                        selectedBusinessCategories,
+                                    onToggleCategory: (id) {
+                                      setState(() {
+                                        if (selectedBusinessCategories
+                                            .contains(id)) {
+                                          selectedBusinessCategories.remove(id);
+                                        } else {
+                                          selectedBusinessCategories.add(id);
+                                        }
+                                      });
+                                    },
+                                    openingTime: _openingTime,
+                                    closingTime: _closingTime,
+                                    onPickOpening: () =>
+                                        _selectTime(context, true),
+                                    onPickClosing: () =>
+                                        _selectTime(context, false),
+                                    paymentMethods: paymentMethods,
+                                    selectedPaymentMethods:
+                                        selectedPaymentMethods,
+                                    paymentControllers:
+                                        paymentAccountControllers,
+                                    onTogglePayment: (key, isSelected) {
+                                      setState(() {
+                                        if (isSelected) {
+                                          if (!selectedPaymentMethods
+                                              .contains(key)) {
+                                            selectedPaymentMethods.add(key);
+                                            paymentAccountControllers[key] =
+                                                TextEditingController();
+                                          }
+                                        } else {
+                                          selectedPaymentMethods.remove(key);
+                                          paymentAccountControllers[key]
+                                              ?.dispose();
+                                          paymentAccountControllers.remove(key);
+                                        }
+                                      });
+                                    },
+                                    getAccountHint: _getAccountHint,
+
+                                    // ⬇️ مهم: أوقات الدوام (الجديد)
+                                    workingHours: _workingHours,
+                                    onChangedWorkingHours: (updated) {
+                                      setState(() {
+                                        _workingHours =
+                                            updated; // خزّنها أو أرسلها للكيوبيت/الباك-إند
+                                      });
+                                    },
+
+                                    // اختياري: عرض/تحميل الشعار
+                                    isLogoUploading: _businessLogoUploading,
+                                    logoUploadProgress: _businessLogoProgress,
+                                    showLogoPreviewHint:
+                                        _businessLogoPreviewHint,
+                                  );
+                                },
+                              ),
+                            ],
+
+                            // الأفراد
+                            if (widget.selectedAccountType == "1" ||
+                                widget.selectedAccountType == "individual") ...[
+                              EmailOnlySection(
+                                  emailController: _emailController),
+                            ],
+
+                            const SizedBox(height: 20),
+                            UiUtils.buildButton(
+                              context,
+                              onPressed: _submitForm,
+                              buttonTitle:
+                                  "completeRegistration".translate(context),
+                              radius: 10,
+                              height: 46,
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-
   String _getTitle() {
-    if (widget.fromSocialLogin == true &&
-        widget.selectedAccountType == null) {
+    if (widget.fromSocialLogin == true && widget.selectedAccountType == null) {
       return "completeAccountSetup".translate(context);
     }
 
@@ -913,8 +910,6 @@ class _SignupScreenState extends CloudState<SignupScreen> {
     return true;
   }
 
-
-
   bool _validateWithoutPhone() {
     // نوع 3 (تجاري): نتحقق من الاسم/الموقع/الأقسام فقط — بدون هاتف/واتساب
     if (widget.selectedAccountType == "3") {
@@ -948,10 +943,6 @@ class _SignupScreenState extends CloudState<SignupScreen> {
     return true;
   }
 
-
-
-
-
   Map<String, dynamic> _toStringKeyedMap(dynamic value) {
     if (value is Map<String, dynamic>) {
       return Map<String, dynamic>.from(value);
@@ -973,26 +964,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
     return result;
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   // إرسال الطلب
-
 
   Future<void> _submitForm() async {
     final form = _formKey.currentState;
@@ -1030,7 +1002,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
 
           if (_officeLogoImage != null) {
             final base64Image =
-            base64Encode(_officeLogoImage!.readAsBytesSync());
+                base64Encode(_officeLogoImage!.readAsBytesSync());
             payload["office_logo"] = base64Image;
           }
         } else if (widget.selectedAccountType == "3") {
@@ -1044,7 +1016,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
           }
 
           final businessCategoriesString =
-          selectedBusinessCategories.map((e) => e.toString()).join(',');
+              selectedBusinessCategories.map((e) => e.toString()).join(',');
 
           payload.addAll({
             "business_name": _businessNameController.text.trim(),
@@ -1060,10 +1032,8 @@ class _SignupScreenState extends CloudState<SignupScreen> {
             "contact_info": {
               "business_name": _businessNameController.text.trim(),
               "business_phone": _businessPhoneController.text.trim(),
-              "business_whatsapp":
-              _businessWhatsappController.text.trim(),
-              "business_location":
-              _businessLocationController.text.trim(),
+              "business_whatsapp": _businessWhatsappController.text.trim(),
+              "business_location": _businessLocationController.text.trim(),
               "business_categories": businessCategoriesString,
               "payment_methods": selectedPaymentMethods.join(','),
               "payment_account_details": accountDetails,
@@ -1079,24 +1049,23 @@ class _SignupScreenState extends CloudState<SignupScreen> {
 
           if (_openingTime != null) {
             payload["opening_time"] =
-            "${_openingTime!.hour}:${_openingTime!.minute.toString().padLeft(2, '0')}";
+                "${_openingTime!.hour}:${_openingTime!.minute.toString().padLeft(2, '0')}";
           }
           if (_closingTime != null) {
             payload["closing_time"] =
-            "${_closingTime!.hour}:${_closingTime!.minute.toString().padLeft(2, '0')}";
+                "${_closingTime!.hour}:${_closingTime!.minute.toString().padLeft(2, '0')}";
           }
 
           if (_businessLogoImage != null) {
             final base64Image =
-            base64Encode(_businessLogoImage!.readAsBytesSync());
+                base64Encode(_businessLogoImage!.readAsBytesSync());
             payload["business_logo"] = base64Image;
           }
 
           if (_commercialRegisterFile != null) {
             final base64File =
-            base64Encode(_commercialRegisterFile!.readAsBytesSync());
-            final fileName =
-                _commercialRegisterFile!.path.split('/').last;
+                base64Encode(_commercialRegisterFile!.readAsBytesSync());
+            final fileName = _commercialRegisterFile!.path.split('/').last;
             payload["commercial_register_file"] = base64File;
             payload["commercial_register_filename"] = fileName;
           }
@@ -1116,17 +1085,13 @@ class _SignupScreenState extends CloudState<SignupScreen> {
         );
 
         if (response['error'] == false) {
-
-
-
-
           try {
             Map<String, dynamic> latestUserData = {};
             final dynamic responseData = response['data'];
 
             if (responseData is Map) {
-              latestUserData =
-              Map<String, dynamic>.from(responseData as Map<dynamic, dynamic>);
+              latestUserData = Map<String, dynamic>.from(
+                  responseData as Map<dynamic, dynamic>);
             }
 
             if (response['token'] != null) {
@@ -1148,7 +1113,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
               }
 
               loginPayload["platform_type"] =
-              Platform.isAndroid ? "android" : "ios";
+                  Platform.isAndroid ? "android" : "ios";
 
               try {
                 final loginResponse = await Api.post(
@@ -1195,9 +1160,9 @@ class _SignupScreenState extends CloudState<SignupScreen> {
             }
 
             final Map<String, dynamic> additionalInfo =
-            _toStringKeyedMap(persistedUser['additional_info']);
+                _toStringKeyedMap(persistedUser['additional_info']);
             final Map<String, dynamic> contactInfo =
-            _toStringKeyedMap(additionalInfo['contact_info']);
+                _toStringKeyedMap(additionalInfo['contact_info']);
 
             if (widget.selectedAccountType == "2") {
               contactInfo['office_name'] = _officeNameController.text.trim();
@@ -1227,10 +1192,10 @@ class _SignupScreenState extends CloudState<SignupScreen> {
               contactInfo['business_categories'] =
                   selectedBusinessCategories.map((e) => e.toString()).toList();
               contactInfo['payment_methods'] =
-              List<String>.from(selectedPaymentMethods);
+                  List<String>.from(selectedPaymentMethods);
 
               final Map<String, dynamic> accountDetails =
-              _collectSelectedPaymentAccounts();
+                  _collectSelectedPaymentAccounts();
               if (accountDetails.isNotEmpty) {
                 contactInfo['payment_account_details'] = accountDetails;
               } else {
@@ -1248,11 +1213,11 @@ class _SignupScreenState extends CloudState<SignupScreen> {
               }
               if (_openingTime != null) {
                 contactInfo['opening_time'] =
-                "${_openingTime!.hour}:${_openingTime!.minute.toString().padLeft(2, '0')}";
+                    "${_openingTime!.hour}:${_openingTime!.minute.toString().padLeft(2, '0')}";
               }
               if (_closingTime != null) {
                 contactInfo['closing_time'] =
-                "${_closingTime!.hour}:${_closingTime!.minute.toString().padLeft(2, '0')}";
+                    "${_closingTime!.hour}:${_closingTime!.minute.toString().padLeft(2, '0')}";
               }
             }
 
@@ -1267,29 +1232,19 @@ class _SignupScreenState extends CloudState<SignupScreen> {
 
             await NotificationService.resendPendingTokenIfNeeded();
 
-
-
             if (mounted) {
-              context
-                  .read<UserDetailsCubit>()
-                  .fill(HiveUtils.getUserDetails());
+              context.read<UserDetailsCubit>().fill(HiveUtils.getUserDetails());
 
               FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
                 context,
                 clearCacheBeforeFetch: true,
               );
-
             }
           } catch (e) {
             if (kDebugMode) {
               print('Failed to persist registration data: ${e.toString()}');
             }
           }
-
-
-
-
-
 
           HelperUtils.showSnackBarMessage(
             context,
@@ -1316,8 +1271,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
         } else {
           HelperUtils.showSnackBarMessage(
             context,
-            response['message'] ??
-                'registrationError'.translate(context),
+            response['message'] ?? 'registrationError'.translate(context),
             messageDuration: 3,
           );
         }
@@ -1332,11 +1286,6 @@ class _SignupScreenState extends CloudState<SignupScreen> {
       }
     }
   }
-
-
-
-
-
 
 /*
 
@@ -1501,5 +1450,4 @@ class _SignupScreenState extends CloudState<SignupScreen> {
   }
 
   */
-
 }

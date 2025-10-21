@@ -37,7 +37,7 @@ import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/login/lib/payloads.dart';
 import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/constant.dart';
-import 'widgets/login_status_bar.dart';
+import '../widgets/auth_status_bar.dart';
 
 // =================== ثوابت ===================
 const double kSidePadding = 20.0;

@@ -25,6 +25,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sms_autofill/sms_autofill.dart';
+import '../widgets/auth_status_bar.dart';
 
 class MobileSignUpScreen extends StatefulWidget {
   final String? mobile;
@@ -270,16 +271,21 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final statusBarBase = LoginStatusBar.resolveBaseColor(
+      context,
+      override: context.color.backgroundColor,
+    );
     size = MediaQuery.of(context).size;
     final settingsState = context.watch<FetchSystemSettingsCubit>().state;
     final bool isSettingsReady = settingsState is FetchSystemSettingsSuccess;
     final bool isSettingsLoading = settingsState is FetchSystemSettingsInProgress;
-    return AnnotatedRegion(
-      value: UiUtils.getSystemUiOverlayStyle(
-        context: context,
-        statusBarColor: context.color.backgroundColor,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: LoginStatusBar.overlayFor(
+        context,
+        baseColor: statusBarBase,
       ),
       child: SafeArea(
+        top: false,
         child: GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(),
           child: PopScope(
@@ -290,9 +296,10 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
               });
               return;
             },
-            child: AnnotatedRegion(
-              value: SystemUiOverlayStyle(
-                statusBarColor: context.color.backgroundColor,
+            child: AnnotatedRegion<SystemUiOverlayStyle>(
+              value: LoginStatusBar.overlayFor(
+                context,
+                baseColor: statusBarBase,
               ),
               child: Scaffold(
                 backgroundColor: context.color.backgroundColor,
@@ -303,6 +310,7 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
                     child: buildLoginWidget(
                       isSettingsReady: isSettingsReady,
                       isSettingsLoading: isSettingsLoading,
+                      statusBarBase: statusBarBase,
                     ),
 
                   );
@@ -347,6 +355,8 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
   Widget buildLoginWidget({
     required bool isSettingsReady,
     required bool isSettingsLoading,
+    required Color statusBarBase,
+
   }) {
 
     return SingleChildScrollView(
@@ -357,6 +367,10 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              LoginStatusBar.topSpacer(
+                context,
+                baseColor: statusBarBase,
+              ),
               Align(
                 alignment: AlignmentDirectional.topEnd,
                 child: FittedBox(

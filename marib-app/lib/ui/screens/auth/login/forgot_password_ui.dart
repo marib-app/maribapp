@@ -6,7 +6,7 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:pinput/pinput.dart';
-import 'widgets/login_status_bar.dart';
+import '../widgets/auth_status_bar.dart';
 
 const double sidePadding = 20.0;
 

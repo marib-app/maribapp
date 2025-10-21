@@ -20,6 +20,7 @@ import 'dart:io';
 import 'package:marib/utils/api.dart';
 import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
 import 'package:marib/utils/notification/notification_service.dart';
+import '../widgets/auth_status_bar.dart';
 
 const double sidePadding = 20.0;
 
@@ -291,8 +292,19 @@ class _MobileVerificationScreenState extends State<MobileVerificationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: _otpCubit,
+    final statusBarBase = LoginStatusBar.resolveBaseColor(
+      context,
+      override: context.color.territoryColor,
+    );
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+        value: LoginStatusBar.overlayFor(
+          context,
+          baseColor: statusBarBase,
+        ),
+        child: BlocProvider.value(
+
+          value: _otpCubit,
       child: BlocConsumer<OtpCubit, OtpState>(
         listener: (context, state) {
           if (state is OtpVerified) {
@@ -414,22 +426,24 @@ class _MobileVerificationScreenState extends State<MobileVerificationScreen> {
 
           return Scaffold(
             backgroundColor: context.color.territoryColor,
-            body: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(begin: Alignment.topCenter, colors: [
-                  context.color.territoryColor,
-                  context.color.territoryColor,
-                ]),
-              ),
-              child: AnnotatedRegion<SystemUiOverlayStyle>(
-                value: SystemUiOverlayStyle(
-                  statusBarColor: context.color.backgroundColor,
+            body: SafeArea(
+              top: false,
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(begin: Alignment.topCenter, colors: [
+                    context.color.territoryColor,
+                    context.color.territoryColor,
+                  ]),
                 ),
                 child: Column(
                   // Direct Column as the body content
                   children: [
-                    const SizedBox(height: 40),
+                    LoginStatusBar.topSpacer(
+                      context,
+                      baseColor: statusBarBase,
+                    ),
+                    const SizedBox(height: 16),
                     SvgPicture.asset('assets/svg/Logo.svg',
                         height: 90, color: context.color.buttonColor),
                     Text("readytoserve".translate(context))
@@ -598,6 +612,7 @@ class _MobileVerificationScreenState extends State<MobileVerificationScreen> {
           );
         },
       ),
+        ),
     );
   }
 }

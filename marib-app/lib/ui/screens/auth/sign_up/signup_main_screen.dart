@@ -44,6 +44,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
 import 'package:marib/utils/notification/notification_service.dart';
 
+import '../widgets/auth_status_bar.dart';
 
 
 
@@ -639,13 +640,16 @@ class LoginScreenState extends State<SignUpMainScreen> {
   @override
   Widget build(BuildContext context) {
 
+    final statusBarBase = LoginStatusBar.resolveBaseColor(context);
+
     // واجهة الشاشة
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: UiUtils.getSystemUiOverlayStyle(
-        context: context,
-        statusBarColor: context.color.backgroundColor,
+      value: LoginStatusBar.overlayFor(
+        context,
+        baseColor: statusBarBase,
       ),
       child: SafeArea(
+        top: false,
         child: GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(),
           // إخفاء الكيبورد عند الضغط خارج الحقول
@@ -653,8 +657,9 @@ class LoginScreenState extends State<SignUpMainScreen> {
             canPop: isBack,
             onPopInvoked: (didPop) => setState(() => isBack = true),
             child: AnnotatedRegion<SystemUiOverlayStyle>(
-              value: SystemUiOverlayStyle.light.copyWith(
-                statusBarColor: Colors.transparent,
+              value: LoginStatusBar.overlayFor(
+                context,
+                baseColor: statusBarBase,
               ),
               child: FutureBuilder<void>(
                 future: _bootstrapFuture,
@@ -755,6 +760,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
                     body: SignUpMainUI(
                       vm: vm,
                       callbacks: callbacks,
+                      statusBarBase: statusBarBase,
                     ),
                   );
                 },

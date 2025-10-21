@@ -268,29 +268,6 @@ class _SliderComponentState extends State<SliderComponent>
     );
   }
 
-  Widget _buildBannerCounter(
-      BuildContext context,
-      int activeIndex,
-      int total,
-      ) {
-    final String counterText = '${activeIndex + 1}/$total';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.45),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        counterText,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
 
   /// ✅ التعامل مع الضغط على كل صورة داخل السلايدر
   Future<void> _handleTap(HomeSlider slider) async {
@@ -673,25 +650,7 @@ class _SliderComponentState extends State<SliderComponent>
                     },
                   ),
                 ),
-                PositionedDirectional(
-                  top: 12,
-                  end: 12,
-                  child: IgnorePointer(
-                    child: ValueListenableBuilder<int>(
-                      valueListenable: _bannerIndex,
-                      builder: (context, activeIndex, _) {
-                        final int total = bannersLength > 0 ? bannersLength : 1;
-                        final int safeActiveIndex =
-                        total == 0 ? 0 : activeIndex % total;
-                        return _buildBannerCounter(
-                          context,
-                          safeActiveIndex,
-                          total,
-                        );
-                      },
-                    ),
-                  ),
-                ),
+
               ],
             ),
           ),

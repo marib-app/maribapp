@@ -207,13 +207,8 @@ trait ManualPaymentPresentationHelpers
 
     protected function resolveManualBankName(mixed $row): ?string
     {
-        $aliasCandidates = array_merge(
-            (array) ManualPaymentRequest::manualBankGatewayAliases(),
-            (array) ManualPaymentRequest::walletGatewayAliases(),
-            $this->resolveLocalizedGatewayFallbacks()
-        );
+        $genericGatewayAliases = $this->resolveGenericGatewayAliases();
 
-        $genericGatewayAliases = $this->normalizeGatewayAliases($aliasCandidates);
 
 
         $candidates = [

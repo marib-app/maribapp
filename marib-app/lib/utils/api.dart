@@ -89,8 +89,7 @@ class _ApiResponseCache {
 
     final DateTime now = _clock();
     _cache.removeWhere(
-          (String key, _CachedApiResponse value) =>
-          value.isExpired(_entryTtl, now),
+      (String key, _CachedApiResponse value) => value.isExpired(_entryTtl, now),
     );
   }
 
@@ -205,10 +204,6 @@ class Api {
   static void setNetworkLoggingOverride(bool enabled) {
     AppSettings.setNetworkLoggingOverride(enabled);
     _ensureNetworkInterceptor(_sharedDio);
-    final Dio? custom = _customDio;
-    if (custom != null) {
-      _ensureNetworkInterceptor(custom);
-    }
   }
 
   // تهيئة الهيدرز لكل الطلبات
@@ -348,80 +343,82 @@ class Api {
   static const Object _contentTypeNotSpecified = Object();
 
   static Dio Function()? _dioFactory;
+  static Dio Function()? _activeClientFactory;
 
   @visibleForTesting
   static Dio Function()? get dioFactory => _dioFactory;
 
   @visibleForTesting
   static set dioFactory(Dio Function()? factory) {
-    if (identical(_dioFactory, factory)) {
+    if (identical(_activeClientFactory, factory)) {
+      _dioFactory = factory == null ? null : (() => _sharedDio);
       return;
     }
 
-    _dioFactory = factory;
-
-    _customDio?.close(force: true);
-    _customDio = null;
-    _customDioOptionsSnapshot = null;
-    _activeClientFactory = null;
+    final Dio previousClient = _sharedDio;
+    _activeClientFactory = factory;
 
     if (factory != null) {
-      final Dio newDio = factory();
-      _configureCustomDio(newDio);
-      _customDio = newDio;
-      _activeClientFactory = factory;
+      final Dio injected = factory();
+      if (!identical(previousClient, injected)) {
+        previousClient.close(force: true);
+      }
+      _sharedDio = injected;
+      _adoptSharedClient(_sharedDio, fromFactory: true);
+      _dioFactory = () => _sharedDio;
+    } else {
+      previousClient.close(force: true);
+      _sharedDio = _createSharedClient();
+      _dioFactory = null;
     }
   }
 
   static late _DioBaseOptionsSnapshot _sharedDioOptionsSnapshot;
   static Dio _sharedDio = _createSharedClient();
-  static Dio? _customDio;
-  static _DioBaseOptionsSnapshot? _customDioOptionsSnapshot;
-
-  static Dio Function()? _activeClientFactory;
 
   static Dio _createSharedClient() {
     final Dio dio = Dio();
-    dio.options
-      ..headers = <String, dynamic>{}
-      ..queryParameters = <String, dynamic>{}
-      ..contentType = null
-      ..followRedirects = false
-      ..validateStatus = (status) => status != null && status < 400;
-    _sharedDioOptionsSnapshot = _DioBaseOptionsSnapshot.capture(dio.options);
-    _ensureNetworkInterceptor(dio);
+    _adoptSharedClient(dio, fromFactory: false);
+
     return dio;
   }
 
-  static void _configureCustomDio(Dio dio) {
-    dio.options.followRedirects = false;
-    dio.options.validateStatus = (status) => status != null && status < 400;
-    _customDioOptionsSnapshot = _DioBaseOptionsSnapshot.capture(dio.options);
+  static void _configureDioForReuse(
+    Dio dio, {
+    required bool resetHeaders,
+  }) {
+    final BaseOptions options = dio.options;
+
+    if (resetHeaders) {
+      options
+        ..headers = <String, dynamic>{}
+        ..queryParameters = <String, dynamic>{}
+        ..contentType = null;
+    } else {
+      final Map<String, dynamic>? headers = options.headers;
+      options.headers = headers == null
+          ? <String, dynamic>{}
+          : Map<String, dynamic>.from(headers);
+      final Map<String, dynamic> queryParameters = options.queryParameters;
+      options.queryParameters = queryParameters.isEmpty
+          ? <String, dynamic>{}
+          : Map<String, dynamic>.from(queryParameters);
+    }
+
+    options.followRedirects = false;
+    options.validateStatus = (status) => status != null && status < 400;
+  }
+
+  static void _adoptSharedClient(
+    Dio dio, {
+    required bool fromFactory,
+  }) {
+    _configureDioForReuse(dio, resetHeaders: !fromFactory);
+    _sharedDioOptionsSnapshot = _DioBaseOptionsSnapshot.capture(dio.options);
     _ensureNetworkInterceptor(dio);
   }
 
   static Dio _dioForRequest({required bool allowAnyStatus}) {
-    final Dio Function()? factory = dioFactory;
-    if (factory != null) {
-      if (_customDio == null || !identical(factory, _activeClientFactory)) {
-        _customDio?.close(force: true);
-        final Dio newDio = factory();
-        _configureCustomDio(newDio);
-        _customDio = newDio;
-        _activeClientFactory = factory;
-      }
-      final Dio dio = _customDio!;
-      _resetDioOptionsForRequest(dio, allowAnyStatus: allowAnyStatus);
-      return dio;
-    }
-
-    if (_activeClientFactory != null) {
-      _customDio?.close(force: true);
-      _customDio = null;
-      _customDioOptionsSnapshot = null;
-      _activeClientFactory = null;
-    }
-
     final Dio dio = _sharedDio;
     _resetDioOptionsForRequest(dio, allowAnyStatus: allowAnyStatus);
     return dio;
@@ -445,19 +442,11 @@ class Api {
     Dio dio, {
     required bool allowAnyStatus,
   }) {
-    final bool isShared = identical(dio, _sharedDio);
-    final _DioBaseOptionsSnapshot? snapshot =
-        isShared ? _sharedDioOptionsSnapshot : _customDioOptionsSnapshot;
-    if (snapshot != null) {
-      snapshot.applyTo(dio.options);
-    } else {
-      dio.options
-        ..headers = <String, dynamic>{}
-        ..queryParameters = <String, dynamic>{}
-        ..contentType = null
-        ..followRedirects = false
-        ..validateStatus = (status) => status != null && status < 400;
-    }
+    dio.options
+      ..headers = <String, dynamic>{}
+      ..queryParameters = <String, dynamic>{};
+
+    _sharedDioOptionsSnapshot.applyTo(dio.options);
 
     dio.options.headers ??= <String, dynamic>{};
     dio.options.queryParameters ??= <String, dynamic>{};
@@ -470,12 +459,23 @@ class Api {
 
   @visibleForTesting
   static void resetSharedHttpClient() {
-    _sharedDio.close(force: true);
-    _sharedDio = _createSharedClient();
-    _customDio?.close(force: true);
-    _customDio = null;
-    _customDioOptionsSnapshot = null;
-    _activeClientFactory = null;
+    final Dio previous = _sharedDio;
+    final Dio Function()? factory = _activeClientFactory;
+
+    if (factory != null) {
+      final Dio injected = factory();
+      if (!identical(previous, injected)) {
+        previous.close(force: true);
+      }
+      _sharedDio = injected;
+      _adoptSharedClient(_sharedDio, fromFactory: true);
+      _dioFactory = () => _sharedDio;
+    } else {
+      previous.close(force: true);
+      _sharedDio = _createSharedClient();
+      _activeClientFactory = null;
+      _dioFactory = null;
+    }
   }
 
   static String? _resolveContentType({

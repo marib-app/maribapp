@@ -111,13 +111,14 @@ class ItemCommentsListState extends State<ItemCommentsList> {
         perPage: 20,
         sort: _sort,
         serviceUid: widget.serviceUid,
-          _serviceId = res.serviceId;
-          widget.onServiceIdResolved?.call(_serviceId);
+
       );
       _items.addAll(res.list);
       _hasMore = res.hasMore;
       _page = res.nextPage;
       widget.onCanReviewChanged?.call(res.canReview);
+      _serviceId = res.serviceId;
+      widget.onServiceIdResolved?.call(_serviceId);
 
     } catch (_) {
       // تجاهل هادئ

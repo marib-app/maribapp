@@ -193,7 +193,7 @@ class ServiceRequestRepository {
 
     final int total = _parseInt(meta['total']) ?? requests.length;
     final int currentPage = _parseInt(meta['current_page']) ?? page;
-    final int lastPageCandidate = _parseInt(meta['last_page']);
+    final int? lastPageCandidate = _parseInt(meta['last_page']);
     final int? perPageFromMeta = _parseInt(meta['per_page']);
 
     final int resolvedLastPage = lastPageCandidate != null && lastPageCandidate >= 1

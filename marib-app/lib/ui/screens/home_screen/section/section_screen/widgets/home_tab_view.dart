@@ -497,6 +497,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                                           'slider_${sliderInterfaceType}_${widget.sliderRefreshToken}',
                                         ),
                                         interfaceType: sliderInterfaceType,
+                                        padding: EdgeInsets.zero,
                                       ),
                                     ),
                                   ),

@@ -8,10 +8,11 @@ import 'package:marib/ui/theme/theme.dart';
 //This will open image crop SDK
 class CropImage {
 
-  static Future<CroppedFile?> crop(
-      BuildContext context, {
-        required String filePath,
-      }) async {
+  static Future<CroppedFile?> crop({
+    required BuildContext context,
+    required String filePath,
+  }) async {
+
     final territoryColor = context.color.territoryColor;
 
 
@@ -35,12 +36,9 @@ class CropImage {
             CropAspectRatioPreset.square,
           ],
         ),
-        WebUiSettings(
-          context: context,
-        ),
+        WebUiSettings(context: context),
       ],
     );
-
     return croppedFile;
   }
 }

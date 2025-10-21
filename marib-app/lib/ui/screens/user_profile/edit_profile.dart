@@ -129,7 +129,7 @@ class UserProfileScreenState extends State<UserProfileScreen> {
     try {
       // نرسل القيم الحالية + المتغير الذي تغيّر فقط
       final resp = await context.read<AuthCubit>().updateuserdata(
-            context,
+            context: context,
             name: nameController.text.trim(),
             email: emailController.text.trim(),
             // لا نرفع صورة هنا

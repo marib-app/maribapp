@@ -21,45 +21,36 @@ import 'slider_shimmer.dart';
 import 'package:marib/ui/screens/widgets/lazy_network_image.dart';
 import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 
-
-
-
 class SliderComponent extends StatefulWidget {
   final String interfaceType;
   final List<HomeSlider> sliderList;
+  final EdgeInsetsGeometry padding;
 
   const SliderComponent({
     super.key,
     required this.interfaceType,
     required this.sliderList,
+    this.padding = const EdgeInsets.symmetric(horizontal: 12),
   });
 
   @override
   State<SliderComponent> createState() => _SliderComponentState();
 }
 
-
-
-
-
 typedef _LaunchUrlCallback = Future<bool> Function(Uri uri);
 typedef _CanLaunchUrlCallback = Future<bool> Function(Uri uri);
 typedef _SliderClickPostCallback = Future<Map<String, dynamic>> Function({
-required String url,
-dynamic parameter,
-Map<String, dynamic>? extraHeaders,
+  required String url,
+  dynamic parameter,
+  Map<String, dynamic>? extraHeaders,
 });
 
 typedef _EnsureSliderSessionCallback = Future<String> Function();
-
-
 
 _LaunchUrlCallback? _launchUrlOverride;
 _CanLaunchUrlCallback? _canLaunchUrlOverride;
 _SliderClickPostCallback? _sliderClickReporterOverride;
 _EnsureSliderSessionCallback? _ensureSliderSessionOverride;
-
-
 
 @visibleForTesting
 void setSliderUrlLauncherOverrides({
@@ -70,7 +61,6 @@ void setSliderUrlLauncherOverrides({
   _canLaunchUrlOverride = canLaunch;
 }
 
-
 @visibleForTesting
 void setSliderClickReporterOverrides({
   _SliderClickPostCallback? postOverride,
@@ -79,8 +69,6 @@ void setSliderClickReporterOverrides({
   _sliderClickReporterOverride = postOverride;
   _ensureSliderSessionOverride = ensureSessionOverride;
 }
-
-
 
 Future<bool> _launchExternalUrl(Uri uri) {
   final _LaunchUrlCallback? override = _launchUrlOverride;
@@ -101,13 +89,10 @@ Future<bool> _canLaunchExternalUrl(Uri uri) {
   return urllauncher.canLaunchUrl(uri);
 }
 
-
-
-
 class _SliderComponentState extends State<SliderComponent>
     with AutomaticKeepAliveClientMixin {
-  final ValueNotifier<int> _bannerIndex = ValueNotifier(
-      0); // لتتبع السلايدر الحالي
+  final ValueNotifier<int> _bannerIndex =
+      ValueNotifier(0); // لتتبع السلايدر الحالي
   Timer? _sliderTimer;
   late final PageController _pageController;
   bool _userInteracting = false;
@@ -120,7 +105,6 @@ class _SliderComponentState extends State<SliderComponent>
     final String normalizedTarget =
         SliderInterfaceMapper.normalize(widget.interfaceType) ?? rawTarget;
 
-
     bool isGeneralInterfaceValue(String? value) {
       if (value == null) {
         return true;
@@ -129,7 +113,6 @@ class _SliderComponentState extends State<SliderComponent>
       final String cleaned = value.trim().toLowerCase();
       return cleaned.isEmpty || cleaned == 'all';
     }
-
 
     return widget.sliderList.where((HomeSlider e) {
       if (isGeneralInterfaceValue(e.interfaceType)) {
@@ -165,10 +148,7 @@ class _SliderComponentState extends State<SliderComponent>
     _currentPage = _pageController.initialPage.toDouble();
 
     _startAutoSlider(resetToInitial: true);
-
   }
-
-
 
   @override
   void didUpdateWidget(covariant SliderComponent oldWidget) {
@@ -178,8 +158,6 @@ class _SliderComponentState extends State<SliderComponent>
       _startAutoSlider(resetToInitial: true);
     }
   }
-
-
 
   @override
   void dispose() {
@@ -212,8 +190,9 @@ class _SliderComponentState extends State<SliderComponent>
         return; // إذا المستخدم يتفاعل، لا تنفذ التنقل التلقائي
       if (bannersLength <= 1) return;
 
-      final currentPageValue =
-          _pageController.page ?? _currentPage ?? _pageController.initialPage.toDouble();
+      final currentPageValue = _pageController.page ??
+          _currentPage ??
+          _pageController.initialPage.toDouble();
       final currentIndex = currentPageValue.floor();
       final next = currentIndex + 1;
 
@@ -232,7 +211,6 @@ class _SliderComponentState extends State<SliderComponent>
       });
     });
   }
-
 
   void _resetToInitialPage() {
     final initialPage = bannersLength <= 1 ? 0 : bannersLength * 1000;
@@ -253,9 +231,6 @@ class _SliderComponentState extends State<SliderComponent>
       _bannerIndex.value = 0;
     }
   }
-
-
-
 
   BoxDecoration _buildBannerDecoration() {
     return BoxDecoration(
@@ -289,10 +264,10 @@ class _SliderComponentState extends State<SliderComponent>
   }
 
   Widget _buildBannerCounter(
-      BuildContext context,
-      int activeIndex,
-      int total,
-      ) {
+    BuildContext context,
+    int activeIndex,
+    int total,
+  ) {
     final String counterText = '${activeIndex + 1}/$total';
 
     return Container(
@@ -311,8 +286,6 @@ class _SliderComponentState extends State<SliderComponent>
       ),
     );
   }
-
-
 
   /// ✅ التعامل مع الضغط على كل صورة داخل السلايدر
   Future<void> _handleTap(HomeSlider slider) async {
@@ -336,14 +309,14 @@ class _SliderComponentState extends State<SliderComponent>
       return;
     }
 
-    final bool navigated = await _handleTargetNavigation(slider, actionType, destination);
+    final bool navigated =
+        await _handleTargetNavigation(slider, actionType, destination);
     if (navigated) {
       return;
     }
 
     await _handleLegacyTap(slider);
   }
-
 
   Future<void> _reportSliderClick(HomeSlider slider) async {
     final int? sliderId = slider.id;
@@ -379,7 +352,6 @@ class _SliderComponentState extends State<SliderComponent>
     }
   }
 
-
   bool _isChatAction(String? actionType, String? destination) {
     return actionType == 'open_chat' ||
         destination == 'chat' ||
@@ -393,15 +365,14 @@ class _SliderComponentState extends State<SliderComponent>
   }
 
   Future<bool> _handleExternalLink(
-      HomeSlider slider,
-      String? actionType,
-      String? destination,
-      ) async {
-    final bool wantsExternal =
-        actionType == 'open_link' ||
-            actionType == 'external_link' ||
-            destination == 'external_link' ||
-            destination == 'external';
+    HomeSlider slider,
+    String? actionType,
+    String? destination,
+  ) async {
+    final bool wantsExternal = actionType == 'open_link' ||
+        actionType == 'external_link' ||
+        destination == 'external_link' ||
+        destination == 'external';
 
     String? link = wantsExternal ? slider.resolvedExternalLink : null;
     link ??= slider.thirdPartyLink;
@@ -431,15 +402,14 @@ class _SliderComponentState extends State<SliderComponent>
   }
 
   Future<bool> _handleTargetNavigation(
-      HomeSlider slider,
-      String? actionType,
-      String? destination,
-      ) async {
-    final bool shouldNavigate =
-        slider.targetSummary != null ||
-            actionType == 'navigate' ||
-            destination == 'internal' ||
-            destination == 'navigate';
+    HomeSlider slider,
+    String? actionType,
+    String? destination,
+  ) async {
+    final bool shouldNavigate = slider.targetSummary != null ||
+        actionType == 'navigate' ||
+        destination == 'internal' ||
+        destination == 'navigate';
 
     if (!shouldNavigate || slider.targetSummary == null) {
       return false;
@@ -458,7 +428,8 @@ class _SliderComponentState extends State<SliderComponent>
     final String? route = target.routeName;
     if (route != null && route.isNotEmpty) {
       if (!mounted) return true;
-      await Navigator.pushNamed(context, route, arguments: target.arguments ?? target.meta);
+      await Navigator.pushNamed(context, route,
+          arguments: target.arguments ?? target.meta);
       return true;
     }
 
@@ -466,16 +437,17 @@ class _SliderComponentState extends State<SliderComponent>
   }
 
   Future<bool> _navigateToCategory(
-      HomeSlider slider,
-      HomeSliderTargetSummary target,
-      ) async {
+    HomeSlider slider,
+    HomeSliderTargetSummary target,
+  ) async {
     final CategorySlider? category = target.asCategorySlider ?? slider.model;
     final int? categoryId = target.idAsInt ?? slider.modelId ?? category?.id;
     if (category == null || categoryId == null) {
       return false;
     }
 
-    final int subCount = target.subCategoriesCount ?? category.subCategoriesCount ?? 0;
+    final int subCount =
+        target.subCategoriesCount ?? category.subCategoriesCount ?? 0;
     final int? parentId = target.parentCategoryId ?? category.parentCategoryId;
     if (!mounted) {
       return false;
@@ -499,9 +471,9 @@ class _SliderComponentState extends State<SliderComponent>
   }
 
   Future<bool> _navigateToItem(
-      HomeSlider slider,
-      HomeSliderTargetSummary target,
-      ) async {
+    HomeSlider slider,
+    HomeSliderTargetSummary target,
+  ) async {
     final ItemRepository repository = ItemRepository();
     try {
       Widgets.showLoader(context);
@@ -516,7 +488,6 @@ class _SliderComponentState extends State<SliderComponent>
           : await repository.fetchItemFromItemId(itemId!);
       if (!mounted) {
         return true;
-
       }
       await Future.delayed(const Duration(milliseconds: 100));
       Widgets.hideLoder(context);
@@ -539,14 +510,11 @@ class _SliderComponentState extends State<SliderComponent>
     }
 
     if (slider.modelType?.contains('Category') == true) {
-
-
       if (slider.model == null) return;
 
       if (slider.model!.subCategoriesCount != null &&
           slider.model!.subCategoriesCount! > 0) {
         if (!mounted) return;
-
 
         Navigator.pushNamed(context, Routes.subCategoryScreen, arguments: {
           'categoryList': <CategoryModel>[],
@@ -590,11 +558,9 @@ class _SliderComponentState extends State<SliderComponent>
     }
   }
 
-
-
-
   Future<void> _handleCouponAction(HomeSlider slider) async {
-    final String? coupon = slider.resolvedCouponCode ?? slider.actionPayload?.couponCode;
+    final String? coupon =
+        slider.resolvedCouponCode ?? slider.actionPayload?.couponCode;
     if (coupon == null || coupon.trim().isEmpty) {
       if (!mounted) return;
       HelperUtils.showSnackBarMessage(context, 'تعذر قراءة رمز القسيمة.');
@@ -628,10 +594,6 @@ class _SliderComponentState extends State<SliderComponent>
     }
   }
 
-
-
-
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -642,126 +604,135 @@ class _SliderComponentState extends State<SliderComponent>
         : 1; // الحفاظ على صفحة واحدة عند غياب أي بنرات
     final pagePhysics = hasBanners
         ? (bannersLength == 1
-        ? const BouncingScrollPhysics()
-        : const ClampingScrollPhysics())
+            ? const BouncingScrollPhysics()
+            : const ClampingScrollPhysics())
         : const NeverScrollableScrollPhysics();
 
     if (!hasBanners) {
-
-
       debugPrint(
           "⚠️ SliderComponent: لا توجد بانرات لواجهة '${widget.interfaceType}'");
-      return const SliderShimmer();
-
-
+      return _wrapWithPadding(const SliderShimmer());
     }
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: double.infinity,
-          child: AspectRatio(
-            aspectRatio: 390 / 150,
-            child: Stack(
+    return _wrapWithPadding(
+      Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: double.infinity,
+            child: AspectRatio(
+              aspectRatio: 390 / 150,
+              child: Stack(
                 fit: StackFit.expand,
                 children: [
-            NotificationListener<UserScrollNotification>(
-            onNotification: (notification) {
-          if (!hasBanners) return false;
+                  NotificationListener<UserScrollNotification>(
+                    onNotification: (notification) {
+                      if (!hasBanners) return false;
 
-          if (notification is ScrollStartNotification) {
-          _userInteracting = true;
-          _sliderTimer?.cancel();
-          } else if (notification is ScrollEndNotification) {
-          _userInteracting = false;
-          _startAutoSlider();
-          }
-          return false;
-          },
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: itemCount,
-              physics: pagePhysics,
-              onPageChanged: hasBanners
-                  ? (int index) {
-                if (bannersLength > 1) {
-                  _bannerIndex.value = index % bannersLength;
-                } else {
-                  _bannerIndex.value = 0;
-                }
-                _currentPage = index.toDouble();
-              }
-                  : null,
-              itemBuilder: (_, int index) {
-                final int actualIndex =
-                bannersLength == 1 ? 0 : index % bannersLength;
-                final HomeSlider slider = filteredList[actualIndex];
+                      if (notification is ScrollStartNotification) {
+                        _userInteracting = true;
+                        _sliderTimer?.cancel();
+                      } else if (notification is ScrollEndNotification) {
+                        _userInteracting = false;
+                        _startAutoSlider();
+                      }
+                      return false;
+                    },
+                    child: PageView.builder(
+                      controller: _pageController,
+                      itemCount: itemCount,
+                      physics: pagePhysics,
+                      onPageChanged: hasBanners
+                          ? (int index) {
+                              if (bannersLength > 1) {
+                                _bannerIndex.value = index % bannersLength;
+                              } else {
+                                _bannerIndex.value = 0;
+                              }
+                              _currentPage = index.toDouble();
+                            }
+                          : null,
+                      itemBuilder: (_, int index) {
+                        final int actualIndex =
+                            bannersLength == 1 ? 0 : index % bannersLength;
+                        final HomeSlider slider = filteredList[actualIndex];
 
-                return _buildBannerShell(
-                  onTap: () => _handleTap(slider),
-                  child: LazyNetworkImage(
-                    imageUrl: slider.image ?? '',
-                    fit: BoxFit.cover,
-                    placeholder: const ShimmerBox(),
-                    errorWidget: const ShimmerBox(animate: false),
-                  ),
-                );
-              },
-            ),
-          ),
-        PositionedDirectional(
-            top: 12,
-            end: 12,
-            child: IgnorePointer(
-              child: ValueListenableBuilder<int>(
-                valueListenable: _bannerIndex,
-                builder: (context, activeIndex, _) {
-                  final int total = bannersLength > 0 ? bannersLength : 1;
-                  final int safeActiveIndex =
-                  total == 0 ? 0 : activeIndex % total;
-                  return _buildBannerCounter(
-                    context,
-                    safeActiveIndex,
-                    total,
+                        return _buildBannerShell(
+                          onTap: () => _handleTap(slider),
+                          child: LazyNetworkImage(
+                            imageUrl: slider.image ?? '',
+                            fit: BoxFit.cover,
+                            placeholder: const ShimmerBox(),
+                            errorWidget: const ShimmerBox(animate: false),
+                          ),
                         );
                       },
-
                     ),
-            ),
-        ),
+                  ),
+                  PositionedDirectional(
+                    top: 12,
+                    end: 12,
+                    child: IgnorePointer(
+                      child: ValueListenableBuilder<int>(
+                        valueListenable: _bannerIndex,
+                        builder: (context, activeIndex, _) {
+                          final int total =
+                              bannersLength > 0 ? bannersLength : 1;
+                          final int safeActiveIndex =
+                              total == 0 ? 0 : activeIndex % total;
+                          return _buildBannerCounter(
+                            context,
+                            safeActiveIndex,
+                            total,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
                 ],
+              ),
             ),
           ),
-        ),
-        SizedBox(height: 8.rh(context)),
-        ValueListenableBuilder<int>(
-          valueListenable: _bannerIndex,
-          builder: (context, activeIndex, _) {
-            final int total = bannersLength > 0 ? bannersLength : 1;
-            final int safeActiveIndex = total == 0 ? 0 : activeIndex % total;
-            return AnimatedSmoothIndicator(
-              activeIndex: safeActiveIndex,
-              count: total,
-              effect: CustomizableEffect(
-                spacing: 6,
-                activeDotDecoration: DotDecoration(
-                  width: 16,
-                  height: 8,
-                  color: const Color(0xFFEB5924),
-                  borderRadius: BorderRadius.circular(8),
+          SizedBox(height: 8.rh(context)),
+          ValueListenableBuilder<int>(
+            valueListenable: _bannerIndex,
+            builder: (context, activeIndex, _) {
+              final int total = bannersLength > 0 ? bannersLength : 1;
+              final int safeActiveIndex = total == 0 ? 0 : activeIndex % total;
+              return AnimatedSmoothIndicator(
+                activeIndex: safeActiveIndex,
+                count: total,
+                effect: CustomizableEffect(
+                  spacing: 6,
+                  activeDotDecoration: DotDecoration(
+                    width: 16,
+                    height: 8,
+                    color: const Color(0xFFEB5924),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  dotDecoration: DotDecoration(
+                    width: 8,
+                    height: 8,
+                    color: Colors.grey.shade400,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
-                dotDecoration: DotDecoration(
-                  width: 8,
-                  height: 8,
-                  color: Colors.grey.shade400,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            );
-          },
-        )
-      ],
+              );
+            },
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _wrapWithPadding(Widget child) {
+    if (widget.padding == EdgeInsets.zero ||
+        widget.padding == EdgeInsetsDirectional.zero) {
+      return child;
+    }
+    return Padding(
+      padding: widget.padding,
+      child: child,
     );
   }
 }

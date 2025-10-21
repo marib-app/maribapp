@@ -380,7 +380,7 @@ class UserProfileScreenState extends State<ShowUserProfileScreen>
 
     if (pickedFile != null) {
       final croppedFile = await CropImage.crop(
-        context,
+        context: context,
         filePath: pickedFile.path,
       );
 

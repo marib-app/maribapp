@@ -16,12 +16,15 @@ class SliderWidget extends StatefulWidget {
   final String interfaceType;
   final VoidCallback? onLoaded;
   final VoidCallback? onError;
+  final EdgeInsetsGeometry padding;
 
   const SliderWidget({
     super.key,
     this.interfaceType = "homepage",
     this.onLoaded,
     this.onError,
+    this.padding = const EdgeInsets.symmetric(horizontal: 12),
+
   });
 
   @override
@@ -86,12 +89,13 @@ class _SliderWidgetState extends State<SliderWidget> {
       builder: (context, state) {
         if (state is SliderFetchInProgress) {
           final Widget? cached = _buildFromCache();
-          return cached ?? const SliderShimmer();
+          return cached ?? _wrapWithPadding(const SliderShimmer());
+
         }
         if (state is SliderFallbackState) {
           final String display = state.display.toLowerCase();
           if (display == 'shimmer') {
-            return const SliderShimmer();
+            return _wrapWithPadding(const SliderShimmer());
           }
           if (display == 'image') {
             final String? imageUrl = state.image;
@@ -107,12 +111,13 @@ class _SliderWidgetState extends State<SliderWidget> {
           if (state.sliderlist.isEmpty) {
             _cachedSliderList = null;
             final Widget? cached = _buildFromCache();
-            return cached ?? const SliderShimmer();
+            return cached ?? _wrapWithPadding(const SliderShimmer());
           }
           _cacheSliderList(state.sliderlist);
           return SliderComponent(
             interfaceType: widget.interfaceType,
             sliderList: state.sliderlist,
+            padding: widget.padding,
           );
         }
         if (state is SliderFetchFailure) {
@@ -123,6 +128,17 @@ class _SliderWidgetState extends State<SliderWidget> {
         }
         return const SizedBox.shrink();
       },
+    );
+  }
+
+  Widget _wrapWithPadding(Widget child) {
+    if (widget.padding == EdgeInsets.zero ||
+        widget.padding == EdgeInsetsDirectional.zero) {
+      return child;
+    }
+    return Padding(
+      padding: widget.padding,
+      child: child,
     );
   }
 
@@ -158,6 +174,7 @@ class _SliderWidgetState extends State<SliderWidget> {
       return SliderComponent(
         interfaceType: widget.interfaceType,
         sliderList: _cachedSliderList!,
+        padding: widget.padding,
       );
     }
     if (_cachedFallbackImage != null && _cachedFallbackImage!.isNotEmpty) {
@@ -169,44 +186,46 @@ class _SliderWidgetState extends State<SliderWidget> {
   Widget _buildFallbackImage(BuildContext context, String imageUrl) {
     final BorderRadius borderRadius = BorderRadius.circular(12);
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
+    return _wrapWithPadding(
+      Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
         SizedBox(
-          width: double.infinity,
-          child: AspectRatio(
-            aspectRatio: 390 / 150,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: borderRadius,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-                color: Colors.grey.shade200,
-              ),
-              child: ClipRRect(
-                borderRadius: borderRadius,
-                child: LazyNetworkImage(
-                  imageUrl: imageUrl,
-                  fit: BoxFit.cover,
-                  placeholder: Container(
-                    color: Colors.grey.shade200,
+        width: double.infinity,
+        child: AspectRatio(
+          aspectRatio: 390 / 150,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: borderRadius,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+              color: Colors.grey.shade200,
+            ),
+            child: ClipRRect(
+              borderRadius: borderRadius,
+              child: LazyNetworkImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.cover,
+                placeholder: Container(
+                  color: Colors.grey.shade200,
+                ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 8),
-        const _StaticSliderIndicator(
-          count: 1,
-          activeIndex: 0,
-        ),
-      ],
+          const SizedBox(height: 8),
+          const _StaticSliderIndicator(
+            count: 1,
+            activeIndex: 0,
+          ),
+        ],
+      ),
     );
   }
 }

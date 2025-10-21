@@ -655,7 +655,22 @@ class LoginScreenState extends State<SignUpMainScreen> {
           // إخفاء الكيبورد عند الضغط خارج الحقول
           child: PopScope(
             canPop: isBack,
-            onPopInvoked: (didPop) => setState(() => isBack = true),
+            onPopInvoked: (didPop) {
+              if (didPop) {
+                if (mounted) {
+                  setState(() => isBack = false);
+                }
+                return;
+              }
+              HelperUtils.showSnackBarMessage(
+                context,
+                'اضغط مرة أخرى للتأكيد',
+              );
+              if (mounted) {
+                setState(() => isBack = true);
+              }
+            },
+
             child: AnnotatedRegion<SystemUiOverlayStyle>(
               value: LoginStatusBar.overlayFor(
                 context,

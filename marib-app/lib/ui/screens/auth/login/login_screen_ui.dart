@@ -37,6 +37,7 @@ import 'package:marib/utils/login/lib/payloads.dart';
 import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/constant.dart';
 import '../widgets/auth_status_bar.dart';
+import 'package:marib/utils/helper_utils.dart';
 
 // =================== ثوابت ===================
 const double kSidePadding = 20.0;
@@ -342,21 +343,32 @@ class LoginHeaderSection extends StatelessWidget {
         child: PopScope(
           canPop: isBack,
           onPopInvoked: (didPop) {
+            if (didPop) {
+              updateBackState(false);
+              return;
+            }
             // منطق الرجوع الأصلي — بدون تغيير
             if (isDeleteAccount) {
               Navigator.pop(context);
-            } else {
-              if (isOtpSent) {
-                onResetOTP();
-              } else if (sendMailClicked) {
-                onBack();
-              } else {
-                updateBackState(true);
-                return;
-              }
+              updateBackState(false);
+              return;
             }
-            updateBackState(false);
-            return;
+            if (isOtpSent) {
+              onResetOTP();
+              updateBackState(false);
+              return;
+            }
+            if (sendMailClicked) {
+              onBack();
+              updateBackState(false);
+              return;
+            }
+
+            HelperUtils.showSnackBarMessage(
+              context,
+              'اضغط مرة أخرى للتأكيد',
+            );
+            updateBackState(true);
           },
           child: AnnotatedRegion<SystemUiOverlayStyle>(
             value: overlay, // [تثبيت] نمرّر ستايل شريط الحالة المحايد

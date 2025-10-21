@@ -282,10 +282,19 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
           child: PopScope(
             canPop: isBack,
             onPopInvoked: (didPop) {
-              setState(() {
-                isBack = true;
-              });
-              return;
+              if (didPop) {
+                if (mounted) {
+                  setState(() => isBack = false);
+                }
+                return;
+              }
+              HelperUtils.showSnackBarMessage(
+                context,
+                'اضغط مرة أخرى للتأكيد',
+              );
+              if (mounted) {
+                setState(() => isBack = true);
+              }
             },
             child: AnnotatedRegion<SystemUiOverlayStyle>(
               value: LoginStatusBar.overlayFor(

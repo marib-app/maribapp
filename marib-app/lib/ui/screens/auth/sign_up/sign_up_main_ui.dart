@@ -132,6 +132,7 @@ class SignUpMainUI extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    final statusBarHeight = MediaQuery.of(context).padding.top;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -148,9 +149,10 @@ class SignUpMainUI extends StatelessWidget {
         child: CustomScrollView(
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           slivers: [
-            SliverToBoxAdapter(
-              child: LoginStatusBar.topSpacer(
-                context,
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _SignUpStatusBarHeader(
+                height: statusBarHeight,
                 baseColor: statusBarBase,
               ),
             ),
@@ -165,6 +167,44 @@ class SignUpMainUI extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+
+class _SignUpStatusBarHeader extends SliverPersistentHeaderDelegate {
+  const _SignUpStatusBarHeader({
+    required this.height,
+    required this.baseColor,
+  });
+
+  final double height;
+  final Color baseColor;
+
+  @override
+  double get minExtent => height;
+
+  @override
+  double get maxExtent => height;
+
+  @override
+  Widget build(
+      BuildContext context,
+      double shrinkOffset,
+      bool overlapsContent,
+      ) {
+    if (height <= 0) {
+      return const SizedBox.shrink();
+    }
+
+    return LoginStatusBar.topSpacer(
+      context,
+      baseColor: baseColor,
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _SignUpStatusBarHeader oldDelegate) {
+    return oldDelegate.height != height || oldDelegate.baseColor != baseColor;
   }
 }
 

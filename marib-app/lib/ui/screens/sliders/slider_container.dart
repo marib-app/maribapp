@@ -293,7 +293,7 @@ class _StaticSliderIndicator extends StatelessWidget {
     return AnimatedSmoothIndicator(
       activeIndex: safeActiveIndex,
       count: safeCount,
-      effect: SlideEffect(
+      effect: WormEffect(
         spacing: 6,
         dotWidth: 16,
         dotHeight: 8,

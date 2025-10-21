@@ -715,7 +715,7 @@ class _SliderComponentState extends State<SliderComponent>
               return AnimatedSmoothIndicator(
                 activeIndex: safeActiveIndex,
                 count: total,
-                effect: SlideEffect(
+                effect: WormEffect(
                   spacing: 6,
                   dotWidth: 16,
                   dotHeight: 8,

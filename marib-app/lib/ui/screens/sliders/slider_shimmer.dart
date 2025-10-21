@@ -30,14 +30,44 @@ class SliderShimmer extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: List.generate(4, (index) {
-                final isActive = index == 1;
+                final bool isActive = index == 1;
+                final BorderRadius borderRadius = BorderRadius.circular(8);
+
+                if (isActive) {
+                  return Container(
+                    width: 18,
+                    height: 10,
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    decoration: BoxDecoration(
+                      borderRadius: borderRadius,
+                      gradient: LinearGradient(
+                        colors: [
+                          baseColor,
+                          highlightColor,
+                        ],
+                      ),
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: 16,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: baseColor,
+                          borderRadius: borderRadius,
+                        ),
+                      ),
+                    ),
+                  );
+                }
+
+
                 return Container(
-                  width: isActive ? 16 : 8,
+                  width: 16,
                   height: 8,
                   margin: const EdgeInsets.symmetric(horizontal: 3),
                   decoration: BoxDecoration(
                     color: baseColor,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: borderRadius,
                   ),
                 );
               }),

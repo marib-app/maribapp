@@ -292,20 +292,14 @@ class _StaticSliderIndicator extends StatelessWidget {
     return AnimatedSmoothIndicator(
       activeIndex: safeActiveIndex,
       count: safeCount,
-      effect: CustomizableEffect(
+      effect: SlideEffect(
         spacing: 6,
-        activeDotDecoration: DotDecoration(
-          width: 16,
-          height: 8,
-          color: const Color(0xFFEB5924),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        dotDecoration: DotDecoration(
-          width: 8,
-          height: 8,
-          color: Colors.grey.shade400,
-          borderRadius: BorderRadius.circular(8),
-        ),
+        dotWidth: 16,
+        dotHeight: 8,
+        radius: 8,
+        dotColor: Colors.grey.shade400,
+        activeDotColor: const Color(0xFFEB5924),
+        paintStyle: PaintingStyle.fill,
       ),
     );
   }

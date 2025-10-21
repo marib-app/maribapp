@@ -7,12 +7,12 @@ import '../models/card_planet_data.dart';
 class CardPlanet extends StatelessWidget {
   final CardPlanetData data;
   final Map<String, LottieComposition> compositions;
-  final bool isActive;
+  final bool shouldAnimate;
   final double progress;
 
   const CardPlanet({
     required this.data,
-    required this.isActive,
+    required this.shouldAnimate,
     required this.compositions,
     required this.progress,
     super.key,
@@ -82,15 +82,15 @@ class CardPlanet extends StatelessWidget {
                   return Lottie(
                     composition: cached,
                     fit: BoxFit.cover,
-                    animate: isActive,
-                    repeat: isActive,
+                    animate: shouldAnimate,
+                    repeat: shouldAnimate,
                   );
                 }
                 return Lottie.asset(
                   data.backgroundAnimationPath!,
                   fit: BoxFit.cover,
-                  animate: isActive,
-                  repeat: isActive,
+                  animate: shouldAnimate,
+                  repeat: shouldAnimate,
                 );
               }(),
             ),
@@ -117,8 +117,8 @@ class CardPlanet extends StatelessWidget {
                             composition: cached,
                             height: height,
                             fit: BoxFit.contain,
-                            animate: isActive,
-                            repeat: isActive,
+                            animate: shouldAnimate,
+                            repeat: shouldAnimate,
                           );
                         }
                         return Lottie.asset(
@@ -126,8 +126,8 @@ class CardPlanet extends StatelessWidget {
                           height: height,
                           fit: BoxFit.contain,
                           // قم بإيقاف التشغيل الافتراضي إذا تريد تحكم خاص
-                          animate: isActive,
-                          repeat: isActive,
+                          animate: shouldAnimate,
+                          repeat: shouldAnimate,
                         );
                       }(),
                     ),

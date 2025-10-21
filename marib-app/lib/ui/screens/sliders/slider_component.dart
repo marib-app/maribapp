@@ -19,6 +19,7 @@ import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
 import 'slider_shimmer.dart';
 import 'package:marib/ui/screens/widgets/lazy_network_image.dart';
+import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 
 
 
@@ -701,17 +702,9 @@ class _SliderComponentState extends State<SliderComponent>
                   onTap: () => _handleTap(slider),
                   child: LazyNetworkImage(
                     imageUrl: slider.image ?? '',
-                    fit: BoxFit.fill,
-                    placeholder: Container(
-                      color: Colors.grey.shade200,
-                      alignment: Alignment.center,
-                      child: const CircularProgressIndicator(),
-                    ),
-                    errorWidget: Container(
-                      color: Colors.grey.shade200,
-                      alignment: Alignment.center,
-                      child: const Icon(Icons.broken_image),
-                    ),
+                    fit: BoxFit.cover,
+                    placeholder: const ShimmerBox(),
+                    errorWidget: const ShimmerBox(animate: false),
                   ),
                 );
               },

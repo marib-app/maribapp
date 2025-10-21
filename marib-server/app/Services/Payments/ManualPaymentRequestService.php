@@ -16,15 +16,11 @@ use Throwable;
 
 class ManualPaymentRequestService
 {
-    /**
-     * @var array<string, bool>
-     */
-    private array $bankNameColumnSupportCache = [];
+    private ?bool $supportsBankNameColumn = null;
 
-    /**
-     * @var array<string, bool>
-     */
-    private array $bankAccountNameColumnSupportCache = [];
+
+    private ?bool $supportsBankAccountNameColumn = null;
+
 
 
     private ?string $manualPaymentRequestConnection = null;
@@ -557,6 +553,10 @@ class ManualPaymentRequestService
             $bankName = $normalizeString($manualBank->name);
         }
 
+        $supportsBankNameColumn = $this->manualPaymentSupportsBankNameColumn();
+        $supportsBankAccountNameColumn = $this->manualPaymentSupportsBankAccountNameColumn();
+
+
         $bankBeneficiary = $manualBank && $manualBank->beneficiary_name
             ? $normalizeString($manualBank->beneficiary_name)
             : null;
@@ -719,12 +719,12 @@ class ManualPaymentRequestService
                 'payment_transaction_id' => $transaction->getKey(),
             ], static fn ($value) => $value !== null && $value !== ''));
 
-            if ($bankName !== null && $this->manualPaymentSupportsBankNameColumn()) {
+            if ($supportsBankNameColumn && $bankName !== null) {
 
                 $existingRequest->bank_name = $bankName;
             }
 
-            if ($bankBeneficiary !== null && $this->manualPaymentSupportsBankAccountNameColumn()) {
+            if ($supportsBankAccountNameColumn && $bankBeneficiary !== null) {
 
                 $existingRequest->bank_account_name = $bankBeneficiary;
             }
@@ -747,13 +747,13 @@ class ManualPaymentRequestService
                 'manual_bank_id' => $manualBank?->getKey() ?? $manualBankId,
             ]);
 
-            if ($bankName !== null && $this->manualPaymentSupportsBankNameColumn()) {
+            if ($supportsBankNameColumn && $bankName !== null) {
                 $manualPaymentRequest->bank_name = $bankName;
             }
 
             if (
                 $bankBeneficiary !== null
-                && $this->manualPaymentSupportsBankAccountNameColumn()
+                && $supportsBankAccountNameColumn
                 && $manualPaymentRequest->bank_account_name === null
             ) {
                 
@@ -1048,38 +1048,37 @@ class ManualPaymentRequestService
 
     private function manualPaymentSupportsBankNameColumn(): bool
     {
-        $connection = $this->getManualPaymentRequestConnection();
-        $cacheKey = $this->manualPaymentColumnCacheKey($connection);
-
-        if (array_key_exists($cacheKey, $this->bankNameColumnSupportCache)) {
-            return $this->bankNameColumnSupportCache[$cacheKey];
-
-
+        if ($this->supportsBankNameColumn !== null) {
+            return $this->supportsBankNameColumn;
         }
 
-        $supportsColumn = $this->manualPaymentRequestHasColumn('bank_name', $connection);
-        $this->bankNameColumnSupportCache[$cacheKey] = $supportsColumn;
+        $connection = $this->getManualPaymentRequestConnection();
+
+        $this->supportsBankNameColumn = $this->manualPaymentRequestHasColumn('bank_name', $connection);
 
 
-        return $supportsColumn;
+        return $this->supportsBankNameColumn;
+
     }
 
     private function manualPaymentSupportsBankAccountNameColumn(): bool
     
     {
-        $connection = $this->getManualPaymentRequestConnection();
-        $cacheKey = $this->manualPaymentColumnCacheKey($connection);
-
-        if (array_key_exists($cacheKey, $this->bankAccountNameColumnSupportCache)) {
-            return $this->bankAccountNameColumnSupportCache[$cacheKey];
+        if ($this->supportsBankAccountNameColumn !== null) {
+            return $this->supportsBankAccountNameColumn;
 
         }
 
-        $supportsColumn = $this->manualPaymentRequestHasColumn('bank_account_name', $connection);
-        $this->bankAccountNameColumnSupportCache[$cacheKey] = $supportsColumn;
+        $connection = $this->getManualPaymentRequestConnection();
+
+        $this->supportsBankAccountNameColumn = $this->manualPaymentRequestHasColumn(
+            'bank_account_name',
+            $connection
+        );
 
 
-        return $supportsColumn;
+        return $this->supportsBankAccountNameColumn;
+
     }
 
     private function manualPaymentRequestHasColumn(string $column, ?string $connection = null): bool
@@ -1107,10 +1106,6 @@ class ManualPaymentRequestService
 
 
     
-    private function manualPaymentColumnCacheKey(?string $connection): string
-    {
-        return $connection ?? '__default__';
-    }
 
     private function getManualPaymentRequestConnection(): ?string
     {

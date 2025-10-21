@@ -8,7 +8,8 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 class ApiMetricsService
 {
     public const START_TIME_ATTRIBUTE = 'api_metrics.start_time';
@@ -39,20 +40,57 @@ class ApiMetricsService
             ?? $request->attributes->get(self::ENDPOINT_ATTRIBUTE)
             ?? self::resolveEndpointName();
 
-        $payloadBytes = strlen($response->getContent());
+        $payloadBytes = self::resolvePayloadSize($response);
 
         $status = $response->getStatusCode();
         $method = $request->getMethod();
 
-        Log::info('api.response.metrics', [
+        $logContext = [
             'endpoint' => $endpointName,
             'duration_ms' => round($durationMs, 3),
-            'payload_bytes' => $payloadBytes,
             'status' => $status,
             'method' => $method,
-        ]);
 
-        self::updateHistograms($endpointName, $durationMs, $payloadBytes);
+
+        ];
+
+        if ($payloadBytes !== null) {
+            $logContext['payload_bytes'] = $payloadBytes;
+        }
+
+        Log::info('api.response.metrics', $logContext);
+
+        if ($payloadBytes !== null) {
+            self::updateHistograms($endpointName, $durationMs, $payloadBytes);
+        }
+    }
+
+    protected static function resolvePayloadSize(Response|JsonResponse $response): ?int
+    {
+        if ($response instanceof StreamedResponse) {
+            $contentLength = $response->headers->get('Content-Length');
+
+            return is_numeric($contentLength) ? (int) $contentLength : null;
+        }
+
+        if ($response instanceof BinaryFileResponse) {
+            $file = $response->getFile();
+
+            if ($file !== null) {
+                $fileSize = $file->getSize();
+
+                if ($fileSize !== false) {
+                    return (int) $fileSize;
+                }
+            }
+
+            $contentLength = $response->headers->get('Content-Length');
+
+            return is_numeric($contentLength) ? (int) $contentLength : null;
+        }
+
+
+        return strlen($response->getContent());
     }
 
     protected static function resolveEndpointName(): string

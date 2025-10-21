@@ -381,8 +381,8 @@ class LoginHeaderSection extends StatelessWidget {
                     SliverPersistentHeader(
                       pinned: true,
                       delegate: _LoginStatusBarHeader(
-                        height: statusBarHeight,
-                        baseColor: statusBarBase,
+                        statusBarHeight,
+                        statusBarBase,
                       ),
                     ),
 
@@ -1189,10 +1189,8 @@ class _LoginStatusBarHeader extends SliverPersistentHeaderDelegate {
   final double height;
   final Color baseColor;
 
-  _LoginStatusBarHeader({
-    required this.height,
-    required this.baseColor,
-  });
+  _LoginStatusBarHeader(this.height, this.baseColor);
+
 
   @override
   double get minExtent => height;

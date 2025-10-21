@@ -608,7 +608,6 @@ class ItemsListState extends State<ItemsList> {
         key: const ValueKey('items_slider_section'),
         child: SliderWidget(
           interfaceType: widget.interfaceType,
-          margin: const EdgeInsets.only(bottom: 5),
         ),
       ),
       _buildSearchHeaderSection(context),

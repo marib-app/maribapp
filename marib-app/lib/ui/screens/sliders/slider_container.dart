@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'slider_component.dart';
 import 'slider_shimmer.dart';
 import 'package:marib/data/model/home_slider.dart';
-import 'package:marib/utils/responsiveSize.dart';
 
 import 'package:marib/data/cubits/slider_cubit.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
@@ -20,7 +19,6 @@ class SliderWidget extends StatefulWidget {
   final VoidCallback? onLoaded;
   final VoidCallback? onError;
   final EdgeInsetsGeometry padding;
-  final EdgeInsetsGeometry margin;
 
   const SliderWidget({
     super.key,
@@ -28,7 +26,6 @@ class SliderWidget extends StatefulWidget {
     this.onLoaded,
     this.onError,
     this.padding = kSliderHorizontalPadding,
-    this.margin = kSliderBottomMargin,
   });
 
   @override
@@ -61,13 +58,13 @@ class _SliderWidgetState extends State<SliderWidget> {
   void _requestSlider({bool forceRefresh = false}) {
     if (_hasRequestedCurrentInterface && !forceRefresh) return;
     final String? normalized =
-        SliderInterfaceMapper.normalize(widget.interfaceType);
+    SliderInterfaceMapper.normalize(widget.interfaceType);
     unawaited(
       context.read<SliderCubit>().fetchSlider(
-            context,
-            interfaceType: normalized ?? widget.interfaceType,
-            forceRefresh: forceRefresh,
-          ),
+        context,
+        interfaceType: normalized ?? widget.interfaceType,
+        forceRefresh: forceRefresh,
+      ),
     );
     _hasRequestedCurrentInterface = true;
   }
@@ -127,7 +124,6 @@ class _SliderWidgetState extends State<SliderWidget> {
             interfaceType: widget.interfaceType,
             sliderList: state.sliderlist,
             padding: widget.padding,
-            margin: widget.margin,
           );
         }
         if (state is SliderFetchFailure) {
@@ -148,24 +144,13 @@ class _SliderWidgetState extends State<SliderWidget> {
   }
 
   Widget _wrapWithPadding(Widget child) {
-    Widget wrapped = child;
-
-    final EdgeInsetsGeometry padding = widget.padding;
-    if (padding != EdgeInsets.zero && padding != EdgeInsetsDirectional.zero) {
-      wrapped = Padding(
-        padding: padding,
-        child: wrapped,
-      );
+    if (widget.padding == EdgeInsets.zero ||
+        widget.padding == EdgeInsetsDirectional.zero) {
+      return child;
     }
-
-    final EdgeInsetsGeometry margin = widget.margin;
-    if (margin == EdgeInsets.zero || margin == EdgeInsetsDirectional.zero) {
-      return wrapped;
-    }
-
-    return Container(
-      margin: margin,
-      child: wrapped,
+    return Padding(
+      padding: widget.padding,
+      child: child,
     );
   }
 
@@ -211,7 +196,6 @@ class _SliderWidgetState extends State<SliderWidget> {
         interfaceType: widget.interfaceType,
         sliderList: _cachedSliderList!,
         padding: widget.padding,
-        margin: widget.margin,
       );
     }
     if (_cachedFallbackImage != null && _cachedFallbackImage!.isNotEmpty) {
@@ -254,7 +238,7 @@ class _SliderWidgetState extends State<SliderWidget> {
               ),
             ),
           ),
-          SizedBox(height: 8.rh(context)),
+          const SizedBox(height: 8),
           const _StaticSliderIndicator(
             count: 1,
             activeIndex: 0,
@@ -293,14 +277,20 @@ class _StaticSliderIndicator extends StatelessWidget {
     return AnimatedSmoothIndicator(
       activeIndex: safeActiveIndex,
       count: safeCount,
-      effect: WormEffect(
+      effect: CustomizableEffect(
         spacing: 6,
-        dotWidth: 16,
-        dotHeight: 8,
-        radius: 8,
-        dotColor: Colors.grey.shade400,
-        activeDotColor: const Color(0xFFEB5924),
-        paintStyle: PaintingStyle.fill,
+        activeDotDecoration: DotDecoration(
+          width: 16,
+          height: 8,
+          color: const Color(0xFFEB5924),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        dotDecoration: DotDecoration(
+          width: 8,
+          height: 8,
+          color: Colors.grey.shade400,
+          borderRadius: BorderRadius.circular(8),
+        ),
       ),
     );
   }

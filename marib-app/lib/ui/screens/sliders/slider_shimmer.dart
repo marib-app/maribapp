@@ -1,7 +1,6 @@
 // ملف: slider_shimmer.dart
 
 import 'package:flutter/material.dart';
-import 'package:marib/utils/responsiveSize.dart';
 import 'package:shimmer/shimmer.dart';
 
 class SliderShimmer extends StatelessWidget {
@@ -11,7 +10,6 @@ class SliderShimmer extends StatelessWidget {
   Widget build(BuildContext context) {
     final baseColor = Colors.grey.shade300;
     final highlightColor = Colors.grey.shade100;
-    final double indicatorSpacing = 8.rh(context);
 
     return Shimmer.fromColors(
       baseColor: baseColor,
@@ -27,48 +25,19 @@ class SliderShimmer extends StatelessWidget {
               child: Container(color: baseColor),
             ),
           ),
-          SizedBox(height: indicatorSpacing),
+          const SizedBox(height: 8),
           Center(
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: List.generate(4, (index) {
-                final bool isActive = index == 1;
-                final BorderRadius borderRadius = BorderRadius.circular(8);
-
-                if (isActive) {
-                  return Container(
-                    width: 18,
-                    height: 10,
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    decoration: BoxDecoration(
-                      borderRadius: borderRadius,
-                      gradient: LinearGradient(
-                        colors: [
-                          baseColor,
-                          highlightColor,
-                        ],
-                      ),
-                    ),
-                    child: Center(
-                      child: Container(
-                        width: 16,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: baseColor,
-                          borderRadius: borderRadius,
-                        ),
-                      ),
-                    ),
-                  );
-                }
-
+                final isActive = index == 1;
                 return Container(
-                  width: 16,
+                  width: isActive ? 16 : 8,
                   height: 8,
                   margin: const EdgeInsets.symmetric(horizontal: 3),
                   decoration: BoxDecoration(
                     color: baseColor,
-                    borderRadius: borderRadius,
+                    borderRadius: BorderRadius.circular(8),
                   ),
                 );
               }),

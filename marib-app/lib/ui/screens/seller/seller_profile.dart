@@ -286,7 +286,6 @@ class SellerProfileScreenState extends State<SellerProfileScreen>
                         ),
                       SliderWidget(
                         interfaceType: "homepage",
-                        margin: EdgeInsets.zero,
                       ),
                       SizedBox(
                         height: 1,

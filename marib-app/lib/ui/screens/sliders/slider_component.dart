@@ -4,6 +4,7 @@ import 'package:marib/data/model/home_slider.dart';
 import 'package:marib/data/repositories/item/item_repository.dart';
 import 'package:marib/data/model/category_model.dart';
 import 'package:marib/utils/responsiveSize.dart';
+import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/app/routes.dart';
 import 'package:url_launcher/url_launcher.dart' as urllauncher;
@@ -20,22 +21,21 @@ import 'slider_shimmer.dart';
 import 'package:marib/ui/screens/widgets/lazy_network_image.dart';
 import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 
+
 const EdgeInsetsGeometry kSliderHorizontalPadding =
-    EdgeInsets.symmetric(horizontal: 10);
-const EdgeInsetsGeometry kSliderBottomMargin = EdgeInsets.only(bottom: 12);
+EdgeInsets.symmetric(horizontal: 10);
+
 
 class SliderComponent extends StatefulWidget {
   final String interfaceType;
   final List<HomeSlider> sliderList;
   final EdgeInsetsGeometry padding;
-  final EdgeInsetsGeometry margin;
 
   const SliderComponent({
     super.key,
     required this.interfaceType,
     required this.sliderList,
     this.padding = kSliderHorizontalPadding,
-    this.margin = kSliderBottomMargin,
   });
 
   @override
@@ -45,9 +45,9 @@ class SliderComponent extends StatefulWidget {
 typedef _LaunchUrlCallback = Future<bool> Function(Uri uri);
 typedef _CanLaunchUrlCallback = Future<bool> Function(Uri uri);
 typedef _SliderClickPostCallback = Future<Map<String, dynamic>> Function({
-  required String url,
-  dynamic parameter,
-  Map<String, dynamic>? extraHeaders,
+required String url,
+dynamic parameter,
+Map<String, dynamic>? extraHeaders,
 });
 
 typedef _EnsureSliderSessionCallback = Future<String> Function();
@@ -97,9 +97,9 @@ Future<bool> _canLaunchExternalUrl(Uri uri) {
 class _SliderComponentState extends State<SliderComponent>
     with AutomaticKeepAliveClientMixin {
   final ValueNotifier<int> _bannerIndex =
-      ValueNotifier(0); // لتتبع السلايدر الحالي
+  ValueNotifier(0); // لتتبع السلايدر الحالي
   Timer? _sliderTimer;
-  late PageController _pageController;
+  late final PageController _pageController;
   bool _userInteracting = false;
   double? _currentPage;
   final Set<int> _pendingSliderClickReports = <int>{};
@@ -146,7 +146,9 @@ class _SliderComponentState extends State<SliderComponent>
   void initState() {
     super.initState();
 
-    _pageController = _createPageController();
+    _pageController = PageController(
+      initialPage: bannersLength == 1 ? 0 : bannersLength * 1000,
+    );
 
     _currentPage = _pageController.initialPage.toDouble();
 
@@ -158,7 +160,6 @@ class _SliderComponentState extends State<SliderComponent>
     super.didUpdateWidget(oldWidget);
 
     if (oldWidget.sliderList != widget.sliderList) {
-      _recreatePageController();
       _startAutoSlider(resetToInitial: true);
     }
   }
@@ -203,7 +204,7 @@ class _SliderComponentState extends State<SliderComponent>
       _pageController
           .animateToPage(
         next,
-        duration: const Duration(milliseconds: 350),
+        duration: const Duration(milliseconds: 500),
         curve: Curves.easeInOut,
       )
           .then((_) {
@@ -217,7 +218,7 @@ class _SliderComponentState extends State<SliderComponent>
   }
 
   void _resetToInitialPage() {
-    final initialPage = _resolveInitialPage();
+    final initialPage = bannersLength <= 1 ? 0 : bannersLength * 1000;
     _currentPage = initialPage.toDouble();
 
     if (_pageController.hasClients) {
@@ -234,32 +235,6 @@ class _SliderComponentState extends State<SliderComponent>
     } else {
       _bannerIndex.value = 0;
     }
-  }
-
-  PageController _createPageController() {
-    return PageController(
-      initialPage: _resolveInitialPage(),
-      viewportFraction: _resolveViewportFraction(),
-    );
-  }
-
-  void _recreatePageController() {
-    final PageController oldController = _pageController;
-    final PageController newController = _createPageController();
-    _pageController = newController;
-    _currentPage = newController.initialPage.toDouble();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      oldController.dispose();
-    });
-  }
-
-  int _resolveInitialPage() {
-    return bannersLength <= 1 ? 0 : bannersLength * 1000;
-  }
-
-  double _resolveViewportFraction() {
-    return bannersLength <= 1 ? 1.0 : 0.9;
   }
 
   BoxDecoration _buildBannerDecoration() {
@@ -293,6 +268,30 @@ class _SliderComponentState extends State<SliderComponent>
     );
   }
 
+  Widget _buildBannerCounter(
+      BuildContext context,
+      int activeIndex,
+      int total,
+      ) {
+    final String counterText = '${activeIndex + 1}/$total';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.45),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        counterText,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
   /// ✅ التعامل مع الضغط على كل صورة داخل السلايدر
   Future<void> _handleTap(HomeSlider slider) async {
     if (!mounted) return;
@@ -316,7 +315,7 @@ class _SliderComponentState extends State<SliderComponent>
     }
 
     final bool navigated =
-        await _handleTargetNavigation(slider, actionType, destination);
+    await _handleTargetNavigation(slider, actionType, destination);
     if (navigated) {
       return;
     }
@@ -371,10 +370,10 @@ class _SliderComponentState extends State<SliderComponent>
   }
 
   Future<bool> _handleExternalLink(
-    HomeSlider slider,
-    String? actionType,
-    String? destination,
-  ) async {
+      HomeSlider slider,
+      String? actionType,
+      String? destination,
+      ) async {
     final bool wantsExternal = actionType == 'open_link' ||
         actionType == 'external_link' ||
         destination == 'external_link' ||
@@ -408,10 +407,10 @@ class _SliderComponentState extends State<SliderComponent>
   }
 
   Future<bool> _handleTargetNavigation(
-    HomeSlider slider,
-    String? actionType,
-    String? destination,
-  ) async {
+      HomeSlider slider,
+      String? actionType,
+      String? destination,
+      ) async {
     final bool shouldNavigate = slider.targetSummary != null ||
         actionType == 'navigate' ||
         destination == 'internal' ||
@@ -443,9 +442,9 @@ class _SliderComponentState extends State<SliderComponent>
   }
 
   Future<bool> _navigateToCategory(
-    HomeSlider slider,
-    HomeSliderTargetSummary target,
-  ) async {
+      HomeSlider slider,
+      HomeSliderTargetSummary target,
+      ) async {
     final CategorySlider? category = target.asCategorySlider ?? slider.model;
     final int? categoryId = target.idAsInt ?? slider.modelId ?? category?.id;
     if (category == null || categoryId == null) {
@@ -477,9 +476,9 @@ class _SliderComponentState extends State<SliderComponent>
   }
 
   Future<bool> _navigateToItem(
-    HomeSlider slider,
-    HomeSliderTargetSummary target,
-  ) async {
+      HomeSlider slider,
+      HomeSliderTargetSummary target,
+      ) async {
     final ItemRepository repository = ItemRepository();
     try {
       Widgets.showLoader(context);
@@ -610,8 +609,8 @@ class _SliderComponentState extends State<SliderComponent>
         : 1; // الحفاظ على صفحة واحدة عند غياب أي بنرات
     final pagePhysics = hasBanners
         ? (bannersLength == 1
-            ? const BouncingScrollPhysics()
-            : const ClampingScrollPhysics())
+        ? const BouncingScrollPhysics()
+        : const ClampingScrollPhysics())
         : const NeverScrollableScrollPhysics();
 
     if (!hasBanners) {
@@ -649,72 +648,48 @@ class _SliderComponentState extends State<SliderComponent>
                     physics: pagePhysics,
                     onPageChanged: hasBanners
                         ? (int index) {
-                            if (bannersLength > 1) {
-                              _bannerIndex.value = index % bannersLength;
-                            } else {
-                              _bannerIndex.value = 0;
-                            }
-                            _currentPage = index.toDouble();
-                          }
+                      if (bannersLength > 1) {
+                        _bannerIndex.value = index % bannersLength;
+                      } else {
+                        _bannerIndex.value = 0;
+                      }
+                      _currentPage = index.toDouble();
+                    }
                         : null,
                     itemBuilder: (_, int index) {
                       final int actualIndex =
-                          bannersLength == 1 ? 0 : index % bannersLength;
+                      bannersLength == 1 ? 0 : index % bannersLength;
                       final HomeSlider slider = filteredList[actualIndex];
 
-                      return AnimatedBuilder(
-                        animation: _pageController,
-                        builder: (context, child) {
-                          if (child == null) {
-                            return const SizedBox.shrink();
-                          }
-
-                          double effectivePage = _currentPage ??
-                              _pageController.initialPage.toDouble();
-                          if (_pageController.hasClients &&
-                              _pageController.position.hasContentDimensions) {
-                            effectivePage =
-                                _pageController.page ?? effectivePage;
-                          }
-
-                          final double relativePosition = effectivePage - index;
-                          final double distance = relativePosition.abs();
-
-                          final double clampedDistance =
-                              distance.clamp(0.0, 1.0).toDouble();
-                          final double curvedDistance =
-                              Curves.easeInOut.transform(clampedDistance);
-                          final double focusStrength = 1 - curvedDistance;
-                          final double translationX =
-                              -relativePosition * 20.0 * curvedDistance;
-                          final double opacity =
-                              (0.65 + (0.35 * focusStrength)).clamp(0.65, 1.0);
-
-                          return AnimatedContainer(
-                            duration: const Duration(milliseconds: 350),
-                            curve: Curves.easeInOut,
-                            transformAlignment: Alignment.center,
-                            transform: Matrix4.identity()
-                              ..translate(translationX, 0.0),
-                            child: AnimatedOpacity(
-                              duration: const Duration(milliseconds: 350),
-                              curve: Curves.easeInOut,
-                              opacity: opacity,
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: _buildBannerShell(
-                          onTap: () => _handleTap(slider),
-                          child: LazyNetworkImage(
-                            imageUrl: slider.image ?? '',
-                            fit: BoxFit.cover,
-                            placeholder: const ShimmerBox(),
-                            errorWidget: const ShimmerBox(animate: false),
-                          ),
+                      return _buildBannerShell(
+                        onTap: () => _handleTap(slider),
+                        child: LazyNetworkImage(
+                          imageUrl: slider.image ?? '',
+                          fit: BoxFit.cover,
+                          placeholder: const ShimmerBox(),
+                          errorWidget: const ShimmerBox(animate: false),
                         ),
                       );
                     },
+                  ),
+                ),
+                PositionedDirectional(
+                  top: 12,
+                  end: 12,
+                  child: IgnorePointer(
+                    child: ValueListenableBuilder<int>(
+                      valueListenable: _bannerIndex,
+                      builder: (context, activeIndex, _) {
+                        final int total = bannersLength > 0 ? bannersLength : 1;
+                        final int safeActiveIndex =
+                        total == 0 ? 0 : activeIndex % total;
+                        return _buildBannerCounter(
+                          context,
+                          safeActiveIndex,
+                          total,
+                        );
+                      },
+                    ),
                   ),
                 ),
               ],
@@ -729,14 +704,20 @@ class _SliderComponentState extends State<SliderComponent>
               return AnimatedSmoothIndicator(
                 activeIndex: safeActiveIndex,
                 count: total,
-                effect: WormEffect(
+                effect: CustomizableEffect(
                   spacing: 6,
-                  dotWidth: 16,
-                  dotHeight: 8,
-                  radius: 8,
-                  dotColor: Colors.grey.shade400,
-                  activeDotColor: const Color(0xFFEB5924),
-                  paintStyle: PaintingStyle.fill,
+                  activeDotDecoration: DotDecoration(
+                    width: 16,
+                    height: 8,
+                    color: const Color(0xFFEB5924),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  dotDecoration: DotDecoration(
+                    width: 8,
+                    height: 8,
+                    color: Colors.grey.shade400,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               );
             },
@@ -747,24 +728,13 @@ class _SliderComponentState extends State<SliderComponent>
   }
 
   Widget _wrapWithPadding(Widget child) {
-    Widget wrapped = child;
-
-    final EdgeInsetsGeometry padding = widget.padding;
-    if (padding != EdgeInsets.zero && padding != EdgeInsetsDirectional.zero) {
-      wrapped = Padding(
-        padding: padding,
-        child: wrapped,
-      );
+    if (widget.padding == EdgeInsets.zero ||
+        widget.padding == EdgeInsetsDirectional.zero) {
+      return child;
     }
-
-    final EdgeInsetsGeometry margin = widget.margin;
-    if (margin == EdgeInsets.zero || margin == EdgeInsetsDirectional.zero) {
-      return wrapped;
-    }
-
-    return Container(
-      margin: margin,
-      child: wrapped,
+    return Padding(
+      padding: widget.padding,
+      child: child,
     );
   }
 }

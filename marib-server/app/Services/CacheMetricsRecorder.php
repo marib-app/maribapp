@@ -22,7 +22,6 @@ class CacheMetricsRecorder
     {
         $this->increment($context, 'hits');
 
-        Log::info('cache.hit', $context);
     }
 
     /**
@@ -32,7 +31,6 @@ class CacheMetricsRecorder
     {
         $this->increment($context, 'misses');
 
-        Log::notice('cache.miss', $context);
     }
 
     public function flush(): void

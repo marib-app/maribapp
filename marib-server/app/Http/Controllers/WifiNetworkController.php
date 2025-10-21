@@ -71,8 +71,40 @@ class WifiNetworkController extends Controller
 
 
         $user = $request->user();
-        $walletAccount = $user ? $this->resolveWalletAccount($user, null) : null;
+        $walletAccount = null;
+        if ($user) {
+            $requestedWalletId = array_key_exists('wallet_id', $validated)
+                ? (int) $validated['wallet_id']
+                : null;
 
+            $walletAccount = $this->resolveWalletAccount($user, $requestedWalletId);
+
+            if (! $walletAccount) {
+                $latestOwnerWalletId = WifiNetwork::query()
+                    ->where('user_id', $user->getKey())
+                    ->whereNotNull('wallet_id')
+                    ->latest('id')
+                    ->value('wallet_id');
+
+                if ($latestOwnerWalletId !== null) {
+                    $walletAccount = WalletAccount::query()
+                        ->where('user_id', $user->getKey())
+                        ->whereKey((int) $latestOwnerWalletId)
+                        ->first();
+                }
+            }
+
+            if (! $walletAccount) {
+                return response()->json([
+                    'message' => __('Unable to create the Wi-Fi network.'),
+                    'errors' => [
+                        'wallet_id' => [__('We were unable to find a wallet for your account.')],
+                    ],
+                ], 422);
+            }
+        }
+
+        
         $fillable = (new WifiNetwork())->getFillable();
 
         $contacts = $validated['contacts'] ?? null;

@@ -1,6 +1,7 @@
 import 'dart:developer';
 import 'dart:typed_data';
 import 'package:marib/settings.dart';
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -45,7 +46,7 @@ class NetworkRequestInterseptor extends Interceptor {
     }
 
     final Map<String, dynamic>? payloadSummary =
-        _summarizePayload(options.data);
+        _summarizePayload(options.data, ignoreBinaryData: true);
     if (payloadSummary != null) {
       logEntry['payload'] = payloadSummary;
     }
@@ -85,15 +86,10 @@ class NetworkRequestInterseptor extends Interceptor {
       if (err.message != null) 'message': err.message,
     };
 
-    if (isBinaryResponse) {
-      final int? payloadSize = _binaryLength(responseData);
-      logEntry['payload'] = <String, dynamic>{
-        'type': 'binary',
-        if (payloadSize != null) 'size': payloadSize,
-      };
-    } else {
+    if (!isBinaryResponse) {
       final Map<String, dynamic>? payloadSummary =
-          _summarizePayload(responseData);
+          _summarizePayload(responseData, ignoreBinaryData: true);
+
       if (payloadSummary != null) {
         logEntry['payload'] = payloadSummary;
       }
@@ -133,15 +129,10 @@ class NetworkRequestInterseptor extends Interceptor {
       if (duration != null) 'durationMs': duration.inMilliseconds,
     };
 
-    if (isBinaryResponse) {
-      final int? payloadSize = _binaryLength(response.data);
-      logEntry['payload'] = <String, dynamic>{
-        'type': 'binary',
-        if (payloadSize != null) 'size': payloadSize,
-      };
-    } else {
+    if (!isBinaryResponse) {
       final Map<String, dynamic>? payloadSummary =
-          _summarizePayload(response.data);
+          _summarizePayload(response.data, ignoreBinaryData: true);
+
       if (payloadSummary != null) {
         logEntry['payload'] = payloadSummary;
       }
@@ -165,13 +156,16 @@ class NetworkRequestInterseptor extends Interceptor {
     return null;
   }
 
-  Map<String, dynamic>? _summarizePayload(dynamic data) {
+  Map<String, dynamic>? _summarizePayload(
+    dynamic data, {
+    bool ignoreBinaryData = false,
+  }) {
     if (data == null) {
       return null;
     }
 
     if (data is FormData) {
-      return <String, dynamic>{
+      final Map<String, dynamic> summary = <String, dynamic>{
         'type': 'form-data',
         if (data.fields.isNotEmpty)
           'fieldKeys': data.fields
@@ -186,9 +180,17 @@ class NetworkRequestInterseptor extends Interceptor {
               .toList(growable: false),
         if (data.files.isNotEmpty) 'fileCount': data.files.length,
       };
+      final int? size = _estimatePayloadSize(data);
+      if (size != null) {
+        summary['approxBytes'] = size;
+      }
+      return summary;
     }
 
     if (_isBinaryData(data)) {
+      if (ignoreBinaryData) {
+        return null;
+      }
       final int? size = _binaryLength(data);
       return <String, dynamic>{
         'type': 'binary',
@@ -197,7 +199,7 @@ class NetworkRequestInterseptor extends Interceptor {
     }
 
     if (data is Map) {
-      return <String, dynamic>{
+      final Map<String, dynamic> summary = <String, dynamic>{
         'type': 'map',
         'entries': data.length,
         if (data.isNotEmpty)
@@ -206,14 +208,24 @@ class NetworkRequestInterseptor extends Interceptor {
               .map((dynamic key) => key.toString())
               .toList(growable: false),
       };
+      final int? size = _estimatePayloadSize(data);
+      if (size != null) {
+        summary['approxBytes'] = size;
+      }
+      return summary;
     }
 
     if (data is List) {
-      return <String, dynamic>{
+      final Map<String, dynamic> summary = <String, dynamic>{
         'type': 'list',
         'length': data.length,
         if (data.isNotEmpty) 'firstType': data.first.runtimeType.toString(),
       };
+      final int? size = _estimatePayloadSize(data);
+      if (size != null) {
+        summary['approxBytes'] = size;
+      }
+      return summary;
     }
     if (data is String) {
       final bool truncated = data.length > _maxPreviewStringLength;
@@ -223,6 +235,7 @@ class NetworkRequestInterseptor extends Interceptor {
       return <String, dynamic>{
         'type': 'string',
         'length': data.length,
+        'approxBytes': utf8.encode(data).length,
         if (preview.isNotEmpty) 'preview': preview,
         if (truncated) 'truncated': true,
       };
@@ -232,11 +245,40 @@ class NetworkRequestInterseptor extends Interceptor {
       return <String, dynamic>{
         'type': data.runtimeType.toString(),
         'value': data,
+        'approxBytes': utf8.encode(data.toString()).length,
       };
     }
 
+    final int? size = _estimatePayloadSize(data);
     return <String, dynamic>{
       'type': data.runtimeType.toString(),
+      if (size != null) 'approxBytes': size,
     };
+  }
+
+  int? _estimatePayloadSize(dynamic data) {
+    try {
+      if (data is String) {
+        return utf8.encode(data).length;
+      }
+      if (data is num || data is bool) {
+        return utf8.encode(data.toString()).length;
+      }
+      if (data is Map || data is List) {
+        return utf8.encode(jsonEncode(data)).length;
+      }
+      if (data is FormData) {
+        int length = 0;
+        for (final MapEntry<String, String> field in data.fields) {
+          length += utf8.encode(field.key).length;
+          length += utf8.encode(field.value).length;
+        }
+        return length;
+      }
+    } catch (_) {
+      return null;
+    }
+
+    return null;
   }
 }

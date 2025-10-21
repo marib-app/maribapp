@@ -28,6 +28,7 @@ class StoreWifiNetworkRequest extends FormRequest
             'name' => ['required', 'string', 'min:2', 'max:255'],
             'slug' => $slugRules,
             'description' => ['nullable', 'string'],
+            'wallet_id' => ['required', 'numeric', Rule::exists('wallet_accounts', 'id')],
             'location_name' => ['nullable', 'string', 'max:255'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],

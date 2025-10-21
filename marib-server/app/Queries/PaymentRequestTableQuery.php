@@ -418,6 +418,11 @@ class PaymentRequestTableQuery
         $walletGatewayFilters = self::normalizeGatewayAliasesForFilter(
             ManualPaymentRequest::walletGatewayAliases()
         );
+        $manualAndWalletGatewayFilters = array_values(array_filter(array_unique(array_merge(
+            $manualGatewayFilters,
+            $walletGatewayFilters
+        ))));
+
         $eastYemenGatewayFilters = self::normalizeGatewayAliasesForFilter(self::eastYemenGatewayAliases());
         $cashGatewayFilters = self::normalizeGatewayAliasesForFilter(self::cashGatewayAliases());
 
@@ -706,21 +711,29 @@ class PaymentRequestTableQuery
                 $gatewayExpression,
                 $gatewayFilterGroups,
                 $channelExpression,
-                $channelFilterValues
-            ): void {
+                $channelFilterValues,
+                $manualAndWalletGatewayFilters
+                
+                ): void {
                 
                 $query->whereNotNull('pt.manual_payment_request_id')
                     ->orWhere(function (Builder $inner) use (
                         $gatewayExpression,
                         $gatewayFilterGroups,
                         $channelExpression,
-                        $channelFilterValues
+                        $channelFilterValues,
+                        $manualAndWalletGatewayFilters
                     ): void {
                         
                         
                         $inner->whereNull('pt.manual_payment_request_id');
 
-                        if ($gatewayFilterGroups === [] && $channelFilterValues === []) {
+                        if (
+                            $manualAndWalletGatewayFilters === []
+                            && $gatewayFilterGroups === []
+                            && $channelFilterValues === []
+                        ) {
+                            
                             $inner->whereRaw('0 = 1');
 
                             return;
@@ -729,29 +742,50 @@ class PaymentRequestTableQuery
                         $mergedGatewayFilters = $gatewayFilterGroups === []
                             ? []
                             : array_values(array_unique(array_merge(...$gatewayFilterGroups)));
-
+                        $otherGatewayFilters = $mergedGatewayFilters === []
+                            ? []
+                            : array_values(array_diff(
+                                $mergedGatewayFilters,
+                                $manualAndWalletGatewayFilters
+                            ));
 
 
                         $inner->where(function (Builder $gatewayFilters) use (
                             $gatewayExpression,
-                            $mergedGatewayFilters,
+                            $manualAndWalletGatewayFilters,
+                            $otherGatewayFilters,
+                            
                             $channelExpression,
                             $channelFilterValues
                         ): void {
                             
-                            if ($mergedGatewayFilters !== []) {
+                            if ($manualAndWalletGatewayFilters !== []) {
+
                                 $gatewayFilters->whereIn(
                                     DB::raw($gatewayExpression),
-                                    $mergedGatewayFilters
+                                    $manualAndWalletGatewayFilters
+                                );
+                            }
+
+                            if ($otherGatewayFilters !== []) {
+                                $method = $manualAndWalletGatewayFilters === [] ? 'whereIn' : 'orWhereIn';
+
+                                $gatewayFilters->{$method}(
+                                    DB::raw($gatewayExpression),
+                                    $otherGatewayFilters
+
 
                                 );
                             }
 
                             if ($channelFilterValues !== []) {
-                                $method = $mergedGatewayFilters === [] ? 'whereIn' : 'orWhereIn';
-
+                                $method = (
+                                    $manualAndWalletGatewayFilters === []
+                                    && $otherGatewayFilters === []
+                                ) ? 'whereIn' : 'orWhereIn';
+                                
                                 $gatewayFilters->{$method}(
-                                    
+
                                     DB::raw($channelExpression),
                                     $channelFilterValues
                                 );

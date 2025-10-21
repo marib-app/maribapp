@@ -14,7 +14,7 @@ import 'package:marib/data/model/preference_option.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart'; // context.color
 import 'package:marib/utils/ui_utils.dart';
-import 'metals_tab_view.dart';
+import 'metals/metals_tab_view.dart';
 import '../state/state.dart';
 import 'convert_tab_view.dart';
 import 'rates_tab_view.dart';

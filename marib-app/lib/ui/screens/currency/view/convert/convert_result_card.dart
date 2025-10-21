@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'dart:ui' as ui;
 
 class ConvertResultCard extends StatelessWidget {
   const ConvertResultCard({
@@ -54,7 +55,8 @@ class ConvertResultCard extends StatelessWidget {
                       fontWeight: FontWeight.w800,
                       fontSize: 16,
                     ),
-                    textDirection: TextDirection.rtl,
+                    textDirection: ui.TextDirection.rtl,
+
                     textAlign: TextAlign.right,
                   ),
                 ),

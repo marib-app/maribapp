@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'dart:ui' as ui;
 
 import '../../state/state.dart';
 
@@ -42,7 +43,7 @@ class ConvertHeader extends StatelessWidget {
         border: Border.all(color: borderColor),
       ),
       child: Directionality(
-        textDirection: TextDirection.rtl,
+        textDirection: ui.TextDirection.rtl,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
+import 'dart:ui' as ui;
 import '../../state/state.dart';
-import '../../../../data/model/currency_rate.dart';
+import '../../../../../data/model/currency_rate.dart';
 
 class ConvertGovernorateSection extends StatelessWidget {
   ConvertGovernorateSection({
@@ -33,7 +33,7 @@ class ConvertGovernorateSection extends StatelessWidget {
         value: defaultValue,
         child: Text(
           'المتوسط الافتراضي الوطني',
-          textDirection: TextDirection.rtl,
+          textDirection: ui.TextDirection.rtl,
         ),
       ),
       ...state.governorates.map((Map<String, String?> governorate) {
@@ -48,7 +48,7 @@ class ConvertGovernorateSection extends StatelessWidget {
           value: code,
           child: Text(
             label,
-            textDirection: TextDirection.rtl,
+            textDirection: ui.TextDirection.rtl,
           ),
         );
       }).whereType<DropdownMenuItem<String>>()
@@ -69,7 +69,7 @@ class ConvertGovernorateSection extends StatelessWidget {
           value: selectedValue,
           child: Text(
             fallbackLabel,
-            textDirection: TextDirection.rtl,
+            textDirection: ui.TextDirection.rtl,
           ),
         ),
       );
@@ -89,7 +89,7 @@ class ConvertGovernorateSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Directionality(
-          textDirection: TextDirection.rtl,
+          textDirection: ui.TextDirection.rtl,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -167,7 +167,7 @@ class ConvertGovernorateSection extends StatelessWidget {
               color: onBackground.withOpacity(0.6),
               fontWeight: FontWeight.w600,
             ),
-            textDirection: TextDirection.rtl,
+            textDirection: ui.TextDirection.rtl,
           ),
       ],
     );
@@ -206,7 +206,7 @@ class ConvertGovernorateSection extends StatelessWidget {
               color: onBackground.withOpacity(0.7),
               fontWeight: FontWeight.w600,
             ),
-            textDirection: TextDirection.rtl,
+            textDirection: ui.TextDirection.rtl,
           ),
           const SizedBox(height: 8),
           Text(
@@ -216,7 +216,7 @@ class ConvertGovernorateSection extends StatelessWidget {
               fontWeight: FontWeight.w800,
               fontSize: 16,
             ),
-            textDirection: TextDirection.rtl,
+            textDirection: ui.TextDirection.rtl,
           ),
         ],
       ),

@@ -408,8 +408,24 @@ trait ManualPaymentPresentationHelpers
             return;
         }
 
-        $manualBankAliases = $this->resolveGenericGatewayAliases();
+        $manualBankAliases = array_values(array_unique(array_filter(array_map(
+            static function ($alias) {
+                if (! is_string($alias)) {
+                    return null;
+                }
 
+                $value = Str::lower(trim($alias));
+
+                return $value === '' ? null : $value;
+            },
+            (array) ManualPaymentRequest::manualBankGatewayAliases()
+        ))));
+
+        if ($manualBankAliases === []) {
+            $manualBankAliases = ['manual_banks', 'manual_bank'];
+        }
+
+        
         $candidateIds = $rows
             ->map(static function (object $row) use ($manualBankAliases) {
                 $manualBankName = data_get($row, 'manual_bank_name');

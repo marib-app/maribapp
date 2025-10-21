@@ -324,7 +324,7 @@ class LoginHeaderSection extends StatelessWidget {
   Widget build(BuildContext context) {
     // ارتفاع الكيبورد السفلي للحشو أسفل المحتوى
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-    final statusBarHeight = MediaQuery.of(context).padding.top;
+    final double statusBarHeight = MediaQuery.of(context).padding.top;
 
     // [محايد لشريط الحالة] نختار لون ثابت من الثيم (لا يتبع لون الصفحة/الهيدر)
     final Color statusBarBase =
@@ -381,8 +381,8 @@ class LoginHeaderSection extends StatelessWidget {
                     SliverPersistentHeader(
                       pinned: true,
                       delegate: _LoginStatusBarHeader(
-                        statusBarHeight,
-                        statusBarBase,
+                        height: statusBarHeight,
+                        baseColor: statusBarBase,
                       ),
                     ),
 
@@ -1189,8 +1189,10 @@ class _LoginStatusBarHeader extends SliverPersistentHeaderDelegate {
   final double height;
   final Color baseColor;
 
-  _LoginStatusBarHeader(this.height, this.baseColor);
-
+  const _LoginStatusBarHeader({
+    required this.height,
+    required this.baseColor,
+  });
 
   @override
   double get minExtent => height;

@@ -686,7 +686,7 @@ class NotificationService {
 
   static Future<void> init(BuildContext context) async {
     _ensureLogoutHookRegistered();
-    requestPermission();
+    await requestPermission();
     await _ensureInitialTokenSynced();
     await registerListeners(context);
     await _registerTokenRefreshListener();
@@ -1557,7 +1557,6 @@ class NotificationService {
       return;
     }
     _purgeExpiredParticipantsCacheEntries();
-    _conversationParticipantsCache.remove(key);
     _conversationParticipantsCache.remove(key);
     _conversationParticipantsCache[key] = _CachedParticipantsEntry(
       participants: participants,

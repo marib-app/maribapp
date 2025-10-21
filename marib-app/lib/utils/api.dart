@@ -88,16 +88,10 @@ class _ApiResponseCache {
     }
 
     final DateTime now = _clock();
-    final List<String> expiredKeys = <String>[];
-    _cache.forEach((String key, _CachedApiResponse value) {
-      if (value.isExpired(_entryTtl, now)) {
-        expiredKeys.add(key);
-      }
-    });
-
-    for (final String key in expiredKeys) {
-      _cache.remove(key);
-    }
+    _cache.removeWhere(
+          (String key, _CachedApiResponse value) =>
+          value.isExpired(_entryTtl, now),
+    );
   }
 
   static void _enforceSizeLimit() {

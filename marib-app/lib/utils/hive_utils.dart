@@ -596,6 +596,7 @@ class HiveUtils {
       final bool isDifferentUser =
           previousId != null && previousId != incomingId;
       if (isFirstTime || isDifferentUser) {
+        Api.handleAccountChange();
         await _resetDelegateHistory();
       }
     }

@@ -14,8 +14,14 @@ class SliderCacheService
      * @param array<int, string> $interfaceTypes
      * @return mixed
      */
-    public static function rememberEligible(array $interfaceTypes, ?string $userIdentifier, ?string $sessionIdentifier, int $ttlSeconds, Closure $callback)
-    {
+    public static function rememberEligible(
+        array $interfaceTypes,
+        ?string $userIdentifier,
+        ?string $sessionIdentifier,
+        int $ttlSeconds,
+        Closure $callback
+    ) {
+
         $cacheKey = self::buildCacheKey($interfaceTypes, $userIdentifier, $sessionIdentifier);
         $expiry = now()->addSeconds(max($ttlSeconds, 1));
 
@@ -32,8 +38,13 @@ class SliderCacheService
     /**
      * @param array<int, string> $interfaceTypes
      */
-    public static function buildCacheKey(array $interfaceTypes, ?string $userIdentifier, ?string $sessionIdentifier): string
-    {
+    public static function buildCacheKey(
+        array $interfaceTypes,
+        ?string $userIdentifier,
+        ?string $sessionIdentifier
+    ): string {
+
+        
         $normalizedInterfaces = array_map(
             static fn (string $interfaceType) => self::normalizePart($interfaceType, 'all'),
             $interfaceTypes

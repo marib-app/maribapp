@@ -85,8 +85,8 @@
                                         <th scope="col" data-field="buy_price" data-sortable="true">{{ __('Buy Price') }}</th>
                                         <th scope="col" data-field="icon_url" data-formatter="iconFormatter">{{ __('Icon') }}</th>
                                         <th scope="col" data-field="last_updated_at" data-sortable="true" data-formatter="dateFormatter">{{ __('Last Updated') }}</th>
-                                        <th scope="col" data-field="history" data-formatter="historyHourlyFormatter">{{ __('Last Hourly Snapshot') }}</th>
-                                        <th scope="col" data-field="history" data-formatter="historyDailyFormatter">{{ __('Last Daily Aggregate') }}</th>
+                                        <th scope="col" data-field="history" data-formatter="historyHourlyFormatter" data-visible="false">{{ __('Last Hourly Snapshot') }}</th>
+                                        <th scope="col" data-field="history" data-formatter="historyDailyFormatter" data-visible="false">{{ __('Last Daily Aggregate') }}</th>
                                         <th scope="col" data-field="history" data-formatter="historyQualityFormatter">{{ __('Source Quality') }}</th>
 
                                         @can('currency-rate-edit')

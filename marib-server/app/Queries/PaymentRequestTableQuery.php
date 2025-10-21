@@ -960,17 +960,23 @@ class PaymentRequestTableQuery
     {
         $candidates = self::prepareCoalesceCandidates($labelCandidates);
         $eastAliases = self::sqlList(self::eastYemenGatewayAliases());
+        $walletCase = "CASE WHEN {$gatewayExpression} = 'wallet' THEN 'المحفظة' END";
+        $eastYemenCase = "CASE WHEN {$gatewayExpression} IN {$eastAliases} THEN 'بنك الشرق' END";
+
         $fallback = "CASE"
-            . " WHEN {$gatewayExpression} = 'wallet' THEN 'المحفظة'"
-            . " WHEN {$gatewayExpression} IN {$eastAliases} THEN 'بنك الشرق'"
+            . " WHEN {$gatewayExpression} = 'wallet' THEN NULL"
+            . " WHEN {$gatewayExpression} IN {$eastAliases} THEN NULL"
             . " ELSE 'تحويل بنكي'"
             . ' END';
-        if ($candidates === []) {
-            return $fallback;
-        }
+        $coalesceParts = array_merge([
+            $walletCase,
+            $eastYemenCase,
+        ], $candidates, [
+            $fallback,
+        ]);
 
 
-        return 'COALESCE(' . implode(', ', array_merge($candidates, [$fallback])) . ')';
+        return 'COALESCE(' . implode(', ', $coalesceParts) . ')';
     }
 
     private static function prepareCoalesceCandidates(array $expressions): array

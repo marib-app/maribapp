@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\MetalRateCreated;
+use App\Events\MetalRateUpdated;
 use App\Http\Controllers\Concerns\ValidatesMetalRates;
 use App\Models\Governorate;
 use App\Models\MetalRate;
@@ -16,6 +18,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 
 class MetalRateController extends Controller
@@ -73,6 +76,14 @@ class MetalRateController extends Controller
             $validated['default_governorate_id'],
             Auth::id()
         );
+
+
+        MetalRateCreated::dispatch(
+            $metal->getKey(),
+            $this->resolveQuoteEventPayload($metal),
+            (int) $validated['default_governorate_id']
+        );
+
 
         return redirect()
             ->route('metal-rates.index')
@@ -140,6 +151,13 @@ class MetalRateController extends Controller
             Auth::id()
         );
 
+        MetalRateUpdated::dispatch(
+            $metalRate->getKey(),
+            $this->resolveQuoteEventPayload($metalRate),
+            (int) $validated['default_governorate_id']
+        );
+
+
         
         return redirect()
             ->route('metal-rates.edit', $metalRate)
@@ -186,7 +204,47 @@ class MetalRateController extends Controller
     }
 
 
+    /**
+     * @return array<int, array{
+     *     governorate_id: int,
+     *     governorate_code: string|null,
+     *     governorate_name: string|null,
+     *     sell_price: string|null,
+     *     buy_price: string|null,
+     *     is_default: bool
+     * }>
+     */
+    private function resolveQuoteEventPayload(MetalRate $metalRate): array
+    {
+        return $metalRate->quotes()
+            ->with('governorate:id,code,name')
+            ->get()
+            ->map(static function ($quote): array {
+                $governorate = $quote->relationLoaded('governorate')
+                    ? $quote->governorate
+                    : $quote->governorate()->first();
 
+                return [
+                    'governorate_id' => (int) $quote->governorate_id,
+                    'governorate_code' => $governorate?->code
+                        ? Str::upper((string) $governorate->code)
+                        : null,
+                    'governorate_name' => $governorate?->name,
+                    'sell_price' => $quote->sell_price !== null
+                        ? (string) $quote->sell_price
+                        : null,
+                    'buy_price' => $quote->buy_price !== null
+                        ? (string) $quote->buy_price
+                        : null,
+                    'is_default' => (bool) $quote->is_default,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+
+    
     public function show(Request $request): JsonResponse
     {
         MetalRateUpdate::applyDueUpdates();

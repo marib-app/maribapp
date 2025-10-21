@@ -7,6 +7,8 @@ use App\Listeners\SendCurrencyRatesUpdatedNotification;
 use App\Events\CompetitionAnnounced;
 use App\Events\CurrencyCreated;
 use App\Events\ManualPaymentRequestCreated;
+use App\Events\MetalRateCreated;
+use App\Events\MetalRateUpdated;
 use App\Events\OrderStatusChanged;
 use App\Events\OrderNoteUpdated;
 use App\Events\SubscriptionExpired;
@@ -22,6 +24,8 @@ use App\Listeners\RecordOrderStatusTelemetry;
 use App\Listeners\SendOrderStatusChangedNotification;
 use App\Listeners\SendDelegateAssignmentNotifications;
 use App\Listeners\SendOrderNoteNotification;
+use App\Listeners\SendMetalRateCreatedNotification;
+use App\Listeners\SendMetalRateUpdatedNotification;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -69,6 +73,16 @@ class EventServiceProvider extends ServiceProvider
         CurrencyRatesUpdated::class => [
             SendCurrencyRatesUpdatedNotification::class,
         ],
+
+
+        MetalRateCreated::class => [
+            SendMetalRateCreatedNotification::class,
+        ],
+
+        MetalRateUpdated::class => [
+            SendMetalRateUpdatedNotification::class,
+        ],
+
 
 
         DelegateAssignmentsUpdated::class => [

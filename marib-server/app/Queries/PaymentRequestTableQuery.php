@@ -726,29 +726,38 @@ class PaymentRequestTableQuery
                             return;
                         }
 
+                        $mergedGatewayFilters = $gatewayFilterGroups === []
+                            ? []
+                            : array_values(array_unique(array_merge(...$gatewayFilterGroups)));
+
+
+
                         $inner->where(function (Builder $gatewayFilters) use (
                             $gatewayExpression,
-                            $gatewayFilterGroups,
+                            $mergedGatewayFilters,
                             $channelExpression,
                             $channelFilterValues
                         ): void {
                             
-                            foreach ($gatewayFilterGroups as $index => $filterValues) {
-                                $method = $index === 0 ? 'whereIn' : 'orWhereIn';
-                                $gatewayFilters->{$method}(
+                            if ($mergedGatewayFilters !== []) {
+                                $gatewayFilters->whereIn(
                                     DB::raw($gatewayExpression),
-                                    $filterValues
+                                    $mergedGatewayFilters
+
                                 );
                             }
 
-                                                        if ($channelFilterValues !== []) {
-                                $gatewayFilters->orWhereIn(
+                            if ($channelFilterValues !== []) {
+                                $method = $mergedGatewayFilters === [] ? 'whereIn' : 'orWhereIn';
+
+                                $gatewayFilters->{$method}(
+                                    
                                     DB::raw($channelExpression),
                                     $channelFilterValues
                                 );
                             }
 
-                            
+
                         });
                     });
             });

@@ -12,7 +12,6 @@ import 'dart:async';
 import 'package:marib/ui/screens/widgets/lazy_network_image.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
-
 class SliderWidget extends StatefulWidget {
   final String interfaceType;
   final VoidCallback? onLoaded;
@@ -33,6 +32,7 @@ class _SliderWidgetState extends State<SliderWidget> {
   bool _hasRequestedCurrentInterface = false;
   List<HomeSlider>? _cachedSliderList;
   String? _cachedFallbackImage;
+
   @override
   void initState() {
     super.initState();
@@ -53,17 +53,16 @@ class _SliderWidgetState extends State<SliderWidget> {
   void _requestSlider({bool forceRefresh = false}) {
     if (_hasRequestedCurrentInterface && !forceRefresh) return;
     final String? normalized =
-    SliderInterfaceMapper.normalize(widget.interfaceType);
+        SliderInterfaceMapper.normalize(widget.interfaceType);
     unawaited(
       context.read<SliderCubit>().fetchSlider(
-        context,
-        interfaceType: normalized ?? widget.interfaceType,
-        forceRefresh: forceRefresh,
-      ),
+            context,
+            interfaceType: normalized ?? widget.interfaceType,
+            forceRefresh: forceRefresh,
+          ),
     );
     _hasRequestedCurrentInterface = true;
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -87,7 +86,8 @@ class _SliderWidgetState extends State<SliderWidget> {
       builder: (context, state) {
         if (state is SliderFetchInProgress) {
           final Widget? cached = _buildFromCache();
-          return cached ?? const SliderShimmer();        }
+          return cached ?? const SliderShimmer();
+        }
         if (state is SliderFallbackState) {
           final String display = state.display.toLowerCase();
           if (display == 'shimmer') {
@@ -125,9 +125,6 @@ class _SliderWidgetState extends State<SliderWidget> {
       },
     );
   }
-
-
-
 
   void _cacheSliderList(List<HomeSlider> sliders) {
     if (sliders.isEmpty) {
@@ -209,7 +206,6 @@ class _SliderWidgetState extends State<SliderWidget> {
           count: 1,
           activeIndex: 0,
         ),
-
       ],
     );
   }
@@ -260,5 +256,4 @@ class _StaticSliderIndicator extends StatelessWidget {
       ),
     );
   }
-
 }

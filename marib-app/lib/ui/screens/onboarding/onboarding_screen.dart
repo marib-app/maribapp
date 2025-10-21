@@ -1,13 +1,12 @@
 import 'dart:async';
-import 'package:concentric_transition/page_view.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:lottie/lottie.dart';
+
 import 'package:marib/app/routes.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
+import 'lottie_helpers.dart';
 
 import 'models/card_planet_data.dart';
 import 'widgets/card_planet.dart';
@@ -179,10 +178,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     }
 
     try {
-      final composition = await AssetLottie(
+      final composition = await loadLottieComposition(
         path,
         bundle: rootBundle,
-      ).load();
+      );
       target[path] = composition;
     } catch (error, stackTrace) {
       if (kDebugMode) {
@@ -235,9 +234,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                             .toDouble();
                         final progress = index - effectivePage;
                         final shouldAnimate = progress.abs() <= 1.0;
+                        final contentProgress =
+                        (1 - progress.abs()).clamp(0.0, 1.0).toDouble();
                         return CardPlanet(
                           data: data[index],
                           progress: progress,
+                          contentProgress: contentProgress,
                           shouldAnimate: shouldAnimate,
                           compositions: _preloadedCompositions,
                         );

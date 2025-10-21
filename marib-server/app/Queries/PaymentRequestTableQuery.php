@@ -410,6 +410,25 @@ class PaymentRequestTableQuery
         $channelExpression = self::channelExpression('pt');
 
 
+        $gatewayExpression = self::gatewayExpression('pt');
+
+        $normalizedGatewayFilterValues = array_values(array_unique(array_filter(array_map(
+            static function ($value): ?string {
+                if (! is_string($value)) {
+                    return null;
+                }
+
+                $normalized = strtolower(trim($value));
+
+                return $normalized === '' ? null : $normalized;
+            },
+            array_merge(
+                ManualPaymentRequest::manualBankGatewayAliases(),
+                ManualPaymentRequest::walletGatewayAliases(),
+                self::eastYemenGatewayAliases(),
+                self::cashGatewayAliases()
+            )
+        ))));
 
 
         $paymentGatewayNameParts = [];
@@ -675,16 +694,13 @@ class PaymentRequestTableQuery
                 }
 
             )
-            ->where(static function (Builder $query): void {
+            ->where(static function (Builder $query) use ($gatewayExpression, $normalizedGatewayFilterValues): void {
                 $query->whereNotNull('pt.manual_payment_request_id')
-                    ->orWhere(function (Builder $inner): void {
-                        $inner->whereNotNull('pt.payment_gateway')
+                    ->orWhere(function (Builder $inner) use ($gatewayExpression, $normalizedGatewayFilterValues): void {
+                        $inner->whereNull('pt.manual_payment_request_id')
                             ->whereIn(
-                                DB::raw('LOWER(TRIM(pt.payment_gateway))'),
-                                array_map(
-                                    static fn (string $alias): string => strtolower(trim($alias)),
-                                    ManualPaymentRequest::manualBankGatewayAliases()
-                                )
+                                DB::raw($gatewayExpression),
+                                $normalizedGatewayFilterValues
                             );
                     });
             });
@@ -907,13 +923,8 @@ class PaymentRequestTableQuery
             'wallet-payment',
         ]);
 
-        $cashValues = self::sqlList([
-            'cash',
-            'cod',
-            'cash_on_delivery',
-            'cashcollection',
-            'cash_collect',
-        ]);
+        $cashValues = self::sqlList(self::cashGatewayAliases());
+
 
         
         $walletFallback = $payableTypeColumn !== null
@@ -1024,6 +1035,20 @@ class PaymentRequestTableQuery
             'alsharq',
             'al-sharq',
             'al sharq',
+        ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private static function cashGatewayAliases(): array
+    {
+        return [
+            'cash',
+            'cod',
+            'cash_on_delivery',
+            'cashcollection',
+            'cash_collect',
         ];
     }
 

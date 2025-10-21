@@ -25,24 +25,25 @@ void initApp() async {
   ///This must be used do not remove this line
   WidgetsFlutterBinding.ensureInitialized();
   final WidgetsBinding binding = WidgetsBinding.instance;
+  final PerformanceMonitor performanceMonitor = PerformanceMonitor.instance;
 
-  final bool perfLoggingRequested =
-      AppSettings.isPerformanceLoggingEnabled ||
-          PerformanceMonitor.instance.isEnvironmentCollectionEnabled;
+  final bool perfLoggingRequested = AppSettings.isPerformanceLoggingEnabled ||
+      performanceMonitor.isManualCollectionEnabled ||
+      performanceMonitor.isEnvironmentCollectionEnabled;
+
   final bool allowPerfLoggingInBuild =
-      !kReleaseMode || PerformanceMonitor.instance.isEnvironmentCollectionEnabled;
+      !kReleaseMode || performanceMonitor.isEnvironmentCollectionEnabled;
 
   final bool attachPerformanceMonitor =
       perfLoggingRequested && allowPerfLoggingInBuild;
 
-  if (attachPerformanceMonitor &&
-      (!kReleaseMode ||
-          PerformanceMonitor.instance.isEnvironmentCollectionEnabled)) {
-
-    PerformanceMonitor.instance.initialize();
-    binding.addTimingsCallback(
-      PerformanceMonitor.instance.handleFrameTimings,
-    );
+  if (attachPerformanceMonitor) {
+    performanceMonitor.initialize();
+    if (performanceMonitor.isEnabled) {
+      binding.addTimingsCallback(
+        performanceMonitor.handleFrameTimings,
+      );
+    }
   }
   final HydratedStorage storage = await HydratedStorage.build(
     storageDirectory: kIsWeb

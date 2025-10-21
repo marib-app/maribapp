@@ -28,6 +28,8 @@ class PerformanceMonitor {
 
   bool get isCollectionOverrideEnabled => _collectionOverrideEnabled;
 
+  bool get isManualCollectionEnabled => _collectionOverrideEnabled;
+
   static const int _maxCompletedSessions = 10;
 
   final List<_RoutePerformanceSnapshot> _completedSessions =
@@ -100,7 +102,7 @@ class PerformanceMonitor {
   void initialize() {
     final bool enable = shouldCollectMetrics;
     _updateEnabledState(enable);
-    if (!enable) {
+    if (!enable || !_enabled) {
       return;
     }
     if (_initialized) {
@@ -119,7 +121,7 @@ class PerformanceMonitor {
   }
 
   void handleFrameTimings(List<FrameTiming> timings) {
-    if (!shouldCollectMetrics) {
+    if (!shouldCollectMetrics || !_enabled) {
       _updateEnabledState(false);
       return;
     }
@@ -158,7 +160,7 @@ class PerformanceMonitor {
   }
 
   void onRoutePushed(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    if (!shouldCollectMetrics) {
+    if (!shouldCollectMetrics || !_enabled) {
       _updateEnabledState(false);
       return;
     }
@@ -167,7 +169,7 @@ class PerformanceMonitor {
   }
 
   void onRouteReplaced(Route<dynamic>? newRoute, Route<dynamic>? oldRoute) {
-    if (!shouldCollectMetrics) {
+    if (!shouldCollectMetrics || !_enabled) {
       _updateEnabledState(false);
       return;
     }
@@ -178,7 +180,7 @@ class PerformanceMonitor {
   }
 
   void onRoutePopped(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    if (!shouldCollectMetrics) {
+    if (!shouldCollectMetrics || !_enabled) {
       _updateEnabledState(false);
       return;
     }
@@ -193,7 +195,7 @@ class PerformanceMonitor {
   }
 
   Future<void> saveReport() async {
-    if (!shouldCollectMetrics) {
+    if (!shouldCollectMetrics || !_enabled) {
       _updateEnabledState(false);
       return;
     }
@@ -329,6 +331,10 @@ class PerformanceMonitor {
       return;
     }
     _pendingWrite ??= Timer(_reportWriteInterval, () {
+      if (!_enabled) {
+        _pendingWrite = null;
+        return;
+      }
       _pendingWrite = null;
       unawaited(saveReport());
     });

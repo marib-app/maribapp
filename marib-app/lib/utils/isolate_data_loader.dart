@@ -26,7 +26,6 @@ class IsolateDataLoader<T> {
       }
       cleanedUp = true;
 
-
       receivePort.close();
       isolate.kill(priority: Isolate.immediate);
       final currentSubscription = subscription;
@@ -35,36 +34,44 @@ class IsolateDataLoader<T> {
       }
     }
 
+    unawaited(completer.future.whenComplete(cleanup));
+
     subscription = receivePort.listen(
-          (message) async {
+      (message) {
         if (message is SendPort) {
           // Handshake: transfer the deferred loading function to the isolate.
           // Cleanup must wait until a real payload (result or error) arrives;
           // otherwise we'd terminate the isolate immediately and never see it.
           message.send(_loadingFunction);
-        } else if (message is T) {
-          if (!completer.isCompleted) {
-            completer.complete(message);
-          }
-          await cleanup();
+          return;
+        }
+
+        if (completer.isCompleted) {
+          return;
+        }
+
+        if (message is T) {
+          completer.complete(message);
+          return;
         } else {
-          if (!completer.isCompleted) {
-            if (message is List &&
-                message.length == 2 &&
-                message[1] is StackTrace) {
-              completer.completeError(message[0], message[1] as StackTrace);
-            } else if (message is List &&
-                message.length == 2 &&
-                message[1] is String) {
+          if (message is List && message.length == 2) {
+            final dynamic error = message[0];
+            final dynamic traceOrString = message[1];
+
+            if (traceOrString is StackTrace) {
+              completer.completeError(error, traceOrString);
+              return;
+            }
+
+            if (traceOrString is String) {
               completer.completeError(
-                message[0],
-                StackTrace.fromString(message[1] as String),
+                error,
+                StackTrace.fromString(traceOrString),
               );
-            } else {
-              completer.completeError(message);
+              return;
             }
           }
-          await cleanup();
+          completer.completeError(message);
         }
       },
       onDone: () {
@@ -73,7 +80,6 @@ class IsolateDataLoader<T> {
             StateError('Isolate closed before delivering a result.'),
           );
         }
-        unawaited(cleanup());
       },
     );
 
@@ -85,8 +91,6 @@ class IsolateDataLoader<T> {
     sendPort.send(port.sendPort);
     port.listen((message) async {
       try {
-
-
         final Function loadingFunction = message as Function;
 
         var result = await loadingFunction();

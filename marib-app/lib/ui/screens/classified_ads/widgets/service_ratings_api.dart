@@ -631,11 +631,9 @@ class ServiceRatingsApi {
       tracker.lastReportedTotal = reportedTotal;
     }
 
-    bool hasMore = currentCount >= perPage;
-
-    if (currentCount == 0) {
-      hasMore = false;
-    }
+    // لم يتم العثور على أي معلومات ترقيم صريحة في الاستجابة، لذلك نتوقف بعد
+    // هذه الجولة حتى لا ندخل في حلقات لا نهائية عند تكرار نفس النتائج.
+    bool hasMore = false;
 
     final bool duplicateBySignature = previousSignature != null &&
         previousSignature == signature &&

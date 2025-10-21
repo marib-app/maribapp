@@ -4,6 +4,7 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/data/model/seller_ratings_model.dart' show UserRatings;
 import 'service_ratings_api.dart';
+import 'package:flutter/foundation.dart';
 
 class ItemCommentsList extends StatefulWidget {
   final int? serviceId;
@@ -92,6 +93,7 @@ class ItemCommentsListState extends State<ItemCommentsList> {
       final uniqueFirst = _collectUniqueRatings(
         res.list,
         _items.map(_ratingKey).toSet(),
+        _items.map((r) => r.id).whereType<int>().toSet(),
       );
       if (uniqueFirst.isNotEmpty) {
         _items.addAll(uniqueFirst);
@@ -132,6 +134,7 @@ class ItemCommentsListState extends State<ItemCommentsList> {
       final List<UserRatings> unique = _collectUniqueRatings(
         res.list,
         _items.map(_ratingKey).toSet(),
+        _items.map((r) => r.id).whereType<int>().toSet(),
       );
 
       if (unique.isNotEmpty) {
@@ -192,10 +195,27 @@ class ItemCommentsListState extends State<ItemCommentsList> {
     return 'meta:${buyer ?? 0}|t:$created|r:$reviewText|s:${stars ?? 0}';
   }
 
+  @visibleForTesting
+  List<UserRatings> collectUniqueRatingsForTesting(
+    Iterable<UserRatings> ratings,
+    Set<String> knownKeys,
+    Set<int> knownIds,
+  ) {
+    return _collectUniqueRatings(ratings, knownKeys, knownIds);
+  }
+
   List<UserRatings> _collectUniqueRatings(
-      Iterable<UserRatings> ratings, Set<String> knownKeys) {
+    Iterable<UserRatings> ratings,
+    Set<String> knownKeys,
+    Set<int> knownIds,
+  ) {
     final List<UserRatings> unique = [];
+    final Set<int> seenIds = Set<int>.from(knownIds);
     for (final rating in ratings) {
+      final int? id = rating.id;
+      if (id != null && id > 0 && !seenIds.add(id)) {
+        continue;
+      }
       final key = _ratingKey(rating);
       if (knownKeys.add(key)) {
         unique.add(rating);

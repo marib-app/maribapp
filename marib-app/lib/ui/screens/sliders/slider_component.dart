@@ -21,12 +21,9 @@ import 'slider_shimmer.dart';
 import 'package:marib/ui/screens/widgets/lazy_network_image.dart';
 import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 
-
 const EdgeInsetsGeometry kSliderHorizontalPadding =
-EdgeInsets.symmetric(horizontal: 10);
+    EdgeInsets.symmetric(horizontal: 10);
 const EdgeInsetsGeometry kSliderBottomMargin = EdgeInsets.only(bottom: 12);
-
-
 
 class SliderComponent extends StatefulWidget {
   final String interfaceType;
@@ -103,7 +100,7 @@ class _SliderComponentState extends State<SliderComponent>
   final ValueNotifier<int> _bannerIndex =
       ValueNotifier(0); // لتتبع السلايدر الحالي
   Timer? _sliderTimer;
-  late final PageController _pageController;
+  late PageController _pageController;
   bool _userInteracting = false;
   double? _currentPage;
   final Set<int> _pendingSliderClickReports = <int>{};
@@ -150,9 +147,7 @@ class _SliderComponentState extends State<SliderComponent>
   void initState() {
     super.initState();
 
-    _pageController = PageController(
-      initialPage: bannersLength == 1 ? 0 : bannersLength * 1000,
-    );
+    _pageController = _createPageController();
 
     _currentPage = _pageController.initialPage.toDouble();
 
@@ -164,6 +159,7 @@ class _SliderComponentState extends State<SliderComponent>
     super.didUpdateWidget(oldWidget);
 
     if (oldWidget.sliderList != widget.sliderList) {
+      _recreatePageController();
       _startAutoSlider(resetToInitial: true);
     }
   }
@@ -208,7 +204,7 @@ class _SliderComponentState extends State<SliderComponent>
       _pageController
           .animateToPage(
         next,
-        duration: const Duration(milliseconds: 500),
+        duration: const Duration(milliseconds: 350),
         curve: Curves.easeInOut,
       )
           .then((_) {
@@ -222,7 +218,7 @@ class _SliderComponentState extends State<SliderComponent>
   }
 
   void _resetToInitialPage() {
-    final initialPage = bannersLength <= 1 ? 0 : bannersLength * 1000;
+    final initialPage = _resolveInitialPage();
     _currentPage = initialPage.toDouble();
 
     if (_pageController.hasClients) {
@@ -239,6 +235,32 @@ class _SliderComponentState extends State<SliderComponent>
     } else {
       _bannerIndex.value = 0;
     }
+  }
+
+  PageController _createPageController() {
+    return PageController(
+      initialPage: _resolveInitialPage(),
+      viewportFraction: _resolveViewportFraction(),
+    );
+  }
+
+  void _recreatePageController() {
+    final PageController oldController = _pageController;
+    final PageController newController = _createPageController();
+    _pageController = newController;
+    _currentPage = newController.initialPage.toDouble();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      oldController.dispose();
+    });
+  }
+
+  int _resolveInitialPage() {
+    return bannersLength <= 1 ? 0 : bannersLength * 1000;
+  }
+
+  double _resolveViewportFraction() {
+    return bannersLength <= 1 ? 1.0 : 0.9;
   }
 
   BoxDecoration _buildBannerDecoration() {
@@ -271,8 +293,6 @@ class _SliderComponentState extends State<SliderComponent>
       ),
     );
   }
-
-
 
   /// ✅ التعامل مع الضغط على كل صورة داخل السلايدر
   Future<void> _handleTap(HomeSlider slider) async {
@@ -643,13 +663,47 @@ class _SliderComponentState extends State<SliderComponent>
                           bannersLength == 1 ? 0 : index % bannersLength;
                       final HomeSlider slider = filteredList[actualIndex];
 
-                      return _buildBannerShell(
-                        onTap: () => _handleTap(slider),
-                        child: LazyNetworkImage(
-                          imageUrl: slider.image ?? '',
-                          fit: BoxFit.cover,
-                          placeholder: const ShimmerBox(),
-                          errorWidget: const ShimmerBox(animate: false),
+                      return AnimatedBuilder(
+                        animation: _pageController,
+                        builder: (context, child) {
+                          if (child == null) {
+                            return const SizedBox.shrink();
+                          }
+
+                          double effectivePage = _currentPage ??
+                              _pageController.initialPage.toDouble();
+                          if (_pageController.hasClients &&
+                              _pageController.position.hasContentDimensions) {
+                            effectivePage =
+                                _pageController.page ?? effectivePage;
+                          }
+
+                          final double distance = (effectivePage - index).abs();
+                          final double clampedDistance =
+                              distance.clamp(0.0, 1.0).toDouble();
+                          final double scale = 1 - (clampedDistance * 0.08);
+                          double opacity = 1 - (clampedDistance * 0.35);
+                          if (opacity < 0.65) {
+                            opacity = 0.65;
+                          }
+
+                          return Transform.scale(
+                            scale: scale,
+                            alignment: Alignment.center,
+                            child: Opacity(
+                              opacity: opacity,
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: _buildBannerShell(
+                          onTap: () => _handleTap(slider),
+                          child: LazyNetworkImage(
+                            imageUrl: slider.image ?? '',
+                            fit: BoxFit.cover,
+                            placeholder: const ShimmerBox(),
+                            errorWidget: const ShimmerBox(animate: false),
+                          ),
                         ),
                       );
                     },
@@ -694,8 +748,7 @@ class _SliderComponentState extends State<SliderComponent>
     Widget wrapped = child;
 
     final EdgeInsetsGeometry padding = widget.padding;
-    if (padding != EdgeInsets.zero &&
-        padding != EdgeInsetsDirectional.zero) {
+    if (padding != EdgeInsets.zero && padding != EdgeInsetsDirectional.zero) {
       wrapped = Padding(
         padding: padding,
         child: wrapped,
@@ -705,7 +758,6 @@ class _SliderComponentState extends State<SliderComponent>
     final EdgeInsetsGeometry margin = widget.margin;
     if (margin == EdgeInsets.zero || margin == EdgeInsetsDirectional.zero) {
       return wrapped;
-
     }
 
     return Container(

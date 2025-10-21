@@ -28,7 +28,7 @@ class StoreWifiNetworkRequest extends FormRequest
             'name' => ['required', 'string', 'min:2', 'max:255'],
             'slug' => $slugRules,
             'description' => ['nullable', 'string'],
-            'wallet_id' => ['required', 'numeric', Rule::exists('wallet_accounts', 'id')],
+            'wallet_id' => ['nullable', 'integer', 'min:1', Rule::exists('wallet_accounts', 'id')],
             'location_name' => ['nullable', 'string', 'max:255'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
@@ -57,6 +57,22 @@ class StoreWifiNetworkRequest extends FormRequest
                 $input['contacts'] = Arr::wrap($input['contacts']);
             }
         }
+
+        if (array_key_exists('wallet_id', $input)) {
+            $walletId = $input['wallet_id'];
+
+            if ($walletId === '' || $walletId === null) {
+                $input['wallet_id'] = null;
+            } elseif (is_numeric($walletId)) {
+                $normalizedWalletId = (int) $walletId;
+
+                $input['wallet_id'] = $normalizedWalletId > 0 ? $normalizedWalletId : null;
+            } else {
+                $input['wallet_id'] = null;
+            }
+        }
+
+
 
         if (array_key_exists('meta', $input) && is_string($input['meta'])) {
             $decoded = json_decode($input['meta'], true);

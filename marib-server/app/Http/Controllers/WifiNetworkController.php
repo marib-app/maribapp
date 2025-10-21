@@ -67,26 +67,36 @@ class WifiNetworkController extends Controller
 
     public function store(StoreWifiNetworkRequest $request): JsonResponse
     {
-        $requestedWalletId = $request->integer('wallet_id');
-
-
         $validated = $request->validated();
+
+
+        $requestedWalletId = isset($validated['wallet_id']) ? (int) $validated['wallet_id'] : null;
+        if ($requestedWalletId !== null && $requestedWalletId <= 0) {
+            $requestedWalletId = null;
+        }
 
 
         $user = $request->user();
         $walletAccount = null;
         if ($user) {
-            $walletAccount = WalletAccount::find($requestedWalletId);
+            if ($requestedWalletId !== null) {
+                $walletAccount = WalletAccount::query()
+                    ->where('user_id', $user->getKey())
+                    ->whereKey($requestedWalletId)
+                    ->first();
 
 
-            if (! $walletAccount || $walletAccount->user_id !== $user->getKey()) {
-
-                return response()->json([
-                    'message' => __('Unable to create the Wi-Fi network.'),
-                    'errors' => [
-                        'wallet_id' => [__('We were unable to find a wallet for your account.')],
-                    ],
-                ], 422);
+                if (! $walletAccount) {
+                    return response()->json([
+                        'message' => __('Unable to create the Wi-Fi network.'),
+                        'errors' => [
+                            'wallet_id' => [__('We were unable to find a wallet for your account.')],
+                        ],
+                    ], 422);
+                }
+            } else {
+                $walletAccount = $this->resolveWalletAccount($user, null);
+                
             }
         }
 

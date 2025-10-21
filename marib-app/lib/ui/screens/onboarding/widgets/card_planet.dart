@@ -44,17 +44,33 @@ class CardPlanet extends StatelessWidget {
         ) ??
         data.subtitleColor;
 
+    final gradientBlend = (easedOpacity * 0.7).clamp(0.0, 1.0);
+    final blendedGradientColors = data.backgroundGradientColors
+        .map(
+          (color) =>
+              Color.lerp(
+                color.withOpacity(0.0),
+                color,
+                gradientBlend,
+              ) ??
+              color,
+        )
+        .toList(growable: false);
+
     return Stack(
       children: [
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: data.backgroundGradientColors,
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+        if (blendedGradientColors.any((color) => color.opacity > 0.0))
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: blendedGradientColors,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
             ),
           ),
-        ),
         if (data.backgroundAnimationPath != null)
           Transform.translate(
             offset: Offset(backgroundShift, 0),

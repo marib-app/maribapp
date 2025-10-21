@@ -16,8 +16,11 @@ use Throwable;
 
 class ManualPaymentRequestService
 {
-    private ?bool $supportsManualPaymentBankColumns = null;
+    private ?bool $supportsBankNameColumn = null;
 
+    private ?bool $supportsBankAccountNameColumn = null;
+
+    
     /**
      * @param array<string, mixed> $data
      */
@@ -192,9 +195,15 @@ class ManualPaymentRequestService
 
             ]);
 
-            if ($manualBank && $this->manualPaymentSupportsBankColumns()) {
-                $existingRequest->bank_name = $manualBank->name;
-                $existingRequest->bank_account_name = $manualBank->beneficiary_name;
+            if ($manualBank) {
+                if ($this->manualPaymentSupportsBankNameColumn()) {
+                    $existingRequest->bank_name = $manualBank->name;
+                }
+
+                if ($this->manualPaymentSupportsBankAccountNameColumn()) {
+                    $existingRequest->bank_account_name = $manualBank->beneficiary_name;
+                }
+
             }
 
             $existingRequest->meta = empty($mergedMeta) ? null : $mergedMeta;
@@ -220,14 +229,13 @@ class ManualPaymentRequestService
 
         ];
 
-        if ($manualBank && $this->manualPaymentSupportsBankColumns()) {
+        if ($manualBank && $this->manualPaymentSupportsBankNameColumn()) {
 
             $attributes['bank_name'] = $manualBank->name;
-            $attributes['bank_account_name'] = $manualBank->beneficiary_name;
         }
 
-        if (! $this->manualPaymentSupportsBankColumns()) {
-            unset($attributes['bank_name'], $attributes['bank_account_name']);
+        if ($manualBank && $this->manualPaymentSupportsBankAccountNameColumn()) {
+            $attributes['bank_account_name'] = $manualBank->beneficiary_name;
         }
 
 
@@ -371,7 +379,6 @@ class ManualPaymentRequestService
             'receipt_path' => $receiptPath,
             'status' => ManualPaymentRequest::STATUS_PENDING,
             'department' => $department,
-            'bank_name' => $bankName,
             'meta' => $meta === [] ? null : $meta,
             'payment_transaction_id' => $transaction->getKey(),
 
@@ -379,8 +386,8 @@ class ManualPaymentRequestService
         ];
 
 
-        if (! $this->manualPaymentSupportsBankColumns()) {
-            unset($attributes['bank_name']);
+        if ($this->manualPaymentSupportsBankNameColumn() && $bankName !== null) {
+            $attributes['bank_name'] = $bankName;
         }
 
 
@@ -686,12 +693,12 @@ class ManualPaymentRequestService
                 'payment_transaction_id' => $transaction->getKey(),
             ], static fn ($value) => $value !== null && $value !== ''));
 
-            if ($bankName !== null && $this->manualPaymentSupportsBankColumns()) {
+            if ($bankName !== null && $this->manualPaymentSupportsBankNameColumn()) {
 
                 $existingRequest->bank_name = $bankName;
             }
 
-            if ($bankBeneficiary !== null && $this->manualPaymentSupportsBankColumns()) {
+            if ($bankBeneficiary !== null && $this->manualPaymentSupportsBankAccountNameColumn()) {
 
                 $existingRequest->bank_account_name = $bankBeneficiary;
             }
@@ -714,13 +721,13 @@ class ManualPaymentRequestService
                 'manual_bank_id' => $manualBank?->getKey() ?? $manualBankId,
             ]);
 
-            if ($bankName !== null && $this->manualPaymentSupportsBankColumns()) {
+            if ($bankName !== null && $this->manualPaymentSupportsBankNameColumn()) {
                 $manualPaymentRequest->bank_name = $bankName;
             }
 
             if (
                 $bankBeneficiary !== null
-                && $this->manualPaymentSupportsBankColumns()
+                && $this->manualPaymentSupportsBankAccountNameColumn()
                 && $manualPaymentRequest->bank_account_name === null
             ) {
                 
@@ -1013,25 +1020,57 @@ class ManualPaymentRequestService
         return $filtered;
     }
 
-    private function manualPaymentSupportsBankColumns(): bool
+    private function manualPaymentSupportsBankNameColumn(): bool
     {
-        if ($this->supportsManualPaymentBankColumns !== null) {
-            return $this->supportsManualPaymentBankColumns;
+        if ($this->supportsBankNameColumn !== null) {
+            return $this->supportsBankNameColumn;
         }
 
-        try {
-            $hasBankName = Schema::hasColumn('manual_payment_requests', 'bank_name');
-            $hasBankAccountName = Schema::hasColumn('manual_payment_requests', 'bank_account_name');
+        $this->supportsBankNameColumn = $this->manualPaymentRequestHasColumn('bank_name');
 
-            $this->supportsManualPaymentBankColumns = $hasBankName && $hasBankAccountName;
+        return $this->supportsBankNameColumn;
+    }
+
+    private function manualPaymentSupportsBankAccountNameColumn(): bool
+    
+    {
+        if ($this->supportsBankAccountNameColumn !== null) {
+            return $this->supportsBankAccountNameColumn;
+        }
+
+        $this->supportsBankAccountNameColumn = $this->manualPaymentRequestHasColumn('bank_account_name');
+
+        return $this->supportsBankAccountNameColumn;
+    }
+
+    private function manualPaymentRequestHasColumn(string $column): bool
+    {
+
+        try {
+            $connection = (new ManualPaymentRequest())->getConnectionName();
+
+            if (is_string($connection)) {
+                $connection = trim($connection);
+
+
+                if ($connection === '') {
+                    $connection = null;
+                }
+            }
+
+            if ($connection !== null) {
+                return Schema::connection($connection)->hasColumn('manual_payment_requests', $column);
+            }
+
+            return Schema::hasColumn('manual_payment_requests', $column);
+        
         } catch (Throwable $exception) {
-            Log::warning('Unable to determine manual payment bank columns support.', [
+            Log::warning('Unable to determine manual payment request column support.', [
+                'column' => $column,
                 'exception' => $exception,
             ]);
 
-            $this->supportsManualPaymentBankColumns = false;
+            return false;
         }
-
-        return $this->supportsManualPaymentBankColumns;
     }
 }

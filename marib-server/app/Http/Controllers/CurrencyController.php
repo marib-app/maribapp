@@ -470,11 +470,6 @@ class CurrencyController extends Controller
 
     }
 
-
-
-        ]);
-    }
-
     public function destroy($id)
     {
         $currency = CurrencyRate::findOrFail($id);

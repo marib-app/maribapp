@@ -164,18 +164,17 @@ class ServiceRequestRepository {
     throw ApiException('invalid-response');
   }
 
-
-
   Future<ServiceRequestPage> fetchRequests({
     String status = 'review',
     int page = 1,
     int? perPage,
     int? categoryId,
   }) async {
+    final int normalizedPage = page <= 0 ? 1 : page;
     final Map<String, dynamic> query = <String, dynamic>{
       if (status.trim().isNotEmpty) 'status': status.trim(),
       if (categoryId != null) 'category_id': categoryId,
-      if (page > 0) Api.pageQuery: page,
+      Api.pageQuery: normalizedPage,
       if (perPage != null && perPage > 0) Api.perPageQuery: perPage,
     };
 
@@ -184,31 +183,34 @@ class ServiceRequestRepository {
       queryParameters: query,
     );
 
-    final List<Map<String, dynamic>> rawRequests = _extractRequestList(response);
-    final List<ServiceRequestModel> requests = rawRequests
-        .map(ServiceRequestModel.fromJson)
-        .toList();
+    final List<Map<String, dynamic>> rawRequests =
+        _extractRequestList(response);
+    final List<ServiceRequestModel> requests =
+        rawRequests.map(ServiceRequestModel.fromJson).toList();
 
     final Map<String, dynamic> meta = _extractMeta(response);
 
     final int total = _parseInt(meta['total']) ?? requests.length;
-    final int currentPage = _parseInt(meta['current_page']) ?? page;
+    final int currentPage = _parseInt(meta['current_page']) ?? normalizedPage;
     final int? lastPageCandidate = _parseInt(meta['last_page']);
     final int? perPageFromMeta = _parseInt(meta['per_page']);
 
-    final int resolvedLastPage = lastPageCandidate != null && lastPageCandidate >= 1
-        ? lastPageCandidate
-        : _inferLastPage(
-      total: total,
-      currentPage: currentPage,
-      perPage: perPageFromMeta ?? perPage,
-    );
+    final int resolvedLastPage =
+        lastPageCandidate != null && lastPageCandidate >= 1
+            ? lastPageCandidate
+            : _inferLastPage(
+                total: total,
+                currentPage: currentPage,
+                perPage: perPageFromMeta ?? perPage,
+              );
 
     return ServiceRequestPage(
       requests: requests,
-      total: total,
-      currentPage: currentPage,
-      lastPage: resolvedLastPage,
+      meta: ServiceRequestPaginationMeta(
+        total: total,
+        currentPage: currentPage,
+        lastPage: resolvedLastPage,
+      ),
     );
   }
 
@@ -223,7 +225,7 @@ class ServiceRequestRepository {
       }
       if (source is Map) {
         return source.map(
-              (dynamic key, dynamic value) =>
+          (dynamic key, dynamic value) =>
               MapEntry<String, dynamic>(key.toString(), value),
         );
       }
@@ -305,7 +307,7 @@ class ServiceRequestRepository {
       }
       if (value is Map) {
         return value.map(
-              (dynamic key, dynamic val) =>
+          (dynamic key, dynamic val) =>
               MapEntry<String, dynamic>(key.toString(), val),
         );
       }

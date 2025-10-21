@@ -7,10 +7,10 @@ enum ServiceRequestFilter { review, approved, rejected }
 
 extension ServiceRequestFilterExtension on ServiceRequestFilter {
   String get apiValue => switch (this) {
-    ServiceRequestFilter.review => 'review',
-    ServiceRequestFilter.approved => 'approved',
-    ServiceRequestFilter.rejected => 'rejected',
-  };
+        ServiceRequestFilter.review => 'review',
+        ServiceRequestFilter.approved => 'approved',
+        ServiceRequestFilter.rejected => 'rejected',
+      };
 }
 
 class ServiceRequestPageState {
@@ -28,17 +28,17 @@ class ServiceRequestPageState {
   });
 
   factory ServiceRequestPageState.initial() => const ServiceRequestPageState(
-    requests: <ServiceRequestModel>[],
-    currentPage: 0,
-    lastPage: 1,
-    total: 0,
-    isLoading: false,
-    isRefreshing: false,
-    isLoadingMore: false,
-    hasError: false,
-    loadMoreError: false,
-    errorMessage: null,
-  );
+        requests: <ServiceRequestModel>[],
+        currentPage: 0,
+        lastPage: 1,
+        total: 0,
+        isLoading: false,
+        isRefreshing: false,
+        isLoadingMore: false,
+        hasError: false,
+        loadMoreError: false,
+        errorMessage: null,
+      );
 
   final List<ServiceRequestModel> requests;
   final int currentPage;
@@ -52,6 +52,7 @@ class ServiceRequestPageState {
   final String? errorMessage;
 
   bool get hasMore => currentPage < lastPage;
+
   bool get hasLoaded => currentPage > 0 || requests.isNotEmpty;
 
   ServiceRequestPageState copyWith({
@@ -77,9 +78,8 @@ class ServiceRequestPageState {
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       hasError: hasError ?? this.hasError,
       loadMoreError: loadMoreError ?? this.loadMoreError,
-      errorMessage: clearErrorMessage
-          ? null
-          : (errorMessage ?? this.errorMessage),
+      errorMessage:
+          clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
     );
   }
 }
@@ -115,13 +115,13 @@ class ServiceRequestsState {
   }
 
   ServiceRequestsState updateStatus(
-      ServiceRequestFilter filter,
-      ServiceRequestPageState newState, {
-        ServiceRequestFilter? selectedStatus,
-      }) {
+    ServiceRequestFilter filter,
+    ServiceRequestPageState newState, {
+    ServiceRequestFilter? selectedStatus,
+  }) {
     final Map<ServiceRequestFilter, ServiceRequestPageState> updatedPages =
-    Map<ServiceRequestFilter, ServiceRequestPageState>.from(pages)
-      ..[filter] = newState;
+        Map<ServiceRequestFilter, ServiceRequestPageState>.from(pages)
+          ..[filter] = newState;
     return ServiceRequestsState(
       pages: updatedPages,
       selectedStatus: selectedStatus ?? this.selectedStatus,
@@ -138,6 +138,11 @@ class ServiceRequestsCubit extends Cubit<ServiceRequestsState> {
 
   final ServiceRequestRepository _repository;
   final int? perPage;
+  final Map<ServiceRequestFilter, int> _nextPageByStatus =
+      <ServiceRequestFilter, int>{
+    for (final ServiceRequestFilter filter in ServiceRequestFilter.values)
+      filter: 1,
+  };
 
   Future<void> changeStatus(ServiceRequestFilter status) async {
     if (state.selectedStatus != status) {
@@ -177,7 +182,12 @@ class ServiceRequestsCubit extends Cubit<ServiceRequestsState> {
     if (pageState.isLoadingMore) {
       return Future<void>.value();
     }
-    final int nextPage = pageState.currentPage + 1;
+    final int storedNextPage =
+        _nextPageByStatus[status] ?? (pageState.currentPage + 1);
+    final int nextPage = storedNextPage > pageState.currentPage
+        ? storedNextPage
+        : pageState.currentPage + 1;
+
     return _fetchPage(
       status: status,
       pageNumber: nextPage,
@@ -219,7 +229,7 @@ class ServiceRequestsCubit extends Cubit<ServiceRequestsState> {
     }
 
     final List<ServiceRequestModel> existingRequests =
-    List<ServiceRequestModel>.from(currentState.requests);
+        List<ServiceRequestModel>.from(currentState.requests);
 
     ServiceRequestPageState pendingState;
     if (append) {
@@ -253,7 +263,7 @@ class ServiceRequestsCubit extends Cubit<ServiceRequestsState> {
       );
 
       final int resolvedCurrentPage =
-      result.currentPage > 0 ? result.currentPage : pageNumber;
+          result.currentPage > 0 ? result.currentPage : pageNumber;
       int resolvedLastPage = result.lastPage;
       if (resolvedLastPage < resolvedCurrentPage) {
         resolvedLastPage = resolvedCurrentPage;
@@ -278,6 +288,10 @@ class ServiceRequestsCubit extends Cubit<ServiceRequestsState> {
         loadMoreError: false,
         clearErrorMessage: true,
       );
+
+      _nextPageByStatus[status] = successState.hasMore
+          ? successState.currentPage + 1
+          : successState.currentPage;
 
       emit(state.updateStatus(
         status,
@@ -311,11 +325,13 @@ class ServiceRequestsCubit extends Cubit<ServiceRequestsState> {
   }
 
   List<ServiceRequestModel> _mergeRequests(
-      List<ServiceRequestModel> existing,
-      List<ServiceRequestModel> incoming,
-      ) {
-    final List<ServiceRequestModel> merged = List<ServiceRequestModel>.from(existing);
-    final Set<int> seen = existing.map((ServiceRequestModel item) => item.id).toSet();
+    List<ServiceRequestModel> existing,
+    List<ServiceRequestModel> incoming,
+  ) {
+    final List<ServiceRequestModel> merged =
+        List<ServiceRequestModel>.from(existing);
+    final Set<int> seen =
+        existing.map((ServiceRequestModel item) => item.id).toSet();
     for (final ServiceRequestModel item in incoming) {
       if (seen.add(item.id)) {
         merged.add(item);

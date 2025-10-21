@@ -50,8 +50,6 @@ class ServiceRequestModel {
       map['id'] ?? map['request_id'] ?? map['service_request_id'],
     );
 
-
-
     int? parseNullableInt(dynamic value) {
       if (value == null) return null;
       if (value is int) return value;
@@ -67,7 +65,8 @@ class ServiceRequestModel {
       if (value is DateTime) return value;
       if (value is int) {
         if (value <= 0) return null;
-        return DateTime.fromMillisecondsSinceEpoch(value * (value < 10000000000 ? 1000 : 1));
+        return DateTime.fromMillisecondsSinceEpoch(
+            value * (value < 10000000000 ? 1000 : 1));
       }
       if (value is num) {
         final int asInt = value.toInt();
@@ -87,7 +86,7 @@ class ServiceRequestModel {
             final int? timestamp = int.tryParse(trimmed);
             if (timestamp != null) {
               final int adjusted =
-              timestamp < 10000000000 ? timestamp * 1000 : timestamp;
+                  timestamp < 10000000000 ? timestamp * 1000 : timestamp;
               return DateTime.fromMillisecondsSinceEpoch(adjusted);
             }
           }
@@ -103,7 +102,7 @@ class ServiceRequestModel {
       }
       if (value is Map) {
         return value.map(
-              (dynamic key, dynamic val) => MapEntry(key.toString(), val),
+          (dynamic key, dynamic val) => MapEntry(key.toString(), val),
         );
       }
       if (value is String && value.trim().isNotEmpty) {
@@ -114,7 +113,7 @@ class ServiceRequestModel {
           }
           if (decoded is Map) {
             return decoded.map(
-                  (dynamic key, dynamic val) => MapEntry(key.toString(), val),
+              (dynamic key, dynamic val) => MapEntry(key.toString(), val),
             );
           }
         } catch (_) {
@@ -137,9 +136,9 @@ class ServiceRequestModel {
       final Map<String, dynamic> serviceMap = serviceRaw is Map<String, dynamic>
           ? serviceRaw
           : serviceRaw.map(
-            (dynamic key, dynamic value) =>
-            MapEntry<String, dynamic>(key.toString(), value),
-      );
+              (dynamic key, dynamic value) =>
+                  MapEntry<String, dynamic>(key.toString(), value),
+            );
       serviceTitle = parseString(serviceMap['title'] ?? serviceMap['name']);
     }
 

@@ -49,7 +49,7 @@ class _ServiceRequestsScreenState extends State<ServiceRequestsScreen>
       return;
     }
     final ServiceRequestFilter filter =
-    ServiceRequestFilter.values[_tabController.index];
+        ServiceRequestFilter.values[_tabController.index];
     _cubit.changeStatus(filter);
   }
 
@@ -59,10 +59,10 @@ class _ServiceRequestsScreenState extends State<ServiceRequestsScreen>
       value: _cubit,
       child: BlocListener<ServiceRequestsCubit, ServiceRequestsState>(
         listenWhen: (previous, current) =>
-        previous.selectedStatus != current.selectedStatus,
+            previous.selectedStatus != current.selectedStatus,
         listener: (context, state) {
           final int index =
-          ServiceRequestFilter.values.indexOf(state.selectedStatus);
+              ServiceRequestFilter.values.indexOf(state.selectedStatus);
           if (_tabController.index != index) {
             _tabController.animateTo(index);
           }
@@ -78,7 +78,7 @@ class _ServiceRequestsScreenState extends State<ServiceRequestsScreen>
               const SizedBox(height: 8),
               BlocSelector<ServiceRequestsCubit, ServiceRequestsState, int>(
                 selector: (state) =>
-                state.pages[state.selectedStatus]?.total ?? 0,
+                    state.pages[state.selectedStatus]?.total ?? 0,
                 builder: (context, total) {
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -162,7 +162,8 @@ class _ServiceRequestTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocSelector<ServiceRequestsCubit, ServiceRequestsState,
         ServiceRequestPageState>(
-      selector: (state) => state.pages[filter] ?? ServiceRequestPageState.initial(),
+      selector: (state) =>
+          state.pages[filter] ?? ServiceRequestPageState.initial(),
       builder: (context, pageState) {
         if (pageState.isLoading && !pageState.hasLoaded) {
           return const Center(child: CircularProgressIndicator());
@@ -193,16 +194,16 @@ class _ServiceRequestTab extends StatelessWidget {
   }
 
   bool _onScrollNotification(
-      BuildContext context,
-      ScrollNotification notification,
-      ServiceRequestPageState state,
-      ) {
+    BuildContext context,
+    ScrollNotification notification,
+    ServiceRequestPageState state,
+  ) {
     if (notification.metrics.maxScrollExtent == 0) {
       return false;
     }
 
-    final double threshold =
-        notification.metrics.maxScrollExtent - notification.metrics.viewportDimension;
+    final double threshold = notification.metrics.maxScrollExtent -
+        notification.metrics.viewportDimension;
     if (notification.metrics.pixels >= threshold - 120 &&
         !state.isLoadingMore &&
         state.hasMore &&
@@ -226,12 +227,16 @@ class _ServiceRequestTab extends StatelessWidget {
     final bool showErrorBanner = state.hasError && state.requests.isNotEmpty;
     final bool showLoadMoreSection =
         state.hasMore || state.isLoadingMore || state.loadMoreError;
+    final bool showCompletedBanner = !state.hasMore &&
+        !state.isLoadingMore &&
+        !state.loadMoreError &&
+        state.requests.isNotEmpty;
 
     int itemCount = state.requests.length;
     if (showErrorBanner) {
       itemCount += 1;
     }
-    if (showLoadMoreSection) {
+    if (showLoadMoreSection || showCompletedBanner) {
       itemCount += 1;
     }
 
@@ -253,32 +258,47 @@ class _ServiceRequestTab extends StatelessWidget {
         }
 
         if (currentIndex >= state.requests.length) {
-          if (state.isLoadingMore) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Center(child: CircularProgressIndicator()),
-            );
-          }
-          if (state.loadMoreError) {
+          if (showLoadMoreSection) {
+            if (state.isLoadingMore) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            if (state.loadMoreError) {
+              return Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: OutlinedButton.icon(
+                  onPressed: () =>
+                      context.read<ServiceRequestsCubit>().loadMore(filter),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('حاول مرة أخرى'),
+                ),
+              );
+            }
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: OutlinedButton.icon(
+              child: ElevatedButton.icon(
                 onPressed: () =>
                     context.read<ServiceRequestsCubit>().loadMore(filter),
-                icon: const Icon(Icons.refresh),
-                label: const Text('حاول مرة أخرى'),
+                icon: const Icon(Icons.download),
+                label: const Text('تحميل المزيد'),
               ),
             );
           }
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: ElevatedButton.icon(
-              onPressed: () =>
-                  context.read<ServiceRequestsCubit>().loadMore(filter),
-              icon: const Icon(Icons.download),
-              label: const Text('تحميل المزيد'),
-            ),
-          );
+
+          if (showCompletedBanner) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Center(
+                child: Text(
+                  'تم عرض جميع الطلبات',
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+              ),
+            );
+          }
         }
 
         final ServiceRequestModel request = state.requests[currentIndex];
@@ -329,8 +349,7 @@ class _ServiceRequestTile extends StatelessWidget {
                     ),
                   ),
                   Chip(
-                    backgroundColor:
-                    theme.colorScheme.primary.withOpacity(0.1),
+                    backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
                     label: Text(
                       statusLabel,
                       style: TextStyle(color: theme.colorScheme.primary),

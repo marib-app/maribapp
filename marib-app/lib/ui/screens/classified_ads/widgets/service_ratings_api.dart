@@ -2,6 +2,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:marib/utils/api.dart';
 import 'package:marib/data/model/seller_ratings_model.dart' show UserRatings;
+import 'package:marib/utils/hive_utils.dart';
 
 typedef _GetRequestHandler = Future<Map<String, dynamic>> Function({
   required String url,
@@ -780,6 +781,16 @@ class ServiceRatingsApi {
   }
 
   static bool _extractCanReview(Map<String, dynamic> resp) {
+    try {
+      if (!HiveUtils.isUserAuthenticated()) {
+        return false;
+      }
+    } catch (_) {
+      return false;
+    }
+
+    bool foundCanReviewKey = false;
+
     bool? parseBool(dynamic value) {
       if (value is bool) return value;
       if (value is num) return value != 0;
@@ -841,7 +852,13 @@ class ServiceRatingsApi {
       if (!seen.add(id)) return null;
 
       if (node is Map) {
-        final direct = parseBool(node['can_review']);
+        if (node.containsKey('can_review') || node.containsKey('canReview')) {
+          foundCanReviewKey = true;
+        }
+
+        final dynamic directRaw = node['can_review'] ?? node['canReview'];
+        final direct = parseBool(directRaw);
+
         if (direct != null) return direct;
 
         final dynamic guestFlag = node['is_guest'] ??
@@ -882,6 +899,9 @@ class ServiceRatingsApi {
     }
 
     final bool? extracted = walk(resp, 0, <int>{});
+    if (!foundCanReviewKey) {
+      return false;
+    }
     return extracted ?? false;
   }
 }

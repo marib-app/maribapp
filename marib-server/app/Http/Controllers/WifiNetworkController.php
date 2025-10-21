@@ -67,34 +67,20 @@ class WifiNetworkController extends Controller
 
     public function store(StoreWifiNetworkRequest $request): JsonResponse
     {
+        $requestedWalletId = $request->integer('wallet_id');
+
+
         $validated = $request->validated();
 
 
         $user = $request->user();
         $walletAccount = null;
         if ($user) {
-            $requestedWalletId = array_key_exists('wallet_id', $validated)
-                ? (int) $validated['wallet_id']
-                : null;
+            $walletAccount = WalletAccount::find($requestedWalletId);
 
-            $walletAccount = $this->resolveWalletAccount($user, $requestedWalletId);
 
-            if (! $walletAccount) {
-                $latestOwnerWalletId = WifiNetwork::query()
-                    ->where('user_id', $user->getKey())
-                    ->whereNotNull('wallet_id')
-                    ->latest('id')
-                    ->value('wallet_id');
+            if (! $walletAccount || $walletAccount->user_id !== $user->getKey()) {
 
-                if ($latestOwnerWalletId !== null) {
-                    $walletAccount = WalletAccount::query()
-                        ->where('user_id', $user->getKey())
-                        ->whereKey((int) $latestOwnerWalletId)
-                        ->first();
-                }
-            }
-
-            if (! $walletAccount) {
                 return response()->json([
                     'message' => __('Unable to create the Wi-Fi network.'),
                     'errors' => [
@@ -104,7 +90,7 @@ class WifiNetworkController extends Controller
             }
         }
 
-        
+
         $fillable = (new WifiNetwork())->getFillable();
 
         $contacts = $validated['contacts'] ?? null;

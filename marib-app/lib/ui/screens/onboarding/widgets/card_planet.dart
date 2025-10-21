@@ -8,11 +8,13 @@ class CardPlanet extends StatelessWidget {
   final CardPlanetData data;
   final Map<String, LottieComposition> compositions;
   final bool isActive;
+  final double progress;
 
   const CardPlanet({
     required this.data,
     required this.isActive,
     required this.compositions,
+    required this.progress,
     super.key,
   });
 
@@ -23,6 +25,25 @@ class CardPlanet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final double clampedProgress = progress.clamp(-1.0, 1.0).toDouble();
+    final double inverted = 1 - clampedProgress.abs();
+    final double normalized = inverted.clamp(0.0, 1.0);
+    final double easedOpacity = Curves.easeOut.transform(normalized);
+    final double verticalOffset = 60.0 * clampedProgress;
+    final double backgroundShift = 30.0 * clampedProgress;
+    final titleColor = Color.lerp(
+          data.titleColor.withOpacity(0.0),
+          data.titleColor,
+          easedOpacity,
+        ) ??
+        data.titleColor;
+    final subtitleColor = Color.lerp(
+          data.subtitleColor.withOpacity(0.0),
+          data.subtitleColor,
+          easedOpacity,
+        ) ??
+        data.subtitleColor;
+
     return Stack(
       children: [
         Container(
@@ -35,25 +56,28 @@ class CardPlanet extends StatelessWidget {
           ),
         ),
         if (data.backgroundAnimationPath != null)
-          Opacity(
-            opacity: 0.2,
-            child: () {
-              final cached = _compositionFor(data.backgroundAnimationPath);
-              if (cached != null) {
-                return Lottie(
-                  composition: cached,
+          Transform.translate(
+            offset: Offset(backgroundShift, 0),
+            child: Opacity(
+              opacity: 0.15 + 0.35 * easedOpacity,
+              child: () {
+                final cached = _compositionFor(data.backgroundAnimationPath);
+                if (cached != null) {
+                  return Lottie(
+                    composition: cached,
+                    fit: BoxFit.cover,
+                    animate: isActive,
+                    repeat: isActive,
+                  );
+                }
+                return Lottie.asset(
+                  data.backgroundAnimationPath!,
                   fit: BoxFit.cover,
                   animate: isActive,
                   repeat: isActive,
                 );
-              }
-              return Lottie.asset(
-                data.backgroundAnimationPath!,
-                fit: BoxFit.cover,
-                animate: isActive,
-                repeat: isActive,
-              );
-            }(),
+              }(),
+            ),
           ),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 50, horizontal: 24),
@@ -64,20 +88,18 @@ class CardPlanet extends StatelessWidget {
               if (data.animationPath != null)
                 Flexible(
                   flex: 20,
-                  child: AnimatedSlide(
-                    duration: const Duration(milliseconds: 350),
-                    curve: const Interval(0, 1, curve: Curves.easeOut),
-                    offset: isActive ? Offset.zero : const Offset(0, 0.08),
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 350),
-                      curve: Curves.easeOut,
-                      opacity: isActive ? 1 : 0,
+                  child: Transform.translate(
+                    offset: Offset(0, verticalOffset),
+                    child: Opacity(
+                      opacity: easedOpacity,
                       child: () {
                         final cached = _compositionFor(data.animationPath);
+                        final double height =
+                            MediaQuery.of(context).size.height * 0.45;
                         if (cached != null) {
                           return Lottie(
                             composition: cached,
-                            height: MediaQuery.of(context).size.height * 0.45,
+                            height: height,
                             fit: BoxFit.contain,
                             animate: isActive,
                             repeat: isActive,
@@ -85,7 +107,7 @@ class CardPlanet extends StatelessWidget {
                         }
                         return Lottie.asset(
                           data.animationPath!,
-                          height: MediaQuery.of(context).size.height * 0.45,
+                          height: height,
                           fit: BoxFit.contain,
                           // قم بإيقاف التشغيل الافتراضي إذا تريد تحكم خاص
                           animate: isActive,
@@ -98,14 +120,10 @@ class CardPlanet extends StatelessWidget {
               if (data.image != null)
                 Flexible(
                   flex: 20,
-                  child: AnimatedSlide(
-                    duration: const Duration(milliseconds: 350),
-                    curve: const Interval(0, 1, curve: Curves.easeOut),
-                    offset: isActive ? Offset.zero : const Offset(0, 0.08),
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 350),
-                      curve: Curves.easeOut,
-                      opacity: isActive ? 1 : 0,
+                  child: Transform.translate(
+                    offset: Offset(0, verticalOffset),
+                    child: Opacity(
+                      opacity: easedOpacity,
                       child: Image(image: data.image!),
                     ),
                   ),
@@ -113,48 +131,37 @@ class CardPlanet extends StatelessWidget {
               const Spacer(flex: 2),
               Directionality(
                 textDirection: TextDirection.rtl,
-                child: Column(
-                  children: [
-                    AnimatedSlide(
-                      duration: const Duration(milliseconds: 300),
-                      curve: const Interval(0, 1, curve: Curves.easeOut),
-                      offset: isActive ? Offset.zero : const Offset(0, 0.12),
-                      child: AnimatedOpacity(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeOut,
-                        opacity: isActive ? 1 : 0,
+                child: Transform.translate(
+                  offset: Offset(0, verticalOffset / 2),
+                  child: Column(
+                    children: [
+                      Opacity(
+                        opacity: easedOpacity,
                         child: Text(
                           data.title,
                           style: GoogleFonts.tajawal(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
-                            color: data.titleColor,
+                            color: titleColor,
                           ),
                           textAlign: TextAlign.center,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    AnimatedSlide(
-                      duration: const Duration(milliseconds: 350),
-                      curve: const Interval(0.25, 1, curve: Curves.easeOut),
-                      offset: isActive ? Offset.zero : const Offset(0, 0.12),
-                      child: AnimatedOpacity(
-                        duration: const Duration(milliseconds: 350),
-                        curve: const Interval(0.25, 1, curve: Curves.easeOut),
-                        opacity: isActive ? 1 : 0,
+                      const SizedBox(height: 12),
+                      Opacity(
+                        opacity: easedOpacity,
                         child: Text(
                           data.subtitle,
                           style: GoogleFonts.tajawal(
                             fontSize: 16,
                             height: 1.6,
-                            color: data.subtitleColor,
+                            color: subtitleColor,
                           ),
                           textAlign: TextAlign.center,
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               const Spacer(flex: 5),

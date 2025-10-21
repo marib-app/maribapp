@@ -11,6 +11,7 @@ import 'package:marib/utils/ui_utils.dart';
 
 import 'models/card_planet_data.dart';
 import 'widgets/card_planet.dart';
+import 'dart:math' as math;
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -22,6 +23,10 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen>
     with SingleTickerProviderStateMixin {
   final ValueNotifier<int> currentIndex = ValueNotifier<int>(0);
+
+  late final PageController _pageController;
+  late final ValueNotifier<double> _pageNotifier;
+
   bool _showHint = false;
   Timer? _hintTimer;
   final Map<String, LottieComposition> _preloadedCompositions = {};
@@ -88,6 +93,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   @override
   void initState() {
     super.initState();
+
+    _pageController = PageController();
+    _pageNotifier =
+        ValueNotifier<double>(_pageController.initialPage.toDouble());
+    _pageController.addListener(_handlePageChanged);
+
     _hintAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1300),
@@ -110,6 +121,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       setState(() => _showHint = true);
       _syncHintAnimation();
     });
+  }
+
+  void _handlePageChanged() {
+    final page = _pageController.hasClients
+        ? _pageController.page ?? _pageController.initialPage.toDouble()
+        : _pageController.initialPage.toDouble();
+    if (_pageNotifier.value != page) {
+      _pageNotifier.value = page;
+    }
   }
 
   void _syncHintAnimation() {
@@ -176,6 +196,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   void dispose() {
     _hintAnimationController.dispose();
     _hintTimer?.cancel();
+    _pageController.removeListener(_handlePageChanged);
+    _pageController.dispose();
+    _pageNotifier.dispose();
     currentIndex.dispose();
     super.dispose();
   }
@@ -191,33 +214,34 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           // تمكين التفاعل بالسحب على كامل الشاشة
           child: Stack(
             children: [
-              ConcentricPageView(
+              PageView.builder(
+                controller: _pageController,
                 reverse: true,
-                onChange: (i) {
-                  currentIndex.value = i;
-                  _syncHintAnimation();
-                },
                 itemCount: data.length,
-                colors:
-                    data.map((e) => e.backgroundGradientColors.last).toList(),
-                itemBuilder: (index) => ValueListenableBuilder<int>(
-                  valueListenable: currentIndex,
-                  builder: (context, activeIndex, _) {
-                    return CardPlanet(
-                      data: data[index],
-                      isActive: index == activeIndex,
-                      compositions: _preloadedCompositions,
-                    );
-                  },
-                ),
-                onFinish: () {
-                  if (_showHint) {
+                onPageChanged: (index) {
+                  currentIndex.value = index;
+                  _syncHintAnimation();
+                  if (index == data.length - 1 && _showHint) {
                     setState(() => _showHint = false);
                   }
-                  _syncHintAnimation();
-                  HiveUtils.setUserIsNotNew();
-                  Navigator.of(context)
-                      .pushNamedAndRemoveUntil(Routes.login, (_) => false);
+                },
+                itemBuilder: (context, index) {
+                  return ValueListenableBuilder<double>(
+                    valueListenable: _pageNotifier,
+                    builder: (context, page, _) {
+                      final effectivePage = page
+                          .clamp(0.0, (data.length - 1).toDouble())
+                          .toDouble();
+                      final progress = index - effectivePage;
+                      final isActive = progress.abs() < 0.5;
+                      return CardPlanet(
+                        data: data[index],
+                        progress: progress,
+                        isActive: isActive,
+                        compositions: _preloadedCompositions,
+                      );
+                    },
+                  );
                 },
               ),
               ValueListenableBuilder<int>(
@@ -317,12 +341,53 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             ],
           ),
         ),
-        builder: (context, index, child) {
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 350),
-            curve: Curves.easeInOut,
-            color: data[index].backgroundGradientColors.last,
-            child: child,
+        builder: (context, _, child) {
+          return ValueListenableBuilder<double>(
+            valueListenable: _pageNotifier,
+            builder: (context, page, _) {
+              final clampedPage =
+                  page.clamp(0.0, (data.length - 1).toDouble()).toDouble();
+              final lowerIndex = clampedPage.floor();
+              final upperIndex = math.min(data.length - 1, clampedPage.ceil());
+              final t = (clampedPage - lowerIndex).clamp(0.0, 1.0);
+
+              List<Color> gradientFor(int cardIndex) =>
+                  data[cardIndex].backgroundGradientColors;
+
+              List<Color> lerpGradient(
+                List<Color> from,
+                List<Color> to,
+                double progress,
+              ) {
+                final maxLength = math.max(from.length, to.length);
+                return List<Color>.generate(maxLength, (i) {
+                  final fromColor = from[i % from.length];
+                  final toColor = to[i % to.length];
+                  return Color.lerp(fromColor, toColor, progress) ?? fromColor;
+                });
+              }
+
+              final blendedColors = lowerIndex == upperIndex
+                  ? gradientFor(lowerIndex)
+                  : lerpGradient(
+                      gradientFor(lowerIndex),
+                      gradientFor(upperIndex),
+                      t,
+                    );
+
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOut,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: blendedColors,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: child,
+              );
+            },
           );
         },
       ),

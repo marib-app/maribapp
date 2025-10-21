@@ -1,29 +1,14 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:marib/data/model/currency_rate.dart';
+import 'dart:ui' as ui;
+import '../state/state.dart';
 import 'convert/convert_action_buttons.dart';
 import 'convert/convert_amount_input.dart';
 import 'convert/convert_currency_selector.dart';
 import 'convert/convert_governorate_section.dart';
 import 'convert/convert_header.dart';
-import 'package:intl/intl.dart';
-
-import '../state/state.dart';
-
-
-
-
-
-import 'package:flutter/scheduler.dart';
-import 'dart:ui';
-
-import 'package:flutter/widgets.dart';
-import 'dart:ui' as ui;
-
-
-
-
 
 class ConvertTabView extends StatefulWidget {
   const ConvertTabView({
@@ -166,19 +151,21 @@ class _ConvertTabViewState extends State<ConvertTabView> {
     }
 
     return SafeArea(
-
       top: true,
       bottom: false,
-
       child: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
           final double bottomInset = MediaQuery.of(context).viewInsets.bottom;
           final EdgeInsets scrollPadding = viewPadding.copyWith(
-            bottom: viewPadding.bottom + bottomInset,
+            bottom: viewPadding.bottom,
           );
 
           return SingleChildScrollView(
-            padding: scrollPadding,
+            padding: scrollPadding.add(
+              EdgeInsets.only(
+                bottom: bottomInset > 0 ? bottomInset + 16 : 16,
+              ),
+            ),
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -212,13 +199,13 @@ class _ConvertTabViewState extends State<ConvertTabView> {
                   onChanged: onAmountChanged,
                 ),
                 const SizedBox(height: 12),
-                _ConvertedValueSummary(
+                _ConvertedValueText(
                   brand: brand,
                   onBackground: onBackground,
                   convertedValue: convertedValue,
                   onShowAdvancedDetails: onShowAdvancedDetails,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 ConvertActionButtons(
                   brand: brand,
                   onConvert: onConvert,
@@ -233,8 +220,8 @@ class _ConvertTabViewState extends State<ConvertTabView> {
   }
 }
 
-class _ConvertedValueSummary extends StatelessWidget {
-  const _ConvertedValueSummary({
+class _ConvertedValueText extends StatelessWidget {
+  const _ConvertedValueText({
     required this.brand,
     required this.onBackground,
     required this.convertedValue,
@@ -248,74 +235,68 @@ class _ConvertedValueSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final TextStyle labelStyle = Theme.of(context)
-        .textTheme
-        .titleSmall
-        ?.copyWith(fontWeight: FontWeight.w700, color: onBackground)
-        ?? TextStyle(color: onBackground, fontWeight: FontWeight.w700);
-    final TextStyle valueStyle = Theme.of(context)
-        .textTheme
-        .headlineSmall
-        ?.copyWith(
-      fontWeight: FontWeight.w900,
-      color: onBackground,
-      fontSize: 22,
-    )
-        ?? TextStyle(
-          fontWeight: FontWeight.w900,
-          color: onBackground,
-          fontSize: 22,
-        );
+    final TextStyle captionStyle =
+        Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: onBackground.withOpacity(0.72),
+                  fontWeight: FontWeight.w700,
+                ) ??
+            TextStyle(
+              color: onBackground.withOpacity(0.72),
+              fontWeight: FontWeight.w700,
+            );
+    final TextStyle valueStyle =
+        Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  color: onBackground,
+                  fontSize: 22,
+                ) ??
+            TextStyle(
+              fontWeight: FontWeight.w900,
+              color: onBackground,
+              fontSize: 22,
+            );
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: brand.withOpacity(0.35)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Align(
+          alignment: AlignmentDirectional.centerEnd,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: brand.withOpacity(0.12),
-                foregroundColor: brand,
-                child: const Icon(Icons.currency_exchange, size: 18),
+              Text(
+                'المبلغ المحول',
+                style: captionStyle,
+                textDirection: ui.TextDirection.ltr,
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'المبلغ المحول',
-                  style: labelStyle,
-                  textDirection: ui.TextDirection.rtl,
-                  textAlign: TextAlign.right,
-                ),
+              const SizedBox(height: 4),
+              Text(
+                convertedValue,
+                key: const Key('convertedValueText'),
+                style: valueStyle,
+                textAlign: TextAlign.right,
               ),
-              if (onShowAdvancedDetails != null)
-                TextButton.icon(
-                  key: const Key('advancedDetailsButton'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: brand,
-                    padding: const EdgeInsetsDirectional.fromSTEB(10, 0, 12, 0),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  onPressed: onShowAdvancedDetails,
-                  icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                  label: const Text('التفاصيل المتقدمة'),
-                ),
             ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            convertedValue,
-            key: const Key('convertedValueText'),
-            style: valueStyle,
-            textAlign: TextAlign.center,
+        ),
+        if (onShowAdvancedDetails != null) ...[
+          const SizedBox(height: 8),
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: TextButton.icon(
+              key: const Key('advancedDetailsButton'),
+              onPressed: onShowAdvancedDetails,
+              icon: const Icon(Icons.open_in_new_rounded, size: 18),
+              label: const Text('التفاصيل المتقدمة'),
+              style: TextButton.styleFrom(
+                foregroundColor: brand,
+                padding: const EdgeInsetsDirectional.fromSTEB(10, 0, 12, 0),
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
           ),
         ],
-      ),
+      ],
     );
   }
 }

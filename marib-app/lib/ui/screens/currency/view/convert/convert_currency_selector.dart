@@ -31,7 +31,7 @@ class ConvertCurrencySelector extends StatelessWidget {
   final VoidCallback onSwap;
   final bool isDark;
 
-  static const double _wideFieldWidth = 196;
+  static const double _selectorFieldWidth = 184;
 
   @override
   Widget build(BuildContext context) {
@@ -42,9 +42,8 @@ class ConvertCurrencySelector extends StatelessWidget {
         final double maxWidth = constraints.maxWidth.isFinite
             ? constraints.maxWidth
             : double.infinity;
-        final double fieldWidth = isCompact
-            ? maxWidth
-            : math.min(_wideFieldWidth, math.max(160, maxWidth / 3));
+        final double fieldWidth =
+            isCompact ? maxWidth : math.min(_selectorFieldWidth, maxWidth);
 
         final Widget fromField = SizedBox(
           width: isCompact ? double.infinity : fieldWidth,
@@ -85,9 +84,9 @@ class ConvertCurrencySelector extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               fromField,
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Center(child: swapButton),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               toField,
             ],
           );
@@ -100,7 +99,7 @@ class ConvertCurrencySelector extends StatelessWidget {
             fromField,
             const SizedBox(width: 12),
             Padding(
-              padding: const EdgeInsets.only(top: 18),
+              padding: const EdgeInsets.only(top: 12),
               child: swapButton,
             ),
             const SizedBox(width: 12),
@@ -215,38 +214,41 @@ class _CurrencyDropdown extends StatelessWidget {
             color: fill,
           ),
           child: Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(12, 4, 8, 4),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                key: dropdownKey,
-                value: normalizedSelection,
-                icon: const Icon(Icons.expand_more_rounded),
-                isExpanded: true,
-                isDense: true,
-                items: items,
-                hint: _CurrencyHint(label: label, brand: brand),
-                onChanged: (String? value) {
-                  if (value != null) {
-                    onChanged(value);
-                  }
-                },
-                alignment: AlignmentDirectional.centerEnd,
-                selectedItemBuilder: (BuildContext context) {
-                  return options
-                      .map(
-                        (String currency) => Align(
-                          alignment: Alignment.centerRight,
-                          child: _CurrencyMenuRow(
-                            label: currency,
-                            iconKey:
-                                ValueKey('${iconPrefix}_selected_$currency'),
+            padding: const EdgeInsetsDirectional.fromSTEB(10, 2, 8, 2),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 44),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  key: dropdownKey,
+                  value: normalizedSelection,
+                  icon: const Icon(Icons.expand_more_rounded, size: 18),
+                  isExpanded: true,
+                  isDense: true,
+                  items: items,
+                  hint: _CurrencyHint(label: label, brand: brand),
+                  onChanged: (String? value) {
+                    if (value != null) {
+                      onChanged(value);
+                    }
+                  },
+                  alignment: AlignmentDirectional.centerEnd,
+                  selectedItemBuilder: (BuildContext context) {
+                    return options
+                        .map(
+                          (String currency) => Align(
+                            alignment: Alignment.centerRight,
+                            child: _CurrencyMenuRow(
+                              label: currency,
+                              iconKey:
+                                  ValueKey('${iconPrefix}_selected_$currency'),
+                            ),
                           ),
-                        ),
-                      )
-                      .toList(growable: false);
-                },
-                dropdownColor: theme.scaffoldBackgroundColor,
-                menuMaxHeight: 360,
+                        )
+                        .toList(growable: false);
+                  },
+                  dropdownColor: theme.scaffoldBackgroundColor,
+                  menuMaxHeight: 360,
+                ),
               ),
             ),
           ),
@@ -312,7 +314,6 @@ class _CurrencyMenuRow extends StatelessWidget {
           _CurrencyAvatar(
             label: label,
             key: iconKey,
-            radius: 12,
           ),
           const SizedBox(width: 6),
           Flexible(
@@ -334,7 +335,7 @@ class _CurrencyAvatar extends StatelessWidget {
   const _CurrencyAvatar({
     super.key,
     required this.label,
-    this.radius = 14,
+    this.radius = 11,
   });
 
   final String label;

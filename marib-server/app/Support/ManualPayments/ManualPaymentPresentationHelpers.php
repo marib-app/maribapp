@@ -223,9 +223,13 @@ trait ManualPaymentPresentationHelpers
             array_merge(
                 (array) ManualPaymentRequest::manualBankGatewayAliases(),
                 (array) ManualPaymentRequest::walletGatewayAliases(),
-                ['المحفظة', 'تحويل بنكي']
+                ['manual_banks', 'manual_bank', 'المحفظة', 'تحويل بنكي']
             )
         ))));
+
+        if ($genericGatewayAliases === []) {
+            $genericGatewayAliases = ['manual_banks', 'manual_bank'];
+        }
 
 
         $candidates = [
@@ -441,6 +445,11 @@ trait ManualPaymentPresentationHelpers
             $normalizeAlias,
             (array) ManualPaymentRequest::manualBankGatewayAliases()
         )));
+
+
+        if ($manualBankAliases === []) {
+            $manualBankAliases = ['manual_banks', 'manual_bank'];
+        }
 
 
         foreach (array_merge(

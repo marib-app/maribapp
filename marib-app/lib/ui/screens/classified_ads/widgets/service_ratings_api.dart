@@ -3,6 +3,13 @@ import 'package:flutter/foundation.dart';
 import 'package:marib/utils/api.dart';
 import 'package:marib/data/model/seller_ratings_model.dart' show UserRatings;
 
+typedef _GetRequestHandler = Future<Map<String, dynamic>> Function({
+  required String url,
+  Map<String, dynamic>? queryParameters,
+  bool? useBaseUrl,
+  bool enableEtagCache,
+});
+
 class ServiceRatingsResult {
   final List<UserRatings> list;
   final bool hasMore;
@@ -25,8 +32,43 @@ class ServiceRatingsResult {
 
 class ServiceRatingsApi {
   static final Map<String, _FallbackPageTracker> _fallbackTrackers = {};
+  static _GetRequestHandler? _getOverride;
 
-  /// جلب التعليقات/التقييمات لخدمة معيّنة
+  static Future<Map<String, dynamic>> _performGet({
+    required String url,
+    Map<String, dynamic>? queryParameters,
+    bool? useBaseUrl,
+    bool enableEtagCache = false,
+  }) {
+    final handler = _getOverride;
+    if (handler != null) {
+      return handler(
+        url: url,
+        queryParameters: queryParameters,
+        useBaseUrl: useBaseUrl,
+        enableEtagCache: enableEtagCache,
+      );
+    }
+
+    return Api.get(
+      url: url,
+      queryParameters: queryParameters,
+      useBaseUrl: useBaseUrl,
+      enableEtagCache: enableEtagCache,
+    );
+  }
+
+  @visibleForTesting
+  static void setGetOverride(_GetRequestHandler? handler) {
+    _getOverride = handler;
+  }
+
+  @visibleForTesting
+  static void resetGetOverride() {
+    _getOverride = null;
+  }
+
+  // جلب التعليقات/التقييمات لخدمة معيّنة
   static Future<ServiceRatingsResult> fetchRatings({
     int? serviceId,
     int page = 1,
@@ -43,7 +85,7 @@ class ServiceRatingsApi {
 
     // نستخدم getItemApi لأنه الأكثر ثباتًا لديكم،
     // ونمرر مفاتيح شائعة للترقيم/الفرز كي يتجاهلها الباك إند إن لم يدعمها.
-    final Map<String, dynamic> resp = await Api.get(
+    final Map<String, dynamic> resp = await _performGet(
       url: Api.serviceReviewsApi,
       queryParameters: {
         Api.page: page,
@@ -182,7 +224,7 @@ class ServiceRatingsApi {
       serviceUid: uid,
     );
 
-    final resp = await Api.get(
+    final resp = await _performGet(
       url: Api.myServiceReviewsApi,
       queryParameters: {
         'service_id': resolvedServiceId,
@@ -254,7 +296,7 @@ class ServiceRatingsApi {
     }
 
     try {
-      final Map<String, dynamic> response = await Api.get(
+      final Map<String, dynamic> response = await _performGet(
         url: Api.getServicesApi,
         queryParameters: {
           'service_uid': uid,
@@ -804,7 +846,8 @@ class ServiceRatingsApi {
       return null;
     }
 
-    return walk(resp, 0, <int>{}) ?? false;
+    final bool? extracted = walk(resp, 0, <int>{});
+    return extracted ?? false;
   }
 }
 

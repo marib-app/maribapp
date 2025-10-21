@@ -346,7 +346,7 @@ Widget _buildAddRatingButton(
 
   if (!isAuthenticated && canReview == false) {
     final info = buildInfoMessage(
-      'يرجى تسجيل الدخول لإضافة تقييم جديد.',
+      'سجّل دخولك لإضافة تقييم جديد.',
       icon: Icons.lock_outline,
     );
     return SafeArea(
@@ -362,7 +362,7 @@ Widget _buildAddRatingButton(
               height: 48,
               child: OutlinedButton.icon(
                 icon: const Icon(Icons.login),
-                label: const Text('تسجيل الدخول'),
+                label: const Text('سجّل دخولك'),
                 onPressed: () async {
                   await Navigator.pushNamed(
                     context,

@@ -3207,7 +3207,7 @@ class ApiController extends Controller {
 
             $eligibleSliders->each(fn (Slider $slider) => $slider->loadMissing(['model', 'target']));
 
-            $payload = SliderResource::collection($eligibleSliders)->resolve();
+            $payload = SliderResource::collection($eligibleSliders);
 
             ResponseService::successResponse('Sliders fetched successfully.', $payload);
 

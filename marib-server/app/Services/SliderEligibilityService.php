@@ -65,22 +65,30 @@ class SliderEligibilityService
 
         $total = $weights->sum();
 
-        if ($total <= 0) {
-            return $eligible->first();
-        }
+        $selected = null;
 
-        $random = (mt_rand() / mt_getrandmax()) * $total;
-        $accumulator = 0.0;
+
+        if ($total > 0) {
+            $random = (mt_rand() / mt_getrandmax()) * $total;
+            $accumulator = 0.0;
 
         foreach ($eligible as $slider) {
             $accumulator += $weights[$slider->getKey()] ?? 0.0;
 
-            if ($random <= $accumulator) {
-                return $slider;
+                if ($random <= $accumulator) {
+                    $selected = $slider;
+                    break;
+                }
             }
         }
 
-        return $eligible->first();
+        $selected ??= $eligible->first();
+
+        if ($selected instanceof Slider) {
+            $this->recordImpression($selected, $userId, $sessionId, $moment);
+        }
+
+        return $selected;
     }
 
     public function selectEligibleSliders(Collection $sliders, ?int $userId, ?string $sessionId, ?Carbon $moment = null): Collection

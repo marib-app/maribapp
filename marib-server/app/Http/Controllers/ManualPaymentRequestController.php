@@ -1645,7 +1645,7 @@ class ManualPaymentRequestController extends Controller
 
         $channelValue = data_get($row, 'channel', data_get($row, 'payment_gateway'));
         $normalizedChannel = $this->normalizePaymentRequestChannel($channelValue);
-        $manualBankAliases = ManualPaymentRequest::manualBankGatewayAliases();
+        $manualBankAliases = $this->resolveGenericGatewayAliases();
 
         $propertyNames = ['payment_gateway_name'];
 
@@ -2323,7 +2323,7 @@ class ManualPaymentRequestController extends Controller
 
             $supportsManualBankName = $schema->hasColumn('manual_payment_requests', 'bank_name');
 
-            
+
         } catch (Throwable $exception) {
             $supportsManualBankName = false;
         }
@@ -2633,7 +2633,7 @@ class ManualPaymentRequestController extends Controller
         $manualBankName = is_string($manualBankName) ? trim($manualBankName) : null;
 
         if ($manualBankName !== null && $manualBankName !== '') {
-            $aliases = ManualPaymentRequest::manualBankGatewayAliases();
+            $aliases = $this->resolveGenericGatewayAliases();
 
             if (! in_array(strtolower($manualBankName), $aliases, true)) {
                 return $manualBankName;

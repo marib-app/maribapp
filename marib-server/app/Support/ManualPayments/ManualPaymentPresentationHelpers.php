@@ -207,30 +207,7 @@ trait ManualPaymentPresentationHelpers
 
     protected function resolveManualBankName(mixed $row): ?string
     {
-        $normalizeAlias = static function ($alias): ?string {
-
-            if (! is_string($alias)) {
-                return null;
-            }
-
-            $normalized = Str::lower(trim($alias));
-
-            return $normalized === '' ? null : $normalized;
-        };
-
-        $genericGatewayAliases = array_values(array_unique(array_filter(array_map(
-            $normalizeAlias,
-            array_merge(
-                (array) ManualPaymentRequest::manualBankGatewayAliases(),
-                (array) ManualPaymentRequest::walletGatewayAliases(),
-                ['manual_banks', 'manual_bank', 'المحفظة', 'تحويل بنكي']
-            )
-        ))));
-
-        if ($genericGatewayAliases === []) {
-            $genericGatewayAliases = ['manual_banks', 'manual_bank'];
-        }
-
+        $genericGatewayAliases = $this->resolveGenericGatewayAliases();
 
         $candidates = [
             data_get($row, 'manual_bank_name'),
@@ -431,49 +408,7 @@ trait ManualPaymentPresentationHelpers
             return;
         }
 
-        $normalizeAlias = static function ($alias): ?string {
-            if (! is_string($alias)) {
-                return null;
-            }
-
-            $normalized = Str::lower(trim($alias));
-
-            return $normalized === '' ? null : $normalized;
-        };
-
-        $manualBankAliases = array_values(array_filter(array_map(
-            $normalizeAlias,
-            (array) ManualPaymentRequest::manualBankGatewayAliases()
-        )));
-
-
-        if ($manualBankAliases === []) {
-            $manualBankAliases = ['manual_banks', 'manual_bank'];
-        }
-
-
-        foreach (array_merge(
-            (array) ManualPaymentRequest::walletGatewayAliases(),
-            ['المحفظة', 'تحويل بنكي']
-        ) as $alias) {
-            
-            $normalizedAlias = $normalizeAlias($alias);
-
-
-            if ($normalizedAlias === null) {
-
-                continue;
-            }
-
-            $manualBankAliases[] = $normalizedAlias;
-
-        }
-
-        $manualBankAliases = array_values(array_unique($manualBankAliases));
-
-
-
-
+        $manualBankAliases = $this->resolveGenericGatewayAliases();
 
         $candidateIds = $rows
             ->map(static function (object $row) use ($manualBankAliases) {
@@ -537,5 +472,34 @@ trait ManualPaymentPresentationHelpers
         foreach ($missingIds as $manualPaymentRequestId) {
             $this->manualPaymentRequestLookupCache[$manualPaymentRequestId] = $manualPaymentRequests->get($manualPaymentRequestId);
         }
+    }
+
+
+    /**
+     * @return array<int, string>
+     */
+    protected function resolveGenericGatewayAliases(): array
+    {
+        $aliases = array_merge(
+            (array) ManualPaymentRequest::manualBankGatewayAliases(),
+            (array) ManualPaymentRequest::walletGatewayAliases(),
+            ['manual_banks', 'manual_bank', 'wallet', 'المحفظة', 'تحويل بنكي']
+        );
+
+        $normalized = array_values(array_filter(array_map(static function ($alias) {
+            if (! is_string($alias)) {
+                return null;
+            }
+
+            $value = Str::lower(trim($alias));
+
+            return $value === '' ? null : $value;
+        }, $aliases)));
+
+        if ($normalized === []) {
+            return ['manual_banks', 'manual_bank'];
+        }
+
+        return array_values(array_unique($normalized));
     }
 }

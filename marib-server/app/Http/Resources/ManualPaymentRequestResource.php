@@ -354,7 +354,9 @@ class ManualPaymentRequestResource extends JsonResource
     private function manualBankAliases(): array
     {
         $aliases = array_merge(
-            ManualPaymentRequest::manualBankGatewayAliases(),
+            (array) ManualPaymentRequest::manualBankGatewayAliases(),
+            (array) ManualPaymentRequest::walletGatewayAliases(),
+            
             [
                 'manual bank',
                 'manual banks',
@@ -366,18 +368,30 @@ class ManualPaymentRequestResource extends JsonResource
                 'manual transfers',
                 'bank transfer',
                 'bank transfers',
+                'wallet',
+                'المحفظة',
+                'تحويل بنكي',
+
             ]
         );
 
-        $aliases = array_map(static function ($alias) {
+        $normalized = array_values(array_filter(array_map(static function ($alias) {
             if (! is_string($alias)) {
-                return '';
+                return null;
             }
 
-            return strtolower(trim((string) $alias));
-        }, $aliases);
+            $value = strtolower(trim($alias));
 
-        return array_values(array_filter(array_unique($aliases), static fn ($alias) => $alias !== ''));
+
+            return $value === '' ? null : $value;
+        }, $aliases)));
+
+        if ($normalized === []) {
+            return ['manual_bank', 'manual_banks'];
+        }
+
+        return array_values(array_unique($normalized));
+    
     }
 
 }

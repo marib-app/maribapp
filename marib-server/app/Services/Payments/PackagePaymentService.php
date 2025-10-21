@@ -2,6 +2,8 @@
 
 namespace App\Services\Payments;
 
+
+use App\Services\Payments\Concerns\HandlesManualBankConfirmation;
 use App\Models\Package;
 use App\Services\OrderCheckoutService;
 use App\Models\PaymentTransaction;
@@ -18,6 +20,7 @@ use RuntimeException;
 
 class PackagePaymentService
 {
+    use HandlesManualBankConfirmation;
 
     /**
      * @var array<int, string>
@@ -99,6 +102,24 @@ class PackagePaymentService
 
         $data['payment_method'] = $method;
 
+        $manualContext = null;
+
+        if ($method === 'manual_bank') {
+            $manualContext = $this->prepareManualBankConfirmationPayload(
+                $user,
+                $transaction,
+                Package::class,
+                $package->getKey(),
+                $method,
+                $idempotencyKey,
+                $data
+            );
+
+            if ($manualContext !== null) {
+                $data = $manualContext['data'];
+            }
+        }
+
 
         $options = [
             'payment_gateway' => $method,
@@ -107,6 +128,25 @@ class PackagePaymentService
         ];
 
         $manualPaymentRequestId = $data['manual_payment_request_id'] ?? $transaction->manual_payment_request_id;
+
+
+        if ($manualContext !== null) {
+            $manualPaymentRequest = $manualContext['manual_payment_request'];
+            $options['meta'] = $this->mergeManualConfirmationMeta(
+                $options['meta'],
+                $data,
+                $manualPaymentRequest,
+                $transaction,
+                $idempotencyKey
+            );
+
+            $manualPaymentRequestId = $manualPaymentRequest->getKey();
+            $transaction->manual_payment_request_id = $manualPaymentRequestId;
+            $transaction->meta = $options['meta'];
+            $transaction->save();
+        }
+
+
 
         if ($manualPaymentRequestId) {
             $options['manual_payment_request_id'] = $manualPaymentRequestId;

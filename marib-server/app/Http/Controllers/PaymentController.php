@@ -147,6 +147,16 @@ class PaymentController extends Controller
     {
         $idempotencyKey = $this->resolveIdempotencyKey($request);
 
+        if ($request->filled('manual_bank_id') && ! $request->filled('bank_id')) {
+            $request->merge(['bank_id' => $request->input('manual_bank_id')]);
+        }
+
+        if ($request->filled('bank_id') && ! $request->filled('manual_bank_id')) {
+            $request->merge(['manual_bank_id' => $request->input('bank_id')]);
+        }
+
+
+
         $validated = $request->validate([
             'transaction_id' => ['required', 'integer', 'exists:payment_transactions,id'],
             'reference' => ['nullable', 'string', 'max:191'],
@@ -154,6 +164,21 @@ class PaymentController extends Controller
 
             'note' => ['nullable', 'string'],
             'payment_method' => ['nullable', 'string', 'max:191'],
+
+
+
+            'manual_bank_id' => ['nullable', 'integer', 'exists:manual_banks,id'],
+            'bank_id' => ['nullable', 'integer', 'exists:manual_banks,id'],
+            'bank_account_id' => ['nullable', 'string', 'max:191'],
+            'bank_name' => ['nullable', 'string', 'max:191'],
+            'bank' => ['nullable', 'array'],
+            'bank.name' => ['nullable', 'string', 'max:191'],
+            'bank.account_id' => ['nullable', 'string', 'max:191'],
+            'bank.beneficiary_name' => ['nullable', 'string', 'max:191'],
+            'metadata' => ['nullable', 'array'],
+            'attachments' => ['nullable', 'array'],
+            'attachments.*' => ['array'],
+            'receipt_path' => ['nullable', 'string', 'max:2048'],
 
         ]);
 

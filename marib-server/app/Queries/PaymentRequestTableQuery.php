@@ -8,6 +8,7 @@ use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Query\JoinClause;
+use Throwable;
 
 class PaymentRequestTableQuery
 {
@@ -72,8 +73,19 @@ class PaymentRequestTableQuery
 
         $supportsManualBankId = Schema::hasTable('manual_payment_requests')
             && Schema::hasColumn('manual_payment_requests', 'manual_bank_id');
-        $supportsManualBankName = Schema::hasTable('manual_payment_requests')
-            && Schema::hasColumn('manual_payment_requests', 'bank_name');
+
+        try {
+            $manualPaymentSchema = Schema::connection(
+                ManualPaymentRequest::query()->getConnection()->getName()
+            );
+
+            $supportsManualBankName = $manualPaymentSchema->hasTable('manual_payment_requests')
+                && $manualPaymentSchema->hasColumn('manual_payment_requests', 'bank_name');
+        } catch (Throwable $exception) {
+            $supportsManualBankName = false;
+        }
+
+        
 
         $supportsManualMeta = Schema::hasTable('manual_payment_requests')
             && Schema::hasColumn('manual_payment_requests', 'meta');

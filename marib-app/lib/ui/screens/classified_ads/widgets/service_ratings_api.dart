@@ -359,43 +359,45 @@ class ServiceRatingsApi {
     return buffer.toString();
   }
 
+  static String _rowIdentityKey(Map<String, dynamic> row) {
+    final dynamic id = row['id'] ??
+        row['review_id'] ??
+        row['rating_id'] ??
+        row['ratingId'] ??
+        row['comment_id'] ??
+        row['uid'] ??
+        row['uuid'] ??
+        row['user_id'];
+    if (id != null) {
+      return 'id:$id';
+    }
+
+    final reviewText = (row['review'] ??
+            row['comment'] ??
+            row['message'] ??
+            row['description'] ??
+            row['body'] ??
+            row['text'] ??
+            '')
+        .toString()
+        .trim();
+    final created = (row['created_at'] ??
+            row['created'] ??
+            row['date'] ??
+            row['updated_at'] ??
+            row['timestamp'] ??
+            '')
+        .toString()
+        .trim();
+
+    final reviewHash = reviewText.isEmpty ? reviewText : reviewText.hashCode;
+    final createdHash = created.isEmpty ? created : created.hashCode;
+    return 'c:$reviewHash|t:$createdHash';
+  }
+
   static String _rowsSignature(List<Map<String, dynamic>> rows) {
     if (rows.isEmpty) return 'empty';
-    final keys = <String>[];
-    for (final row in rows) {
-      final dynamic id = row['id'] ??
-          row['review_id'] ??
-          row['rating_id'] ??
-          row['ratingId'] ??
-          row['comment_id'] ??
-          row['uid'] ??
-          row['uuid'] ??
-          row['user_id'];
-      if (id != null) {
-        keys.add('id:$id');
-        continue;
-      }
-      final reviewText = (row['review'] ??
-              row['comment'] ??
-              row['message'] ??
-              row['description'] ??
-              row['body'] ??
-              row['text'] ??
-              '')
-          .toString()
-          .trim();
-      final created = (row['created_at'] ??
-              row['created'] ??
-              row['date'] ??
-              row['updated_at'] ??
-              row['timestamp'] ??
-              '')
-          .toString()
-          .trim();
-      keys.add(
-          'c:${reviewText.isEmpty ? reviewText : reviewText.hashCode}|t:${created.isEmpty ? created : created.hashCode}');
-    }
-    keys.sort();
+    final keys = rows.map(_rowIdentityKey).toList()..sort();
     return keys.join('||');
   }
 
@@ -612,16 +614,49 @@ class ServiceRatingsApi {
     final String signature = _rowsSignature(rawRows);
     final String? previousSignature = tracker.lastSignature;
     final int? previousCount = tracker.lastCount;
+
+    final Set<String> currentKeys = rawRows.map(_rowIdentityKey).toSet();
+    final int? previousUniqueCount = tracker.lastUniqueCount;
+    tracker.lastUniqueCount = currentKeys.length;
+
+    final Set<String> seenRowKeys = tracker.seenRowKeys;
+    final int uniqueBefore = seenRowKeys.length;
+    seenRowKeys.addAll(currentKeys);
+    final bool aggregatedGrew = seenRowKeys.length > uniqueBefore;
+
+    final int? reportedTotal = _extractTotalReviews(resp);
+    final int? previousReportedTotal = tracker.lastReportedTotal;
+    if (reportedTotal != null) {
+      tracker.lastReportedTotal = reportedTotal;
+    }
+
     bool hasMore = currentCount >= perPage;
 
     if (currentCount == 0) {
       hasMore = false;
     }
 
-    if (previousSignature != null &&
+    final bool duplicateBySignature = previousSignature != null &&
         previousSignature == signature &&
-        (previousCount == null || previousCount == currentCount)) {
+        (previousCount == null || previousCount == currentCount);
+    if (duplicateBySignature) {
       hasMore = false;
+    }
+
+    final bool totalsConfirmRepeat = reportedTotal != null &&
+        previousReportedTotal != null &&
+        reportedTotal == previousReportedTotal;
+
+    final bool uniqueCountDidNotIncrease = previousUniqueCount != null &&
+        currentKeys.length <= previousUniqueCount;
+
+    if (!aggregatedGrew && tracker.lastPage != null) {
+      final bool repeatConfirmed = reportedTotal != null
+          ? totalsConfirmRepeat
+          : uniqueCountDidNotIncrease;
+      if (repeatConfirmed) {
+        hasMore = false;
+      }
     }
 
     tracker
@@ -862,4 +897,7 @@ class _FallbackPageTracker {
   String? lastSignature;
   int? lastCount;
   int? lastPage;
+  int? lastUniqueCount;
+  int? lastReportedTotal;
+  final Set<String> seenRowKeys = <String>{};
 }

@@ -89,9 +89,21 @@ class ItemCommentsListState extends State<ItemCommentsList> {
         sort: _sort,
         serviceUid: widget.serviceUid,
       );
-      _items.addAll(res.list);
-      _hasMore = res.hasMore;
-      _paginationEnded = !_hasMore && _items.isNotEmpty;
+      final uniqueFirst = _collectUniqueRatings(
+        res.list,
+        _items.map(_ratingKey).toSet(),
+      );
+      if (uniqueFirst.isNotEmpty) {
+        _items.addAll(uniqueFirst);
+      }
+
+      final bool duplicateResponse = res.list.isNotEmpty && uniqueFirst.isEmpty;
+      final bool emptyResponse = res.list.isEmpty;
+
+      _hasMore = res.hasMore && !duplicateResponse && !emptyResponse;
+      _paginationEnded = (!_hasMore || duplicateResponse || emptyResponse) &&
+          _items.isNotEmpty;
+
       _page = res.nextPage;
       widget.onCanReviewChanged?.call(res.canReview);
       _serviceId = res.serviceId;
@@ -117,14 +129,10 @@ class ItemCommentsListState extends State<ItemCommentsList> {
         sort: _sort,
         serviceUid: widget.serviceUid,
       );
-      final existingKeys = _items.map(_ratingKey).toSet();
-      final List<UserRatings> unique = [];
-      for (final rating in res.list) {
-        final key = _ratingKey(rating);
-        if (existingKeys.add(key)) {
-          unique.add(rating);
-        }
-      }
+      final List<UserRatings> unique = _collectUniqueRatings(
+        res.list,
+        _items.map(_ratingKey).toSet(),
+      );
 
       if (unique.isNotEmpty) {
         _items.addAll(unique);
@@ -182,6 +190,18 @@ class ItemCommentsListState extends State<ItemCommentsList> {
     final int? buyer = rating.buyerId;
     final double? stars = rating.ratings;
     return 'meta:${buyer ?? 0}|t:$created|r:$reviewText|s:${stars ?? 0}';
+  }
+
+  List<UserRatings> _collectUniqueRatings(
+      Iterable<UserRatings> ratings, Set<String> knownKeys) {
+    final List<UserRatings> unique = [];
+    for (final rating in ratings) {
+      final key = _ratingKey(rating);
+      if (knownKeys.add(key)) {
+        unique.add(rating);
+      }
+    }
+    return unique;
   }
 
   Widget _buildEndOfListMessage(BuildContext context) {

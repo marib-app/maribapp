@@ -10,10 +10,14 @@ use App\Models\User;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
+use Throwable;
 
 
 class ManualPaymentRequestService
 {
+    private ?bool $supportsManualPaymentBankColumns = null;
+
     /**
      * @param array<string, mixed> $data
      */
@@ -188,7 +192,7 @@ class ManualPaymentRequestService
 
             ]);
 
-            if ($manualBank) {
+            if ($manualBank && $this->manualPaymentSupportsBankColumns()) {
                 $existingRequest->bank_name = $manualBank->name;
                 $existingRequest->bank_account_name = $manualBank->beneficiary_name;
             }
@@ -216,10 +220,17 @@ class ManualPaymentRequestService
 
         ];
 
-        if ($manualBank) {
+        if ($manualBank && $this->manualPaymentSupportsBankColumns()) {
+
             $attributes['bank_name'] = $manualBank->name;
             $attributes['bank_account_name'] = $manualBank->beneficiary_name;
         }
+
+        if (! $this->manualPaymentSupportsBankColumns()) {
+            unset($attributes['bank_name'], $attributes['bank_account_name']);
+        }
+
+
 
         return ManualPaymentRequest::create($attributes);
     }
@@ -366,6 +377,12 @@ class ManualPaymentRequestService
 
 
         ];
+
+
+        if (! $this->manualPaymentSupportsBankColumns()) {
+            unset($attributes['bank_name']);
+        }
+
 
         return ManualPaymentRequest::create(array_filter(
             $attributes,
@@ -669,11 +686,13 @@ class ManualPaymentRequestService
                 'payment_transaction_id' => $transaction->getKey(),
             ], static fn ($value) => $value !== null && $value !== ''));
 
-            if ($bankName !== null) {
+            if ($bankName !== null && $this->manualPaymentSupportsBankColumns()) {
+
                 $existingRequest->bank_name = $bankName;
             }
 
-            if ($bankBeneficiary !== null) {
+            if ($bankBeneficiary !== null && $this->manualPaymentSupportsBankColumns()) {
+
                 $existingRequest->bank_account_name = $bankBeneficiary;
             }
 
@@ -695,11 +714,16 @@ class ManualPaymentRequestService
                 'manual_bank_id' => $manualBank?->getKey() ?? $manualBankId,
             ]);
 
-            if ($bankName !== null) {
+            if ($bankName !== null && $this->manualPaymentSupportsBankColumns()) {
                 $manualPaymentRequest->bank_name = $bankName;
             }
 
-            if ($bankBeneficiary !== null && $manualPaymentRequest->bank_account_name === null) {
+            if (
+                $bankBeneficiary !== null
+                && $this->manualPaymentSupportsBankColumns()
+                && $manualPaymentRequest->bank_account_name === null
+            ) {
+                
                 $manualPaymentRequest->bank_account_name = $bankBeneficiary;
             }
 
@@ -989,4 +1013,25 @@ class ManualPaymentRequestService
         return $filtered;
     }
 
+    private function manualPaymentSupportsBankColumns(): bool
+    {
+        if ($this->supportsManualPaymentBankColumns !== null) {
+            return $this->supportsManualPaymentBankColumns;
+        }
+
+        try {
+            $hasBankName = Schema::hasColumn('manual_payment_requests', 'bank_name');
+            $hasBankAccountName = Schema::hasColumn('manual_payment_requests', 'bank_account_name');
+
+            $this->supportsManualPaymentBankColumns = $hasBankName && $hasBankAccountName;
+        } catch (Throwable $exception) {
+            Log::warning('Unable to determine manual payment bank columns support.', [
+                'exception' => $exception,
+            ]);
+
+            $this->supportsManualPaymentBankColumns = false;
+        }
+
+        return $this->supportsManualPaymentBankColumns;
+    }
 }

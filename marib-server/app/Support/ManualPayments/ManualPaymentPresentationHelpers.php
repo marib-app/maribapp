@@ -410,7 +410,11 @@ trait ManualPaymentPresentationHelpers
             return;
         }
 
-
+        $manualBankAliases = array_map('strtolower', ManualPaymentRequest::manualBankGatewayAliases());
+        $manualBankAliases = array_merge(
+            $manualBankAliases,
+            array_map('strtolower', $this->resolveLocalizedGatewayFallbacks())
+        );
 
         
 

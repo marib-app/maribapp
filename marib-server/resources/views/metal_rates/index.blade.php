@@ -1,24 +1,9 @@
 @extends('layouts.main')
 
-
-
-@php
-    use Illuminate\Support\Facades\Storage;
-@endphp
-
-
-
 @section('title')
     {{ __('Metal Rates Management') }}
 @endsection
 
-
-
-@push('scripts')
-    @include('metal_rates.partials.icon_preview_scripts')
-    @include('metal_rates.partials.quote_table_scripts')
-
-@endpush
 
 
 
@@ -33,6 +18,10 @@
 @endsection
 
 @section('content')
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+
+
     <section class="section">
         <div class="row">
             <div class="col-12">
@@ -59,196 +48,250 @@
             <div class="col-12">
 
                 <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">{{ __('Existing metal rates') }}</h5>
+                    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+
                         <div class="d-flex align-items-center gap-2">
-                            <span class="badge bg-light text-dark">{{ $metalRates->count() }}</span>
-                            @can('metal-rate-create')
-                                <a href="{{ route('metal-rates.create') }}" class="btn btn-primary btn-sm">{{ __('Add metal rate') }}</a>
-                            @endcan
+                            <h5 class="card-title mb-0">{{ __('Metal Rates') }}</h5>
+                            <span class="badge bg-light text-dark" id="metalRatesCount">{{ $metalRateCount }}</span>
+                        
                         </div>
                     
+                        @can('metal-rate-create')
+                            <a href="{{ route('metal-rates.create') }}" class="btn btn-primary btn-sm">
+                                {{ __('إضافة معدن') }}
+                            </a>
+                        @endcan
+
+
                     </div>
                     <div class="card-body">
-                        @if ($metalRates->isEmpty())
-                            <p class="text-muted mb-0">{{ __('No metal rates have been configured yet.') }}</p>
-                        @else
-                            <div class="accordion" id="metalRatesAccordion">
-                                @foreach ($metalRates as $rate)
-                                    <div class="accordion-item mb-3 border">
-                                        <h2 class="accordion-header" id="heading{{ $rate->id }}">
-                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ $rate->id }}" aria-expanded="false" aria-controls="collapse{{ $rate->id }}">
-                                                <div class="d-flex flex-column flex-md-row w-100">
-                                                    <strong class="me-md-3">{{ $rate->display_name }}</strong>
-
-
-                                                    @php
-                                                        $defaultQuote = $rate->quotes->firstWhere('is_default', true);
-                                                        $displayBuy = $defaultQuote?->buy_price ?? $rate->buy_price;
-                                                        $displaySell = $defaultQuote?->sell_price ?? $rate->sell_price;
-                                                        $displaySource = $defaultQuote?->source ?? $rate->source;
-                                                        $displayQuotedAt = optional($defaultQuote?->quoted_at ?? $rate->quoted_at)->format('Y-m-d H:i');
-                                                    @endphp
-
-                                                    <div class="text-muted small">
-                                                        <span class="me-2">{{ __('Buy') }}: <strong>{{ $displayBuy !== null ? number_format((float) $displayBuy, 3) : '—' }}</strong></span>
-                                                        <span class="me-2">{{ __('Sell') }}: <strong>{{ $displaySell !== null ? number_format((float) $displaySell, 3) : '—' }}</strong></span>
-                                                        <span class="me-2">{{ __('Source') }}: {{ $displaySource ?: '—' }}</span>
-                                                        <span>{{ __('Updated at') }}: {{ $displayQuotedAt ?: '—' }}</span>
-                                                    </div>
-                                                </div>
-                                            </button>
-                                        </h2>
-                                        <div id="collapse{{ $rate->id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ $rate->id }}" data-bs-parent="#metalRatesAccordion">
-                                            <div class="accordion-body">
-                                                <div class="row g-4">
-                                                    <div class="col-md-6">
-                                                        <h6>{{ __('Update rate') }}</h6>
-                                                        @can('metal-rate-edit')
-                                                            <form action="{{ route('metal-rates.update', $rate) }}" method="POST" class="mb-3" enctype="multipart/form-data">
-                                                                @csrf
-                                                                @method('PUT')
-                                                                <input type="hidden" name="metal_type" value="{{ $rate->metal_type }}">
-                                                                <div class="mb-3">
-                                                                    <label class="form-label">{{ __('Karat') }}</label>
-                                                                    <input type="number" step="0.01" min="0" max="999" class="form-control" name="karat" value="{{ $rate->karat }}" @if($rate->metal_type === 'silver') disabled @endif>
-                                                                    @if($rate->metal_type === 'silver')
-                                                                        <input type="hidden" name="karat" value="">
-                                                                    @endif
-                                                                </div>
-                                                                 <div class="mb-4">
-                                                                    <label class="form-label">{{ __('Governorate quotes') }}</label>
-                                                                    @php
-                                                                        $quoteMap = $rate->quotes
-                                                                            ->mapWithKeys(fn($quote) => [
-                                                                                $quote->governorate_id => [
-                                                                                    'governorate_id' => $quote->governorate_id,
-                                                                                    'sell_price' => $quote->sell_price,
-                                                                                    'buy_price' => $quote->buy_price,
-                                                                                    'source' => $quote->source,
-                                                                                    'quoted_at' => optional($quote->quoted_at)->toIso8601String(),
-                                                                                    'is_default' => (bool) $quote->is_default,
-                                                                                ],
-                                                                            ])
-                                                                            ->all();
-                                                                        $defaultQuoteId = optional($rate->quotes->firstWhere('is_default', true))->governorate_id ?? $defaultGovernorateId;
-                                                                    @endphp
-                                                                    @include('metal_rates.partials.quote-table', [
-                                                                        'governorates' => $governorates,
-                                                                        'quotes' => $quoteMap,
-                                                                        'context' => 'update-' . $rate->id,
-                                                                        'defaultGovernorateId' => $defaultQuoteId,
-                                                                    ])
-                                                                </div>
-
-
-                                                                <div class="mb-3">
-                                                                    <label class="form-label" for="metal_icon_{{ $rate->id }}">{{ __('Icon (optional)') }}</label>
-                                                                    <input type="file" class="form-control" id="metal_icon_{{ $rate->id }}" name="icon" accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml" data-metal-icon-input data-metal-icon-preview="metal_icon_preview_{{ $rate->id }}" data-metal-icon-wrapper="metal_icon_wrapper_{{ $rate->id }}" data-metal-rate-id="{{ $rate->id }}">
-                                                                    <div class="form-text">{{ __('Uploading a new file replaces the previous icon.') }}</div>
-                                                                    <div class="mt-2 {{ $rate->icon_path ? '' : 'd-none' }}" id="metal_icon_wrapper_{{ $rate->id }}" data-metal-icon-preview-container>
-                                                                        <img src="{{ $rate->icon_path ? Storage::url($rate->icon_path) : '#' }}" alt="{{ $rate->icon_alt ?? __('Current icon') }}" id="metal_icon_preview_{{ $rate->id }}" class="img-thumbnail" style="max-height: 120px; {{ $rate->icon_path ? '' : 'display:none;' }}" data-original-src="{{ $rate->icon_path ? Storage::url($rate->icon_path) : '' }}" data-original-alt="{{ $rate->icon_alt ?? '' }}">
-                                                                        @if($rate->icon_path)
-                                                                            <div class="mt-2 d-flex gap-2" data-metal-icon-actions>
-                                                                                <button type="submit" name="remove_icon" value="1" class="btn btn-outline-danger btn-sm" formnovalidate data-metal-icon-remove="{{ $rate->id }}">{{ __('Remove icon') }}</button>
-                                                                                <button type="button" class="btn btn-outline-secondary btn-sm" data-metal-icon-clear-input="metal_icon_{{ $rate->id }}">{{ __('Clear selection') }}</button>
-                                                                            </div>
-                                                                        @else
-                                                                            <div class="mt-2 d-flex gap-2">
-                                                                                <button type="button" class="btn btn-outline-secondary btn-sm" data-metal-icon-clear-input="metal_icon_{{ $rate->id }}">{{ __('Clear selection') }}</button>
-                                                                            </div>
-                                                                        @endif
-                                                                    </div>
-                                                                </div>
-                                                                <div class="mb-3">
-                                                                    <label class="form-label" for="metal_icon_alt_{{ $rate->id }}">{{ __('Icon alternative text') }}</label>
-                                                                    <input type="text" class="form-control" id="metal_icon_alt_{{ $rate->id }}" name="icon_alt" value="{{ $rate->icon_alt }}" maxlength="255" placeholder="{{ __('Describe the icon for screen readers') }}">
-                                                                </div>
-
-
-                                                                <div class="d-flex gap-2">
-                                                                    <button type="submit" class="btn btn-primary">{{ __('Save changes') }}</button>
-                                                                </div>
-                                                            </form>
-                                                        @else
-                                                            <p class="text-muted">{{ __('You do not have permission to edit this rate.') }}</p>
-                                                        @endcan
-
-                                                        @can('metal-rate-delete')
-                                                            <form action="{{ route('metal-rates.destroy', $rate) }}" method="POST" onsubmit="return confirm('{{ __('Are you sure?') }}');" class="mt-2">
-                                                                @csrf
-                                                                @method('DELETE')
-                                                                <button type="submit" class="btn btn-outline-danger">{{ __('Delete') }}</button>
-                                                            </form>
-                                                        @endcan
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <h6>{{ __('Schedule future update') }}</h6>
-                                                        @can('metal-rate-schedule')
-                                                            <form action="{{ route('metal-rates.schedule', $rate) }}" method="POST" class="mb-3">
-                                                                @csrf
-                                                                <div class="row g-2">
-                                                                    <div class="col-6">
-                                                                        <label class="form-label">{{ __('Buy price') }}</label>
-                                                                        <input type="number" step="0.001" min="0" class="form-control" name="buy_price" required>
-                                                                    </div>
-                                                                    <div class="col-6">
-                                                                        <label class="form-label">{{ __('Sell price') }}</label>
-                                                                        <input type="number" step="0.001" min="0" class="form-control" name="sell_price" required>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="mb-3 mt-3">
-                                                                    <label class="form-label">{{ __('Source (optional)') }}</label>
-                                                                    <input type="text" class="form-control" name="source">
-                                                                </div>
-                                                                <div class="mb-3">
-                                                                    <label class="form-label">{{ __('Run at') }}</label>
-                                                                    <input type="datetime-local" class="form-control" name="scheduled_for" required>
-                                                                </div>
-                                                                <div class="d-grid">
-                                                                    <button type="submit" class="btn btn-outline-primary">{{ __('Schedule update') }}</button>
-                                                                </div>
-                                                            </form>
-                                                        @else
-                                                            <p class="text-muted">{{ __('You do not have permission to schedule updates.') }}</p>
-                                                        @endcan
-
-                                                        <h6>{{ __('Upcoming schedules') }}</h6>
-                                                        @if($rate->pendingUpdates->isEmpty())
-                                                            <p class="text-muted">{{ __('No pending schedules.') }}</p>
-                                                        @else
-                                                            <ul class="list-group">
-                                                                @foreach($rate->pendingUpdates as $update)
-                                                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                                        <div>
-                                                                            <div class="fw-semibold">{{ __('Run at') }}: {{ optional($update->scheduled_for)->format('Y-m-d H:i') }}</div>
-                                                                            <div class="text-muted small">
-                                                                                {{ __('Buy') }}: {{ number_format((float) $update->buy_price, 3) }} ·
-                                                                                {{ __('Sell') }}: {{ number_format((float) $update->sell_price, 3) }}
-                                                                            </div>
-                                                                        </div>
-                                                                        @can('metal-rate-schedule')
-                                                                            <form action="{{ route('metal-rates.schedule.cancel', $update) }}" method="POST" onsubmit="return confirm('{{ __('Cancel this schedule?') }}');">
-                                                                                @csrf
-                                                                                @method('DELETE')
-                                                                                <button type="submit" class="btn btn-sm btn-outline-danger">{{ __('Cancel') }}</button>
-                                                                            </form>
-                                                                        @endcan
-                                                                    </li>
-                                                                @endforeach
-                                                            </ul>
-                                                        @endif
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @endif
+                        <div class="table-responsive">
+                            <table class="table table-borderless table-striped"
+                                   id="metal_rates_table"
+                                   data-toggle="table"
+                                   data-url="{{ route('metal-rates.show') }}"
+                                   data-click-to-select="true"
+                                   data-side-pagination="server"
+                                   data-pagination="true"
+                                   data-page-list="[5, 10, 20, 50, 100, 200]"
+                                   data-search="true"
+                                   data-show-columns="true"
+                                   data-show-refresh="true"
+                                   data-fixed-columns="true"
+                                   data-fixed-number="1"
+                                   data-trim-on-search="false"
+                                   data-mobile-responsive="true"
+                                   data-sort-name="id"
+                                   data-sort-order="desc"
+                                   data-pagination-successively-size="3"
+                                   data-query-params="metalRatesQueryParams"
+                                   data-response-handler="metalRatesResponseHandler">
+                                <thead>
+                                <tr>
+                                    <th scope="col" data-field="id" data-sortable="true">{{ __('ID') }}</th>
+                                    <th scope="col" data-field="display_name" data-sortable="true">{{ __('Name') }}</th>
+                                    <th scope="col" data-field="sell_price" data-sortable="true" data-formatter="metalPriceFormatter">{{ __('Sell Price') }}</th>
+                                    <th scope="col" data-field="buy_price" data-sortable="true" data-formatter="metalPriceFormatter">{{ __('Buy Price') }}</th>
+                                    <th scope="col" data-field="icon_url" data-formatter="metalIconFormatter">{{ __('Icon') }}</th>
+                                    <th scope="col" data-field="last_updated_at" data-sortable="true" data-formatter="metalDateFormatter">{{ __('Last Updated') }}</th>
+                                    <th scope="col" data-field="history" data-formatter="metalHistoryQualityFormatter">{{ __('Source Quality') }}</th>
+                                    <th scope="col" data-field="history" data-formatter="metalHistoryHourlyFormatter" data-visible="false">{{ __('Last Hourly Snapshot') }}</th>
+                                    <th scope="col" data-field="history" data-formatter="metalHistoryDailyFormatter" data-visible="false">{{ __('Last Daily Aggregate') }}</th>
+                                    @canany(['metal-rate-edit', 'metal-rate-delete'])
+                                        <th scope="col" data-field="operate" data-events="metalRateEvents" data-escape="false" data-formatter="metalOperateFormatter">{{ __('Action') }}</th>
+                                    @endcanany
+                                </tr>
+                                </thead>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </section>
+
+@endsection
+
+@section('script')
+    <script>
+        const metalRatesI18n = {
+            unknown: @json(__('Unknown')),
+            deleteConfirm: @json(__('هل أنت متأكد من حذف هذا المعدن؟')),
+            deleteError: @json(__('حدث خطأ أثناء حذف المعدن.')),
+            deleteSuccessFallback: @json(__('تم حذف سعر المعدن بنجاح.')),
+            fresh: @json(__('Fresh')),
+            warning: @json(__('Warning')),
+            stale: @json(__('Stale')),
+        };
+
+        function metalRatesQueryParams(params) {
+            return params;
+        }
+
+        function metalRatesResponseHandler(res) {
+            if (res && typeof res.total === 'number') {
+                $('#metalRatesCount').text(res.total);
+            }
+
+            return res;
+        }
+
+        function metalIconFormatter(value, row) {
+            if (!value) {
+                return '<span class="text-muted">&mdash;</span>';
+            }
+
+            const alt = row.icon_alt ? $('<div>').text(row.icon_alt).html() : '';
+            return '<img src="' + value + '" alt="' + alt + '" class="img-thumbnail" style="height:40px;max-width:40px;">';
+        }
+
+        function metalDateFormatter(value) {
+            if (!value) {
+                return '<span class="text-muted">&mdash;</span>';
+            }
+
+            return moment(value).isValid()
+                ? moment(value).format('YYYY-MM-DD HH:mm')
+                : value;
+        }
+
+        function metalPriceFormatter(value) {
+            if (value === null || typeof value === 'undefined') {
+                return '<span class="text-muted">&mdash;</span>';
+            }
+
+            const number = Number(value);
+
+            if (Number.isNaN(number)) {
+                return '<span class="text-muted">&mdash;</span>';
+            }
+
+            return number.toLocaleString(undefined, {
+                minimumFractionDigits: 3,
+                maximumFractionDigits: 3,
+            });
+        }
+
+        function metalHistoryQualityFormatter(value) {
+            const quality = (value?.source_quality || 'unknown').toLowerCase();
+            const source = value?.source ? $('<div>').text(value.source).html() : '';
+
+            const map = {
+                fresh: { label: metalRatesI18n.fresh, class: 'badge bg-success-subtle text-success fw-semibold' },
+                warning: { label: metalRatesI18n.warning, class: 'badge bg-warning-subtle text-warning-emphasis fw-semibold' },
+                stale: { label: metalRatesI18n.stale, class: 'badge bg-danger-subtle text-danger fw-semibold' },
+                unknown: { label: metalRatesI18n.unknown, class: 'badge bg-secondary-subtle text-secondary fw-semibold' },
+            };
+
+            const meta = map[quality] || map.unknown;
+
+            const sourceMarkup = source ? `<span class="d-block text-muted small mt-1">${source}</span>` : '';
+
+            return `<span class="${meta.class}">${meta.label}</span>${sourceMarkup}`;
+        }
+
+        function metalHistoryHourlyFormatter(value) {
+            const timestamp = value?.last_hourly_at || value?.last_captured_at;
+            if (!timestamp) {
+                return '<span class="text-muted">&mdash;</span>';
+            }
+
+            return moment(timestamp).isValid()
+                ? moment(timestamp).format('YYYY-MM-DD HH:mm')
+                : timestamp;
+        }
+
+        function metalHistoryDailyFormatter(value) {
+            const timestamp = value?.last_daily_at;
+            if (!timestamp) {
+                return '<span class="text-muted">&mdash;</span>';
+            }
+
+            return moment(timestamp).isValid()
+                ? moment(timestamp).format('YYYY-MM-DD')
+                : timestamp;
+        }
+
+        @canany(['metal-rate-edit', 'metal-rate-delete'])
+            @can('metal-rate-edit')
+                const metalRatesEditUrlTemplate = @json(route('metal-rates.edit', ['metalRate' => '__ID__']));
+            @endcan
+
+            @can('metal-rate-delete')
+                const metalRatesDeleteUrlTemplate = @json(route('metal-rates.destroy', ['metalRate' => '__ID__']));
+            @endcan
+
+            function metalOperateFormatter(value, row) {
+                const buttons = [];
+
+                @can('metal-rate-edit')
+                    if (row.id) {
+                        const editUrl = metalRatesEditUrlTemplate.replace('__ID__', row.id);
+                        buttons.push(
+                            '<a class="btn btn-sm btn-outline-primary me-1" href="' + editUrl + '" title="{{ __('Edit') }}">'
+                            + '<i class="bi bi-pencil-square"></i>'
+                            + '</a>'
+                        );
+                    }
+                @endcan
+
+                @can('metal-rate-delete')
+                    buttons.push(
+                        '<button class="delete-metal-rate btn btn-sm btn-danger" title="{{ __('Delete') }}">'
+                        + '<i class="bi bi-trash"></i>'
+                        + '</button>'
+                    );
+                @endcan
+
+                return buttons.join('') || '<span class="text-muted">&mdash;</span>';
+            }
+
+            @can('metal-rate-delete')
+                window.metalRateEvents = {
+                    'click .delete-metal-rate': function (e, value, row) {
+                        if (!row?.id) {
+                            return;
+                        }
+
+                        if (!confirm(metalRatesI18n.deleteConfirm)) {
+                            return;
+                        }
+
+                        const deleteUrl = metalRatesDeleteUrlTemplate.replace('__ID__', row.id);
+
+                        $.ajax({
+                            url: deleteUrl,
+                            type: 'DELETE',
+                            headers: {
+                                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                            },
+                            success: function (response) {
+                                if (response?.success) {
+                                    $('#metal_rates_table').bootstrapTable('refresh');
+                                    if (typeof showSuccessToast === 'function') {
+                                        showSuccessToast(response.message || metalRatesI18n.deleteSuccessFallback);
+                                    }
+                                } else if (typeof showErrorToast === 'function') {
+                                    showErrorToast(response?.message || metalRatesI18n.deleteError);
+                                }
+                            },
+                            error: function () {
+                                if (typeof showErrorToast === 'function') {
+                                    showErrorToast(metalRatesI18n.deleteError);
+                                }
+                            }
+                        });
+                    }
+                };
+            @else
+                window.metalRateEvents = {};
+            @endcan
+        @else
+            function metalOperateFormatter() {
+                return '<span class="text-muted">&mdash;</span>';
+            }
+
+            window.metalRateEvents = {};
+        @endcanany
+    </script>
 @endsection

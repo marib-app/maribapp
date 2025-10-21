@@ -207,7 +207,14 @@ trait ManualPaymentPresentationHelpers
 
     protected function resolveManualBankName(mixed $row): ?string
     {
-        $genericGatewayAliases = $this->resolveGenericGatewayAliases();
+        $aliasCandidates = array_merge(
+            (array) ManualPaymentRequest::manualBankGatewayAliases(),
+            (array) ManualPaymentRequest::walletGatewayAliases(),
+            $this->resolveLocalizedGatewayFallbacks()
+        );
+
+        $genericGatewayAliases = $this->normalizeGatewayAliases($aliasCandidates);
+
 
         $candidates = [
             data_get($row, 'manual_bank_name'),
@@ -425,7 +432,7 @@ trait ManualPaymentPresentationHelpers
             $manualBankAliases = ['manual_banks', 'manual_bank'];
         }
 
-        
+
         $candidateIds = $rows
             ->map(static function (object $row) use ($manualBankAliases) {
                 $manualBankName = data_get($row, 'manual_bank_name');
@@ -496,12 +503,20 @@ trait ManualPaymentPresentationHelpers
      */
     protected function resolveGenericGatewayAliases(): array
     {
-        $aliases = array_merge(
+        $aliasCandidates = array_merge(
             (array) ManualPaymentRequest::manualBankGatewayAliases(),
             (array) ManualPaymentRequest::walletGatewayAliases(),
-            ['manual_banks', 'manual_bank', 'wallet', 'المحفظة', 'تحويل بنكي']
+            $this->resolveLocalizedGatewayFallbacks()
         );
+        return $this->normalizeGatewayAliases($aliasCandidates);
+    }
 
+    /**
+     * @param array<int, mixed> $aliases
+     * @return array<int, string>
+     */
+    protected function normalizeGatewayAliases(array $aliases): array
+    {
         $normalized = array_values(array_filter(array_map(static function ($alias) {
             if (! is_string($alias)) {
                 return null;
@@ -513,9 +528,27 @@ trait ManualPaymentPresentationHelpers
         }, $aliases)));
 
         if ($normalized === []) {
-            return ['manual_banks', 'manual_bank'];
+            return ['manual_banks', 'manual_bank', 'wallet'];
         }
 
         return array_values(array_unique($normalized));
     }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function resolveLocalizedGatewayFallbacks(): array
+    {
+        return [
+            trans('Bank Transfer'),
+            trans('Wallet'),
+            'manual_banks',
+            'manual_bank',
+            'wallet',
+            'التحويل البنكي',
+            'تحويل بنكي',
+            'المحفظة',
+        ];
+    }
+
 }

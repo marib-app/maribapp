@@ -430,24 +430,33 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
     });
 
     /* ------------------------------- أسعار المعادن Metal Rates ------------------------------ */
+
+
     Route::group([
         'prefix' => 'metal-rates',
         'as' => 'metal-rates.',
         'middleware' => ['permission:metal-rate-list|metal-rate-create|metal-rate-edit|metal-rate-delete|metal-rate-schedule'],
     ], static function () {
         Route::get('/', [MetalRateController::class, 'index'])->name('index');
+        Route::get('/show', [MetalRateController::class, 'show'])->name('show');
         Route::get('/create', [MetalRateController::class, 'create'])
             ->middleware('permission:metal-rate-create')
             ->name('create');
+        Route::get('/{metalRate}/edit', [MetalRateController::class, 'edit'])
+            ->whereNumber('metalRate')
+            ->middleware('permission:metal-rate-edit')
+            ->name('edit');
         Route::post('/', [MetalRateController::class, 'store'])
             ->middleware('permission:metal-rate-create')
             ->name('store');
             
-            Route::put('/{metalRate}', [MetalRateController::class, 'update'])
+        Route::put('/{metalRate}', [MetalRateController::class, 'update'])
             ->whereNumber('metalRate')
+            ->middleware('permission:metal-rate-edit')
             ->name('update');
         Route::delete('/{metalRate}', [MetalRateController::class, 'destroy'])
             ->whereNumber('metalRate')
+            ->middleware('permission:metal-rate-delete')
             ->name('destroy');
         Route::post('/{metalRate}/schedule', [MetalRateController::class, 'schedule'])
             ->whereNumber('metalRate')
@@ -458,6 +467,8 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
             ->middleware('permission:metal-rate-schedule')
             ->name('schedule.cancel');
     });
+
+
 
 
     /* --------------------------------- الرئيسية Home ------------------------------- */

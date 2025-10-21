@@ -19,7 +19,6 @@ import 'package:marib/utils/slider_interface_mapper.dart';
 import 'slider_shimmer.dart';
 import 'package:marib/ui/screens/widgets/lazy_network_image.dart';
 import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
-import 'slider_constants.dart';
 
 const EdgeInsetsGeometry kSliderHorizontalPadding =
     EdgeInsets.symmetric(horizontal: 10);
@@ -627,7 +626,7 @@ class _SliderComponentState extends State<SliderComponent>
         children: [
           SizedBox(
             width: double.infinity,
-            height: kSliderBannerHeight,
+            height: 150,
             child: NotificationListener<UserScrollNotification>(
               onNotification: (notification) {
                 if (!hasBanners) return false;

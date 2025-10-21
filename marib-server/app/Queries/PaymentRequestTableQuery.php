@@ -875,18 +875,7 @@ class PaymentRequestTableQuery
     private static function channelExpressionFromGateway(string $gatewayExpression, ?string $payableTypeColumn = null): string
     {
 
-        $eastValues = self::sqlList([
-            'east_yemen_bank',
-            'east-yemen-bank',
-            'east',
-            'eastyemenbank',
-            'bank_alsharq',
-            'bank-alsharq',
-            'bank alsharq',
-            'alsharq',
-            'al-sharq',
-            'al sharq',
-        ]);
+        $eastValues = self::sqlList(self::eastYemenGatewayAliases());
 
         $manualValues = self::sqlList([
             
@@ -970,8 +959,12 @@ class PaymentRequestTableQuery
     private static function gatewayLabelCaseExpression(string $gatewayExpression, array $labelCandidates): string
     {
         $candidates = self::prepareCoalesceCandidates($labelCandidates);
-        $fallback = "CASE WHEN {$gatewayExpression} = 'wallet' THEN 'المحفظة' ELSE 'تحويل بنكي' END";
-
+        $eastAliases = self::sqlList(self::eastYemenGatewayAliases());
+        $fallback = "CASE"
+            . " WHEN {$gatewayExpression} = 'wallet' THEN 'المحفظة'"
+            . " WHEN {$gatewayExpression} IN {$eastAliases} THEN 'بنك الشرق'"
+            . " ELSE 'تحويل بنكي'"
+            . ' END';
         if ($candidates === []) {
             return $fallback;
         }
@@ -1001,4 +994,31 @@ class PaymentRequestTableQuery
 
         return '(' . implode(',', $escaped) . ')';
     }
+
+
+
+    /**
+     * @return array<int, string>
+     */
+    private static function eastYemenGatewayAliases(): array
+    {
+        return [
+            'east_yemen_bank',
+            'east-yemen-bank',
+            'east',
+            'eastyemenbank',
+            'bankalsharq',
+            'bank_alsharq',
+            'bank-alsharq',
+            'bank alsharq',
+            'bankalsharqbank',
+            'bank_alsharq_bank',
+            'bank-alsharq-bank',
+            'bank alsharq bank',
+            'alsharq',
+            'al-sharq',
+            'al sharq',
+        ];
+    }
+
 }

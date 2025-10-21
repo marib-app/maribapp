@@ -415,17 +415,21 @@ trait ManualPaymentPresentationHelpers
             return;
         }
 
+
+
+        
+
         $manualBankAliases = array_values(array_unique(array_filter(array_map(
             static function ($alias) {
                 if (! is_string($alias)) {
                     return null;
                 }
 
-                $value = Str::lower(trim($alias));
+                $value = trim($alias);
 
                 return $value === '' ? null : $value;
             },
-            (array) ManualPaymentRequest::manualBankGatewayAliases()
+            $manualBankAliases
         ))));
 
         if ($manualBankAliases === []) {

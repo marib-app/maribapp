@@ -2315,10 +2315,8 @@ class ManualPaymentRequestController extends Controller
 
         try {
             $manualPaymentConnection = ManualPaymentRequest::query()->getConnection();
-            $manualPaymentSchema = Schema::connection($manualPaymentConnection->getName());
-
-            $supportsManualBankName = $manualPaymentSchema->hasTable('manual_payment_requests')
-                && $manualPaymentSchema->hasColumn('manual_payment_requests', 'bank_name');
+            $supportsManualBankName = Schema::connection($manualPaymentConnection->getName())
+                ->hasColumn('manual_payment_requests', 'bank_name');
         } catch (Throwable $exception) {
             $supportsManualBankName = false;
         }

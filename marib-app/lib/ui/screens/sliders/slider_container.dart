@@ -24,7 +24,8 @@ class SliderWidget extends StatefulWidget {
     this.interfaceType = "homepage",
     this.onLoaded,
     this.onError,
-    this.padding = const EdgeInsets.symmetric(horizontal: 10),
+    this.padding = kSliderHorizontalPadding,
+
   });
 
   @override

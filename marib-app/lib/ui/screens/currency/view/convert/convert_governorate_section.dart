@@ -43,7 +43,7 @@ class ConvertGovernorateSection extends StatelessWidget {
         }
         final dynamic rawName = governorate['name'];
         final String label =
-        (rawName is String && rawName.isNotEmpty) ? rawName : code;
+            (rawName is String && rawName.isNotEmpty) ? rawName : code;
         return DropdownMenuItem<String>(
           value: code,
           child: Text(
@@ -58,8 +58,8 @@ class ConvertGovernorateSection extends StatelessWidget {
         ? defaultValue
         : state.selectedGovernorateCode!;
 
-    final bool hasSelectedItem =
-    items.any((DropdownMenuItem<String> item) => item.value == selectedValue);
+    final bool hasSelectedItem = items
+        .any((DropdownMenuItem<String> item) => item.value == selectedValue);
     if (!hasSelectedItem && selectedValue != defaultValue) {
       final String fallbackLabel = state.appliedGovernorateName ??
           state.requestedGovernorateName ??
@@ -91,48 +91,58 @@ class ConvertGovernorateSection extends StatelessWidget {
         Directionality(
           textDirection: ui.TextDirection.rtl,
           child: Row(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(Icons.location_on_outlined, color: brand),
-              const SizedBox(width: 8),
               Flexible(
-                child: Text(
-                  'أسعار المحافظة',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: onBackground,
-                    fontWeight: FontWeight.w800,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.location_on_outlined, color: brand),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        'أسعار المحافظة',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: onBackground,
+                          fontWeight: FontWeight.w800,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
+              const SizedBox(width: 8),
+              Flexible(
                 child: DropdownButtonFormField<String>(
                   key: const Key('convertGovernorateDropdown'),
                   value: selectedValue,
                   items: items,
                   onChanged: enabled
                       ? (String? value) {
-                    if (value == defaultValue) {
-                      onGovernorateChanged(null);
-                    } else {
-                      onGovernorateChanged(value);
-                    }
-                  }
+                          if (value == defaultValue) {
+                            onGovernorateChanged(null);
+                          } else {
+                            onGovernorateChanged(value);
+                          }
+                        }
                       : null,
                   decoration: InputDecoration(
                     border: _border(context),
                     enabledBorder: _border(context),
                     focusedBorder: _border(context),
                     contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
+                      horizontal: 8,
                       vertical: 10,
                     ),
                   ),
                   icon: Icon(Icons.keyboard_arrow_down_rounded, color: brand),
                   dropdownColor: theme.scaffoldBackgroundColor,
-                  style: theme.textTheme.bodyLarge?.copyWith(color: onBackground),
+                  style:
+                      theme.textTheme.bodyLarge?.copyWith(color: onBackground),
                   isDense: true,
+                  isExpanded: true,
                   menuMaxHeight: 360,
                 ),
               ),
@@ -185,10 +195,10 @@ class ConvertGovernorateSection extends StatelessWidget {
   String _format(double value) => _numberFormat.format(value);
 
   Widget _infoCard(
-      BuildContext context, {
-        required String label,
-        required String value,
-      }) {
+    BuildContext context, {
+    required String label,
+    required String value,
+  }) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final Color onBackground = isDark ? Colors.white : Colors.black;
     return Container(

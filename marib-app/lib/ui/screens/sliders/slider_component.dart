@@ -21,6 +21,11 @@ import 'slider_shimmer.dart';
 import 'package:marib/ui/screens/widgets/lazy_network_image.dart';
 import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 
+
+const EdgeInsetsGeometry kSliderHorizontalPadding =
+EdgeInsets.symmetric(horizontal: 10);
+
+
 class SliderComponent extends StatefulWidget {
   final String interfaceType;
   final List<HomeSlider> sliderList;
@@ -30,7 +35,7 @@ class SliderComponent extends StatefulWidget {
     super.key,
     required this.interfaceType,
     required this.sliderList,
-    this.padding = const EdgeInsets.symmetric(horizontal: 10),
+    this.padding = kSliderHorizontalPadding,
   });
 
   @override

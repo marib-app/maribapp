@@ -17,13 +17,13 @@ class SliderShimmer extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-        SizedBox(
-        width: double.infinity,
-        height: 150,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Container(color: baseColor),
-        ),
+          SizedBox(
+            width: double.infinity,
+            height: 150,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Container(color: baseColor),
+            ),
           ),
           const SizedBox(height: 8),
           Center(

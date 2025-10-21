@@ -408,7 +408,7 @@ trait ManualPaymentPresentationHelpers
             return;
         }
 
-        $genericGatewayAliases = array_merge(
+        $manualBankAliases = array_merge(
             ManualPaymentRequest::manualBankGatewayAliases(),
             ManualPaymentRequest::walletGatewayAliases(),
             [
@@ -417,7 +417,7 @@ trait ManualPaymentPresentationHelpers
             ]
         );
 
-        $genericGatewayAliases = array_values(array_unique(array_filter(array_map(
+        $manualBankAliases = array_values(array_unique(array_filter(array_map(
             static function ($alias) {
                 if (! is_string($alias)) {
                     return null;
@@ -431,7 +431,7 @@ trait ManualPaymentPresentationHelpers
 
                 return Str::lower($trimmed);
             },
-            $genericGatewayAliases
+            $manualBankAliases
         ))));
 
 

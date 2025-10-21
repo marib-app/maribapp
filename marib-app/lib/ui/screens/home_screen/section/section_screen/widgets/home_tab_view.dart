@@ -372,7 +372,7 @@ class _HomeTabViewState extends State<HomeTabView> {
   }
 
 // ثابت عرض الحافة لليمين/اليسار
-  double kAdSliderHPad = 12.0;
+  double kAdSliderHPad = 10.0;
 
 // نصف القطر
   double kAdSliderRadius = 12.0;
@@ -387,24 +387,14 @@ class _HomeTabViewState extends State<HomeTabView> {
   double _dotsReserveHeight(BuildContext ctx) =>
       _kIndicatorDotHeight + _dotsSpacingHeight(ctx);
 
-// نفس نسبة SliderComponent (AspectRatio 395/150)
-  double kSliderAspect = 390 / 150;
-
-// حدود مرنة لارتفاع الصورة لضمان تطابقها مع SliderComponent على مختلف الشاشات
-  double kMinImgH = 100.0;
-  double kMaxImgH = 640.0;
-
-  double _sliderContentWidth(BuildContext ctx) {
-    return MediaQuery.sizeOf(ctx).width - (kAdSliderHPad * 2);
-  }
 
   double _adSliderImageHeight(BuildContext ctx) {
-    final h = _sliderContentWidth(ctx) / kSliderAspect;
-    return h.clamp(kMinImgH, kMaxImgH);
+    return 150;
+
   }
 
   double _adSliderTotalHeight(BuildContext ctx) {
-    return _adSliderImageHeight(ctx) + _dotsReserveHeight(ctx);
+    return 150 + _dotsReserveHeight(ctx);
   }
 
 // اختياري: لوج سريع للتأكد من الأرقام
@@ -414,15 +404,6 @@ class _HomeTabViewState extends State<HomeTabView> {
     final reserve = _dotsReserveHeight(ctx);
 
     debugPrint('AD_SLIDER heights: image=$img, total=$tot, reserve=$reserve');
-  }
-
-// الارتفاع الأساسي حسب العرض والنسبة
-  double _adSliderBaseHeight(BuildContext context) {
-    final w = MediaQuery.of(context).size.width;
-    final contentW = w - (kAdSliderHPad * 2);
-    final h = contentW / kSliderAspect;
-    // قيود اختيارية (عدّلها حسب تصميمك)
-    return h.clamp(kMinImgH, kMaxImgH);
   }
 
   @override

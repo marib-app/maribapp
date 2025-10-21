@@ -620,77 +620,74 @@ class _SliderComponentState extends State<SliderComponent>
         children: [
           SizedBox(
             width: double.infinity,
-            child: AspectRatio(
-              aspectRatio: 390 / 150,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  NotificationListener<UserScrollNotification>(
-                    onNotification: (notification) {
-                      if (!hasBanners) return false;
+            height: 150,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                NotificationListener<UserScrollNotification>(
+                  onNotification: (notification) {
+                    if (!hasBanners) return false;
 
-                      if (notification is ScrollStartNotification) {
-                        _userInteracting = true;
-                        _sliderTimer?.cancel();
-                      } else if (notification is ScrollEndNotification) {
-                        _userInteracting = false;
-                        _startAutoSlider();
-                      }
-                      return false;
-                    },
-                    child: PageView.builder(
-                      controller: _pageController,
-                      itemCount: itemCount,
-                      physics: pagePhysics,
-                      onPageChanged: hasBanners
-                          ? (int index) {
-                              if (bannersLength > 1) {
-                                _bannerIndex.value = index % bannersLength;
-                              } else {
-                                _bannerIndex.value = 0;
-                              }
-                              _currentPage = index.toDouble();
+                    if (notification is ScrollStartNotification) {
+                      _userInteracting = true;
+                      _sliderTimer?.cancel();
+                    } else if (notification is ScrollEndNotification) {
+                      _userInteracting = false;
+                      _startAutoSlider();
+                    }
+                    return false;
+                  },
+                  child: PageView.builder(
+                    controller: _pageController,
+                    itemCount: itemCount,
+                    physics: pagePhysics,
+                    onPageChanged: hasBanners
+                        ? (int index) {
+                            if (bannersLength > 1) {
+                              _bannerIndex.value = index % bannersLength;
+                            } else {
+                              _bannerIndex.value = 0;
                             }
-                          : null,
-                      itemBuilder: (_, int index) {
-                        final int actualIndex =
-                            bannersLength == 1 ? 0 : index % bannersLength;
-                        final HomeSlider slider = filteredList[actualIndex];
+                            _currentPage = index.toDouble();
+                          }
+                        : null,
+                    itemBuilder: (_, int index) {
+                      final int actualIndex =
+                          bannersLength == 1 ? 0 : index % bannersLength;
+                      final HomeSlider slider = filteredList[actualIndex];
 
-                        return _buildBannerShell(
-                          onTap: () => _handleTap(slider),
-                          child: LazyNetworkImage(
-                            imageUrl: slider.image ?? '',
-                            fit: BoxFit.cover,
-                            placeholder: const ShimmerBox(),
-                            errorWidget: const ShimmerBox(animate: false),
-                          ),
+                      return _buildBannerShell(
+                        onTap: () => _handleTap(slider),
+                        child: LazyNetworkImage(
+                          imageUrl: slider.image ?? '',
+                          fit: BoxFit.cover,
+                          placeholder: const ShimmerBox(),
+                          errorWidget: const ShimmerBox(animate: false),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                PositionedDirectional(
+                  top: 12,
+                  end: 12,
+                  child: IgnorePointer(
+                    child: ValueListenableBuilder<int>(
+                      valueListenable: _bannerIndex,
+                      builder: (context, activeIndex, _) {
+                        final int total = bannersLength > 0 ? bannersLength : 1;
+                        final int safeActiveIndex =
+                            total == 0 ? 0 : activeIndex % total;
+                        return _buildBannerCounter(
+                          context,
+                          safeActiveIndex,
+                          total,
                         );
                       },
                     ),
                   ),
-                  PositionedDirectional(
-                    top: 12,
-                    end: 12,
-                    child: IgnorePointer(
-                      child: ValueListenableBuilder<int>(
-                        valueListenable: _bannerIndex,
-                        builder: (context, activeIndex, _) {
-                          final int total =
-                              bannersLength > 0 ? bannersLength : 1;
-                          final int safeActiveIndex =
-                              total == 0 ? 0 : activeIndex % total;
-                          return _buildBannerCounter(
-                            context,
-                            safeActiveIndex,
-                            total,
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
           SizedBox(height: 8.rh(context)),

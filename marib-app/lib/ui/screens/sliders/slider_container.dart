@@ -191,28 +191,26 @@ class _SliderWidgetState extends State<SliderWidget> {
         children: [
           SizedBox(
             width: double.infinity,
-            child: AspectRatio(
-              aspectRatio: 390 / 150,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: borderRadius,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                  color: Colors.grey.shade200,
-                ),
-                child: ClipRRect(
-                  borderRadius: borderRadius,
-                  child: LazyNetworkImage(
-                    imageUrl: imageUrl,
-                    fit: BoxFit.cover,
-                    placeholder: ShimmerBox(
-                      borderRadius: borderRadius,
-                    ),
+            height: 150,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: borderRadius,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+                color: Colors.grey.shade200,
+              ),
+              child: ClipRRect(
+                borderRadius: borderRadius,
+                child: LazyNetworkImage(
+                  imageUrl: imageUrl,
+                  fit: BoxFit.cover,
+                  placeholder: ShimmerBox(
+                    borderRadius: borderRadius,
                   ),
                 ),
               ),

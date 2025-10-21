@@ -3197,19 +3197,22 @@ class ApiController extends Controller {
 
 
             $eligibleSliders = $sliderEligibilityService->selectEligibleSliders($rows, $userId, $sessionId, $now);
-            if ($eligibleSliders->isEmpty()) {
+            if ($eligibleSliders->isNotEmpty()) {
+                $eligibleSliders->each(fn (Slider $slider) => $slider->loadMissing(['model', 'target']));
 
-                ResponseService::successResponse(null, $sliderEligibilityService->fallbackPayload($normalizedInterfaceType ?? 'all'));
+                ResponseService::successResponse(
+                    'Sliders fetched successfully.',
+                    SliderResource::collection($eligibleSliders)
+                );
 
                 return;
             }
 
 
-            $eligibleSliders->each(fn (Slider $slider) => $slider->loadMissing(['model', 'target']));
-
-            $payload = SliderResource::collection($eligibleSliders);
-
-            ResponseService::successResponse('Sliders fetched successfully.', $payload);
+            ResponseService::successResponse(
+                null,
+                $sliderEligibilityService->fallbackPayload($normalizedInterfaceType ?? 'all')
+            );
 
             return;
 

@@ -95,8 +95,10 @@ class SliderEligibilityService
     {
         $moment ??= Carbon::now();
 
-        $eligible = $this->eligibleSliders($sliders, $userId, $sessionId, $moment)->values();
-
+        $eligible = $this->eligibleSliders($sliders, $userId, $sessionId, $moment)
+            ->sortByDesc(fn (Slider $slider) => $slider->priority)
+            ->values();
+            
         foreach ($eligible as $slider) {
             $this->recordImpression($slider, $userId, $sessionId, $moment);
         }

@@ -10,6 +10,7 @@ import 'package:marib/data/cubits/slider_cubit.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
 import 'dart:async';
 import 'package:marib/ui/screens/widgets/lazy_network_image.dart';
+import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 
 class SliderWidget extends StatefulWidget {
@@ -204,46 +205,60 @@ class _SliderWidgetState extends State<SliderWidget> {
           ),
         ),
         const SizedBox(height: 8),
-        const _StaticSliderIndicator(),
+        const _StaticSliderIndicator(
+          count: 1,
+          activeIndex: 0,
+        ),
+
       ],
     );
   }
 }
 
 class _StaticSliderIndicator extends StatelessWidget {
-  const _StaticSliderIndicator();
+  const _StaticSliderIndicator({
+    required this.count,
+    required this.activeIndex,
+  });
+
+  final int count;
+  final int activeIndex;
 
   @override
   Widget build(BuildContext context) {
-    const double inactiveWidth = 8;
-    const double activeWidth = 16;
-    const double height = 8;
-    const double spacing = 6;
-    const int activeIndex = 1;
-    const int totalDots = 4;
+    final int safeCount = count <= 0 ? 0 : count;
+    if (safeCount == 0) {
+      return const SizedBox.shrink();
+    }
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(totalDots, (index) {
-        final bool isActive = index == activeIndex;
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: spacing / 2),
-          child: Container(
-            width: isActive ? activeWidth : inactiveWidth,
-            height: height,
-            decoration: BoxDecoration(
-              color: isActive
-                  ? const Color(0xFFEB5924)
-                  : Colors.grey.shade400,
-              borderRadius: BorderRadius.circular(height),
-            ),
-          ),
-        );
-      }),
+    final int safeActiveIndex;
+    if (activeIndex < 0) {
+      safeActiveIndex = 0;
+    } else if (activeIndex >= safeCount) {
+      safeActiveIndex = safeCount - 1;
+    } else {
+      safeActiveIndex = activeIndex;
+    }
+
+    return AnimatedSmoothIndicator(
+      activeIndex: safeActiveIndex,
+      count: safeCount,
+      effect: CustomizableEffect(
+        spacing: 6,
+        activeDotDecoration: DotDecoration(
+          width: 16,
+          height: 8,
+          color: const Color(0xFFEB5924),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        dotDecoration: DotDecoration(
+          width: 8,
+          height: 8,
+          color: Colors.grey.shade400,
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
     );
   }
-
-
-
 
 }

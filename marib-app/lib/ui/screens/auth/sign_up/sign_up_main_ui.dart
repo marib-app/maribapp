@@ -223,6 +223,7 @@ class _HeaderAppBar extends StatelessWidget {
       backgroundColor: Colors.transparent,
       elevation: 0,
       automaticallyImplyLeading: false,
+      systemOverlayStyle: null,
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           alignment: Alignment.center,

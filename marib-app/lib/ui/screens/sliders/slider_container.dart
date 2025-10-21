@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'slider_component.dart';
 import 'slider_shimmer.dart';
 import 'package:marib/data/model/home_slider.dart';
+import 'package:marib/utils/responsiveSize.dart';
 
 import 'package:marib/data/cubits/slider_cubit.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
@@ -253,7 +254,7 @@ class _SliderWidgetState extends State<SliderWidget> {
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8.rh(context)),
           const _StaticSliderIndicator(
             count: 1,
             activeIndex: 0,

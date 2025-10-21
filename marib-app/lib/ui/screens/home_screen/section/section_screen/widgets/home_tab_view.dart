@@ -379,6 +379,7 @@ class _HomeTabViewState extends State<HomeTabView> {
 
 // ارتفاع نقاط المؤشر = ارتفاع الـ dots نفسها (SmoothPageIndicator.dotHeight)
   static const double _kIndicatorDotHeight = 8.0;
+  static const double _kAdSliderImageHeight = 150.0;
 
 // حجز بسيط جدًا لنقاط السلايدر (الفراغ الذي يسبق المؤشر)
   double _dotsSpacingHeight(BuildContext ctx) => 8.rh(ctx);
@@ -387,15 +388,10 @@ class _HomeTabViewState extends State<HomeTabView> {
   double _dotsReserveHeight(BuildContext ctx) =>
       _kIndicatorDotHeight + _dotsSpacingHeight(ctx);
 
+  double _adSliderImageHeight(BuildContext ctx) => _kAdSliderImageHeight;
 
-  double _adSliderImageHeight(BuildContext ctx) {
-    return 150;
-
-  }
-
-  double _adSliderTotalHeight(BuildContext ctx) {
-    return 150 + _dotsReserveHeight(ctx);
-  }
+  double _adSliderTotalHeight(BuildContext ctx) =>
+      _kAdSliderImageHeight + _dotsReserveHeight(ctx);
 
 // اختياري: لوج سريع للتأكد من الأرقام
   void _logHeights(BuildContext ctx) {

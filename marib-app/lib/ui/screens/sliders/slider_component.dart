@@ -627,91 +627,97 @@ class _SliderComponentState extends State<SliderComponent>
           SizedBox(
             width: double.infinity,
             height: 150,
-            child: NotificationListener<UserScrollNotification>(
-              onNotification: (notification) {
-                if (!hasBanners) return false;
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                NotificationListener<UserScrollNotification>(
+                  onNotification: (notification) {
+                    if (!hasBanners) return false;
 
-                if (notification is ScrollStartNotification) {
-                  _userInteracting = true;
-                  _sliderTimer?.cancel();
-                } else if (notification is ScrollEndNotification) {
-                  _userInteracting = false;
-                  _startAutoSlider();
-                }
-                return false;
-              },
-              child: PageView.builder(
-                controller: _pageController,
-                itemCount: itemCount,
-                physics: pagePhysics,
-                onPageChanged: hasBanners
-                    ? (int index) {
-                        if (bannersLength > 1) {
-                          _bannerIndex.value = index % bannersLength;
-                        } else {
-                          _bannerIndex.value = 0;
-                        }
-                        _currentPage = index.toDouble();
-                      }
-                    : null,
-                itemBuilder: (_, int index) {
-                  final int actualIndex =
-                      bannersLength == 1 ? 0 : index % bannersLength;
-                  final HomeSlider slider = filteredList[actualIndex];
+                    if (notification is ScrollStartNotification) {
+                      _userInteracting = true;
+                      _sliderTimer?.cancel();
+                    } else if (notification is ScrollEndNotification) {
+                      _userInteracting = false;
+                      _startAutoSlider();
+                    }
+                    return false;
+                  },
+                  child: PageView.builder(
+                    controller: _pageController,
+                    itemCount: itemCount,
+                    physics: pagePhysics,
+                    onPageChanged: hasBanners
+                        ? (int index) {
+                            if (bannersLength > 1) {
+                              _bannerIndex.value = index % bannersLength;
+                            } else {
+                              _bannerIndex.value = 0;
+                            }
+                            _currentPage = index.toDouble();
+                          }
+                        : null,
+                    itemBuilder: (_, int index) {
+                      final int actualIndex =
+                          bannersLength == 1 ? 0 : index % bannersLength;
+                      final HomeSlider slider = filteredList[actualIndex];
 
-                  return AnimatedBuilder(
-                    animation: _pageController,
-                    builder: (context, child) {
-                      if (child == null) {
-                        return const SizedBox.shrink();
-                      }
+                      return AnimatedBuilder(
+                        animation: _pageController,
+                        builder: (context, child) {
+                          if (child == null) {
+                            return const SizedBox.shrink();
+                          }
 
-                      double effectivePage = _currentPage ??
-                          _pageController.initialPage.toDouble();
-                      if (_pageController.hasClients &&
-                          _pageController.position.hasContentDimensions) {
-                        effectivePage = _pageController.page ?? effectivePage;
-                      }
+                          double effectivePage = _currentPage ??
+                              _pageController.initialPage.toDouble();
+                          if (_pageController.hasClients &&
+                              _pageController.position.hasContentDimensions) {
+                            effectivePage =
+                                _pageController.page ?? effectivePage;
+                          }
 
-                      final double relativePosition = effectivePage - index;
-                      final double distance = relativePosition.abs();
+                          final double relativePosition = effectivePage - index;
+                          final double distance = relativePosition.abs();
 
-                      final double clampedDistance =
-                          distance.clamp(0.0, 1.0).toDouble();
-                      final double curvedDistance =
-                          Curves.easeInOut.transform(clampedDistance);
-                      final double focusStrength = 1 - curvedDistance;
-                      final double translationX =
-                          -relativePosition * 20.0 * curvedDistance;
-                      final double opacity =
-                          (0.65 + (0.35 * focusStrength)).clamp(0.65, 1.0);
+                          final double clampedDistance =
+                              distance.clamp(0.0, 1.0).toDouble();
+                          final double curvedDistance =
+                              Curves.easeInOut.transform(clampedDistance);
+                          final double focusStrength = 1 - curvedDistance;
+                          final double translationX =
+                              -relativePosition * 20.0 * curvedDistance;
+                          final double opacity =
+                              (0.65 + (0.35 * focusStrength)).clamp(0.65, 1.0);
 
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 350),
-                        curve: Curves.easeInOut,
-                        transformAlignment: Alignment.center,
-                        transform: Matrix4.identity()
-                          ..translate(translationX, 0.0),
-                        child: AnimatedOpacity(
-                          duration: const Duration(milliseconds: 350),
-                          curve: Curves.easeInOut,
-                          opacity: opacity,
-                          child: child,
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 350),
+                            curve: Curves.easeInOut,
+                            transformAlignment: Alignment.center,
+                            transform: Matrix4.identity()
+                              ..translate(translationX, 0.0),
+                            child: AnimatedOpacity(
+                              duration: const Duration(milliseconds: 350),
+                              curve: Curves.easeInOut,
+                              opacity: opacity,
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: _buildBannerShell(
+                          onTap: () => _handleTap(slider),
+                          child: LazyNetworkImage(
+                            imageUrl: slider.image ?? '',
+                            fit: BoxFit.cover,
+                            placeholder: const ShimmerBox(),
+                            errorWidget: const ShimmerBox(animate: false),
+                          ),
                         ),
                       );
                     },
-                    child: _buildBannerShell(
-                      onTap: () => _handleTap(slider),
-                      child: LazyNetworkImage(
-                        imageUrl: slider.image ?? '',
-                        fit: BoxFit.cover,
-                        placeholder: const ShimmerBox(),
-                        errorWidget: const ShimmerBox(animate: false),
-                      ),
-                    ),
-                  );
-                },
-              ),
+                  ),
+                ),
+              ],
             ),
           ),
           SizedBox(height: 8.rh(context)),

@@ -1,6 +1,7 @@
 // ملف: slider_shimmer.dart
 
 import 'package:flutter/material.dart';
+import 'package:marib/utils/responsiveSize.dart';
 import 'package:shimmer/shimmer.dart';
 
 class SliderShimmer extends StatelessWidget {
@@ -10,6 +11,7 @@ class SliderShimmer extends StatelessWidget {
   Widget build(BuildContext context) {
     final baseColor = Colors.grey.shade300;
     final highlightColor = Colors.grey.shade100;
+    final double indicatorSpacing = 8.rh(context);
 
     return Shimmer.fromColors(
       baseColor: baseColor,
@@ -25,7 +27,7 @@ class SliderShimmer extends StatelessWidget {
               child: Container(color: baseColor),
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: indicatorSpacing),
           Center(
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -59,7 +61,6 @@ class SliderShimmer extends StatelessWidget {
                     ),
                   );
                 }
-
 
                 return Container(
                   width: 16,

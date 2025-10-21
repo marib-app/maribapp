@@ -67,37 +67,17 @@ class WifiNetworkController extends Controller
 
     public function store(StoreWifiNetworkRequest $request): JsonResponse
     {
-        $validated = $request->validated();
-
-
-        $requestedWalletId = isset($validated['wallet_id']) ? (int) $validated['wallet_id'] : null;
-        if ($requestedWalletId !== null && $requestedWalletId <= 0) {
-            $requestedWalletId = null;
-        }
 
 
         $user = $request->user();
-        $walletAccount = null;
-        if ($user) {
-            if ($requestedWalletId !== null) {
-                $walletAccount = WalletAccount::query()
-                    ->where('user_id', $user->getKey())
-                    ->whereKey($requestedWalletId)
-                    ->first();
+        $validated = $request->validated();
 
 
-                if (! $walletAccount) {
-                    return response()->json([
-                        'message' => __('Unable to create the Wi-Fi network.'),
-                        'errors' => [
-                            'wallet_id' => [__('We were unable to find a wallet for your account.')],
-                        ],
-                    ], 422);
-                }
-            } else {
-                $walletAccount = $this->resolveWalletAccount($user, null);
-                
-            }
+
+        $walletAccount = WalletAccount::find($request->integer('wallet_id'));
+        if (! $walletAccount || $walletAccount->user_id !== $user->id) {
+            return response()->json(['message'=>'Unable to create the Wi-Fi network.',
+                'errors'=>['wallet_id'=>['Wallet account not found for this user.']]], 422);
         }
 
 
@@ -122,11 +102,8 @@ class WifiNetworkController extends Controller
         $networkData['meta'] = $this->normalizeMeta($meta);
         
         $networkData['user_id'] = $user?->getKey();
-        if ($walletAccount) {
-            $networkData['wallet_id'] = $walletAccount->getKey();
-        } else {
-            unset($networkData['wallet_id']);
-        }
+        $networkData['wallet_id'] = $walletAccount->getKey();
+
         
         $networkData['commission_rate'] = $networkData['commission_rate'] ?? 0;
         $networkData['commission_flat'] = $networkData['commission_flat'] ?? 0;
@@ -166,14 +143,8 @@ class WifiNetworkController extends Controller
 
 
         for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
-
-             if ($walletAccount) {
-                $networkData['wallet_id'] = $walletAccount->getKey();
-            } else {
-                unset($networkData['wallet_id']);
-            }
-
-
+            $networkData['wallet_id'] = $walletAccount->getKey();
+            
             try {
                 $network = WifiNetwork::create($networkData);
                 break;

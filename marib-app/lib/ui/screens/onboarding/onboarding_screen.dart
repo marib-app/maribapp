@@ -214,35 +214,37 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           // تمكين التفاعل بالسحب على كامل الشاشة
           child: Stack(
             children: [
-              PageView.builder(
-                controller: _pageController,
-                reverse: true,
-                itemCount: data.length,
-                onPageChanged: (index) {
-                  currentIndex.value = index;
-                  _syncHintAnimation();
-                  if (index == data.length - 1 && _showHint) {
-                    setState(() => _showHint = false);
-                  }
-                },
-                itemBuilder: (context, index) {
-                  return ValueListenableBuilder<double>(
-                    valueListenable: _pageNotifier,
-                    builder: (context, page, _) {
-                      final effectivePage = page
-                          .clamp(0.0, (data.length - 1).toDouble())
-                          .toDouble();
-                      final progress = index - effectivePage;
-                      final shouldAnimate = progress.abs() <= 1.0;
-                      return CardPlanet(
-                        data: data[index],
-                        progress: progress,
-                        shouldAnimate: shouldAnimate,
-                        compositions: _preloadedCompositions,
-                      );
-                    },
-                  );
-                },
+              Directionality(
+                textDirection: TextDirection.rtl,
+                child: PageView.builder(
+                  controller: _pageController,
+                  itemCount: data.length,
+                  onPageChanged: (index) {
+                    currentIndex.value = index;
+                    _syncHintAnimation();
+                    if (index == data.length - 1 && _showHint) {
+                      setState(() => _showHint = false);
+                    }
+                  },
+                  itemBuilder: (context, index) {
+                    return ValueListenableBuilder<double>(
+                      valueListenable: _pageNotifier,
+                      builder: (context, page, _) {
+                        final effectivePage = page
+                            .clamp(0.0, (data.length - 1).toDouble())
+                            .toDouble();
+                        final progress = index - effectivePage;
+                        final shouldAnimate = progress.abs() <= 1.0;
+                        return CardPlanet(
+                          data: data[index],
+                          progress: progress,
+                          shouldAnimate: shouldAnimate,
+                          compositions: _preloadedCompositions,
+                        );
+                      },
+                    );
+                  },
+                ),
               ),
               ValueListenableBuilder<int>(
                 valueListenable: currentIndex,

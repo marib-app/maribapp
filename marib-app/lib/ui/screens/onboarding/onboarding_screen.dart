@@ -251,22 +251,24 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     bottom: 20,
                     left: 0,
                     right: 0,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(data.length, (i) {
-                        final reversedIndex = data.length - 1 - i;
-                        final selected = reversedIndex == index;
-                        return AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          width: selected ? 18 : 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: selected ? Colors.white : Colors.white38,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        );
-                      }),
+                    child: Directionality(
+                      textDirection: TextDirection.rtl,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(data.length, (i) {
+                          final selected = i == index;
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            width: selected ? 18 : 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: selected ? Colors.white : Colors.white38,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          );
+                        }),
+                      ),
                     ),
                   );
                 },

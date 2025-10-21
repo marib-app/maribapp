@@ -412,23 +412,20 @@ class PaymentRequestTableQuery
 
         $gatewayExpression = self::gatewayExpression('pt');
 
-        $normalizedGatewayFilterValues = array_values(array_unique(array_filter(array_map(
-            static function ($value): ?string {
-                if (! is_string($value)) {
-                    return null;
-                }
+        $gatewayFilterGroups = [];
 
-                $normalized = strtolower(trim($value));
+        foreach ([
+            ManualPaymentRequest::manualBankGatewayAliases(),
+            ManualPaymentRequest::walletGatewayAliases(),
+            self::eastYemenGatewayAliases(),
+            self::cashGatewayAliases(),
+        ] as $gatewayAliases) {
+            $normalized = self::normalizeGatewayAliasesForFilter($gatewayAliases);
 
-                return $normalized === '' ? null : $normalized;
-            },
-            array_merge(
-                ManualPaymentRequest::manualBankGatewayAliases(),
-                ManualPaymentRequest::walletGatewayAliases(),
-                self::eastYemenGatewayAliases(),
-                self::cashGatewayAliases()
-            )
-        ))));
+            if ($normalized !== []) {
+                $gatewayFilterGroups[] = $normalized;
+            }
+        }
 
 
         $paymentGatewayNameParts = [];
@@ -694,14 +691,26 @@ class PaymentRequestTableQuery
                 }
 
             )
-            ->where(static function (Builder $query) use ($gatewayExpression, $normalizedGatewayFilterValues): void {
+            ->where(static function (Builder $query) use ($gatewayExpression, $gatewayFilterGroups): void {
                 $query->whereNotNull('pt.manual_payment_request_id')
-                    ->orWhere(function (Builder $inner) use ($gatewayExpression, $normalizedGatewayFilterValues): void {
-                        $inner->whereNull('pt.manual_payment_request_id')
-                            ->whereIn(
-                                DB::raw($gatewayExpression),
-                                $normalizedGatewayFilterValues
-                            );
+                    ->orWhere(function (Builder $inner) use ($gatewayExpression, $gatewayFilterGroups): void {
+                        $inner->whereNull('pt.manual_payment_request_id');
+
+                        if ($gatewayFilterGroups === []) {
+                            $inner->whereRaw('0 = 1');
+
+                            return;
+                        }
+
+                        $inner->where(function (Builder $gatewayFilters) use ($gatewayExpression, $gatewayFilterGroups): void {
+                            foreach ($gatewayFilterGroups as $index => $filterValues) {
+                                $method = $index === 0 ? 'whereIn' : 'orWhereIn';
+                                $gatewayFilters->{$method}(
+                                    DB::raw($gatewayExpression),
+                                    $filterValues
+                                );
+                            }
+                        });
                     });
             });
 
@@ -1012,6 +1021,25 @@ class PaymentRequestTableQuery
         return '(' . implode(',', $escaped) . ')';
     }
 
+    /**
+     * @param array<int, string> $aliases
+     * @return array<int, string>
+     */
+    private static function normalizeGatewayAliasesForFilter(array $aliases): array
+    {
+        return array_values(array_unique(array_filter(array_map(
+            static function ($value): ?string {
+                if (! is_string($value)) {
+                    return null;
+                }
+
+                $normalized = strtolower(trim($value));
+
+                return $normalized === '' ? null : $normalized;
+            },
+            $aliases
+        ))));
+    }
 
 
     /**

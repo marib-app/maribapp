@@ -27,15 +27,17 @@ void initApp() async {
   final WidgetsBinding binding = WidgetsBinding.instance;
   final PerformanceMonitor performanceMonitor = PerformanceMonitor.instance;
 
-  final bool perfLoggingRequested = AppSettings.isPerformanceLoggingEnabled ||
-      performanceMonitor.isManualCollectionEnabled ||
-      performanceMonitor.isEnvironmentCollectionEnabled;
+  final bool debugPerfLoggingEnabled =
+      !kReleaseMode && AppSettings.isPerformanceLoggingEnabled;
+  final bool manualPerfLoggingEnabled =
+      performanceMonitor.isManualCollectionEnabled;
+  final bool releasePerfLoggingEnabled =
+      AppSettings.allowPerformanceLoggingInRelease &&
+          performanceMonitor.isEnvironmentCollectionEnabled;
 
-  final bool allowPerfLoggingInBuild =
-      !kReleaseMode || AppSettings.allowPerformanceLoggingInRelease;
-
-  final bool attachPerformanceMonitor =
-      perfLoggingRequested && allowPerfLoggingInBuild;
+  final bool attachPerformanceMonitor = debugPerfLoggingEnabled ||
+      manualPerfLoggingEnabled ||
+      releasePerfLoggingEnabled;
 
   if (attachPerformanceMonitor) {
     performanceMonitor.initialize();

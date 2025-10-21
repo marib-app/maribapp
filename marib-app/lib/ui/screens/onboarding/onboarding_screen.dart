@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'widgets/card_planet.dart';
+import 'package:marib/ui/screens/onboarding/widgets/card_planet.dart';
 
 import 'package:marib/app/routes.dart';
 import 'package:marib/utils/hive_utils.dart';

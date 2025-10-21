@@ -87,6 +87,7 @@ class WifiNetworkController extends Controller
         $meta = $validated['meta'] ?? null;
 
 
+        $networkData = array_filter($networkData, static fn ($value, $key) => ! is_numeric($key) && $key !== '', ARRAY_FILTER_USE_BOTH);
 
         $networkData = Arr::only($validated, $fillable);
 
@@ -117,10 +118,7 @@ class WifiNetworkController extends Controller
             $networkData['login_screenshot_path'] = $this->storeUploadedFile($request->file('login_screenshot'), 'wifi/login-screens');
         }
 
-        $networkData = Arr::only($networkData, (new WifiNetwork())->getFillable());
-        $networkData = collect($networkData)
-            ->reject(static fn ($value, $key) => is_int($key) || (is_string($key) && trim($key) === ''))
-            ->all();
+
 
         $network = null;
         $maxAttempts = $supportsSlug ? 5 : 3;
@@ -144,7 +142,7 @@ class WifiNetworkController extends Controller
 
         for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
             $networkData['wallet_id'] = $walletAccount->getKey();
-            
+
             try {
                 $network = WifiNetwork::create($networkData);
                 break;

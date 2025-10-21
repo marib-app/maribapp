@@ -13,6 +13,7 @@ import 'package:marib/ui/screens/widgets/lazy_network_image.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 import 'package:flutter/foundation.dart';
+import 'slider_constants.dart';
 
 class SliderWidget extends StatefulWidget {
   final String interfaceType;
@@ -228,7 +229,7 @@ class _SliderWidgetState extends State<SliderWidget> {
         children: [
           SizedBox(
             width: double.infinity,
-            height: 150,
+            height: kSliderBannerHeight,
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: borderRadius,

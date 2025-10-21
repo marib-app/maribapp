@@ -4,7 +4,6 @@ import 'package:marib/data/model/home_slider.dart';
 import 'package:marib/data/repositories/item/item_repository.dart';
 import 'package:marib/data/model/category_model.dart';
 import 'package:marib/utils/responsiveSize.dart';
-import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/app/routes.dart';
 import 'package:url_launcher/url_launcher.dart' as urllauncher;
@@ -20,6 +19,7 @@ import 'package:marib/utils/slider_interface_mapper.dart';
 import 'slider_shimmer.dart';
 import 'package:marib/ui/screens/widgets/lazy_network_image.dart';
 import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
+import 'slider_constants.dart';
 
 const EdgeInsetsGeometry kSliderHorizontalPadding =
     EdgeInsets.symmetric(horizontal: 10);
@@ -627,89 +627,83 @@ class _SliderComponentState extends State<SliderComponent>
         children: [
           SizedBox(
             width: double.infinity,
-            height: 150,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                NotificationListener<UserScrollNotification>(
-                  onNotification: (notification) {
-                    if (!hasBanners) return false;
+            height: kSliderBannerHeight,
+            child: NotificationListener<UserScrollNotification>(
+              onNotification: (notification) {
+                if (!hasBanners) return false;
 
-                    if (notification is ScrollStartNotification) {
-                      _userInteracting = true;
-                      _sliderTimer?.cancel();
-                    } else if (notification is ScrollEndNotification) {
-                      _userInteracting = false;
-                      _startAutoSlider();
-                    }
-                    return false;
-                  },
-                  child: PageView.builder(
-                    controller: _pageController,
-                    itemCount: itemCount,
-                    physics: pagePhysics,
-                    onPageChanged: hasBanners
-                        ? (int index) {
-                            if (bannersLength > 1) {
-                              _bannerIndex.value = index % bannersLength;
-                            } else {
-                              _bannerIndex.value = 0;
-                            }
-                            _currentPage = index.toDouble();
-                          }
-                        : null,
-                    itemBuilder: (_, int index) {
-                      final int actualIndex =
-                          bannersLength == 1 ? 0 : index % bannersLength;
-                      final HomeSlider slider = filteredList[actualIndex];
+                if (notification is ScrollStartNotification) {
+                  _userInteracting = true;
+                  _sliderTimer?.cancel();
+                } else if (notification is ScrollEndNotification) {
+                  _userInteracting = false;
+                  _startAutoSlider();
+                }
+                return false;
+              },
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: itemCount,
+                physics: pagePhysics,
+                onPageChanged: hasBanners
+                    ? (int index) {
+                        if (bannersLength > 1) {
+                          _bannerIndex.value = index % bannersLength;
+                        } else {
+                          _bannerIndex.value = 0;
+                        }
+                        _currentPage = index.toDouble();
+                      }
+                    : null,
+                itemBuilder: (_, int index) {
+                  final int actualIndex =
+                      bannersLength == 1 ? 0 : index % bannersLength;
+                  final HomeSlider slider = filteredList[actualIndex];
 
-                      return AnimatedBuilder(
-                        animation: _pageController,
-                        builder: (context, child) {
-                          if (child == null) {
-                            return const SizedBox.shrink();
-                          }
+                  return AnimatedBuilder(
+                    animation: _pageController,
+                    builder: (context, child) {
+                      if (child == null) {
+                        return const SizedBox.shrink();
+                      }
 
-                          double effectivePage = _currentPage ??
-                              _pageController.initialPage.toDouble();
-                          if (_pageController.hasClients &&
-                              _pageController.position.hasContentDimensions) {
-                            effectivePage =
-                                _pageController.page ?? effectivePage;
-                          }
+                      double effectivePage = _currentPage ??
+                          _pageController.initialPage.toDouble();
+                      if (_pageController.hasClients &&
+                          _pageController.position.hasContentDimensions) {
+                        effectivePage = _pageController.page ?? effectivePage;
+                      }
 
-                          final double distance = (effectivePage - index).abs();
-                          final double clampedDistance =
-                              distance.clamp(0.0, 1.0).toDouble();
-                          final double scale = 1 - (clampedDistance * 0.08);
-                          double opacity = 1 - (clampedDistance * 0.35);
-                          if (opacity < 0.65) {
-                            opacity = 0.65;
-                          }
+                      final double distance = (effectivePage - index).abs();
+                      final double clampedDistance =
+                          distance.clamp(0.0, 1.0).toDouble();
+                      final double scale = 1 - (clampedDistance * 0.08);
+                      double opacity = 1 - (clampedDistance * 0.35);
+                      if (opacity < 0.65) {
+                        opacity = 0.65;
+                      }
 
-                          return Transform.scale(
-                            scale: scale,
-                            alignment: Alignment.center,
-                            child: Opacity(
-                              opacity: opacity,
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: _buildBannerShell(
-                          onTap: () => _handleTap(slider),
-                          child: LazyNetworkImage(
-                            imageUrl: slider.image ?? '',
-                            fit: BoxFit.cover,
-                            placeholder: const ShimmerBox(),
-                            errorWidget: const ShimmerBox(animate: false),
-                          ),
+                      return Transform.scale(
+                        scale: scale,
+                        alignment: Alignment.center,
+                        child: Opacity(
+                          opacity: opacity,
+                          child: child,
                         ),
                       );
                     },
-                  ),
-                ),
-              ],
+                    child: _buildBannerShell(
+                      onTap: () => _handleTap(slider),
+                      child: LazyNetworkImage(
+                        imageUrl: slider.image ?? '',
+                        fit: BoxFit.cover,
+                        placeholder: const ShimmerBox(),
+                        errorWidget: const ShimmerBox(animate: false),
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
           ),
           SizedBox(height: 8.rh(context)),

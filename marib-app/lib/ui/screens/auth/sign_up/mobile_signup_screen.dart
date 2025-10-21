@@ -80,11 +80,9 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
     });
   }
 
-
   void _lazyInit() {
     final authCubit = context.read<AuthenticationCubit>();
     authCubit.init();
-
 
     _authenticationListenerDisposer?.call();
     _authenticationListenerDisposer = authCubit.listen((MLoginState state) {
@@ -99,7 +97,6 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
     });
     getSignature();
 
-
     getSimCountry().then((value) {
       if (!mounted) return;
 
@@ -111,10 +108,7 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
       );
       setState(() {});
     });
-
-
   }
-
 
   Future<void> getSignature() async {
     signature = await SmsAutoFill().getAppSignature;
@@ -123,8 +117,6 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
 
     setState(() {});
   }
-
-
 
   Future<bool> _ensureSystemSettingsAvailable() async {
     final cubit = context.read<FetchSystemSettingsCubit>();
@@ -138,8 +130,8 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
     try {
       if (currentState is FetchSystemSettingsInProgress) {
         resolvedState = await cubit.stream.firstWhere(
-              (state) =>
-          state is FetchSystemSettingsSuccess ||
+          (state) =>
+              state is FetchSystemSettingsSuccess ||
               state is FetchSystemSettingsFailure,
         );
       } else {
@@ -183,8 +175,6 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
     );
   }
 
-
-
   /// it will return user's sim cards country code
   Future<Country> getSimCountry() async {
     List<Country> countryList = countryCodeService.getAll();
@@ -196,7 +186,7 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
 
     final normalizedSimCode = simCountryCode?.toUpperCase();
     final Country fallback = countryList.firstWhere(
-          (element) => element.phoneCode == Constant.defaultCountryCode,
+      (element) => element.phoneCode == Constant.defaultCountryCode,
       orElse: () => countryList.first,
     );
 
@@ -204,15 +194,14 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
 
     if (normalizedSimCode != null && normalizedSimCode.isNotEmpty) {
       simCountry = countryList.firstWhere(
-            (element) => element.countryCode.toUpperCase() == normalizedSimCode,
+        (element) => element.countryCode.toUpperCase() == normalizedSimCode,
         orElse: () => fallback,
       );
     }
 
-
     if (Constant.isDemoModeOn) {
       return countryList.firstWhere(
-            (element) => element.phoneCode == Constant.demoCountryCode,
+        (element) => element.phoneCode == Constant.demoCountryCode,
         orElse: () => fallback,
       );
     }
@@ -235,7 +224,8 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
   }
 
   void _onTapContinue() {
-    final resolvedCode = countryCode ?? widget.countryCode ?? Constant.defaultCountryCode;
+    final resolvedCode =
+        countryCode ?? widget.countryCode ?? Constant.defaultCountryCode;
     phoneLoginPayload = PhoneLoginPayload(
       widget.mobile ?? '',
       resolvedCode,
@@ -278,7 +268,8 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
     size = MediaQuery.of(context).size;
     final settingsState = context.watch<FetchSystemSettingsCubit>().state;
     final bool isSettingsReady = settingsState is FetchSystemSettingsSuccess;
-    final bool isSettingsLoading = settingsState is FetchSystemSettingsInProgress;
+    final bool isSettingsLoading =
+        settingsState is FetchSystemSettingsInProgress;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: LoginStatusBar.overlayFor(
         context,
@@ -312,7 +303,6 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
                       isSettingsLoading: isSettingsLoading,
                       statusBarBase: statusBarBase,
                     ),
-
                   );
                 }),
               ),
@@ -356,9 +346,7 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
     required bool isSettingsReady,
     required bool isSettingsLoading,
     required Color statusBarBase,
-
   }) {
-
     return SingleChildScrollView(
       child: SizedBox(
         height: context.screenHeight - 50,
@@ -403,7 +391,6 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
               const SizedBox(
                 height: 66,
               ),
-
               if (isSettingsLoading && !isSettingsReady)
                 const Padding(
                   padding: EdgeInsets.only(bottom: 16.0),
@@ -412,7 +399,6 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
                     child: LinearProgressIndicator(minHeight: 3),
                   ),
                 ),
-
               Text("welcome".translate(context))
                   .size(context.font.extraLarge)
                   .color(context.color.textDefaultColor),
@@ -441,10 +427,7 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 8.0),
                       child: Text(
                         "${flagEmoji != null ? "${flagEmoji!} " : ""}+${countryCode ?? widget.countryCode ?? Constant.defaultCountryCode}",
-                      )
-
-                          .size(context.font.large)
-                          .centerAlign(),
+                      ).size(context.font.large).centerAlign(),
                     ),
                     Expanded(
                       child: Text(
@@ -582,9 +565,9 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
                     .color(context.color.territoryColor)
                     .size(context.font.small),
                 onTap: () => _openStaticContent(
-                  title: "termsConditions".translate(context),
-                  param: Api.termsAndConditions,
-                )),
+                      title: "termsConditions".translate(context),
+                      param: Api.termsAndConditions,
+                    )),
             /*CustomTextButton(
                 text:Text("termsOfService".translate(context)).underline().color(context.color.teritoryColor).size(context.font.small),
                 onPressed: () => Navigator.pushNamed(
@@ -609,9 +592,9 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
                     .color(context.color.territoryColor)
                     .size(context.font.small),
                 onTap: () => _openStaticContent(
-                  title: "privacyPolicy".translate(context),
-                  param: Api.privacyPolicy,
-                )),
+                      title: "privacyPolicy".translate(context),
+                      param: Api.privacyPolicy,
+                    )),
             /*CustomTextButton(
                 text:
                     Text("privacyPolicy".translate(context)).underline().color(context.color.teritoryColor).size(context.font.small),

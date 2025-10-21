@@ -207,30 +207,25 @@ trait ManualPaymentPresentationHelpers
 
     protected function resolveManualBankName(mixed $row): ?string
     {
-        $genericGatewayAliasSet = [];
+        $normalizeAlias = static function ($alias): ?string {
 
-
-        foreach (array_merge(
-            (array) ManualPaymentRequest::manualBankGatewayAliases(),
-            (array) ManualPaymentRequest::walletGatewayAliases(),
-            ['المحفظة', 'تحويل بنكي']
-        ) as $alias) {
             if (! is_string($alias)) {
-                continue;
+                return null;
             }
 
+            $normalized = Str::lower(trim($alias));
 
-             $trimmedAlias = trim($alias);
+            return $normalized === '' ? null : $normalized;
+        };
 
-
-            if ($trimmedAlias === '') {
-                continue;
-            }
-
-            $genericGatewayAliasSet[Str::lower($trimmedAlias)] = true;
-        }
-
-        $genericGatewayAliases = array_keys($genericGatewayAliasSet);
+        $genericGatewayAliases = array_values(array_unique(array_filter(array_map(
+            $normalizeAlias,
+            array_merge(
+                (array) ManualPaymentRequest::manualBankGatewayAliases(),
+                (array) ManualPaymentRequest::walletGatewayAliases(),
+                ['المحفظة', 'تحويل بنكي']
+            )
+        ))));
 
 
         $candidates = [
@@ -432,30 +427,41 @@ trait ManualPaymentPresentationHelpers
             return;
         }
 
-        $manualBankAliasSet = [];
+        $normalizeAlias = static function ($alias): ?string {
+            if (! is_string($alias)) {
+                return null;
+            }
+
+            $normalized = Str::lower(trim($alias));
+
+            return $normalized === '' ? null : $normalized;
+        };
+
+        $manualBankAliases = array_values(array_filter(array_map(
+            $normalizeAlias,
+            (array) ManualPaymentRequest::manualBankGatewayAliases()
+        )));
+
 
         foreach (array_merge(
-            (array) ManualPaymentRequest::manualBankGatewayAliases(),
             (array) ManualPaymentRequest::walletGatewayAliases(),
             ['المحفظة', 'تحويل بنكي']
         ) as $alias) {
             
-            
-            if (! is_string($alias)) {
-                continue;
+            $normalizedAlias = $normalizeAlias($alias);
 
-            }
 
-            $trimmedAlias = trim($alias);
+            if ($normalizedAlias === null) {
 
-            if ($trimmedAlias === '') {
                 continue;
             }
 
-            $manualBankAliasSet[Str::lower($trimmedAlias)] = true;
+            $manualBankAliases[] = $normalizedAlias;
+
         }
 
-        $manualBankAliases = array_keys($manualBankAliasSet);
+        $manualBankAliases = array_values(array_unique($manualBankAliases));
+
 
 
 

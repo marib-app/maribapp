@@ -673,19 +673,28 @@ class _SliderComponentState extends State<SliderComponent>
                         effectivePage = _pageController.page ?? effectivePage;
                       }
 
-                      final double distance = (effectivePage - index).abs();
+                      final double relativePosition = effectivePage - index;
+                      final double distance = relativePosition.abs();
+
                       final double clampedDistance =
                           distance.clamp(0.0, 1.0).toDouble();
-                      final double scale = 1 - (clampedDistance * 0.08);
-                      double opacity = 1 - (clampedDistance * 0.35);
-                      if (opacity < 0.65) {
-                        opacity = 0.65;
-                      }
+                      final double curvedDistance =
+                      Curves.easeInOut.transform(clampedDistance);
+                      final double focusStrength = 1 - curvedDistance;
+                      final double translationX =
+                          -relativePosition * 20.0 * curvedDistance;
+                      final double opacity =
+                      (0.65 + (0.35 * focusStrength)).clamp(0.65, 1.0);
 
-                      return Transform.scale(
-                        scale: scale,
-                        alignment: Alignment.center,
-                        child: Opacity(
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 350),
+                        curve: Curves.easeInOut,
+                        transformAlignment: Alignment.center,
+                        transform:
+                        Matrix4.identity()..translate(translationX, 0.0),
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 350),
+                          curve: Curves.easeInOut,
                           opacity: opacity,
                           child: child,
                         ),

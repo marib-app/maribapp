@@ -91,30 +91,24 @@ class ConvertGovernorateSection extends StatelessWidget {
         Directionality(
           textDirection: ui.TextDirection.rtl,
           child: Row(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisSize: MainAxisSize.max,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Flexible(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.location_on_outlined, color: brand),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        'أسعار المحافظة',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: onBackground,
-                          fontWeight: FontWeight.w800,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+              Icon(Icons.location_on_outlined, color: brand, size: 22),
+              const SizedBox(width: 6),
+              Text(
+                'أسعار المحافظة',
+                style: theme.textTheme.titleMedium?.copyWith(
+                      color: onBackground,
+                      fontWeight: FontWeight.w800,
+                    ) ??
+                    TextStyle(
+                      color: onBackground,
+                      fontWeight: FontWeight.w800,
                     ),
-                  ],
-                ),
               ),
-              const SizedBox(width: 8),
-              Flexible(
+              const SizedBox(width: 12),
+              Expanded(
                 child: DropdownButtonFormField<String>(
                   key: const Key('convertGovernorateDropdown'),
                   value: selectedValue,
@@ -134,13 +128,14 @@ class ConvertGovernorateSection extends StatelessWidget {
                     focusedBorder: _border(context),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 8,
-                      vertical: 10,
+                      vertical: 8,
                     ),
+                    isDense: true,
                   ),
                   icon: Icon(Icons.keyboard_arrow_down_rounded, color: brand),
                   dropdownColor: theme.scaffoldBackgroundColor,
                   style:
-                      theme.textTheme.bodyLarge?.copyWith(color: onBackground),
+                      theme.textTheme.bodyMedium?.copyWith(color: onBackground),
                   isDense: true,
                   isExpanded: true,
                   menuMaxHeight: 360,
@@ -149,7 +144,7 @@ class ConvertGovernorateSection extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         if (canDisplayRates)
           Row(
             children: [
@@ -202,7 +197,7 @@ class ConvertGovernorateSection extends StatelessWidget {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final Color onBackground = isDark ? Colors.white : Colors.black;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: brand.withOpacity(0.35)),

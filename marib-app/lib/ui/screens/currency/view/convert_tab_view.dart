@@ -7,9 +7,23 @@ import 'convert/convert_amount_input.dart';
 import 'convert/convert_currency_selector.dart';
 import 'convert/convert_governorate_section.dart';
 import 'convert/convert_header.dart';
-import 'convert/convert_result_card.dart';
+import 'package:intl/intl.dart';
 
 import '../state/state.dart';
+
+
+
+
+
+import 'package:flutter/scheduler.dart';
+import 'dart:ui';
+
+import 'package:flutter/widgets.dart';
+import 'dart:ui' as ui;
+
+
+
+
 
 class ConvertTabView extends StatefulWidget {
   const ConvertTabView({
@@ -120,13 +134,16 @@ class _ConvertTabViewState extends State<ConvertTabView> {
 
   @override
   Widget build(BuildContext context) {
-    final edge = const EdgeInsets.fromLTRB(12, 8, 12, 18);
+    const EdgeInsets viewPadding = EdgeInsets.fromLTRB(12, 8, 12, 12);
+    final NumberFormat convertedFormat = NumberFormat('#,##0.##');
 
     final bool isDarkContext = Theme.of(context).brightness == Brightness.dark;
+    final Color onBackground = isDarkContext ? Colors.white : Colors.black;
 
     String _name(dynamic d) => (d as dynamic).currencyName?.toString() ?? '';
     final List<dynamic> all = state.rates;
     final List<String> fromOptions = all.map(_name).toList(growable: false);
+
     final List<String> toOptions = all
         .where((r) => _name(r) != state.fromCurrency)
         .map(_name)
@@ -136,7 +153,9 @@ class _ConvertTabViewState extends State<ConvertTabView> {
     _syncController(_toCurrencyController, state.toCurrency, toOptions);
 
     final CurrencyRate? selectedRate = _resolveSelectedCurrencyRate();
-
+    final String convertedValue = state.hasCalculated
+        ? "${convertedFormat.format(state.convertedAmount)} ${state.toCurrency}"
+        : '---';
     void handleSwap() {
       if (state.toCurrency.isNotEmpty && state.fromCurrency.isNotEmpty) {
         final String oldFrom = state.fromCurrency;
@@ -147,72 +166,155 @@ class _ConvertTabViewState extends State<ConvertTabView> {
     }
 
     return SafeArea(
+
+      top: true,
+      bottom: false,
+
       child: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
           final double bottomInset = MediaQuery.of(context).viewInsets.bottom;
-          final EdgeInsets scrollPadding = edge.copyWith(
-            bottom: edge.bottom + bottomInset,
+          final EdgeInsets scrollPadding = viewPadding.copyWith(
+            bottom: viewPadding.bottom + bottomInset,
           );
 
           return SingleChildScrollView(
             padding: scrollPadding,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minWidth:
-                    constraints.maxWidth.isFinite ? constraints.maxWidth : 0,
-                minHeight: constraints.maxHeight.isFinite
-                    ? math.max(0.0, constraints.maxHeight - bottomInset)
-                    : 0.0,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  ConvertHeader(state: state, brand: brand),
-                  ConvertGovernorateSection(
-                    state: state,
-                    brand: brand,
-                    selectedRate: selectedRate,
-                    onGovernorateChanged: onGovernorateChanged,
-                  ),
-                  const SizedBox(height: 16),
-                  ConvertCurrencySelector(
-                    brand: brand,
-                    fromOptions: fromOptions,
-                    toOptions: toOptions,
-                    fromController: _fromCurrencyController,
-                    toController: _toCurrencyController,
-                    selectedFrom: state.fromCurrency,
-                    selectedTo: state.toCurrency,
-                    onChangeFrom: onChangeFrom,
-                    onChangeTo: onChangeTo,
-                    onSwap: handleSwap,
-                    isDark: isDarkContext,
-                  ),
-                  const SizedBox(height: 18),
-                  ConvertAmountInput(
-                    controller: amountController,
-                    inputFormatters: amountInputFormatters,
-                    onChanged: onAmountChanged,
-                  ),
-                  const SizedBox(height: 18),
-                  ConvertResultCard(
-                    brand: brand,
-                    isDark: isDarkContext,
-                    convertedAmount: state.convertedAmount,
-                    hasCalculated: state.hasCalculated,
-                    toCurrency: state.toCurrency,
-                    onShowAdvancedDetails: onShowAdvancedDetails,
-                    actions: ConvertActionButtons(
-                      brand: brand,
-                      onConvert: onConvert,
-                      onReset: onReset,
-                    ),
-                  ),
-                ],
-              ),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ConvertHeader(state: state, brand: brand),
+                const SizedBox(height: 12),
+                ConvertGovernorateSection(
+                  state: state,
+                  brand: brand,
+                  selectedRate: selectedRate,
+                  onGovernorateChanged: onGovernorateChanged,
+                ),
+                const SizedBox(height: 16),
+                ConvertCurrencySelector(
+                  brand: brand,
+                  fromOptions: fromOptions,
+                  toOptions: toOptions,
+                  fromController: _fromCurrencyController,
+                  toController: _toCurrencyController,
+                  selectedFrom: state.fromCurrency,
+                  selectedTo: state.toCurrency,
+                  onChangeFrom: onChangeFrom,
+                  onChangeTo: onChangeTo,
+                  onSwap: handleSwap,
+                  isDark: isDarkContext,
+                ),
+                const SizedBox(height: 16),
+                ConvertAmountInput(
+                  controller: amountController,
+                  inputFormatters: amountInputFormatters,
+                  onChanged: onAmountChanged,
+                ),
+                const SizedBox(height: 12),
+                _ConvertedValueSummary(
+                  brand: brand,
+                  onBackground: onBackground,
+                  convertedValue: convertedValue,
+                  onShowAdvancedDetails: onShowAdvancedDetails,
+                ),
+                const SizedBox(height: 12),
+                ConvertActionButtons(
+                  brand: brand,
+                  onConvert: onConvert,
+                  onReset: onReset,
+                ),
+              ],
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _ConvertedValueSummary extends StatelessWidget {
+  const _ConvertedValueSummary({
+    required this.brand,
+    required this.onBackground,
+    required this.convertedValue,
+    this.onShowAdvancedDetails,
+  });
+
+  final Color brand;
+  final Color onBackground;
+  final String convertedValue;
+  final VoidCallback? onShowAdvancedDetails;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle labelStyle = Theme.of(context)
+        .textTheme
+        .titleSmall
+        ?.copyWith(fontWeight: FontWeight.w700, color: onBackground)
+        ?? TextStyle(color: onBackground, fontWeight: FontWeight.w700);
+    final TextStyle valueStyle = Theme.of(context)
+        .textTheme
+        .headlineSmall
+        ?.copyWith(
+      fontWeight: FontWeight.w900,
+      color: onBackground,
+      fontSize: 22,
+    )
+        ?? TextStyle(
+          fontWeight: FontWeight.w900,
+          color: onBackground,
+          fontSize: 22,
+        );
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: brand.withOpacity(0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: brand.withOpacity(0.12),
+                foregroundColor: brand,
+                child: const Icon(Icons.currency_exchange, size: 18),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'المبلغ المحول',
+                  style: labelStyle,
+                  textDirection: ui.TextDirection.rtl,
+                  textAlign: TextAlign.right,
+                ),
+              ),
+              if (onShowAdvancedDetails != null)
+                TextButton.icon(
+                  key: const Key('advancedDetailsButton'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: brand,
+                    padding: const EdgeInsetsDirectional.fromSTEB(10, 0, 12, 0),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  onPressed: onShowAdvancedDetails,
+                  icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                  label: const Text('التفاصيل المتقدمة'),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            convertedValue,
+            key: const Key('convertedValueText'),
+            style: valueStyle,
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }

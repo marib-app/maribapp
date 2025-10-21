@@ -24,11 +24,13 @@ class ConvertAmountInput extends StatelessWidget {
         Text(
           'المبلغ',
           style: TextStyle(
-            color: onBackground.withOpacity(0.7),
+            color: onBackground.withOpacity(0.72),
             fontWeight: FontWeight.w700,
           ),
+          textDirection: TextDirection.rtl,
+
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         TextField(
           controller: controller,
           keyboardType: TextInputType.number,
@@ -41,7 +43,7 @@ class ConvertAmountInput extends StatelessWidget {
             enabledBorder: _border(context),
             focusedBorder: _border(context),
             contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           ),
         ),
       ],

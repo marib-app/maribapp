@@ -1,6 +1,7 @@
 import 'package:characters/characters.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 
 class ConvertCurrencySelector extends StatelessWidget {
   const ConvertCurrencySelector({
@@ -30,99 +31,80 @@ class ConvertCurrencySelector extends StatelessWidget {
   final VoidCallback onSwap;
   final bool isDark;
 
+  static const double _wideFieldWidth = 196;
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        const double breakpoint = 560;
         final bool isCompact =
-            !constraints.hasBoundedWidth || constraints.maxWidth <= breakpoint;
+            !constraints.hasBoundedWidth || constraints.maxWidth < 520;
+        final double maxWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : double.infinity;
+        final double fieldWidth = isCompact
+            ? maxWidth
+            : math.min(_wideFieldWidth, math.max(160, maxWidth / 3));
+
+        final Widget fromField = SizedBox(
+          width: isCompact ? double.infinity : fieldWidth,
+          child: _CurrencyDropdown(
+            label: 'من',
+            brand: brand,
+            options: fromOptions,
+            controller: fromController,
+            selectedValue: selectedFrom,
+            dropdownKey: const Key('fromCurrencyDropdownField'),
+            iconPrefix: 'fromCurrencyIcon',
+            onChanged: onChangeFrom,
+          ),
+        );
+
+        final Widget toField = SizedBox(
+          width: isCompact ? double.infinity : fieldWidth,
+          child: _CurrencyDropdown(
+            label: 'إلى',
+            brand: brand,
+            options: toOptions,
+            controller: toController,
+            selectedValue: selectedTo,
+            dropdownKey: const Key('toCurrencyDropdownField'),
+            iconPrefix: 'toCurrencyIcon',
+            onChanged: onChangeTo,
+          ),
+        );
+
+        final Widget swapButton = _SwapButton(
+          onSwap: onSwap,
+          brand: brand,
+          isDark: isDark,
+        );
 
         if (isCompact) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _CurrencyPickerCard(
-                brand: brand,
-                label: 'من',
-                options: fromOptions,
-                controller: fromController,
-                selectedValue: selectedFrom,
-                dropdownKey: const Key('fromCurrencyDropdownField'),
-                iconPrefix: 'fromCurrencyIcon',
-                onChanged: (String? value) {
-                  if (value != null) {
-                    onChangeFrom(value);
-                  }
-                },
-              ),
+              fromField,
               const SizedBox(height: 12),
-              Center(child: _SwapButton(onSwap: onSwap, brand: brand, isDark: isDark)),
+              Center(child: swapButton),
               const SizedBox(height: 12),
-              _CurrencyPickerCard(
-                brand: brand,
-                label: 'إلى',
-                options: toOptions,
-                controller: toController,
-                selectedValue: selectedTo,
-                dropdownKey: const Key('toCurrencyDropdownField'),
-                iconPrefix: 'toCurrencyIcon',
-                onChanged: (String? value) {
-                  if (value != null) {
-                    onChangeTo(value);
-                  }
-                },
-              ),
+              toField,
             ],
           );
         }
 
         return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Flexible(
-              flex: 3,
-              child: _CurrencyPickerCard(
-                brand: brand,
-                label: 'من',
-                options: fromOptions,
-                controller: fromController,
-                selectedValue: selectedFrom,
-                dropdownKey: const Key('fromCurrencyDropdownField'),
-                iconPrefix: 'fromCurrencyIcon',
-                onChanged: (String? value) {
-                  if (value != null) {
-                    onChangeFrom(value);
-                  }
-                },
-              ),
+            fromField,
+            const SizedBox(width: 12),
+            Padding(
+              padding: const EdgeInsets.only(top: 18),
+              child: swapButton,
             ),
             const SizedBox(width: 12),
-            Flexible(
-              flex: 1,
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: _SwapButton(onSwap: onSwap, brand: brand, isDark: isDark),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Flexible(
-              flex: 3,
-              child: _CurrencyPickerCard(
-                brand: brand,
-                label: 'إلى',
-                options: toOptions,
-                controller: toController,
-                selectedValue: selectedTo,
-                dropdownKey: const Key('toCurrencyDropdownField'),
-                iconPrefix: 'toCurrencyIcon',
-                onChanged: (String? value) {
-                  if (value != null) {
-                    onChangeTo(value);
-                  }
-                },
-              ),
-            ),
+            toField,
           ],
         );
       },
@@ -143,24 +125,28 @@ class _SwapButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      elevation: isDark ? 0 : 1,
-      shape: const CircleBorder(),
-      child: IconButton(
+    final Color borderColor = brand.withOpacity(isDark ? 0.6 : 0.8);
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: OutlinedButton(
         key: const Key('swapCurrenciesAction'),
-        tooltip: 'تبديل العملات',
-        icon: Icon(Icons.swap_horiz_rounded, color: brand),
         onPressed: onSwap,
+        style: OutlinedButton.styleFrom(
+          shape: const CircleBorder(),
+          side: BorderSide(color: borderColor),
+          padding: EdgeInsets.zero,
+        ),
+        child: Icon(Icons.swap_horiz_rounded, color: brand),
       ),
     );
   }
 }
 
-class _CurrencyPickerCard extends StatelessWidget {
-  const _CurrencyPickerCard({
-    required this.brand,
+class _CurrencyDropdown extends StatelessWidget {
+  const _CurrencyDropdown({
     required this.label,
+    required this.brand,
     required this.options,
     required this.controller,
     required this.selectedValue,
@@ -176,106 +162,96 @@ class _CurrencyPickerCard extends StatelessWidget {
   final String selectedValue;
   final Key dropdownKey;
   final String iconPrefix;
-  final ValueChanged<String?> onChanged;
+  final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color cardColor = isDark ? Colors.white10 : Colors.white;
-    final Color shadowColor = isDark ? Colors.transparent : Colors.black12;
-    final TextStyle labelStyle = Theme.of(context)
-        .textTheme
-        .titleSmall
-        ?.copyWith(fontWeight: FontWeight.w700) ??
+    final ThemeData theme = Theme.of(context);
+    final bool isDark = theme.brightness == Brightness.dark;
+    final Color border = isDark ? Colors.white12 : Colors.black26;
+    final Color fill = isDark ? Colors.white10 : Colors.white;
+    final TextStyle labelStyle = theme.textTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.w700,
+        ) ??
         const TextStyle(fontWeight: FontWeight.w700);
 
-    final List<DropdownMenuEntry<String>> menuItems = options
+    final List<DropdownMenuItem<String>> items = options
         .map(
-          (String currency) => DropdownMenuEntry<String>(
-        value: currency,
-        label: currency,
-        labelWidget: _CurrencyMenuRow(
-          label: currency,
-          iconKey: ValueKey('${iconPrefix}_menu_$currency'),
-        ),
-      ),
-    )
+          (String currency) => DropdownMenuItem<String>(
+            value: currency,
+            child: _CurrencyMenuRow(
+              label: currency,
+              iconKey: ValueKey('${iconPrefix}_menu_$currency'),
+            ),
+          ),
+        )
         .toList(growable: false);
 
     final String? normalizedSelection =
         _normalizedSelection(selectedValue, options) ??
             _normalizedSelection(controller.text, options);
 
-    final String avatarLabel =
-        normalizedSelection ?? (options.isNotEmpty ? options.first : label);
+    final String controllerText = normalizedSelection ?? '';
+    if (controller.text != controllerText) {
+      controller.value = controller.value.copyWith(
+        text: controllerText,
+        selection: TextSelection.collapsed(offset: controllerText.length),
+      );
+    }
 
-    return Card(
-      color: cardColor,
-      shadowColor: shadowColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: isDark ? 0 : 2,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              label,
-              style: labelStyle,
-              textDirection: TextDirection.rtl,
-            ),
-            const SizedBox(height: 8),
-            LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints fieldConstraints) {
-                return DropdownMenu<String>(
-                  key: dropdownKey,
-                  controller: controller,
-                  initialSelection: normalizedSelection,
-                  width: fieldConstraints.maxWidth.isFinite
-                      ? fieldConstraints.maxWidth
-                      : null,
-                  onSelected: onChanged,
-                  dropdownMenuEntries: menuItems,
-                  inputDecorationTheme: InputDecorationTheme(
-                    border: _border(context),
-                    enabledBorder: _border(context),
-                    focusedBorder: _border(context),
-                    contentPadding: const EdgeInsetsDirectional.fromSTEB(
-                      12,
-                      14,
-                      12,
-                      14,
-                    ),
-                  ),
-                  textStyle: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w600),
-                  leadingIcon: Padding(
-                    padding: const EdgeInsetsDirectional.only(start: 8),
-                    child: _CurrencyAvatar(
-                      key: ValueKey('${iconPrefix}_selected'),
-                      label: avatarLabel,
-                      radius: 16,
-                    ),
-                  ),
-                  trailingIcon: const Icon(Icons.expand_more_rounded),
-                  menuHeight: 360,
-                );
-              },
-            ),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: labelStyle,
+          textDirection: TextDirection.rtl,
         ),
-      ),
-    );
-  }
-
-  OutlineInputBorder _border(BuildContext context) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color color = isDark ? Colors.white12 : Colors.black12;
-    return OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(color: color),
+        const SizedBox(height: 6),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: border),
+            color: fill,
+          ),
+          child: Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(12, 4, 8, 4),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                key: dropdownKey,
+                value: normalizedSelection,
+                icon: const Icon(Icons.expand_more_rounded),
+                isExpanded: true,
+                isDense: true,
+                items: items,
+                hint: _CurrencyHint(label: label, brand: brand),
+                onChanged: (String? value) {
+                  if (value != null) {
+                    onChanged(value);
+                  }
+                },
+                alignment: AlignmentDirectional.centerEnd,
+                selectedItemBuilder: (BuildContext context) {
+                  return options
+                      .map(
+                        (String currency) => Align(
+                          alignment: Alignment.centerRight,
+                          child: _CurrencyMenuRow(
+                            label: currency,
+                            iconKey:
+                                ValueKey('${iconPrefix}_selected_$currency'),
+                          ),
+                        ),
+                      )
+                      .toList(growable: false);
+                },
+                dropdownColor: theme.scaffoldBackgroundColor,
+                menuMaxHeight: 360,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -285,6 +261,35 @@ class _CurrencyPickerCard extends StatelessWidget {
       return null;
     }
     return options.contains(trimmed) ? trimmed : null;
+  }
+}
+
+class _CurrencyHint extends StatelessWidget {
+  const _CurrencyHint({
+    required this.label,
+    required this.brand,
+  });
+
+  final String label;
+  final Color brand;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Text(
+        'اختر $label',
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: brand.withOpacity(0.7),
+                  fontWeight: FontWeight.w600,
+                ) ??
+            TextStyle(
+              color: brand.withOpacity(0.7),
+              fontWeight: FontWeight.w600,
+            ),
+        textDirection: TextDirection.rtl,
+      ),
+    );
   }
 }
 
@@ -309,15 +314,14 @@ class _CurrencyMenuRow extends StatelessWidget {
             key: iconKey,
             radius: 12,
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 6),
           Flexible(
             child: Text(
               label,
               textDirection: TextDirection.rtl,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.right,
-              maxLines: 3,
-              softWrap: true,
-              overflow: TextOverflow.visible,
             ),
           ),
         ],

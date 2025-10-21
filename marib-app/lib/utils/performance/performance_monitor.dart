@@ -12,8 +12,9 @@ import 'frame_stats_accumulator.dart';
 
 class PerformanceMonitor {
   PerformanceMonitor._()
-      : _collectionOverrideEnabled = AppSettings.isPerformanceLoggingEnabled ||
-            _environmentOverrideEnabled;
+      : _collectionOverrideEnabled =
+      (!kReleaseMode && AppSettings.isPerformanceLoggingEnabled) ||
+          _environmentOverrideEnabled;
 
   static final PerformanceMonitor instance = PerformanceMonitor._();
 
@@ -64,17 +65,15 @@ class PerformanceMonitor {
       return true;
     }
 
-    if (_envCollectionEnabled) {
-      return true;
+    if (kReleaseMode) {
+      return _envCollectionEnabled;
     }
 
     if (_collectionOverrideEnabled) {
       return true;
     }
 
-    if (kReleaseMode) {
-      return false;
-    }
+
     if (kDebugMode || kProfileMode) {
       return AppSettings.isPerformanceLoggingEnabled;
     }
@@ -85,13 +84,13 @@ class PerformanceMonitor {
     if (_environmentOverrideEnabled) {
       return true;
     }
+    if (kReleaseMode) {
+      return _envCollectionEnabled;
+    }
     if (_collectionOverrideEnabled) {
       return true;
     }
-    if (_envCollectionEnabled) {
-      return true;
-    }
-    if (!kReleaseMode && AppSettings.isPerformanceLoggingEnabled) {
+    if (AppSettings.isPerformanceLoggingEnabled) {
       return true;
     }
     return false;
@@ -361,7 +360,13 @@ class PerformanceMonitor {
       return;
     }
     _pendingWrite ??= Timer(_reportWriteInterval, () {
-      if (!_enabled) {
+      if (!_enabled || !shouldCollectMetrics || !_isSchedulingAllowed) {
+        if (!_enabled) {
+          _pendingWrite = null;
+          return;
+        }
+        _updateEnabledState(false);
+
         _pendingWrite = null;
         return;
       }

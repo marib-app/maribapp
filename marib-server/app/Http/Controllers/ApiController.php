@@ -9581,6 +9581,10 @@ public function storeRequestDevice(Request $request)
                     ], static fn($value) => $value !== null && $value !== ''),
                 ]);
 
+                $transactionMeta['provider'] = 'alsharq';
+                $transactionMeta['channel'] = 'alsharq';
+
+
                 if ($paymentStatusValue !== null && $paymentStatusValue !== '') {
                     $transactionMeta['east_yemen_bank_status'] = $paymentStatusValue;
                 }

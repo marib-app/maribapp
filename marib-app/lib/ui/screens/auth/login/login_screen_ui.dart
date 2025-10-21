@@ -37,6 +37,7 @@ import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/login/lib/payloads.dart';
 import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/constant.dart';
+import 'widgets/login_status_bar.dart';
 
 // =================== ثوابت ===================
 const double kSidePadding = 20.0;
@@ -322,19 +323,13 @@ class LoginHeaderSection extends StatelessWidget {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
     // [محايد لشريط الحالة] نختار لون ثابت من الثيم (لا يتبع لون الصفحة/الهيدر)
-    final theme = Theme.of(context);
-    final Color statusBarBase = theme.colorScheme.surface; // بديل مناسب: theme.scaffoldBackgroundColor
-
-    // نحدد سطوع الأيقونات بناءً على سطوع اللون المحايد
-    final bool useDarkIcons = statusBarBase.computeLuminance() > 0.5;
+    final Color statusBarBase =
+    LoginStatusBar.resolveBaseColor(context); // لون محايد ومتسق
 
     // [ستايل شريط الحالة] لون محايد + أيقونات داكنة/فاتحة تلقائيًا
     final SystemUiOverlayStyle overlay =
-    (useDarkIcons ? SystemUiOverlayStyle.dark : SystemUiOverlayStyle.light).copyWith(
-      statusBarColor: statusBarBase,                            // Android: لون صلب محايد
-      statusBarIconBrightness: useDarkIcons ? Brightness.dark : Brightness.light, // Android
-      statusBarBrightness: useDarkIcons ? Brightness.light : Brightness.dark,     // iOS (معكوس)
-    );
+    LoginStatusBar.overlayFor(context, baseColor: statusBarBase);
+
 
     return SafeArea(
       top: false, // [مهم] نرسم نحن منطقة شريط الحالة، ثم نلوّنها يدويًا بالسليفِر الأول
@@ -379,9 +374,9 @@ class LoginHeaderSection extends StatelessWidget {
                   slivers: [
                     // [جديد] نلوّن مساحة شريط الحالة فقط بلون محايد مستقل عن الهيدر
                     SliverToBoxAdapter(
-                      child: Container(
-                        height: MediaQuery.of(context).padding.top, // ارتفاع شريط الحالة
-                        color: statusBarBase, // اللون المحايد الذي اخترناه
+                      child: LoginStatusBar.topSpacer(
+                        context,
+                        baseColor: statusBarBase,
                       ),
                     ),
 

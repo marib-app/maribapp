@@ -30,7 +30,7 @@ class SliderComponent extends StatefulWidget {
     super.key,
     required this.interfaceType,
     required this.sliderList,
-    this.padding = const EdgeInsets.symmetric(horizontal: 12),
+    this.padding = const EdgeInsets.symmetric(horizontal: 10),
   });
 
   @override

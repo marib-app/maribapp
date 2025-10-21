@@ -1962,7 +1962,7 @@ class ManualPaymentRequestController extends Controller
 
 
         if (!$transaction && $required) {
-            $transaction = PaymentTransaction::create([
+            $attributes = [
                 'user_id' => $manualPaymentRequest->user_id,
                 'amount' => $manualPaymentRequest->amount,
                 'payment_gateway' => $transactionGateway,
@@ -1971,7 +1971,16 @@ class ManualPaymentRequestController extends Controller
                 'payable_id' => $manualPaymentRequest->payable_id,
                 'manual_payment_request_id' => $manualPaymentRequest->id,
                 'payment_status' => 'pending',
-            ]);
+            ];
+
+            if ($transactionGateway === 'east_yemen_bank') {
+                $attributes['meta'] = [
+                    'provider' => 'alsharq',
+                    'channel' => 'alsharq',
+                ];
+            }
+
+            $transaction = PaymentTransaction::create($attributes);
 
 
         }
@@ -2006,6 +2015,27 @@ class ManualPaymentRequestController extends Controller
             if (empty($transaction->payable_id) && !empty($manualPaymentRequest->payable_id)) {
                 $updates['payable_id'] = $manualPaymentRequest->payable_id;
             }
+
+
+            if ($transactionGateway === 'east_yemen_bank') {
+                $currentMeta = $transaction->meta;
+
+                if (!is_array($currentMeta)) {
+                    $currentMeta = [];
+                }
+
+                $needsProvider = ($currentMeta['provider'] ?? null) !== 'alsharq';
+                $needsChannel = ($currentMeta['channel'] ?? null) !== 'alsharq';
+
+                if ($needsProvider || $needsChannel) {
+                    $currentMeta['provider'] = 'alsharq';
+                    $currentMeta['channel'] = 'alsharq';
+
+                    $updates['meta'] = $currentMeta;
+                }
+            }
+
+
 
             if (!empty($updates)) {
                 $transaction->fill($updates);

@@ -83,6 +83,21 @@ class SliderEligibilityService
         return $eligible->first();
     }
 
+    public function selectEligibleSliders(Collection $sliders, ?int $userId, ?string $sessionId, ?Carbon $moment = null): Collection
+    {
+        $moment ??= Carbon::now();
+
+        $eligible = $this->eligibleSliders($sliders, $userId, $sessionId, $moment);
+
+        if ($eligible->isNotEmpty()) {
+            $this->recordImpressions($eligible, $userId, $sessionId, $moment);
+        }
+
+        return $eligible;
+    }
+
+
+
     public function recordImpressions(iterable $sliders, ?int $userId, ?string $sessionId, ?Carbon $moment = null): void
     {
         $moment ??= Carbon::now();

@@ -3196,7 +3196,7 @@ class ApiController extends Controller {
             $sessionId = $this->resolveSliderSessionId($request);
 
 
-            $eligibleSliders = $sliderEligibilityService->eligibleSliders($rows, $userId, $sessionId, $now);
+            $eligibleSliders = $sliderEligibilityService->selectEligibleSliders($rows, $userId, $sessionId, $now);
             if ($eligibleSliders->isEmpty()) {
 
                 ResponseService::successResponse(null, $sliderEligibilityService->fallbackPayload($normalizedInterfaceType ?? 'all'));
@@ -3204,18 +3204,14 @@ class ApiController extends Controller {
                 return;
             }
 
-            $sliderEligibilityService->recordImpressions($eligibleSliders, $userId, $sessionId, $now);
 
             $eligibleSliders->each(fn (Slider $slider) => $slider->loadMissing(['model', 'target']));
 
-            $payload = SliderResource::make($selected)->resolve();
+            $payload = SliderResource::collection($eligibleSliders)->resolve();
 
-            $resolved = SliderResource::collection($eligibleSliders)->resolve();
+            ResponseService::successResponse('Sliders fetched successfully.', $payload);
 
-            $payload = count($resolved) === 1
-                ? $resolved[0]
-                : $resolved;
-
+            return;
 
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "API Controller -> getSlider");

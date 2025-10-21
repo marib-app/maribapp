@@ -11,6 +11,7 @@ import 'package:marib/utils/slider_interface_mapper.dart';
 import 'dart:async';
 import 'package:marib/ui/screens/widgets/lazy_network_image.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 
 class SliderWidget extends StatefulWidget {
   final String interfaceType;
@@ -24,7 +25,6 @@ class SliderWidget extends StatefulWidget {
     this.onLoaded,
     this.onError,
     this.padding = const EdgeInsets.symmetric(horizontal: 12),
-
   });
 
   @override
@@ -90,7 +90,6 @@ class _SliderWidgetState extends State<SliderWidget> {
         if (state is SliderFetchInProgress) {
           final Widget? cached = _buildFromCache();
           return cached ?? _wrapWithPadding(const SliderShimmer());
-
         }
         if (state is SliderFallbackState) {
           final String display = state.display.toLowerCase();
@@ -190,30 +189,30 @@ class _SliderWidgetState extends State<SliderWidget> {
       Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-        SizedBox(
-        width: double.infinity,
-        child: AspectRatio(
-          aspectRatio: 390 / 150,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: borderRadius,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-              color: Colors.grey.shade200,
-            ),
-            child: ClipRRect(
-              borderRadius: borderRadius,
-              child: LazyNetworkImage(
-                imageUrl: imageUrl,
-                fit: BoxFit.cover,
-                placeholder: Container(
+          SizedBox(
+            width: double.infinity,
+            child: AspectRatio(
+              aspectRatio: 390 / 150,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: borderRadius,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                   color: Colors.grey.shade200,
                 ),
+                child: ClipRRect(
+                  borderRadius: borderRadius,
+                  child: LazyNetworkImage(
+                    imageUrl: imageUrl,
+                    fit: BoxFit.cover,
+                    placeholder: ShimmerBox(
+                      borderRadius: borderRadius,
+                    ),
                   ),
                 ),
               ),

@@ -28,7 +28,7 @@
                 <div class="card">
                     <div class="card-body">
                         <div class="divider pt-3">
-                            <h6 class="divider-text">{{ __('East Yemen Bank Gateway') }}</h6>
+                            <h6 class="divider-text">{{ __('East Yemen Bank') }}</h6>
                         </div>
                         <form
                             id="east_yemen_gateway_form"
@@ -246,7 +246,7 @@
                 <div class="card">
                     <div class="card-body">
                         <div class="divider pt-3">
-                            <h6 class="divider-text">{{ __('Manual Banks') }}</h6>
+                            <h6 class="divider-text">{{ __('Bank Transfer') }}</h6>
                         </div>
                         @forelse($manualBanks as $manualBank)
                             <div class="border rounded p-3 mb-4">

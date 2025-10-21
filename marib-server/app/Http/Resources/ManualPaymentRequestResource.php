@@ -302,8 +302,8 @@ class ManualPaymentRequestResource extends JsonResource
         }
 
         return match ($canonicalGateway) {
-            'manual_banks' => $manualBankName ?? __('Manual Banks'),
-            'east_yemen_bank' => $manualBankName ?? __('East Yemen Bank Gateway'),
+            'manual_banks' => $manualBankName ?? __('Bank Transfer'),
+            'east_yemen_bank' => $manualBankName ?? __('East Yemen Bank'),
             'wallet' => $manualBankName ?? __('Wallet'),
             'cash' => __('Cash'),
             default => $this->fallbackGatewayLabel($rawGateway),
@@ -320,7 +320,7 @@ class ManualPaymentRequestResource extends JsonResource
                 ->value();
         }
 
-        return __('Manual Banks');
+        return __('Bank Transfer');
     }
 
     private function sanitizeManualBankName(mixed $value, array $aliases): ?string

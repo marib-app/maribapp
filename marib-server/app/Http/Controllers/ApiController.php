@@ -3443,7 +3443,9 @@ class ApiController extends Controller {
         try {
             $transactions = PaymentTransaction::with([
                 'manualPaymentRequest.manualBank',
-                'order',
+                'order' => static function ($query) {
+                    $query->select('id', 'order_number', 'payment_status', 'department');
+                },
 
 
             ])->where('user_id', Auth::id())
@@ -9977,8 +9979,16 @@ public function storeRequestDevice(Request $request)
                 'manual-payment',
                 'manual payment',
                 'manualpayment',
+                'manualpayments',
                 'manualbank',
+                'manualbanking',
                 'manualbanks',
+                'manual_transfer',
+                'manual-transfer',
+                'manual transfers',
+                'manual-transfers',
+                'manualtransfers',
+                'manualtransfer',
                 'offline',
                 'internal',
                 'bank',
@@ -9986,14 +9996,7 @@ public function storeRequestDevice(Request $request)
                 'bank-transfer',
                 'bank transfer',
                 'banktransfer',
-                'bank_alsharq',
-                'bank-alsharq',
-                'bank alsharq',
-                'bankalsharq',
-                'bank_alsharq_bank',
-                'bank-alsharq-bank',
-                'bank alsharq bank',
-                'bankalsharqbank',
+
             ],
             'east_yemen_bank' => [
                 'east_yemen_bank',
@@ -10012,6 +10015,9 @@ public function storeRequestDevice(Request $request)
                 'bank_alsharq_bank',
                 'bank-alsharq-bank',
                 'bank alsharq bank',
+                'alsharq',
+                'al-sharq',
+                'al sharq',
             ],
             'wallet' => [
                 'wallet',

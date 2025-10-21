@@ -440,7 +440,7 @@ class PaymentRequestTableQuery
             $paymentGatewayNameParts,
         );
         
-        $manualGatewayNameParts[] = "'Manual Banks'";
+        $manualGatewayNameParts[] = "'Bank Transfer'";
         $manualGatewayNameSelect = 'COALESCE(' . implode(', ', $manualGatewayNameParts) . ')';
 
 
@@ -534,7 +534,7 @@ class PaymentRequestTableQuery
             . " WHEN ({$manualGatewayKeyExpression}) = 'wallet' THEN 'Wallet'"
             . " WHEN ({$manualGatewayKeyExpression}) = 'east_yemen_bank' THEN 'East Yemen Bank'"
             . " WHEN ({$manualGatewayKeyExpression}) = 'cash' THEN 'Cash'"
-            . " ELSE 'Manual Banks'"
+            . " ELSE 'Bank Transfer'"
             . ' END';
 
 
@@ -576,7 +576,7 @@ class PaymentRequestTableQuery
         $cashGatewayNameSelect = 'COALESCE(' . implode(', ', $cashGatewayNameParts) . ')';
 
         $defaultGatewayNameParts = $paymentGatewayNameParts;
-        $defaultGatewayNameParts[] = "'Manual Banks'";
+        $defaultGatewayNameParts[] = "'Bank Transfer'";
         $defaultGatewayNameSelect = 'COALESCE(' . implode(', ', $defaultGatewayNameParts) . ')';
 
         $gatewayNameSelect = 'CASE'
@@ -869,6 +869,12 @@ class PaymentRequestTableQuery
             'east-yemen-bank',
             'east',
             'eastyemenbank',
+            'bank_alsharq',
+            'bank-alsharq',
+            'bank alsharq',
+            'alsharq',
+            'al-sharq',
+            'al sharq',
         ]);
 
         $manualValues = self::sqlList([
@@ -877,7 +883,6 @@ class PaymentRequestTableQuery
             'bank',
             'bank_transfer',
             'banktransfer',
-            'bank_alsharq',
             'manual',
             'manual_payment',
             'offline',

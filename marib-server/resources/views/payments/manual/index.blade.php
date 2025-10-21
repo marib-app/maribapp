@@ -164,8 +164,8 @@
                         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
                             <h5 class="card-title mb-0">{{ __('Gateway Breakdown') }}</h5>
                             <div class="d-flex flex-wrap gap-2">
-                                <span class="badge bg-primary">{{ __('East Yemen Bank Gateway') }}: <span data-summary-gateway="east_yemen_bank">{{ number_format($gatewaySummary['east_yemen_bank'] ?? 0) }}</span></span>
-                                <span class="badge bg-info text-dark">{{ __('Manual Banks') }}: <span data-summary-gateway="manual_banks">{{ number_format($gatewaySummary['manual_banks'] ?? 0) }}</span></span>
+                                <span class="badge bg-primary">{{ __('East Yemen Bank') }}: <span data-summary-gateway="east_yemen_bank">{{ number_format($gatewaySummary['east_yemen_bank'] ?? 0) }}</span></span>
+                                <span class="badge bg-info text-dark">{{ __('Bank Transfer') }}: <span data-summary-gateway="manual_banks">{{ number_format($gatewaySummary['manual_banks'] ?? 0) }}</span></span>
                                 <span class="badge bg-warning text-dark">{{ __('Wallet') }}: <span data-summary-gateway="wallet">{{ number_format($gatewaySummary['wallet'] ?? 0) }}</span></span>
                                 <span class="badge bg-success">{{ __('Cash') }}: <span data-summary-gateway="cash">{{ number_format($gatewaySummary['cash'] ?? 0) }}</span></span>
 
@@ -177,7 +177,7 @@
 
                                 <div class="border border-primary border-2 rounded-3 p-3 h-100">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span class="fw-semibold text-primary">{{ __('East Yemen Bank Gateway') }}</span>
+                                        <span class="fw-semibold text-primary">{{ __('East Yemen Bank') }}</span>
                                         <span class="badge bg-primary"><i class="fa fa-university"></i></span>
                                     </div>
                                     <div class="d-flex align-items-baseline gap-2">
@@ -190,7 +190,7 @@
                             <div class="col-md-3 col-sm-6">
                                 <div class="border border-info border-2 rounded-3 p-3 h-100">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span class="fw-semibold text-info">{{ __('Manual Banks') }}</span>
+                                        <span class="fw-semibold text-info">{{ __('Bank Transfer') }}</span>
                                         <span class="badge bg-info text-dark"><i class="fa fa-user-cog"></i></span>
                                     </div>
                                     <div class="d-flex align-items-baseline gap-2">
@@ -295,7 +295,8 @@
                                   </div>
                                   <div class="btn-group" role="group">
                                       <button type="button" class="btn btn-outline-primary btn-sm" data-filter-gateway="east_yemen_bank">{{ __('View East Yemen Bank') }}</button>
-                                      <button type="button" class="btn btn-outline-dark btn-sm" data-filter-gateway="manual_banks">{{ __('View Manual Banks') }}</button>
+                                      <button type="button" class="btn btn-outline-dark btn-sm" data-filter-gateway="manual_banks">{{ __('View Bank Transfers') }}</button>
+
                                       <button type="button" class="btn btn-outline-warning btn-sm" data-filter-gateway="wallet">{{ __('View Wallet') }}</button>
                                       <button type="button" class="btn btn-outline-success btn-sm" data-filter-gateway="cash">{{ __('View Cash') }}</button>
                                   </div>
@@ -473,7 +474,7 @@
 @section('script')
     <script>
 
-        const MANUAL_PAYMENT_FILTER_STORAGE_KEY = 'mpr_filters_v3';
+        const MANUAL_PAYMENT_FILTER_STORAGE_KEY = 'mpr_filters_v4';
         const MANUAL_PAYMENT_FILTER_KEYS = ['search', 'status', 'payment_gateway', 'payable_type', 'category', 'department', 'from', 'to'];
 
         const MANUAL_PAYMENT_STATUS_MAP = {
@@ -514,21 +515,50 @@
 
 
         const MANUAL_PAYMENT_GATEWAY_MAP = {
+            'manual-requests': 'manual_banks',
+            'manual-request': 'manual_banks',
+            manualrequest: 'manual_banks',
+            manualrequests: 'manual_banks',
+            manualpayments: 'manual_banks',
+            manualpayment: 'manual_banks',
+            manual_transfer: 'manual_banks',
+            'manual-transfer': 'manual_banks',
+            'manual transfers': 'manual_banks',
+            manual_transfers: 'manual_banks',
+            'manual-transfers': 'manual_banks',
+            manualtransfers: 'manual_banks',
+            manualtransfer: 'manual_banks',
             manual: 'manual_banks',
             manual_payment: 'manual_banks',
+            'manual-payment': 'manual_banks',
+            'manual payment': 'manual_banks',
             offline: 'manual_banks',
             internal: 'manual_banks',
             'manual banks': 'manual_banks',
             manual_bank: 'manual_banks',
             'manual-bank': 'manual_banks',
             manualbank: 'manual_banks',
+            manualbanks: 'manual_banks',
+            manualbanking: 'manual_banks',
             bank: 'manual_banks',
             bank_transfer: 'manual_banks',
+            'bank-transfer': 'manual_banks',
+            'bank transfer': 'manual_banks',
             banktransfer: 'manual_banks',
-            bank_alsharq: 'manual_banks',
+            bank_alsharq: 'east_yemen_bank',
+            'bank-alsharq': 'east_yemen_bank',
+            'bank alsharq': 'east_yemen_bank',
+            bankalsharqbank: 'east_yemen_bank',
+            'bank_alsharq_bank': 'east_yemen_bank',
+            'bank-alsharq-bank': 'east_yemen_bank',
+            'bank alsharq bank': 'east_yemen_bank',
+            alsharq: 'east_yemen_bank',
+            'al-sharq': 'east_yemen_bank',
+            'al sharq': 'east_yemen_bank',
             east: 'east_yemen_bank',
             east_yemen_bank: 'east_yemen_bank',
             'east-yemen-bank': 'east_yemen_bank',
+            'east yemen bank': 'east_yemen_bank',
             eastyemenbank: 'east_yemen_bank',
             wallet: 'wallet',
             wallet_balance: 'wallet',
@@ -575,8 +605,8 @@
         };
 
         const MANUAL_PAYMENT_GATEWAY_LABEL_OVERRIDES = {
-            east_yemen_bank: @json(__('East Yemen Bank Gateway')),
-            manual_banks: @json(__('Manual Banks')),
+            east_yemen_bank: @json(__('East Yemen Bank')),
+            manual_banks: @json(__('Bank Transfer')),
             wallet: @json(__('Wallet')),
             cash: @json(__('Cash')),
         };
@@ -754,16 +784,19 @@
 
         function resolveManualPaymentGatewayLabel(row, fallback, normalizedGateway) {
             const safeRow = row && typeof row === 'object' ? row : {};
+            const rawGatewayValue = typeof safeRow.gateway_code === 'string'
+                ? safeRow.gateway_code
+                : (typeof safeRow.channel === 'string'
+                    ? safeRow.channel
+                    : (typeof safeRow.payment_gateway === 'string'
+                        ? safeRow.payment_gateway
+                        : (typeof safeRow.payment_method === 'string' ? safeRow.payment_method : '')
+                    ));
+
 
             const normalized = normalizedGateway
-                ?? normalizeManualPaymentGateway(
-                    typeof safeRow.channel === 'string'
-                        ? safeRow.channel
-                        : (typeof safeRow.payment_gateway === 'string'
-                            ? safeRow.payment_gateway
-                            : (typeof safeRow.payment_method === 'string' ? safeRow.payment_method : '')
-                        )
-                )
+                ?? normalizeManualPaymentGateway(rawGatewayValue)
+
                 ?? null;
 
             const valueOrNull = (candidate) => {
@@ -1578,13 +1611,20 @@
                         name: 'channel',
                         defaultContent: '—',
                         render: function (data, type, row) {
-                            if (type !== 'display') {
-                                return data ?? row?.channel_label ?? '';
-                            }
 
                             const normalizedGateway = normalizeManualPaymentGateway(
-                                row?.channel ?? row?.payment_gateway ?? row?.payment_method ?? ''
+                                row?.gateway_code ?? row?.channel ?? row?.payment_gateway ?? row?.payment_method ?? ''
                             ) ?? '';
+
+                            if (type === 'sort' || type === 'type') {
+                                return normalizedGateway;
+                            }
+
+
+                            if (type !== 'display') {
+                                return row?.gateway_label ?? row?.channel_label ?? data ?? '';
+                            }
+
                             const classes = MANUAL_PAYMENT_GATEWAY_STYLES[normalizedGateway] ?? 'bg-secondary';
                             const label = resolveManualPaymentGatewayLabel(row ?? {}, data, normalizedGateway);
 

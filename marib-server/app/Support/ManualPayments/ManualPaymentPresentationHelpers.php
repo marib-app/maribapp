@@ -117,11 +117,11 @@ trait ManualPaymentPresentationHelpers
 
         if ($normalized !== null) {
             return match ($normalized) {
-                'east_yemen_bank' => trans('East Yemen Bank Gateway'),
-                'manual_banks' => trans('Manual Banks'),
+                'east_yemen_bank' => trans('East Yemen Bank'),
+                'manual_banks' => trans('Bank Transfer'),
                 'wallet' => trans('Wallet'),
                 'cash' => trans('Cash'),
-                default => trans('Manual Banks'),
+                default => trans('Bank Transfer'),
             };
         }
 
@@ -133,7 +133,7 @@ trait ManualPaymentPresentationHelpers
                 ->value();
         }
 
-        return trans('Manual Banks');
+        return trans('Bank Transfer');
     }
 
     protected function paymentRequestDepartmentLabel(?string $department): string

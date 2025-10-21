@@ -74,8 +74,8 @@ class ManualPaymentRequestController extends Controller
         ];
 
         $paymentGateways = [
-            'east_yemen_bank' => trans('East Yemen Bank Gateway'),
-            'manual_banks' => trans('Manual Banks'),
+            'east_yemen_bank' => trans('East Yemen Bank'),
+            'manual_banks' => trans('Bank Transfer'),
 
             'wallet' => trans('Wallet'),
             'cash' => trans('Cash'),
@@ -232,13 +232,21 @@ class ManualPaymentRequestController extends Controller
             $rowData['id'] = $requestRow->manual_payment_request_id ?? $requestRow->payment_transaction_id;
             $rowData['user_name'] = $requestRow->user_name ?? '-';
             $rowData['user_mobile'] = $requestRow->user_mobile ?? '-';
-            $rowData['payment_gateway_key'] = $gatewayKey;
+            $canonicalGateway = ManualPaymentRequest::canonicalGateway($gatewayKey) ?? $gatewayKey;
+            if ($canonicalGateway === 'manual_bank') {
+                $canonicalGateway = 'manual_banks';
+            }
+
+            $rowData['payment_gateway_key'] = $canonicalGateway;
+            
             $rowData['manual_bank_name'] = $manualBankName;
             $rowData['payment_gateway_name'] = $manualBankName
 
 
                 ?? $this->paymentRequestGatewayName($requestRow);
-            $rowData['payment_gateway'] = $this->gatewayLabel($gatewayKey, $manualBankName);
+            $rowData['gateway_code'] = $canonicalGateway;
+            $rowData['gateway_label'] = $this->gatewayLabel($canonicalGateway, $manualBankName);
+            $rowData['payment_gateway'] = $rowData['gateway_label'];
             $rowData['formatted_amount'] = number_format((float) ($requestRow->amount ?? 0), 2)
 
 
@@ -287,6 +295,7 @@ class ManualPaymentRequestController extends Controller
             'amount',
             'currency',
             'gateway_label',
+            'gateway_code',
             'status',
             'channel',
             'created_at',
@@ -315,6 +324,7 @@ class ManualPaymentRequestController extends Controller
             'channel_label' => 'channel',
             'channel_name' => 'channel',
             'channel' => 'channel',
+            'gateway_code' => 'channel',
             'department_label' => 'department',
             'department' => 'department',
             'payable_label' => 'category',
@@ -465,7 +475,15 @@ class ManualPaymentRequestController extends Controller
             $amount = (float) ($row->amount ?? 0);
 
 
-            $channel = ManualPaymentRequest::canonicalGateway($row->channel ?? null);
+            $gatewayKey = data_get($row, 'gateway_key', $row->channel ?? null);
+            $gatewayCode = ManualPaymentRequest::canonicalGateway(is_string($gatewayKey) ? $gatewayKey : null);
+            if ($gatewayCode === 'manual_bank') {
+                $gatewayCode = 'manual_banks';
+            }
+
+            $channel = $gatewayCode ?? ManualPaymentRequest::canonicalGateway($row->channel ?? null);
+            
+            
             if ($channel === 'manual_bank') {
                 $channel = 'manual_banks';
             }
@@ -487,6 +505,9 @@ class ManualPaymentRequestController extends Controller
 
             $categoryLabel = $this->paymentRequestPayableLabel($row);
 
+            $resolvedChannel = $channel ?? $row->channel;
+            $gatewayLabel = $gatewayLabelValue
+                ?? $this->paymentRequestChannelLabel($resolvedChannel, $manualBankName);
 
             return [
                 'reference' => $row->reference ?? $transactionId,
@@ -497,12 +518,9 @@ class ManualPaymentRequestController extends Controller
                 'amount_fmt' => number_format($amount, 2, '.', ''),
                 'currency' => $row->currency ?? '',
                 'manual_payment_request_id' => $row->manual_payment_request_id,
-                'channel' => $channel ?? $row->channel,
-                'channel_label' => $gatewayLabelValue
-                    ?? $this->paymentRequestChannelLabel(
-                        $channel ?? $row->channel,
-                        $manualBankName
-                    ),
+                'channel' => $resolvedChannel,
+                'gateway_code' => $gatewayCode ?? $resolvedChannel,
+                'channel_label' => $gatewayLabel,
                 'channel_name' => $gatewayLabelValue
                     ?? $manualBankName
 
@@ -518,6 +536,8 @@ class ManualPaymentRequestController extends Controller
                 'payable_type' => $row->payable_type ?? null,
                 'payable_id' => $row->payable_id ?? null,
                 'payable_label' => $categoryLabel,
+                'gateway_label' => $gatewayLabel,
+                'payment_gateway_label' => $gatewayLabel,
                 'status' => $row->status ?? $row->status_group,
                 'status_group' => $row->status_group,
                 'status_label' => $this->paymentRequestStatusLabel($row->status_group),
@@ -1736,6 +1756,7 @@ class ManualPaymentRequestController extends Controller
             'channel_label' => 'channel',
             'channel_name' => 'channel',
             'channel' => 'channel',
+            'gateway_code' => 'channel',
             'department_label' => 'department',
             'department' => 'department',
             'payable_label' => 'category',
@@ -2575,8 +2596,8 @@ class ManualPaymentRequestController extends Controller
         }
 
         return match ($canonical) {
-            'east_yemen_bank' => trans('East Yemen Bank Gateway'),
-            'manual_banks' => trans('Manual Banks'),
+            'east_yemen_bank' => trans('East Yemen Bank'),
+            'manual_banks' => trans('Bank Transfer'),
 
             'wallet' => trans('Wallet'),
             'cash' => trans('Cash'),

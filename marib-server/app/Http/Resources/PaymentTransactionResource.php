@@ -25,6 +25,10 @@ class PaymentTransactionResource extends JsonResource
             'status' => $this->payment_status,
             'amount' => isset($this->amount) ? (float) $this->amount : null,
             'currency' => $this->currency,
+            'payment_gateway' => $this->payment_gateway,
+            'gateway_code' => $this->gateway_code,
+            'gateway_label' => $this->gateway_label,
+
             'created_at' => optional($this->created_at)->toIso8601String(),
 
             'order' => $order ? [

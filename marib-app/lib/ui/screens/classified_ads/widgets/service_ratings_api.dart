@@ -10,6 +10,7 @@ class ServiceRatingsResult {
   final bool canReview;
   final double averageRating;
   final int totalReviews;
+  final int serviceId;
 
 
   ServiceRatingsResult({
@@ -19,6 +20,7 @@ class ServiceRatingsResult {
     required this.canReview,
     required this.averageRating,
     required this.totalReviews,
+    required this.serviceId,
 
   });
 }
@@ -26,14 +28,19 @@ class ServiceRatingsResult {
 class ServiceRatingsApi {
   /// جلب التعليقات/التقييمات لخدمة معيّنة
   static Future<ServiceRatingsResult> fetchRatings({
-    required int itemId,
+    int? serviceId,
     int page = 1,
     int perPage = 20,
     String? sort, // "newest" | "highest" | "lowest" ...الخ (اختياري)
     String? serviceUid,
 
   }) async {
-    final uid = serviceUid?.trim();
+    final String? uid = _normalizeUid(serviceUid);
+
+    final int resolvedServiceId = await _ensureServiceId(
+      serviceId: serviceId,
+      serviceUid: uid,
+    );
 
     // نستخدم getItemApi لأنه الأكثر ثباتًا لديكم،
     // ونمرر مفاتيح شائعة للترقيم/الفرز كي يتجاهلها الباك إند إن لم يدعمها.
@@ -44,9 +51,9 @@ class ServiceRatingsApi {
         Api.page: page,
 
         'per_page': perPage,
-        'service_id': itemId,
-        if (uid != null && uid.isNotEmpty) 'service_uid': uid,
-        if (uid != null && uid.isNotEmpty) 'uid': uid,
+        'service_id': resolvedServiceId,
+        if (uid != null) 'service_uid': uid,
+        if (uid != null) 'uid': uid,
 
         if (sort != null) 'sort': sort,
       },
@@ -56,7 +63,7 @@ class ServiceRatingsApi {
       // اطبع مفتاحًا واحدًا صغيرًا للتشخيص فقط
       // (بدون إغراق اللوج)
       // ignore: avoid_print
-      print('[ratings] got response keys: ${resp.keys.take(6).toList()}');
+      print('[ratings] got response keys: ${resp.keys.take(6).toList()} for serviceId=$resolvedServiceId');
     }
 
     final rows = _extractReviewRows(resp);
@@ -79,6 +86,8 @@ class ServiceRatingsApi {
         ? (extractedTotal < fallbackTotal ? fallbackTotal : extractedTotal)
         : fallbackTotal;
 
+    final int extractedServiceId =
+        _extractServiceIdFromAny(resp, matchUid: uid) ?? resolvedServiceId;
 
     return ServiceRatingsResult(
       list: list,
@@ -87,26 +96,33 @@ class ServiceRatingsApi {
       canReview: _extractCanReview(resp),
       averageRating: averageRating,
       totalReviews: totalReviews,
+      serviceId: extractedServiceId,
+
     );
   }
 
   /// إضافة تقييم/تعليق جديد
   static Future<bool> addRating({
-    required int itemId,
+    required int serviceId,
     required int stars, // 1..5
     String? comment,
     String? serviceUid,
 
   }) async {
     final text = (comment ?? '').trim();
-    final uid = serviceUid?.trim();
+    final String? uid = _normalizeUid(serviceUid);
+
+    final int resolvedServiceId = await _ensureServiceId(
+      serviceId: serviceId,
+      serviceUid: uid,
+    );
 
     final payload = <String, dynamic>{
-      'service_id': itemId,
+      'service_id': resolvedServiceId,
       'rating': stars,
       if (text.isNotEmpty) 'review': text,
-      if (uid != null && uid.isNotEmpty) 'service_uid': uid,
-      if (uid != null && uid.isNotEmpty) 'uid': uid,
+      if (uid != null) 'service_uid': uid,
+      if (uid != null) 'uid': uid,
     };
 
     final resp = await Api.post(url: Api.addServiceReviewApi, parameter: payload);
@@ -145,17 +161,22 @@ class ServiceRatingsApi {
   // (اختياري) جلب تقييم المستخدم الحالي لهذه الخدمة — لمنع التكرار أو لعرض زر "عدل تقييمك"
 
   static Future<UserRatings?> getMyReview({
-    required int itemId,
+    int? serviceId,
     String? serviceUid,
   }) async {
-    final uid = serviceUid?.trim();
+    final String? uid = _normalizeUid(serviceUid);
+
+    final int resolvedServiceId = await _ensureServiceId(
+      serviceId: serviceId,
+      serviceUid: uid,
+    );
 
     final resp = await Api.get(
       url: Api.myServiceReviewsApi,
       queryParameters: {
-        'service_id': itemId,
-        if (uid != null && uid.isNotEmpty) 'service_uid': uid,
-        if (uid != null && uid.isNotEmpty) 'uid': uid,
+        'service_id': resolvedServiceId,
+        if (uid != null) 'service_uid': uid,
+        if (uid != null) 'uid': uid,
       },
     );
     final row = _firstRow(resp);
@@ -165,20 +186,27 @@ class ServiceRatingsApi {
   /// (اختياري) الإبلاغ عن تعليق/تقييم معيّن
   static Future<bool> reportReview({
     required int reviewId,
+    required int serviceId,
     String? reasonText,
     String? serviceUid,
 
   }) async {
-    final text = (reasonText ?? '').trim();
-    final uid = serviceUid?.trim();
+    final String? uid = _normalizeUid(serviceUid);
+    final String text = (reasonText ?? '').trim();
+
+    final int resolvedServiceId = await _ensureServiceId(
+      serviceId: serviceId,
+      serviceUid: uid,
+    );
 
     final payload = <String, dynamic>{
       'review_id': reviewId,
+      'service_id': resolvedServiceId,
       if (text.isNotEmpty) Api.message: text,
       if (text.isNotEmpty) 'details': text,
       'type': 'service',
-      if (uid != null && uid.isNotEmpty) 'service_uid': uid,
-      if (uid != null && uid.isNotEmpty) 'uid': uid,
+      if (uid != null) 'service_uid': uid,
+      if (uid != null) 'uid': uid,
     };
 
     final resp = await Api.post(url: Api.addServiceReviewReportApi, parameter: payload);
@@ -199,6 +227,122 @@ class ServiceRatingsApi {
   // --------------------------------------------------------------------------
   // Helpers
   // --------------------------------------------------------------------------
+
+
+  static Future<int> _ensureServiceId({
+    int? serviceId,
+    String? serviceUid,
+  }) async {
+    final int? direct = _asPositiveInt(serviceId);
+    if (direct != null) {
+      return direct;
+    }
+
+    final String? uid = _normalizeUid(serviceUid);
+    if (uid == null) {
+      throw ApiException('تعذر العثور على الخدمة المطلوبة.');
+    }
+
+    try {
+      final Map<String, dynamic> response = await Api.get(
+        url: Api.getServicesApi,
+        queryParameters: {
+          'service_uid': uid,
+          'uid': uid,
+          'limit': 1,
+        },
+      );
+
+      final int? extracted =
+          _extractServiceIdFromAny(response, matchUid: uid) ??
+              _extractServiceIdFromAny(response);
+      if (extracted != null) {
+        return extracted;
+      }
+    } on ApiException {
+      rethrow;
+    } catch (error) {
+      if (kDebugMode) {
+        // ignore: avoid_print
+        print('[ratings] resolve serviceId failed for uid=$uid -> $error');
+      }
+    }
+
+    throw ApiException('تعذر العثور على الخدمة المطلوبة.');
+  }
+
+  static String? _normalizeUid(String? value) {
+    if (value == null) return null;
+    final String trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  static int? _asPositiveInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value > 0 ? value : null;
+    if (value is num) {
+      final int intValue = value.toInt();
+      return intValue > 0 ? intValue : null;
+    }
+    if (value is String) {
+      final int? parsed = int.tryParse(value.trim());
+      if (parsed != null && parsed > 0) return parsed;
+    }
+    return null;
+  }
+
+  static int? _extractServiceIdFromAny(
+      dynamic source, {
+        String? matchUid,
+      }) {
+    if (source == null) return null;
+
+    if (source is Map) {
+      final Map<String, dynamic> map = <String, dynamic>{};
+      source.forEach((key, value) {
+        map[key.toString()] = value;
+      });
+
+      final int? directId = _asPositiveInt(
+        map['service_id'] ?? map['id'] ?? map['item_id'] ?? map['items_id'],
+      );
+      final String? uidCandidate = _normalizeUid(
+        map['service_uid'] ?? map['serviceUid'] ?? map['uid'],
+      );
+
+      if (directId != null) {
+        if (matchUid == null) {
+          return directId;
+        }
+        if (uidCandidate != null && uidCandidate == matchUid) {
+          return directId;
+        }
+      }
+
+      for (final value in map.values) {
+        final int? nested =
+        _extractServiceIdFromAny(value, matchUid: matchUid);
+        if (nested != null) {
+          return nested;
+        }
+      }
+
+      return null;
+    }
+
+    if (source is Iterable) {
+      for (final dynamic value in source) {
+        final int? nested =
+        _extractServiceIdFromAny(value, matchUid: matchUid);
+        if (nested != null) {
+          return nested;
+        }
+      }
+    }
+
+    return null;
+  }
+
 
   /// يحاول استخراج مصفوفة التعليقات/التقييمات من أنماط شائعة
   static List<Map<String, dynamic>> _extractReviewRows(Map<String, dynamic> resp) {

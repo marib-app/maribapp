@@ -7,15 +7,17 @@ import 'service_ratings_api.dart';
 
 
 class ItemCommentsList extends StatefulWidget {
-  final int itemId;
+  final int? serviceId;
   final EdgeInsetsGeometry? padding;
   final ValueChanged<bool>? onCanReviewChanged;
+  final ValueChanged<int?>? onServiceIdResolved;
   final String? serviceUid;
 
   const ItemCommentsList({
     super.key,
-    required this.itemId,
+    this.serviceId,
     this.onCanReviewChanged,
+    this.onServiceIdResolved,
     this.serviceUid,
 
 
@@ -35,12 +37,14 @@ class ItemCommentsListState extends State<ItemCommentsList> {
   bool _hasMore = true;
   int _page = 1;
   String? _sort; // 'default' | 'recent' | 'top' (اختياري)
+  int? _serviceId;
 
   @override
   void initState() {
     super.initState();
     // تهيئة timeago بالعربية (بهدوء لو كانت مسجلة مسبقًا)
     try { timeago.setLocaleMessages('ar', timeago.ArMessages()); } catch (_) {}
+    _serviceId = widget.serviceId;
     _loadFirst();
     _scroll.addListener(_onScroll);
   }
@@ -50,6 +54,16 @@ class ItemCommentsListState extends State<ItemCommentsList> {
     _scroll.dispose();
     super.dispose();
   }
+
+
+  @override
+  void didUpdateWidget(covariant ItemCommentsList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.serviceId != null && widget.serviceId != oldWidget.serviceId && widget.serviceId != _serviceId) {
+      _serviceId = widget.serviceId;
+    }
+  }
+
 
   /// تُستدعى من الخارج لتحديث القائمة
   Future<void> reload({String? sort}) async {
@@ -66,7 +80,7 @@ class ItemCommentsListState extends State<ItemCommentsList> {
     });
     try {
       final res = await ServiceRatingsApi.fetchRatings(
-        itemId: widget.itemId,
+        serviceId: _serviceId,
         page: _page,
         perPage: 20,
         sort: _sort,
@@ -77,6 +91,8 @@ class ItemCommentsListState extends State<ItemCommentsList> {
       _hasMore = res.hasMore;
       _page = res.nextPage;
       widget.onCanReviewChanged?.call(res.canReview);
+      _serviceId = res.serviceId;
+      widget.onServiceIdResolved?.call(_serviceId);
 
     } catch (_) {
       // بإمكانك عرض SnackBar هنا لو حبيت
@@ -90,12 +106,13 @@ class ItemCommentsListState extends State<ItemCommentsList> {
     setState(() => _loadingMore = true);
     try {
       final res = await ServiceRatingsApi.fetchRatings(
-        itemId: widget.itemId,
+        serviceId: _serviceId,
         page: _page,
         perPage: 20,
         sort: _sort,
         serviceUid: widget.serviceUid,
-
+          _serviceId = res.serviceId;
+          widget.onServiceIdResolved?.call(_serviceId);
       );
       _items.addAll(res.list);
       _hasMore = res.hasMore;

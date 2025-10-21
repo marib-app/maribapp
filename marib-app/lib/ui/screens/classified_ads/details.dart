@@ -146,6 +146,47 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
   DateTime? _ownerExpiryOverride;
   String? get _initialTitle => widget.initialTitle ?? widget.classified?.title;
 
+
+
+
+  int? _extractServiceId() {
+    final int? direct = _data?.id;
+    if (direct != null && direct > 0) return direct;
+
+    int? parse(dynamic value) {
+      if (value == null) return null;
+      if (value is int) return value > 0 ? value : null;
+      if (value is num) {
+        final int intValue = value.toInt();
+        return intValue > 0 ? intValue : null;
+      }
+      if (value is String) {
+        final parsed = int.tryParse(value.trim());
+        if (parsed != null && parsed > 0) return parsed;
+      }
+      return null;
+    }
+
+    final Map<String, dynamic>? json = _data?.toJson();
+    if (json == null) return null;
+
+    for (final key in const [
+      'service_id',
+      'serviceId',
+      'id',
+      'item_id',
+      'items_id',
+    ]) {
+      if (!json.containsKey(key)) continue;
+      final parsed = parse(json[key]);
+      if (parsed != null) return parsed;
+    }
+
+    return null;
+  }
+
+
+
   // --------- Regex للمساعدة ----------
   static final RegExp _htmlTagRe = RegExp(r'<[^>]+>');
   static final RegExp _telRe = RegExp(r'tel:\s*([0-9+]+)', caseSensitive: false);
@@ -1076,10 +1117,14 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
       },
 
       onRateTap: () {
-        final itemId = _data?.id;
-        if (itemId == null) {
+        final int? serviceId = _extractServiceId();
+        final String? serviceUid = _data?.serviceUid?.trim();
+        if ((serviceId == null || serviceId <= 0) &&
+            (serviceUid == null || serviceUid.isEmpty)) {
+
+
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('لا يوجد معرّف للإعلان')),
+            const SnackBar(content: Text('تعذّر تحديد الخدمة لعرض التقييمات.')),
           );
           return;
         }
@@ -1091,9 +1136,10 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
             builder: (_) => const ServiceRatingPage(),
             settings: RouteSettings(arguments: {
               'serviceTitle': _data?.title ?? 'بدون عنوان',
-              'itemId': itemId,
+              'serviceId': serviceId,
+              'itemId': serviceId ?? _data?.id,
               'sellerId': sellerId,
-              'serviceUid': _data?.serviceUid,
+              if (serviceUid != null && serviceUid.isNotEmpty) 'serviceUid': serviceUid,
 
             }),
           ),

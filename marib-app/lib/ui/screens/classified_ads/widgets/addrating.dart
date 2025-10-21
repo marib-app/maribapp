@@ -10,14 +10,14 @@ import 'package:marib/ui/screens/classified_ads/widgets/service_ratings_api.dart
 class AddRatingBottomSheet extends StatefulWidget {
   const AddRatingBottomSheet({
     super.key,
-    this.itemId,
+    this.serviceId,
     this.serviceTitle,
     this.sellerId, // احتياطي للتوافق مع الاستدعاءات السابقة
     this.serviceUid,
 
   });
 
-  final int? itemId;           // معرّف الخدمة
+  final int? serviceId;           // معرّف الخدمة
   final String? serviceTitle;  // غير مستخدم للإرسال، فقط للعرض إن لزم
   final int? sellerId;         // لم يعد مطلوبًا من واجهة الخدمة الحالية
   final String? serviceUid;
@@ -87,10 +87,10 @@ class _AddRatingBottomSheetState extends State<AddRatingBottomSheet> with Single
     if (text.isEmpty) text = "تم إرسال تقييم من التطبيق";
 
 
-    final int? itemId   = widget.itemId;
+    final int? serviceId   = widget.serviceId;
 
 
-    if (itemId == null) {
+    if (serviceId  == null) {
       HelperUtils.showSnackBarMessage(context, "تعذّر تحديد الخدمة.");
       return;
     }
@@ -98,7 +98,7 @@ class _AddRatingBottomSheetState extends State<AddRatingBottomSheet> with Single
     setState(() => _isSubmitting = true);
     try {
       final ok = await ServiceRatingsApi.addRating(
-        itemId: itemId,
+        serviceId: serviceId,
         stars: stars,
         comment: text,
         serviceUid: widget.serviceUid,

@@ -33,6 +33,7 @@ class ServiceRatingPage extends StatefulWidget {
 
 class _ServiceRatingPageState extends State<ServiceRatingPage> {
   bool? _canReview;
+  int? _serviceId;
 
   void _updateCanReview(bool? value) {
     if (!mounted || value == null || _canReview == value) return;
@@ -47,6 +48,18 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
     });
   }
 
+  void _updateServiceId(int? value) {
+    if (!mounted || value == null || value <= 0 || _serviceId == value) return;
+    setState(() => _serviceId = value);
+  }
+
+  void _scheduleServiceIdUpdate(int? value) {
+    if (value == null || value <= 0 || _serviceId == value) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _serviceId == value) return;
+      setState(() => _serviceId = value);
+    });
+  }
 
 
 
@@ -56,20 +69,35 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
 
     // 🟢 القيم القادمة عبر Route
     final args = (ModalRoute.of(context)?.settings.arguments as Map?)?.cast<String, dynamic>() ?? const {};
-    final dynamic itemIdRaw = args['itemId'];
-    final int? itemIdArg = itemIdRaw is String
-        ? int.tryParse(itemIdRaw)
-        : itemIdRaw as int?;
+    int? parseId(dynamic raw) {
+      if (raw == null) return null;
+      if (raw is int) return raw;
+      if (raw is num) return raw.toInt();
+      if (raw is String) return int.tryParse(raw.trim());
+      return null;
+    }
+
+    final int? serviceIdArg = parseId(args['serviceId'] ?? args['service_id']);
+    final int? itemIdArg = parseId(args['itemId'] ?? args['item_id'] ?? args['id']);
+    final int? effectiveServiceId = serviceIdArg ?? itemIdArg;
+
+
     final dynamic sellerIdRaw = args['sellerId'];
     final int? sellerIdArg = sellerIdRaw is String
         ? int.tryParse(sellerIdRaw)
         : sellerIdRaw as int?;
-    final String  serviceTitleResolved = (args['serviceTitle'] as String?)?.trim() ?? 'بدون عنوان';
+    final String serviceTitleResolved = (args['serviceTitle'] as String?)?.trim() ?? 'بدون عنوان';
 
     final dynamic serviceUidRaw = args['serviceUid'] ?? args['service_uid'];
     final String? serviceUidArg = serviceUidRaw is String
         ? (serviceUidRaw.trim().isNotEmpty ? serviceUidRaw.trim() : null)
         : null;
+
+    final bool hasLookupKey =
+        (effectiveServiceId != null && effectiveServiceId > 0) ||
+            (serviceUidArg != null && serviceUidArg.isNotEmpty);
+
+    _scheduleServiceIdUpdate(effectiveServiceId);
 
 
     return Scaffold(
@@ -91,7 +119,7 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
               child: ValueListenableBuilder<int>(
                 valueListenable: ServiceRatingPage.headerRefresh,
                 builder: (context, _, __) {
-                  if (itemIdArg == null) {
+                  if (!hasLookupKey) {
                     return OverallRatingSection(
                       serviceTitle: serviceTitleResolved,
                       ratingValue: 0.0,
@@ -101,7 +129,7 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
                   }
                   return FutureBuilder<ServiceRatingsResult>(
                     future: ServiceRatingsApi.fetchRatings(
-                      itemId: itemIdArg,
+                      serviceId: _serviceId ?? effectiveServiceId,
                       page: 1,
                       perPage: 100,
                       serviceUid: serviceUidArg,
@@ -119,7 +147,7 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
                       }
 
                       if (snap.hasError) {
-                        debugPrint('ServiceRatingPage: failed to fetch ratings for item $itemIdArg => ${snap.error}');
+                        debugPrint('ServiceRatingPage: failed to fetch ratings for service ${_serviceId ?? effectiveServiceId} => ${snap.error}');
                         return _buildOverallRatingErrorFallback(
                           context,
                           serviceTitle: serviceTitleResolved,
@@ -141,6 +169,7 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
                       }
                       final result = snap.data!;
                       _scheduleCanReviewUpdate(result.canReview);
+                      _scheduleServiceIdUpdate(result.serviceId);
                       final list = result.list;
 
                       final summary = _summaryFrom(list);
@@ -178,17 +207,16 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
 
             // ✅ قائمة التعليقات — مربوطة بالسيرفر
             Expanded(
-              child: itemIdArg == null
-                  ? const Center(child: Text('لا يمكن جلب التعليقات بدون itemId'))
+              child: !hasLookupKey
+                  ? const Center(child: Text('لا يمكن جلب التعليقات بدون معرف الخدمة.'))
                   : ItemCommentsList(
                 key: ServiceRatingPage.commentsKey,
-                itemId: itemIdArg!,
+                serviceId: _serviceId ?? effectiveServiceId,
                 serviceUid: serviceUidArg,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 onCanReviewChanged: _updateCanReview,
+                onServiceIdResolved: _updateServiceId,
               ),
-
-
 
             ),
           ],
@@ -198,7 +226,7 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
       // ✅ زر إضافة تقييم — نفس الشكل. بعد الإرسال: نعيد تحميل التعليقات والرأس.
       bottomNavigationBar: _buildAddRatingButton(
         context,
-        itemId: itemIdArg,
+        serviceId: _serviceId ?? effectiveServiceId,
         serviceTitle: serviceTitleResolved,
         canReview: _canReview,
         sellerId: sellerIdArg,
@@ -268,7 +296,7 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
 // زر ثابت أسفل الشاشة لإضافة تقييم جديد (نفس تصميمك)
 Widget _buildAddRatingButton(
     BuildContext context, {
-      int? itemId,
+      int? serviceId,
       String? serviceTitle,
       int? sellerId,
       bool? canReview,
@@ -314,7 +342,11 @@ Widget _buildAddRatingButton(
     );
   }
 
-  if (itemId == null) {
+  if (serviceId == null || serviceId <= 0) {
+    if (serviceUid != null && serviceUid.isNotEmpty) {
+      return buildInfoMessage('جاري التحقق من الخدمة قبل السماح بإضافة تقييم...');
+    }
+
     return buildInfoMessage('تعذّر تحديد الخدمة لإضافة تقييم.');
   }
 
@@ -362,7 +394,7 @@ Widget _buildAddRatingButton(
                   bottom: MediaQuery.of(ctx).viewInsets.bottom,
                 ),
                 child: AddRatingBottomSheet(
-                  itemId: itemId,
+                  serviceId: serviceId,
                   serviceTitle: serviceTitle,
                   sellerId: sellerId,
                   serviceUid: serviceUid,

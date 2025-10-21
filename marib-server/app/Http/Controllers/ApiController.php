@@ -3196,22 +3196,25 @@ class ApiController extends Controller {
             $sessionId = $this->resolveSliderSessionId($request);
 
 
-            $selected = $sliderEligibilityService->selectSlider($rows, $userId, $sessionId, $now);
+            $eligibleSliders = $sliderEligibilityService->eligibleSliders($rows, $userId, $sessionId, $now);
+            if ($eligibleSliders->isEmpty()) {
 
-            if (! $selected) {
                 ResponseService::successResponse(null, $sliderEligibilityService->fallbackPayload($normalizedInterfaceType ?? 'all'));
 
                 return;
             }
 
-            $sliderEligibilityService->recordImpression($selected, $userId, $sessionId, $now);
+            $sliderEligibilityService->recordImpressions($eligibleSliders, $userId, $sessionId, $now);
 
-            $selected->loadMissing(['model', 'target']);
+            $eligibleSliders->each(fn (Slider $slider) => $slider->loadMissing(['model', 'target']));
 
             $payload = SliderResource::make($selected)->resolve();
 
-            ResponseService::successResponse(null, $payload);
+            $resolved = SliderResource::collection($eligibleSliders)->resolve();
 
+            $payload = count($resolved) === 1
+                ? $resolved[0]
+                : $resolved;
 
 
         } catch (Throwable $th) {

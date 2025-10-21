@@ -26,23 +26,34 @@ class SliderEligibilityService
 
     }
 
+    public function eligibleSliders(Collection $sliders, ?int $userId, ?string $sessionId, ?Carbon $moment = null): Collection
+    {
+        $moment ??= Carbon::now();
+
+        return $sliders
+            ->filter(function (Slider $slider) use ($moment, $userId, $sessionId) {
+                if (! $slider->isEligible($moment)) {
+                    return false;
+                }
+
+                return ! $this->hasReachedFrequencyCap($slider, $userId, $sessionId, $moment);
+            })
+            ->sortByDesc(fn (Slider $slider) => $slider->priority)
+            ->values();
+    }
+
     public function selectSlider(Collection $sliders, ?int $userId, ?string $sessionId, ?Carbon $moment = null): ?Slider
     {
         $moment ??= Carbon::now();
 
-        $eligible = $sliders->filter(function (Slider $slider) use ($moment, $userId, $sessionId) {
-            if (! $slider->isEligible($moment)) {
-                return false;
-            }
+        $eligible = $this->eligibleSliders($sliders, $userId, $sessionId, $moment);
 
-            return ! $this->hasReachedFrequencyCap($slider, $userId, $sessionId, $moment);
-        });
+
 
         if ($eligible->isEmpty()) {
             return null;
         }
 
-        $eligible = $eligible->sortByDesc(fn (Slider $slider) => $slider->priority)->values();
 
         $weights = $eligible->mapWithKeys(function (Slider $slider) {
             $weight = $slider->share_of_voice > 0
@@ -71,6 +82,18 @@ class SliderEligibilityService
 
         return $eligible->first();
     }
+
+    public function recordImpressions(iterable $sliders, ?int $userId, ?string $sessionId, ?Carbon $moment = null): void
+    {
+        $moment ??= Carbon::now();
+
+        foreach ($sliders as $slider) {
+            if ($slider instanceof Slider) {
+                $this->recordImpression($slider, $userId, $sessionId, $moment);
+            }
+        }
+    }
+
 
     public function recordImpression(Slider $slider, ?int $userId, ?string $sessionId, ?Carbon $moment = null): void
     {

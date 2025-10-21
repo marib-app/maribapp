@@ -150,8 +150,7 @@ class _SliderWidgetState extends State<SliderWidget> {
     Widget wrapped = child;
 
     final EdgeInsetsGeometry padding = widget.padding;
-    if (padding != EdgeInsets.zero &&
-        padding != EdgeInsetsDirectional.zero) {
+    if (padding != EdgeInsets.zero && padding != EdgeInsetsDirectional.zero) {
       wrapped = Padding(
         padding: padding,
         child: wrapped,

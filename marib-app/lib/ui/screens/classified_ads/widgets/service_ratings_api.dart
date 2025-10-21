@@ -743,6 +743,21 @@ class ServiceRatingsApi {
       return null;
     }
 
+    bool? parseGuestFlag(dynamic value) {
+      if (value == null) return null;
+      if (value is bool) return value;
+      if (value is num) return value != 0;
+      final String normalized = value.toString().trim().toLowerCase();
+      if (normalized.isEmpty) return null;
+      if (const {'guest', 'visitor', 'anonymous'}.contains(normalized)) {
+        return true;
+      }
+      if (const {'user', 'member', 'authenticated'}.contains(normalized)) {
+        return false;
+      }
+      return null;
+    }
+
     bool? walk(dynamic node, int depth, Set<int> seen) {
       if (node == null || depth > 6) return null;
       final id = identityHashCode(node);
@@ -751,6 +766,17 @@ class ServiceRatingsApi {
       if (node is Map) {
         final direct = parseBool(node['can_review']);
         if (direct != null) return direct;
+
+        final dynamic guestFlag = node['is_guest'] ??
+            node['guest'] ??
+            node['guest_user'] ??
+            node['isGuest'];
+        final bool? isGuest = parseGuestFlag(guestFlag);
+        if (isGuest == true) return false;
+
+        final dynamic userType = node['user_type'] ?? node['userType'];
+        final bool? userTypeGuest = parseGuestFlag(userType);
+        if (userTypeGuest == true) return false;
 
         for (final key in [
           Api.data,
@@ -778,7 +804,7 @@ class ServiceRatingsApi {
       return null;
     }
 
-    return walk(resp, 0, <int>{}) ?? true;
+    return walk(resp, 0, <int>{}) ?? false;
   }
 }
 

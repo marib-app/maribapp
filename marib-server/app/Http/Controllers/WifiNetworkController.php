@@ -97,6 +97,8 @@ class WifiNetworkController extends Controller
         if ($supportsSlug) {
             
             $networkData['slug'] = $this->prepareSlug($validated['slug'] ?? null, $validated['name']);
+        } else {
+            unset($networkData['slug']);
         }
         
         $networkData['contacts'] = $this->normalizeContacts($contacts);

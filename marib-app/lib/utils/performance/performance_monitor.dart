@@ -17,10 +17,9 @@ class PerformanceMonitor {
 
   static const _frameBudget = Duration(microseconds: 16667);
   static const _startupRouteName = '__startup__';
-  static const bool _envCollectionEnabled = bool.fromEnvironment(
-    'MARIB_ENABLE_PERFORMANCE_MONITOR',
-    defaultValue: false,
-  );
+
+  bool get _envCollectionEnabled =>
+      AppSettings.allowPerformanceLoggingInRelease;
 
   bool get isEnvironmentCollectionEnabled => _envCollectionEnabled;
 
@@ -92,6 +91,9 @@ class PerformanceMonitor {
     }
     _collectionOverrideEnabled = enabled;
     AppSettings.setPerformanceLoggingOverride(enabled);
+    if (kReleaseMode) {
+      AppSettings.setReleasePerformanceLoggingOverride(enabled);
+    }
     if (enabled) {
       initialize();
     } else {

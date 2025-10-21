@@ -32,7 +32,7 @@ void initApp() async {
       performanceMonitor.isEnvironmentCollectionEnabled;
 
   final bool allowPerfLoggingInBuild =
-      !kReleaseMode || performanceMonitor.isEnvironmentCollectionEnabled;
+      !kReleaseMode || AppSettings.allowPerformanceLoggingInRelease;
 
   final bool attachPerformanceMonitor =
       perfLoggingRequested && allowPerfLoggingInBuild;

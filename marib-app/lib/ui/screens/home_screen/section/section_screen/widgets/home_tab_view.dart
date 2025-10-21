@@ -29,6 +29,7 @@ import 'package:marib/data/model/item_filter_model.dart'; // ← مهم
 import 'package:marib/utils/slider_interface_mapper.dart';
 import 'special_request_card.dart';
 import 'package:flutter/rendering.dart';
+import 'package:marib/ui/screens/sliders/slider_constants.dart';
 
 //==============================================================================
 ///                                   HomeTabView
@@ -389,12 +390,11 @@ class _HomeTabViewState extends State<HomeTabView> {
 
 
   double _adSliderImageHeight(BuildContext ctx) {
-    return 150;
-
+    return kSliderBannerHeight;
   }
 
   double _adSliderTotalHeight(BuildContext ctx) {
-    return 150 + _dotsReserveHeight(ctx);
+    return kSliderBannerHeight + _dotsReserveHeight(ctx);
   }
 
 // اختياري: لوج سريع للتأكد من الأرقام

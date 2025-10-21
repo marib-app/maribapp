@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'slider_component.dart';
 import 'slider_shimmer.dart';
 import 'package:marib/data/model/home_slider.dart';
+import 'slider_constants.dart';
 
 import 'package:marib/data/cubits/slider_cubit.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
@@ -213,29 +214,35 @@ class _SliderWidgetState extends State<SliderWidget> {
         children: [
           SizedBox(
             width: double.infinity,
-            height: 150,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: borderRadius,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
+        height: kSliderBannerHeight,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+        Container(
+        decoration: BoxDecoration(
+        borderRadius: borderRadius,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          color: Colors.grey.shade200,
                   ),
-                ],
-                color: Colors.grey.shade200,
-              ),
-              child: ClipRRect(
-                borderRadius: borderRadius,
-                child: LazyNetworkImage(
-                  imageUrl: imageUrl,
-                  fit: BoxFit.cover,
-                  placeholder: ShimmerBox(
+        child: ClipRRect(
+
                     borderRadius: borderRadius,
+          child: LazyNetworkImage(
+            imageUrl: imageUrl,
+            fit: BoxFit.cover,
+            placeholder: ShimmerBox(
+              borderRadius: borderRadius,
+            ),
+          ),
                   ),
                 ),
-              ),
+          ],
             ),
           ),
           const SizedBox(height: 8),

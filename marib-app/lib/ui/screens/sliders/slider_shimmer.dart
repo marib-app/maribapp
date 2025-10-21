@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
+import 'slider_constants.dart';
 
 class SliderShimmer extends StatelessWidget {
   const SliderShimmer({super.key});
@@ -19,7 +20,7 @@ class SliderShimmer extends StatelessWidget {
         children: [
           SizedBox(
             width: double.infinity,
-            height: 150,
+            height: kSliderBannerHeight,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Container(color: baseColor),

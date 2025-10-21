@@ -72,8 +72,8 @@ class SliderEligibilityService
             $random = (mt_rand() / mt_getrandmax()) * $total;
             $accumulator = 0.0;
 
-        foreach ($eligible as $slider) {
-            $accumulator += $weights[$slider->getKey()] ?? 0.0;
+            foreach ($eligible as $slider) {
+                $accumulator += $weights[$slider->getKey()] ?? 0.0;
 
                 if ($random <= $accumulator) {
                     $selected = $slider;
@@ -95,26 +95,13 @@ class SliderEligibilityService
     {
         $moment ??= Carbon::now();
 
-        $eligible = $this->eligibleSliders($sliders, $userId, $sessionId, $moment);
+        $eligible = $this->eligibleSliders($sliders, $userId, $sessionId, $moment)->values();
 
-        if ($eligible->isNotEmpty()) {
-            $this->recordImpressions($eligible, $userId, $sessionId, $moment);
+        foreach ($eligible as $slider) {
+            $this->recordImpression($slider, $userId, $sessionId, $moment);
         }
 
         return $eligible;
-    }
-
-
-
-    public function recordImpressions(iterable $sliders, ?int $userId, ?string $sessionId, ?Carbon $moment = null): void
-    {
-        $moment ??= Carbon::now();
-
-        foreach ($sliders as $slider) {
-            if ($slider instanceof Slider) {
-                $this->recordImpression($slider, $userId, $sessionId, $moment);
-            }
-        }
     }
 
 

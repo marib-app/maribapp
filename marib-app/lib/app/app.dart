@@ -26,23 +26,8 @@ void initApp() async {
   WidgetsFlutterBinding.ensureInitialized();
   final WidgetsBinding binding = WidgetsBinding.instance;
   final PerformanceMonitor performanceMonitor = PerformanceMonitor.instance;
-  final bool hasEnvironmentOverride =
-      performanceMonitor.hasEnvironmentOverride;
+  if (!kReleaseMode && AppSettings.isPerformanceLoggingEnabled) {
 
-  final bool debugPerfLoggingEnabled =
-      !kReleaseMode && AppSettings.isPerformanceLoggingEnabled;
-  final bool manualPerfLoggingEnabled = !kReleaseMode &&
-      performanceMonitor.isManualCollectionEnabled;
-  final bool releasePerfLoggingEnabled = kReleaseMode &&
-      (AppSettings.allowPerformanceLoggingInRelease ||
-          hasEnvironmentOverride);
-
-  final bool shouldAttachPerformanceMonitor =
-      debugPerfLoggingEnabled ||
-          manualPerfLoggingEnabled ||
-          releasePerfLoggingEnabled;
-
-  if (shouldAttachPerformanceMonitor) {
     performanceMonitor.initialize();
     if (performanceMonitor.isEnabled) {
       binding.addTimingsCallback(

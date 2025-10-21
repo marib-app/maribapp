@@ -77,12 +77,6 @@ class AppSettings {
 
   static bool _performanceLoggingOverride = false;
 
-  static const bool _enableReleasePerfLogging = bool.fromEnvironment(
-    'MARIB_ENABLE_PERFORMANCE_MONITOR',
-    defaultValue: false,
-  );
-
-  static bool _releasePerformanceLoggingOverride = false;
 
   /// Returns whether performance logging has been enabled explicitly.
   ///
@@ -99,21 +93,7 @@ class AppSettings {
     _performanceLoggingOverride = enabled;
   }
 
-  /// Returns whether release builds are explicitly allowed to gather metrics.
-  ///
-  /// This remains `false` by default to avoid unnecessary work on production
-  /// devices. Teams can opt in either at build time by passing
-  /// `--dart-define=MARIB_ENABLE_PERFORMANCE_MONITOR=true` or by toggling the
-  /// runtime override when running a diagnostic build.
-  static bool get allowPerformanceLoggingInRelease =>
-      _enableReleasePerfLogging || _releasePerformanceLoggingOverride;
 
-  /// Provides a runtime toggle for release builds so that testers can enable
-  /// the metrics collector on demand without permanently altering the default
-  /// production behaviour.
-  static void setReleasePerformanceLoggingOverride(bool enabled) {
-    _releasePerformanceLoggingOverride = enabled;
-  }
 
   static final String baseUrl =
       "${HelperUtils.checkHost(hostUrl)}api/"; //don't change this

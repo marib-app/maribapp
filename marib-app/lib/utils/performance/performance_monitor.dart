@@ -11,35 +11,12 @@ import 'package:path_provider/path_provider.dart';
 import 'frame_stats_accumulator.dart';
 
 class PerformanceMonitor {
-  PerformanceMonitor._()
-      : _collectionOverrideEnabled =
-      (!kReleaseMode && AppSettings.isPerformanceLoggingEnabled) ||
-          _environmentOverrideEnabled;
+  PerformanceMonitor._();
 
   static final PerformanceMonitor instance = PerformanceMonitor._();
 
   static const _frameBudget = Duration(microseconds: 16667);
   static const _startupRouteName = '__startup__';
-
-  static const bool _environmentOverrideEnabled = bool.fromEnvironment(
-    'MARIB_FORCE_PERFORMANCE_MONITOR',
-    defaultValue: false,
-  );
-
-  bool get _envCollectionEnabled =>
-      AppSettings.allowPerformanceLoggingInRelease;
-
-  bool get isEnvironmentCollectionEnabled =>
-      _envCollectionEnabled || _environmentOverrideEnabled;
-
-  bool get hasEnvironmentOverride => _environmentOverrideEnabled;
-
-  bool _collectionOverrideEnabled;
-
-  bool get isCollectionOverrideEnabled => _collectionOverrideEnabled;
-
-  bool get isManualCollectionEnabled =>
-      _collectionOverrideEnabled || _environmentOverrideEnabled;
 
   static const int _maxCompletedSessions = 10;
 
@@ -60,73 +37,15 @@ class PerformanceMonitor {
 
   bool get isEnabled => _enabled;
 
-  bool get shouldCollectMetrics {
-    if (_environmentOverrideEnabled) {
-      return true;
-    }
-
-    if (kReleaseMode) {
-      return _envCollectionEnabled;
-    }
-
-    if (_collectionOverrideEnabled) {
-      return true;
-    }
-
-
-    if (kDebugMode || kProfileMode) {
-      return AppSettings.isPerformanceLoggingEnabled;
-    }
-    return false;
-  }
-
-  bool get _isSchedulingAllowed {
-    if (_environmentOverrideEnabled) {
-      return true;
-    }
-    if (kReleaseMode) {
-      return _envCollectionEnabled;
-    }
-    if (_collectionOverrideEnabled) {
-      return true;
-    }
-    if (AppSettings.isPerformanceLoggingEnabled) {
-      return true;
-    }
-    return false;
-  }
-
-  void setManualCollectionEnabled(bool enabled) {
-    if (enabled &&
-        kReleaseMode &&
-        !_envCollectionEnabled &&
-        !_environmentOverrideEnabled) {
-      debugPrint(
-        'PerformanceMonitor: manual collection cannot be enabled in release builds.',
-      );
-      return;
-    }
-    if (_collectionOverrideEnabled == enabled) {
-      return;
-    }
-    _collectionOverrideEnabled = enabled;
-    AppSettings.setPerformanceLoggingOverride(enabled);
-    if (kReleaseMode) {
-      AppSettings.setReleasePerformanceLoggingOverride(enabled);
-    }
-    if (enabled) {
-      initialize();
-    } else {
-      _updateEnabledState(false);
-    }
-  }
+  bool get _shouldCollectMetrics =>
+      !kReleaseMode && AppSettings.isPerformanceLoggingEnabled;
 
   void initialize() {
-    final bool enable = shouldCollectMetrics;
-    _updateEnabledState(enable);
-    if (!enable || !_enabled) {
+    if (!_shouldCollectMetrics) {
+      _disable();
       return;
     }
+    _enabled = true;
     if (_initialized) {
       return;
     }
@@ -142,22 +61,49 @@ class PerformanceMonitor {
     );
   }
 
-  void handleFrameTimings(List<FrameTiming> timings) {
-    if (!shouldCollectMetrics || !_enabled) {
-      _updateEnabledState(false);
+  void disable() {
+    _disable();
+  }
+
+  void _disable() {
+    if (!_enabled && !_initialized) {
       return;
     }
-    _updateEnabledState(true);
+    _enabled = false;
+    _initialized = false;
+    _pendingWrite?.cancel();
+    _pendingWrite = null;
+    _currentSession = null;
+    _completedSessions.clear();
+    _monotonicClock?.stop();
+    _monotonicClock = null;
+    _engineTimestampOffsetUs = null;
+    _appStartUs = null;
+    _firstFrameUs = null;
+    _firstMeaningfulPaintUs = null;
+    _currentRouteName = null;
+  }
+
+  bool _ensureReady() {
+    if (!_enabled) {
+      return false;
+    }
+
     if (!_initialized) {
       initialize();
     }
-    if (_currentSession == null) {
-      _currentSession = _RoutePerformanceSession(
-        routeName: _currentRouteName ?? _startupRouteName,
-        startedAtUs: _elapsedUs(),
-        wallClockStartedAt: DateTime.now(),
-      );
+    return _enabled && _initialized;
+  }
+
+  void handleFrameTimings(List<FrameTiming> timings) {
+    if (!_ensureReady()) {
+      return;
     }
+    _currentSession ??= _RoutePerformanceSession(
+      routeName: _currentRouteName ?? _startupRouteName,
+      startedAtUs: _elapsedUs(),
+      wallClockStartedAt: DateTime.now(),
+    );
 
     for (final FrameTiming timing in timings) {
       final int buildStartEngineUs =
@@ -182,31 +128,27 @@ class PerformanceMonitor {
   }
 
   void onRoutePushed(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    if (!shouldCollectMetrics || !_enabled) {
-      _updateEnabledState(false);
+    if (!_ensureReady()) {
       return;
     }
-    _updateEnabledState(true);
     _switchRoute(route.settings.name ?? route.runtimeType.toString());
   }
 
   void onRouteReplaced(Route<dynamic>? newRoute, Route<dynamic>? oldRoute) {
-    if (!shouldCollectMetrics || !_enabled) {
-      _updateEnabledState(false);
+    if (!_ensureReady()) {
       return;
     }
-    _updateEnabledState(true);
+
     if (newRoute != null) {
       _switchRoute(newRoute.settings.name ?? newRoute.runtimeType.toString());
     }
   }
 
   void onRoutePopped(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    if (!shouldCollectMetrics || !_enabled) {
-      _updateEnabledState(false);
+    if (!_ensureReady()) {
       return;
     }
-    _updateEnabledState(true);
+
     if (previousRoute != null) {
       _switchRoute(
           previousRoute.settings.name ?? previousRoute.runtimeType.toString());
@@ -217,11 +159,10 @@ class PerformanceMonitor {
   }
 
   Future<void> saveReport() async {
-    if (!shouldCollectMetrics || !_enabled) {
-      _updateEnabledState(false);
+    if (!_ensureReady()) {
       return;
     }
-    _updateEnabledState(true);
+
     final file = await _resolveLogFile();
     final List<_RoutePerformanceSnapshot> sessions = _buildSessionsForReport();
 
@@ -328,45 +269,16 @@ class PerformanceMonitor {
         0, _completedSessions.length - _maxCompletedSessions);
   }
 
-  Duration get _reportWriteInterval {
-    if (_envCollectionEnabled && kReleaseMode) {
-      return const Duration(seconds: 10);
-    }
-    if (!kReleaseMode && AppSettings.isPerformanceLoggingEnabled) {
-      return const Duration(seconds: 5);
-    }
-    return const Duration(seconds: 1);
-  }
-
-  void _updateEnabledState(bool enabled) {
-    if (_enabled == enabled) {
-      if (!enabled) {
-        _pendingWrite?.cancel();
-        _pendingWrite = null;
-      }
-      return;
-    }
-    _enabled = enabled;
-    if (!enabled) {
-      _pendingWrite?.cancel();
-      _pendingWrite = null;
-    }
-  }
+  Duration get _reportWriteInterval => const Duration(seconds: 5);
 
   void _scheduleReportWrite() {
-    if (!_enabled || !shouldCollectMetrics || !_isSchedulingAllowed) {
+    if (!_enabled) {
       _pendingWrite?.cancel();
       _pendingWrite = null;
       return;
     }
     _pendingWrite ??= Timer(_reportWriteInterval, () {
-      if (!_enabled || !shouldCollectMetrics || !_isSchedulingAllowed) {
-        if (!_enabled) {
-          _pendingWrite = null;
-          return;
-        }
-        _updateEnabledState(false);
-
+      if (!_enabled) {
         _pendingWrite = null;
         return;
       }

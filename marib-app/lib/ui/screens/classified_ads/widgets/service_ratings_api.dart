@@ -12,7 +12,6 @@ class ServiceRatingsResult {
   final int totalReviews;
   final int serviceId;
 
-
   ServiceRatingsResult({
     required this.list,
     required this.hasMore,
@@ -21,11 +20,12 @@ class ServiceRatingsResult {
     required this.averageRating,
     required this.totalReviews,
     required this.serviceId,
-
   });
 }
 
 class ServiceRatingsApi {
+  static final Map<String, _FallbackPageTracker> _fallbackTrackers = {};
+
   /// جلب التعليقات/التقييمات لخدمة معيّنة
   static Future<ServiceRatingsResult> fetchRatings({
     int? serviceId,
@@ -33,7 +33,6 @@ class ServiceRatingsApi {
     int perPage = 20,
     String? sort, // "newest" | "highest" | "lowest" ...الخ (اختياري)
     String? serviceUid,
-
   }) async {
     final String? uid = _normalizeUid(serviceUid);
 
@@ -47,14 +46,11 @@ class ServiceRatingsApi {
     final Map<String, dynamic> resp = await Api.get(
       url: Api.serviceReviewsApi,
       queryParameters: {
-
         Api.page: page,
-
         'per_page': perPage,
         'service_id': resolvedServiceId,
         if (uid != null) 'service_uid': uid,
         if (uid != null) 'uid': uid,
-
         if (sort != null) 'sort': sort,
       },
     );
@@ -63,21 +59,37 @@ class ServiceRatingsApi {
       // اطبع مفتاحًا واحدًا صغيرًا للتشخيص فقط
       // (بدون إغراق اللوج)
       // ignore: avoid_print
-      print('[ratings] got response keys: ${resp.keys.take(6).toList()} for serviceId=$resolvedServiceId');
+      print(
+          '[ratings] got response keys: ${resp.keys.take(6).toList()} for serviceId=$resolvedServiceId');
     }
 
     final rows = _extractReviewRows(resp);
     final list = rows.map(_toUserRatings).whereType<UserRatings>().toList();
 
+    final String trackerKey = _paginationTrackerKey(
+      serviceId: resolvedServiceId,
+      uid: uid,
+      sort: sort,
+      perPage: perPage,
+    );
+    if (page <= 1) {
+      _fallbackTrackers.remove(trackerKey);
+    }
+
     // استنتاج الترقيم من الاستجابة إن وُجد
     final pg = _extractPagination(resp,
-        fallbackPage: page, perPage: perPage, currentCount: list.length);
+        fallbackPage: page,
+        perPage: perPage,
+        currentCount: list.length,
+        rawRows: rows,
+        trackerKey: trackerKey);
 
     double totalRatings = 0;
     for (final rating in list) {
       totalRatings += (rating.ratings ?? 0).toDouble();
     }
-    final double fallbackAverage = list.isEmpty ? 0.0 : totalRatings / list.length;
+    final double fallbackAverage =
+        list.isEmpty ? 0.0 : totalRatings / list.length;
     final double averageRating = _extractAverageRating(resp) ?? fallbackAverage;
 
     final int fallbackTotal = ((page - 1) * perPage) + list.length;
@@ -97,7 +109,6 @@ class ServiceRatingsApi {
       averageRating: averageRating,
       totalReviews: totalReviews,
       serviceId: extractedServiceId,
-
     );
   }
 
@@ -107,7 +118,6 @@ class ServiceRatingsApi {
     required int stars, // 1..5
     String? comment,
     String? serviceUid,
-
   }) async {
     final text = (comment ?? '').trim();
     final String? uid = _normalizeUid(serviceUid);
@@ -125,16 +135,16 @@ class ServiceRatingsApi {
       if (uid != null) 'uid': uid,
     };
 
-    final resp = await Api.post(url: Api.addServiceReviewApi, parameter: payload);
+    final resp =
+        await Api.post(url: Api.addServiceReviewApi, parameter: payload);
 
     final messageValue = resp['message'];
     final messageString =
-    messageValue is String ? messageValue.trim().toLowerCase() : null;
+        messageValue is String ? messageValue.trim().toLowerCase() : null;
 
     final ok = (resp['success'] == true) ||
         (resp['status'] == 'ok') ||
         (resp['status'] == true) ||
-
         (resp['code'] == 200) ||
         (resp['error'] == false) ||
         (messageString == 'success');
@@ -144,9 +154,10 @@ class ServiceRatingsApi {
     }
 
     if (!ok) {
-      final dynamic rawMessage = resp['message'] ?? resp['msg'] ?? resp['error'];
+      final dynamic rawMessage =
+          resp['message'] ?? resp['msg'] ?? resp['error'];
       final String? serverMessage =
-      rawMessage is String ? rawMessage.trim() : rawMessage?.toString();
+          rawMessage is String ? rawMessage.trim() : rawMessage?.toString();
 
       throw ApiException(
         (serverMessage != null && serverMessage.isNotEmpty)
@@ -189,7 +200,6 @@ class ServiceRatingsApi {
     required int serviceId,
     String? reasonText,
     String? serviceUid,
-
   }) async {
     final String? uid = _normalizeUid(serviceUid);
     final String text = (reasonText ?? '').trim();
@@ -209,7 +219,8 @@ class ServiceRatingsApi {
       if (uid != null) 'uid': uid,
     };
 
-    final resp = await Api.post(url: Api.addServiceReviewReportApi, parameter: payload);
+    final resp =
+        await Api.post(url: Api.addServiceReviewReportApi, parameter: payload);
 
     final ok = (resp['success'] == true) ||
         (resp['status'] == 'ok') ||
@@ -227,7 +238,6 @@ class ServiceRatingsApi {
   // --------------------------------------------------------------------------
   // Helpers
   // --------------------------------------------------------------------------
-
 
   static Future<int> _ensureServiceId({
     int? serviceId,
@@ -291,10 +301,66 @@ class ServiceRatingsApi {
     return null;
   }
 
+  static String _paginationTrackerKey({
+    required int serviceId,
+    String? uid,
+    String? sort,
+    required int perPage,
+  }) {
+    final buffer = StringBuffer('srv:$serviceId|pp:$perPage');
+    if (uid != null && uid.trim().isNotEmpty) {
+      buffer.write('|uid:${uid.trim()}');
+    }
+    if (sort != null && sort.trim().isNotEmpty) {
+      buffer.write('|sort:${sort.trim()}');
+    }
+    return buffer.toString();
+  }
+
+  static String _rowsSignature(List<Map<String, dynamic>> rows) {
+    if (rows.isEmpty) return 'empty';
+    final keys = <String>[];
+    for (final row in rows) {
+      final dynamic id = row['id'] ??
+          row['review_id'] ??
+          row['rating_id'] ??
+          row['ratingId'] ??
+          row['comment_id'] ??
+          row['uid'] ??
+          row['uuid'] ??
+          row['user_id'];
+      if (id != null) {
+        keys.add('id:$id');
+        continue;
+      }
+      final reviewText = (row['review'] ??
+              row['comment'] ??
+              row['message'] ??
+              row['description'] ??
+              row['body'] ??
+              row['text'] ??
+              '')
+          .toString()
+          .trim();
+      final created = (row['created_at'] ??
+              row['created'] ??
+              row['date'] ??
+              row['updated_at'] ??
+              row['timestamp'] ??
+              '')
+          .toString()
+          .trim();
+      keys.add(
+          'c:${reviewText.isEmpty ? reviewText : reviewText.hashCode}|t:${created.isEmpty ? created : created.hashCode}');
+    }
+    keys.sort();
+    return keys.join('||');
+  }
+
   static int? _extractServiceIdFromAny(
-      dynamic source, {
-        String? matchUid,
-      }) {
+    dynamic source, {
+    String? matchUid,
+  }) {
     if (source == null) return null;
 
     if (source is Map) {
@@ -320,8 +386,7 @@ class ServiceRatingsApi {
       }
 
       for (final value in map.values) {
-        final int? nested =
-        _extractServiceIdFromAny(value, matchUid: matchUid);
+        final int? nested = _extractServiceIdFromAny(value, matchUid: matchUid);
         if (nested != null) {
           return nested;
         }
@@ -332,8 +397,7 @@ class ServiceRatingsApi {
 
     if (source is Iterable) {
       for (final dynamic value in source) {
-        final int? nested =
-        _extractServiceIdFromAny(value, matchUid: matchUid);
+        final int? nested = _extractServiceIdFromAny(value, matchUid: matchUid);
         if (nested != null) {
           return nested;
         }
@@ -343,16 +407,13 @@ class ServiceRatingsApi {
     return null;
   }
 
-
   /// يحاول استخراج مصفوفة التعليقات/التقييمات من أنماط شائعة
-  static List<Map<String, dynamic>> _extractReviewRows(Map<String, dynamic> resp) {
+  static List<Map<String, dynamic>> _extractReviewRows(
+      Map<String, dynamic> resp) {
     dynamic root = resp;
 
     // شائع: { data: {...} } أو { item: {...} }
     root = root[Api.data] ?? root['data'] ?? root;
-
-
-
 
     // في حال كان الجذر يحوي مباشرة على قائمة داخل data
     if (root is Map) {
@@ -364,10 +425,6 @@ class ServiceRatingsApi {
             .toList();
       }
     }
-
-
-
-
 
     root = root[Api.item] ?? root['item'] ?? root['service'] ?? root;
 
@@ -390,13 +447,19 @@ class ServiceRatingsApi {
             .toList();
       }
       if (v is List) {
-        return v.whereType<Map>().map((e) => e.cast<String, dynamic>()).toList();
+        return v
+            .whereType<Map>()
+            .map((e) => e.cast<String, dynamic>())
+            .toList();
       }
     }
 
     // أحيانًا تكون المصفوفة مباشرة
     if (root is List) {
-      return root.whereType<Map>().map((e) => e.cast<String, dynamic>()).toList();
+      return root
+          .whereType<Map>()
+          .map((e) => e.cast<String, dynamic>())
+          .toList();
     }
 
     // لا شيء
@@ -413,8 +476,18 @@ class ServiceRatingsApi {
     try {
       // وفّر مفاتيح افتراضية لكي يقرأها موديل UserRatings بسلاسة
       final rating = m['ratings'] ?? m['rating'] ?? m['stars'] ?? 0;
-      final review = (m['review'] ?? m['comment'] ?? m['message'] ?? m['description'] ?? '').toString();
-      final created = (m['created_at'] ?? m['created'] ?? m['date'] ?? m['updated_at'] ?? '').toString();
+      final review = (m['review'] ??
+              m['comment'] ??
+              m['message'] ??
+              m['description'] ??
+              '')
+          .toString();
+      final created = (m['created_at'] ??
+              m['created'] ??
+              m['date'] ??
+              m['updated_at'] ??
+              '')
+          .toString();
 
       final mm = Map<String, dynamic>.from(m);
       mm.putIfAbsent('ratings', () => rating);
@@ -429,14 +502,15 @@ class ServiceRatingsApi {
 
   /// إستنتاج معلومات الترقيم من أنماط شائعة أو من طول النتائج
   static _Pager _extractPagination(
-      Map<String, dynamic> resp, {
-        required int fallbackPage,
-        required int perPage,
-        required int currentCount,
-      }) {
+    Map<String, dynamic> resp, {
+    required int fallbackPage,
+    required int perPage,
+    required int currentCount,
+    required List<Map<String, dynamic>> rawRows,
+    required String trackerKey,
+  }) {
     // 1) Laravel pagination شائع:
     // meta: { current_page, last_page, next_page_url, per_page }
-
 
     dynamic meta = resp['meta'];
     if (meta == null) {
@@ -445,7 +519,6 @@ class ServiceRatingsApi {
         meta = root['meta'] ?? root['pagination'];
       }
     }
-
 
     if (meta is Map) {
       final int current = (meta['current_page'] is int)
@@ -463,7 +536,9 @@ class ServiceRatingsApi {
             ? pagination['last_page'] as int
             : int.tryParse('${pagination['last_page'] ?? ''}') ?? current2;
 
-        final bool hasMore = current2 < last || (pagination['next_page_url'] ?? pagination['next'] ?? '') != null;
+        final bool hasMore = current2 < last ||
+            (pagination['next_page_url'] ?? pagination['next'] ?? '') != null;
+        _fallbackTrackers.remove(trackerKey);
         return _Pager(hasMore: hasMore, nextPage: current2 + 1);
       }
 
@@ -471,24 +546,56 @@ class ServiceRatingsApi {
           ? meta['last_page'] as int
           : int.tryParse('${meta['last_page'] ?? ''}') ?? fallbackPage;
 
-      final bool hasMore = current < last || (meta['next_page_url'] ?? meta['next'] ?? '') != null;
+      final bool hasMore = current < last ||
+          (meta['next_page_url'] ?? meta['next'] ?? '') != null;
+      _fallbackTrackers.remove(trackerKey);
       return _Pager(hasMore: hasMore, nextPage: current + 1);
     }
 
     // 2) reviews: { data: [...], current_page, last_page }
     final reviews = (resp['data'] ?? resp['item'] ?? resp)['reviews'];
     if (reviews is Map) {
-      final int current = int.tryParse('${reviews['current_page'] ?? ''}') ?? fallbackPage;
+      final int current =
+          int.tryParse('${reviews['current_page'] ?? ''}') ?? fallbackPage;
       final int last = int.tryParse('${reviews['last_page'] ?? ''}') ?? current;
-      final bool hasMore = current < last || (reviews['next_page_url'] ?? reviews['next'] ?? '') != null;
+      final bool hasMore = current < last ||
+          (reviews['next_page_url'] ?? reviews['next'] ?? '') != null;
+      _fallbackTrackers.remove(trackerKey);
       return _Pager(hasMore: hasMore, nextPage: current + 1);
     }
 
     // 3) fallback: استنتج من طول النتائج
-    final hasMore = currentCount >= perPage;
-    return _Pager(hasMore: hasMore, nextPage: fallbackPage + 1);
-  }
+    final tracker =
+        _fallbackTrackers.putIfAbsent(trackerKey, () => _FallbackPageTracker());
+    final String signature = _rowsSignature(rawRows);
+    final String? previousSignature = tracker.lastSignature;
+    final int? previousCount = tracker.lastCount;
+    bool hasMore = currentCount >= perPage;
 
+    if (currentCount == 0) {
+      hasMore = false;
+    }
+
+    if (previousSignature != null &&
+        previousSignature == signature &&
+        (previousCount == null || previousCount == currentCount)) {
+      hasMore = false;
+    }
+
+    tracker
+      ..lastSignature = signature
+      ..lastCount = currentCount
+      ..lastPage = fallbackPage;
+
+    if (!hasMore) {
+      _fallbackTrackers.remove(trackerKey);
+    }
+
+    return _Pager(
+      hasMore: hasMore,
+      nextPage: hasMore ? fallbackPage + 1 : fallbackPage,
+    );
+  }
 
   static double? _extractAverageRating(Map<String, dynamic> resp) {
     double? parse(dynamic value) {
@@ -595,7 +702,6 @@ class ServiceRatingsApi {
     return walk(resp, 0, <int>{});
   }
 
-
   static bool _extractCanReview(Map<String, dynamic> resp) {
     bool? parseBool(dynamic value) {
       if (value is bool) return value;
@@ -646,7 +752,7 @@ class ServiceRatingsApi {
         final direct = parseBool(node['can_review']);
         if (direct != null) return direct;
 
-        for (final key in  [
+        for (final key in [
           Api.data,
           'data',
           'meta',
@@ -674,14 +780,17 @@ class ServiceRatingsApi {
 
     return walk(resp, 0, <int>{}) ?? true;
   }
-
-
-
-
 }
 
 class _Pager {
   final bool hasMore;
   final int nextPage;
+
   _Pager({required this.hasMore, required this.nextPage});
+}
+
+class _FallbackPageTracker {
+  String? lastSignature;
+  int? lastCount;
+  int? lastPage;
 }

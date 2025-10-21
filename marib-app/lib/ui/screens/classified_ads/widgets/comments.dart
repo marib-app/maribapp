@@ -5,7 +5,6 @@ import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/data/model/seller_ratings_model.dart' show UserRatings;
 import 'service_ratings_api.dart';
 
-
 class ItemCommentsList extends StatefulWidget {
   final int? serviceId;
   final EdgeInsetsGeometry? padding;
@@ -19,8 +18,6 @@ class ItemCommentsList extends StatefulWidget {
     this.onCanReviewChanged,
     this.onServiceIdResolved,
     this.serviceUid,
-
-
     this.padding = const EdgeInsets.symmetric(horizontal: 16),
   });
 
@@ -38,12 +35,16 @@ class ItemCommentsListState extends State<ItemCommentsList> {
   int _page = 1;
   String? _sort; // 'default' | 'recent' | 'top' (اختياري)
   int? _serviceId;
+  bool _paginationEnded = false;
+  bool _endOfListNotified = false;
 
   @override
   void initState() {
     super.initState();
     // تهيئة timeago بالعربية (بهدوء لو كانت مسجلة مسبقًا)
-    try { timeago.setLocaleMessages('ar', timeago.ArMessages()); } catch (_) {}
+    try {
+      timeago.setLocaleMessages('ar', timeago.ArMessages());
+    } catch (_) {}
     _serviceId = widget.serviceId;
     _loadFirst();
     _scroll.addListener(_onScroll);
@@ -55,15 +56,15 @@ class ItemCommentsListState extends State<ItemCommentsList> {
     super.dispose();
   }
 
-
   @override
   void didUpdateWidget(covariant ItemCommentsList oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.serviceId != null && widget.serviceId != oldWidget.serviceId && widget.serviceId != _serviceId) {
+    if (widget.serviceId != null &&
+        widget.serviceId != oldWidget.serviceId &&
+        widget.serviceId != _serviceId) {
       _serviceId = widget.serviceId;
     }
   }
-
 
   /// تُستدعى من الخارج لتحديث القائمة
   Future<void> reload({String? sort}) async {
@@ -77,6 +78,8 @@ class ItemCommentsListState extends State<ItemCommentsList> {
       _items.clear();
       _page = 1;
       _hasMore = true;
+      _paginationEnded = false;
+      _endOfListNotified = false;
     });
     try {
       final res = await ServiceRatingsApi.fetchRatings(
@@ -85,15 +88,17 @@ class ItemCommentsListState extends State<ItemCommentsList> {
         perPage: 20,
         sort: _sort,
         serviceUid: widget.serviceUid,
-
       );
       _items.addAll(res.list);
       _hasMore = res.hasMore;
+      _paginationEnded = !_hasMore && _items.isNotEmpty;
       _page = res.nextPage;
       widget.onCanReviewChanged?.call(res.canReview);
       _serviceId = res.serviceId;
       widget.onServiceIdResolved?.call(_serviceId);
-
+      if (_paginationEnded) {
+        _notifyPaginationEndOnce();
+      }
     } catch (_) {
       // بإمكانك عرض SnackBar هنا لو حبيت
     } finally {
@@ -111,15 +116,33 @@ class ItemCommentsListState extends State<ItemCommentsList> {
         perPage: 20,
         sort: _sort,
         serviceUid: widget.serviceUid,
-
       );
-      _items.addAll(res.list);
-      _hasMore = res.hasMore;
+      final existingKeys = _items.map(_ratingKey).toSet();
+      final List<UserRatings> unique = [];
+      for (final rating in res.list) {
+        final key = _ratingKey(rating);
+        if (existingKeys.add(key)) {
+          unique.add(rating);
+        }
+      }
+
+      if (unique.isNotEmpty) {
+        _items.addAll(unique);
+      }
+
+      final bool duplicateResponse = res.list.isNotEmpty && unique.isEmpty;
+      final bool emptyResponse = res.list.isEmpty;
+      _hasMore = res.hasMore && !duplicateResponse && !emptyResponse;
+      _paginationEnded = (!_hasMore || duplicateResponse || emptyResponse) &&
+          _items.isNotEmpty;
+
       _page = res.nextPage;
       widget.onCanReviewChanged?.call(res.canReview);
       _serviceId = res.serviceId;
       widget.onServiceIdResolved?.call(_serviceId);
-
+      if (_paginationEnded) {
+        _notifyPaginationEndOnce();
+      }
     } catch (_) {
       // تجاهل هادئ
     } finally {
@@ -135,11 +158,55 @@ class ItemCommentsListState extends State<ItemCommentsList> {
     }
   }
 
+  void _notifyPaginationEndOnce() {
+    if (_endOfListNotified || !mounted || _items.isEmpty) {
+      return;
+    }
+    _endOfListNotified = true;
+    Future.microtask(() {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم عرض جميع التعليقات.')),
+      );
+    });
+  }
+
+  String _ratingKey(UserRatings rating) {
+    final int? id = rating.id;
+    if (id != null && id > 0) {
+      return 'id:$id';
+    }
+    final String created =
+        (rating.createdAt ?? rating.updatedAt ?? '').toString().trim();
+    final String reviewText = (rating.review ?? '').toString().trim();
+    final int? buyer = rating.buyerId;
+    final double? stars = rating.ratings;
+    return 'meta:${buyer ?? 0}|t:$created|r:$reviewText|s:${stars ?? 0}';
+  }
+
+  Widget _buildEndOfListMessage(BuildContext context) {
+    final theme = Theme.of(context);
+    final Color textColor =
+        theme.textTheme.bodySmall?.color?.withOpacity(0.7) ?? theme.hintColor;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Center(
+        child: Text(
+          'تم عرض جميع التعليقات.',
+          style: TextStyle(color: textColor, fontSize: 12),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
       return const Center(
-        child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)),
+        child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2)),
       );
     }
 
@@ -152,16 +219,26 @@ class ItemCommentsListState extends State<ItemCommentsList> {
       child: ListView.separated(
         controller: _scroll,
         padding: widget.padding ?? EdgeInsets.zero,
-        itemCount: _items.length + (_loadingMore ? 1 : 0),
+        itemCount: _items.length +
+            (_loadingMore ? 1 : 0) +
+            (_paginationEnded && _items.isNotEmpty ? 1 : 0),
         separatorBuilder: (_, __) => const SizedBox(height: 10),
         itemBuilder: (ctx, i) {
-          if (i >= _items.length) {
+          final int loaderIndex = _items.length;
+          final int footerIndex = loaderIndex + (_loadingMore ? 1 : 0);
+          if (_loadingMore && i >= loaderIndex && i < footerIndex) {
             return const Padding(
               padding: EdgeInsets.symmetric(vertical: 14),
               child: Center(
-                child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+                child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2)),
               ),
             );
+          }
+          if (_paginationEnded && _items.isNotEmpty && i >= footerIndex) {
+            return _buildEndOfListMessage(context);
           }
           final r = _items[i];
           return _CommentTile(rating: r);
@@ -173,12 +250,13 @@ class ItemCommentsListState extends State<ItemCommentsList> {
 
 class _CommentTile extends StatelessWidget {
   final UserRatings rating;
+
   const _CommentTile({required this.rating});
 
   @override
   Widget build(BuildContext context) {
     final card = Theme.of(context).cardColor;
-    final txt  = context.color.textColorDark;
+    final txt = context.color.textColorDark;
 
     final double stars = (rating.ratings ?? 0).toDouble();
     final String reviewText = (rating.review ?? '').toString().trim();
@@ -188,7 +266,12 @@ class _CommentTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: card,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2))
+        ],
       ),
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -200,7 +283,9 @@ class _CommentTile extends StatelessWidget {
               _StarsRow(value: stars),
               const Spacer(),
               if (timeText.isNotEmpty)
-                Text(timeText, style: TextStyle(fontSize: 12, color: txt.withOpacity(0.65))),
+                Text(timeText,
+                    style:
+                        TextStyle(fontSize: 12, color: txt.withOpacity(0.65))),
             ],
           ),
           const SizedBox(height: 8),
@@ -219,7 +304,9 @@ class _CommentTile extends StatelessWidget {
     final raw = (r.createdAt ?? '').toString();
     if (raw.isEmpty) return '';
     DateTime? dt;
-    try { dt = DateTime.tryParse(raw); } catch (_) {}
+    try {
+      dt = DateTime.tryParse(raw);
+    } catch (_) {}
     if (dt == null) return '';
     return timeago.format(dt, locale: 'ar');
   }
@@ -227,6 +314,7 @@ class _CommentTile extends StatelessWidget {
 
 class _StarsRow extends StatelessWidget {
   final double value;
+
   const _StarsRow({required this.value});
 
   @override

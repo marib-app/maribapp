@@ -19,6 +19,7 @@ class SliderWidget extends StatefulWidget {
   final VoidCallback? onLoaded;
   final VoidCallback? onError;
   final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry margin;
 
   const SliderWidget({
     super.key,
@@ -26,6 +27,7 @@ class SliderWidget extends StatefulWidget {
     this.onLoaded,
     this.onError,
     this.padding = kSliderHorizontalPadding,
+    this.margin = kSliderBottomMargin,
   });
 
   @override
@@ -124,6 +126,7 @@ class _SliderWidgetState extends State<SliderWidget> {
             interfaceType: widget.interfaceType,
             sliderList: state.sliderlist,
             padding: widget.padding,
+            margin: widget.margin,
           );
         }
         if (state is SliderFetchFailure) {
@@ -144,13 +147,25 @@ class _SliderWidgetState extends State<SliderWidget> {
   }
 
   Widget _wrapWithPadding(Widget child) {
-    if (widget.padding == EdgeInsets.zero ||
-        widget.padding == EdgeInsetsDirectional.zero) {
-      return child;
+    Widget wrapped = child;
+
+    final EdgeInsetsGeometry padding = widget.padding;
+    if (padding != EdgeInsets.zero &&
+        padding != EdgeInsetsDirectional.zero) {
+      wrapped = Padding(
+        padding: padding,
+        child: wrapped,
+      );
     }
-    return Padding(
-      padding: widget.padding,
-      child: child,
+
+    final EdgeInsetsGeometry margin = widget.margin;
+    if (margin == EdgeInsets.zero || margin == EdgeInsetsDirectional.zero) {
+      return wrapped;
+    }
+
+    return Container(
+      margin: margin,
+      child: wrapped,
     );
   }
 
@@ -196,6 +211,7 @@ class _SliderWidgetState extends State<SliderWidget> {
         interfaceType: widget.interfaceType,
         sliderList: _cachedSliderList!,
         padding: widget.padding,
+        margin: widget.margin,
       );
     }
     if (_cachedFallbackImage != null && _cachedFallbackImage!.isNotEmpty) {

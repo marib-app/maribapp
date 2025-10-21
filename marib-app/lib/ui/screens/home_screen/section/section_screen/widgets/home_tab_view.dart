@@ -479,6 +479,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                                         ),
                                         interfaceType: sliderInterfaceType,
                                         padding: EdgeInsets.zero,
+                                        margin: EdgeInsets.zero,
                                       ),
                                     ),
                                   ),

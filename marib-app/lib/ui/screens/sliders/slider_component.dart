@@ -24,18 +24,22 @@ import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 
 const EdgeInsetsGeometry kSliderHorizontalPadding =
 EdgeInsets.symmetric(horizontal: 10);
+const EdgeInsetsGeometry kSliderBottomMargin = EdgeInsets.only(bottom: 12);
+
 
 
 class SliderComponent extends StatefulWidget {
   final String interfaceType;
   final List<HomeSlider> sliderList;
   final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry margin;
 
   const SliderComponent({
     super.key,
     required this.interfaceType,
     required this.sliderList,
     this.padding = kSliderHorizontalPadding,
+    this.margin = kSliderBottomMargin,
   });
 
   @override
@@ -728,13 +732,26 @@ class _SliderComponentState extends State<SliderComponent>
   }
 
   Widget _wrapWithPadding(Widget child) {
-    if (widget.padding == EdgeInsets.zero ||
-        widget.padding == EdgeInsetsDirectional.zero) {
-      return child;
+    Widget wrapped = child;
+
+    final EdgeInsetsGeometry padding = widget.padding;
+    if (padding != EdgeInsets.zero &&
+        padding != EdgeInsetsDirectional.zero) {
+      wrapped = Padding(
+        padding: padding,
+        child: wrapped,
+      );
     }
-    return Padding(
-      padding: widget.padding,
-      child: child,
+
+    final EdgeInsetsGeometry margin = widget.margin;
+    if (margin == EdgeInsets.zero || margin == EdgeInsetsDirectional.zero) {
+      return wrapped;
+
+    }
+
+    return Container(
+      margin: margin,
+      child: wrapped,
     );
   }
 }

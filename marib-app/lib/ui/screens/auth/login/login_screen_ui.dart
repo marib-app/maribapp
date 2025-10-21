@@ -381,8 +381,8 @@ class LoginHeaderSection extends StatelessWidget {
                     SliverPersistentHeader(
                       pinned: true,
                       delegate: _LoginStatusBarHeader(
-                        statusBarHeight,
-                        statusBarBase,
+                        height: statusBarHeight,
+                        baseColor: statusBarBase,
                       ),
                     ),
 
@@ -1186,10 +1186,13 @@ class _EnterPasswordEmailView extends StatelessWidget {
 }
 
 class _LoginStatusBarHeader extends SliverPersistentHeaderDelegate {
-  _LoginStatusBarHeader(this.height, this.baseColor);
-
   final double height;
   final Color baseColor;
+
+  _LoginStatusBarHeader({
+    required this.height,
+    required this.baseColor,
+  });
 
   @override
   double get minExtent => height;
@@ -1199,14 +1202,20 @@ class _LoginStatusBarHeader extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     if (height <= 0) {
       return const SizedBox.shrink();
     }
 
-    final color = LoginStatusBar.resolveBaseColor(context, override: baseColor);
-    return SizedBox.expand(
-      child: Container(color: color),
+    return SizedBox(
+      height: height,
+      child: LoginStatusBar.topSpacer(
+        context,
+        baseColor: baseColor,
+      ),
     );
   }
 

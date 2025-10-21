@@ -129,7 +129,7 @@ class UserProfileScreenState extends State<UserProfileScreen> {
     try {
       // نرسل القيم الحالية + المتغير الذي تغيّر فقط
       final resp = await context.read<AuthCubit>().updateuserdata(
-            context: context,
+            context,
             name: nameController.text.trim(),
             email: emailController.text.trim(),
             // لا نرفع صورة هنا
@@ -804,7 +804,7 @@ class UserProfileScreenState extends State<UserProfileScreen> {
     if (pickedFile != null) {
       CroppedFile? croppedFile;
       croppedFile = await CropImage.crop(
-        context,
+        context: context,
         filePath: pickedFile.path,
       );
       if (croppedFile == null) {

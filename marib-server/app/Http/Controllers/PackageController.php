@@ -4,19 +4,24 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Package;
-use App\Models\PaymentTransaction;
+use App\Queries\PaymentRequestTableQuery;
+use App\Support\ManualPayments\ManualPaymentPresentationHelpers;
 use App\Models\UserPurchasedPackage;
 use App\Services\BootstrapTableService;
 use App\Services\CachingService;
 use App\Services\FileService;
 use App\Services\ResponseService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Throwable;
 
 class PackageController extends Controller {
+
+
+    use ManualPaymentPresentationHelpers;
+
 
     private string $uploadFolder;
 
@@ -291,29 +296,138 @@ class PackageController extends Controller {
 
     public function paymentTransactionShow(Request $request) {
         ResponseService::noPermissionThenSendJson('user-package-list');
-        $offset = $request->offset ?? 0;
-        $limit = $request->limit ?? 10;
-        $sort = $request->sort ?? 'id';
-        $order = $request->order ?? 'DESC';
+        $offset = max((int) ($request->offset ?? 0), 0);
+        $limit = (int) ($request->limit ?? 10);
+        $limit = $limit > 0 ? $limit : 10;
 
-        $sql = PaymentTransaction::with(['user', 'order'])->orderBy($sort, $order);
-        if (!empty($request->search)) {
-            $sql = $sql->search($request->search);
+        $sort = (string) ($request->sort ?? 'id');
+        $order = strtolower((string) ($request->order ?? 'desc'));
+        $order = in_array($order, ['asc', 'desc'], true) ? $order : 'desc';
+
+        $sortableColumns = [
+            'id'                    => 'payment_transaction_id',
+            'payment_status'        => 'status_group',
+            'status_group'          => 'status_group',
+            'created_at'            => 'created_at',
+            'amount'                => 'amount',
+            'gateway_label'         => 'gateway_label',
+            'normalized_channel'    => 'channel',
+            'normalized_channel_label' => 'channel',
+        ];
+
+        $sortColumn = $sortableColumns[$sort] ?? 'created_at';
+
+        $baseQuery = DB::query()
+            ->fromSub(PaymentRequestTableQuery::make(), 'requests')
+            ->where('category', 'packages');
+
+        $search = trim((string) ($request->search ?? ''));
+
+        if ($search !== '') {
+            $like = '%' . $search . '%';
+            $baseQuery->where(function ($query) use ($like) {
+                $query->where('reference', 'LIKE', $like)
+                    ->orWhere('payment_transaction_id', 'LIKE', $like)
+                    ->orWhere('manual_payment_request_id', 'LIKE', $like)
+                    ->orWhere('wallet_transaction_id', 'LIKE', $like)
+                    ->orWhere('user_name', 'LIKE', $like)
+                    ->orWhere('user_mobile', 'LIKE', $like)
+                    ->orWhere('gateway_label', 'LIKE', $like)
+                    ->orWhere('manual_bank_name', 'LIKE', $like);
+            });
         }
-        $total = $sql->count();
-        $sql->skip($offset)->take($limit);
-        $result = $sql->get();
-        $bulkData = array();
-        $bulkData['total'] = $total;
-        $rows = array();
-        foreach ($result as $key => $row) {
-            $tempRow = $row->toArray();
-            $tempRow['created_at'] = Carbon::createFromFormat('Y-m-d H:i:s', $row->created_at)->format('d-m-y H:i:s');
-            $tempRow['updated_at'] = Carbon::createFromFormat('Y-m-d H:i:s', $row->updated_at)->format('d-m-y H:i:s');
-            $rows[] = $tempRow;
+        $total = (clone $baseQuery)->count();
+
+        $recordsQuery = (clone $baseQuery);
+
+        $orderDirection = strtoupper($order);
+
+        if ($sort === 'id') {
+            $recordsQuery->orderByRaw('COALESCE(payment_transaction_id, manual_payment_request_id, wallet_transaction_id, 0) ' . $orderDirection);
+        } else {
+            $recordsQuery->orderBy($sortColumn, $orderDirection === 'ASC' ? 'asc' : 'desc');
         }
 
-        $bulkData['rows'] = $rows;
-        return response()->json($bulkData);
+        $records = $recordsQuery
+            ->skip($offset)
+            ->take($limit)
+            ->get();
+
+        $rows = $records->map(function ($row) {
+            return $this->formatPaymentTransactionRow((array) $row);
+        })->all();
+
+        return response()->json([
+            'total' => $total,
+            'rows'  => $rows,
+        ]);
+    }
+
+    private function formatPaymentTransactionRow(array $row): array
+    {
+        $rawChannel = $row['channel'] ?? null;
+        $gatewayKey = $row['gateway_key'] ?? null;
+        $normalizedChannel = $this->normalizePaymentRequestChannel($rawChannel)
+            ?? $this->normalizePaymentRequestChannel($gatewayKey)
+            ?? 'manual_banks';
+        $channel = $rawChannel ?? $gatewayKey ?? $normalizedChannel;
+
+        $manualBankName = isset($row['manual_bank_name']) && is_string($row['manual_bank_name'])
+            ? trim($row['manual_bank_name'])
+            : null;
+        $gatewayLabel = $manualBankName !== null && $manualBankName !== ''
+            ? $manualBankName
+            : ((isset($row['gateway_label']) && is_string($row['gateway_label']) && trim($row['gateway_label']) !== '')
+                ? $row['gateway_label']
+                : $this->paymentRequestChannelLabel($normalizedChannel));
+
+        $createdAt = $this->parseDateOrNull($row['created_at'] ?? null);
+        $formattedCreatedAt = $createdAt?->format('d-m-y H:i:s');
+        $updatedAt = $this->parseDateOrNull($row['updated_at'] ?? null);
+        $formattedUpdatedAt = $updatedAt?->format('d-m-y H:i:s');
+
+        $amount = $row['amount'] ?? null;
+
+        $id = $row['payment_transaction_id']
+            ?? $row['manual_payment_request_id']
+            ?? $row['wallet_transaction_id']
+            ?? $row['row_key']
+            ?? null;
+
+        return [
+            'id'                         => $id,
+            'row_key'                    => $row['row_key'] ?? null,
+            'payment_transaction_id'     => $row['payment_transaction_id'] ?? null,
+            'wallet_transaction_id'      => $row['wallet_transaction_id'] ?? null,
+            'manual_payment_request_id'  => $row['manual_payment_request_id'] ?? null,
+            'user_id'                    => $row['user_id'] ?? null,
+            'amount'                     => $amount,
+            'currency'                   => $row['currency'] ?? null,
+            'reference'                  => $row['reference'] ?? null,
+            'payment_status'             => $row['status_group'] ?? null,
+            'status_group'               => $row['status_group'] ?? null,
+            'gateway_key'                => $row['gateway_key'] ?? null,
+            'gateway_label'              => $gatewayLabel,
+            'gateway_name'               => $row['gateway_name'] ?? null,
+            'payment_gateway'            => $gatewayLabel,
+            'manual_bank_name'           => $manualBankName,
+            'manual_bank_id'             => $row['manual_bank_id'] ?? null,
+            'normalized_channel'         => $normalizedChannel,
+            'normalized_channel_label'   => $this->paymentRequestChannelLabel($normalizedChannel),
+            'channel'                    => $channel,
+            'category'                   => $row['category'] ?? null,
+            'department'                 => $row['department'] ?? null,
+            'user'                       => [
+                'name' => $row['user_name'] ?? '',
+            ],
+            'user_name'                  => $row['user_name'] ?? null,
+            'user_mobile'                => $row['user_mobile'] ?? null,
+            'created_at'                 => $formattedCreatedAt,
+            'created_at_raw'             => $createdAt?->toDateTimeString(),
+            'updated_at'                 => $formattedUpdatedAt,
+            'updated_at_raw'             => $updatedAt?->toDateTimeString(),
+            'source'                     => $row['source'] ?? null,
+        ];
+        
     }
 }

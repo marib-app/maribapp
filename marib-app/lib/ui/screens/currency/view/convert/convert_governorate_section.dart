@@ -155,7 +155,7 @@ class ConvertGovernorateSection extends StatelessWidget {
                 child: _infoCard(
                   context,
                   label: 'سعر الشراء',
-                  value: _format(selectedRate.buyPrice),
+                  value: _format(selectedRate!.buyPrice),
                 ),
               ),
             ],

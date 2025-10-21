@@ -207,8 +207,28 @@ trait ManualPaymentPresentationHelpers
 
     protected function resolveManualBankName(mixed $row): ?string
     {
-        $manualBankAliases = ManualPaymentRequest::manualBankGatewayAliases();
+        $genericGatewayAliases = array_unique(array_filter(array_map(
+            static function ($alias) {
+                if (! is_string($alias)) {
+                    return null;
+                }
 
+                $trimmedAlias = trim($alias);
+
+                if ($trimmedAlias === '') {
+                    return null;
+                }
+
+                return Str::lower($trimmedAlias);
+            },
+            array_merge(
+                ManualPaymentRequest::manualBankGatewayAliases(),
+                ManualPaymentRequest::walletGatewayAliases(),
+                ['المحفظة', 'تحويل بنكي']
+            )
+        )));
+
+        
         $candidates = [
             data_get($row, 'manual_bank_name'),
             data_get($row, 'bank_name'),

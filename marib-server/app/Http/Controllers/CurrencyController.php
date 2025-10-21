@@ -67,7 +67,39 @@ class CurrencyController extends Controller
     }
 
 
+    public function edit(int $id)
+    {
+        $currency = CurrencyRate::with(['quotes' => function ($query) {
+            $query->orderBy('governorate_id');
+        }, 'quotes.governorate'])->findOrFail($id);
 
+        $governorates = Governorate::orderBy('name')->get();
+
+        $quotes = $currency->quotes
+            ->mapWithKeys(static function (CurrencyRateQuote $quote): array {
+                return [
+                    $quote->governorate_id => [
+                        'sell_price' => $quote->sell_price,
+                        'buy_price' => $quote->buy_price,
+                        'source' => $quote->source,
+                        'quoted_at' => optional($quote->quoted_at)?->toDateTimeString(),
+                        'is_default' => (bool) $quote->is_default,
+                    ],
+                ];
+            })
+            ->toArray();
+
+        $defaultGovernorateId = $currency->quotes->firstWhere('is_default', true)?->governorate_id;
+
+        return view('currency.edit', [
+            'currency' => $currency,
+            'governorates' => $governorates,
+            'governorateStoreUrl' => route('governorates.store'),
+            'quotes' => $quotes,
+            'defaultGovernorateId' => $defaultGovernorateId,
+        ]);
+
+    }
 
     public function import(Request $request)
     {
@@ -357,7 +389,15 @@ class CurrencyController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            if ($request->expectsJson()) {
+                return response()->json(['errors' => $validator->errors()], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
+            return redirect()
+                ->back()
+                ->withErrors($validator)
+                ->withInput();
+
         }
 
         $iconData = $this->extractIconData($request, $currency);
@@ -411,12 +451,24 @@ class CurrencyController extends Controller
                 ->all()
         );
 
+        $message = __('Currency rate updated successfully');
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'data' => $currency,
+            ]);
+        }
+
+        return redirect()
+            ->route('currency.index')
+            ->with('success', $message);
 
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Currency rate updated successfully',
-            'data' => $currency,
+
+
+    }
 
 
 

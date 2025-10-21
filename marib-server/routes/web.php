@@ -408,6 +408,12 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
             ->name('currency.import');
 
 
+        Route::get('/currency/{id}/edit', [CurrencyController::class, 'edit'])
+            ->middleware('permission:currency-rate-edit')
+            ->name('currency.edit');
+
+
+
         Route::get('/currency/show', [CurrencyController::class, 'show'])->name('currency.show');
         Route::get('/currency/logs', [CurrencyController::class, 'changeLogs'])->name('currency.logs');
         Route::put('/currency/{id}', [CurrencyController::class, 'update'])

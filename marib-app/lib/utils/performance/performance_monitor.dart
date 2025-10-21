@@ -11,23 +11,34 @@ import 'package:path_provider/path_provider.dart';
 import 'frame_stats_accumulator.dart';
 
 class PerformanceMonitor {
-  PerformanceMonitor._();
+  PerformanceMonitor._()
+      : _collectionOverrideEnabled = AppSettings.isPerformanceLoggingEnabled ||
+            _environmentOverrideEnabled;
 
   static final PerformanceMonitor instance = PerformanceMonitor._();
 
   static const _frameBudget = Duration(microseconds: 16667);
   static const _startupRouteName = '__startup__';
 
+  static const bool _environmentOverrideEnabled = bool.fromEnvironment(
+    'MARIB_FORCE_PERFORMANCE_MONITOR',
+    defaultValue: false,
+  );
+
   bool get _envCollectionEnabled =>
       AppSettings.allowPerformanceLoggingInRelease;
 
-  bool get isEnvironmentCollectionEnabled => _envCollectionEnabled;
+  bool get isEnvironmentCollectionEnabled =>
+      _envCollectionEnabled || _environmentOverrideEnabled;
 
-  bool _collectionOverrideEnabled = false;
+  bool get hasEnvironmentOverride => _environmentOverrideEnabled;
+
+  bool _collectionOverrideEnabled;
 
   bool get isCollectionOverrideEnabled => _collectionOverrideEnabled;
 
-  bool get isManualCollectionEnabled => _collectionOverrideEnabled;
+  bool get isManualCollectionEnabled =>
+      _collectionOverrideEnabled || _environmentOverrideEnabled;
 
   static const int _maxCompletedSessions = 10;
 
@@ -49,6 +60,10 @@ class PerformanceMonitor {
   bool get isEnabled => _enabled;
 
   bool get shouldCollectMetrics {
+    if (_environmentOverrideEnabled) {
+      return true;
+    }
+
     if (_envCollectionEnabled) {
       return true;
     }
@@ -67,6 +82,9 @@ class PerformanceMonitor {
   }
 
   bool get _isSchedulingAllowed {
+    if (_environmentOverrideEnabled) {
+      return true;
+    }
     if (_collectionOverrideEnabled) {
       return true;
     }
@@ -80,7 +98,10 @@ class PerformanceMonitor {
   }
 
   void setManualCollectionEnabled(bool enabled) {
-    if (enabled && kReleaseMode && !_envCollectionEnabled) {
+    if (enabled &&
+        kReleaseMode &&
+        !_envCollectionEnabled &&
+        !_environmentOverrideEnabled) {
       debugPrint(
         'PerformanceMonitor: manual collection cannot be enabled in release builds.',
       );
@@ -269,6 +290,9 @@ class PerformanceMonitor {
   }
 
   void _switchRoute(String routeName) {
+    if (!_enabled) {
+      return;
+    }
     if (_currentRouteName == routeName) {
       return;
     }
@@ -282,6 +306,10 @@ class PerformanceMonitor {
   }
 
   void _endCurrentSession() {
+    if (!_enabled) {
+      return;
+    }
+
     if (_currentSession != null) {
       final _RoutePerformanceSnapshot snapshot =
           _currentSession!.snapshot(finalize: true);

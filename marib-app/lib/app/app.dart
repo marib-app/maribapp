@@ -27,19 +27,25 @@ void initApp() async {
   final WidgetsBinding binding = WidgetsBinding.instance;
   final PerformanceMonitor performanceMonitor = PerformanceMonitor.instance;
 
-  final bool debugPerfLoggingEnabled =
+
+  final bool hasEnvironmentOverride =
+      performanceMonitor.hasEnvironmentOverride;
+
+  final bool manualPerfLoggingEnabled = !kReleaseMode &&
+
       !kReleaseMode && AppSettings.isPerformanceLoggingEnabled;
   final bool manualPerfLoggingEnabled =
       performanceMonitor.isManualCollectionEnabled;
-  final bool releasePerfLoggingEnabled =
-      AppSettings.allowPerformanceLoggingInRelease &&
-          performanceMonitor.isEnvironmentCollectionEnabled;
+  final bool releasePerfLoggingEnabled = kReleaseMode &&
+      (AppSettings.allowPerformanceLoggingInRelease ||
+          hasEnvironmentOverride);
 
-  final bool attachPerformanceMonitor = debugPerfLoggingEnabled ||
-      manualPerfLoggingEnabled ||
-      releasePerfLoggingEnabled;
+  final bool shouldAttachPerformanceMonitor =
+      debugPerfLoggingEnabled ||
+          manualPerfLoggingEnabled ||
+          releasePerfLoggingEnabled;
 
-  if (attachPerformanceMonitor) {
+  if (shouldAttachPerformanceMonitor) {
     performanceMonitor.initialize();
     if (performanceMonitor.isEnabled) {
       binding.addTimingsCallback(

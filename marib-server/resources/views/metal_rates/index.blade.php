@@ -122,6 +122,7 @@
                                                                         $quoteMap = $rate->quotes
                                                                             ->mapWithKeys(fn($quote) => [
                                                                                 $quote->governorate_id => [
+                                                                                    'governorate_id' => $quote->governorate_id,
                                                                                     'sell_price' => $quote->sell_price,
                                                                                     'buy_price' => $quote->buy_price,
                                                                                     'source' => $quote->source,

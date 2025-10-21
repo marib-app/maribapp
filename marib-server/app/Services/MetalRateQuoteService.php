@@ -48,6 +48,13 @@ class MetalRateQuoteService
         /** @var Collection<int, array<string, mixed>> $quotes */
         $quotes = collect($quotesPayload)
             ->map(function (array $quote): array {
+
+                if (!array_key_exists('governorate_id', $quote) || $quote['governorate_id'] === null || $quote['governorate_id'] === '') {
+                    throw ValidationException::withMessages([
+                        'quotes' => __('Each quote must include a governorate.'),
+                    ]);
+                }
+
                 $governorateId = (int) Arr::get($quote, 'governorate_id');
 
                 $sell = $this->normalizeNumber(Arr::get($quote, 'sell_price'));

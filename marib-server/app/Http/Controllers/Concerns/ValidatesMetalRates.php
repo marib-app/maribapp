@@ -59,7 +59,7 @@ trait ValidatesMetalRates
             $hasCompleteQuote = false;
             $defaultGovernorateId = (int) $request->input('default_governorate_id');
 
-            foreach ($quotes as $quote) {
+            foreach ($quotes as $index => $quote) {
                 $sell = Arr::get($quote, 'sell_price');
                 $buy = Arr::get($quote, 'buy_price');
                 $governorateId = (int) Arr::get($quote, 'governorate_id');
@@ -69,7 +69,7 @@ trait ValidatesMetalRates
 
                     if ((float) $sell < (float) $buy) {
                         $validator->errors()->add(
-                            'quotes.' . $governorateId . '.sell_price',
+                            'quotes.' . $index . '.sell_price',
                             __('يجب أن يكون سعر البيع أعلى من أو يساوي سعر الشراء لكل محافظة.')
                         );
                     }
@@ -95,6 +95,8 @@ trait ValidatesMetalRates
         });
 
         $payload = $data->validate();
+
+        $payload['quotes'] = array_values($payload['quotes']);
 
         $payload['karat'] = $payload['metal_type'] === MetalRate::TYPE_SILVER
             ? null

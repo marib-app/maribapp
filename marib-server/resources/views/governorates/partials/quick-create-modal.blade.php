@@ -74,6 +74,16 @@
                 });
             }
 
+            function resolveNextQuoteIndex(table) {
+                const rowCount = table.querySelectorAll('tbody tr').length;
+                const stored = parseInt(table.dataset.nextQuoteIndex || rowCount.toString(), 10);
+                const base = Number.isNaN(stored) ? rowCount : Math.max(stored, rowCount);
+                table.dataset.nextQuoteIndex = String(base + 1);
+
+                return base;
+            }
+
+
             function appendGovernorateRow(table, governorate) {
                 const tbody = table.querySelector('tbody');
                 if (!tbody) {
@@ -97,25 +107,26 @@
                 const buyStep = buyInput?.getAttribute('step') || '0.0001';
                 const buyPlaceholder = buyInput?.getAttribute('placeholder') || '0.0000';
                 const sourcePlaceholder = sourceInput?.getAttribute('placeholder') || '';
+                const nextIndex = resolveNextQuoteIndex(table);
 
                 const row = document.createElement('tr');
                 row.setAttribute('data-governorate-row', governorate.id);
                 row.innerHTML = `
                     <td>
                         <span class="fw-semibold" data-label="name">${governorate.name}</span>
-                        <input type="hidden" name="quotes[${governorate.id}][governorate_id]" value="${governorate.id}">
+                        <input type="hidden" name="quotes[${nextIndex}][governorate_id]" value="${governorate.id}" data-field="governorate_id" data-governorate="${governorate.id}">
                     </td>
                     <td>
-                        <input type="number" name="quotes[${governorate.id}][sell_price]" value="" class="form-control form-control-sm quote-input quote-sell-input" min="0" step="${sellStep}" data-field="sell_price" data-governorate="${governorate.id}" placeholder="${sellPlaceholder}">
+                        <input type="number" name="quotes[${nextIndex}][sell_price]" value="" class="form-control form-control-sm quote-input quote-sell-input" min="0" step="${sellStep}" data-field="sell_price" data-governorate="${governorate.id}" placeholder="${sellPlaceholder}">
                     </td>
                     <td>
-                        <input type="number" name="quotes[${governorate.id}][buy_price]" value="" class="form-control form-control-sm quote-input quote-buy-input" min="0" step="${buyStep}" data-field="buy_price" data-governorate="${governorate.id}" placeholder="${buyPlaceholder}">
+                        <input type="number" name="quotes[${nextIndex}][buy_price]" value="" class="form-control form-control-sm quote-input quote-buy-input" min="0" step="${buyStep}" data-field="buy_price" data-governorate="${governorate.id}" placeholder="${buyPlaceholder}">
                     </td>
                     <td>
-                        <input type="text" name="quotes[${governorate.id}][source]" value="" class="form-control form-control-sm quote-input quote-source-input" maxlength="255" data-field="source" data-governorate="${governorate.id}" placeholder="${sourcePlaceholder}">
+                        <input type="text" name="quotes[${nextIndex}][source]" value="" class="form-control form-control-sm quote-input quote-source-input" maxlength="255" data-field="source" data-governorate="${governorate.id}" placeholder="${sourcePlaceholder}">
                     </td>
                     <td>
-                        <input type="datetime-local" name="quotes[${governorate.id}][quoted_at]" value="" class="form-control form-control-sm quote-input quote-quoted-at-input" data-field="quoted_at" data-governorate="${governorate.id}">
+                        <input type="datetime-local" name="quotes[${nextIndex}][quoted_at]" value="" class="form-control form-control-sm quote-input quote-quoted-at-input" data-field="quoted_at" data-governorate="${governorate.id}">
                     </td>
                     <td class="text-center">
                         <div class="form-check form-check-inline">

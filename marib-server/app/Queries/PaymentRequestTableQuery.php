@@ -970,13 +970,13 @@ class PaymentRequestTableQuery
     private static function gatewayLabelCaseExpression(string $gatewayExpression, array $labelCandidates): string
     {
         $candidates = self::prepareCoalesceCandidates($labelCandidates);
-        $eastAliases = self::sqlList(self::eastYemenGatewayAliases());
-        $walletCase = "CASE WHEN {$gatewayExpression} = 'wallet' THEN 'المحفظة' END";
-        $eastYemenCase = "CASE WHEN {$gatewayExpression} IN {$eastAliases} THEN 'بنك الشرق' END";
+        $channelExpression = self::channelExpressionFromGateway($gatewayExpression);
+        $walletCase = "CASE WHEN ({$channelExpression}) = 'wallet' THEN 'المحفظة' END";
+        $eastYemenCase = "CASE WHEN ({$channelExpression}) = 'east_yemen_bank' THEN 'بنك الشرق' END";
 
         $fallback = "CASE"
-            . " WHEN {$gatewayExpression} = 'wallet' THEN 'المحفظة'"
-            . " WHEN {$gatewayExpression} IN {$eastAliases} THEN 'بنك الشرق'"
+            . " WHEN ({$channelExpression}) = 'wallet' THEN 'المحفظة'"
+            . " WHEN ({$channelExpression}) = 'east_yemen_bank' THEN 'بنك الشرق'"
             . " ELSE 'تحويل بنكي'"
             . ' END';
         $coalesceParts = array_merge([

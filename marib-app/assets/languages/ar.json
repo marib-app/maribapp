@@ -1,0 +1,10 @@
+{
+  "notifications.currency.created.title": "تمت إضافة عملة جديدة",
+  "notifications.currency.created.body": "عملة جديدة (:currency) أصبحت متاحة الآن.",
+  "notifications.currency.created.default_governorate": "المحافظة الافتراضية: :governorate.",
+  "notifications.currency.updated.title": "تم تحديث سعر العملة",
+  "notifications.currency.updated.body": "تم تحديث أسعار :currency في :governorate.",
+  "notifications.currency.updated.governorate_fallback": "المنطقة المحددة",
+  "notifications.currency.price.sell": "سعر البيع: :value",
+  "notifications.currency.price.buy": "سعر الشراء: :value"
+}

@@ -36,6 +36,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use App\Services\Payments\ManualPaymentRequestService;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Collection;
 use Carbon\CarbonInterface;
@@ -53,6 +54,8 @@ class ManualPaymentRequestController extends Controller
         private readonly PaymentFulfillmentService $paymentFulfillmentService,
         private readonly DepartmentReportService $departmentReportService,
         private readonly WalletService $walletService,
+        private readonly ManualPaymentRequestService $manualPaymentRequestService,
+
     ) {
     }
 
@@ -203,6 +206,7 @@ class ManualPaymentRequestController extends Controller
             ->get();
 
         $this->prefetchManualPaymentRequestsForRows($requests);
+        $this->hydrateMissingManualPaymentRequestIds($requests);
 
         $rows = [];
 
@@ -465,6 +469,7 @@ class ManualPaymentRequestController extends Controller
 
         $rows = $orderedQuery->get();
         $this->prefetchManualPaymentRequestsForRows($rows);
+        $this->hydrateMissingManualPaymentRequestIds($rows);
 
 
         $data = $rows->map(function (object $row) {
@@ -1617,19 +1622,41 @@ class ManualPaymentRequestController extends Controller
 
     private function paymentRequestActionsFromRow(object $row): string
     {
+        $manualPaymentRequestId = $this->normalizeManualPaymentIdentifier(
+            data_get($row, 'manual_payment_request_id')
+        );
+
+        if ($manualPaymentRequestId === null) {
+            $manualPaymentRequest = $this->resolveManualPaymentRequestForRow($row);
 
 
-        if (
-            empty($row->manual_payment_request_id)
-            || ! Route::has('payment-requests.review')
-        ) {
+
+            if ($manualPaymentRequest instanceof ManualPaymentRequest) {
+                $manualPaymentRequestId = $manualPaymentRequest->getKey();
+                $row->manual_payment_request_id = $manualPaymentRequestId;
+            }
+        }
+
+        if ($manualPaymentRequestId === null) {
+
+
             return '';
+        }
+
+        return $this->renderManualPaymentReviewButton($manualPaymentRequestId);
+    }
+
+    private function renderManualPaymentReviewButton(int $manualPaymentRequestId): string
+    {
+        if (! Route::has('payment-requests.review')) {
+            return '';
+
 
         }
 
         return BootstrapTableService::button(
             'fa fa-eye',
-            route('payment-requests.review', ['manualPaymentRequest' => $row->manual_payment_request_id]),
+            route('payment-requests.review', ['manualPaymentRequest' => $manualPaymentRequestId]),
             ['btn-primary', 'view-payment-request'],
             [
                 'target' => '_blank',
@@ -1639,6 +1666,168 @@ class ManualPaymentRequestController extends Controller
             trans('Review')
         );
     }
+
+
+
+    private function resolveManualPaymentRequestForRow(object $row): ?ManualPaymentRequest
+    {
+        $transactionId = $this->normalizeManualPaymentIdentifier(
+            data_get($row, 'payment_transaction_id')
+        );
+
+        if ($transactionId === null) {
+            return null;
+        }
+
+        $transaction = PaymentTransaction::query()
+            ->with('manualPaymentRequest')
+            ->find($transactionId);
+
+        if (! $transaction) {
+            return null;
+        }
+
+        $manualPaymentRequest = $transaction->manualPaymentRequest;
+
+        if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+            $manualPaymentRequestId = $this->normalizeManualPaymentIdentifier(
+                $transaction->manual_payment_request_id
+            );
+
+            if ($manualPaymentRequestId !== null) {
+                $manualPaymentRequest = $this->getManualPaymentRequestById($manualPaymentRequestId);
+            }
+        }
+
+        if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+            $manualPaymentRequest = ManualPaymentRequest::query()
+                ->where('payment_transaction_id', $transaction->getKey())
+                ->orderByDesc('id')
+                ->first();
+        }
+
+        if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+            $manualPaymentRequest = $this->manualPaymentRequestService
+                ->ensureManualPaymentRequestForTransaction($transaction);
+        }
+
+        if ($manualPaymentRequest instanceof ManualPaymentRequest) {
+            $this->manualPaymentRequestLookupCache[$manualPaymentRequest->id] = $manualPaymentRequest;
+
+            return $manualPaymentRequest;
+        }
+
+        return null;
+    }
+
+    private function hydrateMissingManualPaymentRequestIds(Collection $rows): void
+    {
+        if ($rows->isEmpty()) {
+            return;
+        }
+
+        $transactionIds = $rows
+            ->map(function (object $row) {
+                if ($this->normalizeManualPaymentIdentifier(data_get($row, 'manual_payment_request_id')) !== null) {
+                    return null;
+                }
+
+                return $this->normalizeManualPaymentIdentifier(data_get($row, 'payment_transaction_id'));
+            })
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($transactionIds->isEmpty()) {
+            return;
+        }
+
+        $transactions = PaymentTransaction::query()
+            ->with('manualPaymentRequest')
+            ->whereIn('id', $transactionIds->all())
+            ->get()
+            ->keyBy('id');
+
+        foreach ($rows as $row) {
+            $manualPaymentRequestId = $this->normalizeManualPaymentIdentifier(
+                data_get($row, 'manual_payment_request_id')
+            );
+
+            if ($manualPaymentRequestId !== null) {
+                continue;
+            }
+
+            $transactionId = $this->normalizeManualPaymentIdentifier(
+                data_get($row, 'payment_transaction_id')
+            );
+
+            if ($transactionId === null) {
+                continue;
+            }
+
+            $transaction = $transactions->get($transactionId);
+
+            if (! $transaction) {
+                continue;
+            }
+
+            $manualPaymentRequest = $transaction->manualPaymentRequest;
+
+            if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+                $manualPaymentRequestId = $this->normalizeManualPaymentIdentifier(
+                    $transaction->manual_payment_request_id
+                );
+
+                if ($manualPaymentRequestId !== null) {
+                    $manualPaymentRequest = $this->getManualPaymentRequestById($manualPaymentRequestId);
+                }
+            }
+
+            if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+                $manualPaymentRequest = ManualPaymentRequest::query()
+                    ->where('payment_transaction_id', $transaction->getKey())
+                    ->orderByDesc('id')
+                    ->first();
+            }
+
+            if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+                $manualPaymentRequest = $this->manualPaymentRequestService
+                    ->ensureManualPaymentRequestForTransaction($transaction);
+            }
+
+            if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+                continue;
+            }
+
+            $row->manual_payment_request_id = $manualPaymentRequest->getKey();
+            $this->manualPaymentRequestLookupCache[$manualPaymentRequest->id] = $manualPaymentRequest;
+        }
+    }
+
+    private function normalizeManualPaymentIdentifier($value): ?int
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $value = trim($value);
+
+            if ($value === '') {
+                return null;
+            }
+        }
+
+        if (! is_numeric($value)) {
+            return null;
+        }
+
+        $id = (int) $value;
+
+        return $id > 0 ? $id : null;
+    }
+
+
 
     private function paymentRequestGatewayName(object $row): string
     {

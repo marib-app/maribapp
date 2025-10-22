@@ -27,10 +27,13 @@ class CurrencyRateUpdatedNotification extends Notification
 
     public function toFcm(object $notifiable): array
     {
-        $title = __('Currency rate updated');
+        $title = __('notifications.currency.updated.title');
 
-        $governorateLabel = $this->governorateName ?: __('Selected region');
-        $body = __('Updated :currency rates for :governorate.', [
+        $governorateLabel = $this->governorateName
+            ?: __('notifications.currency.updated.governorate_fallback');
+        $body = __('notifications.currency.updated.body', [
+
+
             'currency' => $this->currencyName,
             'governorate' => $governorateLabel,
         ]);
@@ -38,11 +41,11 @@ class CurrencyRateUpdatedNotification extends Notification
         $priceSegments = [];
 
         if ($this->sellPrice !== null) {
-            $priceSegments[] = __('Sell: :value', ['value' => $this->sellPrice]);
+            $priceSegments[] = __('notifications.currency.price.sell', ['value' => $this->sellPrice]);
         }
 
         if ($this->buyPrice !== null) {
-            $priceSegments[] = __('Buy: :value', ['value' => $this->buyPrice]);
+            $priceSegments[] = __('notifications.currency.price.buy', ['value' => $this->buyPrice]);
         }
 
         if (!empty($priceSegments)) {

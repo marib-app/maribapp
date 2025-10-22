@@ -27,14 +27,14 @@ class CurrencyCreatedNotification extends Notification
 
     public function toFcm(object $notifiable): array
     {
-        $title = __('New currency added');
+        $title = __('notifications.currency.created.title');
 
-        $body = __('A new currency (:currency) is now available.', [
+        $body = __('notifications.currency.created.body', [
             'currency' => $this->currencyName,
         ]);
 
         if ($this->defaultGovernorateName) {
-            $body .= ' ' . __('Default governorate: :governorate.', [
+            $body .= ' ' . __('notifications.currency.created.default_governorate', [
                 'governorate' => $this->defaultGovernorateName,
             ]);
         }
@@ -43,11 +43,11 @@ class CurrencyCreatedNotification extends Notification
             $priceSegments = [];
 
             if ($this->sellPrice !== null) {
-                $priceSegments[] = __('Sell: :value', ['value' => $this->sellPrice]);
+                $priceSegments[] = __('notifications.currency.price.sell', ['value' => $this->sellPrice]);
             }
 
             if ($this->buyPrice !== null) {
-                $priceSegments[] = __('Buy: :value', ['value' => $this->buyPrice]);
+                $priceSegments[] = __('notifications.currency.price.buy', ['value' => $this->buyPrice]);
             }
 
             if (!empty($priceSegments)) {

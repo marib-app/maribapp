@@ -638,4 +638,13 @@
   "locationPermissionScreenEnableServicesMarib": "Turn on location services so we can verify you're in Marib.",
   "locationPermissionScreenEnableServicesMarib_ar": "فعّل خدمة الموقع حتى نتحقق من وجودك في مأرب.",
   "locationPermissionScreenEnableFromSettingsMarib": "Allow location permissions from settings so we can confirm you're within Marib.",
-  "locationPermissionScreenEnableFromSettingsMarib_ar": "فعّل صلاحيات الموقع من الإعدادات حتى نؤكد وجودك داخل مأرب."}
+  "locationPermissionScreenEnableFromSettingsMarib_ar": "فعّل صلاحيات الموقع من الإعدادات حتى نؤكد وجودك داخل مأرب.",
+  "notifications.currency.created.title": "New currency added",
+  "notifications.currency.created.body": "A new currency (:currency) is now available.",
+  "notifications.currency.created.default_governorate": "Default governorate: :governorate.",
+  "notifications.currency.updated.title": "Currency rate updated",
+  "notifications.currency.updated.body": "Updated :currency rates for :governorate.",
+  "notifications.currency.updated.governorate_fallback": "Selected region",
+  "notifications.currency.price.sell": "Sell: :value",
+  "notifications.currency.price.buy": "Buy: :value"
+}

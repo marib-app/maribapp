@@ -1657,12 +1657,28 @@ class ManualPaymentRequestController extends Controller
             }
         }
 
-        if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+        if ($manualPaymentRequest instanceof ManualPaymentRequest) {
+            return $this->actionsColumn($manualPaymentRequest);
+        }
+        $transactionId = $this->normalizeManualPaymentIdentifier(
+            data_get($row, 'payment_transaction_id') ?? data_get($row, 'id')
+        );
 
-            return '';
+        if ($transactionId) {
+            return BootstrapTableService::button(
+                'fa fa-eye',
+                route('payment-requests.deep-link', ['paymentTransaction' => $transactionId]),
+                ['btn-primary', 'view-payment-transaction'],
+                [
+                    'target' => '_blank',
+                    'rel' => 'noopener noreferrer',
+                    'title' => trans('View'),
+                ],
+                trans('View')
+            );
         }
 
-        return $this->renderManualPaymentReviewButton($manualPaymentRequest);
+        return '';
     }
 
     private function renderManualPaymentReviewButton(ManualPaymentRequest|int $manualPaymentRequest): string

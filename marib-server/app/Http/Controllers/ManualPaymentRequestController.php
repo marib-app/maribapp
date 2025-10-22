@@ -1664,18 +1664,27 @@ class ManualPaymentRequestController extends Controller
             data_get($row, 'payment_transaction_id') ?? data_get($row, 'id')
         );
 
-        if ($transactionId) {
-            return BootstrapTableService::button(
-                'fa fa-eye',
-                route('payment-requests.deep-link', ['paymentTransaction' => $transactionId]),
-                ['btn-primary', 'view-payment-transaction'],
-                [
-                    'target' => '_blank',
-                    'rel' => 'noopener noreferrer',
-                    'title' => trans('View'),
-                ],
-                trans('View')
-            );
+        if ($transactionId !== null) {
+            $transaction = PaymentTransaction::query()
+                ->with('manualPaymentRequest')
+                ->find($transactionId);
+
+            if ($transaction instanceof PaymentTransaction) {
+                $manualPaymentRequest = $transaction->manualPaymentRequest;
+
+                if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+                    $manualPaymentRequest = $this->manualPaymentRequestService
+                        ->ensureManualPaymentRequestForTransaction($transaction);
+                }
+
+                if ($manualPaymentRequest instanceof ManualPaymentRequest) {
+                    $manualPaymentRequestId = $manualPaymentRequest->getKey();
+                    $row->manual_payment_request_id = $manualPaymentRequestId;
+                    $this->manualPaymentRequestLookupCache[$manualPaymentRequestId] = $manualPaymentRequest;
+
+                    return $this->actionsColumn($manualPaymentRequest);
+                }
+            }
         }
 
         return '';

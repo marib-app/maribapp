@@ -11,6 +11,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Throwable;
 
 
@@ -545,19 +546,43 @@ class ManualPaymentRequestService
             }
         }
 
+        $manualBankMissing = false;
+
+
+
         $manualBank = $manualBankId !== null
             ? ManualBank::query()->find($manualBankId)
             : null;
 
-        if ($manualBank && $bankName === null) {
-            $bankName = $normalizeString($manualBank->name);
+        if (! $manualBank instanceof ManualBank && $bankName !== null) {
+            $normalizedBankName = Str::of($bankName)->trim()->lower()->value();
+
+            if ($normalizedBankName !== '') {
+                $manualBank = ManualBank::query()
+                    ->whereRaw('LOWER(TRIM(name)) = ?', [$normalizedBankName])
+                    ->orWhereRaw('LOWER(TRIM(beneficiary_name)) = ?', [$normalizedBankName])
+                    ->first();
+            }
+        }
+
+        if (! $manualBank instanceof ManualBank) {
+            $manualBankMissing = $manualBankId !== null || $bankName !== null;
+            $manualBankId = null;
+        } else {
+            $manualBankId = $manualBank->getKey();
+
+            if ($bankName === null) {
+                $bankName = $normalizeString($manualBank->name);
+            }
+
+
         }
 
         $supportsBankNameColumn = $this->manualPaymentSupportsBankNameColumn();
         $supportsBankAccountNameColumn = $this->manualPaymentSupportsBankAccountNameColumn();
 
 
-        $bankBeneficiary = $manualBank && $manualBank->beneficiary_name
+        $bankBeneficiary = $manualBank instanceof ManualBank && $manualBank->beneficiary_name
             ? $normalizeString($manualBank->beneficiary_name)
             : null;
 
@@ -639,6 +664,28 @@ class ManualPaymentRequestService
                 ->orderByDesc('id')
                 ->first();
         }
+
+
+        if ($manualBankMissing && $existingRequest instanceof ManualPaymentRequest) {
+            $existingManualBank = $existingRequest->relationLoaded('manualBank')
+                ? $existingRequest->getRelation('manualBank')
+                : $existingRequest->manualBank;
+
+            if ($existingManualBank instanceof ManualBank) {
+                $manualBank = $existingManualBank;
+                $manualBankId = $manualBank->getKey();
+                $manualBankMissing = false;
+
+                if ($bankName === null) {
+                    $bankName = $normalizeString($manualBank->name);
+                }
+
+                if ($bankBeneficiary === null && $manualBank->beneficiary_name) {
+                    $bankBeneficiary = $normalizeString($manualBank->beneficiary_name);
+                }
+            }
+        }
+
 
         $metaPayload = [];
 
@@ -734,6 +781,24 @@ class ManualPaymentRequestService
 
             $manualPaymentRequest = $existingRequest->fresh();
         } else {
+
+
+            if ($manualBankId === null) {
+                if ($manualBankMissing) {
+                    Log::warning('Unable to create manual payment request without a matching manual bank.', [
+                        'payment_transaction_id' => $transaction->getKey(),
+                        'provided_manual_bank_id' => Arr::get($data, 'manual_bank_id')
+                            ?? Arr::get($manualMeta, 'manual_bank.id')
+                            ?? Arr::get($manualRequestMeta, 'manual_bank_id')
+                            ?? Arr::get($manualRequestMeta, 'bank_id'),
+                        'provided_manual_bank_name' => $bankName,
+                    ]);
+                }
+
+                return null;
+            }
+
+
             $manualPaymentRequest = $this->createFromTransaction(
                 $user,
                 $transactionPayableType,

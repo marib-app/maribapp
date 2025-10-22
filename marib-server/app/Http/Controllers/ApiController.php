@@ -435,6 +435,45 @@ class ApiController extends Controller {
 
 
 
+    private function requestHasBoundingBox(Request $request): bool
+    {
+        return $request->filled('sw_lat')
+            && $request->filled('sw_lng')
+            && $request->filled('ne_lat')
+            && $request->filled('ne_lng');
+    }
+
+    private function applyBoundingBoxFilter(Builder $sql, Request $request): Builder
+    {
+        $swLat = (float) $request->query('sw_lat');
+        $neLat = (float) $request->query('ne_lat');
+        $swLng = (float) $request->query('sw_lng');
+        $neLng = (float) $request->query('ne_lng');
+
+        $minLat = min($swLat, $neLat);
+        $maxLat = max($swLat, $neLat);
+
+        $sql->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->whereBetween('latitude', [$minLat, $maxLat])
+            ->where(function (Builder $query) use ($swLng, $neLng): void {
+                if ($swLng <= $neLng) {
+                    $minLng = min($swLng, $neLng);
+                    $maxLng = max($swLng, $neLng);
+
+                    $query->whereBetween('longitude', [$minLng, $maxLng]);
+
+                    return;
+                }
+
+                $query->where(function (Builder $wrap) use ($swLng, $neLng): void {
+                    $wrap->whereBetween('longitude', [$swLng, 180])
+                        ->orWhereBetween('longitude', [-180, $neLng]);
+                });
+            });
+
+        return $sql;
+    }
 
 
 
@@ -1904,6 +1943,11 @@ class ApiController extends Controller {
             'promoted'       => 'nullable|boolean',
             'interface_type' => ['nullable', Rule::in(self::interfaceTypes(includeLegacy: true))],
             'view'           => ['nullable', Rule::in(['summary', 'detail'])],
+            'sw_lat'         => ['nullable', 'numeric', 'between:-90,90'],
+            'sw_lng'         => ['nullable', 'numeric', 'between:-180,180'],
+            'ne_lat'         => ['nullable', 'numeric', 'between:-90,90'],
+            'ne_lng'         => ['nullable', 'numeric', 'between:-180,180'],
+
 
         ]);
 
@@ -2035,6 +2079,9 @@ class ApiController extends Controller {
                     return $sql->where('user_id', $request->user_id);
                 })->when($request->slug, function ($sql) use ($request) {
                     return $sql->where('slug', $request->slug);
+                })->when($this->requestHasBoundingBox($request), function ($sql) use ($request) {
+                    return $this->applyBoundingBoxFilter($sql, $request);
+
                 // Remove radius/location-based filtering to show all items
                 // })->when($request->latitude && $request->longitude && $request->radius, function ($sql) use ($request) {
                 //     $latitude = $request->latitude;

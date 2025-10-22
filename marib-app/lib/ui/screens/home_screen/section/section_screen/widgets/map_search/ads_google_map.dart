@@ -75,7 +75,11 @@ class AdsGoogleMap extends StatefulWidget {
   final bool enableRadiusFilter; // تفعيل "نطاق البحث"
   final double initialRadiusKm; // 0 = غير مفعّل افتراضياً
   final Function(LatLngBounds)?
-      onSearchThisArea; // (اختياري) نداء API مع bounds
+  onSearchThisArea; // (اختياري) نداء API مع bounds
+  final Future<void> Function()? onLoadMore; // طلب صفحة إضافية
+  final VoidCallback? onViewportFilterCleared; // عند إلغاء مرشح النطاق
+  final bool hasMoreAds; // هل يوجد المزيد للتحميل
+  final bool isLoadingMore; // مؤشر تحميل المزيد
   final bool applyAppMapStyle; // لو عندك JSON لستايل الخريطة
 
   // تهيئة العرض
@@ -99,6 +103,10 @@ class AdsGoogleMap extends StatefulWidget {
     this.priceFormatter,
     this.imageUrlResolver,
     this.onOpenAdDetails,
+    this.onLoadMore,
+    this.onViewportFilterCleared,
+    this.hasMoreAds = false,
+    this.isLoadingMore = false,
   });
 
   @override
@@ -440,6 +448,7 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
     setState(() {
       _viewportFilterOn = false;
     });
+    widget.onViewportFilterCleared?.call();
     await _rebuildMarkers();
     if (withSnack) {
       HelperUtils.showSnackBarMessage(context, "تم إلغاء بحث في هذه المنطقة");
@@ -581,6 +590,9 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
                       setState(() => _selectedAd = ad);
                     }
                   },
+                  onLoadMore: widget.onLoadMore,
+                  hasMore: widget.hasMoreAds,
+                  isLoadingMore: widget.isLoadingMore,
                 ),
               ),
             ),
@@ -982,35 +994,106 @@ class _BottomDetailsSheet extends StatelessWidget {
   }
 }
 
-class _HorizontalAdStrip extends StatelessWidget {
+class _HorizontalAdStrip extends StatefulWidget {
   final List<ItemModel> ads;
   final ImageUrlResolver? imageUrlResolver;
   final PriceFormatter priceFormatter;
   final ValueChanged<ItemModel> onTapCard;
+  final Future<void> Function()? onLoadMore;
+  final bool hasMore;
+  final bool isLoadingMore;
 
   const _HorizontalAdStrip({
     required this.ads,
     required this.imageUrlResolver,
     required this.priceFormatter,
     required this.onTapCard,
+    this.onLoadMore,
+    this.hasMore = false,
+    this.isLoadingMore = false,
   });
+
+
+  @override
+  State<_HorizontalAdStrip> createState() => _HorizontalAdStripState();
+}
+
+class _HorizontalAdStripState extends State<_HorizontalAdStrip> {
+  late final ScrollController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = ScrollController();
+    _controller.addListener(_handleScroll);
+  }
+
+  void _handleScroll() {
+    if (!widget.hasMore || widget.onLoadMore == null || widget.isLoadingMore) {
+      return;
+    }
+    if (!_controller.hasClients) return;
+    final position = _controller.position;
+    if (!position.hasPixels) return;
+
+    const threshold = 80.0;
+    if (position.pixels >= position.maxScrollExtent - threshold) {
+      widget.onLoadMore!();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_handleScroll);
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return ListView.separated(
+    final list = ListView.separated(
+      controller: _controller,
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       itemBuilder: (_, i) {
-        final ad = ads[i];
+        final ad = widget.ads[i];
+
         return _AdThumbCard(
           ad: ad,
-          imageUrl: imageUrlResolver?.call(ad),
-          price: priceFormatter(ad),
-          onTap: () => onTapCard(ad),
+          imageUrl: widget.imageUrlResolver?.call(ad),
+          price: widget.priceFormatter(ad),
+          onTap: () => widget.onTapCard(ad),
         );
       },
       separatorBuilder: (_, __) => const SizedBox(width: 10),
-      itemCount: ads.length.clamp(0, 30),
+      itemCount: widget.ads.length,
+    );
+
+    return Stack(
+      alignment: Alignment.bottomCenter,
+      children: [
+        list,
+        if (widget.isLoadingMore)
+          Positioned(
+            bottom: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor.withOpacity(.92),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Theme.of(context).dividerColor.withOpacity(.2),
+                ),
+              ),
+              child: const SizedBox(
+                height: 18,
+                width: 18,
+                child: CircularProgressIndicator(strokeWidth: 2.2),
+              ),
+            ),
+          ),
+      ],
+
     );
   }
 }

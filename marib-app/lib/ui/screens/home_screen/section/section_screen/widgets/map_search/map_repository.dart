@@ -3,93 +3,96 @@ import 'package:marib/data/model/item/item_model.dart';
 
 import 'package:marib/data/model/category_model.dart';
 import 'package:marib/data/model/item/item_model.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class MapAdsRepository {
   final String endpoint; // Api.getItemApi
   MapAdsRepository({required this.endpoint});
 
-  bool _isAbsoluteUrl(String u) {
-    final s = u.toLowerCase();
-    return s.startsWith('http://') || s.startsWith('https://');
+  Future<AdsPageResult> fetchAdsPage({
+    int page = 1,
+    LatLngBounds? bounds,
+    int? perPage,
+  }) async {
+    final query = <String, dynamic>{
+      'page': page,
+    };
+
+    if (perPage != null) {
+      query['per_page'] = perPage;
+    }
+
+    if (bounds != null) {
+      query
+        ..['sw_lat'] = bounds.southwest.latitude
+        ..['sw_lng'] = bounds.southwest.longitude
+        ..['ne_lat'] = bounds.northeast.latitude
+        ..['ne_lng'] = bounds.northeast.longitude;
+    }
+
+    final resp = await Api.get(url: endpoint, queryParameters: query);
+    return _toAdsPageResult(resp, fallbackPage: page);
+
   }
 
-  Future<List<ItemModel>> fetchAllAds() async {
-    final List<ItemModel> acc = [];
+  AdsPageResult _toAdsPageResult(Map<String, dynamic> resp, {required int fallbackPage}) {
+    final List<ItemModel> items = [];
 
-    Map<String, dynamic> resp = await Api.get(url: endpoint);
-    _appendItems(resp, acc);
+    Map<String, dynamic>? meta;
+    if (resp['data'] is Map<String, dynamic>) {
+      meta = Map<String, dynamic>.from(resp['data'] as Map);
 
-    String? nextUrl = _extractNext(resp);
-    int? curr = _toInt(resp['data']?['current_page']);
-    int? last = _toInt(resp['data']?['last_page']);
-    final String? path = resp['data']?['path']?.toString();
-
-    int safety = 0;
-    while (true) {
-      if (safety++ > 50) break;
-
-      if (nextUrl != null && nextUrl.isNotEmpty) {
-        final useBase = !_isAbsoluteUrl(nextUrl) ? true : false;
-        resp = await Api.get(url: nextUrl, useBaseUrl: useBase);
-        _appendItems(resp, acc);
-        nextUrl = _extractNext(resp);
-        curr = _toInt(resp['data']?['current_page']);
-        last = _toInt(resp['data']?['last_page']);
-        continue;
+    }
+    final List<dynamic> payload;
+    if (meta != null && meta['data'] is List) {
+      payload = List<dynamic>.from(meta['data'] as List);
+    } else if (resp['items'] is List) {
+      payload = List<dynamic>.from(resp['items'] as List);
+    } else {
+      payload = const [];
+    }
+    for (final raw in payload) {
+      if (raw is Map<String, dynamic>) {
+        items.add(ItemModel.fromJson(raw));
+      } else if (raw is Map) {
+        items.add(ItemModel.fromJson(Map<String, dynamic>.from(raw)));
       }
-
-      if (curr != null && last != null && curr < last) {
-        final int nextPageNum = curr + 1;
-        if (path != null && path.isNotEmpty) {
-          final pageUrl = '$path?page=$nextPageNum';
-          final useBase = !_isAbsoluteUrl(pageUrl) ? true : false;
-          resp = await Api.get(url: pageUrl, useBaseUrl: useBase);
-        } else {
-          resp = await Api.get(url: endpoint, queryParameters: {'page': nextPageNum});
-        }
-        _appendItems(resp, acc);
-        curr = _toInt(resp['data']?['current_page']);
-        last = _toInt(resp['data']?['last_page']);
-        nextUrl = _extractNext(resp);
-        continue;
-      }
-
-      break;
     }
+    final current = _toInt(meta?['current_page']) ?? fallbackPage;
+    final last = _toInt(meta?['last_page']) ?? current;
+    final perPage = _toInt(meta?['per_page']) ?? items.length;
+    final total = _toInt(meta?['total']) ?? items.length;
 
-    return acc;
-  }
-
-  void _appendItems(Map<String, dynamic> r, List<ItemModel> acc) {
-    final data = r['data'];
-    List pageItems = const [];
-    if (data is Map && data['data'] is List) {
-      pageItems = data['data'];
-    } else if (r['items'] is List) {
-      pageItems = r['items'];
-    }
-    for (final e in pageItems) {
-      if (e is Map<String, dynamic>) {
-        acc.add(ItemModel.fromJson(e));
-      } else if (e is Map) {
-        acc.add(ItemModel.fromJson(Map<String, dynamic>.from(e)));
-      }
-
-    }
-  }
-
-  String? _extractNext(Map<String, dynamic> r) {
-    final data = r['data'];
-    if (data is Map && data['next_page_url'] != null && data['next_page_url'].toString().isNotEmpty) {
-      return data['next_page_url'].toString();
-    }
-    if (r['next'] is String && (r['next'] as String).isNotEmpty) {
-      return r['next'] as String;
-    }
-    return null;
+    return AdsPageResult(
+      items: items,
+      currentPage: current,
+      lastPage: last,
+      perPage: perPage,
+      total: total,
+    );
   }
 
   int? _toInt(dynamic v) => v == null ? null : int.tryParse(v.toString());
+}
+
+
+
+class AdsPageResult {
+  final List<ItemModel> items;
+  final int currentPage;
+  final int lastPage;
+  final int perPage;
+  final int total;
+
+  const AdsPageResult({
+    required this.items,
+    required this.currentPage,
+    required this.lastPage,
+    required this.perPage,
+    required this.total,
+  });
+
+  bool get hasMore => currentPage < lastPage;
 }
 
 /// تطبيع فئات بسيطة

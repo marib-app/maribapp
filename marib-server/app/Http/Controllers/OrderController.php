@@ -24,6 +24,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Log;
 
 
 class OrderController extends Controller
@@ -432,7 +433,17 @@ class OrderController extends Controller
 
             $order = $order->refreshOrderNumber();
 
+            try {
+                $this->delegateNotificationService->notifyNewOrder($order);
+            } catch (Throwable $exception) {
+                Log::error('delegate_notifications.new_order_failed', [
+                    'order_id' => $order->getKey(),
+                    'exception_class' => $exception::class,
+                    'exception_message' => $exception->getMessage(),
+                ]);
+            }
 
+            
             // إضافة عناصر الطلب
             foreach ($request->items as $itemData) {
                 $item = $items->get($itemData['item_id']);

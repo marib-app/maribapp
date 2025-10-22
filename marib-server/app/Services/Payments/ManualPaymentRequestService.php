@@ -782,20 +782,15 @@ class ManualPaymentRequestService
             $manualPaymentRequest = $existingRequest->fresh();
         } else {
 
-
-            if ($manualBankId === null) {
-                if ($manualBankMissing) {
-                    Log::warning('Unable to create manual payment request without a matching manual bank.', [
-                        'payment_transaction_id' => $transaction->getKey(),
-                        'provided_manual_bank_id' => Arr::get($data, 'manual_bank_id')
-                            ?? Arr::get($manualMeta, 'manual_bank.id')
-                            ?? Arr::get($manualRequestMeta, 'manual_bank_id')
-                            ?? Arr::get($manualRequestMeta, 'bank_id'),
-                        'provided_manual_bank_name' => $bankName,
-                    ]);
-                }
-
-                return null;
+            if ($manualBankMissing && $manualBankId === null) {
+                Log::warning('Unable to determine manual bank while creating manual payment request from transaction.', [
+                    'payment_transaction_id' => $transaction->getKey(),
+                    'provided_manual_bank_id' => Arr::get($data, 'manual_bank_id')
+                        ?? Arr::get($manualMeta, 'manual_bank.id')
+                        ?? Arr::get($manualRequestMeta, 'manual_bank_id')
+                        ?? Arr::get($manualRequestMeta, 'bank_id'),
+                    'provided_manual_bank_name' => $bankName,
+                ]);
             }
 
 

@@ -1664,30 +1664,44 @@ class ManualPaymentRequestController extends Controller
             data_get($row, 'payment_transaction_id') ?? data_get($row, 'id')
         );
 
-        if ($transactionId !== null) {
-            $transaction = PaymentTransaction::query()
-                ->with('manualPaymentRequest')
-                ->find($transactionId);
+        if ($transactionId === null) {
+            return '';
+        }
 
-            if ($transaction instanceof PaymentTransaction) {
-                $manualPaymentRequest = $transaction->manualPaymentRequest;
+        $transaction = PaymentTransaction::query()
+            ->with('manualPaymentRequest')
+            ->find($transactionId);
 
-                if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
-                    $manualPaymentRequest = $this->manualPaymentRequestService
-                        ->ensureManualPaymentRequestForTransaction($transaction);
-                }
+        if (! $transaction instanceof PaymentTransaction) {
+            return '';
+        }
 
-                if ($manualPaymentRequest instanceof ManualPaymentRequest) {
-                    $manualPaymentRequestId = $manualPaymentRequest->getKey();
-                    $row->manual_payment_request_id = $manualPaymentRequestId;
-                    $this->manualPaymentRequestLookupCache[$manualPaymentRequestId] = $manualPaymentRequest;
+        $manualPaymentRequest = $transaction->manualPaymentRequest;
 
-                    return $this->actionsColumn($manualPaymentRequest);
-                }
+        if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+            $manualPaymentRequest = $this->manualPaymentRequestService
+                ->ensureManualPaymentRequestForTransaction($transaction);
+        }
+
+        if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+            $transactionManualRequestId = $this->normalizeManualPaymentIdentifier(
+                $transaction->manual_payment_request_id
+            );
+
+            if ($transactionManualRequestId !== null) {
+                $manualPaymentRequest = $this->getManualPaymentRequestById($transactionManualRequestId);
             }
         }
 
-        return '';
+        if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+            return '';
+        }
+
+        $manualPaymentRequestId = $manualPaymentRequest->getKey();
+        $row->manual_payment_request_id = $manualPaymentRequestId;
+        $this->manualPaymentRequestLookupCache[$manualPaymentRequestId] = $manualPaymentRequest;
+
+        return $this->actionsColumn($manualPaymentRequest);
     }
 
     private function renderManualPaymentReviewButton(ManualPaymentRequest|int $manualPaymentRequest): string

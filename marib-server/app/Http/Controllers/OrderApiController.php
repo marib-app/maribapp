@@ -459,7 +459,7 @@ class OrderApiController extends Controller
 
 
 
-    public function invoice(Request $request, int $orderId): Response
+    public function invoice(Request $request, int $orderId): Response|JsonResponse
     {
         $order = Order::query()
             ->with(['items', 'user'])

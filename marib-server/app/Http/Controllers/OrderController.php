@@ -475,13 +475,6 @@ class OrderController extends Controller
                 'comment' => 'تم إنشاء الطلب',
             ]);
 
-
-            try {
-                $this->delegateNotificationService->notifyNewOrder($order);
-            } catch (Throwable $exception) {
-                report($exception);
-            }
-
             // تأكيد المعاملة
             DB::commit();
 

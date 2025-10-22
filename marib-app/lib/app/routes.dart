@@ -13,6 +13,7 @@ import 'package:marib/ui/screens/home/widgets/subCategoryFilterScreen.dart';
 import 'package:marib/ui/screens/info_screen/info_screen.dart';
 
 import 'package:marib/ui/screens/item/purchase_options/product_management_screen.dart';
+import 'package:marib/ui/screens/item/purchase_options/product_review_screen.dart';
 
 import 'package:marib/ui/screens/item/items_list_seller.dart';
 import 'package:marib/ui/screens/item/viewAll.dart';
@@ -110,6 +111,7 @@ class Routes {
   static const section_screen = 'section_screen'; // واجهة الاقسام
   static const promoteAdScreen = '/promoteAdScreen';
   static const productManagementScreen = '/productManagementScreen';
+  static const productReviewScreen = '/productReviewScreen';
 
   // الخدمات
   static const classifiedScreenRoute = 'classifiedScreenRoute';
@@ -323,6 +325,10 @@ class Routes {
 
       case productManagementScreen:
         return ProductManagementScreen.route(routeSettings);
+
+      case productReviewScreen:
+        return ProductReviewScreen.route(routeSettings);
+
 
 // ✅ جديد: خدمات أخرى
       case otherServices:

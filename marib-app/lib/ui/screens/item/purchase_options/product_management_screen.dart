@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:collection';
 import 'package:marib/data/constants/color_catalog.dart';
 import 'package:marib/utils/ecommerce_department.dart';
+import 'package:marib/data/helper/widgets.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -262,7 +263,9 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
             Expanded(
               child: UiUtils.buildButton(
                 context,
-                onPressed: () => _finish(context),
+                onPressed: () async {
+                  await _finish(context);
+                },
                 buttonTitle: 'إنهاء',
                 height: 48.rh(context),
                 fontSize: context.font.large,
@@ -305,12 +308,36 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
     }
   }
 
-  void _finish(BuildContext context) {
-    Navigator.popUntil(context, (Route<dynamic> route) => route.isFirst);
+  Future<void> _finish(BuildContext context) async {
+    final ProductManagementCubit cubit = context.read<ProductManagementCubit>();
+
+    Widgets.showLoader(context);
+    SubmissionOutcome outcome;
+    try {
+      outcome = await cubit.submitAll();
+    } finally {
+      if (mounted) {
+        Widgets.hideLoder(context);
+      }
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    if (!outcome.success) {
+      HelperUtils.showSnackBarMessage(context, outcome.message);
+      return;
+    }
+
     Navigator.pushNamed(
       context,
-      Routes.adDetailsScreen,
-      arguments: <String, dynamic>{'model': widget.item},
+      Routes.productReviewScreen,
+      arguments: <String, dynamic>{
+        'item': cubit.state.item,
+        'options': cubit.state.options,
+        'message': outcome.message,
+      },
     );
   }
 }

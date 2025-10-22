@@ -1330,6 +1330,45 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     }
   }
 
+  Future<SubmissionOutcome> submitAll() async {
+    if (!state.hasLoaded) {
+      return const SubmissionOutcome(
+        success: false,
+        message:
+            'يرجى الانتظار حتى يتم تحميل بيانات المنتج بالكامل ثم إعادة المحاولة.',
+      );
+    }
+
+    SubmissionOutcome? lastOutcome;
+
+    final List<Future<SubmissionOutcome> Function()> tasks =
+        <Future<SubmissionOutcome> Function()>[
+      saveAttributes,
+      saveStock,
+      saveDiscount,
+    ];
+
+    for (final Future<SubmissionOutcome> Function() task in tasks) {
+      final SubmissionOutcome outcome = await task();
+      if (!outcome.success) {
+        return outcome;
+      }
+      lastOutcome = outcome;
+    }
+
+    if (lastOutcome == null) {
+      return const SubmissionOutcome(
+        success: true,
+        message: 'لا توجد تغييرات لحفظها.',
+      );
+    }
+
+    return const SubmissionOutcome(
+      success: true,
+      message: 'تم حفظ جميع الإعدادات بنجاح.',
+    );
+  }
+
   void _applyOptions(ItemPurchaseOptions options, {double? finalPrice}) {
     final Map<String, ItemPurchaseAttributeOption> rawAttributes =
         <String, ItemPurchaseAttributeOption>{

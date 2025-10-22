@@ -1,12 +1,11 @@
 import Blogs from '@/components/PagesComponent/Blogs/Blogs'
 import axios from 'axios';
-import { buildApiUrl } from '@/utils/env';
 
 
 export const generateMetadata = async () => {
   try {
       const response = await axios.get(
-          buildApiUrl('seo-settings?page=blogs')
+          `${process.env.NEXT_PUBLIC_API_URL}${process.env.NEXT_PUBLIC_END_POINT}seo-settings?page=blogs`
       );
       const blogs = response?.data?.data[0]
 

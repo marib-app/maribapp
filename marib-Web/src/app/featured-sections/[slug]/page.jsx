@@ -2,14 +2,10 @@ import FeaturedViewAll from '@/components/PagesComponent/FeaturedViewAll/Feature
 import SEO from '@/components/SEO/SEO'
 import axios from 'axios';
 import React from 'react'
-import { buildApiUrl } from '@/utils/env';
-
-
-
 export const generateMetadata = async ({ params }) => {
     try {
         const response = await axios.get(
-            buildApiUrl(`get-featured-section?slug=${params?.slug}`)
+            `${process.env.NEXT_PUBLIC_API_URL}${process.env.NEXT_PUBLIC_END_POINT}get-featured-section?slug=${params?.slug}`
         );
 
         const stopWords = ['the', 'is', 'in', 'and', 'a', 'to', 'of', 'for', 'on', 'at', 'with', 'by', 'this', 'that', 'or', 'as', 'an', 'from', 'it', 'was', 'are', 'be', 'has', 'have', 'had', 'but', 'if', 'else'];

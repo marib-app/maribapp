@@ -1,13 +1,12 @@
 import SingleBlog from '@/components/PagesComponent/SingleBlog/SingleBlog'
 import { GET_BLOGS } from '@/utils/api';
 import axios from 'axios';
-import { buildApiUrl } from '@/utils/env';
 
 
 export const generateMetadata = async ({ params }) => {
     try {
         const response = await axios.get(
-            buildApiUrl(`blogs?slug=${params?.slug}`)
+            `${process.env.NEXT_PUBLIC_API_URL}${process.env.NEXT_PUBLIC_END_POINT}blogs?slug=${params?.slug}`
         );
         const data = response?.data?.data?.data[0]
         const plainTextDescription = data?.description?.replace(/<\/?[^>]+(>|$)/g, "");

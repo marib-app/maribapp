@@ -133,70 +133,7 @@
     </div>
 
 
-    @if($latestManualPaymentRequest)
-        @php
-            $manualPaymentStatus = $latestManualPaymentRequest->status;
-            $manualPaymentStatusLabel = $manualPaymentStatus
-                ? ($manualPaymentStatusLabels[$manualPaymentStatus] ?? $manualPaymentStatus)
-                : 'غير محدد';
-            $manualPaymentAlertClass = $manualPaymentStatusAlertClasses[$manualPaymentStatus] ?? 'alert-info';
-            $manualPaymentCurrency = $latestManualPaymentRequest->currency;
-            $manualPaymentCurrencyDisplay = $manualPaymentCurrency ?: 'ريال';
-            $manualPaymentAmountRaw = $latestManualPaymentRequest->amount;
-            $manualPaymentAmountDisplay = null;
 
-            if (is_numeric($manualPaymentAmountRaw)) {
-                $manualPaymentAmountDisplay = number_format((float) $manualPaymentAmountRaw, 2) . ' ' . $manualPaymentCurrencyDisplay;
-            } elseif (is_string($manualPaymentAmountRaw) && trim($manualPaymentAmountRaw) !== '') {
-                $manualPaymentAmountDisplay = trim($manualPaymentAmountRaw);
-            }
-
-            $manualPaymentReviewUrl = route('payment-requests.review', $latestManualPaymentRequest->id);
-            $isBlockingManualPayment = $pendingManualPaymentRequest
-                && $pendingManualPaymentRequest->is($latestManualPaymentRequest);
-
-            $manualPaymentTitle = 'تفاصيل طلب الدفع اليدوي.';
-
-            if ($isBlockingManualPayment) {
-                $manualPaymentTitle = 'طلب دفع قيد المراجعة.';
-            } elseif ($manualPaymentStatus === ManualPaymentRequest::STATUS_APPROVED) {
-                $manualPaymentTitle = 'تم اعتماد طلب الدفع اليدوي.';
-            } elseif ($manualPaymentStatus === ManualPaymentRequest::STATUS_REJECTED) {
-                $manualPaymentTitle = 'تم رفض طلب الدفع اليدوي.';
-            }
-
-            $manualPaymentMessage = 'يوجد طلب دفع رقم #' . $latestManualPaymentRequest->id;
-
-            if ($manualPaymentAmountDisplay) {
-                $manualPaymentMessage .= ' بمبلغ ' . $manualPaymentAmountDisplay;
-            }
-
-            if ($manualPaymentStatusLabel) {
-                $manualPaymentMessage .= ' حالته: ' . $manualPaymentStatusLabel . '.';
-            } else {
-                $manualPaymentMessage .= '.';
-            }
-
-            if ($isBlockingManualPayment) {
-                $manualPaymentMessage .= ' لا يمكن تعديل حالة الدفع أو حالة الطلب حتى يتم اعتماد أو رفض هذا الطلب.';
-            } else {
-                $manualPaymentMessage .= ' يمكنك عرض تفاصيل الطلب من خلال الزر التالي.';
-            }
-        @endphp
-        <div class="alert {{ $manualPaymentAlertClass }}" role="alert">
-
-
-            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
-                <div>
-                     <strong>{{ $manualPaymentTitle }}</strong>
-                    <p class="mb-0">{{ $manualPaymentMessage }}</p>
-                </div>
-                <a href="{{ $manualPaymentReviewUrl }}" class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer">
-                    <i class="fa fa-external-link-alt me-1"></i> عرض طلب الدفع
-                </a>
-            </div>
-        </div>
-    @endif
 
 
     <form action="{{ route('orders.update', $order->id) }}" method="POST" id="orderForm">
@@ -222,9 +159,7 @@
             $manualPaymentBadgeClass = $manualPaymentStatus
                 ? ($manualPaymentStatusBadgeClasses[$manualPaymentStatus] ?? 'bg-secondary')
                 : null;
-            $manualPaymentReviewUrl = $latestManualPaymentRequest
-                ? route('payment-requests.review', $latestManualPaymentRequest->id)
-                : null;
+
             $paymentStatusLabel = $manualPaymentStatusLabelValue
                 ?? ($paymentStatusOptions[$order->payment_status] ?? ($order->payment_status ?: 'غير محدد'));
 
@@ -310,15 +245,6 @@
                             
                             </div>
                             <small class="text-muted d-block mt-2">يتم تحديث حالة الدفع حصراً من خلال واجهة طلبات الدفع.</small>
-                            @if($latestManualPaymentRequest)
-                                <small class="text-muted d-block">
-                                    آخر طلب دفع رقم #{{ $latestManualPaymentRequest->id }}:
-                                    {{ $manualPaymentStatusLabelValue ?? ($paymentStatusLabel ?? 'غير محدد') }}
-                                    @if($manualPaymentReviewUrl)
-                                        — <a href="{{ $manualPaymentReviewUrl }}" target="_blank" rel="noopener noreferrer">عرض الطلب</a>
-                                    @endif
-                                </small>
-                            @endif
 
                         </div>
 

@@ -339,7 +339,6 @@
                                         <td>{{ $order->payment_method ?: 'غير محدد' }}</td>
                                         <td>
                                             @php
-                                                $pendingManualPayments = (int) ($order->pending_manual_payment_requests_count ?? 0);
                                                 $latestManualPaymentRequest = $order->latestManualPaymentRequest;
                                                 $manualPaymentStatus = $latestManualPaymentRequest?->status;
                                                 $manualPaymentStatusLabel = $manualPaymentStatus
@@ -350,9 +349,7 @@
                                                     : null;
                                                 $manualPaymentLocked = $manualPaymentStatus !== null
                                                     && in_array($manualPaymentStatus, ManualPaymentRequest::OPEN_STATUSES, true);
-                                                $manualPaymentReviewUrl = $latestManualPaymentRequest
-                                                    ? route('payment-requests.review', $latestManualPaymentRequest->id)
-                                                    : null;
+
 
                                                 $paymentStatusValue = $order->payment_status;
 
@@ -371,24 +368,7 @@
                                             @endphp
                                             <span class="badge {{ $paymentStatusClass }}">{{ $paymentStatusLabel }}</span>
 
-                                            @if($manualPaymentLocked && $latestManualPaymentRequest)
-                                                <div class="small text-muted mt-1">
-                                                    يوجد طلب دفع رقم #{{ $latestManualPaymentRequest->id }} قيد المراجعة
-                                                    @if($manualPaymentReviewUrl)
-                                                        — <a href="{{ $manualPaymentReviewUrl }}" target="_blank" rel="noopener noreferrer">عرض الطلب</a>
-                                                    @endif
-                                                    @if($pendingManualPayments > 1)
-                                                        <span class="ms-1">(إجمالي {{ $pendingManualPayments }} طلبات مفتوحة)</span>
-                                                    @endif
-                                                </div>
-                                            @elseif($latestManualPaymentRequest && $manualPaymentStatusLabel)
-                                                <div class="small text-muted mt-1">
-                                                    آخر طلب دفع رقم #{{ $latestManualPaymentRequest->id }}: {{ $manualPaymentStatusLabel }}
-                                                    @if($manualPaymentReviewUrl)
-                                                        — <a href="{{ $manualPaymentReviewUrl }}" target="_blank" rel="noopener noreferrer">عرض الطلب</a>
-                                                    @endif
-                                                </div>
-                                            @endif
+
 
                                         </td>
                                         <td>

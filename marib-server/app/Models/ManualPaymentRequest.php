@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Throwable;
 
 
 class ManualPaymentRequest extends Model
@@ -602,19 +603,87 @@ class ManualPaymentRequest extends Model
 
     public function getReceiptUrlAttribute(): ?string
     {
-        if (empty($this->receipt_path)) {
+        $path = $this->receipt_path;
+
+        if (empty($path)) {
+            
             return null;
         }
 
-        if (filter_var($this->receipt_path, FILTER_VALIDATE_URL)) {
-            return $this->receipt_path;
+        if (filter_var($path, FILTER_VALIDATE_URL)) {
+            return $path;
         }
 
-        if (Storage::exists($this->receipt_path)) {
-            return url(Storage::url($this->receipt_path));
+        $meta = is_array($this->meta) ? $this->meta : [];
+
+        $diskCandidates = [];
+
+        $metaDisk = data_get($meta, 'receipt.disk');
+        if (is_string($metaDisk) && $metaDisk !== '') {
+            $diskCandidates[] = $metaDisk;
         }
 
-        return $this->receipt_path;
+        $attachmentDisks = collect(data_get($meta, 'attachments', []))
+            ->filter(static function ($attachment) use ($path) {
+                if (! is_array($attachment)) {
+                    return false;
+                }
+
+                $attachmentPath = data_get($attachment, 'path');
+
+                return is_string($attachmentPath)
+                    && trim($attachmentPath) !== ''
+                    && trim($attachmentPath) === $path;
+            })
+            ->map(static fn ($attachment) => data_get($attachment, 'disk'))
+            ->filter(static fn ($disk) => is_string($disk) && $disk !== '')
+            ->all();
+
+        $diskCandidates = array_merge($diskCandidates, $attachmentDisks);
+
+        $diskCandidates[] = 'public';
+
+        $defaultDisk = config('filesystems.default');
+        if (is_string($defaultDisk) && $defaultDisk !== '') {
+            $diskCandidates[] = $defaultDisk;
+        }
+
+        foreach ($diskCandidates as $diskName) {
+            try {
+                $disk = Storage::disk($diskName);
+            } catch (Throwable) {
+                continue;
+            }
+
+            try {
+                if (method_exists($disk, 'temporaryUrl')) {
+                    $temporaryUrl = $disk->temporaryUrl($path, now()->addMinutes(15));
+
+                    if (is_string($temporaryUrl) && $temporaryUrl !== '') {
+                        return $temporaryUrl;
+                    }
+                }
+            } catch (Throwable) {
+                // ignore and fall back to standard URL generation
+            }
+
+            try {
+                $resolvedUrl = $disk->url($path);
+
+                if (is_string($resolvedUrl) && $resolvedUrl !== '') {
+                    if (filter_var($resolvedUrl, FILTER_VALIDATE_URL)) {
+                        return $resolvedUrl;
+                    }
+
+                    return url($resolvedUrl);
+                }
+            } catch (Throwable) {
+                continue;
+            }
+
+        }
+
+        return $path;
     }
 
     public function isWalletTopUp(): bool

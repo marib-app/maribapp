@@ -1,6 +1,10 @@
 @php
     use App\Models\ManualPaymentRequest;
+    use Illuminate\Support\Arr;
+    use Illuminate\Support\Str;
     $statusHtml = match ($request->status) {
+
+
         ManualPaymentRequest::STATUS_APPROVED => '<span class="badge bg-success">' . __('Approved') . '</span>',
         ManualPaymentRequest::STATUS_REJECTED => '<span class="badge bg-danger">' . __('Rejected') . '</span>',
         default => '<span class="badge bg-warning text-dark">' . __('Pending') . '</span>',
@@ -111,7 +115,7 @@
                         <dt class="col-5 text-muted">{{ __('Payable Type') }}</dt>
                         <dd class="col-7">
                             {{ filled($request->payable_type)
-                                ? \Illuminate\Support\Str::title(class_basename($request->payable_type))
+                                ? Str::title(class_basename($request->payable_type))
                                 : __('N/A') }}
                         </dd>
 
@@ -144,25 +148,158 @@
         <div class="col-lg-4 col-md-12">
             <div class="card h-100 shadow-sm">
                 <div class="card-header bg-light">
-                    <h6 class="mb-0"><i class="fa fa-university me-2"></i>{{ __('Bank Details') }}</h6>
+                    <h6 class="mb-0"><i class="fa fa-exchange-alt me-2"></i>{{ __('Transfer Information') }}</h6>
                 </div>
                 <div class="card-body">
-                    <dl class="row mb-0">
-                        <dt class="col-5 text-muted">{{ __('Bank Name') }}</dt>
-                        <dd class="col-7">{{ $request->bank_name ?? __('N/A') }}</dd>
+                    @php
+                        $rawMeta = is_array($request->meta) ? $request->meta : [];
+                        $metadata = Arr::get($rawMeta, 'metadata', []);
 
-                        <dt class="col-5 text-muted">{{ __('Account Name') }}</dt>
-                        <dd class="col-7">{{ $request->bank_account_name ?? __('N/A') }}</dd>
+                        if (! is_array($metadata)) {
+                            $metadata = [];
+                        }
 
-                        <dt class="col-5 text-muted">{{ __('Account Number') }}</dt>
-                        <dd class="col-7">{{ $request->bank_account_number ?? __('N/A') }}</dd>
+                        $valueFromMetadata = static function (array $keys) use ($metadata) {
+                            foreach ($keys as $key) {
+                                $value = data_get($metadata, $key);
 
-                        <dt class="col-5 text-muted">{{ __('IBAN') }}</dt>
-                        <dd class="col-7">{{ $request->bank_iban ?? __('N/A') }}</dd>
+                                if ($value instanceof \DateTimeInterface) {
+                                    return $value;
+                                }
 
-                        <dt class="col-5 text-muted">{{ __('SWIFT Code') }}</dt>
-                        <dd class="col-7">{{ $request->bank_swift_code ?? __('N/A') }}</dd>
-                    </dl>
+                                if (is_string($value)) {
+                                    $value = trim($value);
+                                } elseif (is_numeric($value)) {
+                                    $value = trim((string) $value);
+                                } else {
+                                    continue;
+                                }
+
+                                if ($value !== '') {
+                                    return $value;
+                                }
+                            }
+
+                            return null;
+                        };
+
+                        $senderName = $valueFromMetadata(['sender_name', 'sender']);
+
+                        $rawUserNote = is_string($request->user_note) ? $request->user_note : '';
+                        $noteLines = [];
+                        $senderFromNote = null;
+
+                        if ($rawUserNote !== '') {
+                            $lines = preg_split("/\r\n|\n|\r/", $rawUserNote) ?: [];
+
+                            foreach ($lines as $line) {
+                                $trimmedLine = trim($line);
+
+                                if ($trimmedLine === '') {
+                                    continue;
+                                }
+
+                                if ($senderFromNote === null) {
+                                    $normalizedLine = Str::lower($trimmedLine);
+
+                                    if (Str::contains($normalizedLine, 'اسم المرسل')) {
+                                        $parts = preg_split('/[:：]/u', $trimmedLine, 2);
+
+                                        if (isset($parts[1])) {
+                                            $candidate = trim($parts[1]);
+
+                                            if ($candidate !== '') {
+                                                $senderFromNote = $candidate;
+                                                continue;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                $noteLines[] = $trimmedLine;
+                            }
+                        }
+
+                        if (! $senderName && $senderFromNote) {
+                            $senderName = $senderFromNote;
+                        }
+
+                        $transferReference = $valueFromMetadata([
+                            'transfer_reference',
+                            'transfer_number',
+                            'reference_number',
+                            'transaction_reference',
+                            'reference',
+                            'voucher_number',
+                        ]);
+
+                        if (! $transferReference && filled($request->reference)) {
+                            $transferReference = trim((string) $request->reference);
+                        }
+
+                        $transferDate = $valueFromMetadata(['transferred_at', 'transfer_date']);
+
+                        if ($transferDate instanceof \DateTimeInterface) {
+                            $transferDate = $transferDate->format('Y-m-d H:i');
+                        } elseif (is_string($transferDate) && $transferDate !== '') {
+                            try {
+                                $parsedDate = \Carbon\Carbon::parse($transferDate);
+                                $transferDate = $parsedDate->format('Y-m-d H:i');
+                            } catch (\Exception $exception) {
+                                // Keep the original string when parsing fails.
+                            }
+                        } else {
+                            $transferDate = null;
+                        }
+
+                        $noteFromMetadata = $valueFromMetadata(['notes', 'note', 'additional_note', 'message']);
+
+                        if (! $noteFromMetadata) {
+                            $noteFromMetadata = $noteLines !== []
+                                ? implode("\n", $noteLines)
+                                : ($rawUserNote !== '' ? $rawUserNote : null);
+                        }
+
+                        $transferDetails = [];
+
+                        if ($senderName) {
+                            $transferDetails[__('Sender Name')] = $senderName;
+                        }
+
+                        if ($transferReference) {
+                            $transferDetails[__('Transfer Reference')] = $transferReference;
+                        }
+
+                        if ($transferDate) {
+                            $transferDetails[__('Transfer Date')] = $transferDate;
+                        }
+
+                        if ($noteFromMetadata) {
+                            $transferDetails[__('Additional Notes')] = $noteFromMetadata;
+                        }
+                    @endphp
+
+                    @if($transferDetails !== [])
+                        <dl class="row mb-0">
+                            @foreach($transferDetails as $label => $value)
+                                <dt class="col-5 text-muted">{{ $label }}</dt>
+                                <dd class="col-7">
+                                    @php
+                                        $stringValue = is_string($value) ? $value : (is_numeric($value) ? (string) $value : '');
+                                    @endphp
+                                    @if($stringValue !== '' && Str::contains($stringValue, "\n"))
+                                        {!! nl2br(e($stringValue)) !!}
+                                    @else
+                                        {{ $stringValue !== '' ? $stringValue : __('N/A') }}
+                                    @endif
+                                </dd>
+                            @endforeach
+                        </dl>
+                    @else
+                        <p class="text-muted mb-0">{{ __('No transfer information provided.') }}</p>
+                    @endif
+
+                    
                 </div>
             </div>
         </div>

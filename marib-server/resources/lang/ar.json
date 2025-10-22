@@ -691,5 +691,11 @@
     "Manual Payment Follow Up Update Status": "حدّث حالة الطلب في لوحة الطلبات بعد اعتماد الدفع اليدوي.",
     "Manual Payment Follow Up Quick Actions": "إجراءات سريعة للمتابعة",
     "Manual Payment Open Order Details": "فتح تفاصيل الطلب",
-    "validation.unique": "تم استخدام :attribute بالفعل."
+    "validation.unique": "تم استخدام :attribute بالفعل.",
+    "Transfer Information": "معلومات التحويل",
+    "Sender Name": "اسم المرسل",
+    "Transfer Reference": "رقم الحوالة",
+    "Transfer Date": "تاريخ التحويل",
+    "Additional Notes": "ملاحظات إضافية",
+    "No transfer information provided.": "لا توجد معلومات تحويل مقدمة."
 }

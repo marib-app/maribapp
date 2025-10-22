@@ -1,6 +1,7 @@
 import 'package:marib/data/model/item/purchase_options.dart';
 import 'package:marib/utils/api.dart';
-
+import 'package:marib/data/services/delivery_pricing_service.dart'
+    show DeliveryPackageSize, DeliveryPackageSizeLabel;
 
 class PurchaseOptionsUpdateResult {
   const PurchaseOptionsUpdateResult({
@@ -13,7 +14,6 @@ class PurchaseOptionsUpdateResult {
   final String message;
   final double? finalPrice;
 }
-
 
 class ItemPurchaseOptionsRepository {
   Future<ItemPurchaseOptions> fetch(int itemId) async {
@@ -28,25 +28,24 @@ class ItemPurchaseOptionsRepository {
 
     if (data is Map) {
       return ItemPurchaseOptions.fromJson(
-        data.map((dynamic key, dynamic value) => MapEntry(key.toString(), value)),
+        data.map(
+            (dynamic key, dynamic value) => MapEntry(key.toString(), value)),
       );
     }
 
     throw Exception('unexpected-response');
   }
 
-
-
   Future<PurchaseOptionsUpdateResult> saveAttributes({
     required int itemId,
     required List<Map<String, dynamic>> attributes,
-
+    DeliveryPackageSize? deliverySize,
   }) async {
     final Map<String, dynamic> response = await Api.post(
       url: Api.itemAttributesApi(itemId),
       parameter: <String, dynamic>{
         'attributes': attributes,
-
+        'delivery_size': deliverySize == null ? '' : deliverySize.label,
       },
     );
 
@@ -70,7 +69,6 @@ class ItemPurchaseOptionsRepository {
     required Map<String, dynamic> payload,
   }) async {
     final Map<String, dynamic> response = await Api.requestJson(
-
       url: Api.itemDiscountApi(itemId),
       method: 'PATCH',
       data: payload,
@@ -80,9 +78,11 @@ class ItemPurchaseOptionsRepository {
   }
 
   PurchaseOptionsUpdateResult _parseUpdateResponse(
-      Map<String, dynamic> response,) {
-    final Map<String, dynamic>? data =
-    response['data'] is Map ? Map<String, dynamic>.from(response['data']) : null;
+    Map<String, dynamic> response,
+  ) {
+    final Map<String, dynamic>? data = response['data'] is Map
+        ? Map<String, dynamic>.from(response['data'])
+        : null;
 
     final String message = response['message']?.toString() ?? 'تم الحفظ بنجاح';
 
@@ -96,7 +96,7 @@ class ItemPurchaseOptionsRepository {
     }
 
     final ItemPurchaseOptions options =
-    ItemPurchaseOptions.fromJson(optionsRaw as Map<String, dynamic>);
+        ItemPurchaseOptions.fromJson(optionsRaw as Map<String, dynamic>);
 
     final double? finalPrice = data['final_price'] is num
         ? (data['final_price'] as num).toDouble()
@@ -108,7 +108,4 @@ class ItemPurchaseOptionsRepository {
       finalPrice: finalPrice,
     );
   }
-
-
-
 }

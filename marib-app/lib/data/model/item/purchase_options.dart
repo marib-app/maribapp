@@ -5,14 +5,15 @@ import 'package:marib/data/model/custom_field/custom_field_model.dart'
 
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/utils/variant_key.dart';
-
+import 'package:marib/data/services/delivery_pricing_service.dart'
+    show DeliveryPackageSize;
 
 bool _looksLikeColorAttribute(
-    String key,
-    String name,
-    String? type,
-    String? uiType,
-    ) {
+  String key,
+  String name,
+  String? type,
+  String? uiType,
+) {
   final String normalizedKey = key.toLowerCase();
   final String normalizedName = name.toLowerCase();
   final String? normalizedType = type?.toLowerCase();
@@ -45,7 +46,6 @@ String? _normalizeColorCode(String? value) {
   final RegExp hexPattern = RegExp(r'^[0-9A-F]{6}$');
   return hexPattern.hasMatch(sanitized) ? sanitized : null;
 }
-
 
 class ItemPurchaseAttributeOption {
   const ItemPurchaseAttributeOption({
@@ -92,12 +92,8 @@ class ItemPurchaseAttributeOption {
     }
 
     final int? id = _parseInt(json['id']);
-    final String key = (json['key'] ?? (id != null ? 'attr$id' : ''))
-
-        .toString()
-        .trim();
-
-
+    final String key =
+        (json['key'] ?? (id != null ? 'attr$id' : '')).toString().trim();
 
     final String name = _normalizeString(json['name']) ?? '';
     final String? type = _normalizeString(json['type']);
@@ -109,26 +105,25 @@ class ItemPurchaseAttributeOption {
     String? defaultValue = _normalizeString(json['default_value']);
 
     final Map<String, dynamic>? metadata = json['metadata'] is Map
-        ? (json['metadata'] as Map).map((dynamic key, dynamic value) =>
-        MapEntry(key.toString(), value))
+        ? (json['metadata'] as Map).map(
+            (dynamic key, dynamic value) => MapEntry(key.toString(), value))
         : null;
 
     final int? position = _parseInt(json['position']);
 
     final bool looksLikeColor =
-    _looksLikeColorAttribute(key, name, type, uiType);
-
+        _looksLikeColorAttribute(key, name, type, uiType);
 
     List<CustomFieldColorEntry> colorEntries = const <CustomFieldColorEntry>[];
     if (looksLikeColor) {
       final List<CustomFieldColorEntry> parsedColorEntries =
-      parseCustomFieldColorEntries(json['color_entries']);
+          parseCustomFieldColorEntries(json['color_entries']);
       final List<CustomFieldColorEntry> fallbackFromAllowed =
-      parseCustomFieldColorEntries(json['allowed_values']);
+          parseCustomFieldColorEntries(json['allowed_values']);
       final List<CustomFieldColorEntry> fallbackFromValues =
-      parseCustomFieldColorEntries(json['values']);
+          parseCustomFieldColorEntries(json['values']);
       final Map<String, CustomFieldColorEntry> merged =
-      <String, CustomFieldColorEntry>{};
+          <String, CustomFieldColorEntry>{};
 
       void addEntries(List<CustomFieldColorEntry> entries) {
         for (final CustomFieldColorEntry entry in entries) {
@@ -180,7 +175,6 @@ class ItemPurchaseAttributeOption {
       }
     }
 
-
     return ItemPurchaseAttributeOption(
       id: id ?? 0,
       key: key,
@@ -225,8 +219,9 @@ class ItemVariantStockOption {
 
   factory ItemVariantStockOption.fromJson(Map<String, dynamic> json) {
     final String rawVariantKey = _normalizeString(json['variant_key']) ?? '';
-    final String normalizedVariantKey =
-    rawVariantKey.isEmpty ? '' : VariantKeyCodec.canonicalize(rawVariantKey);
+    final String normalizedVariantKey = rawVariantKey.isEmpty
+        ? ''
+        : VariantKeyCodec.canonicalize(rawVariantKey);
     return ItemVariantStockOption(
       variantKey: normalizedVariantKey,
       stock: _parseInt(json['stock']) ?? 0,
@@ -249,6 +244,7 @@ class ItemPurchaseOptions {
     this.discount,
     this.attributes = const <ItemPurchaseAttributeOption>[],
     this.variantStocks = const <ItemVariantStockOption>[],
+    this.deliverySize,
   });
 
   factory ItemPurchaseOptions.fromJson(Map<String, dynamic> json) {
@@ -265,8 +261,8 @@ class ItemPurchaseOptions {
 
       return entries
           .map((Map<dynamic, dynamic> entry) =>
-          ItemPurchaseAttributeOption.fromJson(entry.map((dynamic key, dynamic val) =>
-              MapEntry(key.toString(), val))))
+              ItemPurchaseAttributeOption.fromJson(entry.map(
+                  (dynamic key, dynamic val) => MapEntry(key.toString(), val))))
           .toList(growable: false);
     }
 
@@ -282,19 +278,20 @@ class ItemPurchaseOptions {
       }
 
       return entries
-          .map((Map<dynamic, dynamic> entry) =>
-          ItemVariantStockOption.fromJson(entry.map((dynamic key, dynamic val) =>
-              MapEntry(key.toString(), val))))
+          .map((Map<dynamic, dynamic> entry) => ItemVariantStockOption.fromJson(
+              entry.map(
+                  (dynamic key, dynamic val) => MapEntry(key.toString(), val))))
           .toList(growable: false);
     }
 
     final int itemId = _parseInt(json['item_id']) ?? _parseInt(json['id']) ?? 0;
-    final double basePrice = _parseDouble(json['base_price']) ??
-        _parseDouble(json['price']) ??
-        0.0;
+    final double basePrice =
+        _parseDouble(json['base_price']) ?? _parseDouble(json['price']) ?? 0.0;
     final double finalPrice = _parseDouble(json['final_price']) ?? basePrice;
 
     final dynamic discountRaw = json['discount'];
+    final DeliveryPackageSize? deliverySize =
+        _parseDeliveryPackageSize(json['delivery_size']);
 
     return ItemPurchaseOptions(
       itemId: itemId,
@@ -303,6 +300,7 @@ class ItemPurchaseOptions {
       discount: ItemDiscount.fromJson(discountRaw),
       attributes: _parseAttributes(json['attributes']),
       variantStocks: _parseStocks(json['variant_stocks']),
+      deliverySize: deliverySize,
     );
   }
 
@@ -311,6 +309,7 @@ class ItemPurchaseOptions {
       itemId: itemId,
       basePrice: 0,
       finalPrice: 0,
+      deliverySize: null,
     );
   }
 
@@ -320,6 +319,7 @@ class ItemPurchaseOptions {
   final ItemDiscount? discount;
   final List<ItemPurchaseAttributeOption> attributes;
   final List<ItemVariantStockOption> variantStocks;
+  final DeliveryPackageSize? deliverySize;
 
   ItemPurchaseAttributeOption? attributeByKey(String key) {
     final String normalized = key.toLowerCase().trim();
@@ -394,4 +394,26 @@ String? _normalizeString(dynamic value) {
 
   final String normalized = value.toString().trim();
   return normalized.isEmpty ? null : normalized;
+}
+
+DeliveryPackageSize? _parseDeliveryPackageSize(dynamic value) {
+  if (value == null) {
+    return null;
+  }
+
+  final String normalized = value.toString().trim().toLowerCase();
+  if (normalized.isEmpty) {
+    return null;
+  }
+
+  switch (normalized) {
+    case 'small':
+      return DeliveryPackageSize.small;
+    case 'medium':
+      return DeliveryPackageSize.medium;
+    case 'large':
+      return DeliveryPackageSize.large;
+  }
+
+  return null;
 }

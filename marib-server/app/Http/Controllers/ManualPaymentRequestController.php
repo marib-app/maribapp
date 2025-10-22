@@ -1380,22 +1380,8 @@ class ManualPaymentRequestController extends Controller
             return '';
         }
 
-        $buttons = '';
+        return $this->renderManualPaymentReviewButton($manualPaymentRequest);
 
-        $buttons .= BootstrapTableService::button(
-            'fa fa-eye',
-            route('payment-requests.review', $manualPaymentRequest),
-            ['btn-primary', 'view-payment-request'],
-            [
-                'target' => '_blank',
-                'rel' => 'noopener noreferrer',
-                'title' => trans('View'),
-            ],
-            trans('View')
-        
-        );
-
-        return $buttons;
     }
 
 
@@ -1692,6 +1678,13 @@ class ManualPaymentRequestController extends Controller
         if ($manualPaymentRequest instanceof ManualPaymentRequest) {
             return $this->actionsColumn($manualPaymentRequest);
         }
+
+
+        if ($manualPaymentRequestId !== null) {
+            return $this->renderManualPaymentReviewButton($manualPaymentRequestId);
+        }
+
+
         $transactionId = $this->normalizeManualPaymentIdentifier(
             data_get($row, 'payment_transaction_id') ?? data_get($row, 'id')
         );
@@ -1721,12 +1714,15 @@ class ManualPaymentRequestController extends Controller
             );
 
             if ($transactionManualRequestId !== null) {
+                $manualPaymentRequestId = $transactionManualRequestId;
                 $manualPaymentRequest = $this->getManualPaymentRequestById($transactionManualRequestId);
             }
         }
 
         if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
-            return '';
+            return $manualPaymentRequestId !== null
+                ? $this->renderManualPaymentReviewButton($manualPaymentRequestId)
+                : '';
         }
 
         $manualPaymentRequestId = $manualPaymentRequest->getKey();
@@ -1768,20 +1764,20 @@ class ManualPaymentRequestController extends Controller
         $url = route('payment-requests.review', ['manualPaymentRequest' => $manualPaymentRequestId]);
 
         $label = $shouldOpenReview ? trans('Review request') : trans('View request');
-        $buttonClass = $shouldOpenReview
-            ? 'btn btn-sm btn-primary'
-            : 'btn btn-sm btn-outline-primary';
+        $buttonClasses = $shouldOpenReview
+            ? ['btn-primary']
+            : ['btn-outline-primary'];
 
-
-
-        return sprintf(
-            '<a href="%s" class="%s btn-with-label view-payment-request d-inline-flex align-items-center gap-1" target="_blank" rel="noopener noreferrer" title="%s">'
-            . '<i class="fa fa-eye" aria-hidden="true"></i><span class="btn-label">%s</span>'
-            . '</a>',
-            e($url),
-            e($buttonClass),
-            e($label),
-            e($label)
+        return BootstrapTableService::button(
+            'fa fa-eye',
+            $url,
+            array_merge($buttonClasses, ['view-payment-request']),
+            [
+                'target' => '_blank',
+                'rel' => 'noopener noreferrer',
+                'title' => $label,
+            ],
+            $label
         );
     }
 

@@ -12,6 +12,7 @@ use Google\Client;
 use Google\Exception;
 use Illuminate\Support\Facades\Storage;
 use GuzzleHttp\Client as GuzzleClient;
+use Illuminate\Support\Str;
 
 use Throwable;
 
@@ -38,9 +39,14 @@ class NotificationService {
             ];
         }
 
-        $serviceFilePath = Storage::disk('public')->path($serviceFileSetting->value);
+        $serviceFilePath = self::resolveServiceFilePath($serviceFileSetting->value ?? null);
 
-        if (!is_file($serviceFilePath) || !is_readable($serviceFilePath)) {
+        if (empty($serviceFilePath)) {
+            \Log::error('NotificationService: FCM service account file path could not be resolved.', [
+                'stored_value' => $serviceFileSetting->value ?? null,
+            ]);
+
+
             return [
                 'error'   => true,
                 'message' => 'FCM service account file is missing or unreadable.',
@@ -444,16 +450,19 @@ class NotificationService {
                 ];
             }
             $file_name = $file_name->value;
-            $file_path = Storage::disk('public')->path($file_name);
+            $file_path = self::resolveServiceFilePath($file_name);
             \Log::info('NotificationService: Service file path check', [
                 'file_name' => $file_name,
                 'file_path' => $file_path,
-                'file_exists' => file_exists($file_path)
+                'file_exists' => !empty($file_path) && file_exists($file_path)
             ]);
 
-            if (!file_exists($file_path)) {
+            if (empty($file_path) || !file_exists($file_path)) {
+
                 \Log::error('NotificationService: FCM Service File not found at path', [
-                    'computed_path' => $file_path
+                    'computed_path' => $file_path,
+                    'stored_value' => $file_name,
+                
                 ]);
                 return [
                     'error'   => true,
@@ -693,6 +702,68 @@ class NotificationService {
 
         return realpath($absolutePath) ?: $absolutePath;
     }
+
+
+    protected static function resolveServiceFilePath(?string $serviceFileValue): ?string
+    {
+        if (empty($serviceFileValue)) {
+            return null;
+        }
+
+        $candidateValues = [];
+
+        $trimmedValue = trim($serviceFileValue);
+
+        if (self::isAbsolutePath($trimmedValue) && is_file($trimmedValue) && is_readable($trimmedValue)) {
+            return realpath($trimmedValue) ?: $trimmedValue;
+        }
+
+        if (Str::startsWith($trimmedValue, ['http://', 'https://'])) {
+            $parsedPath = parse_url($trimmedValue, PHP_URL_PATH);
+
+            if (!empty($parsedPath)) {
+                $trimmedValue = ltrim($parsedPath, '/');
+            }
+        }
+
+        $normalizedValue = ltrim($trimmedValue, '/');
+
+        foreach (['storage/', 'public/', 'app/public/'] as $prefix) {
+            if (Str::startsWith($normalizedValue, $prefix)) {
+                $normalizedValue = Str::after($normalizedValue, $prefix);
+            }
+        }
+
+        if (!empty($normalizedValue)) {
+            try {
+                $candidateValues[] = Storage::disk('public')->path($normalizedValue);
+            } catch (Throwable $exception) {
+                \Log::warning('NotificationService: Failed to resolve service file path via storage disk.', [
+                    'stored_value' => $serviceFileValue,
+                    'normalized_value' => $normalizedValue,
+                    'exception' => $exception->getMessage(),
+                ]);
+            }
+
+            $candidateValues[] = storage_path('app/public/' . $normalizedValue);
+            $candidateValues[] = public_path('storage/' . $normalizedValue);
+        }
+
+        $candidateValues[] = $trimmedValue;
+
+        foreach ($candidateValues as $path) {
+            if (empty($path)) {
+                continue;
+            }
+
+            if (is_file($path) && is_readable($path)) {
+                return realpath($path) ?: $path;
+            }
+        }
+
+        return null;
+    }
+
 
     protected static function isAbsolutePath(string $path): bool
     {

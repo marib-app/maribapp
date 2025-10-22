@@ -276,24 +276,24 @@ class _SliderComponentState extends State<SliderComponent>
     unawaited(_reportSliderClick(slider));
 
     final String? actionType = slider.actionTypeNormalized;
-    final String? destination = slider.destinationNormalized;
+    final String? destinationType = slider.destinationTypeNormalized;
 
-    if (_isChatAction(actionType, destination)) {
+    if (_isChatAction(actionType, destinationType)) {
       MainActivity.globalKey.currentState?.onItemTapped(1);
       return;
     }
 
-    if (_isCouponAction(actionType, destination)) {
+    if (_isCouponAction(actionType, destinationType)) {
       await _handleCouponAction(slider);
       return;
     }
 
-    if (await _handleExternalLink(slider, actionType, destination)) {
+    if (await _handleExternalLink(slider, actionType, destinationType)) {
       return;
     }
 
     final bool navigated =
-        await _handleTargetNavigation(slider, actionType, destination);
+        await _handleTargetNavigation(slider, actionType, destinationType);
     if (navigated) {
       return;
     }
@@ -335,30 +335,32 @@ class _SliderComponentState extends State<SliderComponent>
     }
   }
 
-  bool _isChatAction(String? actionType, String? destination) {
+  bool _isChatAction(String? actionType, String? destinationType) {
     return actionType == 'open_chat' ||
-        destination == 'chat' ||
+        destinationType == 'chat' ||
         actionType == 'chat';
   }
 
-  bool _isCouponAction(String? actionType, String? destination) {
+  bool _isCouponAction(String? actionType, String? destinationType) {
     return actionType == 'apply_coupon' ||
         actionType == 'coupon' ||
-        destination == 'coupon';
+        destinationType == 'coupon';
   }
 
   Future<bool> _handleExternalLink(
     HomeSlider slider,
     String? actionType,
-    String? destination,
+    String? destinationType,
   ) async {
     final bool wantsExternal = actionType == 'open_link' ||
         actionType == 'external_link' ||
-        destination == 'external_link' ||
-        destination == 'external';
+        destinationType == 'external_link' ||
+        destinationType == 'external' ||
+        slider.destination?.wantsExternal == true;
 
     String? link = wantsExternal ? slider.resolvedExternalLink : null;
     link ??= slider.thirdPartyLink;
+    link ??= slider.destination?.resolvedUrl;
 
     if (link == null || link.trim().isEmpty) {
       return false;
@@ -387,12 +389,13 @@ class _SliderComponentState extends State<SliderComponent>
   Future<bool> _handleTargetNavigation(
     HomeSlider slider,
     String? actionType,
-    String? destination,
+    String? destinationType,
   ) async {
     final bool shouldNavigate = slider.targetSummary != null ||
         actionType == 'navigate' ||
-        destination == 'internal' ||
-        destination == 'navigate';
+        destinationType == 'internal' ||
+        destinationType == 'navigate' ||
+        slider.destination?.wantsInternal == true;
 
     if (!shouldNavigate || slider.targetSummary == null) {
       return false;

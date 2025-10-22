@@ -70,17 +70,17 @@
                                                 <th scope="col" data-field="interface_type" data-align="center" data-sortable="true" data-formatter="interfaceTypeFormatter">{{ __('Interface Type') }}</th>
 
                                                 <th scope="col" data-field="status" data-align="center" data-sortable="true">{{ __('الحالة') }}</th>
-                                                <th scope="col" data-field="priority" data-align="center" data-sortable="true">{{ __('الأولوية') }}</th>
-                                                <th scope="col" data-field="weight" data-align="center" data-sortable="true">{{ __('الوزن') }}</th>
-                                                <th scope="col" data-field="share_of_voice" data-align="center" data-sortable="true">{{ __('حصة الظهور') }}</th>
+                                                <th scope="col" data-field="priority" data-align="center" data-sortable="true" data-visible="false">{{ __('الأولوية') }}</th>
+                                                <th scope="col" data-field="weight" data-align="center" data-sortable="true" data-visible="false">{{ __('الوزن') }}</th>
+                                                <th scope="col" data-field="share_of_voice" data-align="center" data-sortable="true" data-visible="false">{{ __('حصة الظهور') }}</th>
                                                 <th scope="col" data-field="impressions" data-align="center" data-sortable="true" data-formatter="sliderNumberFormatter">{{ __('الظهور') }}</th>
                                                 <th scope="col" data-field="clicks" data-align="center" data-sortable="true" data-formatter="sliderNumberFormatter">{{ __('النقرات') }}</th>
                                                 <th scope="col" data-field="ctr" data-align="center" data-sortable="true" data-formatter="sliderCtrFormatter">{{ __('CTR (%)') }}</th>
-                                                <th scope="col" data-field="per_user_per_day_limit" data-align="center" data-sortable="true" data-formatter="sliderLimitFormatter">{{ __('حد يومي') }}</th>
-                                                <th scope="col" data-field="per_user_per_session_limit" data-align="center" data-sortable="true" data-formatter="sliderLimitFormatter">{{ __('حد الجلسة') }}</th>
+                                                <th scope="col" data-field="per_user_per_day_limit" data-align="center" data-sortable="true" data-formatter="sliderLimitFormatter" data-visible="false">{{ __('حد يومي') }}</th>
+                                                <th scope="col" data-field="per_user_per_session_limit" data-align="center" data-sortable="true" data-formatter="sliderLimitFormatter" data-visible="false">{{ __('حد الجلسة') }}</th>
 
-                                                <th scope="col" data-field="starts_at" data-align="center" data-sortable="true">{{ __('تاريخ البدء') }}</th>
-                                                <th scope="col" data-field="ends_at" data-align="center" data-sortable="true">{{ __('تاريخ الانتهاء') }}</th>
+                                                <th scope="col" data-field="starts_at" data-align="center" data-sortable="true" data-visible="false">{{ __('تاريخ البدء') }}</th>
+                                                <th scope="col" data-field="ends_at" data-align="center" data-sortable="true" data-visible="false">{{ __('تاريخ الانتهاء') }}</th>
 
 
                                                 <th scope="col" data-field="third_party_link" data-align="center" data-sortable="true">{{ __('Third Party Link') }}</th>

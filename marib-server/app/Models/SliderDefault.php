@@ -5,6 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
+
 
 class SliderDefault extends Model
 {
@@ -40,6 +43,22 @@ class SliderDefault extends Model
             return null;
         }
 
-        return url(Storage::url($this->image_path));
+        $storageUrl = Storage::url($this->image_path);
+
+        if (Str::startsWith($storageUrl, ['http://', 'https://'])) {
+            return $storageUrl;
+        }
+
+        $normalizedPath = '/' . ltrim($storageUrl, '/');
+
+        if (! app()->runningInConsole()) {
+            $request = request();
+
+            if ($request && $request->getHost()) {
+                return rtrim($request->getSchemeAndHttpHost(), '/') . $normalizedPath;
+            }
+        }
+
+        return URL::to($normalizedPath);
     }
 }

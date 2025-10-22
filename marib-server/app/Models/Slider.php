@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\URL;
 
 class Slider extends Model
 {
@@ -117,11 +118,27 @@ class Slider extends Model
 
     public function getImageAttribute($image)
     {
-        if (! empty($image)) {
-            return url(Storage::url($image));
+        if (empty($image)) {
+            return $image;
         }
 
-        return $image;
+        $storageUrl = Storage::url($image);
+
+        if (Str::startsWith($storageUrl, ['http://', 'https://'])) {
+            return $storageUrl;
+        }
+
+        $normalizedPath = '/' . ltrim($storageUrl, '/');
+
+        if (! app()->runningInConsole()) {
+            $request = request();
+
+            if ($request && $request->getHost()) {
+                return rtrim($request->getSchemeAndHttpHost(), '/') . $normalizedPath;
+            }
+        }
+
+        return URL::to($normalizedPath);
     }
 
     public function scopeSearch($query, $search)

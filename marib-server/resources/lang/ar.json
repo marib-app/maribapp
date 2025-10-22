@@ -690,7 +690,6 @@
     "Manual Payment Follow Up Review Order": "افتح الطلب لمراجعة تفاصيل السلة وتحديث الحالة بعد التحقق من الدفع.",
     "Manual Payment Follow Up Update Status": "حدّث حالة الطلب في لوحة الطلبات بعد اعتماد الدفع اليدوي.",
     "Manual Payment Follow Up Quick Actions": "إجراءات سريعة للمتابعة",
-    "Manual Payment Open Order Details": "فتح تفاصيل الطلب"
-
-
+    "Manual Payment Open Order Details": "فتح تفاصيل الطلب",
+    "validation.unique": "تم استخدام :attribute بالفعل."
 }

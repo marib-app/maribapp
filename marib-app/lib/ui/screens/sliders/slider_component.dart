@@ -251,18 +251,22 @@ class _SliderComponentState extends State<SliderComponent>
       ],
     );
   }
+  static const EdgeInsets _sliderItemPadding = EdgeInsets.symmetric(horizontal: 6);
 
   Widget _buildBannerShell({required Widget child, VoidCallback? onTap}) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Ink(
-          decoration: _buildBannerDecoration(),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: child,
+    return Padding(
+      padding: _sliderItemPadding,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Ink(
+            decoration: _buildBannerDecoration(),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: child,
+            ),
           ), //
         ),
       ),

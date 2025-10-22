@@ -70,7 +70,7 @@ class UserModel {
     profile = json['profile'];
     token = json['token'];
     updatedAt = json['updated_at'];
-    isVerified = json['is_verified'];
+    isVerified = Adapter.forceInt(json['is_verified']);
     isPersonalDetailShow = (json['show_personal_details'] != null
         ? (json['show_personal_details'] is int)
             ? json['show_personal_details']

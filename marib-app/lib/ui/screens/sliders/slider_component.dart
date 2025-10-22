@@ -633,6 +633,7 @@ class _SliderComponentState extends State<SliderComponent>
                         final double pageWidth = constraints.maxWidth;
 
                         return PageView.builder(
+                          clipBehavior: Clip.none,
                           controller: _pageController,
                           itemCount: itemCount,
                           physics: pagePhysics,

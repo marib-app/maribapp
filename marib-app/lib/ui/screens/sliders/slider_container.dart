@@ -20,6 +20,7 @@ class SliderWidget extends StatefulWidget {
   final VoidCallback? onLoaded;
   final VoidCallback? onError;
   final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry margin;
 
   const SliderWidget({
     super.key,
@@ -27,6 +28,7 @@ class SliderWidget extends StatefulWidget {
     this.onLoaded,
     this.onError,
     this.padding = kSliderHorizontalPadding,
+    this.margin = const EdgeInsets.only(bottom: 12),
   });
 
   @override
@@ -108,7 +110,12 @@ class _SliderWidgetState extends State<SliderWidget> {
             final String? imageUrl = state.image;
             if (imageUrl != null && imageUrl.isNotEmpty) {
               _cacheFallbackImage(state);
-              return _buildFallbackImage(context, imageUrl);
+              return _buildFallbackImage(
+                context,
+                imageUrl,
+                margin: widget.margin,
+              );
+
             }
             return const SizedBox.shrink();
           }
@@ -125,6 +132,7 @@ class _SliderWidgetState extends State<SliderWidget> {
             interfaceType: widget.interfaceType,
             sliderList: state.sliderlist,
             padding: widget.padding,
+            margin: widget.margin,
           );
         }
         if (state is SliderFetchFailure) {
@@ -135,7 +143,12 @@ class _SliderWidgetState extends State<SliderWidget> {
           }
           if (_cachedFallbackImage != null &&
               _cachedFallbackImage!.isNotEmpty) {
-            return _buildFallbackImage(context, _cachedFallbackImage!);
+            return _buildFallbackImage(
+              context,
+              _cachedFallbackImage!,
+              margin: widget.margin,
+            );
+
           }
           return _wrapWithPadding(const SliderShimmer());
         }
@@ -144,15 +157,30 @@ class _SliderWidgetState extends State<SliderWidget> {
     );
   }
 
-  Widget _wrapWithPadding(Widget child) {
-    if (widget.padding == EdgeInsets.zero ||
-        widget.padding == EdgeInsetsDirectional.zero) {
-      return child;
+  Widget _wrapWithPadding(
+      Widget child, {
+        EdgeInsetsGeometry? margin,
+      }) {
+    Widget current = child;
+
+    final EdgeInsetsGeometry effectiveMargin = margin ?? widget.margin;
+
+    if (effectiveMargin != EdgeInsets.zero &&
+        effectiveMargin != EdgeInsetsDirectional.zero) {
+      current = Container(
+        margin: effectiveMargin,
+        child: current,
+      );
     }
-    return Padding(
-      padding: widget.padding,
-      child: child,
-    );
+    if (widget.padding != EdgeInsets.zero &&
+        widget.padding != EdgeInsetsDirectional.zero) {
+      current = Padding(
+        padding: widget.padding,
+        child: current,
+      );
+    }
+
+    return current;
   }
 
   void _notifySliderError() {
@@ -197,15 +225,24 @@ class _SliderWidgetState extends State<SliderWidget> {
         interfaceType: widget.interfaceType,
         sliderList: _cachedSliderList!,
         padding: widget.padding,
+        margin: widget.margin,
       );
     }
     if (_cachedFallbackImage != null && _cachedFallbackImage!.isNotEmpty) {
-      return _buildFallbackImage(context, _cachedFallbackImage!);
+      return _buildFallbackImage(
+        context,
+        _cachedFallbackImage!,
+        margin: widget.margin,
+      );
     }
     return null;
   }
 
-  Widget _buildFallbackImage(BuildContext context, String imageUrl) {
+  Widget _buildFallbackImage(
+      BuildContext context,
+      String imageUrl, {
+        EdgeInsetsGeometry? margin,
+      }) {
     final BorderRadius borderRadius = BorderRadius.circular(12);
 
     return _wrapWithPadding(
@@ -214,32 +251,32 @@ class _SliderWidgetState extends State<SliderWidget> {
         children: [
           SizedBox(
             width: double.infinity,
-        height: kSliderBannerHeight,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-        Container(
-        decoration: BoxDecoration(
-        borderRadius: borderRadius,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-          color: Colors.grey.shade200,
+            height: kSliderBannerHeight,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: borderRadius,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                    color: Colors.grey.shade200,
                   ),
-        child: ClipRRect(
+                  child: ClipRRect(
 
                     borderRadius: borderRadius,
-          child: LazyNetworkImage(
-            imageUrl: imageUrl,
-            fit: BoxFit.cover,
-            placeholder: ShimmerBox(
-              borderRadius: borderRadius,
-            ),
-          ),
+                    child: LazyNetworkImage(
+                      imageUrl: imageUrl,
+                      fit: BoxFit.cover,
+                      placeholder: ShimmerBox(
+                        borderRadius: borderRadius,
+                      ),
+                    ),
                   ),
                 ),
           ],
@@ -252,6 +289,8 @@ class _SliderWidgetState extends State<SliderWidget> {
           ),
         ],
       ),
+      margin: margin ?? widget.margin,
+
     );
   }
 }

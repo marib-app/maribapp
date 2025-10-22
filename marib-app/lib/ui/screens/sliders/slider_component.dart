@@ -22,21 +22,21 @@ import 'package:marib/ui/screens/widgets/lazy_network_image.dart';
 import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 import 'slider_constants.dart';
 
-
 const EdgeInsetsGeometry kSliderHorizontalPadding =
-EdgeInsets.symmetric(horizontal: 10);
-
+    EdgeInsets.symmetric(horizontal: 10);
 
 class SliderComponent extends StatefulWidget {
   final String interfaceType;
   final List<HomeSlider> sliderList;
   final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry margin;
 
   const SliderComponent({
     super.key,
     required this.interfaceType,
     required this.sliderList,
     this.padding = kSliderHorizontalPadding,
+    this.margin = const EdgeInsets.only(bottom: 12),
   });
 
   @override
@@ -46,9 +46,9 @@ class SliderComponent extends StatefulWidget {
 typedef _LaunchUrlCallback = Future<bool> Function(Uri uri);
 typedef _CanLaunchUrlCallback = Future<bool> Function(Uri uri);
 typedef _SliderClickPostCallback = Future<Map<String, dynamic>> Function({
-required String url,
-dynamic parameter,
-Map<String, dynamic>? extraHeaders,
+  required String url,
+  dynamic parameter,
+  Map<String, dynamic>? extraHeaders,
 });
 
 typedef _EnsureSliderSessionCallback = Future<String> Function();
@@ -98,7 +98,7 @@ Future<bool> _canLaunchExternalUrl(Uri uri) {
 class _SliderComponentState extends State<SliderComponent>
     with AutomaticKeepAliveClientMixin {
   final ValueNotifier<int> _bannerIndex =
-  ValueNotifier(0); // لتتبع السلايدر الحالي
+      ValueNotifier(0); // لتتبع السلايدر الحالي
   Timer? _sliderTimer;
   late final PageController _pageController;
   bool _userInteracting = false;
@@ -269,7 +269,6 @@ class _SliderComponentState extends State<SliderComponent>
     );
   }
 
-
   /// ✅ التعامل مع الضغط على كل صورة داخل السلايدر
   Future<void> _handleTap(HomeSlider slider) async {
     if (!mounted) return;
@@ -293,7 +292,7 @@ class _SliderComponentState extends State<SliderComponent>
     }
 
     final bool navigated =
-    await _handleTargetNavigation(slider, actionType, destination);
+        await _handleTargetNavigation(slider, actionType, destination);
     if (navigated) {
       return;
     }
@@ -348,10 +347,10 @@ class _SliderComponentState extends State<SliderComponent>
   }
 
   Future<bool> _handleExternalLink(
-      HomeSlider slider,
-      String? actionType,
-      String? destination,
-      ) async {
+    HomeSlider slider,
+    String? actionType,
+    String? destination,
+  ) async {
     final bool wantsExternal = actionType == 'open_link' ||
         actionType == 'external_link' ||
         destination == 'external_link' ||
@@ -385,10 +384,10 @@ class _SliderComponentState extends State<SliderComponent>
   }
 
   Future<bool> _handleTargetNavigation(
-      HomeSlider slider,
-      String? actionType,
-      String? destination,
-      ) async {
+    HomeSlider slider,
+    String? actionType,
+    String? destination,
+  ) async {
     final bool shouldNavigate = slider.targetSummary != null ||
         actionType == 'navigate' ||
         destination == 'internal' ||
@@ -420,9 +419,9 @@ class _SliderComponentState extends State<SliderComponent>
   }
 
   Future<bool> _navigateToCategory(
-      HomeSlider slider,
-      HomeSliderTargetSummary target,
-      ) async {
+    HomeSlider slider,
+    HomeSliderTargetSummary target,
+  ) async {
     final CategorySlider? category = target.asCategorySlider ?? slider.model;
     final int? categoryId = target.idAsInt ?? slider.modelId ?? category?.id;
     if (category == null || categoryId == null) {
@@ -454,9 +453,9 @@ class _SliderComponentState extends State<SliderComponent>
   }
 
   Future<bool> _navigateToItem(
-      HomeSlider slider,
-      HomeSliderTargetSummary target,
-      ) async {
+    HomeSlider slider,
+    HomeSliderTargetSummary target,
+  ) async {
     final ItemRepository repository = ItemRepository();
     try {
       Widgets.showLoader(context);
@@ -587,102 +586,110 @@ class _SliderComponentState extends State<SliderComponent>
         : 1; // الحفاظ على صفحة واحدة عند غياب أي بنرات
     final pagePhysics = hasBanners
         ? (bannersLength == 1
-        ? const BouncingScrollPhysics()
-        : const ClampingScrollPhysics())
+            ? const BouncingScrollPhysics()
+            : const ClampingScrollPhysics())
         : const NeverScrollableScrollPhysics();
 
     if (!hasBanners) {
       debugPrint(
           "⚠️ SliderComponent: لا توجد بانرات لواجهة '${widget.interfaceType}'");
-      return _wrapWithPadding(const SliderShimmer());
+      return _wrapWithPadding(
+        Container(
+          margin: widget.margin,
+          child: const SliderShimmer(),
+        ),
+      );
     }
 
     return _wrapWithPadding(
-      Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: double.infinity,
-            height: kSliderBannerHeight,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                NotificationListener<UserScrollNotification>(
-                  onNotification: (notification) {
-                    if (!hasBanners) return false;
+      Container(
+        margin: widget.margin,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: double.infinity,
+              height: kSliderBannerHeight,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  NotificationListener<UserScrollNotification>(
+                    onNotification: (notification) {
+                      if (!hasBanners) return false;
 
-                    if (notification is ScrollStartNotification) {
-                      _userInteracting = true;
-                      _sliderTimer?.cancel();
-                    } else if (notification is ScrollEndNotification) {
-                      _userInteracting = false;
-                      _startAutoSlider();
-                    }
-                    return false;
-                  },
-                  child: PageView.builder(
-                    controller: _pageController,
-                    itemCount: itemCount,
-                    physics: pagePhysics,
-                    onPageChanged: hasBanners
-                        ? (int index) {
-                      if (bannersLength > 1) {
-                        _bannerIndex.value = index % bannersLength;
-                      } else {
-                        _bannerIndex.value = 0;
+                      if (notification is ScrollStartNotification) {
+                        _userInteracting = true;
+                        _sliderTimer?.cancel();
+                      } else if (notification is ScrollEndNotification) {
+                        _userInteracting = false;
+                        _startAutoSlider();
                       }
-                      _currentPage = index.toDouble();
-                    }
-                        : null,
-                    itemBuilder: (_, int index) {
-                      final int actualIndex =
-                      bannersLength == 1 ? 0 : index % bannersLength;
-                      final HomeSlider slider = filteredList[actualIndex];
-
-                      return _buildBannerShell(
-                        onTap: () => _handleTap(slider),
-                        child: LazyNetworkImage(
-                          imageUrl: slider.image ?? '',
-                          fit: BoxFit.cover,
-                          placeholder: const ShimmerBox(),
-                          errorWidget: const ShimmerBox(animate: false),
-                        ),
-                      );
+                      return false;
                     },
-                  ),
-                ),
+                    child: PageView.builder(
+                      controller: _pageController,
+                      itemCount: itemCount,
+                      physics: pagePhysics,
+                      onPageChanged: hasBanners
+                          ? (int index) {
+                              if (bannersLength > 1) {
+                                _bannerIndex.value = index % bannersLength;
+                              } else {
+                                _bannerIndex.value = 0;
+                              }
+                              _currentPage = index.toDouble();
+                            }
+                          : null,
+                      itemBuilder: (_, int index) {
+                        final int actualIndex =
+                            bannersLength == 1 ? 0 : index % bannersLength;
+                        final HomeSlider slider = filteredList[actualIndex];
 
-              ],
+                        return _buildBannerShell(
+                          onTap: () => _handleTap(slider),
+                          child: LazyNetworkImage(
+                            imageUrl: slider.image ?? '',
+                            fit: BoxFit.cover,
+                            placeholder: const ShimmerBox(),
+                            errorWidget: const ShimmerBox(animate: false),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          SizedBox(height: 8.rh(context)),
-          ValueListenableBuilder<int>(
-            valueListenable: _bannerIndex,
-            builder: (context, activeIndex, _) {
-              final int total = bannersLength > 0 ? bannersLength : 1;
-              final int safeActiveIndex = total == 0 ? 0 : activeIndex % total;
-              return AnimatedSmoothIndicator(
-                activeIndex: safeActiveIndex,
-                count: total,
-                effect: CustomizableEffect(
-                  spacing: 6,
-                  activeDotDecoration: DotDecoration(
-                    width: 16,
-                    height: 8,
-                    color: const Color(0xFFEB5924),
-                    borderRadius: BorderRadius.circular(8),
+            SizedBox(height: 8.rh(context)),
+            ValueListenableBuilder<int>(
+              valueListenable: _bannerIndex,
+              builder: (context, activeIndex, _) {
+                final int total = bannersLength > 0 ? bannersLength : 1;
+                final int safeActiveIndex =
+                    total == 0 ? 0 : activeIndex % total;
+                return AnimatedSmoothIndicator(
+                  activeIndex: safeActiveIndex,
+                  count: total,
+                  effect: CustomizableEffect(
+                    spacing: 6,
+                    activeDotDecoration: DotDecoration(
+                      width: 16,
+                      height: 8,
+                      color: const Color(0xFFEB5924),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    dotDecoration: DotDecoration(
+                      width: 8,
+                      height: 8,
+                      color: Colors.grey.shade400,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
-                  dotDecoration: DotDecoration(
-                    width: 8,
-                    height: 8,
-                    color: Colors.grey.shade400,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              );
-            },
-          )
-        ],
+                );
+              },
+            )
+          ],
+        ),
       ),
     );
   }

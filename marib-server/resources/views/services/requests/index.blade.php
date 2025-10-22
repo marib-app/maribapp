@@ -14,6 +14,26 @@
     .select2-container--default .select2-selection--single { height: 45px !important; padding: 8px 0; }
     .select2-container--default .select2-selection--single .select2-selection__arrow { height: 45px !important; }
     #table_list { width: 100%; }
+
+    .btn-with-label {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        padding: 0.35rem 0.75rem;
+        line-height: 1.2;
+        width: auto;
+        height: auto;
+        white-space: nowrap;
+    }
+    .btn-with-label.btn-icon {
+        width: auto;
+        height: auto;
+    }
+    .btn-with-label .btn-label {
+        display: inline-block;
+    }
+
 </style>
 @endsection
 

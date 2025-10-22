@@ -189,9 +189,10 @@ class ServiceRequestController extends Controller
 
 
                         [
-                            'title' => __('View'),
+                            'title' => __('Review Request'),
 
-                        ]
+                        ],
+                        __('Review Request')
                     );
                 }
 

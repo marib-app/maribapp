@@ -1,0 +1,23 @@
+#payment-requests-table .btn-with-label,
+#payment-requests-table .btn-with-label:visited,
+.manual-payment-review-content .btn-with-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    line-height: 1.2;
+    width: auto;
+    height: auto;
+    white-space: nowrap;
+}
+
+#payment-requests-table .btn-with-label .btn-label,
+.manual-payment-review-content .btn-with-label .btn-label {
+    display: inline-block;
+}
+
+#payment-requests-table .btn-with-label i,
+.manual-payment-review-content .btn-with-label i {
+    font-size: 0.9rem;
+}

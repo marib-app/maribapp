@@ -25,6 +25,9 @@ php artisan cache:clear; php artisan config:clear ;  php artisan route:clear
 
 
 
+# افتح اللوج وراقب كل الأخطاء المهمة
+Get-Content .\storage\logs\laravel.log -Tail 0 -Wait `
+| Select-String -Pattern "payment-requests|PaymentRequest|PaymentRequestTableQuery|SQLSTATE|QueryException|TypeError|ErrorException|Undefined|Base table|Call to"
 
 
 

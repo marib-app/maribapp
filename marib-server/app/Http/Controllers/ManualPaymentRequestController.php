@@ -1654,16 +1654,16 @@ class ManualPaymentRequestController extends Controller
 
         }
 
-        return BootstrapTableService::button(
-            'fa fa-eye',
-            route('payment-requests.review', ['manualPaymentRequest' => $manualPaymentRequestId]),
-            ['btn-primary', 'view-payment-request'],
-            [
-                'target' => '_blank',
-                'rel' => 'noopener noreferrer',
-                'title' => trans('Review'),
-            ],
-            trans('Review')
+        $url = route('payment-requests.review', ['manualPaymentRequest' => $manualPaymentRequestId]);
+        $label = trans('Review');
+
+        return sprintf(
+            '<a href="%s" class="btn btn-sm btn-primary btn-with-label view-payment-request d-inline-flex align-items-center gap-1" target="_blank" rel="noopener noreferrer" title="%s">'
+            . '<i class="fa fa-eye" aria-hidden="true"></i><span class="btn-label">%s</span>'
+            . '</a>',
+            e($url),
+            e($label),
+            e($label)
         );
     }
 

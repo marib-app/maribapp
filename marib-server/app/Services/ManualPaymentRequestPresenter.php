@@ -8,6 +8,7 @@ use App\Models\ManualPaymentRequestHistory;
 use App\Models\Order;
 use App\Models\WalletTransaction;
 use App\Support\ManualPayments\ManualPaymentPresentationHelpers;
+use App\Support\Payments\PaymentLabelService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
@@ -58,11 +59,10 @@ class ManualPaymentRequestPresenter
         $paymentGatewayCanonical = $this->resolveManualPaymentGatewayKey($manualPaymentRequest);
         $paymentGatewayKey = $paymentGatewayCanonical;
 
-        $manualBankName = $this->resolveManualBankName($manualPaymentRequest);
-        $paymentGatewayLabel = $this->paymentRequestChannelLabel(
-            $paymentGatewayCanonical ?? $paymentGatewayKey,
-            $manualBankName
-        );
+        $manualPaymentRequest->loadMissing('manualBank');
+        $labels = PaymentLabelService::forManualPaymentRequest($manualPaymentRequest);
+        $paymentGatewayLabel = $labels['gateway_label'];
+        $manualBankName = $labels['bank_label'];
         $departmentLabel = $this->paymentRequestDepartmentLabel($manualPaymentRequest->department ?? null);
 
         return compact(
@@ -70,7 +70,8 @@ class ManualPaymentRequestPresenter
             'paymentGatewayCanonical',
             'paymentGatewayLabel',
             'departmentLabel'
-        );
+        ) + ['manualBankName' => $manualBankName];
+
     }
 
     public function timelineData(ManualPaymentRequest $manualPaymentRequest): array

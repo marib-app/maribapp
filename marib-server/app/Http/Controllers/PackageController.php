@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\ManualPaymentRequest;
 use App\Models\Package;
+use App\Models\PaymentTransaction;
 use App\Queries\PaymentRequestTableQuery;
 use App\Support\ManualPayments\ManualPaymentPresentationHelpers;
 use App\Models\UserPurchasedPackage;
@@ -15,6 +17,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Collection;
+use App\Support\Payments\PaymentLabelService;
 use Throwable;
 
 class PackageController extends Controller {
@@ -353,8 +357,40 @@ class PackageController extends Controller {
             ->take($limit)
             ->get();
 
-        $rows = $records->map(function ($row) {
-            return $this->formatPaymentTransactionRow((array) $row);
+        $transactionIds = $records->pluck('payment_transaction_id')
+            ->filter(static fn ($id) => $id !== null && $id !== '')
+            ->map(static fn ($id) => is_numeric($id) ? (int) $id : null)
+            ->filter()
+            ->unique()
+            ->values();
+
+        $manualRequestIds = $records->pluck('manual_payment_request_id')
+            ->filter(static fn ($id) => $id !== null && $id !== '')
+            ->map(static fn ($id) => is_numeric($id) ? (int) $id : null)
+            ->filter()
+            ->unique()
+            ->values();
+
+        $transactions = $transactionIds->isEmpty()
+            ? collect()
+            : PaymentTransaction::query()
+                ->with(['manualPaymentRequest.manualBank'])
+                ->whereIn('id', $transactionIds)
+                ->get()
+                ->keyBy('id');
+
+        $manualRequests = $manualRequestIds->isEmpty()
+            ? collect()
+            : ManualPaymentRequest::query()
+                ->with(['manualBank'])
+                ->whereIn('id', $manualRequestIds)
+                ->get()
+                ->keyBy('id');
+
+        $rows = $records->map(function ($row) use ($transactions, $manualRequests) {
+            return $this->formatPaymentTransactionRow((array) $row, $transactions, $manualRequests);
+
+
         })->all();
 
         return response()->json([
@@ -363,7 +399,7 @@ class PackageController extends Controller {
         ]);
     }
 
-    private function formatPaymentTransactionRow(array $row): array
+    private function formatPaymentTransactionRow(array $row, Collection $transactions, Collection $manualRequests): array
     {
         $rawChannel = $row['channel'] ?? null;
         $gatewayKey = $row['gateway_key'] ?? null;
@@ -372,14 +408,43 @@ class PackageController extends Controller {
             ?? 'manual_banks';
         $channel = $rawChannel ?? $gatewayKey ?? $normalizedChannel;
 
-        $manualBankName = isset($row['manual_bank_name']) && is_string($row['manual_bank_name'])
-            ? trim($row['manual_bank_name'])
+        $transactionId = isset($row['payment_transaction_id']) && is_numeric($row['payment_transaction_id'])
+            ? (int) $row['payment_transaction_id']
+
             : null;
-        $gatewayLabel = $manualBankName !== null && $manualBankName !== ''
-            ? $manualBankName
-            : ((isset($row['gateway_label']) && is_string($row['gateway_label']) && trim($row['gateway_label']) !== '')
-                ? $row['gateway_label']
-                : $this->paymentRequestChannelLabel($normalizedChannel));
+
+        $manualRequestId = isset($row['manual_payment_request_id']) && is_numeric($row['manual_payment_request_id'])
+            ? (int) $row['manual_payment_request_id']
+            : null;
+
+        $transaction = $transactionId !== null ? $transactions->get($transactionId) : null;
+        $manualRequest = $manualRequestId !== null ? $manualRequests->get($manualRequestId) : null;
+
+        if ($transaction instanceof PaymentTransaction) {
+            $transaction->loadMissing(['manualPaymentRequest.manualBank']);
+        }
+
+        if ($manualRequest instanceof ManualPaymentRequest) {
+            $manualRequest->loadMissing('manualBank');
+        }
+
+        if ($transaction instanceof PaymentTransaction) {
+            $labels = PaymentLabelService::forPaymentTransaction($transaction);
+        } elseif ($manualRequest instanceof ManualPaymentRequest) {
+            $labels = PaymentLabelService::forManualPaymentRequest($manualRequest);
+        } else {
+            $labels = [
+                'gateway_label' => $row['gateway_label'] ?? null,
+                'bank_label' => $row['manual_bank_name'] ?? null,
+            ];
+        }
+
+        $gatewayLabel = $labels['gateway_label'];
+        $bankLabel = $labels['bank_label'];
+
+        $manualBankName = $gatewayLabel === trans('المحفظة') ? null : $bankLabel;
+
+
 
         $createdAt = $this->parseDateOrNull($row['created_at'] ?? null);
         $formattedCreatedAt = $createdAt?->format('d-m-y H:i:s');
@@ -411,6 +476,7 @@ class PackageController extends Controller {
             'gateway_name'               => $row['gateway_name'] ?? null,
             'payment_gateway'            => $gatewayLabel,
             'manual_bank_name'           => $manualBankName,
+            'bank_label'                 => $bankLabel,
             'manual_bank_id'             => $row['manual_bank_id'] ?? null,
             'normalized_channel'         => $normalizedChannel,
             'normalized_channel_label'   => $this->paymentRequestChannelLabel($normalizedChannel),

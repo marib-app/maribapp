@@ -10,6 +10,7 @@ use App\Services\Payments\ManualPaymentRequestService;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Str;
+use App\Models\Concerns\HasPaymentLabels;
 
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
@@ -17,6 +18,7 @@ use Illuminate\Support\Facades\Log;
 class PaymentTransaction extends Model
 {
     use HasFactory;
+    use HasPaymentLabels;
 
 
     protected $fillable = [
@@ -167,86 +169,6 @@ class PaymentTransaction extends Model
         }
 
         return null;
-    }
-
-    public function getGatewayLabelAttribute(): string
-    {
-        $gateway = Str::of($this->payment_gateway ?? '')
-            ->trim()
-            ->lower()
-            ->value();
-
-        if ($gateway === 'wallet') {
-            return 'المحفظة';
-        }
-
-        if (in_array($gateway, ['bank_alsharq', 'alsharq', 'al-sharq', 'east_yemen_bank'], true)) {
-            return 'بنك الشرق';
-        }
-
-        $manualGateways = [
-            'manual_bank',
-            'manual-banks',
-            'manual banks',
-            'manual_banks',
-            'manualbanks',
-            'manual',
-            'manualpayment',
-            'manual_payment',
-            'manualpayments',
-            'manual_transfer',
-            'manual-transfer',
-            'manual transfers',
-            'manualtransfers',
-            'manualtransfer',
-            'manualbank',
-            'manualbanking',
-            'bank',
-            'bank_transfer',
-            'bank-transfer',
-            'bank transfer',
-            'banktransfer',
-            'offline',
-            'internal',
-        ];
-
-        if (in_array($gateway, $manualGateways, true)) {
-            $nameFromMeta = data_get($this->meta, 'payload.bank_name')
-                ?? data_get($this->meta, 'manual.bank.name')
-                ?? data_get($this->meta, 'manual_bank.name');
-
-            if (is_string($nameFromMeta) && trim($nameFromMeta) !== '') {
-                return trim($nameFromMeta);
-            }
-
-            $bankFromJoin = optional(optional($this->manualPaymentRequest)->manualBank)->name;
-
-            if (is_string($bankFromJoin) && trim($bankFromJoin) !== '') {
-                return trim($bankFromJoin);
-            }
-
-            return 'تحويل بنكي';
-        }
-
-        $provider = Str::of((string) data_get($this->meta, 'provider', ''))
-            ->trim()
-            ->lower()
-            ->value();
-
-        if ($provider === 'alsharq' || $provider === 'bank_alsharq') {
-            return 'بنك الشرق';
-        }
-
-        $channel = Str::of((string) data_get($this->meta, 'channel', ''))
-            ->trim()
-            ->lower()
-            ->value();
-
-        if ($channel === 'alsharq' || $channel === 'bank_alsharq') {
-            return 'بنك الشرق';
-        }
-
-        return (string) ($this->payment_gateway ?? '');
     }
 
 }

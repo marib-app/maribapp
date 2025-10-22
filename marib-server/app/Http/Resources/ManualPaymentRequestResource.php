@@ -4,7 +4,9 @@ namespace App\Http\Resources;
 
 use App\Models\ManualBank;
 use App\Models\ManualPaymentRequest;
+use App\Models\PaymentTransaction;
 use App\Models\WalletTransaction;
+use App\Support\Payments\PaymentLabelService;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
@@ -21,7 +23,20 @@ class ManualPaymentRequestResource extends JsonResource
             $paymentTransaction->load('order');
         }
 
-        $manualBank = $this->whenLoaded('manualBank');
+        if ($paymentTransaction instanceof EloquentModel) {
+            $paymentTransaction->loadMissing('manualPaymentRequest.manualBank');
+        }
+
+        $manualPaymentRequestModel = $this->resource instanceof ManualPaymentRequest
+            ? $this->resource
+            : null;
+
+        if ($manualPaymentRequestModel instanceof ManualPaymentRequest) {
+            $manualPaymentRequestModel->loadMissing('manualBank');
+        }
+
+        $manualBank = $manualPaymentRequestModel?->manualBank;
+        
         $payable = $this->whenLoaded('payable');
 
         if (
@@ -47,8 +62,18 @@ class ManualPaymentRequestResource extends JsonResource
             ?? 'manual_bank';
 
         $canonicalGateway = ManualPaymentRequest::canonicalGateway($gatewayKey) ?? 'manual_banks';
-        $manualBankName = $this->resolveManualBankName($manualBank, $paymentTransaction);
-        $gatewayLabel = $this->resolvePaymentGatewayLabel($canonicalGateway, $manualBankName, $gatewayKey, $paymentTransaction);
+        $labels = $manualPaymentRequestModel instanceof ManualPaymentRequest
+            ? PaymentLabelService::forManualPaymentRequest($manualPaymentRequestModel)
+            : ['gateway_label' => null, 'bank_label' => null];
+
+        $transactionLabels = $paymentTransaction instanceof PaymentTransaction
+            ? PaymentLabelService::forPaymentTransaction($paymentTransaction)
+            : ['gateway_label' => null, 'bank_label' => null];
+
+        $manualBankName = $labels['bank_label'];
+        $gatewayLabel = $labels['gateway_label'];
+
+
 
         $paymentStatus = $this->normalizePaymentStatus($paymentTransaction?->payment_status);
         $manualReference = $this->reference
@@ -86,6 +111,7 @@ class ManualPaymentRequestResource extends JsonResource
                 'qr_code_url' => $this->generateSignedUrl($manualBank->qr_code ?? null),
             ]) : null,
             'manual_bank_name' => $manualBankName,
+            'bank_label' => $manualBankName,
             'amount' => $this->whenNotNull($this->amount, fn () => (float) $this->amount),
             
             'currency' => $this->currency,
@@ -121,6 +147,9 @@ class ManualPaymentRequestResource extends JsonResource
                 'amount' => (float) $paymentTransaction->amount,
                 'currency' => $paymentTransaction->currency,
                 'receipt_url' => $this->generateSignedUrl($paymentTransaction->receipt_path ?? $this->receipt_path),
+                'gateway_label' => $transactionLabels['gateway_label'],
+                'bank_label' => $transactionLabels['bank_label'],
+
 
                 'order' => $order ? [
                     'id' => $order->id,

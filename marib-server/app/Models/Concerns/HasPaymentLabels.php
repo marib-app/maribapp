@@ -10,14 +10,14 @@ trait HasPaymentLabels
 {
     private ?array $paymentLabelCache = null;
 
-    public function getGatewayLabelAttribute(): string
+    public function getGatewayLabelAttribute(): ?string
     {
-        return $this->resolvePaymentLabels()['gateway_label'] ?? '';
+        return $this->resolvePaymentLabels()['gateway_label'] ?? null;
     }
 
-    public function getBankLabelAttribute(): string
+    public function getBankLabelAttribute(): ?string
     {
-        return $this->resolvePaymentLabels()['bank_label'] ?? '';
+        return $this->resolvePaymentLabels()['bank_label'] ?? null;
     }
 
     private function resolvePaymentLabels(): array
@@ -26,17 +26,14 @@ trait HasPaymentLabels
             return $this->paymentLabelCache;
         }
 
-        /** @var PaymentLabelService $service */
-        $service = app(PaymentLabelService::class);
-
         if ($this instanceof PaymentTransaction) {
-            $this->paymentLabelCache = $service->forPaymentTransaction($this);
+            $this->paymentLabelCache = PaymentLabelService::forPaymentTransaction($this);
         } elseif ($this instanceof ManualPaymentRequest) {
-            $this->paymentLabelCache = $service->forManualPaymentRequest($this);
+            $this->paymentLabelCache = PaymentLabelService::forManualPaymentRequest($this);
         } else {
             $this->paymentLabelCache = [
-                'gateway_label' => '',
-                'bank_label' => '',
+                'gateway_label' => null,
+                'bank_label' => null,
             ];
         }
 

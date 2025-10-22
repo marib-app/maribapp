@@ -14,6 +14,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Database\Eloquent\Model;
 use App\Queries\PaymentRequestTableQuery;
+use App\Support\Payments\PaymentLabelService;
 
 use App\Models\UserFcmToken;
 use App\Services\BootstrapTableService;
@@ -208,6 +209,22 @@ class ManualPaymentRequestController extends Controller
         $this->prefetchManualPaymentRequestsForRows($requests);
         $this->hydrateMissingManualPaymentRequestIds($requests);
 
+        $transactionIds = $requests->pluck('payment_transaction_id')
+            ->filter(static fn ($id) => $id !== null && $id !== '')
+            ->map(static fn ($id) => is_numeric($id) ? (int) $id : null)
+            ->filter()
+            ->unique()
+            ->values();
+
+        $transactions = $transactionIds->isEmpty()
+            ? collect()
+            : PaymentTransaction::query()
+                ->with(['manualPaymentRequest.manualBank'])
+                ->whereIn('id', $transactionIds)
+                ->get()
+                ->keyBy('id');
+
+
         $rows = [];
 
 
@@ -255,8 +272,26 @@ class ManualPaymentRequestController extends Controller
 
                 ?? $this->paymentRequestGatewayName($requestRow);
             $rowData['gateway_code'] = $canonicalGateway;
-            $rowData['gateway_label'] = $this->gatewayLabel($canonicalGateway, $manualBankName);
-            $rowData['payment_gateway'] = $rowData['gateway_label'];
+
+            $labels = null;
+            if ($requestRow->payment_transaction_id && $transactions->has((int) $requestRow->payment_transaction_id)) {
+                $labels = PaymentLabelService::forPaymentTransaction($transactions->get((int) $requestRow->payment_transaction_id));
+            } elseif ($manualPaymentRequest instanceof ManualPaymentRequest) {
+                $labels = PaymentLabelService::forManualPaymentRequest($manualPaymentRequest);
+            }
+
+            if ($labels === null) {
+                $labels = [
+                    'gateway_label' => null,
+                    'bank_label' => null,
+                ];
+            }
+
+            $rowData['gateway_label'] = $labels['gateway_label'];
+            $rowData['payment_gateway'] = $labels['gateway_label'];
+            $rowData['bank_label'] = $labels['bank_label'];
+            $rowData['manual_bank_name'] = $labels['bank_label'];
+
             $rowData['formatted_amount'] = number_format((float) ($requestRow->amount ?? 0), 2)
 
 
@@ -312,6 +347,7 @@ class ManualPaymentRequestController extends Controller
             'amount',
             'currency',
             'gateway_label',
+            'bank_label',
             'gateway_code',
             'status',
             'channel',
@@ -336,6 +372,7 @@ class ManualPaymentRequestController extends Controller
             'currency' => 'currency',
             'payment_gateway_label' => 'gateway_label',
             'gateway_label' => 'gateway_label',
+            'bank_label' => 'manual_bank_name',
             'payment_gateway_name' => 'channel',
             'payment_gateway' => 'channel',
             'channel_label' => 'channel',
@@ -536,6 +573,7 @@ class ManualPaymentRequestController extends Controller
                 'amount_fmt' => number_format($amount, 2, '.', ''),
                 'currency' => $row->currency ?? '',
                 'manual_payment_request_id' => $row->manual_payment_request_id,
+                'payment_transaction_id' => $row->payment_transaction_id,
                 'channel' => $resolvedChannel,
                 'gateway_code' => $gatewayCode ?? $resolvedChannel,
                 'channel_label' => $gatewayLabel,
@@ -556,6 +594,7 @@ class ManualPaymentRequestController extends Controller
                 'payable_label' => $categoryLabel,
                 'gateway_label' => $gatewayLabel,
                 'payment_gateway_label' => $gatewayLabel,
+                'bank_label' => null,
                 'status' => $row->status ?? $row->status_group,
                 'status_group' => $row->status_group,
                 'status_label' => $this->paymentRequestStatusLabel($row->status_group),
@@ -565,6 +604,7 @@ class ManualPaymentRequestController extends Controller
                 'actions' => $this->paymentRequestActionsFromRow($row),
             ];
         })->values();
+        $data = $this->applyPaymentLabelsToRowData($data)->values();
 
         return response()->json([
             'draw' => $draw,
@@ -581,9 +621,90 @@ class ManualPaymentRequestController extends Controller
 
     
 
+
+
+    private function applyPaymentLabelsToRowData(Collection $rows): Collection
+    {
+        if ($rows->isEmpty()) {
+            return $rows;
+        }
+
+        $transactionIds = $rows->pluck('payment_transaction_id')
+            ->filter(static fn ($id) => $id !== null && $id !== '')
+            ->map(static fn ($id) => is_numeric($id) ? (int) $id : null)
+            ->filter()
+            ->unique()
+            ->values();
+
+        $manualRequestIds = $rows->pluck('manual_payment_request_id')
+            ->map(fn ($id) => $this->normalizeManualPaymentIdentifier($id))
+            ->filter()
+            ->unique()
+            ->values();
+
+        $transactions = $transactionIds->isEmpty()
+            ? collect()
+            : PaymentTransaction::query()
+                ->with(['manualPaymentRequest.manualBank'])
+                ->whereIn('id', $transactionIds)
+                ->get()
+                ->keyBy('id');
+
+        $manualRequests = $manualRequestIds->isEmpty()
+            ? collect()
+            : ManualPaymentRequest::query()
+                ->with(['manualBank'])
+                ->whereIn('id', $manualRequestIds)
+                ->get()
+                ->keyBy('id');
+
+        return $rows->map(function ($row) use ($transactions, $manualRequests) {
+            $rowArray = is_array($row) ? $row : (array) $row;
+
+            $transactionId = $rowArray['payment_transaction_id'] ?? null;
+            $manualRequestId = $this->normalizeManualPaymentIdentifier($rowArray['manual_payment_request_id'] ?? null);
+
+            $labels = [
+                'gateway_label' => $rowArray['gateway_label'] ?? null,
+                'bank_label' => $rowArray['bank_label'] ?? null,
+            ];
+
+            if ($transactionId !== null) {
+                $transactionKey = is_numeric($transactionId) ? (int) $transactionId : null;
+
+                if ($transactionKey !== null && $transactions->has($transactionKey)) {
+                    $labels = PaymentLabelService::forPaymentTransaction($transactions->get($transactionKey));
+                }
+            }
+
+            if (($labels['gateway_label'] ?? null) === null && $manualRequestId !== null && $manualRequests->has($manualRequestId)) {
+                $labels = PaymentLabelService::forManualPaymentRequest($manualRequests->get($manualRequestId));
+            }
+
+            if ($transactionId === null && $manualRequestId !== null && $manualRequests->has($manualRequestId)) {
+                $labels = PaymentLabelService::forManualPaymentRequest($manualRequests->get($manualRequestId));
+            }
+
+            $rowArray['gateway_label'] = $labels['gateway_label'];
+            $rowArray['payment_gateway_label'] = $labels['gateway_label'];
+            $rowArray['bank_label'] = $labels['bank_label'];
+            $rowArray['manual_bank_name'] = $labels['bank_label'];
+
+            if ($rowArray['gateway_label'] === trans('المحفظة')) {
+                $rowArray['bank_label'] = null;
+                $rowArray['manual_bank_name'] = null;
+            }
+
+            return $rowArray;
+        });
+    }
+
+
     public function show(ManualPaymentRequest $manualPaymentRequest)
     {
         ResponseService::noAnyPermissionThenSendJson(['manual-payments-list', 'manual-payments-review']);
+
+
 
         $manualPaymentRequest = $this->loadManualPaymentRequestRelations($manualPaymentRequest);
 
@@ -654,15 +775,14 @@ class ManualPaymentRequestController extends Controller
 
     private function manualPaymentRequestPresentationData(ManualPaymentRequest $manualPaymentRequest): array
     {
+        $manualPaymentRequest->loadMissing('manualBank');
 
         $paymentGatewayCanonical = $this->resolveManualPaymentGatewayKey($manualPaymentRequest);
         $paymentGatewayKey = $paymentGatewayCanonical;
 
-        $manualBankName = $this->resolveManualBankName($manualPaymentRequest);
-        $paymentGatewayLabel = $this->paymentRequestChannelLabel(
-            $paymentGatewayCanonical ?? $paymentGatewayKey,
-            $manualBankName
-        );
+        $labels = PaymentLabelService::forManualPaymentRequest($manualPaymentRequest);
+        $paymentGatewayLabel = $labels['gateway_label'];
+        $manualBankName = $labels['bank_label'];
         $departmentLabel = $this->paymentRequestDepartmentLabel($manualPaymentRequest->department ?? null);
 
         return compact(
@@ -670,7 +790,7 @@ class ManualPaymentRequestController extends Controller
             'paymentGatewayCanonical',
             'paymentGatewayLabel',
             'departmentLabel'
-        );
+        ) + ['manualBankName' => $manualBankName];
     }
 
     public function timeline(ManualPaymentRequest $manualPaymentRequest)

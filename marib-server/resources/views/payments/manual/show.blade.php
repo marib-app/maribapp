@@ -22,6 +22,7 @@
     }
 
     $paymentGatewayLabel = $paymentGatewayLabel ?? __('Bank Transfer');
+    $manualBankName = $manualBankName ?? null;
     $departmentLabel = $departmentLabel ?? __('Unknown Department');
 
 
@@ -124,8 +125,12 @@
 
 
                         <dt class="col-5 text-muted">{{ __('Payment Gateway') }}</dt>
-                        <dd class="col-7">{{ $paymentGatewayLabel }}</dd>
-
+                        <dd class="col-7">
+                            {{ $paymentGatewayLabel }}
+                            @if(!empty($manualBankName) && $paymentGatewayLabel !== trans('المحفظة'))
+                                <span class="text-muted">— {{ $manualBankName }}</span>
+                            @endif
+                        </dd>
                         @if($paymentGatewayCanonical === 'wallet')
                             <dt class="col-5 text-muted">{{ __('Wallet Transaction ID') }}</dt>
                             <dd class="col-7">{{ $walletTransaction?->id ?? __('N/A') }}</dd>

@@ -16,12 +16,14 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
+use App\Models\Concerns\HasPaymentLabels;
 
 
 class ManualPaymentRequest extends Model
 {
     use HasFactory;
     use Concerns\NotifiesAdminOnApprovalStatus;
+    use HasPaymentLabels;
 
     /**
      * @var array<string, class-string>

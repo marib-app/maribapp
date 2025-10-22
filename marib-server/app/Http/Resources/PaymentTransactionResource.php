@@ -11,8 +11,11 @@ class PaymentTransactionResource extends JsonResource
     {
 
         $resource = $this->resource;
-        if ($resource instanceof EloquentModel && !$resource->relationLoaded('order')) {
+        if ($resource instanceof EloquentModel && ! $resource->relationLoaded('order')) {
             $resource->load('order');
+        }
+        if ($resource instanceof EloquentModel) {
+            $resource->loadMissing(['manualPaymentRequest.manualBank']);
         }
 
         $manualPaymentRequest = $this->whenLoaded('manualPaymentRequest');
@@ -28,6 +31,7 @@ class PaymentTransactionResource extends JsonResource
             'payment_gateway' => $this->payment_gateway,
             'gateway_code' => $this->gateway_code,
             'gateway_label' => $this->gateway_label,
+            'bank_label' => $this->bank_label,
 
             'created_at' => optional($this->created_at)->toIso8601String(),
 

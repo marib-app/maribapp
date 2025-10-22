@@ -664,10 +664,8 @@ class OrderReportController extends Controller
         $rows = [];
 
         $rows = $requests->map(function (object $requestRow) {
-            $manualPaymentRequest = null;
-            if (! empty($requestRow->manual_payment_request_id)) {
-                $manualPaymentRequest = $this->getManualPaymentRequestById((int) $requestRow->manual_payment_request_id);
-            }
+            $manualPaymentRequest = $this->resolveManualPaymentRequestFromRow($requestRow);
+
 
 
             return [
@@ -685,8 +683,12 @@ class OrderReportController extends Controller
                 'submitted_at' => $requestRow->created_at
                     ? Carbon::parse($requestRow->created_at)->format('Y-m-d H:i')
                     : null,
-                'operate' => $manualPaymentRequest ? $this->manualPaymentActionsColumn($manualPaymentRequest) : '',
-            ];
+                'operate' => $manualPaymentRequest
+                    ? $this->manualPaymentActionsColumn($manualPaymentRequest)
+                    : '<span class="text-muted">' . e(trans('Not available')) . '</span>',
+                
+                
+                ];
         })->values();
 
 
@@ -748,6 +750,62 @@ class OrderReportController extends Controller
 
         return [$baseQuery, $startDate, $endDate, $statusFilter];
     }
+
+
+    private function resolveManualPaymentRequestFromRow(object $requestRow): ?ManualPaymentRequest
+    {
+        $manualPaymentRequestId = $this->normalizePositiveInt(data_get($requestRow, 'manual_payment_request_id'));
+
+        if ($manualPaymentRequestId !== null) {
+            $manualPaymentRequest = $this->getManualPaymentRequestById($manualPaymentRequestId);
+
+            if ($manualPaymentRequest instanceof ManualPaymentRequest) {
+                return $manualPaymentRequest;
+            }
+        }
+
+        $paymentTransactionId = $this->normalizePositiveInt(data_get($requestRow, 'payment_transaction_id'));
+
+        if ($paymentTransactionId !== null) {
+            $manualPaymentRequest = $this->getManualPaymentRequestByPaymentTransactionId($paymentTransactionId);
+
+            if ($manualPaymentRequest instanceof ManualPaymentRequest) {
+                return $manualPaymentRequest;
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizePositiveInt($value): ?int
+    {
+        if (is_int($value)) {
+            return $value > 0 ? $value : null;
+        }
+
+        if (is_string($value)) {
+            $trimmed = trim($value);
+
+            if ($trimmed === '') {
+                return null;
+            }
+
+            if (ctype_digit($trimmed)) {
+                $intValue = (int) $trimmed;
+
+                return $intValue > 0 ? $intValue : null;
+            }
+
+            if (preg_match('/\d+/', $trimmed, $matches) === 1) {
+                $intValue = (int) $matches[0];
+
+                return $intValue > 0 ? $intValue : null;
+            }
+        }
+
+        return null;
+    }
+
 
     private function manualPaymentStatusBadge(?string $status): string
     {

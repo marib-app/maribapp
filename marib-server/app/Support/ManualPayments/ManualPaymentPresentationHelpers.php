@@ -15,6 +15,7 @@ trait ManualPaymentPresentationHelpers
     protected array $manualPaymentColumnSupportCache = [];
 
     protected array $manualPaymentRequestLookupCache = [];
+    protected array $manualPaymentRequestByTransactionLookupCache = [];
 
     protected array $manualBankLookupCache = [];
 
@@ -403,6 +404,27 @@ trait ManualPaymentPresentationHelpers
 
         return $manualPaymentRequest instanceof ManualPaymentRequest ? $manualPaymentRequest : null;
     }
+
+
+    protected function getManualPaymentRequestByPaymentTransactionId(int $paymentTransactionId): ?ManualPaymentRequest
+    {
+        if ($paymentTransactionId <= 0) {
+            return null;
+        }
+
+        if (! array_key_exists($paymentTransactionId, $this->manualPaymentRequestByTransactionLookupCache)) {
+            $this->manualPaymentRequestByTransactionLookupCache[$paymentTransactionId] = ManualPaymentRequest::query()
+                ->with('manualBank')
+                ->where('payment_transaction_id', $paymentTransactionId)
+                ->first();
+        }
+
+        $manualPaymentRequest = $this->manualPaymentRequestByTransactionLookupCache[$paymentTransactionId] ?? null;
+
+        return $manualPaymentRequest instanceof ManualPaymentRequest ? $manualPaymentRequest : null;
+    }
+
+
 
     protected function prefetchManualPaymentRequestsForRows(Collection $rows): void
     {

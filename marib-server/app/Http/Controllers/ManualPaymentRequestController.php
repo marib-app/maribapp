@@ -224,16 +224,22 @@ class ManualPaymentRequestController extends Controller
                 $gatewayKey = 'manual_banks';
             }
 
+            $manualPaymentRequestId = $this->normalizeManualPaymentIdentifier(
+                $requestRow->manual_payment_request_id ?? null
+            );
+
+
+
             $manualPaymentRequest = null;
-            if (! empty($requestRow->manual_payment_request_id)) {
-                $manualPaymentRequest = $this->getManualPaymentRequestById((int) $requestRow->manual_payment_request_id);
+            if ($manualPaymentRequestId !== null) {
+                $manualPaymentRequest = $this->getManualPaymentRequestById($manualPaymentRequestId);
             }
 
 
 
 
 
-            $rowData['id'] = $requestRow->manual_payment_request_id ?? $requestRow->payment_transaction_id;
+            $rowData['id'] = $manualPaymentRequestId ?? $requestRow->payment_transaction_id;
             $rowData['user_name'] = $requestRow->user_name ?? '-';
             $rowData['user_mobile'] = $requestRow->user_mobile ?? '-';
             $canonicalGateway = ManualPaymentRequest::canonicalGateway($gatewayKey) ?? $gatewayKey;
@@ -262,8 +268,15 @@ class ManualPaymentRequestController extends Controller
                 : null;
             $rowData['status_badge'] = $this->statusBadge($requestRow->status_group ?? null);
             $rowData['status_group'] = $requestRow->status_group ?? null;
-            $rowData['operate'] = $manualPaymentRequest ? $this->actionsColumn($manualPaymentRequest) : '';
+            if ($manualPaymentRequest instanceof ManualPaymentRequest) {
+                $rowData['operate'] = $this->actionsColumn($manualPaymentRequest);
+            } elseif ($manualPaymentRequestId !== null) {
+                $rowData['operate'] = $this->renderManualPaymentReviewButton($manualPaymentRequestId);
+            } else {
+                $rowData['operate'] = '';
+            }
 
+            
 
             $rows[] = $rowData;
 

@@ -1,12 +1,38 @@
-import HomePage from "@/components/Home";
+import HomePage from '@/components/Home';
+import axios from 'axios';
 
-export async function generateMetadata() {
+
+export const generateMetadata = async () => {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${process.env.NEXT_PUBLIC_END_POINT}seo-settings?page=home`, { cache: "no-store" });
-    const data = await res.json();
-    const title = data?.title || process.env.NEXT_PUBLIC_META_TITLE || "Marib";
-    return { title };
-  } catch { return { title: process.env.NEXT_PUBLIC_META_TITLE || "Marib" }; }
+    const response = await axios.get(
+      `${process.env.NEXT_PUBLIC_API_URL}${process.env.NEXT_PUBLIC_END_POINT}seo-settings?page=home`
+    );
+    const home = response?.data
+
+    return {
+      title: home?.title ? home?.title : process.env.NEXT_PUBLIC_META_TITLE,
+      description: home?.description ? home?.description : process.env.NEXT_PUBLIC_META_DESCRIPTION,
+      openGraph: {
+        images: home?.image ? [home?.image] : [],
+      },
+      keywords: home?.keywords ? home?.keywords : process.env.NEXT_PUBLIC_META_kEYWORDS
+    };
+  } catch (error) {
+    console.error("Error fetching MetaData:", error);
+    return null;
+  }
+};
+
+
+const index = () => {
+
+  return (
+    <>
+      {/* <SEO /> */}
+      <HomePage />
+    </>
+  )
 }
 
-export default function Page() { return <HomePage />; }
+export default index
+

@@ -205,8 +205,8 @@ class _SliderComponentState extends State<SliderComponent>
       _pageController
           .animateToPage(
         next,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
+        duration: kSliderAutoScrollDuration,
+        curve: kSliderAutoScrollCurve,
       )
           .then((_) {
         if (!mounted) return;

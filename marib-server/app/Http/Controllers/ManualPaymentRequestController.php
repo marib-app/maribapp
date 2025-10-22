@@ -1626,9 +1626,12 @@ class ManualPaymentRequestController extends Controller
             data_get($row, 'manual_payment_request_id')
         );
 
-        if ($manualPaymentRequestId === null) {
-            $manualPaymentRequest = $this->resolveManualPaymentRequestForRow($row);
+        $manualPaymentRequest = $manualPaymentRequestId !== null
+            ? $this->getManualPaymentRequestById($manualPaymentRequestId)
+            : null;
 
+        if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+            $manualPaymentRequest = $this->resolveManualPaymentRequestForRow($row);
 
 
             if ($manualPaymentRequest instanceof ManualPaymentRequest) {
@@ -1637,31 +1640,78 @@ class ManualPaymentRequestController extends Controller
             }
         }
 
-        if ($manualPaymentRequestId === null) {
+        if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+            $reference = data_get($row, 'reference');
 
+            if (is_string($reference) && trim($reference) !== '') {
+                $manualPaymentRequest = ManualPaymentRequest::query()
+                    ->where('reference', trim($reference))
+                    ->orderByDesc('id')
+                    ->first();
+
+                if ($manualPaymentRequest instanceof ManualPaymentRequest) {
+                    $manualPaymentRequestId = $manualPaymentRequest->getKey();
+                    $row->manual_payment_request_id = $manualPaymentRequestId;
+                    $this->manualPaymentRequestLookupCache[$manualPaymentRequestId] = $manualPaymentRequest;
+                }
+            }
+        }
+
+        if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
 
             return '';
         }
 
-        return $this->renderManualPaymentReviewButton($manualPaymentRequestId);
+        return $this->renderManualPaymentReviewButton($manualPaymentRequest);
     }
 
-    private function renderManualPaymentReviewButton(int $manualPaymentRequestId): string
+    private function renderManualPaymentReviewButton(ManualPaymentRequest|int $manualPaymentRequest): string
     {
         if (! Route::has('payment-requests.review')) {
             return '';
 
+        
+        }
+
+        $manualPaymentRequestId = $manualPaymentRequest instanceof ManualPaymentRequest
+            ? $manualPaymentRequest->getKey()
+            : $manualPaymentRequest;
+
+        if (! is_int($manualPaymentRequestId) || $manualPaymentRequestId <= 0) {
+            return '';
+
+
 
         }
 
-        $url = route('payment-requests.review', ['manualPaymentRequest' => $manualPaymentRequestId]);
-        $label = trans('Review');
+        $manualPaymentInstance = $manualPaymentRequest instanceof ManualPaymentRequest
+            ? $manualPaymentRequest
+            : $this->getManualPaymentRequestById($manualPaymentRequestId);
+
+        $user = Auth::user();
+        $canReview = $user?->can('manual-payments-review') ?? false;
+        $shouldOpenReview = $manualPaymentInstance instanceof ManualPaymentRequest
+            ? ($canReview && $manualPaymentInstance->isOpen())
+            : $canReview;
+
+        $targetRoute = $shouldOpenReview && Route::has('payment-requests.review')
+            ? 'payment-requests.review'
+            : (Route::has('payment-requests.show') ? 'payment-requests.show' : 'payment-requests.review');
+
+        $url = route($targetRoute, ['manualPaymentRequest' => $manualPaymentRequestId]);
+        $label = $shouldOpenReview ? trans('Review request') : trans('View request');
+        $buttonClass = $shouldOpenReview
+            ? 'btn btn-sm btn-primary'
+            : 'btn btn-sm btn-outline-primary';
+
+
 
         return sprintf(
-            '<a href="%s" class="btn btn-sm btn-primary btn-with-label view-payment-request d-inline-flex align-items-center gap-1" target="_blank" rel="noopener noreferrer" title="%s">'
+            '<a href="%s" class="%s btn-with-label view-payment-request d-inline-flex align-items-center gap-1" target="_blank" rel="noopener noreferrer" title="%s">'
             . '<i class="fa fa-eye" aria-hidden="true"></i><span class="btn-label">%s</span>'
             . '</a>',
             e($url),
+            e($buttonClass),
             e($label),
             e($label)
         );

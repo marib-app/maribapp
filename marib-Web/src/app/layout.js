@@ -2,21 +2,17 @@ import { Providers } from "@/redux/store/providers";
 import "../../public/css/style.css";
 import "bootstrap/dist/css/bootstrap.css";
 import { Toaster } from "react-hot-toast";
-import 'react-loading-skeleton/dist/skeleton.css'
+import "react-loading-skeleton/dist/skeleton.css";
 import Layout from "@/components/Layout/Layout";
 import Script from "next/script";
 
 export async function generateMetadata() {
   try {
-    const res = await fetch(\\\get-system-settings\, { cache: "no-store" });
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${process.env.NEXT_PUBLIC_END_POINT}get-system-settings`, { cache: "no-store" });
     const data = await res.json();
     const favicon = data?.data?.favicon_icon;
-    return {
-      icons: favicon ? [{ url: favicon }] : undefined,
-    };
-  } catch {
-    return {};
-  }
+    return { icons: favicon ? [{ url: favicon }] : undefined };
+  } catch { return {}; }
 }
 
 export default function RootLayout({ children }) {
@@ -29,10 +25,7 @@ export default function RootLayout({ children }) {
       <body>
         <Script src="https://js.paystack.co/v1/inline.js" strategy="afterInteractive" />
         {placeApiKey ? (
-          <Script
-            src={\https://maps.googleapis.com/maps/api/js?key=\&libraries=places\}
-            strategy="afterInteractive"
-          />
+          <Script src={`https://maps.googleapis.com/maps/api/js?key=${placeApiKey}&libraries=places`} strategy="afterInteractive" />
         ) : null}
         <Providers>
           <Toaster position="top-center" reverseOrder={false} />

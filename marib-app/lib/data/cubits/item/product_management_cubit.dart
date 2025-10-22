@@ -10,8 +10,7 @@ import 'package:marib/data/model/item/purchase_options.dart';
 import 'package:marib/data/repositories/item/item_purchase_options_repository.dart';
 import 'package:marib/utils/errorFilter.dart';
 import 'package:marib/utils/variant_key.dart';
-import 'package:marib/data/services/delivery_pricing_service.dart'
-    show DeliveryPackageSize;
+
 
 const List<String> _defaultSizeCatalog = <String>[
   'XS',
@@ -107,6 +106,20 @@ List<CustomFieldColorEntry> _normalizeColorEntries(
     normalized[code] = CustomFieldColorEntry(code: code, quantity: quantity);
   }
   return normalized.values.toList(growable: false);
+}
+
+
+String? _normalizeDeliverySize(String? value) {
+  if (value == null) {
+    return null;
+  }
+
+  final String trimmed = value.trim();
+  if (trimmed.isEmpty) {
+    return null;
+  }
+
+  return trimmed;
 }
 
 ManagedPurchaseAttribute _createManagedAttribute(
@@ -368,7 +381,7 @@ class ProductManagementState extends Equatable {
   final double basePrice;
   final double previewFinalPrice;
   final double lastKnownFinalPrice;
-  final DeliveryPackageSize? deliverySize;
+  final String? deliverySize;
 
   bool get hasLoaded => options != null;
 
@@ -429,7 +442,7 @@ class ProductManagementState extends Equatable {
     double? basePrice,
     double? previewFinalPrice,
     double? lastKnownFinalPrice,
-    DeliveryPackageSize? deliverySize,
+    String? deliverySize,
     bool clearDeliverySize = false,
   }) {
     return ProductManagementState(
@@ -877,10 +890,15 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     _recomputeVariantState();
   }
 
-  void setDeliverySize(DeliveryPackageSize? size) {
+  void setDeliverySize(String? value) {
+    final String? normalized = _normalizeDeliverySize(value);
+    if (state.deliverySize == normalized) {
+      return;
+    }
+
     emit(state.copyWith(
-      deliverySize: size,
-      clearDeliverySize: size == null,
+      deliverySize: normalized,
+      clearDeliverySize: normalized == null,
       error: null,
     ));
   }
@@ -1275,7 +1293,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       discountStart = discount.start;
       discountEnd = discount.end;
     }
-    final DeliveryPackageSize? deliverySize = options.deliverySize;
+    final String? deliverySize = _normalizeDeliverySize(options.deliverySize);
 
     emit(state.copyWith(
       loading: false,

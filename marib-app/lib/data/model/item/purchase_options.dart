@@ -5,8 +5,7 @@ import 'package:marib/data/model/custom_field/custom_field_model.dart'
 
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/utils/variant_key.dart';
-import 'package:marib/data/services/delivery_pricing_service.dart'
-    show DeliveryPackageSize;
+
 
 bool _looksLikeColorAttribute(
   String key,
@@ -290,8 +289,8 @@ class ItemPurchaseOptions {
     final double finalPrice = _parseDouble(json['final_price']) ?? basePrice;
 
     final dynamic discountRaw = json['discount'];
-    final DeliveryPackageSize? deliverySize =
-        _parseDeliveryPackageSize(json['delivery_size']);
+    final String? deliverySize = _normalizeString(json['delivery_size']);
+
 
     return ItemPurchaseOptions(
       itemId: itemId,
@@ -319,7 +318,7 @@ class ItemPurchaseOptions {
   final ItemDiscount? discount;
   final List<ItemPurchaseAttributeOption> attributes;
   final List<ItemVariantStockOption> variantStocks;
-  final DeliveryPackageSize? deliverySize;
+  final String? deliverySize;
 
   ItemPurchaseAttributeOption? attributeByKey(String key) {
     final String normalized = key.toLowerCase().trim();
@@ -396,24 +395,4 @@ String? _normalizeString(dynamic value) {
   return normalized.isEmpty ? null : normalized;
 }
 
-DeliveryPackageSize? _parseDeliveryPackageSize(dynamic value) {
-  if (value == null) {
-    return null;
-  }
 
-  final String normalized = value.toString().trim().toLowerCase();
-  if (normalized.isEmpty) {
-    return null;
-  }
-
-  switch (normalized) {
-    case 'small':
-      return DeliveryPackageSize.small;
-    case 'medium':
-      return DeliveryPackageSize.medium;
-    case 'large':
-      return DeliveryPackageSize.large;
-  }
-
-  return null;
-}

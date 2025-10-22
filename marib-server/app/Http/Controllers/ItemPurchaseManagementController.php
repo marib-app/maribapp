@@ -30,7 +30,6 @@ class ItemPurchaseManagementController extends Controller
         }
 
 
-        $allowedDeliverySizes = ['small', 'medium', 'large'];
         $deliverySizeProvided = $request->has('delivery_size');
         $deliverySizeValue = $item->delivery_size;
 
@@ -39,13 +38,19 @@ class ItemPurchaseManagementController extends Controller
 
             if ($rawDeliverySize === null) {
                 $deliverySizeValue = null;
+
+            } elseif (is_array($rawDeliverySize)) {
+                throw ValidationException::withMessages([
+                    'delivery_size' => [__('صيغة حقل حجم التوصيل غير صحيحة.')],
+                ]);
+
             } else {
-                $normalizedDeliverySize = strtolower($this->stringifyValue($rawDeliverySize));
+                $normalizedDeliverySize = trim((string) $rawDeliverySize);
                 if ($normalizedDeliverySize === '') {
                     $deliverySizeValue = null;
-                } elseif (! in_array($normalizedDeliverySize, $allowedDeliverySizes, true)) {
+                } elseif (mb_strlen($normalizedDeliverySize) > 16) {
                     throw ValidationException::withMessages([
-                        'delivery_size' => [__('خيار حجم التوصيل المحدد غير صالح.')],
+                        'delivery_size' => [__('يمكن أن يحتوي حجم التوصيل على 16 محرفًا كحد أقصى.')],
                     ]);
                 } else {
                     $deliverySizeValue = $normalizedDeliverySize;

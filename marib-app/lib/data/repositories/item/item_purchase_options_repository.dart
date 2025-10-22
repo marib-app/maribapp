@@ -1,7 +1,6 @@
 import 'package:marib/data/model/item/purchase_options.dart';
 import 'package:marib/utils/api.dart';
-import 'package:marib/data/services/delivery_pricing_service.dart'
-    show DeliveryPackageSize, DeliveryPackageSizeLabel;
+
 
 class PurchaseOptionsUpdateResult {
   const PurchaseOptionsUpdateResult({
@@ -39,13 +38,13 @@ class ItemPurchaseOptionsRepository {
   Future<PurchaseOptionsUpdateResult> saveAttributes({
     required int itemId,
     required List<Map<String, dynamic>> attributes,
-    DeliveryPackageSize? deliverySize,
+    String? deliverySize,
   }) async {
     final Map<String, dynamic> response = await Api.post(
       url: Api.itemAttributesApi(itemId),
       parameter: <String, dynamic>{
         'attributes': attributes,
-        'delivery_size': deliverySize == null ? '' : deliverySize.label,
+        'delivery_size': deliverySize?.trim() ?? '',
       },
     );
 

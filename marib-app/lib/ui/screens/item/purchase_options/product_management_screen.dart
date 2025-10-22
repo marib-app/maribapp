@@ -18,8 +18,7 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/data/model/custom_field/custom_field_model.dart'
     show CustomFieldColorEntry;
-import 'package:marib/data/services/delivery_pricing_service.dart'
-    show DeliveryPackageSize;
+
 
 class ProductManagementScreen extends StatefulWidget {
   const ProductManagementScreen({super.key, required this.item});
@@ -110,7 +109,7 @@ class _UnsupportedProductManagement extends StatelessWidget {
 class _ProductManagementScreenState extends State<ProductManagementScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController =
-      TabController(length: 3, vsync: this)..addListener(_onTabChanged);
+      TabController(length: 4, vsync: this)..addListener(_onTabChanged);
 
   final Map<String, TextEditingController> _stockControllers =
       <String, TextEditingController>{};
@@ -186,6 +185,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
         controller: _tabController,
         children: <Widget>[
           _AttributesTab(state: state),
+          _DeliverySizeTab(state: state),
           _StockTab(
             state: state,
             stockControllers: _stockControllers,
@@ -222,6 +222,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
         labelStyle: labelStyle,
         tabs: const <Tab>[
           Tab(text: 'السمات'),
+          Tab(text: 'الحجم'),
           Tab(text: 'المخزون'),
           Tab(text: 'الخصم'),
         ],
@@ -236,8 +237,9 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
         state.attributesSaving || state.stockSaving || state.discountSaving;
     final String saveLabel = <int, String>{
           0: 'حفظ السمات',
-          1: 'حفظ المخزون',
-          2: 'حفظ الخصم',
+      1: 'حفظ الحجم',
+      2: 'حفظ المخزون',
+      3: 'حفظ الخصم',
         }[_currentTabIndex] ??
         'حفظ';
 
@@ -283,12 +285,13 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
     SubmissionOutcome outcome;
     switch (_currentTabIndex) {
       case 0:
+      case 1:
         outcome = await cubit.saveAttributes();
         break;
-      case 1:
+      case 2:
         outcome = await cubit.saveStock();
         break;
-      case 2:
+      case 3:
         outcome = await cubit.saveDiscount();
         break;
       default:
@@ -471,8 +474,7 @@ class _AttributesTabState extends State<_AttributesTab> {
           ),
         ),
         const SizedBox(height: 16),
-        _buildDeliverySizeCard(context, state),
-        const SizedBox(height: 16),
+
         if (attributes.isEmpty)
           const _EmptyState(
             message:
@@ -489,128 +491,7 @@ class _AttributesTabState extends State<_AttributesTab> {
     );
   }
 
-  Widget _buildDeliverySizeCard(
-    BuildContext context,
-    ProductManagementState state,
-  ) {
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme palette = context.color;
-    final ProductManagementCubit cubit = context.read<ProductManagementCubit>();
-    final DeliveryPackageSize? selectedSize = state.deliverySize;
 
-    final Map<DeliveryPackageSize, String> labelKeys =
-        <DeliveryPackageSize, String>{
-      DeliveryPackageSize.small: 'deliverySizeSmall',
-      DeliveryPackageSize.medium: 'deliverySizeMedium',
-      DeliveryPackageSize.large: 'deliverySizeLarge',
-    };
-
-    final String currentLabelKey = selectedSize == null
-        ? 'deliverySizeUnset'
-        : labelKeys[selectedSize] ?? 'deliverySizeUnset';
-
-    Widget buildChip({
-      required DeliveryPackageSize? size,
-      required String labelKey,
-      required bool isSelected,
-    }) {
-      return _buildTextAttributeChip(
-        context: context,
-        theme: theme,
-        color: palette,
-        label: labelKey.translate(context),
-        isSelected: isSelected,
-        onSelected: () => cubit.setDeliverySize(size),
-      );
-    }
-
-    return Card(
-      color: palette.secondaryColor,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: palette.borderColor.withOpacity(0.4)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              'deliverySizeCardTitle'.translate(context),
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: palette.textDefaultColor,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'deliverySizeCardSubtitle'.translate(context),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: palette.textDefaultColor.withOpacity(0.7),
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: palette.territoryColor.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: <Widget>[
-                  Text(
-                    'deliverySizeCurrentLabel'.translate(context),
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: palette.territoryColor,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    currentLabelKey.translate(context),
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: palette.textDefaultColor,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              children: <Widget>[
-                buildChip(
-                  size: DeliveryPackageSize.small,
-                  labelKey: 'deliverySizeSmall',
-                  isSelected: selectedSize == DeliveryPackageSize.small,
-                ),
-                buildChip(
-                  size: DeliveryPackageSize.medium,
-                  labelKey: 'deliverySizeMedium',
-                  isSelected: selectedSize == DeliveryPackageSize.medium,
-                ),
-                buildChip(
-                  size: DeliveryPackageSize.large,
-                  labelKey: 'deliverySizeLarge',
-                  isSelected: selectedSize == DeliveryPackageSize.large,
-                ),
-                buildChip(
-                  size: null,
-                  labelKey: 'deliverySizeClear',
-                  isSelected: selectedSize == null,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildAttributeCard(
     BuildContext context,
@@ -890,6 +771,120 @@ void _openColorAttributeEditor({
     },
   );
 }
+
+
+class _DeliverySizeTab extends StatefulWidget {
+  const _DeliverySizeTab({required this.state});
+
+  final ProductManagementState state;
+
+  @override
+  State<_DeliverySizeTab> createState() => _DeliverySizeTabState();
+}
+
+class _DeliverySizeTabState extends State<_DeliverySizeTab> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.state.deliverySize ?? '');
+  }
+
+  @override
+  void didUpdateWidget(covariant _DeliverySizeTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final String nextValue = widget.state.deliverySize ?? '';
+    if (oldWidget.state.deliverySize != widget.state.deliverySize &&
+        _controller.text != nextValue) {
+      _controller.text = nextValue;
+      _controller.selection = TextSelection.fromPosition(
+        TextPosition(offset: _controller.text.length),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleClear(ProductManagementCubit cubit) {
+    if (_controller.text.isNotEmpty) {
+      _controller.clear();
+    }
+    cubit.setDeliverySize(null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme palette = context.color;
+    final ProductManagementCubit cubit = context.read<ProductManagementCubit>();
+    const String helperText =
+        'يمكنك إدخال الأبعاد أو وصفًا مختصرًا لحجم الطرد (حتى 16 محرفًا). سيتم استخدام هذا النص أثناء حساب تكلفة الشحن.';
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      children: <Widget>[
+        Card(
+          color: palette.secondaryColor,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: palette.borderColor.withOpacity(0.4)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'تحديد حجم التوصيل',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  helperText,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color:
+                    theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _controller,
+                  decoration: _themedInputDecoration(
+                    context,
+                    label: 'حجم التوصيل',
+                    hint: 'مثال: 40×30 سم',
+                  ),
+                  maxLength: 16,
+                  onChanged: cubit.setDeliverySize,
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: TextButton.icon(
+                    onPressed: () => _handleClear(cubit),
+                    icon: const Icon(Icons.clear),
+                    label: const Text('مسح الحجم'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+
 
 Widget _buildTextAttributeChip({
   required BuildContext context,

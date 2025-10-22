@@ -135,9 +135,11 @@ class ManualPaymentRequest extends Model
             self::STATUS_UNDER_REVIEW,
             'in_review',
             'in-review',
+            'in review',
             'review',
             'reviewing',
             'under-review',
+            'under review',
         ],
         self::STATUS_APPROVED => [
             self::STATUS_APPROVED,

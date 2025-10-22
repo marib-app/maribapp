@@ -170,5 +170,10 @@ class PaymentTransaction extends Model
 
         return null;
     }
+    public function getGatewayDisplayAttribute(): string
+    {
+        $label = $this->gateway_label;
 
+        return is_string($label) ? $label : '';
+    }
 }

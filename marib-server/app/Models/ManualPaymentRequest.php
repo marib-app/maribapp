@@ -860,4 +860,12 @@ class ManualPaymentRequest extends Model
                 });
         });
     }
+
+    public function getGatewayDisplayAttribute(): string
+    {
+        $label = $this->gateway_label;
+
+        return is_string($label) ? $label : '';
+    }
+
 }

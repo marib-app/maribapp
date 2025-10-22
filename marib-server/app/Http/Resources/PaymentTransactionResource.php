@@ -30,7 +30,9 @@ class PaymentTransactionResource extends JsonResource
             'currency' => $this->currency,
             'payment_gateway' => $this->payment_gateway,
             'gateway_code' => $this->gateway_code,
-            'gateway_label' => $this->gateway_label,
+            'gateway_label' => $this->gateway_display,
+            'gateway_display' => $this->gateway_display,
+            
             'bank_label' => $this->bank_label,
 
             'created_at' => optional($this->created_at)->toIso8601String(),

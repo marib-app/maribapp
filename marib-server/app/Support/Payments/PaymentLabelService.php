@@ -51,7 +51,7 @@ class PaymentLabelService
 
     }
 
-    public static function forManualPaymentRequest(ManualPaymentRequest $mpr): array
+    public static function forManualPaymentRequest(\App\Models\ManualPaymentRequest $mpr): array
     {
         $bankName = optional($mpr->manualBank)->name;
 

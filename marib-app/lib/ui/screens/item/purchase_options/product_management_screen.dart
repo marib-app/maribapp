@@ -861,7 +861,7 @@ class _DeliverySizeTabState extends State<_DeliverySizeTab> {
                   ),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: const <TextInputFormatter>[
+                  inputFormatters: <TextInputFormatter>[
                     FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                   ],
                   maxLength: 10,
@@ -2179,6 +2179,8 @@ InputDecoration _themedInputDecoration(
   String? label,
   String? hint,
   String? helperText,
+  String? suffixText,
+  String? errorText,
   Widget? prefixIcon,
   Widget? suffixIcon,
 }) {
@@ -2187,6 +2189,8 @@ InputDecoration _themedInputDecoration(
     labelText: label,
     hintText: hint,
     helperText: helperText,
+    suffixText: suffixText,
+    errorText: errorText,
     filled: true,
     fillColor: color.secondaryColor,
     prefixIcon: prefixIcon,

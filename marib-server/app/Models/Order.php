@@ -1216,10 +1216,15 @@ class Order extends Model
             $payload['department'] = $department;
         }
 
-        $sizeWeightMap = config('services.delivery_pricing.size_weight_map', []);
+        $numericSize = self::normalizeDeliverySizeWeight($size);
+        if ($numericSize !== null) {
+            $payload['weight_total'] = $numericSize;
+        } else {
+            $sizeWeightMap = config('services.delivery_pricing.size_weight_map', []);
 
-        if (is_array($sizeWeightMap) && array_key_exists($size, $sizeWeightMap)) {
-            $payload['weight_total'] = (float) $sizeWeightMap[$size];
+            if (is_array($sizeWeightMap) && array_key_exists($size, $sizeWeightMap)) {
+                $payload['weight_total'] = (float) $sizeWeightMap[$size];
+            }
         }
 
 
@@ -1239,10 +1244,44 @@ class Order extends Model
 
             return null;
         }
-
-
-
     }
+
+
+    private static function normalizeDeliverySizeWeight(mixed $value): ?float
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_numeric($value)) {
+            $weight = (float) $value;
+        } elseif (is_string($value)) {
+            $normalized = str_replace(',', '.', trim($value));
+
+            if ($normalized === '') {
+                return null;
+            }
+
+            if (str_starts_with($normalized, '.')) {
+                $normalized = '0' . $normalized;
+            }
+
+            if (!preg_match('/^(?:\d+)(?:\.\d+)?$/', $normalized)) {
+                return null;
+            }
+
+            $weight = (float) $normalized;
+        } else {
+            return null;
+        }
+
+        if ($weight <= 0) {
+            return null;
+        }
+
+        return round($weight, 3);
+    }
+
 
     /**
      * تحديث سعر التوصيل للطلب

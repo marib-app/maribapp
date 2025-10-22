@@ -379,11 +379,49 @@ class ItemPurchaseOptionsService
             'base_price' => (float) ($item->price ?? 0.0),
             'final_price' => (float) $item->final_price,
             'discount' => $item->discount_snapshot,
-            'delivery_size' => $item->delivery_size,
+            'delivery_size' => $this->normalizeDeliverySizeValue($item->delivery_size),
             'attributes' => $attributes,
             'variant_stocks' => $stocks,
         ];
     }
+
+
+    private function normalizeDeliverySizeValue(mixed $value): ?float
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $normalized = str_replace(',', '.', trim($value));
+
+            if ($normalized === '') {
+                return null;
+            }
+
+            if (str_starts_with($normalized, '.')) {
+                $normalized = '0' . $normalized;
+            }
+
+            if (!preg_match('/^(?:\d+)(?:\.\d+)?$/', $normalized)) {
+                return null;
+            }
+
+            $weight = (float) $normalized;
+        } elseif (is_numeric($value)) {
+            $weight = (float) $value;
+        } else {
+            return null;
+        }
+
+        if ($weight <= 0) {
+            return null;
+        }
+
+        return round($weight, 3);
+    }
+
+
 
     private function attributeKey(int $id): string
     {

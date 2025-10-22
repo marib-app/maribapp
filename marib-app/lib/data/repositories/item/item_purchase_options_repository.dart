@@ -1,7 +1,6 @@
 import 'package:marib/data/model/item/purchase_options.dart';
 import 'package:marib/utils/api.dart';
 
-
 class PurchaseOptionsUpdateResult {
   const PurchaseOptionsUpdateResult({
     required this.options,
@@ -38,13 +37,16 @@ class ItemPurchaseOptionsRepository {
   Future<PurchaseOptionsUpdateResult> saveAttributes({
     required int itemId,
     required List<Map<String, dynamic>> attributes,
-    String? deliverySize,
+    double? deliverySize,
   }) async {
+    final String? normalizedSize =
+        deliverySize != null ? _formatDeliverySize(deliverySize) : null;
+
     final Map<String, dynamic> response = await Api.post(
       url: Api.itemAttributesApi(itemId),
       parameter: <String, dynamic>{
         'attributes': attributes,
-        'delivery_size': deliverySize?.trim() ?? '',
+        'delivery_size': normalizedSize ?? '',
       },
     );
 
@@ -106,5 +108,16 @@ class ItemPurchaseOptionsRepository {
       message: message,
       finalPrice: finalPrice,
     );
+  }
+
+  String _formatDeliverySize(double value) {
+    String formatted = value.toStringAsFixed(3);
+    if (formatted.contains('.')) {
+      formatted = formatted.replaceFirst(RegExp(r'0+$'), '');
+      if (formatted.endsWith('.')) {
+        formatted = formatted.substring(0, formatted.length - 1);
+      }
+    }
+    return formatted;
   }
 }

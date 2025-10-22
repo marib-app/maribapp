@@ -533,7 +533,13 @@ class CartShippingQuoteService
 
         if ($weightPerUnit === null) {
             $deliverySize = $item->item?->delivery_size;
-            if (is_string($deliverySize) && $deliverySize !== '') {
+            $numericDelivery = $this->normalizeDeliverySizeWeight($deliverySize);
+
+            if ($numericDelivery !== null) {
+                $weightPerUnit = $numericDelivery;
+            } elseif (is_string($deliverySize) && $deliverySize !== '') {
+
+
                 $normalizedSize = strtolower(trim($deliverySize));
                 $sizeWeightMap = config('services.delivery_pricing.size_weight_map', []);
 
@@ -551,6 +557,44 @@ class CartShippingQuoteService
 
         return (float) $weightPerUnit * $quantity;
     }
+
+
+    private function normalizeDeliverySizeWeight(mixed $value): ?float
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_numeric($value)) {
+            $weight = (float) $value;
+        } elseif (is_string($value)) {
+            $normalized = str_replace(',', '.', trim($value));
+
+            if ($normalized === '') {
+                return null;
+            }
+
+            if (str_starts_with($normalized, '.')) {
+                $normalized = '0' . $normalized;
+            }
+
+            if (!preg_match('/^(?:\d+)(?:\.\d+)?$/', $normalized)) {
+                return null;
+            }
+
+            $weight = (float) $normalized;
+        } else {
+            return null;
+        }
+
+        if ($weight <= 0) {
+            return null;
+        }
+
+        return round($weight, 3);
+    }
+
+
 
     /**
      * @param array<string, mixed> $data

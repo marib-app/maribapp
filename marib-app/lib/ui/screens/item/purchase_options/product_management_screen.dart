@@ -19,7 +19,6 @@ import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/data/model/custom_field/custom_field_model.dart'
     show CustomFieldColorEntry;
 
-
 class ProductManagementScreen extends StatefulWidget {
   const ProductManagementScreen({super.key, required this.item});
 
@@ -237,9 +236,9 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
         state.attributesSaving || state.stockSaving || state.discountSaving;
     final String saveLabel = <int, String>{
           0: 'حفظ السمات',
-      1: 'حفظ الحجم',
-      2: 'حفظ المخزون',
-      3: 'حفظ الخصم',
+          1: 'حفظ الحجم',
+          2: 'حفظ المخزون',
+          3: 'حفظ الخصم',
         }[_currentTabIndex] ??
         'حفظ';
 
@@ -474,7 +473,6 @@ class _AttributesTabState extends State<_AttributesTab> {
           ),
         ),
         const SizedBox(height: 16),
-
         if (attributes.isEmpty)
           const _EmptyState(
             message:
@@ -490,8 +488,6 @@ class _AttributesTabState extends State<_AttributesTab> {
       ],
     );
   }
-
-
 
   Widget _buildAttributeCard(
     BuildContext context,
@@ -772,7 +768,6 @@ void _openColorAttributeEditor({
   );
 }
 
-
 class _DeliverySizeTab extends StatefulWidget {
   const _DeliverySizeTab({required this.state});
 
@@ -788,14 +783,14 @@ class _DeliverySizeTabState extends State<_DeliverySizeTab> {
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.state.deliverySize ?? '');
+    _controller = TextEditingController(text: widget.state.deliverySizeInput);
   }
 
   @override
   void didUpdateWidget(covariant _DeliverySizeTab oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final String nextValue = widget.state.deliverySize ?? '';
-    if (oldWidget.state.deliverySize != widget.state.deliverySize &&
+    final String nextValue = widget.state.deliverySizeInput;
+    if (oldWidget.state.deliverySizeInput != widget.state.deliverySizeInput &&
         _controller.text != nextValue) {
       _controller.text = nextValue;
       _controller.selection = TextSelection.fromPosition(
@@ -823,7 +818,7 @@ class _DeliverySizeTabState extends State<_DeliverySizeTab> {
     final ColorScheme palette = context.color;
     final ProductManagementCubit cubit = context.read<ProductManagementCubit>();
     const String helperText =
-        'يمكنك إدخال الأبعاد أو وصفًا مختصرًا لحجم الطرد (حتى 16 محرفًا). سيتم استخدام هذا النص أثناء حساب تكلفة الشحن.';
+        'أدخل وزن الطرد بالكيلوجرام (مثل 2 أو 2.75). يسمح بثلاث منازل عشرية كحد أقصى ولن تُقبل أي حروف أو رموز أخرى.';
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -841,7 +836,7 @@ class _DeliverySizeTabState extends State<_DeliverySizeTab> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  'تحديد حجم التوصيل',
+                  'تحديد وزن الشحنة',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -850,8 +845,7 @@ class _DeliverySizeTabState extends State<_DeliverySizeTab> {
                 Text(
                   helperText,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color:
-                    theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
                     height: 1.5,
                   ),
                 ),
@@ -860,10 +854,17 @@ class _DeliverySizeTabState extends State<_DeliverySizeTab> {
                   controller: _controller,
                   decoration: _themedInputDecoration(
                     context,
-                    label: 'حجم التوصيل',
-                    hint: 'مثال: 40×30 سم',
+                    label: 'وزن الشحنة (كجم)',
+                    hint: 'مثال: 2.5',
+                    suffixText: 'كجم',
+                    errorText: widget.state.deliverySizeError,
                   ),
-                  maxLength: 16,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: const <TextInputFormatter>[
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                  ],
+                  maxLength: 10,
                   onChanged: cubit.setDeliverySize,
                 ),
                 const SizedBox(height: 8),
@@ -872,7 +873,7 @@ class _DeliverySizeTabState extends State<_DeliverySizeTab> {
                   child: TextButton.icon(
                     onPressed: () => _handleClear(cubit),
                     icon: const Icon(Icons.clear),
-                    label: const Text('مسح الحجم'),
+                    label: const Text('مسح الوزن'),
                   ),
                 ),
               ],
@@ -883,8 +884,6 @@ class _DeliverySizeTabState extends State<_DeliverySizeTab> {
     );
   }
 }
-
-
 
 Widget _buildTextAttributeChip({
   required BuildContext context,

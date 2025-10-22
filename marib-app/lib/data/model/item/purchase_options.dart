@@ -289,7 +289,7 @@ class ItemPurchaseOptions {
     final double finalPrice = _parseDouble(json['final_price']) ?? basePrice;
 
     final dynamic discountRaw = json['discount'];
-    final String? deliverySize = _normalizeString(json['delivery_size']);
+    final double? deliverySize = _parseDouble(json['delivery_size']);
 
 
     return ItemPurchaseOptions(
@@ -318,7 +318,7 @@ class ItemPurchaseOptions {
   final ItemDiscount? discount;
   final List<ItemPurchaseAttributeOption> attributes;
   final List<ItemVariantStockOption> variantStocks;
-  final String? deliverySize;
+  final double? deliverySize;
 
   ItemPurchaseAttributeOption? attributeByKey(String key) {
     final String normalized = key.toLowerCase().trim();

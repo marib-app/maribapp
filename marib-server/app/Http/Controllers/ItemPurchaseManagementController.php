@@ -36,26 +36,26 @@ class ItemPurchaseManagementController extends Controller
         if ($deliverySizeProvided) {
             $rawDeliverySize = $request->input('delivery_size');
 
-            if ($rawDeliverySize === null) {
-                $deliverySizeValue = null;
+            if ($rawDeliverySize === null || (is_string($rawDeliverySize) && trim($rawDeliverySize) === '')) {
+                throw ValidationException::withMessages([
+                    'delivery_size' => [__('يرجى إدخال وزن المنتج بالكيلوجرام.')],
+                ]);
+            }
 
-            } elseif (is_array($rawDeliverySize)) {
+            if (is_array($rawDeliverySize)) {
                 throw ValidationException::withMessages([
                     'delivery_size' => [__('صيغة حقل حجم التوصيل غير صحيحة.')],
                 ]);
-
-            } else {
-                $normalizedDeliverySize = trim((string) $rawDeliverySize);
-                if ($normalizedDeliverySize === '') {
-                    $deliverySizeValue = null;
-                } elseif (mb_strlen($normalizedDeliverySize) > 16) {
-                    throw ValidationException::withMessages([
-                        'delivery_size' => [__('يمكن أن يحتوي حجم التوصيل على 16 محرفًا كحد أقصى.')],
-                    ]);
-                } else {
-                    $deliverySizeValue = $normalizedDeliverySize;
-                }
             }
+            $normalizedDeliverySize = $this->normalizeDeliverySizeValue($rawDeliverySize);
+
+            if ($normalizedDeliverySize === null) {
+                throw ValidationException::withMessages([
+                    'delivery_size' => [__('يجب إدخال وزن صالح بالكيلوجرام (مثال: 2 أو 2.75).')],
+                ]);
+            }
+                        $deliverySizeValue = $normalizedDeliverySize;
+
         }
 
         $item->loadMissing(['purchaseAttributes', 'purchaseAttributes.values']);
@@ -546,6 +546,63 @@ class ItemPurchaseManagementController extends Controller
 
         return trim((string) $value);
     }
+
+
+    private function normalizeDeliverySizeValue(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $normalized = str_replace(',', '.', trim($value));
+
+            if ($normalized === '') {
+                return null;
+            }
+
+            if (str_starts_with($normalized, '.')) {
+                $normalized = '0' . $normalized;
+            }
+
+            if (!preg_match('/^(?:\d+)(?:\.\d+)?$/', $normalized)) {
+                return null;
+            }
+
+            if (str_contains($normalized, '.')) {
+                $decimalPlaces = strlen($normalized) - strpos($normalized, '.') - 1;
+                if ($decimalPlaces > 3) {
+                    return null;
+                }
+            }
+
+            $weight = (float) $normalized;
+        } elseif (is_numeric($value)) {
+            $weight = (float) $value;
+        } else {
+            return null;
+        }
+
+        if ($weight <= 0) {
+            return null;
+        }
+
+        $rounded = round($weight, 3);
+        $formatted = number_format($rounded, 3, '.', '');
+        $formatted = rtrim(rtrim($formatted, '0'), '.');
+
+        if ($formatted === '') {
+            return null;
+        }
+
+        if (mb_strlen($formatted) > 16) {
+            return null;
+        }
+
+        return $formatted;
+    }
+
+
 
 
     private function normalizeColorSelections(mixed $value): array

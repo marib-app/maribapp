@@ -11,7 +11,6 @@ import 'package:marib/data/repositories/item/item_purchase_options_repository.da
 import 'package:marib/utils/errorFilter.dart';
 import 'package:marib/utils/variant_key.dart';
 
-
 const List<String> _defaultSizeCatalog = <String>[
   'XS',
   'S',
@@ -108,18 +107,39 @@ List<CustomFieldColorEntry> _normalizeColorEntries(
   return normalized.values.toList(growable: false);
 }
 
-
-String? _normalizeDeliverySize(String? value) {
+double? _normalizeDeliverySize(dynamic value) {
   if (value == null) {
     return null;
   }
 
-  final String trimmed = value.trim();
-  if (trimmed.isEmpty) {
+  double? parsed;
+
+  if (value is num) {
+    parsed = value.toDouble();
+  } else if (value is String) {
+    final String normalized = value.replaceAll(',', '.').trim();
+    if (normalized.isEmpty) {
+      return null;
+    }
+    parsed = double.tryParse(normalized);
+  }
+
+  if (parsed == null || parsed <= 0) {
     return null;
   }
 
-  return trimmed;
+  return double.parse(parsed.toStringAsFixed(3));
+}
+
+String _formatDeliverySizeInput(double value) {
+  String formatted = value.toStringAsFixed(3);
+  if (formatted.contains('.')) {
+    formatted = formatted.replaceFirst(RegExp(r'0+$'), '');
+    if (formatted.endsWith('.')) {
+      formatted = formatted.substring(0, formatted.length - 1);
+    }
+  }
+  return formatted;
 }
 
 ManagedPurchaseAttribute _createManagedAttribute(
@@ -319,6 +339,8 @@ class ProductManagementState extends Equatable {
     required this.discountSaving,
     required this.variantForms,
     required this.deliverySize,
+    required this.deliverySizeInput,
+    required this.deliverySizeError,
     required this.hasStockVariants,
     required this.generalStock,
     required this.discountEnabled,
@@ -347,6 +369,8 @@ class ProductManagementState extends Equatable {
       variantForms: const <String, VariantStockFormState>{},
       hasStockVariants: false,
       deliverySize: null,
+      deliverySizeInput: '',
+      deliverySizeError: null,
       generalStock: 0,
       discountEnabled: false,
       discountType: 'percent',
@@ -381,7 +405,9 @@ class ProductManagementState extends Equatable {
   final double basePrice;
   final double previewFinalPrice;
   final double lastKnownFinalPrice;
-  final String? deliverySize;
+  final double? deliverySize;
+  final String deliverySizeInput;
+  final String? deliverySizeError;
 
   bool get hasLoaded => options != null;
 
@@ -442,7 +468,10 @@ class ProductManagementState extends Equatable {
     double? basePrice,
     double? previewFinalPrice,
     double? lastKnownFinalPrice,
-    String? deliverySize,
+    double? deliverySize,
+    String? deliverySizeInput,
+    String? deliverySizeError,
+    bool clearDeliverySizeError = false,
     bool clearDeliverySize = false,
   }) {
     return ProductManagementState(
@@ -460,6 +489,12 @@ class ProductManagementState extends Equatable {
       variantForms: variantForms ?? this.variantForms,
       deliverySize:
           clearDeliverySize ? null : (deliverySize ?? this.deliverySize),
+      deliverySizeInput: deliverySizeInput ?? this.deliverySizeInput,
+      deliverySizeError: clearDeliverySize
+          ? null
+          : (clearDeliverySizeError
+              ? null
+              : (deliverySizeError ?? this.deliverySizeError)),
       hasStockVariants: hasStockVariants ?? this.hasStockVariants,
       generalStock:
           setGeneralStockNull ? null : (generalStock ?? this.generalStock),
@@ -502,6 +537,8 @@ class ProductManagementState extends Equatable {
         discountSaving,
         variantForms,
         deliverySize,
+        deliverySizeInput,
+        deliverySizeError,
         hasStockVariants,
         generalStock,
         discountEnabled,
@@ -891,14 +928,91 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
   }
 
   void setDeliverySize(String? value) {
-    final String? normalized = _normalizeDeliverySize(value);
-    if (state.deliverySize == normalized) {
+    if (value == null) {
+      emit(state.copyWith(
+        deliverySize: null,
+        deliverySizeInput: '',
+        clearDeliverySize: true,
+        deliverySizeError: null,
+        clearDeliverySizeError: true,
+        error: null,
+      ));
+      return;
+    }
+
+    final String sanitized = value.replaceAll(',', '.');
+    final String trimmed = sanitized.trim();
+
+    if (trimmed.isEmpty) {
+      emit(state.copyWith(
+        deliverySize: null,
+        deliverySizeInput: '',
+        clearDeliverySize: true,
+        deliverySizeError: 'يرجى إدخال وزن المنتج بالكيلوجرام.',
+        clearDeliverySizeError: false,
+        error: null,
+      ));
+      return;
+    }
+
+    final double? parsed = double.tryParse(trimmed);
+    if (parsed == null) {
+      emit(state.copyWith(
+        deliverySizeInput: trimmed,
+        deliverySizeError:
+            'يمكن إدخال الأرقام والفاصل العشري فقط (على سبيل المثال 2.5).',
+        clearDeliverySizeError: false,
+        error: null,
+      ));
+      return;
+    }
+
+    final int decimalIndex = trimmed.indexOf('.');
+    if (decimalIndex != -1 && trimmed.length - decimalIndex - 1 > 3) {
+      emit(state.copyWith(
+        deliverySizeInput: trimmed,
+        deliverySizeError: 'يمكن استخدام حتى ثلاثة منازل عشرية فقط.',
+        clearDeliverySizeError: false,
+        error: null,
+      ));
+      return;
+    }
+
+    if (trimmed.endsWith('.')) {
+      emit(state.copyWith(
+        deliverySizeInput: trimmed,
+        deliverySizeError: 'يرجى إكمال الجزء العشري بعد الفاصل.',
+        clearDeliverySizeError: false,
+        error: null,
+      ));
+      return;
+    }
+
+    if (parsed <= 0) {
+      emit(state.copyWith(
+        deliverySizeInput: trimmed,
+        deliverySizeError: 'الوزن يجب أن يكون أكبر من صفر.',
+        clearDeliverySizeError: false,
+        error: null,
+      ));
+      return;
+    }
+
+    final double normalizedValue = double.parse(parsed.toStringAsFixed(3));
+    final String formattedInput = _formatDeliverySizeInput(normalizedValue);
+
+    if (state.deliverySize == normalizedValue &&
+        state.deliverySizeInput == formattedInput &&
+        state.deliverySizeError == null) {
       return;
     }
 
     emit(state.copyWith(
-      deliverySize: normalized,
-      clearDeliverySize: normalized == null,
+      deliverySize: normalizedValue,
+      deliverySizeInput: formattedInput,
+      clearDeliverySize: false,
+      deliverySizeError: null,
+      clearDeliverySizeError: true,
       error: null,
     ));
   }
@@ -908,6 +1022,24 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       return const SubmissionOutcome(
         success: false,
         message: 'لا يمكن حفظ السمات قبل تحميل البيانات.',
+      );
+    }
+
+    if (state.deliverySizeError != null) {
+      return SubmissionOutcome(
+        success: false,
+        message: state.deliverySizeError!,
+      );
+    }
+
+    if (state.deliverySize == null) {
+      emit(state.copyWith(
+        deliverySizeError: 'يرجى إدخال وزن المنتج بالكيلوجرام.',
+        clearDeliverySizeError: false,
+      ));
+      return const SubmissionOutcome(
+        success: false,
+        message: 'يرجى إدخال وزن المنتج بالكيلوجرام قبل الحفظ.',
       );
     }
 
@@ -1293,7 +1425,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       discountStart = discount.start;
       discountEnd = discount.end;
     }
-    final String? deliverySize = _normalizeDeliverySize(options.deliverySize);
+    final double? deliverySize = _normalizeDeliverySize(options.deliverySize);
 
     emit(state.copyWith(
       loading: false,
@@ -1304,7 +1436,11 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       colorSelections: colorSelections,
       textInputs: textInputs,
       deliverySize: deliverySize,
+      deliverySizeInput:
+          deliverySize != null ? _formatDeliverySizeInput(deliverySize) : '',
+      deliverySizeError: null,
       clearDeliverySize: deliverySize == null,
+      clearDeliverySizeError: true,
       hasStockVariants: hasVariants,
       generalStock: hasVariants ? null : generalStockOption.stock,
       basePrice: basePrice,

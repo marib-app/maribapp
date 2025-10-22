@@ -3,6 +3,16 @@
 <head>
     <meta charset="utf-8">
     <title>فاتورة {{ $order->invoice_no ?? $order->order_number ?? '' }}</title>
+    @php
+        $isPreview = !empty($preview);
+        $fontRegularSource = $isPreview
+            ? ($preview_assets['font_regular'] ?? 'file://' . storage_path('fonts/Almarai-Regular.ttf'))
+            : 'file://' . storage_path('fonts/Almarai-Regular.ttf');
+        $fontBoldSource = $isPreview
+            ? ($preview_assets['font_bold'] ?? 'file://' . storage_path('fonts/Almarai-Bold.ttf'))
+            : 'file://' . storage_path('fonts/Almarai-Bold.ttf');
+    @endphp
+
     <style>
         @page {
             margin: 110px 36px 120px 36px;
@@ -10,15 +20,21 @@
 
         @font-face {
             font-family: 'InvoiceArabic';
-            src: url("file://{{ storage_path('fonts/DejaVuSans.ttf') }}") format('truetype');
-            font-weight: normal;
+            src:
+                url("{{ $fontRegularSource }}") format('truetype'),
+                local('Tahoma');
+                
+                font-weight: normal;
             font-style: normal;
         }
 
         @font-face {
             font-family: 'InvoiceArabic';
-            src: url("file://{{ storage_path('fonts/DejaVuSans-Bold.ttf') }}") format('truetype');
-            font-weight: bold;
+            src:
+                url("{{ $fontBoldSource }}") format('truetype'),
+                local('Tahoma');
+                
+                font-weight: bold;
             font-style: normal;
         }
 
@@ -40,7 +56,7 @@
 
         body {
             margin: 0;
-            font-family: 'InvoiceArabic', 'DejaVu Sans', sans-serif;
+            font-family: 'InvoiceArabic', 'Almarai', 'Tahoma', 'Segoe UI', sans-serif;
             direction: rtl;
             text-align: right;
             background-color: #ffffff;
@@ -48,6 +64,87 @@
             font-size: 13px;
             line-height: 1.7;
         }
+
+        body.invoice-preview {
+            background-color: #f1f5f9;
+            padding: 56px 0 96px;
+        }
+
+        .preview-container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .preview-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            background: #ffffff;
+            border-radius: 18px;
+            padding: 18px 24px;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
+            margin-bottom: 28px;
+        }
+
+        .preview-toolbar h1 {
+            font-size: 18px;
+            color: var(--slate-900);
+        }
+
+        .preview-toolbar span {
+            display: block;
+            color: var(--slate-500);
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        .preview-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .preview-actions a,
+        .preview-actions button {
+            border: none;
+            border-radius: 12px;
+            padding: 10px 18px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .preview-actions button {
+            background: linear-gradient(120deg, var(--primary), #2563eb);
+            color: var(--primary-contrast);
+            box-shadow: 0 12px 24px rgba(37, 99, 235, 0.2);
+        }
+
+        .preview-actions a {
+            background: rgba(30, 58, 138, 0.08);
+            color: var(--primary);
+        }
+
+        .preview-actions a:hover,
+        .preview-actions button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 14px 30px rgba(15, 23, 42, 0.18);
+        }
+
+        .preview-page {
+            position: relative;
+            background: #ffffff;
+            border-radius: 26px;
+            box-shadow: 0 28px 70px rgba(15, 23, 42, 0.18);
+            padding: 120px 36px 140px 36px;
+        }
+
+
+
 
         h1,
         h2,
@@ -73,6 +170,27 @@
         footer.invoice-footer {
             bottom: -90px;
         }
+
+
+        body.invoice-preview header.invoice-header,
+        body.invoice-preview footer.invoice-footer {
+            position: static;
+            left: auto;
+            right: auto;
+        }
+
+        body.invoice-preview header.invoice-header {
+            margin-bottom: 28px;
+        }
+
+        body.invoice-preview footer.invoice-footer {
+            margin-top: 32px;
+        }
+
+        body.invoice-preview main {
+            margin: 0;
+        }
+
 
         .header-shell,
         .footer-shell {
@@ -429,9 +547,34 @@
             font-weight: bold;
             letter-spacing: 0.5px;
         }
+
+
+
+        @media print {
+            body.invoice-preview {
+                background: #ffffff;
+                padding: 0;
+            }
+
+            .preview-container {
+                max-width: none;
+                padding: 0;
+            }
+
+            .preview-toolbar {
+                display: none;
+            }
+
+            .preview-page {
+                box-shadow: none;
+                border-radius: 0;
+                padding: 110px 36px 120px 36px;
+            }
+        }
+
     </style>
 </head>
-<body>
+<body class="{{ $isPreview ? 'invoice-preview' : '' }}">
     @php
         $formatCurrency = static fn (float $amount): string => trim(sprintf('%s %s', $currency, number_format($amount, 2)));
 
@@ -457,6 +600,31 @@
             'final' => data_get($summary, 'final', 0),
         ];
     @endphp
+
+    @if ($isPreview)
+        <div class="preview-container">
+            <div class="preview-toolbar">
+                <div>
+                    <h1>فاتورة رقم {{ $invoice_number ?? $order->order_number ?? $order->getKey() }}</h1>
+                    <span>
+                        @if ($issued_at)
+                            صادرة في {{ $issued_at->translatedFormat('d F Y') }}
+                        @else
+                            تم التوليد في {{ $generated_at->translatedFormat('d F Y') }}
+                        @endif
+                    </span>
+                    <span>آخر تحديث: {{ $generated_at->translatedFormat('d F Y \، H:i') }}</span>
+                </div>
+                <div class="preview-actions">
+                    <button type="button" data-action="print">طباعة</button>
+                    @if (! empty($preview_download_url))
+                        <a href="{{ $preview_download_url }}" target="_blank" rel="noopener">تحميل PDF</a>
+                    @endif
+                </div>
+            </div>
+            <div class="preview-page">
+    @endif
+
 
     <header class="invoice-header">
         <div class="header-shell">
@@ -651,5 +819,20 @@
             </div>
         </section>
     </main>
+
+    @if ($isPreview)
+            </div>
+        </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                document.querySelectorAll('[data-action="print"]').forEach(function (button) {
+                    button.addEventListener('click', function () {
+                        window.print();
+                    });
+                });
+            });
+        </script>
+    @endif
+
 </body>
 </html>

@@ -974,6 +974,10 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
 
 
     Route::get('orders/{order}/invoice.pdf', [OrderDocumentController::class, 'invoice'])->name('orders.invoice.pdf');
+    Route::get('orders/{order}/invoice/preview', [OrderDocumentController::class, 'preview'])
+        ->name('orders.invoice.preview')
+        ->middleware(['signed', 'throttle:60,1']);
+
     Route::get('orders/{order}/deposit-receipts', [OrderDocumentController::class, 'depositReceipts'])->name('orders.deposit-receipts');
     Route::post('orders/{order}/manual-payments', [OrderPaymentActionController::class, 'storeManualPayment'])->name('orders.manual-payments.store');
     Route::post('orders/{order}/notifications', [OrderPaymentActionController::class, 'sendInstantNotification'])->name('orders.notifications.send');

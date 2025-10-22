@@ -26,8 +26,6 @@ class InvoicePdfService
     }
 
 
-
-
     public function generate(Order $order): string
     {
         $document = $this->renderDocument($order);
@@ -40,11 +38,9 @@ class InvoicePdfService
     }
 
     public function renderDocument(Order $order): InvoiceDocument
-
     {
         $order->loadMissing(['items', 'user']);
         Carbon::setLocale(app()->getLocale() ?? 'ar');
-
 
         $viewData = $this->buildViewPayload($order);
         $html = $this->renderView($viewData, false);
@@ -95,8 +91,6 @@ class InvoicePdfService
      */
     private function buildViewPayload(Order $order): array
     {
-
-
         $settings = $this->resolveSettings();
 
         $company = [
@@ -110,8 +104,6 @@ class InvoicePdfService
 
 
         ];
-
-
 
         $summary = [
             'items_total' => (float) ($order->total_amount ?? 0),
@@ -138,7 +130,6 @@ class InvoicePdfService
         $paymentMethod = $order->payment_method ?: null;
 
         return [
-
             'order' => $order,
             'items' => $items,
             'summary' => $summary,
@@ -173,6 +164,7 @@ class InvoicePdfService
         $base = $order->order_number ?: $order->invoice_no ?: $order->getKey();
 
 
+
         $slug = Str::slug((string) $base) ?: (string) $order->getKey();
 
 
@@ -188,7 +180,7 @@ class InvoicePdfService
             return $settings->toArray();
         }
 
-         if (is_array($settings)) {
+        if (is_array($settings)) {
             return $settings;
         }
 
@@ -273,17 +265,14 @@ class InvoicePdfService
                 resource_path('fonts' . DIRECTORY_SEPARATOR . $fileName),
             ];
 
-
             foreach ($candidates as $candidate) {
                 if (is_readable($candidate)) {
                     copy($candidate, $targetPath);
                     break;
                 }
-
             }
         }
-
-    }
+            }
 
     private function buildPreviewAssets(): array
     {
@@ -292,10 +281,24 @@ class InvoicePdfService
             'font_bold' => $this->resolveFontDataUri('Almarai-Bold.ttf'),
         ];
 
-
     }
 
+    private function resolveFontDataUri(string $fileName): ?string
+    {
+        $paths = [
+            storage_path('fonts' . DIRECTORY_SEPARATOR . $fileName),
+            resource_path('fonts' . DIRECTORY_SEPARATOR . $fileName),
+            base_path('resources/fonts/' . $fileName),
+        ];
 
+        foreach ($paths as $path) {
+            if (is_readable($path)) {
+                return $this->encodeFileToDataUri($path);
+            }
+        }
+
+        return null;
+    }
 
     private function encodeStorageImage(string $relativePath): ?string
     {

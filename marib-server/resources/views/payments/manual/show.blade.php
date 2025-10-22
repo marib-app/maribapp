@@ -153,37 +153,105 @@
                 <div class="card-body">
                     @php
                         $rawMeta = is_array($request->meta) ? $request->meta : [];
-                        $metadata = Arr::get($rawMeta, 'metadata', []);
+                        $metadataSources = array_values(array_filter([
+                            Arr::get($rawMeta, 'metadata'),
+                            Arr::get($rawMeta, 'manual.metadata'),
+                            Arr::get($rawMeta, 'manual.transfer'),
+                            Arr::get($rawMeta, 'transfer'),
+                            Arr::get($rawMeta, 'manual'),
+                            $rawMeta,
+                        ], static fn ($value) => is_array($value)));
 
-                        if (! is_array($metadata)) {
-                            $metadata = [];
+                        if ($metadataSources === []) {
+                            $metadataSources[] = [];
+
+
                         }
 
-                        $valueFromMetadata = static function (array $keys) use ($metadata) {
-                            foreach ($keys as $key) {
-                                $value = data_get($metadata, $key);
+                        $normalizedFlattened = [];
 
-                                if ($value instanceof \DateTimeInterface) {
-                                    return $value;
+                        foreach ($metadataSources as $source) {
+                            foreach (Arr::dot($source) as $dotKey => $dotValue) {
+                                $normalizedKey = Str::slug((string) $dotKey, '_');
+
+                                if ($normalizedKey === '') {
+                                    continue;
                                 }
 
-                                if (is_string($value)) {
-                                    $value = trim($value);
-                                } elseif (is_numeric($value)) {
-                                    $value = trim((string) $value);
+                                if (! array_key_exists($normalizedKey, $normalizedFlattened)) {
+                                    $normalizedFlattened[$normalizedKey] = $dotValue;
+                                }
+                            }
+                        }
+
+                        $valueFromMetadata = static function (array $keys) use ($metadataSources, $normalizedFlattened) {
+                            
+                            foreach ($keys as $key) {
+                                foreach ($metadataSources as $source) {
+                                    $value = data_get($source, $key);
+
+                                    if ($value instanceof \DateTimeInterface) {
+                                        return $value;
+                                    }
+
+                                    if (is_string($value)) {
+                                        $value = trim($value);
+                                    } elseif (is_numeric($value)) {
+                                        $value = trim((string) $value);
+                                    } else {
+                                        continue;
+                                    }
+
+                                    if ($value !== '') {
+                                        return $value;
+                                    }
+                                }
+
+                                $normalizedKey = Str::slug((string) $key, '_');
+
+                                if ($normalizedKey === '') {
+                                    continue;
+                                }
+
+                                if (! array_key_exists($normalizedKey, $normalizedFlattened)) {
+                                    continue;
+                                }
+
+                                $candidateValue = $normalizedFlattened[$normalizedKey];
+
+                                if ($candidateValue instanceof \DateTimeInterface) {
+                                    return $candidateValue;
+                                }
+
+                                if (is_string($candidateValue)) {
+                                    $candidateValue = trim($candidateValue);
+                                } elseif (is_numeric($candidateValue)) {
+                                    $candidateValue = trim((string) $candidateValue);
+
+
                                 } else {
                                     continue;
                                 }
 
-                                if ($value !== '') {
-                                    return $value;
+                                if ($candidateValue !== '') {
+                                    return $candidateValue;
                                 }
                             }
 
                             return null;
                         };
 
-                        $senderName = $valueFromMetadata(['sender_name', 'sender']);
+                        $senderName = $valueFromMetadata([
+                            'sender_name',
+                            'sender',
+                            'senderName',
+                            'transfer.sender_name',
+                            'transfer.sender',
+                            'transfer.senderName',
+                            'transfer_details.sender_name',
+                            'transfer_details.sender',
+                            'transfer_details.senderName',
+                        ]);
 
                         $rawUserNote = is_string($request->user_note) ? $request->user_note : '';
                         $noteLines = [];
@@ -226,11 +294,21 @@
 
                         $transferReference = $valueFromMetadata([
                             'transfer_reference',
+                            'transferReference',
                             'transfer_number',
+                            'transferNumber',
+                            'transfer.reference',
+                            'transfer.number',
+                            'transfer_details.transfer_reference',
+                            'transfer_details.transfer_number',
                             'reference_number',
+                            'referenceNumber',
                             'transaction_reference',
+                            'transactionReference',
                             'reference',
+                            'referenceCode',
                             'voucher_number',
+                            'voucherNumber',
                         ]);
 
                         if (! $transferReference && filled($request->reference)) {
@@ -252,8 +330,20 @@
                             $transferDate = null;
                         }
 
-                        $noteFromMetadata = $valueFromMetadata(['notes', 'note', 'additional_note', 'message']);
+                        $noteFromMetadata = $valueFromMetadata([
+                            'notes',
+                            'note',
+                            'additional_note',
+                            'message',
+                            'transfer.notes',
+                            'transfer.note',
+                            'transfer.message',
+                            'transfer_details.notes',
+                            'transfer_details.note',
+                            'transfer_details.message',
+                        ]);
 
+                        
                         if (! $noteFromMetadata) {
                             $noteFromMetadata = $noteLines !== []
                                 ? implode("\n", $noteLines)
@@ -299,7 +389,7 @@
                         <p class="text-muted mb-0">{{ __('No transfer information provided.') }}</p>
                     @endif
 
-                    
+
                 </div>
             </div>
         </div>

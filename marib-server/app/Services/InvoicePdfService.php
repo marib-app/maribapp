@@ -15,10 +15,10 @@ class InvoicePdfService
 {
 
     private const DEFAULT_VIEW = 'invoices.default';
-    private const DEFAULT_FONT = 'DejaVu Sans';
+    private const DEFAULT_FONT = 'Almarai';
     private const REQUIRED_FONTS = [
-        'DejaVuSans.ttf' => 'vendor/dompdf/dompdf/lib/fonts/DejaVuSans.ttf',
-        'DejaVuSans-Bold.ttf' => 'vendor/dompdf/dompdf/lib/fonts/DejaVuSans-Bold.ttf',
+        'Almarai-Regular.ttf' => 'resources/fonts/Almarai-Regular.ttf',
+        'Almarai-Bold.ttf' => 'resources/fonts/Almarai-Bold.ttf',
     ];
 
     public function __construct(private readonly ViewFactory $viewFactory)
@@ -26,10 +26,76 @@ class InvoicePdfService
     }
 
 
+
+
     public function generate(Order $order): string
+    {
+        $document = $this->renderDocument($order);
+
+        if (! $document->hasPdf()) {
+            throw new \RuntimeException('Unable to generate invoice PDF in the current environment.');
+        }
+
+        return $document->pdf;
+    }
+
+    public function renderDocument(Order $order): InvoiceDocument
+
     {
         $order->loadMissing(['items', 'user']);
         Carbon::setLocale(app()->getLocale() ?? 'ar');
+
+
+        $viewData = $this->buildViewPayload($order);
+        $html = $this->renderView($viewData, false);
+
+        $pdfContents = null;
+
+        if (class_exists(\Dompdf\Dompdf::class)) {
+            try {
+                $this->ensureFontDirectoryExists();
+
+                /** @var PDF $pdf */
+                $pdf = app('dompdf.wrapper');
+                $pdf->setOptions([
+                    'defaultFont' => self::DEFAULT_FONT,
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => true,
+                    'fontDir' => storage_path('fonts'),
+                    'fontCache' => storage_path('fonts'),
+                ]);
+                $pdf->loadHTML($html);
+                $pdf->setPaper('a4', 'portrait');
+                $pdfContents = $pdf->output();
+            } catch (\Throwable $exception) {
+                \Log::warning('invoice.pdf_generation_failed', [
+                    'order_id' => $order->getKey(),
+                    'message' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        return new InvoiceDocument(
+            fileName: $this->resolveFileName($order),
+            html: $html,
+            pdf: $pdfContents,
+            viewData: $viewData,
+        );
+    }
+
+    public function renderPreviewHtml(Order $order, ?InvoiceDocument $document = null, array $extra = []): string
+    {
+        $viewData = $document?->viewData ?? $this->buildViewPayload($order);
+
+        return $this->renderView($viewData, true, $extra);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildViewPayload(Order $order): array
+    {
+
 
         $settings = $this->resolveSettings();
 
@@ -45,7 +111,6 @@ class InvoicePdfService
 
         ];
 
-        $currency = $settings['currency_symbol'] ?? 'ر.س';
 
 
         $summary = [
@@ -72,12 +137,13 @@ class InvoicePdfService
 
         $paymentMethod = $order->payment_method ?: null;
 
-        $data = [
+        return [
+
             'order' => $order,
             'items' => $items,
             'summary' => $summary,
             'company' => $company,
-            'currency' => $currency,
+            'currency' => $settings['currency_symbol'] ?? 'ر.س',
             'customer' => $order->user,
             'issued_at' => $order->created_at ? Carbon::parse($order->created_at) : null,
             'generated_at' => Carbon::now(),
@@ -91,34 +157,29 @@ class InvoicePdfService
             'invoice_number' => $order->invoice_no ?: $order->order_number,
 
         ];
-
-
-        $this->ensureFontDirectoryExists();
-
-        $html = $this->viewFactory->make(self::DEFAULT_VIEW, $data)->render();
-
-
-        /** @var PDF $pdf */
-        $pdf = app('dompdf.wrapper');
-
-
-
-        $pdf->setOptions([
-            'defaultFont' => self::DEFAULT_FONT,
-            'isHtml5ParserEnabled' => true,
-            'isRemoteEnabled' => true,
-            'fontDir' => storage_path('fonts'),
-            'fontCache' => storage_path('fonts'),
-        ]);
-        $pdf->loadHTML($html);
-        $pdf->setPaper('a4', 'portrait');
-
-        return $pdf->output();
     }
 
-    /**
-     * @return array<string, mixed>
-     */
+    private function renderView(array $data, bool $preview, array $extra = []): string
+    {
+        $payload = array_merge($data, $extra);
+        $payload['preview'] = $preview;
+        $payload['preview_assets'] = $preview ? $this->buildPreviewAssets() : [];
+
+        return $this->viewFactory->make(self::DEFAULT_VIEW, $payload)->render();
+    }
+
+    private function resolveFileName(Order $order): string
+    {
+        $base = $order->order_number ?: $order->invoice_no ?: $order->getKey();
+
+
+        $slug = Str::slug((string) $base) ?: (string) $order->getKey();
+
+
+        return sprintf('invoice-%s.pdf', $slug);
+    }
+
+
     private function resolveSettings(): array
     {
         $settings = CachingService::getSystemSettings();
@@ -200,19 +261,37 @@ class InvoicePdfService
 
     private function ensureDefaultFontsPresent(string $fontPath): void
     {
-        foreach (self::REQUIRED_FONTS as $fileName => $vendorRelativePath) {
+        foreach (self::REQUIRED_FONTS as $fileName => $relativePath) {
             $targetPath = $fontPath . DIRECTORY_SEPARATOR . $fileName;
 
             if (file_exists($targetPath)) {
                 continue;
             }
 
-            $sourcePath = base_path($vendorRelativePath);
+            $candidates = [
+                base_path($relativePath),
+                resource_path('fonts' . DIRECTORY_SEPARATOR . $fileName),
+            ];
 
-            if (is_readable($sourcePath)) {
-                copy($sourcePath, $targetPath);
+
+            foreach ($candidates as $candidate) {
+                if (is_readable($candidate)) {
+                    copy($candidate, $targetPath);
+                    break;
+                }
+
             }
         }
+
+    }
+
+    private function buildPreviewAssets(): array
+    {
+        return [
+            'font_regular' => $this->resolveFontDataUri('Almarai-Regular.ttf'),
+            'font_bold' => $this->resolveFontDataUri('Almarai-Bold.ttf'),
+        ];
+
 
     }
 

@@ -7,6 +7,7 @@ use App\Services\DepartmentSupportService;
 use Illuminate\Support\Str;
 use App\Services\DepartmentPolicyService;
 use App\Services\OrderCancellationService;
+use Illuminate\Support\Facades\URL;
 
 use App\Models\Order;
 use App\Models\OrderHistory;
@@ -472,18 +473,43 @@ class OrderApiController extends Controller
         }
 
 
-        $pdf = $this->invoicePdfService->generate($order);
-        $fileName = sprintf('invoice-%s.pdf', $order->order_number);
+        $document = $this->invoicePdfService->renderDocument($order);
 
-        return response($pdf, 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="' . $fileName . '"',
+
+        if ($document->hasPdf()) {
+            return response($document->pdf, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $document->fileName . '"',
+            ]);
+        }
+
+        return response()->json([
+            'invoice_url' => $this->buildInvoicePreviewUrl($order, $request),
+            'format' => 'html',
+            'file_name' => $document->fileName,
+
         ]);
     }
 
 
 
+    private function buildInvoicePreviewUrl(Order $order, Request $request): string
+    {
+        $parameters = [
+            'order' => $order->getKey(),
+            'user' => $request->user()->getKey(),
+            'issued_at' => now()->timestamp,
+        ];
 
+        return URL::temporarySignedRoute(
+            'orders.invoice.preview',
+            now()->addMinutes(30),
+            $parameters
+        );
+    }
+
+
+    
     private function resolveIdempotencyKey(Request $request): string
     {
         $key = $request->header('Idempotency-Key');

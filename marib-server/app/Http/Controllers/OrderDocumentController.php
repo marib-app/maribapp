@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Services\InvoicePdfService;
 use Illuminate\Http\Response;
+use Illuminate\Http\Request;
 
 class OrderDocumentController extends Controller
 {
@@ -19,13 +20,53 @@ class OrderDocumentController extends Controller
         if ($order->hasOutstandingBalance()) {
             abort(403, __('orders.invoice.balance_outstanding'));
         }
+        $document = $this->invoicePdfService->renderDocument($order);
 
-        $pdf = $this->invoicePdfService->generate($order);
-        $fileName = sprintf('invoice-%s.pdf', $order->order_number ?? $order->getKey());
 
-        return response($pdf, 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="' . $fileName . '"',
+        if ($document->hasPdf()) {
+            return response($document->pdf, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $document->fileName . '"',
+            ]);
+        }
+
+        $html = $this->invoicePdfService->renderPreviewHtml($order, $document, [
+            'preview_download_url' => null,
+        ]);
+
+        return response($html, 200, [
+            'Content-Type' => 'text/html; charset=UTF-8',
+        ]);
+    }
+
+    public function preview(Request $request, Order $order): Response
+    {
+        if (! $request->hasValidSignature()) {
+            abort(403);
+        }
+
+        $expectedUser = (int) ($request->query('user'));
+
+        if ($expectedUser !== (int) $order->user_id) {
+            abort(403);
+        }
+
+        if ($order->hasOutstandingBalance()) {
+            abort(403, __('orders.invoice.balance_outstanding'));
+        }
+
+        $document = $this->invoicePdfService->renderDocument($order);
+        $html = $this->invoicePdfService->renderPreviewHtml($order, $document, [
+            'preview_download_url' => $document->hasPdf()
+                ? route('orders.invoice.pdf', $order)
+                : null,
+            'preview_request_user' => $request->query('user'),
+        ]);
+
+        return response($html, 200, [
+            'Content-Type' => 'text/html; charset=UTF-8',
+
+            
         ]);
     }
 

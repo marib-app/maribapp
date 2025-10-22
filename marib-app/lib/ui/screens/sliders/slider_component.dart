@@ -630,8 +630,10 @@ class _SliderComponentState extends State<SliderComponent>
                     },
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final double pageWidth = constraints.maxWidth;
-
+                        final double bannerWidth =
+                            (constraints.maxWidth - kSliderBannerSpacing)
+                                .clamp(0.0, constraints.maxWidth)
+                                .toDouble();
                         return PageView.builder(
                           clipBehavior: Clip.none,
                           controller: _pageController,
@@ -652,16 +654,14 @@ class _SliderComponentState extends State<SliderComponent>
                                 bannersLength == 1 ? 0 : index % bannersLength;
                             final HomeSlider slider = filteredList[actualIndex];
 
-                            return OverflowBox(
-                              alignment: Alignment.center,
-                              minWidth: pageWidth + kSliderBannerSpacing,
-                              maxWidth: pageWidth + kSliderBannerSpacing,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: kSliderBannerSpacing / 2,
-                                ),
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: kSliderBannerSpacing / 2,
+                              ),
+                              child: Align(
+                                alignment: Alignment.center,
                                 child: SizedBox(
-                                  width: pageWidth,
+                                  width: bannerWidth,
                                   child: _buildBannerShell(
                                     onTap: () => _handleTap(slider),
                                     child: LazyNetworkImage(

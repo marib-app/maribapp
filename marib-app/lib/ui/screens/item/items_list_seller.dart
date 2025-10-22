@@ -23,9 +23,7 @@ import 'package:marib/data/cubits/seller/fetch_sellers_cubit.dart';
 import 'package:marib/data/repositories/seller/seller_repository.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 import 'package:marib/app/routes.dart';
-
-
-
+import 'dart:convert';
 
 class ItemsListSeller extends StatefulWidget {
   final String categoryId, categoryName;
@@ -215,8 +213,8 @@ class ItemsListListState extends State<ItemsListSeller> {
             if (state is FetchSellersProgress) {
               final shimmerItemCount = (lastSellersCount / 2).ceil();
               return SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                        (context, index) {
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
                     return Row(
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
@@ -241,19 +239,19 @@ class ItemsListListState extends State<ItemsListSeller> {
                       ],
                     );
                   },
-                    childCount: shimmerItemCount,
-                  ),
+                  childCount: shimmerItemCount,
+                ),
               );
             } else if (state is FetchSellersSuccess) {
               lastSellersCount = state.sellers.length;
               if (state.sellers.isEmpty) {
                 return SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: NoDataFound(onTap: () {
+                  hasScrollBody: false,
+                  child: NoDataFound(onTap: () {
                     context
                         .read<FetchSellersCubit>()
                         .fetchSellers(accountType: 3);
-                }),
+                  }),
                 );
               }
               return buildCardList(state.sellers);
@@ -273,29 +271,29 @@ class ItemsListListState extends State<ItemsListSeller> {
 
   Widget buildCardList(List<UserModel> sellers) {
     return SliverList(
-        delegate: SliverChildBuilderDelegate(
-              (context, index) {
-            int firstItemIndex = index * 2;
-            int? secondItemIndex =
-            (firstItemIndex + 1 < sellers.length) ? firstItemIndex + 1 : null;
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          int firstItemIndex = index * 2;
+          int? secondItemIndex =
+              (firstItemIndex + 1 < sellers.length) ? firstItemIndex + 1 : null;
 
-            return Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
               Expanded(
                 child: buildSellerCard(sellers[firstItemIndex]),
               ),
-                  if (secondItemIndex != null)
-                    Expanded(
-                      child: buildSellerCard(sellers[secondItemIndex]),
-                    )
-                  else
-                    Expanded(child: Container()),
-                ],
-            );
-              },
-          childCount: (sellers.length / 2).ceil(),
-        ),
+              if (secondItemIndex != null)
+                Expanded(
+                  child: buildSellerCard(sellers[secondItemIndex]),
+                )
+              else
+                Expanded(child: Container()),
+            ],
+          );
+        },
+        childCount: (sellers.length / 2).ceil(),
+      ),
     );
   }
 
@@ -316,40 +314,57 @@ class ItemsListListState extends State<ItemsListSeller> {
       updatedAt: userModel.updatedAt,
       isVerified: userModel.isVerified,
       showPersonalDetails: userModel.isPersonalDetailShow,
+      accountType: userModel.userType,
+      additionalInfo: _coerceAdditionalInfo(userModel.additionalInfo),
     );
   }
 
-
-
-
   Widget buildSellerCard(UserModel seller) {
-    // استخراج شعار المتجر من البيانات الإضافية
+    final Map<String, dynamic>? contactInfo =
+        _contactInfoFromAdditional(seller.additionalInfo);
     String? businessLogo;
     String? businessName = seller.name;
 
-    if (seller.additionalInfo != null && seller.additionalInfo is Map) {
-      Map<String, dynamic> additionalInfo =
-          seller.additionalInfo as Map<String, dynamic>;
-
-      if (additionalInfo['contact_info'] != null &&
-          additionalInfo['contact_info'] is Map) {
-        Map<String, dynamic> contactInfo = additionalInfo['contact_info'];
-
-        // للحسابات التجارية (نوع 3)
-        if (seller.userType == 3) {
-          businessLogo = contactInfo['business_logo'];
-          businessName = contactInfo['business_name'] ?? seller.name;
+    if (contactInfo != null) {
+      if (seller.userType == Constant.accountTypeSeller) {
+        final dynamic logo = contactInfo['business_logo'];
+        if (logo is String && logo.trim().isNotEmpty) {
+          businessLogo = logo.trim();
         }
-        // للحسابات العقارية (نوع 2)
-        else if (seller.userType == 2) {
-          businessLogo = contactInfo['office_logo'];
-          businessName = contactInfo['office_name'] ?? seller.name;
+        final dynamic name = contactInfo['business_name'];
+        if (name is String && name.trim().isNotEmpty) {
+          businessName = name.trim();
+        }
+      } else if (seller.userType == Constant.accountTypeRealEstate) {
+        final dynamic logo = contactInfo['office_logo'];
+        if (logo is String && logo.trim().isNotEmpty) {
+          businessLogo = logo.trim();
+        }
+        final dynamic name = contactInfo['office_name'];
+        if (name is String && name.trim().isNotEmpty) {
+          businessName = name.trim();
         }
       }
     }
 
     return GestureDetector(
       onTap: () {
+        if (seller.userType == Constant.accountTypeSeller &&
+            seller.id != null) {
+          final String displayName = (businessName?.trim().isNotEmpty ?? false)
+              ? businessName!.trim()
+              : (seller.name ?? '');
+
+          Navigator.pushNamed(context, Routes.section_screen, arguments: {
+            'catID': Constant.storeRootCategoryId.toString(),
+            'catName': displayName,
+            'categoryIds': [Constant.storeRootCategoryId.toString()],
+            'interfaceType': 'e_store',
+            'sellerId': seller.id,
+          });
+          return;
+        }
+
         Navigator.pushNamed(context, Routes.sellerProfileScreen, arguments: {
           "model": userModelToUser(seller),
         });
@@ -406,7 +421,8 @@ class ItemsListListState extends State<ItemsListSeller> {
               top: 8,
               left: 8,
               right: 8,
-              bottom: 35, // اترك مساحة لاسم المتجر
+              bottom: 35,
+              // اترك مساحة لاسم المتجر
               child: (businessLogo != null && businessLogo.isNotEmpty)
                   ? Image.network(
                       "https://marib.app/${businessLogo}",
@@ -429,5 +445,55 @@ class ItemsListListState extends State<ItemsListSeller> {
         ),
       ),
     );
+  }
+
+  Map<String, dynamic>? _coerceAdditionalInfo(dynamic raw) {
+    if (raw == null) {
+      return null;
+    }
+
+    if (raw is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(raw);
+    }
+
+    if (raw is Map) {
+      return raw.map((key, value) => MapEntry(key.toString(), value));
+    }
+
+    if (raw is String) {
+      final String trimmed = raw.trim();
+      if (trimmed.isEmpty) {
+        return null;
+      }
+
+      try {
+        final dynamic decoded = json.decode(trimmed);
+        if (decoded is Map<String, dynamic>) {
+          return Map<String, dynamic>.from(decoded);
+        }
+        if (decoded is Map) {
+          return decoded.map((key, value) => MapEntry(key.toString(), value));
+        }
+      } catch (_) {
+        return null;
+      }
+    }
+
+    return null;
+  }
+
+  Map<String, dynamic>? _contactInfoFromAdditional(dynamic raw) {
+    final Map<String, dynamic>? info = _coerceAdditionalInfo(raw);
+    if (info == null) {
+      return null;
+    }
+    final dynamic contact = info['contact_info'];
+    if (contact is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(contact);
+    }
+    if (contact is Map) {
+      return contact.map((key, value) => MapEntry(key.toString(), value));
+    }
+    return null;
   }
 }

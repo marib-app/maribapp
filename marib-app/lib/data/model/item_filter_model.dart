@@ -15,6 +15,7 @@ class ItemFilterModel {
   final double? longitude;
   final String? currency;
   final Map<String, dynamic>? customFields;
+  final int? userId;
 
   ItemFilterModel({
     this.maxPrice,
@@ -30,6 +31,7 @@ class ItemFilterModel {
     this.latitude,
     this.longitude,
     this.currency,
+    this.userId,
     this.customFields = const {},
   });
 
@@ -47,7 +49,7 @@ class ItemFilterModel {
     double? latitude,
     double? longitude,
     String? currency,
-
+    int? userId,
     Map<String, dynamic>? customFields,
   }) {
     return ItemFilterModel(
@@ -63,6 +65,7 @@ class ItemFilterModel {
       areaId: areaId ?? this.areaId,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      userId: userId ?? this.userId,
       customFields: customFields ?? this.customFields,
       currency: currency ?? this.currency,
     );
@@ -70,7 +73,6 @@ class ItemFilterModel {
 
   Map<String, dynamic> toMap() {
     final Map<String, dynamic> map = <String, dynamic>{
-
       'max_price': maxPrice,
       'min_price': minPrice,
       'category_id': categoryId,
@@ -84,8 +86,10 @@ class ItemFilterModel {
       'longitude': longitude,
       'latitude': latitude,
       'currency': currency,
-
     };
+    if (userId != null) {
+      map['user_id'] = userId;
+    }
     if (customFields != null && customFields!.isNotEmpty) {
       map['custom_fields'] = customFields;
     }
@@ -95,23 +99,25 @@ class ItemFilterModel {
 
   factory ItemFilterModel.fromMap(Map<String, dynamic> map) {
     return ItemFilterModel(
-      city: map['city'].toString(),
-      state: map['state'].toString(),
+      city: map['city']?.toString(),
+      state: map['state']?.toString(),
       country: map['country'] != null ? map['country'].toString() : null,
-      maxPrice: map['max_price'].toString(),
-      minPrice: map['min_price'].toString(),
-      categoryId: map['category_id'].toString(),
-      postedSince: map['posted_since'].toString(),
+      maxPrice: map['max_price']?.toString(),
+      minPrice: map['min_price']?.toString(),
+      categoryId: map['category_id']?.toString(),
+      postedSince: map['posted_since']?.toString(),
       area: map['area']?.toString(),
       radius:
-      map['radius'] != null ? int.tryParse(map['radius'].toString()) : null,
+          map['radius'] != null ? int.tryParse(map['radius'].toString()) : null,
       areaId: map['area_id'] != null
           ? int.tryParse(map['area_id'].toString())
           : null,
       latitude: map['latitude'] != null ? map['latitude'] : null,
       longitude: map['longitude'] != null ? map['longitude'] : null,
       currency: map['currency']?.toString(),
-
+      userId: map['user_id'] != null
+          ? int.tryParse(map['user_id'].toString())
+          : null,
       customFields: Map<String, dynamic>.from(map['custom_fields'] ?? {}),
     );
   }
@@ -123,7 +129,7 @@ class ItemFilterModel {
 
   @override
   String toString() {
-    return 'ItemFilterModel(maxPrice: $maxPrice, minPrice: $minPrice, categoryId: $categoryId, postedSince: $postedSince, city: $city, state: $state, country: $country, area: $area, areaId: $areaId, custom_fields: $customFields,radius:$radius,latitude:$latitude,longitude:$longitude)';
+    return 'ItemFilterModel(maxPrice: $maxPrice, minPrice: $minPrice, categoryId: $categoryId, postedSince: $postedSince, city: $city, state: $state, country: $country, area: $area, areaId: $areaId, custom_fields: $customFields,radius:$radius,latitude:$latitude,longitude:$longitude,userId:$userId)';
   }
 
   factory ItemFilterModel.createEmpty() {
@@ -140,7 +146,8 @@ class ItemFilterModel {
       radius: null,
       latitude: null,
       longitude: null,
-      customFields: {},
+      customFields: const {},
+      userId: null,
     );
   }
 
@@ -161,26 +168,26 @@ class ItemFilterModel {
         other.latitude == latitude &&
         other.longitude == longitude &&
         other.currency == currency &&
-
+        other.userId == userId &&
         other.customFields == customFields;
   }
 
   @override
   int get hashCode {
     return maxPrice.hashCode ^
-    minPrice.hashCode ^
-    categoryId.hashCode ^
-    postedSince.hashCode ^
-    city.hashCode ^
-    state.hashCode ^
-    country.hashCode ^
-    area.hashCode ^
-    radius.hashCode ^
-    areaId.hashCode ^
-    latitude.hashCode ^
-    longitude.hashCode ^
-    currency.hashCode ^
-
-    customFields.hashCode;
+        minPrice.hashCode ^
+        categoryId.hashCode ^
+        postedSince.hashCode ^
+        city.hashCode ^
+        state.hashCode ^
+        country.hashCode ^
+        area.hashCode ^
+        radius.hashCode ^
+        areaId.hashCode ^
+        latitude.hashCode ^
+        longitude.hashCode ^
+        currency.hashCode ^
+        (userId?.hashCode ?? 0) ^
+        customFields.hashCode;
   }
 }

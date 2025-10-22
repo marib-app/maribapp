@@ -4,10 +4,7 @@ import 'package:marib/data/model/seller_ratings_model.dart';
 import 'package:marib/utils/currency_utils.dart';
 import 'package:marib/utils/delivery_department.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
-
-
-
-
+import 'dart:convert';
 
 class ItemSummary {
   final int? id;
@@ -39,8 +36,6 @@ class ItemSummary {
   final String? state;
   final String? country;
   final ItemDiscount? discount;
-
-
 
   const ItemSummary({
     this.id,
@@ -81,10 +76,15 @@ class ItemSummary {
       slug: json['slug'],
       description: json['description'],
       price: ItemModel._toDouble(json['price']),
-      finalPrice: ItemModel._toDouble(json['final_price']) ?? ItemModel._toDouble(json['price']),
-      image: json['image'] ?? json['thumbnail_fallback_url'] ?? json['thumbnail_url'],
+      finalPrice: ItemModel._toDouble(json['final_price']) ??
+          ItemModel._toDouble(json['price']),
+      image: json['image'] ??
+          json['thumbnail_fallback_url'] ??
+          json['thumbnail_url'],
       thumbnailUrl: json['thumbnail_url'] ?? json['thumbnail'] ?? json['thumb'],
-      thumbnailFallbackUrl: json['thumbnail_fallback_url'] ?? json['thumbnail_fallback'] ?? json['image'],
+      thumbnailFallbackUrl: json['thumbnail_fallback_url'] ??
+          json['thumbnail_fallback'] ??
+          json['image'],
       productLink: json['product_link'],
       watermarkImage: json['watermark_image'],
       latitude: ItemModel._toDouble(json['latitude'] ?? json['lat']),
@@ -166,7 +166,6 @@ extension ItemSummaryX on ItemSummary {
       created: created,
       itemType: itemType,
       departmentSlug: normalizeDeliveryDepartment(itemType) ?? itemType,
-
       userId: userId,
       categoryId: categoryId,
       totalLikes: totalLikes,
@@ -180,12 +179,6 @@ extension ItemSummaryX on ItemSummary {
     );
   }
 }
-
-
-
-
-
-
 
 class ItemModel {
   int? id;
@@ -246,11 +239,13 @@ class ItemModel {
   String? currencyCode;
 
   double? get latitude => _latitude;
+
   set latitude(dynamic value) {
     _latitude = _toDouble(value);
   }
 
   double? get longitude => _longitude;
+
   set longitude(dynamic value) {
     _longitude = _toDouble(value);
   }
@@ -340,7 +335,6 @@ class ItemModel {
     String? reviewLink,
     String? productLink,
     ItemDiscount? discount,
-
     User? user,
     List<GalleryImages>? galleryImages,
     List<ItemOffers>? itemOffers,
@@ -375,11 +369,10 @@ class ItemModel {
       finalPrice: finalPrice ?? this.finalPrice,
       image: image ?? this.image,
       thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
-      thumbnailFallbackUrl:
-      thumbnailFallbackUrl ?? this.thumbnailFallbackUrl,
+      thumbnailFallbackUrl: thumbnailFallbackUrl ?? this.thumbnailFallbackUrl,
       detailImageUrl: detailImageUrl ?? this.detailImageUrl,
       detailImageFallbackUrl:
-      detailImageFallbackUrl ?? this.detailImageFallbackUrl,
+          detailImageFallbackUrl ?? this.detailImageFallbackUrl,
       watermarkimage: watermarkimage ?? this.watermarkimage,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
@@ -419,7 +412,6 @@ class ItemModel {
       review: review ?? this.review,
       departmentSlug: departmentSlug ?? this.departmentSlug,
       tips: tips ?? this.tips,
-
     );
   }
 
@@ -450,10 +442,14 @@ class ItemModel {
     m.views = _toInt(json['clicks']);
     m.description = json['description'];
 
-    m.image = json['image'] ?? json['thumbnail_fallback_url'] ?? json['thumbnail_url'];
-    m.thumbnailUrl = json['thumbnail_url'] ?? json['thumbnail'] ?? json['thumb'];
-    m.thumbnailFallbackUrl =
-        json['thumbnail_fallback_url'] ?? json['thumbnail_fallback'] ?? json['image'];
+    m.image = json['image'] ??
+        json['thumbnail_fallback_url'] ??
+        json['thumbnail_url'];
+    m.thumbnailUrl =
+        json['thumbnail_url'] ?? json['thumbnail'] ?? json['thumb'];
+    m.thumbnailFallbackUrl = json['thumbnail_fallback_url'] ??
+        json['thumbnail_fallback'] ??
+        json['image'];
     m.detailImageUrl = json['detail_image_url'] ?? json['detailImageUrl'];
     m.detailImageFallbackUrl = json['detail_image_fallback_url'] ??
         json['detail_image_fallback'] ??
@@ -488,10 +484,11 @@ class ItemModel {
     m.rejectedReason = json['rejected_reason'];
     final CurrencyParseResult currencyInfo = CurrencyUtils.parseCurrency(json);
     final String? rawCurrency = json['currency']?.toString();
-    final String? displayCurrency = (currencyInfo.display ?? rawCurrency)?.trim();
+    final String? displayCurrency =
+        (currencyInfo.display ?? rawCurrency)?.trim();
     m.currency = displayCurrency?.isEmpty == true ? null : displayCurrency;
-    final String? normalizedCurrencyCode =
-        currencyInfo.code ?? CurrencyUtils.normalizeCurrencyCode(displayCurrency);
+    final String? normalizedCurrencyCode = currencyInfo.code ??
+        CurrencyUtils.normalizeCurrencyCode(displayCurrency);
     m.currencyCode = normalizedCurrencyCode;
 
     m.city = json['city'];
@@ -502,9 +499,8 @@ class ItemModel {
       m.tips = ItemTipsMetadata.fromJson(
           Map<String, dynamic>.from(json['tips'] as Map<String, dynamic>));
     } else if (json['tips'] is Map) {
-      m.tips = ItemTipsMetadata.fromJson(
-          (json['tips'] as Map).map((dynamic key, dynamic value) =>
-              MapEntry(key.toString(), value)));
+      m.tips = ItemTipsMetadata.fromJson((json['tips'] as Map).map(
+          (dynamic key, dynamic value) => MapEntry(key.toString(), value)));
     }
     // review أو seller_review (List أو Map)
     final reviewsRaw = json['review'] ?? json['seller_review'];
@@ -668,14 +664,14 @@ class ItemModel {
 
     for (final String candidate in candidates) {
       final String? normalizedInterface =
-      SliderInterfaceMapper.normalize(candidate);
+          SliderInterfaceMapper.normalize(candidate);
       if (normalizedInterface == 'public_ads' ||
           normalizedInterface == 'real_estate_services') {
         return normalizedInterface;
       }
 
       final String condensed =
-      _normalizeDepartmentMatchKey(normalizedInterface ?? candidate);
+          _normalizeDepartmentMatchKey(normalizedInterface ?? candidate);
       if (_looksLikePublicAudience(condensed)) {
         return 'public_ads';
       }
@@ -683,9 +679,6 @@ class ItemModel {
         return 'real_estate_services';
       }
     }
-
-
-
 
     for (final String candidate in candidates) {
       final String? normalized = normalizeDeliveryDepartment(candidate);
@@ -698,7 +691,6 @@ class ItemModel {
 
     return candidates.isNotEmpty ? candidates.first : null;
   }
-
 
   static String _normalizeDepartmentMatchKey(String? raw) {
     if (raw == null) {
@@ -778,8 +770,6 @@ class ItemModel {
     return false;
   }
 
-
-
   // ===== helpers =====
   static double? _toDouble(dynamic v) {
     if (v == null) return null;
@@ -808,8 +798,6 @@ class ItemModel {
     return null;
   }
 }
-
-
 
 class ItemDiscount {
   final String? type;
@@ -865,8 +853,6 @@ class ItemDiscount {
   }
 }
 
-
-
 class ItemTipsMetadata {
   const ItemTipsMetadata({
     this.returnPolicyText,
@@ -884,27 +870,24 @@ class ItemTipsMetadata {
         return value
             .whereType<Map>()
             .map((Map entry) => entry.map(
-              (dynamic key, dynamic val) =>
-              MapEntry(key.toString(), val),
-        ))
+                  (dynamic key, dynamic val) => MapEntry(key.toString(), val),
+                ))
             .toList();
       }
       if (value is Map<String, dynamic>) {
         return value.values
             .whereType<Map>()
             .map((Map entry) => entry.map(
-              (dynamic key, dynamic val) =>
-              MapEntry(key.toString(), val),
-        ))
+                  (dynamic key, dynamic val) => MapEntry(key.toString(), val),
+                ))
             .toList();
       }
       if (value is Map) {
         return value.values
             .whereType<Map>()
             .map((Map entry) => entry.map(
-              (dynamic key, dynamic val) =>
-              MapEntry(key.toString(), val),
-        ))
+                  (dynamic key, dynamic val) => MapEntry(key.toString(), val),
+                ))
             .toList();
       }
       return const <Map<String, dynamic>>[];
@@ -964,9 +947,6 @@ class ItemTipsMetadata {
   }
 }
 
-
-
-
 class User {
   int? id;
   String? name;
@@ -983,6 +963,8 @@ class User {
   String? updatedAt;
   int? showPersonalDetails;
   int? isVerified;
+  int? accountType;
+  Map<String, dynamic>? additionalInfo;
 
   User({
     this.id,
@@ -1000,6 +982,8 @@ class User {
     this.updatedAt,
     this.isVerified,
     this.showPersonalDetails,
+    this.accountType,
+    this.additionalInfo,
   });
 
   User.fromJson(Map<String, dynamic> json) {
@@ -1018,6 +1002,8 @@ class User {
     updatedAt = json['updated_at'];
     isVerified = ItemModel._toInt(json['is_verified']);
     showPersonalDetails = ItemModel._toInt(json['show_personal_details']);
+    accountType = ItemModel._toInt(json['account_type']);
+    additionalInfo = _normalizeAdditionalInfo(json['additional_info']);
   }
 
   Map<String, dynamic> toJson() {
@@ -1037,7 +1023,44 @@ class User {
     data['updated_at'] = updatedAt;
     data['is_verified'] = isVerified;
     data['show_personal_details'] = showPersonalDetails;
+    data['account_type'] = accountType;
+    data['additional_info'] = additionalInfo;
     return data;
+  }
+
+  static Map<String, dynamic>? _normalizeAdditionalInfo(dynamic raw) {
+    if (raw == null) {
+      return null;
+    }
+
+    if (raw is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(raw);
+    }
+
+    if (raw is Map) {
+      return raw.map((key, value) => MapEntry(key.toString(), value));
+    }
+
+    if (raw is String) {
+      final String trimmed = raw.trim();
+      if (trimmed.isEmpty) {
+        return null;
+      }
+
+      try {
+        final dynamic decoded = json.decode(trimmed);
+        if (decoded is Map<String, dynamic>) {
+          return Map<String, dynamic>.from(decoded);
+        }
+        if (decoded is Map) {
+          return decoded.map((key, value) => MapEntry(key.toString(), value));
+        }
+      } catch (_) {
+        return null;
+      }
+    }
+
+    return null;
   }
 }
 
@@ -1066,10 +1089,13 @@ class GalleryImages {
 
   GalleryImages.fromJson(Map<String, dynamic> json) {
     id = ItemModel._toInt(json['id']);
-    image = json['image'] ?? json['thumbnail_fallback_url'] ?? json['thumbnail_url'];
+    image = json['image'] ??
+        json['thumbnail_fallback_url'] ??
+        json['thumbnail_url'];
     thumbnailUrl = json['thumbnail_url'] ?? json['thumbnail'];
-    thumbnailFallbackUrl =
-        json['thumbnail_fallback_url'] ?? json['thumbnail_fallback'] ?? json['image'];
+    thumbnailFallbackUrl = json['thumbnail_fallback_url'] ??
+        json['thumbnail_fallback'] ??
+        json['image'];
     detailImageUrl = json['detail_image_url'];
     detailImageFallbackUrl =
         json['detail_image_fallback_url'] ?? json['detail_image_fallback'];

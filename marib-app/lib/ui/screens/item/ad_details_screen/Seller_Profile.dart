@@ -58,7 +58,6 @@ import 'package:shimmer/shimmer.dart';
 
 import 'package:flutter/widgets.dart';
 
-
 /// ويدجت لعرض صورة البائع بشكل احترافي مع شيمر يظهر إلى أن تكتمل الصورة
 class SellerProfileImage extends StatefulWidget {
   final String? imageUrl; // رابط صورة البائع (إن وُجد)
@@ -78,70 +77,62 @@ class _SellerProfileImageState extends State<SellerProfileImage> {
 
     return SizedBox(
       height: 60.rh(context), // ارتفاع متجاوب
-      width: 60.rw(context),  // عرض متجاوب
+      width: 60.rw(context), // عرض متجاوب
       child: ClipRRect(
         borderRadius: BorderRadius.circular(10), // حواف ناعمة
         child: hasImage
             ? Stack(
-          fit: StackFit.expand,
-          children: [
-            // ✅ صورة البائع من الإنترنت
-            Image.network(
-              widget.imageUrl!,
-              fit: BoxFit.cover, // تغطية مناسبة بدون تشويه
-              frameBuilder: (context, child, frame, wasLoaded) {
-                if (frame != null && !_isImageLoaded) {
-                  // أول ظهور فعلي للصورة → نوقف الشيمر
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted) {
-                      setState(() => _isImageLoaded = true);
-                    }
-                  });
-                }
-                return child; // نرجع الصورة نفسها
-              },
-              errorBuilder: (context, error, stackTrace) {
-                // في حال فشل التحميل → نعرض الأيقونة الافتراضية
-                return UiUtils.getSvg(
-                  AppIcons.defaultPersonLogo,
-                  color: context.color.territoryColor,
-                  fit: BoxFit.none,
-                );
-              },
-            ),
+                fit: StackFit.expand,
+                children: [
+                  // ✅ صورة البائع من الإنترنت
+                  Image.network(
+                    widget.imageUrl!,
+                    fit: BoxFit.cover, // تغطية مناسبة بدون تشويه
+                    frameBuilder: (context, child, frame, wasLoaded) {
+                      if (frame != null && !_isImageLoaded) {
+                        // أول ظهور فعلي للصورة → نوقف الشيمر
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) {
+                            setState(() => _isImageLoaded = true);
+                          }
+                        });
+                      }
+                      return child; // نرجع الصورة نفسها
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      // في حال فشل التحميل → نعرض الأيقونة الافتراضية
+                      return UiUtils.getSvg(
+                        AppIcons.defaultPersonLogo,
+                        color: context.color.territoryColor,
+                        fit: BoxFit.none,
+                      );
+                    },
+                  ),
 
-            // ✨ شيمر احترافي يظهر فوق الصورة إلى أن تكتمل
-            if (!_isImageLoaded)
-              Shimmer.fromColors(
-                baseColor: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.grey[800]!
-                    : Colors.grey[300]!,
-                highlightColor: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.grey[700]!
-                    : Colors.grey[100]!,
-                child: Container(color: Colors.grey),
-              ),
-          ],
-        )
+                  // ✨ شيمر احترافي يظهر فوق الصورة إلى أن تكتمل
+                  if (!_isImageLoaded)
+                    Shimmer.fromColors(
+                      baseColor: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey[800]!
+                          : Colors.grey[300]!,
+                      highlightColor:
+                          Theme.of(context).brightness == Brightness.dark
+                              ? Colors.grey[700]!
+                              : Colors.grey[100]!,
+                      child: Container(color: Colors.grey),
+                    ),
+                ],
+              )
             : UiUtils.getSvg(
-          // ❌ في حال لا يوجد رابط صورة أصلاً
-          AppIcons.defaultPersonLogo,
-          color: context.color.territoryColor,
-          fit: BoxFit.none,
-        ),
+                // ❌ في حال لا يوجد رابط صورة أصلاً
+                AppIcons.defaultPersonLogo,
+                color: context.color.territoryColor,
+                fit: BoxFit.none,
+              ),
       ),
     );
   }
 }
-
-
-
-
-
-
-
-
-
 
 /// ويدجت تعرض معلومات البائع (الاسم، التوثيق، التقييم، البريد)
 /// مع تأثير Shimmer يظهر مؤقتاً أثناء تحميل البيانات
@@ -174,16 +165,12 @@ class SellerInfoSection extends StatelessWidget {
                 horizontal: 6,
                 vertical: 2,
               ),
-              child: Text("verified".translate(context))
-                  .bold()
-                  .size(10),
+              child: Text("verified".translate(context)).bold().size(10),
             ),
           const SizedBox(height: 4),
 
           // ✅ اسم المستخدم
-          Text(user.name ?? "")
-              .bold()
-              .size(context.font.large),
+          Text(user.name ?? "").bold().size(context.font.large),
 
           const SizedBox(height: 4),
 
@@ -208,16 +195,15 @@ class SellerInfoSection extends StatelessWidget {
                 Text('${total ?? 0} ${"ratings".translate(context)}')
                     .size(14)
                     .color(
-                  context.color.textDefaultColor.withOpacity(0.3),
-                ),
+                      context.color.textDefaultColor.withOpacity(0.3),
+                    ),
               ],
             ),
 
           const SizedBox(height: 4),
 
           // ✅ البريد الإلكتروني (إذا كان ظاهر ومتوفر)
-          if (user.showPersonalDetails == 1 &&
-              user.email?.isNotEmpty == true)
+          if (user.showPersonalDetails == 1 && user.email?.isNotEmpty == true)
             Text(user.email!)
                 .color(context.color.textLightColor)
                 .size(context.font.small),
@@ -226,10 +212,6 @@ class SellerInfoSection extends StatelessWidget {
     );
   }
 }
-
-
-
-
 
 /// ويدجت تعرض أزرار الرسائل والاتصال (بدون شيمر)
 class SellerActions extends StatelessWidget {
@@ -240,8 +222,8 @@ class SellerActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // ✅ التحقق من صلاحية عرض الأزرار
-    final canShow = user.showPersonalDetails == 1 &&
-        user.mobile?.isNotEmpty == true;
+    final canShow =
+        user.showPersonalDetails == 1 && user.mobile?.isNotEmpty == true;
 
     if (!canShow) return const SizedBox.shrink();
 
@@ -282,19 +264,13 @@ class SellerActions extends StatelessWidget {
   }
 }
 
-
-
-
-
-
-
 /// زر أيقونة بتأثير بصري احترافي (بدون شيمر)
 class IconActionButton extends StatelessWidget {
-  final String assetName;      // مسار SVG
-  final VoidCallback onTap;    // الإجراء عند النقر
-  final Color? color;          // لون الأيقونة (اختياري)
-  final double size;           // حجم الزر (عرض × ارتفاع)
-  final double borderRadius;   // نصف قطر الحواف
+  final String assetName; // مسار SVG
+  final VoidCallback onTap; // الإجراء عند النقر
+  final Color? color; // لون الأيقونة (اختياري)
+  final double size; // حجم الزر (عرض × ارتفاع)
+  final double borderRadius; // نصف قطر الحواف
 
   const IconActionButton({
     super.key,
@@ -338,8 +314,6 @@ class IconActionButton extends StatelessWidget {
   }
 }
 
-
-
 // دالة عرض معلومات المعلن
 
 Widget setSellerDetails(BuildContext context, ItemModel model) {
@@ -348,13 +322,34 @@ Widget setSellerDetails(BuildContext context, ItemModel model) {
 
   return InkWell(
     onTap: () {
+      if (_isMerchantAccount(user) && user.id != null) {
+        final String displayName = _merchantDisplayName(user);
+
+        Navigator.pushNamed(
+          context,
+          Routes.section_screen,
+          arguments: {
+            'catID': Constant.storeRootCategoryId.toString(),
+            'catName': displayName,
+            'categoryIds': [Constant.storeRootCategoryId.toString()],
+            'interfaceType': 'e_store',
+            'sellerId': user.id,
+          },
+        );
+        return;
+      }
+
       Navigator.pushNamed(
         context,
         Routes.sellerProfileScreen,
         arguments: {
           "model": user,
-          "total": context.read<FetchSellerRatingsCubit>().totalSellerRatings() ?? 0,
-          "rating": context.read<FetchSellerRatingsCubit>().sellerData()?.averageRating,
+          "total":
+              context.read<FetchSellerRatingsCubit>().totalSellerRatings() ?? 0,
+          "rating": context
+              .read<FetchSellerRatingsCubit>()
+              .sellerData()
+              ?.averageRating,
         },
       );
     },
@@ -371,11 +366,70 @@ Widget setSellerDetails(BuildContext context, ItemModel model) {
   );
 }
 
+bool _isMerchantAccount(User user) {
+  final int? accountType = _extractAccountType(user);
+  if (accountType == Constant.accountTypeSeller) {
+    return true;
+  }
 
+  final String? normalizedType = user.type?.trim().toLowerCase();
+  return normalizedType == 'seller' || normalizedType == 'commercial';
+}
 
+int? _extractAccountType(User user) {
+  if (user.accountType != null) {
+    return user.accountType;
+  }
 
+  final String? rawType = user.type;
+  if (rawType == null) {
+    return null;
+  }
 
+  final String trimmed = rawType.trim();
+  if (trimmed.isEmpty) {
+    return null;
+  }
 
+  final int? numeric = int.tryParse(trimmed);
+  if (numeric != null) {
+    return numeric;
+  }
+
+  switch (trimmed.toLowerCase()) {
+    case 'seller':
+    case 'commercial':
+      return Constant.accountTypeSeller;
+    case 'real_estate':
+    case 'realestate':
+    case 'real-estate':
+      return Constant.accountTypeRealEstate;
+  }
+
+  return null;
+}
+
+Map<String, dynamic>? _contactInfoFromUser(User user) {
+  final dynamic additional = user.additionalInfo;
+  if (additional is Map<String, dynamic>) {
+    return Map<String, dynamic>.from(additional);
+  }
+  if (additional is Map) {
+    return additional.map((key, value) => MapEntry(key.toString(), value));
+  }
+  return null;
+}
+
+String _merchantDisplayName(User user) {
+  final Map<String, dynamic>? contactInfo = _contactInfoFromUser(user);
+  if (contactInfo != null) {
+    final dynamic name = contactInfo['business_name'];
+    if (name is String && name.trim().isNotEmpty) {
+      return name.trim();
+    }
+  }
+  return user.name ?? '';
+}
 
 class SellerDetailsShimmer extends StatelessWidget {
   const SellerDetailsShimmer({super.key});

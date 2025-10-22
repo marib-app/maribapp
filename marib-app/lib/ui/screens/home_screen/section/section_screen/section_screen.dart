@@ -28,6 +28,7 @@ class Section_screen extends StatefulWidget {
   final String categoryName; // اسم الفئة الحالية
   final List<String> categoryIds; // قائمة معرفات الفئات
   final String? interfaceType;
+  final int? sellerId;
 
   const Section_screen({
     super.key,
@@ -35,6 +36,7 @@ class Section_screen extends StatefulWidget {
     required this.categoryName,
     required this.categoryIds,
     this.interfaceType,
+    this.sellerId,
   });
 
   @override
@@ -47,6 +49,7 @@ class Section_screen extends StatefulWidget {
         rawInterfaceType is String && rawInterfaceType.trim().isNotEmpty
             ? rawInterfaceType.trim()
             : null;
+    final int? sellerId = _parseSellerId(arguments?['sellerId']);
     return BlurredRouter(
       builder: (_) => BlocProvider(
         create: (context) => FetchHomeScreenCubit(
@@ -57,9 +60,27 @@ class Section_screen extends StatefulWidget {
           categoryName: arguments?['catName'],
           categoryIds: arguments?['categoryIds'],
           interfaceType: interfaceType,
+          sellerId: sellerId,
         ),
       ),
     );
+  }
+
+  static int? _parseSellerId(dynamic raw) {
+    if (raw == null) {
+      return null;
+    }
+    if (raw is int) {
+      return raw;
+    }
+    if (raw is String) {
+      final String trimmed = raw.trim();
+      if (trimmed.isEmpty) {
+        return null;
+      }
+      return int.tryParse(trimmed);
+    }
+    return null;
   }
 }
 
@@ -188,15 +209,18 @@ class Section_screenState extends State<Section_screen> {
       source: source,
       categoryIdOverride: categoryIdOverride,
     );
+    final int? sellerId = widget.sellerId;
 
     if (source == null) {
       return ItemFilterModel(
         categoryId: resolvedCategoryId,
+        userId: sellerId,
       );
     }
 
     return source.copyWith(
       categoryId: resolvedCategoryId,
+      userId: sellerId ?? source.userId,
     );
   }
 
@@ -314,6 +338,7 @@ class Section_screenState extends State<Section_screen> {
       radius: radius,
       latitude: lat,
       longitude: lon,
+      userId: widget.sellerId,
     );
 
     final ItemFilterModel effectiveFilter = _buildEffectiveFilter(

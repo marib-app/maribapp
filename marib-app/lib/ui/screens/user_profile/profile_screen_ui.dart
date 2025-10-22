@@ -20,10 +20,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   void initState() {
     super.initState();
     _isDark.value = context.read<AppThemeCubit>().isDarkMode();
-    if (HiveUtils.isUserAuthenticated()) {
-      context.read<FetchVerificationRequestsCubit>().fetchVerificationRequests();
-      context.read<ProfileStatsCubit>().fetchProfileStats();
-    }
+
     _scroll.addListener(() => _scrollY.value = _scroll.offset);
   }
 

@@ -256,7 +256,7 @@ class FilterScreenState extends State<FilterScreen> {
           actions: [
             // if ((checkFilterValSet() == true)) ...[
             FittedBox(
-              fit: BoxFit.none,
+              fit: BoxFit.scaleDown,
               child: UiUtils.buildButton(
                 context,
                 onPressed: () {

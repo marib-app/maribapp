@@ -1929,7 +1929,10 @@ class _AppBarBottomSection extends StatelessWidget {
     return SizedBox(
       height: height,
       width: double.infinity,
-      child: content,
+      child: SingleChildScrollView(
+        padding: EdgeInsets.zero,
+        child: content,
+      ),
     );
   }
 }

@@ -47,21 +47,25 @@ class InvoicePdfService
 
         $pdfContents = null;
 
-        if (class_exists(\Dompdf\Dompdf::class)) {
+        if (app()->bound('dompdf.wrapper')) {
             try {
                 $this->ensureFontDirectoryExists();
 
                 /** @var PDF $pdf */
                 $pdf = app('dompdf.wrapper');
-                $pdf->setOptions([
-                    'defaultFont' => self::DEFAULT_FONT,
-                    'isHtml5ParserEnabled' => true,
-                    'isRemoteEnabled' => true,
-                    'fontDir' => storage_path('fonts'),
-                    'fontCache' => storage_path('fonts'),
-                ]);
+                if (method_exists($pdf, 'setOptions')) {
+                    $pdf->setOptions([
+                        'defaultFont' => self::DEFAULT_FONT,
+                        'isHtml5ParserEnabled' => true,
+                        'isRemoteEnabled' => true,
+                        'fontDir' => storage_path('fonts'),
+                        'fontCache' => storage_path('fonts'),
+                    ]);
+                }
                 $pdf->loadHTML($html);
-                $pdf->setPaper('a4', 'portrait');
+                if (method_exists($pdf, 'setPaper')) {
+                    $pdf->setPaper('a4', 'portrait');
+                }
                 $pdfContents = $pdf->output();
             } catch (\Throwable $exception) {
                 \Log::warning('invoice.pdf_generation_failed', [

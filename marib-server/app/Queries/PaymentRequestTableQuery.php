@@ -634,6 +634,7 @@ class PaymentRequestTableQuery
 
         $paymentResolvedPayableTypeExpression = "LOWER(COALESCE(NULLIF(pt.payable_type, ''), NULLIF(mpr.payable_type, '')))";
         $paymentResolvedPayableIdExpression = 'COALESCE(pt.payable_id, mpr.payable_id)';
+        $paymentTransactionStatusSource = "LOWER(COALESCE(NULLIF(pt.payment_status, ''), NULLIF(mpr.status, ''), 'pending'))";
 
 
         $paymentTransactions = DB::table('payment_transactions as pt')
@@ -658,10 +659,10 @@ class PaymentRequestTableQuery
             ->selectRaw($gatewayNameSelect . ' as gateway_name')
             ->selectRaw($paymentGatewayLabelSelect . ' as gateway_label')
             ->selectRaw(self::categoryExpression('pt') . ' as category')
+            ->selectRaw("{$paymentTransactionStatusSource} as status")
             ->selectRaw(
-                self::statusExpression(
-                    "LOWER(COALESCE(NULLIF(pt.payment_status, ''), NULLIF(mpr.status, ''), 'pending'))"
-                ) . ' as status_group'
+                self::statusExpression($paymentTransactionStatusSource) . ' as status_group'
+
             )
             ->selectRaw("COALESCE(mpr.reference, CONCAT('TX-', pt.id)) as reference")
             ->selectRaw('pt.created_at')
@@ -801,6 +802,7 @@ class PaymentRequestTableQuery
             
         $walletResolvedPayableIdExpression = 'COALESCE(mpr.payable_id, wt.id)';
         $walletResolvedPayableTypeExpression = "LOWER(NULLIF(mpr.payable_type, ''))";
+        $walletStatusSource = "LOWER(COALESCE(NULLIF(mpr.status, ''), 'succeed'))";
 
 
 
@@ -825,10 +827,10 @@ class PaymentRequestTableQuery
             ->selectRaw($walletGatewayNameSelect . ' as gateway_name')
             ->selectRaw($walletGatewayLabelSelect . ' as gateway_label')
             ->selectRaw("'top_ups' as category")
+            ->selectRaw("{$walletStatusSource} as status")
             ->selectRaw(
-                self::statusExpression(
-                    "LOWER(COALESCE(NULLIF(mpr.status, ''), 'succeed'))"
-                ) . ' as status_group'
+                self::statusExpression($walletStatusSource) . ' as status_group'
+
             )
             ->selectRaw("COALESCE(mpr.reference, CONCAT('WT-', wt.id)) as reference")
             ->selectRaw('wt.created_at')
@@ -886,6 +888,7 @@ class PaymentRequestTableQuery
             )
             ->whereNotNull('wt.manual_payment_request_id');
 
+        $manualRequestStatusSource = "LOWER(COALESCE(NULLIF(mpr.status, ''), 'pending'))";
 
 
         $manualRequests = DB::table('manual_payment_requests as mpr')
@@ -903,12 +906,12 @@ class PaymentRequestTableQuery
             ->selectRaw($manualGatewayKeyExpression . ' as gateway_key')
             ->selectRaw($manualRequestChannelExpression . ' as channel')
             ->selectRaw($manualRequestGatewayNameSelect . ' as gateway_name')
-            ->selectRaw($manualRequestGatewayLabelSelect . ' as gateway_label')            
+            ->selectRaw($manualRequestGatewayLabelSelect . ' as gateway_label')
             ->selectRaw(self::categoryExpression('mpr') . ' as category')
+            ->selectRaw("{$manualRequestStatusSource} as status")
             ->selectRaw(
-                self::statusExpression(
-                    "LOWER(COALESCE(NULLIF(mpr.status, ''), 'pending'))"
-                ) . ' as status_group'
+                self::statusExpression($manualRequestStatusSource) . ' as status_group'
+
             )
             ->selectRaw("COALESCE(NULLIF(mpr.reference, ''), CONCAT('MPR-', mpr.id)) as reference")
             ->selectRaw('mpr.created_at')

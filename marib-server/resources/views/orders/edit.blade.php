@@ -25,6 +25,15 @@
         ];
 
 
+        $manualPaymentStatusAlertClasses = [
+            ManualPaymentRequest::STATUS_PENDING => 'alert-warning',
+            ManualPaymentRequest::STATUS_UNDER_REVIEW => 'alert-warning',
+            ManualPaymentRequest::STATUS_APPROVED => 'alert-success',
+            ManualPaymentRequest::STATUS_REJECTED => 'alert-danger',
+        ];
+        $latestManualPaymentRequest = $latestManualPaymentRequest ?? ($order->manualPaymentRequests->first() ?? null);
+
+
         $orderUser = $order->user;
         $orderUserFallbackLabel = $order->user_id ? ('مستخدم #' . $order->user_id) : 'غير متوفر';
         $orderUserName = $orderUser?->name ?? $orderUserFallbackLabel;
@@ -124,16 +133,65 @@
     </div>
 
 
-    @if($pendingManualPaymentRequest)
-        <div class="alert alert-warning" role="alert">
+    @if($latestManualPaymentRequest)
+        @php
+            $manualPaymentStatus = $latestManualPaymentRequest->status;
+            $manualPaymentStatusLabel = $manualPaymentStatus
+                ? ($manualPaymentStatusLabels[$manualPaymentStatus] ?? $manualPaymentStatus)
+                : 'غير محدد';
+            $manualPaymentAlertClass = $manualPaymentStatusAlertClasses[$manualPaymentStatus] ?? 'alert-info';
+            $manualPaymentCurrency = $latestManualPaymentRequest->currency;
+            $manualPaymentCurrencyDisplay = $manualPaymentCurrency ?: 'ريال';
+            $manualPaymentAmountRaw = $latestManualPaymentRequest->amount;
+            $manualPaymentAmountDisplay = null;
+
+            if (is_numeric($manualPaymentAmountRaw)) {
+                $manualPaymentAmountDisplay = number_format((float) $manualPaymentAmountRaw, 2) . ' ' . $manualPaymentCurrencyDisplay;
+            } elseif (is_string($manualPaymentAmountRaw) && trim($manualPaymentAmountRaw) !== '') {
+                $manualPaymentAmountDisplay = trim($manualPaymentAmountRaw);
+            }
+
+            $manualPaymentReviewUrl = route('payment-requests.review', $latestManualPaymentRequest->id);
+            $isBlockingManualPayment = $pendingManualPaymentRequest
+                && $pendingManualPaymentRequest->is($latestManualPaymentRequest);
+
+            $manualPaymentTitle = 'تفاصيل طلب الدفع اليدوي.';
+
+            if ($isBlockingManualPayment) {
+                $manualPaymentTitle = 'طلب دفع قيد المراجعة.';
+            } elseif ($manualPaymentStatus === ManualPaymentRequest::STATUS_APPROVED) {
+                $manualPaymentTitle = 'تم اعتماد طلب الدفع اليدوي.';
+            } elseif ($manualPaymentStatus === ManualPaymentRequest::STATUS_REJECTED) {
+                $manualPaymentTitle = 'تم رفض طلب الدفع اليدوي.';
+            }
+
+            $manualPaymentMessage = 'يوجد طلب دفع رقم #' . $latestManualPaymentRequest->id;
+
+            if ($manualPaymentAmountDisplay) {
+                $manualPaymentMessage .= ' بمبلغ ' . $manualPaymentAmountDisplay;
+            }
+
+            if ($manualPaymentStatusLabel) {
+                $manualPaymentMessage .= ' حالته: ' . $manualPaymentStatusLabel . '.';
+            } else {
+                $manualPaymentMessage .= '.';
+            }
+
+            if ($isBlockingManualPayment) {
+                $manualPaymentMessage .= ' لا يمكن تعديل حالة الدفع أو حالة الطلب حتى يتم اعتماد أو رفض هذا الطلب.';
+            } else {
+                $manualPaymentMessage .= ' يمكنك عرض تفاصيل الطلب من خلال الزر التالي.';
+            }
+        @endphp
+        <div class="alert {{ $manualPaymentAlertClass }}" role="alert">
+
+
             <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
                 <div>
-                    <strong>يوجد طلب دفع قيد المراجعة.</strong>
-                    <p class="mb-0">لا يمكن تعديل حالة الدفع أو حالة الطلب حتى يتم البت في الطلب رقم #{{ $pendingManualPaymentRequest->id }} بمبلغ
-                        {{ number_format((float) $pendingManualPaymentRequest->amount, 2) }}
-                        {{ $pendingManualPaymentRequest->currency ?? 'ريال' }}.</p>
+                     <strong>{{ $manualPaymentTitle }}</strong>
+                    <p class="mb-0">{{ $manualPaymentMessage }}</p>
                 </div>
-                <a href="{{ route('payment-requests.review', $pendingManualPaymentRequest->id) }}" class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer">
+                <a href="{{ $manualPaymentReviewUrl }}" class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer">
                     <i class="fa fa-external-link-alt me-1"></i> عرض طلب الدفع
                 </a>
             </div>
@@ -156,7 +214,7 @@
             $paymentStatusLocked = true;
             $orderStatusLocked = $pendingManualPaymentRequest !== null;
             $statusLabel = \App\Models\Order::statusLabel($order->order_status);
-            $latestManualPaymentRequest = $order->manualPaymentRequests->first();
+            $latestManualPaymentRequest = $latestManualPaymentRequest ?? $order->manualPaymentRequests->first();
             $manualPaymentStatus = $latestManualPaymentRequest?->status;
             $manualPaymentStatusLabelValue = $manualPaymentStatus
                 ? ($manualPaymentStatusLabels[$manualPaymentStatus] ?? $manualPaymentStatus)

@@ -706,7 +706,7 @@ class OrderController extends Controller
                         $itemQuery->select('order_items.id', 'order_items.order_id', 'order_items.quantity');
                     }]);
             },
-             'manualPaymentRequests' => static function ($query) {
+            'manualPaymentRequests' => static function ($query) {
                 $query->orderByDesc('id')
                     ->with('paymentTransaction');
             },
@@ -724,8 +724,12 @@ class OrderController extends Controller
             ->get();
 
 
-        $pendingManualPaymentRequest = $order->manualPaymentRequests
-            ->first(static fn (ManualPaymentRequest $request) => $request->isOpen());
+        $manualPaymentRequests = $order->manualPaymentRequests;
+
+        $pendingManualPaymentRequest = $manualPaymentRequests
+        
+        ->first(static fn (ManualPaymentRequest $request) => $request->isOpen());
+        $latestManualPaymentRequest = $manualPaymentRequests->first();
 
 
 
@@ -740,7 +744,8 @@ class OrderController extends Controller
             'orderItemsDisplayData',
             'paymentGroups',
             'availablePaymentGroups',
-            'pendingManualPaymentRequest'
+            'pendingManualPaymentRequest',
+            'latestManualPaymentRequest'
         
         ));
     }
@@ -763,8 +768,11 @@ class OrderController extends Controller
             
             ->findOrFail($id);
 
-        $pendingManualPaymentRequest = $order->manualPaymentRequests
-            ->first(static fn (ManualPaymentRequest $request) => $request->isOpen());
+        $manualPaymentRequests = $order->manualPaymentRequests;
+
+        $pendingManualPaymentRequest = $manualPaymentRequests
+        ->first(static fn (ManualPaymentRequest $request) => $request->isOpen());
+        $latestManualPaymentRequest = $manualPaymentRequests->first();
 
 
         // الحصول على قائمة المستخدمين
@@ -777,7 +785,15 @@ class OrderController extends Controller
 
         return view(
             'orders.edit',
-            compact('order', 'users', 'orderStatuses', 'paymentStatusOptions', 'pendingManualPaymentRequest')
+            compact(
+                'order',
+                'users',
+                'orderStatuses',
+                'paymentStatusOptions',
+                'pendingManualPaymentRequest',
+                'latestManualPaymentRequest'
+            )
+        
         );
 
 

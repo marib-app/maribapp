@@ -1733,11 +1733,8 @@ class ManualPaymentRequestController extends Controller
             ? ($canReview && $manualPaymentInstance->isOpen())
             : $canReview;
 
-        $targetRoute = $shouldOpenReview && Route::has('payment-requests.review')
-            ? 'payment-requests.review'
-            : (Route::has('payment-requests.show') ? 'payment-requests.show' : 'payment-requests.review');
+        $url = route('payment-requests.review', ['manualPaymentRequest' => $manualPaymentRequestId]);
 
-        $url = route($targetRoute, ['manualPaymentRequest' => $manualPaymentRequestId]);
         $label = $shouldOpenReview ? trans('Review request') : trans('View request');
         $buttonClass = $shouldOpenReview
             ? 'btn btn-sm btn-primary'

@@ -70,18 +70,23 @@ class LoadChatMessagesCubit extends Cubit<LoadChatMessagesState> {
       {required int itemOfferId, required String conversationId}) async {
     try {
       emit(LoadChatMessagesInProgress());
+      final String trimmedConversationId = conversationId.trim();
+      final String normalizedConversationId =
+          trimmedConversationId.isEmpty ? '' : trimmedConversationId;
+      final int normalizedItemOfferId = itemOfferId > 0 ? itemOfferId : 0;
+
       DataOutput<ChatMessageModal> result =
           await _chatRepostiory.getMessagesApi(
-        itemOfferId: itemOfferId,
-        conversationId: conversationId,
+        itemOfferId: normalizedItemOfferId,
+        conversationId: normalizedConversationId,
         page: 1,
       );
 
       emit(LoadChatMessagesSuccess(
         messages: result.modelList,
         currentPage: 1,
-        itemOfferId: itemOfferId,
-        conversationId: conversationId,
+        itemOfferId: normalizedItemOfferId,
+        conversationId: normalizedConversationId,
         isLoadingMore: false,
         totalPage: result.total,
       ));

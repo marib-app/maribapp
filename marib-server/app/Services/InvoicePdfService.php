@@ -53,20 +53,26 @@ class InvoicePdfService
 
                 /** @var PDF $pdf */
                 $pdf = app('dompdf.wrapper');
-                if (method_exists($pdf, 'setOptions')) {
-                    $pdf->setOptions([
-                        'defaultFont' => self::DEFAULT_FONT,
-                        'isHtml5ParserEnabled' => true,
-                        'isRemoteEnabled' => true,
-                        'fontDir' => storage_path('fonts'),
-                        'fontCache' => storage_path('fonts'),
-                    ]);
+                $this->callIfCallable($pdf, 'setOptions', [
+                    
+                    'defaultFont' => self::DEFAULT_FONT,
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => true,
+                    'fontDir' => storage_path('fonts'),
+                    'fontCache' => storage_path('fonts'),
+                ]);
+                if (is_callable([$pdf, 'loadHTML'])) {
+                    $pdf->loadHTML($html);
+                } elseif (is_callable([$pdf, 'loadView'])) {
+                    $pdf->loadView(self::DEFAULT_VIEW, $viewData);
                 }
-                $pdf->loadHTML($html);
-                if (method_exists($pdf, 'setPaper')) {
-                    $pdf->setPaper('a4', 'portrait');
+
+                $this->callIfCallable($pdf, 'setPaper', 'a4', 'portrait');
+
+                if (is_callable([$pdf, 'output'])) {
+                    $output = $pdf->output();
+                    $pdfContents = is_string($output) ? $output : null;
                 }
-                $pdfContents = $pdf->output();
             } catch (\Throwable $exception) {
                 \Log::warning('invoice.pdf_generation_failed', [
                     'order_id' => $order->getKey(),
@@ -276,8 +282,16 @@ class InvoicePdfService
                 }
             }
         }
-            }
+    }
 
+    private function callIfCallable(object $target, string $method, ...$arguments): void
+    {
+        if (! is_callable([$target, $method])) {
+            return;
+        }
+
+        $target->{$method}(...$arguments);
+    }
     private function buildPreviewAssets(): array
     {
         return [

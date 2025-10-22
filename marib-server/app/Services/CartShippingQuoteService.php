@@ -532,6 +532,20 @@ class CartShippingQuoteService
         }
 
         if ($weightPerUnit === null) {
+            $deliverySize = $item->item?->delivery_size;
+            if (is_string($deliverySize) && $deliverySize !== '') {
+                $normalizedSize = strtolower(trim($deliverySize));
+                $sizeWeightMap = config('services.delivery_pricing.size_weight_map', []);
+
+                if (is_array($sizeWeightMap) && array_key_exists($normalizedSize, $sizeWeightMap)) {
+                    $weightPerUnit = (float) $sizeWeightMap[$normalizedSize];
+                }
+            }
+        }
+
+
+
+        if ($weightPerUnit === null) {
             return 0.0;
         }
 

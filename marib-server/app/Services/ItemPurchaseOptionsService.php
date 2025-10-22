@@ -379,6 +379,7 @@ class ItemPurchaseOptionsService
             'base_price' => (float) ($item->price ?? 0.0),
             'final_price' => (float) $item->final_price,
             'discount' => $item->discount_snapshot,
+            'delivery_size' => $item->delivery_size,
             'attributes' => $attributes,
             'variant_stocks' => $stocks,
         ];

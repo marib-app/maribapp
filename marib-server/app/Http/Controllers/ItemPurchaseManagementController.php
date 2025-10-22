@@ -29,6 +29,30 @@ class ItemPurchaseManagementController extends Controller
             return $this->forbiddenResponse();
         }
 
+
+        $allowedDeliverySizes = ['small', 'medium', 'large'];
+        $deliverySizeProvided = $request->has('delivery_size');
+        $deliverySizeValue = $item->delivery_size;
+
+        if ($deliverySizeProvided) {
+            $rawDeliverySize = $request->input('delivery_size');
+
+            if ($rawDeliverySize === null) {
+                $deliverySizeValue = null;
+            } else {
+                $normalizedDeliverySize = strtolower($this->stringifyValue($rawDeliverySize));
+                if ($normalizedDeliverySize === '') {
+                    $deliverySizeValue = null;
+                } elseif (! in_array($normalizedDeliverySize, $allowedDeliverySizes, true)) {
+                    throw ValidationException::withMessages([
+                        'delivery_size' => [__('خيار حجم التوصيل المحدد غير صالح.')],
+                    ]);
+                } else {
+                    $deliverySizeValue = $normalizedDeliverySize;
+                }
+            }
+        }
+
         $item->loadMissing(['purchaseAttributes', 'purchaseAttributes.values']);
 
         $rawAttributes = $request->input('attributes', []);
@@ -175,9 +199,18 @@ class ItemPurchaseManagementController extends Controller
             ];
         }
 
-        $this->db->transaction(function () use ($item, $normalizedAttributes) {
+        $this->db->transaction(function () use ($item, $normalizedAttributes, $deliverySizeProvided, $deliverySizeValue) {
             $existing = $item->purchaseAttributes()->with('values')->get()->keyBy('id');
             $retainedIds = [];
+
+
+            if ($deliverySizeProvided && $item->delivery_size !== $deliverySizeValue) {
+                $item->forceFill([
+                    'delivery_size' => $deliverySizeValue,
+                ])->save();
+            }
+
+
 
             foreach ($normalizedAttributes as $payload) {
                 $attribute = null;

@@ -55,13 +55,16 @@ class Item extends Model {
         'discount_value',
         'discount_start',
         'discount_end',
+        'delivery_size',
     ];
 
     protected $casts = [
         'discount_value' => 'float',
         'discount_start' => 'datetime',
-        'discount_end' => 'datetime',
-    
+        'discount_end' => 'datetime',    
+        'delivery_size' => 'string',
+
+
     ];
 
     // Relationships

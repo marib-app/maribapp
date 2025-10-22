@@ -1721,44 +1721,66 @@ class ManualPaymentRequestController extends Controller
 
     private function resolveManualPaymentRequestForRow(object $row): ?ManualPaymentRequest
     {
+
+        $manualPaymentRequest = null;
+
+
         $transactionId = $this->normalizeManualPaymentIdentifier(
             data_get($row, 'payment_transaction_id')
         );
 
-        if ($transactionId === null) {
-            return null;
-        }
+        if ($transactionId !== null) {
+            $transaction = PaymentTransaction::query()
+                ->with('manualPaymentRequest')
+                ->find($transactionId);
 
-        $transaction = PaymentTransaction::query()
-            ->with('manualPaymentRequest')
-            ->find($transactionId);
+            if ($transaction) {
+                $manualPaymentRequest = $transaction->manualPaymentRequest;
 
-        if (! $transaction) {
-            return null;
-        }
+                if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+                    $manualPaymentRequestId = $this->normalizeManualPaymentIdentifier(
+                        $transaction->manual_payment_request_id
+                    );
 
-        $manualPaymentRequest = $transaction->manualPaymentRequest;
+                    if ($manualPaymentRequestId !== null) {
+                        $manualPaymentRequest = $this->getManualPaymentRequestById($manualPaymentRequestId);
+                    }
+                }
+                if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+                    $manualPaymentRequest = ManualPaymentRequest::query()
+                        ->where('payment_transaction_id', $transaction->getKey())
+                        ->orderByDesc('id')
+                        ->first();
+                }
 
-        if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
-            $manualPaymentRequestId = $this->normalizeManualPaymentIdentifier(
-                $transaction->manual_payment_request_id
-            );
-
-            if ($manualPaymentRequestId !== null) {
-                $manualPaymentRequest = $this->getManualPaymentRequestById($manualPaymentRequestId);
+                if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+                    $manualPaymentRequest = $this->manualPaymentRequestService
+                        ->ensureManualPaymentRequestForTransaction($transaction);
+                }
             }
         }
 
         if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
-            $manualPaymentRequest = ManualPaymentRequest::query()
-                ->where('payment_transaction_id', $transaction->getKey())
-                ->orderByDesc('id')
-                ->first();
-        }
+            $payableId = $this->normalizeManualPaymentIdentifier(data_get($row, 'payable_id'));
 
-        if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
-            $manualPaymentRequest = $this->manualPaymentRequestService
-                ->ensureManualPaymentRequestForTransaction($transaction);
+
+            if ($payableId !== null) {
+                $query = ManualPaymentRequest::query()
+                    ->where('payable_id', $payableId)
+                    ->orderByDesc('id');
+
+                $payableType = data_get($row, 'payable_type');
+                $category = $this->normalizePaymentRequestCategory(data_get($row, 'category'));
+
+                if (
+                    (is_string($payableType) && ManualPaymentRequest::isOrderPayableType($payableType))
+                    || $category === 'orders'
+                ) {
+                    $query->whereIn('payable_type', ManualPaymentRequest::orderPayableTypeAliases());
+                }
+
+                $manualPaymentRequest = $query->first();
+            }
         }
 
         if ($manualPaymentRequest instanceof ManualPaymentRequest) {

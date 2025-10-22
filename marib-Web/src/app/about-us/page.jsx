@@ -1,12 +1,13 @@
 import AboutUs from '@/components/PagesComponent/AboutUs/AboutUs'
 import axios from 'axios';
 import React from 'react'
+import { buildApiUrl } from '@/utils/env';
 
 export const generateMetadata = async ({ params }) => {
   try {
 
     const response = await axios.get(
-      `${process.env.NEXT_PUBLIC_API_URL}${process.env.NEXT_PUBLIC_END_POINT}get-system-settings?type=about_us`
+      buildApiUrl('get-system-settings?type=about_us')
     );
 
     const htmlContent = response?.data?.data?.about_us

@@ -14,6 +14,10 @@ php artisan migrate
 
 php artisan serve --host=0.0.0.0 --port=8000
 
+npm run dev -- --hostname 0.0.0.0 --port 3010
+npx next dev -H 0.0.0.0 -p 3000
+
+
 Get-Content .\storage\logs\laravel.log -Tail 100
 
 git status; git add -A; git commit -m "msg"; git push

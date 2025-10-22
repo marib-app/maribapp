@@ -263,7 +263,7 @@ class _SliderComponentState extends State<SliderComponent>
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: child,
-          ),
+          ), //
         ),
       ),
     );

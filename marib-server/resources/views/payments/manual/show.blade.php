@@ -3,13 +3,13 @@
     use Illuminate\Support\Arr;
     use Illuminate\Support\Str;
     $statusHtml = match ($request->status) {
-    $readOnly = (bool) ($readOnly ?? false);
 
 
         ManualPaymentRequest::STATUS_APPROVED => '<span class="badge bg-success">' . __('Approved') . '</span>',
         ManualPaymentRequest::STATUS_REJECTED => '<span class="badge bg-danger">' . __('Rejected') . '</span>',
         default => '<span class="badge bg-warning text-dark">' . __('Pending') . '</span>',
     };
+    $readOnly = (bool) ($readOnly ?? false);
 
     $paymentTransaction = $request->paymentTransaction;
     $paymentGatewayKey = $paymentGatewayKey ?? $paymentTransaction?->payment_gateway;

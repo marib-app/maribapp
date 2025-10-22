@@ -1657,6 +1657,38 @@ class ManualPaymentRequestController extends Controller
             }
         }
 
+
+        if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+            $walletTransactionId = $this->normalizeManualPaymentIdentifier(
+                data_get($row, 'wallet_transaction_id')
+            );
+
+            if ($walletTransactionId !== null) {
+                $manualPaymentRequest = ManualPaymentRequest::query()
+                    ->where(function ($query) use ($walletTransactionId) {
+                        $query->where(function ($inner) use ($walletTransactionId) {
+                            $inner->where('payable_type', ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP)
+                                ->where('payable_id', $walletTransactionId);
+                        })->orWhere(function ($inner) use ($walletTransactionId) {
+                            $inner->whereRaw(
+                                "JSON_UNQUOTE(JSON_EXTRACT(meta, '$.wallet.transaction_id')) IN (?, ?)",
+                                [$walletTransactionId, (string) $walletTransactionId]
+                            );
+                        });
+                    })
+                    ->orderByDesc('id')
+                    ->first();
+
+                if ($manualPaymentRequest instanceof ManualPaymentRequest) {
+                    $manualPaymentRequestId = $manualPaymentRequest->getKey();
+                    $row->manual_payment_request_id = $manualPaymentRequestId;
+                    $this->manualPaymentRequestLookupCache[$manualPaymentRequestId] = $manualPaymentRequest;
+                }
+            }
+        }
+
+
+
         if ($manualPaymentRequest instanceof ManualPaymentRequest) {
             return $this->actionsColumn($manualPaymentRequest);
         }

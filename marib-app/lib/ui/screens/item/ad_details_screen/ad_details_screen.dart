@@ -108,7 +108,6 @@ import 'package:marib/utils/item_category_ids.dart';
 import 'package:meta/meta.dart';
 import 'ad_image_source.dart';
 
-
 class _AdItemDetailsRepository implements details.ItemDetailsRepository {
   _AdItemDetailsRepository(this._itemRepository, {this.fallbackSlug});
 
@@ -254,8 +253,7 @@ class AdDetailsScreen extends StatefulWidget {
               late final ItemRepository repository;
               try {
                 final providedRepository =
-                RepositoryProvider.of<ItemRepository>(
-
+                    RepositoryProvider.of<ItemRepository>(
                   context,
                   listen: false,
                 );
@@ -274,7 +272,6 @@ class AdDetailsScreen extends StatefulWidget {
               );
             },
           ),
-
           BlocProvider(
             create: (context) =>
                 FetchItemPurchaseOptionsCubit(ItemPurchaseOptionsRepository()),
@@ -448,7 +445,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   ItemModel? _initialSummaryModel;
   bool _initialSummaryModelResolved = false;
 
-
   bool _purchaseOptionsLoading = false;
   String? _purchaseOptionsError;
   Map<String, String> _selectedAttributes = <String, String>{};
@@ -491,7 +487,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   void _onToggleFavorite() {
     if (_currentItem.id == null) return;
     setState(() => isFavorite = !isFavorite);
-
   }
 
   Future<bool> _changeAdStatus(String newStatus) async {
@@ -507,12 +502,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       status: newStatus,
       userId: userId,
     );
-
-
-
-
-
-
 
     final ChangeMyItemStatusState statusState = cubit.state;
     if (statusState is ChangeMyItemStatusSuccess) {
@@ -551,10 +540,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     }
   }
 
-
-
-
-
   void _fetchPurchaseOptionsForCurrentItem({bool forceRefresh = false}) {
     final int? itemId = _currentItem.id ?? widget.model.id;
     if (itemId == null) {
@@ -588,9 +573,9 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }
 
   void _handlePurchaseOptionsState(
-      BuildContext context,
-      FetchItemPurchaseOptionsState state,
-      ) {
+    BuildContext context,
+    FetchItemPurchaseOptionsState state,
+  ) {
     if (state is FetchItemPurchaseOptionsInProgress) {
       void update() {
         _purchaseOptionsLoading = true;
@@ -651,11 +636,12 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }
 
   Map<String, String> _sanitizeSelections(
-      ItemPurchaseOptions options, {
-        Map<String, String>? seed,
-      }) {
-    final Map<String, String> source =
-    seed != null ? Map<String, String>.from(seed) : Map<String, String>.from(_selectedAttributes);
+    ItemPurchaseOptions options, {
+    Map<String, String>? seed,
+  }) {
+    final Map<String, String> source = seed != null
+        ? Map<String, String>.from(seed)
+        : Map<String, String>.from(_selectedAttributes);
     final Map<String, String> sanitized = <String, String>{};
 
     for (final ItemPurchaseAttributeOption attribute in options.attributes) {
@@ -689,10 +675,11 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }
 
   String? _computeVariantKey(
-      ItemPurchaseOptions options,
-      Map<String, String> selections,
-      ) {
-    final List<MapEntry<String, String>> affecting = <MapEntry<String, String>>[];
+    ItemPurchaseOptions options,
+    Map<String, String> selections,
+  ) {
+    final List<MapEntry<String, String>> affecting =
+        <MapEntry<String, String>>[];
 
     for (final ItemPurchaseAttributeOption attribute in options.attributes) {
       if (!attribute.affectsStock) {
@@ -710,15 +697,15 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     }
 
     affecting.sort(
-          (MapEntry<String, String> a, MapEntry<String, String> b) =>
+      (MapEntry<String, String> a, MapEntry<String, String> b) =>
           a.key.toLowerCase().compareTo(b.key.toLowerCase()),
     );
 
     return affecting
         .map(
           (MapEntry<String, String> entry) =>
-      '${Uri.encodeComponent(entry.key)}=${Uri.encodeComponent(entry.value)}',
-    )
+              '${Uri.encodeComponent(entry.key)}=${Uri.encodeComponent(entry.value)}',
+        )
         .join('|');
   }
 
@@ -750,7 +737,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     final String normalizedKey = key.trim();
     final String? normalizedValue = value?.trim();
     final Map<String, String> nextSelections =
-    Map<String, String>.from(_selectedAttributes);
+        Map<String, String>.from(_selectedAttributes);
 
     if (normalizedValue == null || normalizedValue.isEmpty) {
       nextSelections.remove(normalizedKey);
@@ -759,7 +746,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     }
 
     final Map<String, String> sanitized =
-    _sanitizeSelections(options, seed: nextSelections);
+        _sanitizeSelections(options, seed: nextSelections);
 
     void update() {
       _selectedAttributes = sanitized;
@@ -774,6 +761,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       update();
     }
   }
+
   void _enforceQuantityConstraints() {
     if (_selectedQuantity < 1) {
       _selectedQuantity = 1;
@@ -941,11 +929,10 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     return false;
   }
 
-
   List<String> _resolveTipActionCommands(
-      CartSafetyTipsPayload payload, {
-        CartSafetyTip? tip,
-      }) {
+    CartSafetyTipsPayload payload, {
+    CartSafetyTip? tip,
+  }) {
     final List<String> commands = <String>[];
     final Set<String> seen = <String>{};
 
@@ -977,7 +964,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
     return commands;
   }
-
 
   Future<void> _showCartTipBottomSheet(
       BuildContext context, CartSafetyTipsPayload payload) async {
@@ -1062,11 +1048,11 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
             'has_external': externalAction != null,
           });
 
-
           final List<String> resolvedCommands =
-          _resolveTipActionCommands(payload, tip: tip);
-          final List<String> commands =
-          resolvedCommands.isEmpty ? <String>['add_to_cart'] : resolvedCommands;
+              _resolveTipActionCommands(payload, tip: tip);
+          final List<String> commands = resolvedCommands.isEmpty
+              ? <String>['add_to_cart']
+              : resolvedCommands;
 
           try {
             await cartCubit.confirmPendingCartAddition();
@@ -1082,7 +1068,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
           Navigator.of(sheetContext).pop(true);
 
-
           bool navigateToCart = false;
           for (final String command in commands) {
             switch (command) {
@@ -1090,22 +1075,21 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                 navigateToCart = true;
                 break;
               case 'add_to_cart':
-              // تمت إضافة المنتج بالفعل عبر confirmPendingCartAddition.
+                // تمت إضافة المنتج بالفعل عبر confirmPendingCartAddition.
                 break;
               default:
-              // أي أوامر غير معروفة تُعامل كإضافة للسلة.
+                // أي أوامر غير معروفة تُعامل كإضافة للسلة.
                 break;
             }
           }
 
           if (navigateToCart) {
             final NavigatorState navigator =
-            Navigator.of(context, rootNavigator: true);
+                Navigator.of(context, rootNavigator: true);
             navigator.popUntil((Route<dynamic> route) => route is! PopupRoute);
             await navigator.pushNamed(Routes.cart);
             return;
           }
-
 
           if (navigateAction != null) {
             await _handleCartTipAction(context, navigateAction!);
@@ -1140,8 +1124,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
         final String titleText = (tip?.title?.trim().isNotEmpty ?? false)
             ? tip!.title!.trim()
             : ((fallbackTitle?.trim().isNotEmpty ?? false)
-            ? fallbackTitle!.trim()
-            : 'تنويه هام قبل الشراء');
+                ? fallbackTitle!.trim()
+                : 'تنويه هام قبل الشراء');
         final String effectiveDescription = descriptionText ?? '';
 
         return Container(
@@ -1357,7 +1341,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     }
   }
 
-
   ItemModel? _resolveInitialSummaryModel() {
     if (_initialSummaryModelResolved) {
       return _initialSummaryModel;
@@ -1412,12 +1395,10 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }
 
   bool _supportsMapSectionForItem(ItemModel item) {
-
-
     final List<int> categoryIds = buildItemCategoryIds(item);
     final bool belongsToForcedMapRoot = categoryIds.contains(
-      Constant.realEstateRootCategoryId,
-    ) ||
+          Constant.realEstateRootCategoryId,
+        ) ||
         categoryIds.contains(Constant.publicRootCategoryId);
 
     if (belongsToForcedMapRoot) {
@@ -1427,8 +1408,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
         _isMapSupportedInterface(item.itemType);
   }
 
-
-
   @visibleForTesting
   bool supportsMapSectionForTesting(ItemModel item) =>
       _supportsMapSectionForItem(item);
@@ -1436,7 +1415,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   @visibleForTesting
   bool shouldHideQuantitySelectorForTesting(ItemModel item) =>
       _shouldHideQuantitySelectorForItem(item);
-
 
   bool _isMapSupportedInterface(String? value) {
     if (value == null) {
@@ -1450,8 +1428,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
     return _mapSupportedSections.contains(normalized);
   }
-
-
 
   @override
   void initState() {
@@ -1527,7 +1503,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     final List<AdImageSource> optimized = <AdImageSource>[];
     final Set<String> seenFallbacks = <String>{};
 
-
     String? sanitize(String? value) {
       if (value == null) {
         return null;
@@ -1576,11 +1551,9 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       ..clear()
       ..addAll(optimized);
 
-
     images
       ..clear()
       ..addAll(combined.isEmpty ? <String?>[item.image] : combined);
-
 
     youtubeVideoThumbnail = "";
 
@@ -1623,10 +1596,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       return const SizedBox.shrink();
     }
 
-
     final bool hideQuantitySelector =
-    _shouldHideQuantitySelectorForItem(_currentItem);
-
+        _shouldHideQuantitySelectorForItem(_currentItem);
 
     if (_purchaseOptionsLoading && _purchaseOptions == null) {
       return const Padding(
@@ -1646,7 +1617,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
           decoration: BoxDecoration(
             color: colorScheme.error.withOpacity(0.08),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: colorScheme.error.withOpacity(0.25), width: 1),
+            border: Border.all(
+                color: colorScheme.error.withOpacity(0.25), width: 1),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1689,7 +1661,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
     final ItemPurchaseOptions? options = _purchaseOptions;
     if (options == null) {
-
       if (hideQuantitySelector) {
         return const SizedBox.shrink();
       }
@@ -1699,6 +1670,10 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
         child: _buildQuantitySelector(),
       );
     }
+
+    final double? deliverySize = options.deliverySize;
+    final bool hasDeliverySize = deliverySize != null && deliverySize > 0;
+    bool deliverySizeDisplayed = false;
 
     final List<Widget> children = <Widget>[];
 
@@ -1724,14 +1699,20 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
         children.add(const SizedBox(height: 12));
       }
 
+      if (hasDeliverySize) {
+        children.add(_buildDeliverySizeDisplay(deliverySize!));
+        children.add(const SizedBox(height: 12));
+        deliverySizeDisplayed = true;
+      }
+
       if (_selectedVariantStock != null) {
         final ItemVariantStockOption stock = _selectedVariantStock!;
         children.add(
           Text(
             'الكمية المتاحة: ${stock.availableStock}',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: stock.availableStock > 0 ? Colors.green : Colors.red,
-            ),
+                  color: stock.availableStock > 0 ? Colors.green : Colors.red,
+                ),
           ),
         );
       } else if (options.variantStocks.isNotEmpty) {
@@ -1747,6 +1728,14 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       }
     }
 
+    if (hasDeliverySize && !deliverySizeDisplayed) {
+      if (children.isNotEmpty) {
+        children.add(const SizedBox(height: 12));
+      }
+      children.add(_buildDeliverySizeDisplay(deliverySize!));
+      children.add(const SizedBox(height: 12));
+      deliverySizeDisplayed = true;
+    }
 
     final ItemDiscount? discount = options.discount;
     if (!hideQuantitySelector) {
@@ -1755,7 +1744,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       }
       children.add(_buildQuantitySelector());
     }
-
 
     if (discount != null) {
       if (children.isNotEmpty) {
@@ -1799,13 +1787,10 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                 active
                     ? 'الخصم مفعل حالياً.'
                     : 'الخصم غير مفعل في الوقت الحالي.',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(
-                  color:
-                  active ? Colors.green : Theme.of(context).hintColor,
-                ),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color:
+                          active ? Colors.green : Theme.of(context).hintColor,
+                    ),
               ),
             ],
           ),
@@ -1838,14 +1823,13 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
         children: [
           Text(
             '${attribute.name}${attribute.requiredForCheckout ? ' *' : ''}',
-            style:
-            theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 6),
           Text(
             'لا توجد قيم محددة لهذه السمة.',
-            style:
-            theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
           ),
         ],
       );
@@ -1859,36 +1843,35 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
     final bool isRequired = attribute.requiredForCheckout;
     final String? currentValueRaw = _selectedAttributes[attribute.key];
-    final String effectiveValue = currentValueRaw == null ||
-        (currentValueRaw.isEmpty && !isRequired)
-        ? (isRequired && values.isNotEmpty ? values.first : '')
-        : currentValueRaw;
+    final String effectiveValue =
+        currentValueRaw == null || (currentValueRaw.isEmpty && !isRequired)
+            ? (isRequired && values.isNotEmpty ? values.first : '')
+            : currentValueRaw;
 
-    final List<_AttributeValueDescriptor> descriptors = <_AttributeValueDescriptor>[
-
+    final List<_AttributeValueDescriptor> descriptors =
+        <_AttributeValueDescriptor>[
       if (!isRequired)
         const _AttributeValueDescriptor(
-
           value: '',
           label: 'بدون اختيار',
           isOptional: true,
         ),
       ...values.map(
-            (String value) => _AttributeValueDescriptor(
-              value: value,
-              label: value,
-              isOptional: false,
+        (String value) => _AttributeValueDescriptor(
+          value: value,
+          label: value,
+          isOptional: false,
         ),
       ),
     ];
-
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           '${attribute.name}${isRequired ? ' *' : ''}',
-          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+          style:
+              theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 10),
         SizedBox(
@@ -1903,8 +1886,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                 label: descriptor.label,
                 selected: selected,
                 isOptional: descriptor.isOptional,
-                onTap: () =>
-                    _onAttributeSelectionChanged(attribute.key, descriptor.value),
+                onTap: () => _onAttributeSelectionChanged(
+                    attribute.key, descriptor.value),
               );
             },
             separatorBuilder: (_, __) => const SizedBox(width: 10),
@@ -1915,7 +1898,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     );
   }
 
-
   bool _isColorAttribute(ItemPurchaseAttributeOption attribute) {
     final String key = attribute.key.toLowerCase();
     final String? type = attribute.type?.toLowerCase();
@@ -1925,28 +1907,29 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       return true;
     }
 
-    if (key.contains('color') || key.contains('colour') || key.contains('اللون')) {
+    if (key.contains('color') ||
+        key.contains('colour') ||
+        key.contains('اللون')) {
       return true;
     }
 
     final String name = attribute.name.toLowerCase();
-    if (name.contains('color') || name.contains('colour') || name.contains('اللون')) {
+    if (name.contains('color') ||
+        name.contains('colour') ||
+        name.contains('اللون')) {
       return true;
     }
 
     return false;
   }
 
-
-
-
   Widget _buildColorAttributeSelector(
-      ItemPurchaseAttributeOption attribute,
-      List<String> values,
-      ) {
+    ItemPurchaseAttributeOption attribute,
+    List<String> values,
+  ) {
     final ThemeData theme = Theme.of(context);
     final TextStyle? labelStyle =
-    theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600);
+        theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600);
 
     final String? currentValue = _selectedAttributes[attribute.key];
 
@@ -1962,7 +1945,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       }
 
       final _ColorChoiceDescriptor descriptor =
-      _ColorChoiceDescriptor.fromRawValue(
+          _ColorChoiceDescriptor.fromRawValue(
         rawValue: value,
         context: context,
       );
@@ -1989,20 +1972,20 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
           SizedBox(
             height: 88,
             child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                    padding: EdgeInsets.zero,
-                itemBuilder: (BuildContext context, int index) {
-                  final _ColorChoiceDescriptor descriptor = descriptors[index];
-                  final bool selected = currentValue == descriptor.rawValue;
-                  return _ColorSwatchChip(
-                    descriptor: descriptor,
-                    selected: selected,
-                    onTap: () => _onAttributeSelectionChanged(
-                      attribute.key,
-                      descriptor.rawValue,
+              scrollDirection: Axis.horizontal,
+              padding: EdgeInsets.zero,
+              itemBuilder: (BuildContext context, int index) {
+                final _ColorChoiceDescriptor descriptor = descriptors[index];
+                final bool selected = currentValue == descriptor.rawValue;
+                return _ColorSwatchChip(
+                  descriptor: descriptor,
+                  selected: selected,
+                  onTap: () => _onAttributeSelectionChanged(
+                    attribute.key,
+                    descriptor.rawValue,
                   ),
-                  );
-                },
+                );
+              },
               separatorBuilder: (_, __) => const SizedBox(width: 14),
               itemCount: descriptors.length,
             ),
@@ -2011,16 +1994,57 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     );
   }
 
+  Widget _buildDeliverySizeDisplay(double deliverySize) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colorScheme = theme.colorScheme;
+    final String? formatted = _formatDeliverySize(deliverySize);
+    if (formatted == null) {
+      return const SizedBox.shrink();
+    }
+
+    final TextStyle labelStyle =
+        (theme.textTheme.bodyMedium ?? const TextStyle()).copyWith(
+      fontWeight: FontWeight.w600,
+    );
+    final TextStyle valueStyle =
+        (theme.textTheme.bodyMedium ?? const TextStyle()).copyWith(
+      fontWeight: FontWeight.w700,
+      color: colorScheme.onSurface,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('حجم الطلب', style: labelStyle),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colorScheme.outline.withOpacity(0.25)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.scale_rounded, size: 18, color: colorScheme.primary),
+              const SizedBox(width: 8),
+              Text(formatted, style: valueStyle),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildQuantitySelector() {
     final ThemeData theme = Theme.of(context);
     final ColorScheme colorScheme = theme.colorScheme;
     final TextStyle? labelStyle =
-    theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600);
-
+        theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600);
 
     final int? stockLimit = _selectedVariantStock?.availableStock;
     final bool isStockTracked = stockLimit != null;
-
 
     final bool isOutOfStock = stockLimit != null && stockLimit <= 0;
 
@@ -2033,14 +2057,13 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       canIncrement = _selectedQuantity < stockLimit;
     }
 
-    final int? remainingAfterSelection = stockLimit != null
-        ? (stockLimit - _selectedQuantity)
-        : null;
+    final int? remainingAfterSelection =
+        stockLimit != null ? (stockLimit - _selectedQuantity) : null;
 
     final TextStyle valueStyle = (theme.textTheme.headlineSmall ??
-        theme.textTheme.titleLarge ??
-        theme.textTheme.titleMedium ??
-        const TextStyle(fontSize: 20))
+            theme.textTheme.titleLarge ??
+            theme.textTheme.titleMedium ??
+            const TextStyle(fontSize: 20))
         .copyWith(
       fontWeight: FontWeight.w700,
       color: colorScheme.onSurface,
@@ -2050,99 +2073,99 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-        Text('الكمية', style: labelStyle),
-    if (isStockTracked) ...[
-    const SizedBox(width: 10),
-    _buildQuantityPill(
-    icon: Icons.inventory_2_rounded,
-    label: 'متاح: ${stockLimit!.clamp(0, 9999)}',
-    foreground:
-    isOutOfStock ? colorScheme.error : colorScheme.primary,
-    background: (isOutOfStock
-    ? colorScheme.error
-        : colorScheme.primary)
-        .withOpacity(0.12),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('الكمية', style: labelStyle),
+            if (isStockTracked) ...[
+              const SizedBox(width: 10),
+              _buildQuantityPill(
+                icon: Icons.inventory_2_rounded,
+                label: 'متاح: ${stockLimit!.clamp(0, 9999)}',
+                foreground:
+                    isOutOfStock ? colorScheme.error : colorScheme.primary,
+                background:
+                    (isOutOfStock ? colorScheme.error : colorScheme.primary)
+                        .withOpacity(0.12),
               ),
             ],
-        ],
+          ],
         ),
-    const SizedBox(height: 12),
-    LayoutBuilder(
-    builder: (BuildContext context, BoxConstraints constraints) {
-    final bool compact = constraints.maxWidth < 320;
-    final double buttonSize = compact ? 44 : 48;
+        const SizedBox(height: 12),
+        LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final bool compact = constraints.maxWidth < 320;
+            final double buttonSize = compact ? 44 : 48;
 
-    return Container(
-    width: double.infinity,
-    padding: EdgeInsets.symmetric(
-    horizontal: compact ? 12 : 16,
-    vertical: compact ? 10 : 14,
-    ),
-    decoration: BoxDecoration(
-    color: colorScheme.surface,
-    borderRadius: BorderRadius.circular(16),
-    border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
-    boxShadow: [
-    BoxShadow(
-    color: colorScheme.primary.withOpacity(0.05),
-    blurRadius: 12,
-    offset: const Offset(0, 6),
-    ),
-    ],
-    ),
-    child: Row(
-    children: [
-    _QuantityActionButton(
-    icon: Icons.remove_rounded,
-    onTap: _selectedQuantity > 1 ? _decrementQuantity : null,
-    onDisabledTap: _selectedQuantity <= 1
-    ? () => _notifyQuantityRestriction(
-    'الحد الأدنى للشراء هو قطعة واحدة.',
-    color: colorScheme.primary,
-    )
-        : null,
-    dimension: buttonSize,
-    ),
-    Expanded(
-    child: Center(
-    child: AnimatedDefaultTextStyle(
-    duration: const Duration(milliseconds: 180),
-    style: valueStyle.copyWith(
-    fontSize: compact ? 20 : valueStyle.fontSize,
-    ),
-    child: Text('$_selectedQuantity'),
+            return Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? 12 : 16,
+                vertical: compact ? 10 : 14,
+              ),
+              decoration: BoxDecoration(
+                color: colorScheme.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+                boxShadow: [
+                  BoxShadow(
+                    color: colorScheme.primary.withOpacity(0.05),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  _QuantityActionButton(
+                    icon: Icons.remove_rounded,
+                    onTap: _selectedQuantity > 1 ? _decrementQuantity : null,
+                    onDisabledTap: _selectedQuantity <= 1
+                        ? () => _notifyQuantityRestriction(
+                              'الحد الأدنى للشراء هو قطعة واحدة.',
+                              color: colorScheme.primary,
+                            )
+                        : null,
+                    dimension: buttonSize,
+                  ),
+                  Expanded(
+                    child: Center(
+                      child: AnimatedDefaultTextStyle(
+                        duration: const Duration(milliseconds: 180),
+                        style: valueStyle.copyWith(
+                          fontSize: compact ? 20 : valueStyle.fontSize,
+                        ),
+                        child: Text('$_selectedQuantity'),
                       ),
                     ),
                   ),
-      _QuantityActionButton(
-        icon: Icons.add_rounded,
-        onTap: canIncrement ? _incrementQuantity : null,
-        onDisabledTap: !canIncrement
-            ? () => _notifyQuantityRestriction(
-          isOutOfStock
-              ? 'هذه التوليفة غير متوفرة حالياً في المخزون.'
-              : 'لقد وصلت للكمية المتاحة لهذه التوليفة.',
-          color: isOutOfStock
-              ? colorScheme.error
-              : colorScheme.primary,
-        )
-            : null,
-        dimension: buttonSize,
-      ),
-    ],
-    ),
-    );
-    },
-    ),
+                  _QuantityActionButton(
+                    icon: Icons.add_rounded,
+                    onTap: canIncrement ? _incrementQuantity : null,
+                    onDisabledTap: !canIncrement
+                        ? () => _notifyQuantityRestriction(
+                              isOutOfStock
+                                  ? 'هذه التوليفة غير متوفرة حالياً في المخزون.'
+                                  : 'لقد وصلت للكمية المتاحة لهذه التوليفة.',
+                              color: isOutOfStock
+                                  ? colorScheme.error
+                                  : colorScheme.primary,
+                            )
+                        : null,
+                    dimension: buttonSize,
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
         if (!isOutOfStock &&
             remainingAfterSelection != null &&
             remainingAfterSelection > 0) ...[
           const SizedBox(height: 10),
           _buildQuantityPill(
             icon: Icons.timelapse_rounded,
-            label: 'المتبقي بعد اختيارك: ${remainingAfterSelection.clamp(0, 9999)}',
+            label:
+                'المتبقي بعد اختيارك: ${remainingAfterSelection.clamp(0, 9999)}',
             foreground: theme.hintColor,
             background: theme.hintColor.withOpacity(0.14),
           ),
@@ -2152,7 +2175,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
           _buildInlineBanner(
             icon: Icons.error_outline_rounded,
             message:
-            'هذه التوليفة غير متوفرة حالياً في المخزون. الرجاء اختيار سمة مختلفة أو العودة لاحقاً.',
+                'هذه التوليفة غير متوفرة حالياً في المخزون. الرجاء اختيار سمة مختلفة أو العودة لاحقاً.',
             foreground: colorScheme.error,
             background: colorScheme.error.withOpacity(0.12),
           ),
@@ -2192,25 +2215,25 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }) {
     final ThemeData theme = Theme.of(context);
     return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: background,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: foreground),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: foreground,
-                fontWeight: FontWeight.w600,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: foreground),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: foreground,
+              fontWeight: FontWeight.w600,
             ),
           ),
-          ],
-        ),
+        ],
+      ),
     );
   }
 
@@ -2222,18 +2245,18 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }) {
     final ThemeData theme = Theme.of(context);
     return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: background,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 20, color: foreground),
-            const SizedBox(width: 10),
-            Expanded(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: foreground),
+          const SizedBox(width: 10),
+          Expanded(
             child: Text(
               message,
               style: theme.textTheme.bodySmall?.copyWith(
@@ -2242,11 +2265,26 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
               ),
             ),
           ),
-          ],
-        ),
+        ],
+      ),
     );
   }
 
+  String? _formatDeliverySize(double? value) {
+    if (value == null || value <= 0) {
+      return null;
+    }
+
+    String formatted = value.toStringAsFixed(3);
+    if (formatted.contains('.')) {
+      formatted = formatted.replaceFirst(RegExp(r'0+$'), '');
+      if (formatted.endsWith('.')) {
+        formatted = formatted.substring(0, formatted.length - 1);
+      }
+    }
+
+    return '$formatted كجم';
+  }
 
   String _formatPrice(double value) {
     final NumberFormat formatter = NumberFormat.currency(
@@ -2284,14 +2322,13 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       for (final ItemPurchaseAttributeOption attribute in options.attributes) {
         final String key = attribute.key;
         final String displayName =
-        attribute.name.isNotEmpty ? attribute.name : key;
+            attribute.name.isNotEmpty ? attribute.name : key;
         final String value = selections[key]?.trim() ?? '';
 
         if (attribute.requiredForCheckout && value.isEmpty) {
           throw CartBuildException(
             'الرجاء اختيار قيمة للسمة "$displayName" قبل المتابعة.',
           );
-
         }
         if (attribute.affectsStock && options.variantStocks.isNotEmpty) {
           if (value.isEmpty) {
@@ -2308,17 +2345,19 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
         : _selectedVariantKey;
 
     final ItemVariantStockOption? stockOption =
-    options != null ? _findVariantStock(variantKey) : _selectedVariantStock;
+        options != null ? _findVariantStock(variantKey) : _selectedVariantStock;
 
     if (stockOption != null && stockOption.availableStock <= 0) {
-      throw CartBuildException('التوليفة المحددة غير متوفرة حالياً في المخزون.');
+      throw CartBuildException(
+          'التوليفة المحددة غير متوفرة حالياً في المخزون.');
     }
 
-    if (variantKey != null && options != null &&
-        options.variantStocks.isNotEmpty && stockOption == null) {
+    if (variantKey != null &&
+        options != null &&
+        options.variantStocks.isNotEmpty &&
+        stockOption == null) {
       throw CartBuildException('لم يتم العثور على مخزون للتوليفة المحددة.');
     }
-
 
     if (stockOption != null &&
         stockOption.availableStock > 0 &&
@@ -2327,30 +2366,25 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
           'الكمية المطلوبة تتجاوز المتاح للتوليفة الحالية.');
     }
 
+    final double unitPrice =
+        options?.finalPrice ?? item.finalPrice ?? item.price ?? 0.0;
 
-
-    final double unitPrice = options?.finalPrice ??
-        item.finalPrice ??
-        item.price ??
-        0.0;
-
-    final Map<String, dynamic>? variantAttributes = selections.isEmpty
-        ? null
-        : Map<String, dynamic>.from(selections);
+    final Map<String, dynamic>? variantAttributes =
+        selections.isEmpty ? null : Map<String, dynamic>.from(selections);
 
     final Map<String, dynamic>? stockSnapshot = stockOption != null
         ? <String, dynamic>{
-      'variant_key': stockOption.variantKey,
-      'stock': stockOption.stock,
-      'reserved_stock': stockOption.reservedStock,
-      'available_stock': stockOption.availableStock,
-    }
+            'variant_key': stockOption.variantKey,
+            'stock': stockOption.stock,
+            'reserved_stock': stockOption.reservedStock,
+            'available_stock': stockOption.availableStock,
+          }
         : null;
 
     final List<Map<String, dynamic>>? customFields =
-    (selectedCustomFields == null || selectedCustomFields.isEmpty)
-        ? null
-        : selectedCustomFields;
+        (selectedCustomFields == null || selectedCustomFields.isEmpty)
+            ? null
+            : selectedCustomFields;
 
     return Cart.fromItemModel(
       item,
@@ -2490,8 +2524,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
         cartBuilder: ({List<Map<String, dynamic>>? selectedCustomFields}) =>
             _buildCartItemForCurrentSelection(
-              selectedCustomFields: selectedCustomFields,
-            ),
+          selectedCustomFields: selectedCustomFields,
+        ),
 
         onUpdateFields: (newFields) {
           setState(() {
@@ -2503,11 +2537,9 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }
 
   Widget _buildOwnerBody(BuildContext context) {
-
     final bool supportsMapSection = _supportsMapSectionForItem(_currentItem);
-    final bool hideLocation = supportsMapSection
-        ? false
-        : GeoRules.isDisabledForItem(_currentItem);
+    final bool hideLocation =
+        supportsMapSection ? false : GeoRules.isDisabledForItem(_currentItem);
 
     return OwnerAdDetailsBody(
       model: _currentItem,
@@ -2619,15 +2651,12 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       isAddedByMe: false,
     );
     final bool supportsMapSection = _supportsMapSectionForItem(item);
-    final bool hideLocation = supportsMapSection
-        ? false
-        : GeoRules.isDisabledForItem(item);
+    final bool hideLocation =
+        supportsMapSection ? false : GeoRules.isDisabledForItem(item);
 
     final List<Widget> statusAlerts = _buildStatusAlerts(item);
 
-
     return CustomScrollView(
-
       slivers: [
         // =======================
         // 1️⃣ SliverAppBar للسلايدر
@@ -2712,12 +2741,10 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                   const SizedBox(height: 12),
                 ],
 
-
                 // السعر والحالة
                 adInfo.priceAndStatus(),
 
                 _buildPurchaseOptionsSection(),
-
 
                 // العنوان والتاريخ (لو فيه عنوان)
                 if (!hideLocation && item.address != null)
@@ -2748,7 +2775,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                     supportsMapSection &&
                     item.latitude != null &&
                     item.longitude != null)
-
                   MapPreviewBox(
                     latitude: item.latitude!,
                     longitude: item.longitude!,
@@ -2761,10 +2787,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                     onTap: () => _navigateToGoogleMapScreen(context),
                   ),
 
-
                 if (_isEcommerceItem &&
                     (item.tips?.returnPolicyText?.trim().isNotEmpty ?? false))
-
                   Padding(
                     padding: const EdgeInsets.only(top: 18.0),
                     child: _buildReturnPolicyCard(
@@ -2800,8 +2824,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       ],
     );
   }
-
-
 
   List<Widget> _buildStatusAlerts(ItemModel item) {
     final ThemeData theme = Theme.of(context);
@@ -2865,7 +2887,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       addAlert(
         icon: Icons.shopping_bag,
         color: colorScheme.secondary,
-        message: 'لقد قمت بشراء هذا المنتج مسبقاً. تحقق من الطلبات لمتابعة التفاصيل.',
+        message:
+            'لقد قمت بشراء هذا المنتج مسبقاً. تحقق من الطلبات لمتابعة التفاصيل.',
       );
     }
 
@@ -2953,7 +2976,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
               text,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color:
-                theme.textTheme.bodyMedium?.color ?? colorScheme.onSurface,
+                    theme.textTheme.bodyMedium?.color ?? colorScheme.onSurface,
                 height: 1.5,
               ),
             ),
@@ -2962,7 +2985,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       ),
     );
   }
-
 
   Widget reportedAdsWidget() {
     return BlocBuilder<UpdatedReportItemCubit, UpdatedReportItemState>(
@@ -4416,7 +4438,6 @@ class _AdDetailsLoadingBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     return CustomScrollView(
-
       slivers: [
         SliverAppBar(
           pinned: true,
@@ -4696,7 +4717,6 @@ class _LoadingDetailsContent extends StatelessWidget {
   }
 }
 
-
 class _QuantityActionButton extends StatelessWidget {
   const _QuantityActionButton({
     required this.icon,
@@ -4709,8 +4729,6 @@ class _QuantityActionButton extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onDisabledTap;
   final double? dimension;
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -4725,9 +4743,8 @@ class _QuantityActionButton extends StatelessWidget {
     final Color borderColor = enabled
         ? colorScheme.primary.withOpacity(0.45)
         : colorScheme.outline.withOpacity(0.35);
-    final Color iconColor = enabled
-        ? colorScheme.primary
-        : theme.disabledColor.withOpacity(0.6);
+    final Color iconColor =
+        enabled ? colorScheme.primary : theme.disabledColor.withOpacity(0.6);
 
     return Semantics(
       button: true,
@@ -4750,12 +4767,12 @@ class _QuantityActionButton extends StatelessWidget {
               border: Border.all(color: borderColor, width: 1.2),
               boxShadow: enabled
                   ? [
-                BoxShadow(
-                  color: colorScheme.primary.withOpacity(0.1),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
-                ),
-              ]
+                      BoxShadow(
+                        color: colorScheme.primary.withOpacity(0.1),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ]
                   : null,
             ),
             child: Icon(icon, size: 20, color: iconColor),
@@ -4804,9 +4821,8 @@ class _ColorChoiceDescriptor {
       final String normalized = trimmed.toLowerCase();
       for (final ColorPaletteEntry entry in ColorPaletteHelper.entries) {
         final String fallback = entry.fallbackLabel.toLowerCase();
-        final String englishKey = entry.labelKey
-            .replaceFirst('colorPalette', '')
-            .toLowerCase();
+        final String englishKey =
+            entry.labelKey.replaceFirst('colorPalette', '').toLowerCase();
         if (normalized == fallback || normalized == englishKey) {
           resolvedHex = entry.normalizedHex;
           break;
@@ -4837,9 +4853,8 @@ class _ColorChoiceDescriptor {
       final String normalized = label.toLowerCase();
       for (final ColorPaletteEntry entry in ColorPaletteHelper.entries) {
         final String fallback = entry.fallbackLabel.toLowerCase();
-        final String englishKey = entry.labelKey
-            .replaceFirst('colorPalette', '')
-            .toLowerCase();
+        final String englishKey =
+            entry.labelKey.replaceFirst('colorPalette', '').toLowerCase();
         if (normalized == fallback || normalized == englishKey) {
           color = entry.color;
           final String friendly = entry.label(context);
@@ -4864,13 +4879,6 @@ class _ColorChoiceDescriptor {
     );
   }
 }
-
-
-
-
-
-
-
 
 class _AttributeValueDescriptor {
   const _AttributeValueDescriptor({
@@ -4907,14 +4915,12 @@ class _AttributeChoiceChip extends StatelessWidget {
     final Color backgroundColor = selected
         ? colorScheme.primary.withOpacity(0.12)
         : theme.colorScheme.surface;
-    final Color borderColor = selected
-        ? colorScheme.primary
-        : colorScheme.outline.withOpacity(0.3);
+    final Color borderColor =
+        selected ? colorScheme.primary : colorScheme.outline.withOpacity(0.3);
 
     final String semanticsLabel = label.isEmpty ? '—' : label;
-    final String semanticsText = isOptional
-        ? '$semanticsLabel (اختياري)'
-        : semanticsLabel;
+    final String semanticsText =
+        isOptional ? '$semanticsLabel (اختياري)' : semanticsLabel;
 
     return Semantics(
       button: true,
@@ -4927,33 +4933,30 @@ class _AttributeChoiceChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 170),
-            padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               color: backgroundColor,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: borderColor, width: 1.2),
               boxShadow: selected
                   ? [
-                BoxShadow(
-                  color: colorScheme.primary.withOpacity(0.12),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ]
+                      BoxShadow(
+                        color: colorScheme.primary.withOpacity(0.12),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
                   : null,
             ),
             child: Text(
               label.isEmpty ? '—' : label,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: textColor,
-                fontWeight:
-                selected ? FontWeight.w700 : FontWeight.w500,
-              ) ??
+                    color: textColor,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  ) ??
                   TextStyle(
                     color: textColor,
-                    fontWeight:
-                    selected ? FontWeight.w700 : FontWeight.w500,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                   ),
             ),
           ),
@@ -4981,13 +4984,12 @@ class _ColorSwatchChip extends StatelessWidget {
     final Color? swatchColor = descriptor.swatchColor;
     final Color resolvedColor =
         swatchColor ?? theme.colorScheme.surfaceVariant.withOpacity(0.9);
-    final Color borderColor = selected
-        ? colorScheme.primary
-        : theme.dividerColor.withOpacity(0.3);
+    final Color borderColor =
+        selected ? colorScheme.primary : theme.dividerColor.withOpacity(0.3);
     final Color labelColor = selected
         ? colorScheme.primary
         : theme.textTheme.bodySmall?.color ??
-        colorScheme.onSurface.withOpacity(0.8);
+            colorScheme.onSurface.withOpacity(0.8);
 
     return Semantics(
       button: true,
@@ -5016,12 +5018,12 @@ class _ColorSwatchChip extends StatelessWidget {
                   ),
                   boxShadow: selected
                       ? [
-                    BoxShadow(
-                      color: colorScheme.primary.withOpacity(0.18),
-                      blurRadius: 14,
-                      offset: const Offset(0, 6),
-                    ),
-                  ]
+                          BoxShadow(
+                            color: colorScheme.primary.withOpacity(0.18),
+                            blurRadius: 14,
+                            offset: const Offset(0, 6),
+                          ),
+                        ]
                       : null,
                 ),
                 child: Stack(
@@ -5052,14 +5054,12 @@ class _ColorSwatchChip extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: labelColor,
-                  fontWeight:
-                  selected ? FontWeight.w700 : FontWeight.w500,
-                ) ??
+                      color: labelColor,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    ) ??
                     TextStyle(
                       color: labelColor,
-                      fontWeight:
-                      selected ? FontWeight.w700 : FontWeight.w500,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                     ),
               ),
             ),
@@ -5073,10 +5073,6 @@ class _ColorSwatchChip extends StatelessWidget {
     return color.computeLuminance() > 0.5 ? Colors.black87 : Colors.white;
   }
 }
-
-
-
-
 
 class _FetchErrorView extends StatelessWidget {
   const _FetchErrorView({

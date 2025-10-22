@@ -217,8 +217,9 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
 
   Future<void> _fitToMarkers() async {
     if (_markers.isEmpty) return;
-    final controller =
-        _mapReady.isCompleted ? await _mapReady.future : _mapController!;
+    if (!_mapReady.isCompleted) return;
+
+    final controller = await _mapReady.future;
     final pts = _markers.map((m) => m.position).toList();
 
     try {
@@ -300,14 +301,18 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
 
     debugPrint(
         "Markers: filtered_by='$_selectedCategory', user_marker=${_isValidLatLng(_currentPosition?.latitude, _currentPosition?.longitude) ? 1 : 0}, ads_added=$added");
-    WidgetsBinding.instance.addPostFrameCallback((_) => _fitToMarkers());
+    if (_mapReady.isCompleted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _fitToMarkers());
+    }
+
   }
 
   Future<void> _goToUserLocation() async {
     if (_isValidLatLng(
         _currentPosition?.latitude, _currentPosition?.longitude)) {
-      final controller =
-          _mapReady.isCompleted ? await _mapReady.future : _mapController!;
+      if (!_mapReady.isCompleted) return;
+
+      final controller = await _mapReady.future;
       await controller.animateCamera(
         CameraUpdate.newLatLngZoom(
           LatLng(_currentPosition!.latitude, _currentPosition!.longitude),

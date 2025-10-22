@@ -1,11 +1,12 @@
 import SingleCategory from "@/components/PagesComponent/SingleCategory/SingleCategory"
 import axios from "axios";
+import { buildApiUrl } from "@/utils/env";
 
 export const generateMetadata = async ({ params }) => {
     try {
 
         const response = await axios.get(
-            `${process.env.NEXT_PUBLIC_API_URL}${process.env.NEXT_PUBLIC_END_POINT}get-categories?slug=${params?.slug[0]}`
+            buildApiUrl(`get-categories?slug=${params?.slug[0]}`)
         );
 
         const stopWords = ['the', 'is', 'in', 'and', 'a', 'to', 'of', 'for', 'on', 'at', 'with', 'by', 'this', 'that', 'or', 'as', 'an', 'from', 'it', 'was', 'are', 'be', 'has', 'have', 'had', 'but', 'if', 'else'];

@@ -1,13 +1,15 @@
 
 import axios from 'axios';
 import dynamic from 'next/dynamic'
+import { buildApiUrl } from '@/utils/env';
+
 const AdListing = dynamic(() => import('@/components/PagesComponent/AdListing/AdListing'), { ssr: false })
 
 
 export const generateMetadata = async () => {
     try {
         const response = await axios.get(
-            `${process.env.NEXT_PUBLIC_API_URL}${process.env.NEXT_PUBLIC_END_POINT}seo-settings?page=ad-listing`
+            buildApiUrl('seo-settings?page=ad-listing')
         );
         const adListing = response?.data?.data[0]
 
